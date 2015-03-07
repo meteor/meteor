@@ -32,7 +32,7 @@ var runOldTest = function (filename, extraEnv) {
       METEOR_TOOL_PATH: s.execPath
     }, extraEnv))
   });
-  run.waitSecs(40);
+  run.waitSecs(120);
   run.expectExit(0);
 };
 

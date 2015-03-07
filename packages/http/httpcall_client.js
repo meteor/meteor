@@ -12,6 +12,7 @@
  * @param {Object} options.headers Dictionary of strings, headers to add to the HTTP request.
  * @param {Number} options.timeout Maximum time in milliseconds to wait for the request before failing.  There is no timeout by default.
  * @param {Boolean} options.followRedirects If `true`, transparently follow HTTP redirects. Cannot be set to `false` on the client. Default `true`.
+ * @param {Object} options.npmRequestOptions On the server, `HTTP.call` is implemented by using the [npm `request` module](https://www.npmjs.com/package/request). Any options in this object will be passed directly to the `request` invocation.
  * @param {Function} [asyncCallback] Optional callback.  If passed, the method runs asynchronously, instead of synchronously, and calls asyncCallback.  On the client, this callback is required.
  */
 HTTP.call = function(method, url, options, callback) {
@@ -50,6 +51,10 @@ HTTP.call = function(method, url, options, callback) {
 
   if (options.followRedirects === false)
     throw new Error("Option followRedirects:false not supported on client.");
+
+  if (_.has(options, 'npmRequestOptions')) {
+    throw new Error("Option npmRequestOptions not supported on client.");
+  }
 
   var username, password;
   if (options.auth) {

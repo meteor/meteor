@@ -427,12 +427,12 @@ _.extend(exports.Tropohouse.prototype, {
           try {
             packageLinkTarget = files.readlink(packagePath);
           } catch (e) {
-            // Complain about anything other than "we don't have it at all". This
-            // includes "not a symlink": The main reason this would not be a symlink
-            // is if it's a directory containing a pre-0.9.0 package (ie, this is a
-            // warehouse package not a tropohouse package). But the versions should
-            // not overlap: warehouse versions are truncated SHAs whereas tropohouse
-            // versions should be semver-like.
+            // Complain about anything other than "we don't have it at all".
+            // This includes "not a symlink": The main reason this would not be
+            // a symlink is if it's a directory containing a pre-0.9.0 package
+            // (ie, this is a warehouse package not a tropohouse package). But
+            // the versions should not overlap: warehouse versions are truncated
+            // SHAs whereas tropohouse versions should be semver-like.
             if (e.code !== 'ENOENT')
               throw e;
           }

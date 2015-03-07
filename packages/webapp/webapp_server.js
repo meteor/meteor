@@ -20,6 +20,13 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 WebApp = {};
 WebAppInternals = {};
 
+WebAppInternals.NpmModules = {
+  connect: {
+    version: Npm.require('connect/package.json').version,
+    module: connect
+  }
+};
+
 WebApp.defaultArch = 'web.browser';
 
 // XXX maps archs to manifests
@@ -722,11 +729,7 @@ var runWebAppServer = function () {
         onListeningCallbacks.push(f);
       else
         f();
-    },
-    // Hack: allow http tests to call connect.basicAuth without making them
-    // Npm.depends on another copy of connect. (That would be fine if we could
-    // have test-only NPM dependencies but is overkill here.)
-    __basicAuth__: connect.basicAuth
+    }
   });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect

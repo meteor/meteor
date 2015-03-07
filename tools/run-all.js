@@ -169,6 +169,11 @@ _.extend(Runner.prototype, {
     if (! self.stopped && ! self.quiet) {
       runLog.log("");
       runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+
+      if (process.platform === "win32") {
+        runLog.log("   Type Control-C twice to stop.");
+        runLog.log("");
+      }
     }
 
     if (self.selenium && ! self.stopped) {

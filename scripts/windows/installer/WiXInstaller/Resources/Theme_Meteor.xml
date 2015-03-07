@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Theme xmlns="http://wixtoolset.org/schemas/thmutil/2010">
 	<Window Width="624" Height="388" FontId="0">#(loc.Caption)</Window>
-	<Font Id="0" Height="-12" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
-	<Font Id="1" Height="-14" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
-	<Font Id="2" Height="-14" Weight="800" Foreground="333333" >Tahoma</Font>							<!-- Page header big font -->
-	<Font Id="3" Height="-22" Weight="500" Foreground="252525" >Segoe UI</Font>					<!-- Big light font to dispaly product name in welcome and finish pages -->
+	<Font Id="0" Height="-12" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="1" Height="-14" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="2" Height="-14" Weight="800" Foreground="333333" >Tahoma</Font>                               <!-- Page header big font -->
+	<Font Id="3" Height="-22" Weight="500" Foreground="252525" >Segoe UI</Font>                             <!-- Big light font to dispaly product name in welcome and finish pages -->
 	<Font Id="4" Height="-11" Weight="500" Foreground="000000" >Tahoma</Font>
-	<Font Id="5" Height="-10" Weight="500" Foreground="000000" >Segoe UI</Font>                         <!-- Version number on bottom left corner of all pages -->
-	<Font Id="6" Height="-12" Weight="500" Foreground="0000FF" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
-	<Font Id="7" Height="-12" Weight="500" Foreground="000000" >Segoe UI</Font>							<!-- Same as installer default font but transparent -->
+	<Font Id="5" Height="-10" Weight="500" Foreground="000000" >Segoe UI</Font>                             <!-- Version number on bottom left corner of all pages -->
+	<Font Id="6" Height="-12" Weight="500" Foreground="0000FF" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="7" Height="-12" Weight="500" Foreground="000000" >Segoe UI</Font>                             <!-- Same as installer default font but transparent -->
 
 
 
@@ -30,7 +30,7 @@
         <Hypertext Name="UpgradeHyperlink" X="178" Y="-16" Width="-24" Height="17" TabStop="yes" FontId="4" HideWhenDisabled="yes">#(loc.InstallUpgradeLinkText)</Hypertext>-->
 
 		<Text X="24" Y="-10" Width="100" Height="14" FontId="5" DisablePrefix="yes">#(loc.InstallVersion)</Text>
-		<Button Name="NextButton" X="200" Y="-142" Width="-200" Height="44" TabStop="yes" FontId="3">#(loc.InstallMeteor)</Button>
+		<Button Name="InstallButton" X="200" Y="-142" Width="-200" Height="44" TabStop="yes" FontId="3">#(loc.InstallMeteor)</Button>
 	</Page>
 	<Page Name="InstallDir">
 		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
@@ -46,7 +46,6 @@
 		<Editbox Name="InstallFolderEditbox" X="164" Y="216" Width="-144" Height="21" TabStop="yes" FontId="0" FileSystemAutoComplete="yes" HideWhenDisabled="no" />
 		<Button Name="BrowseButton" X="-64" Y="215" Width="75" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="no">#(loc.OptionsBrowseButton)</Button>
         
-
         <Button Name="BackButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.BackButton)</Button>
 		<Button Name="NextButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.NextButton)</Button>
 		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
@@ -70,7 +69,7 @@
         <Editbox Name="RegisterPass" X="220" Y="208" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[RegisterPass]</Editbox>
         <Checkbox Name="SkipRegistration" X="56" Y="-98" Width="-56" Height="21" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.SkipRegistration)</Checkbox>
 
-
+        <Button Name="SkipButton" X="-372" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
         <Button Name="BackButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.BackButton)</Button>
 		<Button Name="InstallButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallInstallButton)</Button>
 		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
@@ -80,10 +79,8 @@
 		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
 		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text Name="ProgressHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varProgressHeader]</Text>
-		<Text Name="ProgressInfo" X="24" Y="78" Width="-24" Height="36" FontId="1" DisablePrefix="yes">[varProgressInfo]</Text>
-		<Text Name="OverallProgressPackageText" X="24" Y="161" Width="-24" Height="17" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressText)</Text>
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
-		<Text Name="ExecuteProgressActionDataText" X="98" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
+		<Text Name="ExecuteProgressActionDataText" X="24" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
 		<Button Name="ProgressCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
 	</Page>
 	<Page Name="Modify">

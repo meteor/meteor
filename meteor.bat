@@ -28,6 +28,10 @@ IF EXIST "%~dp0\.git" (
     )
     PowerShell.exe -executionpolicy ByPass -file "%~dp0\scripts\windows\download-dev-bundle.ps1" < con
   )
+
+  rem Only set this when we're in a checkout. When running from a release,
+  rem this is correctly set in the top-level `meteor.bat` file
+  SET METEOR_INSTALLATION=%~dp0
 )
 
 SET NODE_PATH=%~dp0\dev_bundle\lib\node_modules

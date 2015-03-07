@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.0.15-winr.5'
+  version: '1.1.0-rc.0'
 });
 
 // We use 'faye-websocket' for connections in server-to-server DDP, mostly
@@ -12,8 +12,9 @@ Package.describe({
 // will prevent a second copy of faye-websocket from being installed inside
 // sockjs.)
 Npm.depends({
-  "faye-websocket": "0.8.1",
-  sockjs: "0.3.11"
+  "faye-websocket": "0.9.3",
+  "permessage-deflate": "0.1.2",
+  sockjs: "0.3.14"
 });
 
 Package.onUse(function (api) {

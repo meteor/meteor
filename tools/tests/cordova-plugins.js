@@ -134,7 +134,7 @@ selftest.define("change cordova plugins", ["cordova"], function () {
 
 // Add plugins through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add cordova plugins", ["slow"], function () {
+selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -260,7 +260,7 @@ selftest.define("remove cordova plugins", function () {
   checkUserPlugins(s, []);
 });
 
-selftest.define("meteor exits when cordova platforms change", ["slow"], function () {
+selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -326,7 +326,7 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   run.expectExit(254);
 });
 
-selftest.define("meteor exits when cordova plugins change", ["slow"], function () {
+selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -464,7 +464,7 @@ var buildAndCheckPluginInStar = selftest.markStack(function (s, name, version) {
   selftest.expectEqual(plugins[name], version);
 });
 
-selftest.define("cordova plugins in star.json, direct and transitive", ["slow"], function () {
+selftest.define("cordova plugins in star.json, direct and transitive", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 

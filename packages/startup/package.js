@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Deprecated package (now empty)",
-  version: "1.0.3-winr.2"
+  version: "1.0.3-rc.0"
 });
 
 Package.onUse(function (api) {

@@ -1631,6 +1631,53 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// admin check-package-versions
+///////////////////////////////////////////////////////////////////////////////
+
+// Run before publish-release --from-checkout to make sure that all of our
+// version numbers are up to date
+main.registerCommand({
+  name: 'admin check-package-versions',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+}, function (options) {
+  if (!files.inCheckout()) {
+    Console.error("Must run from checkout.");
+    return 1;
+  };
+
+  // Set up a temporary project context and build everything.
+  var tempProjectDir = files.mkdtemp('meteor-release-build');
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: tempProjectDir,  // won't have a packages dir, that's OK
+    // seriously, we only want checkout packages
+    ignorePackageDirsEnvVar: true,
+    // When we publish, we should always include web.cordova unibuilds, even
+    // though this temporary directory does not have any cordova platforms
+    forceIncludeCordovaUnibuild: true
+  });
+
+  // Read metadata and initialize catalog.
+  main.captureAndExit("=> Errors while building for release:", function () {
+    projectContext.initializeCatalog();
+  });
+
+  var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
+
+  Console.info("Listing packages where the checkout version doesn't match the",
+    "latest version on the package server.");
+
+  _.each(allPackages, function (packageName) {
+    var checkoutVersion = projectContext.localCatalog.getLatestVersion(packageName).version;
+    var remoteLatestVersion = catalog.official.getLatestVersion(packageName).version;
+
+    if (checkoutVersion !== remoteLatestVersion) {
+      Console.info(packageName, checkoutVersion, remoteLatestVersion);
+    }
+  });
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // add
 ///////////////////////////////////////////////////////////////////////////////
 

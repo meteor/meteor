@@ -15,6 +15,19 @@ var Future = Npm.require(path.join('fibers', 'future'));
 MongoInternals = {};
 MongoTest = {};
 
+MongoInternals.NpmModules = {
+  mongodb: {
+    version: Npm.require('mongodb/package.json').version,
+    module: MongoDB
+  }
+};
+
+// Older version of what is now available via
+// MongoInternals.NpmModules.mongodb.module.  It was never documented, but
+// people do use it.
+// XXX COMPAT WITH 1.0.3.2
+MongoInternals.NpmModule = MongoDB;
+
 // This is used to add or remove EJSON from the beginning of everything nested
 // inside an EJSON custom type. It should only be called on pure JSON!
 var replaceNames = function (filter, thing) {
@@ -224,11 +237,11 @@ MongoConnection.prototype.close = function() {
 };
 
 // Returns the Mongo Collection object; may yield.
-MongoConnection.prototype._getCollection = function (collectionName) {
+MongoConnection.prototype.rawCollection = function (collectionName) {
   var self = this;
 
   if (! self.db)
-    throw Error("_getCollection called before Connection created?");
+    throw Error("rawCollection called before Connection created?");
 
   var future = new Future;
   self.db.collection(collectionName, future.resolver());
@@ -337,7 +350,7 @@ MongoConnection.prototype._insert = function (collection_name, document,
   };
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
   try {
-    var collection = self._getCollection(collection_name);
+    var collection = self.rawCollection(collection_name);
     collection.insert(replaceTypes(document, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
   } catch (e) {
@@ -385,7 +398,7 @@ MongoConnection.prototype._remove = function (collection_name, selector,
   callback = bindEnvironmentForWrite(writeCallback(write, refresh, callback));
 
   try {
-    var collection = self._getCollection(collection_name);
+    var collection = self.rawCollection(collection_name);
     collection.remove(replaceTypes(selector, replaceMeteorAtomWithMongo),
                       {safe: true}, callback);
   } catch (e) {
@@ -405,7 +418,7 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
 
   try {
-    var collection = self._getCollection(collectionName);
+    var collection = self.rawCollection(collectionName);
     collection.drop(cb);
   } catch (e) {
     write.committed();
@@ -455,7 +468,7 @@ MongoConnection.prototype._update = function (collection_name, selector, mod,
   };
   callback = writeCallback(write, refresh, callback);
   try {
-    var collection = self._getCollection(collection_name);
+    var collection = self.rawCollection(collection_name);
     var mongoOpts = {safe: true};
     // explictly enumerate options that minimongo supports
     if (options.upsert) mongoOpts.upsert = true;
@@ -714,7 +727,7 @@ MongoConnection.prototype._ensureIndex = function (collectionName, index,
 
   // We expect this function to be called at startup, not from within a method,
   // so we don't interact with the write fence.
-  var collection = self._getCollection(collectionName);
+  var collection = self.rawCollection(collectionName);
   var future = new Future;
   var indexName = collection.ensureIndex(index, options, future.resolver());
   future.wait();
@@ -724,7 +737,7 @@ MongoConnection.prototype._dropIndex = function (collectionName, index) {
 
   // This function is only used by test code, not within a method, so we don't
   // interact with the write fence.
-  var collection = self._getCollection(collectionName);
+  var collection = self.rawCollection(collectionName);
   var future = new Future;
   var indexName = collection.dropIndex(index, future.resolver());
   future.wait();
@@ -847,7 +860,7 @@ MongoConnection.prototype._createSynchronousCursor = function(
   var self = this;
   options = _.pick(options || {}, 'selfForIteration', 'useTransform');
 
-  var collection = self._getCollection(cursorDescription.collectionName);
+  var collection = self.rawCollection(cursorDescription.collectionName);
   var cursorOptions = cursorDescription.options;
   var mongoOptions = {
     sort: cursorOptions.sort,
@@ -1264,4 +1277,3 @@ MongoConnection.prototype._observeChangesTailable = function (
 MongoInternals.MongoTimestamp = MongoDB.Timestamp;
 
 MongoInternals.Connection = MongoConnection;
-MongoInternals.NpmModule = MongoDB;

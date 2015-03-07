@@ -141,9 +141,7 @@ _.extend(ReactiveDict.prototype, {
     var self = this;
 
     _.each(object, function (value, key){
-      if (value) {
-        self.set(key, value);
-      }
+      self.set(key, value);
     });
   },
 

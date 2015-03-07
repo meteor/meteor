@@ -129,6 +129,7 @@ enum WIXSTDBA_CONTROL
 	WIXSTDBA_CONTROL_UPGRADE_LINK,
 	WIXSTDBA_CONTROL_NEXT_BUTTON,
 	WIXSTDBA_CONTROL_BACK_BUTTON,
+	WIXSTDBA_CONTROL_SKIP_BUTTON,
 
 
 	// Options page
@@ -205,12 +206,13 @@ static THEME_ASSIGN_CONTROL_ID vrgInitControls[] = {
 	{ WIXSTDBA_CONTROL_UPGRADE_LINK, L"UpgradeHyperlink" },
 	{ WIXSTDBA_CONTROL_NEXT_BUTTON, L"NextButton" },
 	{ WIXSTDBA_CONTROL_BACK_BUTTON, L"BackButton" },
+	{ WIXSTDBA_CONTROL_SKIP_BUTTON, L"SkipButton" },
 
 	{WIXSTDBA_CONTROL_PERMACHINE_RADIO, L"PerMachineInstall" },
 	{WIXSTDBA_CONTROL_PERUSER_RADIO, L"PerUserInstall" },
 	{ WIXSTDBA_CONTROL_INSTALLFOLDER_EDITBOX, L"InstallFolderEditbox" },
 	{ WIXSTDBA_CONTROL_BROWSE_BUTTON, L"BrowseButton" },
-	
+
 	{WIXSTDBA_CONTROL_REGSIGNIN_RADIO, L"SignInRButton"},
 	{WIXSTDBA_CONTROL_REGCREATE_RADIO, L"CreateRButton"},
 	{WIXSTDBA_CONTROL_REGMAIL_LABEL, L"RegisterEmailLabel"},
@@ -457,8 +459,8 @@ LExit:
 		{
 			*pRequestedState = BOOTSTRAPPER_REQUEST_STATE_NONE;
 		}
-		else if (BOOTSTRAPPER_RELATED_OPERATION_NONE == m_Operation && 
-			BOOTSTRAPPER_REQUEST_STATE_NONE == *pRequestedState && 
+		else if (BOOTSTRAPPER_RELATED_OPERATION_NONE == m_Operation &&
+			BOOTSTRAPPER_REQUEST_STATE_NONE == *pRequestedState &&
 			BOOTSTRAPPER_RELATION_UPGRADE != m_command.relationType)
 		{
 			// Same version upgrade detected, mark absent so the install runs
@@ -716,7 +718,7 @@ LExit:
 		if (INSTALLMESSAGE_ACTIONSTART == mt)
 		{
 			LPCWSTR wzActionProgressText = NULL;
-			ExtractActionProgressText(wzMessage, &wzActionProgressText);  
+			ExtractActionProgressText(wzMessage, &wzActionProgressText);
 			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_EXECUTE_PROGRESS_ACTIONDATA_TEXT, wzActionProgressText);
 		}
 
@@ -790,10 +792,10 @@ LExit:
 			m_fShowingInternalUiThisPackage = pPackage && pPackage->fDisplayInternalUI;
 
 			WCHAR wzInfo[1024] = { };
-			if (m_fIsUninstall) 
-				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s ...", wz);
+			if (m_fIsUninstall)
+				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s...", wz);
 			else
-				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s ...", wz);
+				::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s...", wz);
 
 			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_EXECUTE_PROGRESS_PACKAGE_TEXT, wz);
 			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_OVERALL_PROGRESS_PACKAGE_TEXT, wz);
@@ -828,10 +830,10 @@ LExit:
 		LPCWSTR wzPackageName = (SUCCEEDED(hr) && pPackage->sczDisplayName) ? pPackage->sczDisplayName : wzPackageId;
 
 		WCHAR wzInfo[1024] = { };
-		if (m_fIsUninstall) 
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s ...  [ %u%% ]", wzPackageName, dwProgressPercentage);
+		if (m_fIsUninstall)
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Uninstalling %s...", wzPackageName, dwProgressPercentage);
 		else
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s ...  [ %u%% ]", wzPackageName, dwProgressPercentage);
+			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Installing %s...", wzPackageName, dwProgressPercentage);
 		ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_OVERALL_PROGRESS_PACKAGE_TEXT, wzInfo);
 
 		m_dwCalculatedExecuteProgress = dwOverallProgressPercentage * (100 - WIXSTDBA_ACQUIRE_PERCENTAGE) / 100;
@@ -887,7 +889,7 @@ LExit:
 				{
 					StrAllocFormatted(&wzDstPackageLog, L"%s\\%s", wzInstallLogPath, PathFile(wzPackageLog));
 					DirEnsureExists(wzInstallLogPath, NULL);
-					FileEnsureMove(wzPackageLog, wzDstPackageLog, TRUE, TRUE); 
+					FileEnsureMove(wzPackageLog, wzDstPackageLog, TRUE, TRUE);
 				} else
 					BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Setup was unable to copy logs to the specified installation log path.");
 
@@ -937,7 +939,7 @@ LExit:
 				{
 					HRESULT hr = m_pEngine->SetDownloadSource(wzPackageOrContainerId, wzPayloadId, wzDownloadSource, sczHTTPDwnUserName, sczHTTPDwnPassword);
 					nResult = SUCCEEDED(hr) ? IDDOWNLOAD : IDERROR;
-				} 
+				}
 				else
 					nResult = IDDOWNLOAD;
 			}
@@ -975,7 +977,7 @@ LExit:
 			{
 				HRESULT hr = m_pEngine->SetDownloadSource(wzPackageOrContainerId, wzPayloadId, wzDownloadSource, sczHTTPDwnUserName, sczHTTPDwnPassword);
 				nResult = SUCCEEDED(hr) ? IDRETRY : IDERROR;
-			} 
+			}
 			else
 				nResult = IDDOWNLOAD;
 		}
@@ -1095,6 +1097,7 @@ private: // privates
 		hr = pThis->InitializeData();
 		BalExitOnFailure(hr, "Failed to initialize data in bootstrapper application.");
 
+
 		// Create main window.
 		pThis->InitializeTaskbarButton();
 		hr = pThis->CreateMainWindow();
@@ -1198,7 +1201,7 @@ LExit:
 		{
 			BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Update available, url: %ls; size: %I64u.", sczUpdateUrl, qwSize);
 			// Show upgrade on install and modify pages
-			if (pThis->m_rgdwPageIds[WIXSTDBA_PAGE_INSTALL] == pThis->m_dwCurrentPage || 
+			if (pThis->m_rgdwPageIds[WIXSTDBA_PAGE_INSTALL] == pThis->m_dwCurrentPage ||
 				pThis->m_rgdwPageIds[WIXSTDBA_PAGE_MODIFY] == pThis->m_dwCurrentPage)
 			{
 				pThis->m_pEngine->SetUpdate(NULL, sczUpdateUrl, qwSize, BOOTSTRAPPER_UPDATE_HASH_TYPE_NONE, NULL, 0);
@@ -1238,10 +1241,10 @@ LExit:
 		ExitOnFailure(hr, "Unknown commandline parameters.");
 
 		// Override default language to correctly support UK English (this is not required in WiX 3.8)
-		if (!(m_sczLanguage && *m_sczLanguage)) 
-		{ 
-			hr = StrAllocFormatted(&m_sczLanguage, L"%u", ::GetUserDefaultLangID()); 
-			BalExitOnFailure(hr, "Failed to set language."); 
+		if (!(m_sczLanguage && *m_sczLanguage))
+		{
+			hr = StrAllocFormatted(&m_sczLanguage, L"%u", ::GetUserDefaultLangID());
+			BalExitOnFailure(hr, "Failed to set language.");
 		}
 
 		hr = PathRelativeToModule(&sczModulePath, NULL, m_hModule);
@@ -1284,6 +1287,35 @@ LExit:
 		{
 			hr = ParseBootrapperApplicationDataFromXml(pixdManifest);
 			BalExitOnFailure(hr, "Failed to read bootstrapper application data.");
+		}
+
+		if (m_fOutputToConsole)
+		{
+			BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Write to console command was detected! Trying to attach to the parent console process");
+			BOOL bAttCons = AttachConsole(ATTACH_PARENT_PROCESS);
+
+			if (!bAttCons)
+			{
+				BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Failed to attach to parent process.");
+			}
+
+			if (bAttCons)
+			{
+				BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Successfully attached to parent console process.");
+				m_fStdConsoleHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+				m_fAttachedToConsole = ((m_fStdConsoleHandle != NULL) && (m_fStdConsoleHandle != INVALID_HANDLE_VALUE));
+				if (!m_fAttachedToConsole)
+				{
+					BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Failed to get the console handle");
+					FreeConsole();
+				}
+			}
+
+			if (!m_fAttachedToConsole)
+			{
+				hr = E_UNEXPECTED;
+				BalExitOnFailure(hr, "Failed to setup console output. Setup will exit now!");
+			}
 		}
 
 
@@ -1329,6 +1361,15 @@ LExit:
 
 						hr = StrAllocString(psczLanguage, &argv[i][0], 0);
 						BalExitOnFailure(hr, "Failed to copy language.");
+					}
+				}
+				if (CSTR_EQUAL == ::CompareStringW(LOCALE_INVARIANT, NORM_IGNORECASE, &argv[i][1], -1, L"toconsole", -1))
+				{
+					m_fOutputToConsole = TRUE;
+					m_command.display = BOOTSTRAPPER_DISPLAY_NONE;
+					if (BOOTSTRAPPER_RESTART_UNKNOWN == m_command.restart)
+					{
+						m_command.restart = BOOTSTRAPPER_RESTART_AUTOMATIC;
 					}
 				}
 				else if (m_sdOverridableVariables)
@@ -1666,11 +1707,11 @@ LExit:
 			dwWindowStyle &= ~WS_VISIBLE;
 		}
 
-		// Don't show the window if there is a splash screen (it will be made visible when the splash screen is hidden) 
-		if (::IsWindow(m_command.hwndSplashScreen)) 
-		{ 
-			dwWindowStyle &= ~WS_VISIBLE; 
-		} 
+		// Don't show the window if there is a splash screen (it will be made visible when the splash screen is hidden)
+		if (::IsWindow(m_command.hwndSplashScreen))
+		{
+			dwWindowStyle &= ~WS_VISIBLE;
+		}
 
 		// Center the window on the monitor with the mouse.
 		if (::GetCursorPos(&ptCursor))
@@ -1846,8 +1887,12 @@ LExit:
 				pBA->OnClickOptionsCancelButton();
 				return 0;
 
+			case WIXSTDBA_CONTROL_SKIP_BUTTON:
+				pBA->OnClickInstallButton(TRUE);
+				return 0;
+
 			case WIXSTDBA_CONTROL_INSTALL_BUTTON:
-				pBA->OnClickInstallButton();
+				pBA->OnClickInstallButton(TRUE);
 				return 0;
 
 			case WIXSTDBA_CONTROL_REPAIR_BUTTON:
@@ -2021,10 +2066,10 @@ LExit:
 		SetState(WIXSTDBA_STATE_HELP, S_OK);
 
 		// If the UI should be visible, display it now and hide the splash screen
-		if (BOOTSTRAPPER_DISPLAY_NONE < m_command.display) 
-		{ 
-			::ShowWindow(m_pTheme->hwndParent, SW_SHOW); 
-		} 
+		if (BOOTSTRAPPER_DISPLAY_NONE < m_command.display)
+		{
+			::ShowWindow(m_pTheme->hwndParent, SW_SHOW);
+		}
 
 		m_pEngine->CloseSplashScreen();
 
@@ -2048,10 +2093,10 @@ LExit:
 		SetState(WIXSTDBA_STATE_DETECTING, hr);
 
 		// If the UI should be visible, display it now and hide the splash screen
-		if (BOOTSTRAPPER_DISPLAY_NONE < m_command.display) 
-		{ 
-			::ShowWindow(m_pTheme->hwndParent, SW_SHOW); 
-		} 
+		if (BOOTSTRAPPER_DISPLAY_NONE < m_command.display)
+		{
+			::ShowWindow(m_pTheme->hwndParent, SW_SHOW);
+		}
 
 		m_pEngine->CloseSplashScreen();
 
@@ -2082,7 +2127,7 @@ LExit:
 
 		LOC_STRING* pLocString = NULL;
 
-		if (m_plannedAction == BOOTSTRAPPER_ACTION_UNINSTALL) 
+		if (m_plannedAction == BOOTSTRAPPER_ACTION_UNINSTALL)
 		{
 			m_fIsUninstall = TRUE;
 			LocGetString(m_pWixLoc, L"#(loc.ProgressHeaderUninstall)", &pLocString);
@@ -2091,7 +2136,7 @@ LExit:
 			m_pEngine->SetVariableString(WIXSTDBA_VARIABLE_PROGRESS_INFO, pLocString->wzText);
 		}
 
-		if (m_plannedAction == BOOTSTRAPPER_ACTION_REPAIR) 
+		if (m_plannedAction == BOOTSTRAPPER_ACTION_REPAIR)
 		{
 			m_fIsRepair = TRUE;
 			LocGetString(m_pWixLoc, L"#(loc.ProgressHeaderRepair)", &pLocString);
@@ -2143,6 +2188,18 @@ LExit:
 
 		SetState(WIXSTDBA_STATE_APPLYING, hr);
 		SetProgressState(hr);
+
+		if (m_fAttachedToConsole)
+		{
+			char *szPgLine;
+			if (m_fIsUninstall) {
+				szPgLine = "\nInstalling...\n";
+			} else {
+				szPgLine = "\nUninstalling...\n";
+			}
+			DWORD dSzWritten;
+			WriteConsole(m_fStdConsoleHandle, szPgLine, strlen(szPgLine), &dSzWritten, NULL);
+		}
 		SetTaskbarButtonProgress(0);
 
 		hr = m_pEngine->Apply(m_hWnd);
@@ -2258,7 +2315,7 @@ LExit:
 						m_pEngine->SetVariableString(WIXSTDBA_VARIABLE_SUCCESS_HEADER, pLocString->wzText);
 						LocGetString(m_pWixLoc, L"#(loc.SuccessInfoRepair)", &pLocString);
 						m_pEngine->SetVariableString(WIXSTDBA_VARIABLE_SUCCESS_INFO, pLocString->wzText);
-					} 
+					}
 					else if (m_fIsUninstall)
 					{
 						LocGetString(m_pWixLoc, L"#(loc.SuccessHeaderUninstall)", &pLocString);
@@ -2266,7 +2323,7 @@ LExit:
 						LocGetString(m_pWixLoc, L"#(loc.SuccessInfoUninstall)", &pLocString);
 						m_pEngine->SetVariableString(WIXSTDBA_VARIABLE_SUCCESS_INFO, pLocString->wzText);
 					}
-					else 
+					else
 					{
 						m_fInstallSucceed = TRUE;
 
@@ -2280,7 +2337,7 @@ LExit:
 
 							BalGetStringVariable(L"MSICustomErrFile", &sczUnFormatedErrFile);
 							BalFormatString(sczUnFormatedErrFile, &sczErrFile);
-							
+
 							if (SUCCEEDED(FileToString(sczErrFile, &sczSuccessErrMsg, &feEncodingFound)))
 							{
 								LocGetString(m_pWixLoc, L"#(loc.SuccessErrorInfoText)", &pLocString);
@@ -2448,19 +2505,19 @@ LExit:
 				// Remember current page
 				m_dwCurrentPage = dwNewPageId;
 
-				// On the install page set the focus to the install button or the next enabled control if install is disabled 
-				if (m_rgdwPageIds[WIXSTDBA_PAGE_INSTALL] == dwNewPageId) 
-				{ 
-					HWND hwndFocus = ::GetDlgItem(m_pTheme->hwndParent, WIXSTDBA_CONTROL_INSTALL_BUTTON); 
-					if (hwndFocus && !ThemeControlEnabled(m_pTheme, WIXSTDBA_CONTROL_INSTALL_BUTTON)) 
-					{ 
-						hwndFocus = ::GetNextDlgTabItem(m_pTheme->hwndParent, hwndFocus, FALSE); 
+				// On the install page set the focus to the install button or the next enabled control if install is disabled
+				if (m_rgdwPageIds[WIXSTDBA_PAGE_INSTALL] == dwNewPageId)
+				{
+					HWND hwndFocus = ::GetDlgItem(m_pTheme->hwndParent, WIXSTDBA_CONTROL_INSTALL_BUTTON);
+					if (hwndFocus && !ThemeControlEnabled(m_pTheme, WIXSTDBA_CONTROL_INSTALL_BUTTON))
+					{
+						hwndFocus = ::GetNextDlgTabItem(m_pTheme->hwndParent, hwndFocus, FALSE);
 					}
 
-					if (hwndFocus) 
-					{ 
-						::SetFocus(hwndFocus); 
-					} 
+					if (hwndFocus)
+					{
+						::SetFocus(hwndFocus);
+					}
 				}
 			}
 		}
@@ -2560,7 +2617,7 @@ LExit:
 		LPWSTR sczDomainValue = NULL;
 		LPWSTR sczPasswordValue = NULL;
 
-		BOOL bRes = SUCCEEDED(BalGetStringVariable(L"ComputerName", &sczDomainValue)) && 
+		BOOL bRes = SUCCEEDED(BalGetStringVariable(L"ComputerName", &sczDomainValue)) &&
 					SUCCEEDED(BalGetStringVariable(L"LogonUser", &sczUserNameValue)) &&
 					SUCCEEDED(BalGetStringVariable(wzPasswordVarID, &sczPasswordValue));
 
@@ -2616,7 +2673,7 @@ LExit:
 			{
 				DWORD exitcode = 0;
 				LPWSTR sczCmdParam = NULL;
-				if (DB_ToCheck == NULL) 
+				if (DB_ToCheck == NULL)
 					StrAllocFormatted(&sczCmdParam, L"\"%s\" checkconnection -H%s -U%s -P%s", sczPSQLPath, sczPSQLHost, sczPSQLUser, sczPSQLPass);
 				else
 					StrAllocFormatted(&sczCmdParam, L"\"%s\" checkdbexists -H%s -U%s -P%s -CKDB%s", sczPSQLPath, sczPSQLHost, sczPSQLUser, sczPSQLPass, DB_ToCheck);
@@ -2629,7 +2686,7 @@ LExit:
 				ZeroMemory( &pi, sizeof(pi) );
 
 
-				// Start the child process. 
+				// Start the child process.
 				if( CreateProcessW(NULL,   // No module name (use command line)
 					sczCmdParam,    // Command line
 					NULL,           // Process handle not inheritable
@@ -2637,10 +2694,10 @@ LExit:
 					FALSE,          // Set handle inheritance to FALSE
 					CREATE_NO_WINDOW, // No creation flags
 					NULL,           // Use parent's environment block
-					NULL,           // Use parent's starting directory 
+					NULL,           // Use parent's starting directory
 					&si,            // Pointer to STARTUPINFO structure
 					&pi )           // Pointer to PROCESS_INFORMATION structure
-					) 
+					)
 				{
 					// Wait until child process exits.
 					WaitForSingleObject( pi.hProcess, INFINITE );
@@ -2648,7 +2705,7 @@ LExit:
 					// get the process exit code
 					GetExitCodeProcess(pi.hProcess, (LPDWORD)&exitcode);
 
-					// Close process and thread handles. 
+					// Close process and thread handles.
 					CloseHandle( pi.hProcess );
 					CloseHandle( pi.hThread );
 				}
@@ -2671,11 +2728,11 @@ LExit:
 						sczMessageText = L"Setup was unable to connect to the specified database server. Invalid arguments.\nWould you like to continue anyway?";
 						break;
 					case QCPSQL_SUCCESS_DBNOTEXISTS:
-						if ((DB_ToCheck != NULL) && (DB_ShouldExists)) 
+						if ((DB_ToCheck != NULL) && (DB_ShouldExists))
 							StrAllocFormatted(&sczMessageText, L"The database \"%s\" does not exists on the host \"%s\".\nWould you like to continue anyway?", DB_ToCheck, sczPSQLHost);
 						break;
 					case QCPSQL_SUCCESS_DBEXISTS:
-						if ((DB_ToCheck != NULL) && (!DB_ShouldExists))				
+						if ((DB_ToCheck != NULL) && (!DB_ShouldExists))
 							StrAllocFormatted(&sczMessageText, L"The database \"%s\" already exists on the host \"%s\".\nWould you like to continue anyway?", DB_ToCheck, sczPSQLHost);
 						break;
 					default:
@@ -2683,9 +2740,9 @@ LExit:
 				}
 
 				if (sczMessageText != NULL)
-					bPSQLOk = (IDYES == ::MessageBoxW(m_hWnd, sczMessageText, m_pTheme->sczCaption, MB_ICONEXCLAMATION | MB_YESNO));										
+					bPSQLOk = (IDYES == ::MessageBoxW(m_hWnd, sczMessageText, m_pTheme->sczCaption, MB_ICONEXCLAMATION | MB_YESNO));
 			}
-		}				
+		}
 
 		return bPSQLOk;
 	}
@@ -2695,7 +2752,7 @@ LExit:
 	{
 		BOOL bPathIsValid = TRUE;
 
-		if (StrCmpCW(wzInstallPath, L"") == 0) 
+		if (StrCmpCW(wzInstallPath, L"") == 0)
 		{
 			bPathIsValid = FALSE;
 			::MessageBoxW(m_hWnd, L"The install location cannot be blank. You must enter a full path with drive letter, like:\n\tC:\\Program Files\\App\n\nor a UNC path, like\n\t\\\\ServerName\\AppShare", m_pTheme->sczCaption, MB_ICONEXCLAMATION | MB_OK);
@@ -2706,7 +2763,7 @@ LExit:
 			while (*wz)
 			{
 				++i;
-				if ((L'/' == *wz) || ((L':' == *wz) && (i != 2)) || (L'*' == *wz) || (L'?' == *wz) || 
+				if ((L'/' == *wz) || ((L':' == *wz) && (i != 2)) || (L'*' == *wz) || (L'?' == *wz) ||
 					(L'"' == *wz) || (L'<' == *wz) || (L'>' == *wz) || (L'|' == *wz))
 					bInvalidCharFound = TRUE;
 				++wz;
@@ -2735,7 +2792,7 @@ LExit:
 			LPWSTR sczMessageText = NULL;
 
 			StrAllocFormatted(&wzLoc, L"#(loc.%s)", wzEmailVarID);
-			LocGetString(m_pWixLoc, wzLoc, &pLocString);			
+			LocGetString(m_pWixLoc, wzLoc, &pLocString);
 
 			BOOL bIsBlank = (StrCmpCW(sczEmailValue, L"") == 0);
 
@@ -2799,7 +2856,7 @@ LExit:
 				m_pEngine->SetVariableString(WIXSTDBA_VARIABLE_INSTALL_FOLDER, sczPath);
 				SavePageSettings(WIXSTDBA_PAGE_INSTALLDIR);
 				SetState(WIXSTDBA_STATE_SVC_OPTIONS, S_OK);
-				
+
 				// Display the elevation shield if perMachine installation
 				LONGLONG llElevated = 0;
 				if (SUCCEEDED(BalGetNumericVariable(WIXSTDBA_VARIABLE_PERMACHINE_INSTALL, &llElevated)))
@@ -2831,7 +2888,7 @@ LExit:
 			if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_PERMACHINE_INSTALL_FOLDER, &sczPath))
 				&& SUCCEEDED(BalFormatString(sczPath, &sczFPath)))
 					ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_INSTALLFOLDER_EDITBOX, sczFPath);
-		} 
+		}
 		else
 		{
 			if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_PERUSER_INSTALL_FOLDER, &sczPath))
@@ -2848,7 +2905,7 @@ LExit:
 		BOOL fSkipReg = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_SKIPREG_CHECKBOX);
 		BOOL fSignIn = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_REGSIGNIN_RADIO);
 
-		//if (fSkipReg) 
+		//if (fSkipReg)
 		//{
 		//	ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_DBHOST_EDIT, L"localhost");
 		//	ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_DBUSER_EDIT, L"postgres");
@@ -2864,16 +2921,16 @@ LExit:
 	}
 
 
-	
+
 	//
 	// OnClickInstallButton - start the install by planning the packages.
 	//
-	void OnClickInstallButton()
+	void OnClickInstallButton(BOOL bSkipRegistration)
 	{
 		m_fOverallInstallationStarted = TRUE;
 		BOOL bOkToContinue = TRUE;
 		BOOL fSignIn = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_REGSIGNIN_RADIO);
-		BOOL fSkipReg = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_SKIPREG_CHECKBOX);
+		BOOL fSkipReg = bSkipRegistration || ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_SKIPREG_CHECKBOX);
 
 		SavePageSettings(WIXSTDBA_PAGE_SVC_OPTIONS);
 
@@ -2899,7 +2956,7 @@ LExit:
 				}
 			}
 		}
-		
+
 		SavePageSettings(WIXSTDBA_PAGE_INSTALL);
 
 		if (bOkToContinue) this->OnPlan(BOOTSTRAPPER_ACTION_INSTALL);
@@ -3389,7 +3446,7 @@ LExit:
 	{
 		/// On package install complete, if WIXSTDBA_VARIABLE_LOGSPATH is defined
 		/// then will move bundle installation log to the specified path.
-		if (!m_fOverallInstallationStarted) 
+		if (!m_fOverallInstallationStarted)
 			return;
 
 		if (BalStringVariableExists(WIXSTDBA_VARIABLE_LOGSPATH))
@@ -3403,7 +3460,7 @@ LExit:
 			{
 				StrAllocFormatted(&wzDstBundleLog, L"%s\\%s", wzInstallLogPath, PathFile(wzBundleLog));
 				DirEnsureExists(wzInstallLogPath, NULL);
-				FileEnsureCopy(wzBundleLog, wzDstBundleLog, TRUE); 
+				FileEnsureCopy(wzBundleLog, wzDstBundleLog, TRUE);
 			} else
 				BalLog(BOOTSTRAPPER_LOG_LEVEL_STANDARD, "Setup was unable to copy bundle log to the specified installation log path.");
 		}
@@ -3418,6 +3475,42 @@ LExit:
 		)
 	{
 		HRESULT hr = S_OK;
+		if (m_fAttachedToConsole)
+		{
+			CONSOLE_SCREEN_BUFFER_INFO csbiInfo;
+			if (GetConsoleScreenBufferInfo(m_fStdConsoleHandle, &csbiInfo))
+			{
+				csbiInfo.dwCursorPosition.X = 0;
+				SetConsoleCursorPosition(m_fStdConsoleHandle, csbiInfo.dwCursorPosition);
+			}
+
+			int lnWidth = 79;
+			int barWidth = 60;
+			int pos = int(barWidth * dwOverallPercentage/100);
+			char  szPgLine[200] = "[";
+
+			for (int i = 0; i < barWidth; ++i)
+			{
+				if (i < pos)
+				{
+					sprintf_s(szPgLine, lnWidth, "%s%s", szPgLine, "=");
+				}
+				else if (i == pos)
+				{
+					sprintf_s(szPgLine, lnWidth, "%s%s", szPgLine, ">");
+				}
+				else
+				{
+					sprintf_s(szPgLine, lnWidth, "%s%s", szPgLine, " ");
+				}
+			}
+			sprintf_s(szPgLine, lnWidth, "%s] %u%%", szPgLine, dwOverallPercentage);
+
+			DWORD dSzWritten;
+			WriteConsole(m_fStdConsoleHandle, szPgLine, strlen(szPgLine), &dSzWritten, NULL);
+			//			m_fStdConsoleHandle = NULL;
+		}
+
 
 		if (m_fTaskbarButtonOK)
 		{
@@ -3506,7 +3599,7 @@ LExit:
 		HRESULT hr = S_OK;
 		LPWSTR sczBafPath = NULL;
 
-		hr = PathRelativeToModule(&sczBafPath, L"bafunctions.dll", m_hModule); 
+		hr = PathRelativeToModule(&sczBafPath, L"bafunctions.dll", m_hModule);
 		BalExitOnFailure(hr, "Failed to get path to BA function DLL.");
 
 #ifdef DEBUG
@@ -3535,7 +3628,7 @@ LExit:
 			::FreeLibrary(m_hBAFModule);
 			m_hBAFModule = NULL;
 		}
-		ReleaseStr(sczBafPath);    
+		ReleaseStr(sczBafPath);
 
 		return hr;
 	}
@@ -3547,8 +3640,8 @@ LExit:
 #define BUF_LEN 1024
 
 BOOL POSTRequest(
-	__in LPCSTR szHost, 
-	__in LPCSTR szApiPath, 
+	__in LPCSTR szHost,
+	__in LPCSTR szApiPath,
 	__in LPSTR  szFormData,
 	__out LPSTR *ppszResponseMessage)
 {
@@ -3565,7 +3658,7 @@ BOOL POSTRequest(
 		HINTERNET connect = InternetConnectA(internet, szHost, INTERNET_DEFAULT_HTTP_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
 		if(connect != NULL)
 		{
-			HINTERNET request = HttpOpenRequestA(connect, method, szApiPath, "HTTP/1.1", NULL, NULL, 
+			HINTERNET request = HttpOpenRequestA(connect, method, szApiPath, "HTTP/1.1", NULL, NULL,
 				INTERNET_FLAG_HYPERLINK | INTERNET_FLAG_IGNORE_CERT_CN_INVALID |
 				INTERNET_FLAG_IGNORE_CERT_DATE_INVALID |
 				INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTP  |
@@ -3590,7 +3683,7 @@ BOOL POSTRequest(
 
 					// Now we should read the response
 					DWORD bytesRead;
-					char holdBuff[4096];    
+					char holdBuff[4096];
 					char* temp = holdBuff;
 					while (InternetReadFile(request, temp, 1024, &bytesRead) == TRUE && bytesRead > 0)
 					{
@@ -3612,8 +3705,8 @@ BOOL POSTRequest(
 			StringCchPrintfA(*ppszResponseMessage, BUF_LEN, "Connectiong to %s failed.", szHost);
 
 		InternetCloseHandle(connect);
-	} 
-	else 
+	}
+	else
 		StringCchPrintfA(*ppszResponseMessage, BUF_LEN, "Initialize internet resources failed.");
 	InternetCloseHandle(internet);
 
@@ -3630,7 +3723,7 @@ BOOL REST_ValidateUserLogin(
 	BOOL bRes = false;
 	wchar_t wzFormData[BUF_LEN] = L"";
 	StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&password=%s", wzUserName, wzPassword);
-	
+
 	size_t   i;
     char *pMBFormData = (char *)malloc( BUF_LEN );
     wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
@@ -3655,7 +3748,7 @@ BOOL REST_ValidateUserLogin(
 			{
 				JSONRoot = JSONResponse->AsObject();
 				if (JSONRoot.find(L"error") != JSONRoot.end() && JSONRoot[L"error"]->IsString())
-				{					
+				{
 					StringCchPrintfW(wzErrorMessage, BUF_LEN, JSONRoot[L"error"]->AsString().c_str());
 				}
 				else
@@ -3673,7 +3766,7 @@ BOOL REST_ValidateUserLogin(
 							if (hFile != INVALID_HANDLE_VALUE)
 							{
 								DWORD bytesWritten;
-								WriteFile(hFile, pMBDataResponse, strlen(pMBDataResponse), &bytesWritten, NULL);		
+								WriteFile(hFile, pMBDataResponse, strlen(pMBDataResponse), &bytesWritten, NULL);
 								CloseHandle( hFile);
 							}
 						}
@@ -3816,6 +3909,9 @@ public:
 		m_fPrereqAlreadyInstalled = FALSE;
 		m_fOverallInstallationStarted = FALSE;
 		m_fUpdating = FALSE;
+		m_fOutputToConsole = FALSE;
+		m_fAttachedToConsole = FALSE;
+		m_fStdConsoleHandle = NULL;
 
 		pEngine->AddRef();
 		m_pEngine = pEngine;
@@ -3833,6 +3929,11 @@ public:
 		CopyBundleLogToSpecifiedPath();
 		AssertSz(!::IsWindow(m_hWnd), "Window should have been destroyed before destructor.");
 		AssertSz(!m_pTheme, "Theme should have been released before destuctor.");
+
+		if (m_fAttachedToConsole)
+		{
+			FreeConsole();
+		}
 
 		ReleaseObject(m_pTaskbarList);
 		ReleaseDict(m_sdOverridableVariables);
@@ -3913,6 +4014,9 @@ private:
 	LPWSTR m_sczPrereqPackage;
 	BOOL m_fPrereqInstalled;
 	BOOL m_fPrereqAlreadyInstalled;
+	BOOL m_fOutputToConsole;
+	BOOL m_fAttachedToConsole;
+	HANDLE m_fStdConsoleHandle;
 
 	ITaskbarList3* m_pTaskbarList;
 	UINT m_uTaskbarButtonCreatedMessage;

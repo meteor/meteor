@@ -160,11 +160,18 @@ _.extend(TestCaseResults.prototype, {
     this.equal(actual, expected, message, true);
   },
 
-  instanceOf: function (obj, klass) {
+  instanceOf: function (obj, klass, message) {
     if (obj instanceof klass)
       this.ok();
     else
-      this.fail({type: "instanceOf"}); // XXX what other data?
+      this.fail({type: "instanceOf", message: message, not: false}); // XXX what other data?
+  },
+
+  notInstanceOf: function (obj, klass, message) {
+    if (obj instanceof klass)
+      this.fail({type: "instanceOf", message: message, not: true}); // XXX what other data?
+    else
+      this.ok();
   },
 
   matches: function (actual, regexp, message) {
@@ -172,7 +179,15 @@ _.extend(TestCaseResults.prototype, {
       this.ok();
     else
       this.fail({type: "matches", message: message,
-                 actual: actual, regexp: regexp.toString()});
+                 actual: actual, regexp: regexp.toString(), not: false});
+  },
+
+  notMatches: function (actual, regexp, message) {
+    if (regexp.test(actual))
+      this.fail({type: "matches", message: message,
+                 actual: actual, regexp: regexp.toString(), not: true});
+    else
+      this.ok();
   },
 
   // expected can be:
@@ -262,14 +277,28 @@ _.extend(TestCaseResults.prototype, {
     if (v === undefined)
       this.ok();
     else
-      this.fail({type: "undefined", message: msg});
+      this.fail({type: "undefined", message: msg, not: false});
+  },
+
+  isNotUndefined: function (v, msg) {
+    if (v === undefined)
+      this.fail({type: "undefined", message: msg, not: true});
+    else
+      this.ok();
   },
 
   isNaN: function (v, msg) {
     if (isNaN(v))
       this.ok();
     else
-      this.fail({type: "NaN", message: msg});
+      this.fail({type: "NaN", message: msg, not: false});
+  },
+
+  isNotNaN: function (v, msg) {
+    if (isNaN(v))
+      this.fail({type: "NaN", message: msg, not: true});
+    else
+      this.ok();
   },
 
   include: function (s, v, message, not) {

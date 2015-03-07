@@ -625,8 +625,10 @@ _.extend(Isopack.prototype, {
     }
 
     // If we're loading from an IsopackCache, we need to load the WatchSets
-    // which will be used by the bundler. (pluginProviderPackageMap and builtBy
-    // are only used by IsopackCache._checkUpToDate.)
+    // which will be used by the bundler.  (builtBy is only used by
+    // IsopackCache._checkUpToDate. pluginProviderPackageMap will actually be
+    // set by IsopackCache afterwards, because it has access to an appropriate
+    // PackageMap which can be subset to create a new PackageMap object.)
     var unibuildWatchSets = {};
     if (options.isopackBuildInfoJson) {
       if (! options.firstIsopack)
@@ -1089,7 +1091,8 @@ _.extend(Isopack.prototype, {
       // The actual trees to copy!
       'tools', 'examples', 'LICENSE.txt', 'meteor', 'meteor.bat',
       'scripts/admin/launch-meteor',
-      'packages/package-version-parser/package-version-parser.js');
+      'packages/package-version-parser/package-version-parser.js',
+      'packages/meteor/flush-buffers-on-exit-in-windows.js');
 
     // Trim blank line and unnecessary examples.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {

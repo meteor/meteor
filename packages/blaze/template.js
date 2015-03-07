@@ -334,7 +334,7 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
  * server's `publish()` call.
  * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function
  * on server.
- * @param {Function|Object} [callbacks] Optional. May include `onError` and
+ * @param {Function|Object} [callbacks] Optional. May include `onStop` and
  * `onReady` callbacks. If a function is passed instead of an object, it is
  * interpreted as an `onReady` callback.
  */

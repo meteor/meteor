@@ -1,21 +1,8 @@
 ## v.NEXT
 
-* Subscription handles returned from `Meteor.subscribe` and
-  `TemplateInstance#subscribe` now have a `subscriptionId` property to identify
-  which subscription the handle is for.
+## v1.0.4, 2015-Mar-??
 
-* The `onError` callback to `Meteor.subscribe` has been replaced with a more
-  general `onStop` callback that has an error as an optional first argument.
-  The `onStop` callback is called when the subscription is terminated for
-  any reason.
-
-* Template instances now have a `subscribe` method that functions exactly like
-  `Meteor.subscribe`, but stops the subscription when the template is destroyed.
-  There is a new method on Template instances called `subscriptionsReady()`
-  which is a reactive function that returns true when all of the subscriptions
-  made with `TemplateInstance#subscribe` are ready. There is also a built-in
-  helper that returns the same thing and can be accessed with
-  `Template.subscriptionsReady` inside any template.
+### Mongo Driver and Livequery
 
 * Meteor is now tested against MongoDB 2.6 (and the bundled version used by
   `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
@@ -33,48 +20,97 @@
   driver is slightly different in MongoDB 2.6; see
   https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
 
-  (We have not tested Meteor against the as-yet-unreleased MongoDB 3.0, but as
+  (We have not tested Meteor against the recently-released MongoDB 3.0, but as
   of this release, Meteor uses a version of the Node Mongo driver that is
   compatible with MongoDB 3.0 and it is likely that it will work.)
-
-* `c.upsert({_id: 'x'}, {foo: 1})`, when acting as an insert, now uses the `_id`
-  of `'x'` rather than a random `_id`, in the Minimongo implementation of
-  `upsert`, just like it does for `c.upsert({_id: 'x'}, {$set: {foo: 1}})`.
-  (The previous behavior matched a bug in the MongoDB 2.4 implementation of
-  upsert that is fixed in MongoDB 2.6.)  #2278
-
-* If the oplog observe driver gets too far behind in processing the oplog, skip
-  entries and re-poll queries instead of trying to keep up.  #2668
 
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
   0.8.1.  #3038
 
-* Support `Npm.require('foo/bar')`.  #3505 #3526
+* Use correct transform for allow/deny rules in `update` when different rules
+  have different transforms.  #3108
 
-* In `package.js` files, `Npm.require` can only require built-in Node modules
-  (and dev bundle modules, though you shouldn't depend on that), not the modules
-  from its own `Npm.depends`. Previously, such code would work but only on the
-  second time a `package.js` was executed.
+* Provide direct access to the collection and database objects from the npm
+  Mongo driver via new `rawCollection` and `rawDatabase` methods on
+  `Mongo.Collection`.  #3640
 
-* Add `onRendered`, `onCreated`, and `onDestroyed` methods to `Template`
+* Observing or publishing an invalid query now throws an error instead of
+  effectively hanging the server.  #2534
 
-* Ignore vim swap files in the `public` and `private` directories.  #3322
 
-* The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
-  email `headers`.  The `from` address can now be set separately on the
-  individual templates, and is a function there rather than a static string.
-  \#2858 #2854
+### Livequery
+
+* If the oplog observe driver gets too far behind in processing the oplog, skip
+  entries and re-poll queries instead of trying to keep up.  #2668
+
+* Optimize common cases faced by the "crossbar" data structure (used by oplog
+  tailing and DDP method write tracking).  #3697
+
+* The oplog observe driver recovers from failed attempts to apply the modifier
+  from the oplog (eg, because of empty field names).
+
+
+### Minimongo
+
+* When acting as an insert, `c.upsert({_id: 'x'}, {foo: 1})` now uses the `_id`
+  of `'x'` rather than a random `_id` in the Minimongo implementation of
+  `upsert`, just like it does for `c.upsert({_id: 'x'}, {$set: {foo: 1}})`.
+  (The previous behavior matched a bug in the MongoDB 2.4 implementation of
+  upsert that is fixed in MongoDB 2.6.)  #2278
+
+* Avoid unnecessary work while paused in minimongo.
+
+* Fix bugs related to observing queries with field filters: `changed` callbacks
+  should not trigger unless a field in the filter has changed, and `changed`
+  callbacks need to trigger when a parent of an included field is
+  unset.  #2254 #3571
+
+* Disallow setting fields with empty names in minimongo, to match MongoDB 2.6
+  semantics.
+
+
+### DDP
+
+* Subscription handles returned from `Meteor.subscribe` and
+  `TemplateInstance#subscribe` now have a `subscriptionId` property to identify
+  which subscription the handle is for.
+
+* The `onError` callback to `Meteor.subscribe` has been replaced with a more
+  general `onStop` callback that has an error as an optional first argument.
+  The `onStop` callback is called when the subscription is terminated for
+  any reason.  `onError` is still supported for backwards compatibility. #1461
+
+* Websockets now support the
+  [`permessage-deflate`](https://tools.ietf.org/id/draft-ietf-hybi-permessage-compression-19.txt)
+  extension, which compresses data on the wire. It is enabled by default on the
+  server. To disable it, set `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure
+  compression options, set `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that
+  will be used as an argument to
+  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
+  Compression is supported on the client side by Meteor's DDP client and by
+  browsers including Chrome, Safari, and Firefox 37.
 
 * The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
   clone of what the function returned rather than sharing mutable state.  #3201
 
-* `spiderable` now supports escaped `#!` fragments.  #2938
-
-* `meteor login --email` no longer takes an ignored argument.  #3532
-
 * Make it easier to use the Node DDP client implementation without running a web
   server too.  #3452
+
+
+### Blaze
+
+* Template instances now have a `subscribe` method that functions exactly like
+  `Meteor.subscribe`, but stops the subscription when the template is destroyed.
+  There is a new method on Template instances called `subscriptionsReady()`
+  which is a reactive function that returns true when all of the subscriptions
+  made with `TemplateInstance#subscribe` are ready. There is also a built-in
+  helper that returns the same thing and can be accessed with
+  `Template.subscriptionsReady` inside any template.
+
+* Add `onRendered`, `onCreated`, and `onDestroyed` methods to
+  `Template`. Assignments to `Template.foo.rendered` and so forth are deprecated
+  but are still supported for backwards compatibility.
 
 * Fix bug where, when a helper or event handler was called from inside a custom
   block helper,  `Template.instance()` returned the `Template.contentBlock`
@@ -89,32 +125,81 @@
   The previous functionality can be reproduced by using
   `Template.instance().data` instead of `Template.currentData()`.
 
-* Remove some packages used internally to support legacy MDG systems
-  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
-  `dev-bundle-fetcher`, and `star-translate`).
+* `Template.instance()` now works inside `Template.body`.  #3631
 
-* Optimize common cases faced by the "crossbar" data structure (used by oplog
-  tailing and DDP method write tracking).  #3697
+* Allow specifying attributes on `<body>` tags in templates.
 
-* Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
-  reading or parsing the settings file.  #3757
+* Improve performance of rendering large arrays.  #3596
 
-* Don't overly escape `Meteor.settings.public` and other parts of
-  `__meteor_runtime_config__`.  #3730
+
+### Isobuild
+
+* Support `Npm.require('foo/bar')`.  #3505 #3526
+
+* In `package.js` files, `Npm.require` can only require built-in Node modules
+  (and dev bundle modules, though you shouldn't depend on that), not the modules
+  from its own `Npm.depends`. Previously, such code would work but only on the
+  second time a `package.js` was executed.
+
+* Ignore vim swap files in the `public` and `private` directories.  #3322
+
+* Fix regression in 1.0.2 where packages might not be rebuilt when the compiler
+  version changes.
+
+
+### Meteor Accounts
+
+* The `accounts-password` `Accounts.emailTemplates` can now specify arbitrary
+  email `headers`.  The `from` address can now be set separately on the
+  individual templates, and is a function there rather than a static
+  string. #2858 #2854
 
 * Add login hooks on the client: `Accounts.onLogin` and
   `Accounts.onLoginFailure`. #3572
 
-* Upgraded dependencies:
+* Add a unique index to the collection that stores OAuth login configuration to
+  ensure that only one configuration exists per service.  #3514
 
-  - node: 0.10.36 (from 0.10.33)
-  - Fibers: 1.0.5 (from 1.0.1)
-  - MongoDB: 2.6.7 (from 2.4.12)
-  - openssl in mongo: 1.0.2 (from 1.0.1j)
-  - MongoDB driver: 1.4.30 (from 1.4.1)
-  - bson: 0.2.18 (from 0.2.7)
 
-### Meteor Mobile updates
+### Webapp
+
+* `spiderable` now supports escaped `#!` fragments.  #2938
+
+* Disable `appcache` on Firefox by default.  #3248
+
+* Don't overly escape `Meteor.settings.public` and other parts of
+  `__meteor_runtime_config__`.  #3730
+
+* Reload the client program on `SIGHUP` or Node-specific IPC messages, not
+  `SIGUSR2`.
+
+
+### `meteor` command-line tool
+
+* Enable tab-completion of global variables in `meteor shell`.  #3227
+
+* Improve the stability of `meteor shell`.  #3437 #3595 #3591
+
+* `meteor login --email` no longer takes an ignored argument.  #3532
+
+* Fix regression in 1.0.2 where `meteor run --settings s` would ignore errors
+  reading or parsing the settings file.  #3757
+
+* Fix crash in `meteor publish` in some cases when the package is inside an
+  app. #3676
+
+* Fix crashes in `meteor search --show-all` and `meteor search --maintainer`.
+  \#3636
+
+* Kill PhantomJS processes after `meteor --test`, and only run the app
+  once. #3205 #3793
+
+* Give a better error when Mongo fails to start up due to a full disk.  #2378
+
+* After killing existing `mongod` servers, also clear the `mongod.lock` file.
+
+
+### Meteor Mobile
 
 * Upgrade the Cordova CLI dependency from 3.5.1 to 4.2.0. See the release notes
   for the 4.x series of the Cordova CLI [on Apache
@@ -140,6 +225,44 @@
   - `org.apache.cordova.inappbrowser`: from 0.5.1 to 0.6.0
 
 * Use the newer `ios-sim` binary, compiled with Xcode 6 on OS X Mavericks.
+
+
+### Tracker
+
+* Use `Session.set({k1: v1, k2: v2})` to set multiple values at once.
+
+
+### Utilities
+
+* Provide direct access to all options supported by the `request` npm module via
+  the new server-only `npmRequestOptions` option to `HTTP.call`.  #1703
+
+
+### Other bug fixes and improvements
+
+* Many internal refactorings towards supporting Meteor on Windows are in this
+  release.
+
+* Remove some packages used internally to support legacy MDG systems
+  (`application-configuration`, `ctl`, `ctl-helper`, `follower-livedata`,
+  `dev-bundle-fetcher`, and `star-translate`).
+
+* Provide direct access to some npm modules used by core packages on the
+  `NpmModules` field of `WebAppInternals`, `MongoInternals`, and
+  `HTTPInternals`.
+
+* Upgraded dependencies:
+
+  - node: 0.10.36 (from 0.10.33)
+  - Fibers: 1.0.5 (from 1.0.1)
+  - MongoDB: 2.6.7 (from 2.4.12)
+  - openssl in mongo: 1.0.2 (from 1.0.1j)
+  - MongoDB driver: 1.4.32 (from 1.4.1)
+  - bson: 0.2.18 (from 0.2.7)
+  - faye-websocket: 0.9.3 (from 0.8.1)
+  - websocket-driver: 0.5.3 (from 0.4.0)
+  - sockjs server: 0.3.14 (from 0.3.11)
+  - request: 2.53.0 (from 2.47.0)
 
 
 ## v.1.0.3.2, 2015-Feb-25
@@ -510,7 +633,7 @@ Primigenus, svda, yauh, and zol.
 * `Package.registerBuildPlugin` its associated functions have been added
   to the public API, cleaned up, and documented. The new function is
   identical to the earlier _transitional_registerBuildPlugin except for
-  minor backwards- compatible API changes. See
+  minor backwards-compatible API changes. See
   https://docs.meteor.com/#Package-registerBuildPlugin
 
 * Rename the `showdown` package to `markdown`.

@@ -186,3 +186,11 @@ exports.createOrganization = function (username, password) {
 
   return orgName;
 };
+
+exports.getMeteorRuntimeConfigFromHTML = function (html) {
+  var m = html.match(/__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]+?)"\)\)/);
+  if (! m) {
+    selftest.fail("Can't find __meteor_runtime_config__");
+  }
+  return JSON.parse(decodeURIComponent(m[1]));
+};

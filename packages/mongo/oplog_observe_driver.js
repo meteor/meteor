@@ -262,8 +262,10 @@ _.extend(OplogObserveDriver.prototype, {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       self._published.set(id, self._sharedProjectionFn(newDoc));
-      var changed = LocalCollection._makeChangedFields(_.clone(newDoc), oldDoc);
-      changed = self._projectionFn(changed);
+      var projectedNew = self._projectionFn(newDoc);
+      var projectedOld = self._projectionFn(oldDoc);
+      var changed = LocalCollection._makeChangedFields(
+        projectedNew, projectedOld);
       if (!_.isEmpty(changed))
         self._multiplexer.changed(id, changed);
     });
@@ -602,7 +604,18 @@ _.extend(OplogObserveDriver.prototype, {
           newDoc = EJSON.clone(newDoc);
 
           newDoc._id = id;
-          LocalCollection._modify(newDoc, op.o);
+          try {
+            LocalCollection._modify(newDoc, op.o);
+          } catch (e) {
+            if (e.name !== "MinimongoError")
+              throw e;
+            // We didn't understand the modifier.  Re-fetch.
+            self._needToFetch.set(id, op.ts.toString());
+            if (self._phase === PHASE.STEADY) {
+              self._fetchModifiedDocuments();
+            }
+            return;
+          }
           self._handleDoc(id, self._sharedProjectionFn(newDoc));
         } else if (!canDirectlyModifyDoc ||
                    self._matcher.canBecomeTrueByModifier(op.o) ||

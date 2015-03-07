@@ -143,7 +143,13 @@ selftest.define("package with colons is converted on Windows", function () {
   //   cwd: targetDirectory
   // }));
 
+  var expectedHash;
+  if (process.platform === "win32") {
+    expectedHash = "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=";
+  } else {
+    expectedHash = "AQX/7h0fXwHT9rNQvlBTvIZAE2g8krlnkEQMc9lTuMI=";
+  }
+
   // Saved tree hash of the correct result
-  selftest.expectEqual(files.treeHash(targetDirectory),
-    "Ayya11T8Zef16+F7C/sZSwRxIiGiBbBFIwUC88Weaqs=");
+  selftest.expectEqual(files.treeHash(targetDirectory), expectedHash);
 });

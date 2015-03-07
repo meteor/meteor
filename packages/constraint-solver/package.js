@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.18-vs.3"
+  version: "1.0.19-rc.0"
 });
 
 Npm.depends({

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.0.12-winr.6'
+  version: '1.1.0-rc.0'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
@@ -10,7 +10,13 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "compileTemplates",
-  use: ['spacebars-compiler'],
+  // minifiers is a weak dependency of spacebars-compiler; adding it here
+  // ensures that the output is minified.  (Having it as a weak dependency means
+  // that we don't ship uglify etc with built apps just because
+  // boilerplate-generator uses spacebars-compiler.)
+  // XXX maybe uglify should be applied by this plugin instead of via magic
+  // weak dependency.
+  use: ['minifiers', 'spacebars-compiler'],
   sources: [
     'plugin/html_scanner.js',
     'plugin/compile-templates.js'

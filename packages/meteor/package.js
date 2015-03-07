@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.5-winr.6'
+  version: '1.1.5-rc.0'
 });
 
 Package.registerBuildPlugin({
@@ -41,6 +41,10 @@ Package.onUse(function (api) {
   // in this case server must load first.
   api.addFiles('url_server.js', 'server');
   api.addFiles('url_common.js', ['client', 'server']);
+
+  // People expect process.exit() to not swallow console output.
+  // On Windows, it sometimes does, so we fix it for all apps and packages
+  api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
 });
 
 Package.onTest(function (api) {
