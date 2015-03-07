@@ -627,7 +627,7 @@ CS.Solver.prototype.analyzeRootDependencies = function () {
 
 CS.Solver.prototype.throwAnyErrors = function () {
   if (this.errors.length) {
-    CS.throwConstraintSolverError(this.errors.join('\n'));
+    CS.throwConstraintSolverError(this.errors.join('\n\n'));
   }
 };
 
