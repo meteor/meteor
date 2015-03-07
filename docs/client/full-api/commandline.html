@@ -49,9 +49,11 @@ server code that would normally execute. In order to continue execution of
 server code, use either the web-based Node Inspector or the command-line
 debugger (further instructions will be printed in the console).
 
-The easiest way to set breakpoints is to use the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger">`debugger` keyword</a>.
+Breakpoints can be set using the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger" target="_blank">`debugger` keyword</a>, or through the web UI of Node Inspector ("Sources" tab).
 
-The options for `meteor debug` are identical to those for `meteor run`, with the addition of `--debug-port`. Run `meteor help debug` for full details.
+The server process debugger will listen for incoming connections from debugging clients, such as node-inspector, on port 5858 by default. To specify a different port use the `--debug-port <port>` option.
+
+The same debugging functionality can be achieved by adding the `--debug-port <port>` option to other `meteor` tool commands, such as `meteor run` and `meteor test-packages`.
 
 
 <h3 id="meteorcreate">meteor create <i>name</i></h3>

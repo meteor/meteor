@@ -19,7 +19,7 @@ using Meteor's local development server.
 
 #### `meteor debug`
 
-Run the project, but suspend the server process for debugging.
+Run the project with Node Inspector attached, so that you can step through your server code line by line. See [`meteor debug`](#/full/meteordebug) in the full docs for more information.
 
 #### `meteor deploy <site>`
 
