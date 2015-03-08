@@ -1,6 +1,5 @@
 var assert = require("assert");
 var _ = require('underscore');
-var files = require('./files.js');
 
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
