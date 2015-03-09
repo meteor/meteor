@@ -104,7 +104,11 @@ var afterFlushCallbacks = [];
 
 var requireFlush = function () {
   if (! willFlush) {
-    setTimeout(Tracker.flush, 0);
+    // We want this code to work without Meteor, see debugFunc above
+    if (typeof Meteor !== "undefined")
+      Meteor._setImmediate(Tracker.flush);
+    else
+      setTimeout(Tracker.flush, 0);
     willFlush = true;
   }
 };
