@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Wrapper around the bcrypt npm package",
-  version: '0.7.8-winr.3'
+  version: '0.7.8_1',
+  documentation: null
 });
 
 Npm.depends({
