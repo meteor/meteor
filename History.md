@@ -118,14 +118,6 @@
   template instead of the actual user-defined template, making it difficult to
   use `Template.instance()` for local template state.
 
-* Fix/change behavior of `Template.currentData` and `Template.parentData`
-  inside event handlers. Previously, they returned the data context of the
-  enclosing template, but now they return the data context of the target
-  element.
-
-  The previous functionality can be reproduced by using
-  `Template.instance().data` instead of `Template.currentData()`.
-
 * `Template.instance()` now works inside `Template.body`.  #3631
 
 * Allow specifying attributes on `<body>` tags in templates.
