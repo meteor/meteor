@@ -357,7 +357,7 @@ var runNpmCommand = function (args, cwd) {
   var future = new Future;
   var child_process = require('child_process');
   child_process.execFile(
-    npmPath, args, { cwd: cwd }, function (err, stdout, stderr) {
+    npmPath, args, { cwd: cwd, maxBuffer: 10 * 1024 * 1024 }, function (err, stdout, stderr) {
     if (meteorNpm._printNpmCalls)
       process.stdout.write(err ? 'failed\n' : 'done\n');
 
