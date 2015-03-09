@@ -831,7 +831,7 @@ exports.maybePrintRegistrationLink = function (options) {
     } else {
       Console.error(
         "You can set a password on your account or change your email",
-        "address at:" + session.registrationUrl);
+        "address at:", session.registrationUrl);
       Console.error();
     }
     return true;
