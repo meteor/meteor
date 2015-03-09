@@ -1028,14 +1028,6 @@ Hi there!
   {{> Template.contentBlock}}
 </template>
 
-<template name="spacebars_template_test_currentData_and_parentData_in_events">
-  {{#with x=1}}
-    {{#with y=2}}
-      <button>{{label}}</button>
-    {{/with}}
-  {{/with}}
-</template>
-
 <template name="spacebars_template_test_template_level_subscriptions">
   {{#if Template.subscriptionsReady}}
     ready!
