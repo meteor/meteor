@@ -143,6 +143,10 @@
 * Add a unique index to the collection that stores OAuth login configuration to
   ensure that only one configuration exists per service.  #3514
 
+* On the server, a new option
+  `Accounts.setPassword(user, password, { logout: false })` overrides the
+  default behavior of logging out all logged-in connections for the user.  #3846
+
 
 ### Webapp
 
