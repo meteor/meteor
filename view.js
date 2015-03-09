@@ -817,10 +817,9 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
               return null;
             var handlerThis = thisInHandler || this;
             var handlerArgs = arguments;
-            return Blaze._withCurrentView(Blaze.getView(evt.currentTarget),
-              function () {
-                return handler.apply(handlerThis, handlerArgs);
-              });
+            return Blaze._withCurrentView(view, function () {
+              return handler.apply(handlerThis, handlerArgs);
+            });
           },
           range, function (r) {
             return r.parentRange;
