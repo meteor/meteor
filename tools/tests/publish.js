@@ -320,7 +320,7 @@ selftest.define("do-not-update-to-rcs",
     run.match("Published " + fullPackageName + "@");
     run.expectExit(0);
 
-    setPackageVersion(s, "1.1.0");
+    setPackageVersion(s, "1.0.1");
     run = s.run("publish");
     run.waitSecs(15);
     run.expectExit(0);
