@@ -81,16 +81,6 @@
   The `onStop` callback is called when the subscription is terminated for
   any reason.  `onError` is still supported for backwards compatibility. #1461
 
-* Websockets now support the
-  [`permessage-deflate`](https://tools.ietf.org/id/draft-ietf-hybi-permessage-compression-19.txt)
-  extension, which compresses data on the wire. It is enabled by default on the
-  server. To disable it, set `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure
-  compression options, set `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that
-  will be used as an argument to
-  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
-  Compression is supported on the client side by Meteor's DDP client and by
-  browsers including Chrome, Safari, and Firefox 37.
-
 * The return value from a server-side `Meteor.call` or `Meteor.apply` is now a
   clone of what the function returned rather than sharing mutable state.  #3201
 
