@@ -4,10 +4,10 @@
 
 ### Mongo Driver and Livequery
 
-* Meteor is now tested against MongoDB 2.6 (and the bundled version used by
-  `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
-  Previous versions of Meteor mostly worked with MongoDB 2.6, with a few
-  caveats:
+* Meteor is now tested against MongoDB 2.6 by default (and the bundled version
+  used by `meteor run` has been upgraded). It should still work fine with
+  MongoDB 2.4.  Previous versions of Meteor mostly worked with MongoDB 2.6, with
+  a few caveats:
 
     - Some upsert invocations did not work with MongoDB in previous versions of
       Meteor.
@@ -20,9 +20,10 @@
   driver is slightly different in MongoDB 2.6; see
   https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
 
-  (We have not tested Meteor against the recently-released MongoDB 3.0, but as
-  of this release, Meteor uses a version of the Node Mongo driver that is
-  compatible with MongoDB 3.0 and it is likely that it will work.)
+  We have also tested Meteor against the recently-released MongoDB 3.0.0.
+  While we are not shipping MongoDB 3.0 with Meteor in this release (preferring
+  to wait until its deployment is more widespread), we believe that Meteor
+  1.0.4 apps will work fine when used with MongoDB 3.0.0 servers.
 
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
