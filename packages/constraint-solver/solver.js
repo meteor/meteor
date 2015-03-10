@@ -287,9 +287,11 @@ CS.Solver.prototype.analyzeConstraints = function () {
 
   // top-level constraints
   _.each(input.constraints, function (c) {
-    constraints.push(new CS.Solver.Constraint(
-      null, c.package, c.versionConstraint,
-      "constraint#" + constraints.length));
+    if (c.constraintString) {
+      constraints.push(new CS.Solver.Constraint(
+        null, c.package, c.versionConstraint,
+        "constraint#" + constraints.length));
+    }
   });
 
   // constraints specified by package versions
@@ -299,7 +301,8 @@ CS.Solver.prototype.analyzeConstraints = function () {
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
         var p2 = dep.packageConstraint.package;
-        if (input.isKnownPackage(p2)) {
+        if (input.isKnownPackage(p2) &&
+            dep.packageConstraint.constraintString) {
           constraints.push(new CS.Solver.Constraint(
             pv, p2, dep.packageConstraint.versionConstraint,
             "constraint#" + constraints.length));
@@ -768,7 +771,7 @@ CS.Solver.prototype.listConstraintsOnPackage = function (package) {
   var self = this;
   var constraints = self.analysis.constraints;
 
-  var result = 'Constraints:';
+  var result = 'Constraints on package "' + package + '":';
 
   _.each(constraints, function (c) {
     if (c.toPackage === package) {
@@ -809,7 +812,7 @@ CS.Solver.prototype.throwConflicts = function () {
         throw new Error("Internal error: Version not found");
       }
       var error = (
-        'conflict: constraint ' + (new PV.PackageConstraint(
+        'Conflict: Constraint ' + (new PV.PackageConstraint(
           c.toPackage, c.vConstraint)) +
           ' is not satisfied by ' + c.toPackage + ' ' + chosenVersion + '.');
 

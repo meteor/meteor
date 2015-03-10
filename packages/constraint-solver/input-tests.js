@@ -184,7 +184,7 @@ Tinytest.add("constraint solver - input - don't break root dep", function (test)
         "bar 2.0.1": []
       }
     }
-  }, 'Breaking change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints:\n* bar@=2.0.0 <- foo 1.0.0\n\nTo allow breaking changes to top-level dependencies, you must pass --allow-incompatible-update to meteor [run], update, add, or remove.');
+  }, 'Breaking change required to top-level dependency: bar 2.0.0, was 2.0.1.\nConstraints on package "bar":\n* bar@=2.0.0 <- foo 1.0.0\n\nTo allow breaking changes to top-level dependencies, you must pass --allow-incompatible-update to meteor [run], update, add, or remove.');
 });
 
 Tinytest.add("constraint solver - input - don't pick RCs", function (test) {
@@ -483,7 +483,7 @@ Tinytest.add("constraint solver - input - fake PackageConstraint", function (tes
                               "bar 1.0.0": ["foo@1.0.0"]
                             }
                           })),
-             /constraint foo@1.0.0 is not satisfied by foo 2.0.0/);
+             /Constraint foo@1.0.0 is not satisfied by foo 2.0.0/);
 });
 
 Tinytest.add("constraint solver - input - stack overflow bug", function (test) {

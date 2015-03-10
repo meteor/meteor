@@ -157,7 +157,7 @@ Tinytest.add("constraint solver - no results", function (test) {
       // Lines should be unique.
         && ! error.message.match(/bad-1[^]+bad-1/)
       // only two constraints listed
-        && ! error.message.match(/onstraints:[^+]@[^]+@[^]+@/);
+        && ! error.message.match(/onstraints on package "foo":[^]+@[^]+@[^]+@/);
     });
   });
 
@@ -170,8 +170,8 @@ Tinytest.add("constraint solver - no results", function (test) {
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({foo: "2.0.0", bar: "1.0.0"}, function (error) {
-      return error.message.match(/Constraints:[^]+top level/) &&
-        error.message.match(/Constraints:[^]+bar 1.0.0/);
+      return error.message.match(/Constraints on package "foo":[^]+top level/) &&
+        error.message.match(/Constraints on package "foo":[^]+bar 1.0.0/);
     });
   });
 
@@ -236,8 +236,8 @@ Tinytest.add("constraint solver - any-of constraint", function (test) {
     FAIL({"one-of-equal": "1.0.0",
           "one-of": "1.0.0",
           "indirect" : "=2.0.0"}, function (error) {
-            return error.message.match(/Constraints:[^]+top level/) &&
-              error.message.match(/Constraints:[^]+one-of-equal 1.0.0/);
+            return error.message.match(/Constraints on package "indirect":[^]+top level/) &&
+              error.message.match(/Constraints on package "indirect":[^]+one-of-equal 1.0.0/);
           });
   });
 });
