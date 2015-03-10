@@ -5,6 +5,9 @@ var pvVar = function (p, v) {
   return p + ' ' + v;
 };
 
+// The "inner solver".  You construct it with a ConstraintSolver.Input object
+// (which specifies the problem) and then call .getSolution() on it.
+
 CS.Solver = function (input, options) {
   var self = this;
   check(input, CS.Input);
