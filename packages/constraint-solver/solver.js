@@ -589,7 +589,7 @@ CS.Solver.prototype.getSolution = function (options) {
     if (input.isRootDependency(package) ||
         input.isInPreviousSolution(package) ||
         input.isUpgrading(package)) {
-      logic.require(pvVar(package, v));
+      logic.require(Logic.implies(package, pvVar(package, v)));
     }
   });
 
