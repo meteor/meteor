@@ -501,6 +501,27 @@ Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
 });
 
 
+Tinytest.add("constraint solver - input - bad package name", function (test) {
+  test.throws(function () {
+    new CS.Input(['-x'], [], new CS.CatalogCache());
+  }, /First character of package name cannot be: -/);
+
+  test.throws(function () {
+    new CS.Input([], [], new CS.CatalogCache(),
+                 { previousSolution: { $a: '1.0.0' } });
+  }, /Package names can only contain/);
+
+  test.throws(function () {
+    new CS.Input([], [], new CS.CatalogCache(),
+                 { upgrade: ['$a'] });
+  }, /Package names can only contain/);
+
+  test.throws(function () {
+    new CS.Input([], [], new CS.CatalogCache(),
+                 { upgrade: ['-a'] });
+  }, /First character of package name cannot be: -/);
+});
+
 
 Tinytest.add("constraint solver - input - slow solve", function (test) {
   var input = CS.Input.fromJSONable({

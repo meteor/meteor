@@ -19,7 +19,7 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
     if (c instanceof PV.PackageConstraint) {
       return c;
     } else {
-      return PV.parsePackageConstraint(c.toString());
+      return PV.parsePackageConstraint(c.package, c.constraintString);
     }
   });
 
@@ -39,6 +39,16 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
 
   self.catalogCache = catalogCache;
 
+  _.each(self.dependencies, validatePackageName);
+  _.each(self.upgrade, validatePackageName);
+  _.each(self.constraints, function (c) {
+    validatePackageName(c.package);
+  });
+  if (self.previousSolution) {
+    _.each(_.keys(self.previousSolution),
+           validatePackageName);
+  }
+
   self._dependencySet = {}; // package name -> true
   _.each(self.dependencies, function (d) {
     self._dependencySet[d] = true;
@@ -47,6 +57,16 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   _.each(self.upgrade, function (u) {
     self._upgradeSet[u] = true;
   });
+};
+
+var validatePackageName = function (name) {
+  PV.validatePackageName(name);
+  // we have some hard constraints of our own, so check them
+  // in case validatePackageName isn't.
+  if ((name.charAt(0) === '$') || (name.charAt(0) === '-')) {
+    throw new Error("First character of package name cannot be: " +
+                    name.charAt(0));
+  }
 };
 
 CS.Input.prototype.isKnownPackage = function (p) {
