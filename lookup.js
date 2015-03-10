@@ -67,7 +67,7 @@ var wrapHelper = function (f, templateFunc) {
     var self = this;
     var args = arguments;
 
-    return Template._withTemplateInstanceFunc(templateFunc, function () {
+    return Blaze.Template._withTemplateInstanceFunc(templateFunc, function () {
       return Blaze._wrapCatchingExceptions(f, 'template helper').apply(self, args);
     });
   };
