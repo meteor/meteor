@@ -1347,8 +1347,8 @@ main.registerCommand({
   maxArgs: 1,
   usesPackage: true,
   options: {
-    "show-all": { type: Boolean, required: false },
-    "ejson": { type: Boolean, required: false }
+    "show-all": { type: Boolean },
+    "ejson": { type: Boolean }
   },
   catalogRefresh:
     new catalog.Refresh.OnceAtStart(
@@ -1449,11 +1449,11 @@ main.registerCommand({
   minArgs: 0, // So we can provide specific help
   maxArgs: 1,
   options: {
-    maintainer: { type: String, required: false },
-    "show-all": { type: Boolean, required: false },
-    ejson: { type: Boolean, required: false },
+    maintainer: { type: String },
+    "show-all": { type: Boolean },
+    ejson: { type: Boolean },
     // Undocumented debug-only option for Velocity.
-    "debug-only": { type: Boolean, required: false }
+    "debug-only": { type: Boolean }
   },
   catalogRefresh:
     new catalog.Refresh.OnceAtStart(

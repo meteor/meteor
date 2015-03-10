@@ -146,6 +146,12 @@ _.extend(ProjectContext.prototype, {
       self._cachedVersionsBeforeReset = null;
     }
 
+    // The --allow-incompatible-update command-line switch, which allows
+    // the version solver to choose versions of root dependencies that are
+    // incompatible with the previously chosen versions (i.e. to downgrade
+    // them or change their major version).
+    self._allowIncompatibleUpdate = options.allowIncompatibleUpdate;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -400,13 +406,22 @@ _.extend(ProjectContext.prototype, {
 
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
       buildmessage.enterJob("selecting package versions", function () {
         var resolver = self._buildResolver();
 
         var resolveOptions = {
           previousSolution: cachedVersions,
-          anticipatedPrereleases: anticipatedPrereleases
+          anticipatedPrereleases: anticipatedPrereleases,
+          allowIncompatibleUpdate: self._allowIncompatibleUpdate,
+          // Not finding an exact match for a previous version in the catalog
+          // is considered an error if we haven't refreshed yet, and will
+          // trigger a refresh and another attempt.  That way, if a previous
+          // version exists, you'll get it, even if we don't have a record
+          // of it yet.  It's not actually fatal, though, for previousSolution
+          // to refer to package versions that we don't have access to or don't
+          // exist.  They'll end up getting changed or removed if possible.
+          missingPreviousVersionIsError: canRetry
         };
         if (self._upgradePackageNames)
           resolveOptions.upgrade = self._upgradePackageNames;

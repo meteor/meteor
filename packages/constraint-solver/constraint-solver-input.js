@@ -5,22 +5,84 @@ var CS = ConstraintSolver;
 // and it holds the data loaded from the Catalog as well.  It can be
 // serialized to JSON and read back in for testing purposes.
 CS.Input = function (dependencies, constraints, catalogCache, options) {
+  var self = this;
   options = options || {};
 
-  this.dependencies = dependencies;
-  this.constraints = constraints;
-  this.upgrade = options.upgrade || [];
-  this.anticipatedPrereleases = options.anticipatedPrereleases || {};
-  this.previousSolution = options.previousSolution || null;
+  // PackageConstraints passed in from the tool to us (where we are a
+  // uniloaded package) will have constructors that we don't recognize
+  // because they come from a different copy of package-version-parser!
+  // Convert them to our PackageConstraint class if necessary.  (This is
+  // just top-level constraints from .meteor/packages or running from
+  // checkout, so it's not a lot of data.)
+  check(constraints, [PackageConstraintType]);
+  constraints = _.map(constraints, function (c) {
+    if (c instanceof PV.PackageConstraint) {
+      return c;
+    } else {
+      return PV.parsePackageConstraint(c.package, c.constraintString);
+    }
+  });
 
-  check(this.dependencies, [String]);
-  check(this.constraints, [PackageConstraintType]);
-  check(this.upgrade, [String]);
-  check(this.anticipatedPrereleases,
+  self.dependencies = dependencies;
+  self.constraints = constraints;
+  self.upgrade = options.upgrade || [];
+  self.anticipatedPrereleases = options.anticipatedPrereleases || {};
+  self.previousSolution = options.previousSolution || null;
+  self.allowIncompatibleUpdate = options.allowIncompatibleUpdate || false;
+
+  check(self.dependencies, [String]);
+  check(self.constraints, [PV.PackageConstraint]);
+  check(self.upgrade, [String]);
+  check(self.anticipatedPrereleases,
         Match.ObjectWithValues(Match.ObjectWithValues(Boolean)));
-  check(this.previousSolution, Match.OneOf(Object, null));
+  check(self.previousSolution, Match.OneOf(Object, null));
 
-  this.catalogCache = catalogCache;
+  self.catalogCache = catalogCache;
+
+  _.each(self.dependencies, validatePackageName);
+  _.each(self.upgrade, validatePackageName);
+  _.each(self.constraints, function (c) {
+    validatePackageName(c.package);
+  });
+  if (self.previousSolution) {
+    _.each(_.keys(self.previousSolution),
+           validatePackageName);
+  }
+
+  self._dependencySet = {}; // package name -> true
+  _.each(self.dependencies, function (d) {
+    self._dependencySet[d] = true;
+  });
+  self._upgradeSet = {};
+  _.each(self.upgrade, function (u) {
+    self._upgradeSet[u] = true;
+  });
+};
+
+var validatePackageName = function (name) {
+  PV.validatePackageName(name);
+  // we have some hard constraints of our own, so check them
+  // in case validatePackageName isn't.
+  if ((name.charAt(0) === '$') || (name.charAt(0) === '-')) {
+    throw new Error("First character of package name cannot be: " +
+                    name.charAt(0));
+  }
+};
+
+CS.Input.prototype.isKnownPackage = function (p) {
+  return this.catalogCache.hasPackage(p);
+};
+
+CS.Input.prototype.isRootDependency = function (p) {
+  return _.has(this._dependencySet, p);
+};
+
+CS.Input.prototype.isUpgrading = function (p) {
+  return _.has(this._upgradeSet, p);
+};
+
+CS.Input.prototype.isInPreviousSolution = function (p) {
+  return !! (this.previousSolution && _.has(this.previousSolution, p));
 };
 
 CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
@@ -34,9 +96,11 @@ CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
   _.each(self.constraints, function (constraint) {
     packagesToLoad[constraint.package] = true;
   });
-  _.each(self.previousSolution, function (version, package) {
-    packagesToLoad[package] = true;
-  });
+  if (self.previousSolution) {
+    _.each(self.previousSolution, function (version, package) {
+      packagesToLoad[package] = true;
+    });
+  }
 
   // Load packages into the cache (if they aren't loaded already).
   catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
@@ -61,7 +125,10 @@ CS.Input.prototype.toJSONable = function () {
   }
   if (self.previousSolution !== null) {
     obj.previousSolution = self.previousSolution;
-  };
+  }
+  if (self.allowIncompatibleUpdate) {
+    obj.allowIncompatibleUpdate = true;
+  }
   return obj;
 };
 
@@ -73,7 +140,8 @@ CS.Input.fromJSONable = function (obj) {
     anticipatedPrereleases: Match.Optional(
       Match.ObjectWithValues(Match.ObjectWithValues(Boolean))),
     previousSolution: Match.Optional(Match.OneOf(Object, null)),
-    upgrade: Match.Optional([String])
+    upgrade: Match.Optional([String]),
+    allowIncompatibleUpdate: Match.Optional(Boolean)
   });
 
   return new CS.Input(
@@ -85,16 +153,16 @@ CS.Input.fromJSONable = function (obj) {
     {
       upgrade: obj.upgrade,
       anticipatedPrereleases: obj.anticipatedPrereleases,
-      previousSolution: obj.previousSolution
+      previousSolution: obj.previousSolution,
+      allowIncompatibleUpdate: obj.allowIncompatibleUpdate
     });
 };
 
-// PackageConstraints and VersionConstraints passed in from the tool
-// to us (where we are a uniloaded package) will have constructors
-// that we don't recognize because they come from a different copy of
-// package-version-parser!  In addition, objects with constructors
+// Type description of PackageConstraint that doesn't rely on the constructor
+// being correct.  Unrelatedly, objects with constructors (any constructors)
 // can't be checked by "check" in the same way as plain objects, so we
 // have to resort to examining the fields explicitly.
+
 var VersionConstraintType = Match.OneOf(
   PV.VersionConstraint,
   Match.Where(function (vc) {
@@ -105,7 +173,6 @@ var VersionConstraintType = Match.OneOf(
     }]);
     return vc.constructor !== Object;
   }));
-
 var PackageConstraintType = Match.OneOf(
   PV.PackageConstraint,
   Match.Where(function (c) {
