@@ -26,27 +26,64 @@ CS.Solver = function (input, options) {
   self.steps = [];
   self.stepsByName = {};
 
-  // package -> array of version strings.  If a package has an entry in
-  // this map, then only the versions in the array are allowed for
-  // consideration.
-  self.packagesWithNoAllowedVersions = {}; // package -> [constraints]
-  self.allowedVersions = self.calculateAllowedVersions();
-
   self.analysis = {};
+  self.analyze();
 
   self.logic = null; // Logic.Solver, initialized later
 };
 
-CS.Solver.prototype.calculateAllowedVersions = function () {
+CS.Solver.prototype.throwAnyErrors = function () {
+  if (this.errors.length) {
+    var multiline = _.any(this.errors, function (e) {
+      return /\n/.test(e);
+    });
+    CS.throwConstraintSolverError(this.errors.join(
+      multiline ? '\n\n' : '\n'));
+  }
+};
+
+CS.Solver.prototype.getVersions = function (package) {
   var self = this;
-  var allowedVersions = {};
-  // process top-level constraints, applying them right now!
+  if (_.has(self.analysis.allowedVersions, package)) {
+    return self.analysis.allowedVersions[package];
+  } else {
+    return self.input.catalogCache.getPackageVersions(package);
+  }
+};
+
+// Populates `self.analysis` with various data structures derived from the
+// input.  May also throw errors, and may call methods that rely on
+// analysis once that particular analysis is done (e.g. `self.getVersions`
+// which relies on `self.analysis.allowedVersions`.
+CS.Solver.prototype.analyze = function () {
+  var self = this;
+  var analysis = self.analysis;
+  var input = self.input;
+  var cache = input.catalogCache;
+
+  ////////// ANALYZE ALLOWED VERSIONS
+  // (An "allowed version" is one that isn't ruled out by a top-level
+  // constraint.)
+
+  // package -> array of version strings.  If a package has an entry in
+  // this map, then only the versions in the array are allowed for
+  // consideration.
+  analysis.allowedVersions = {};
+  analysis.packagesWithNoAllowedVersions = {}; // package -> [constraints]
+
+  // process top-level constraints, applying them right now by limiting
+  // what package versions we even consider (e.g. create variables for).
   // we won't even consider versions that don't match them.
-  // in particular, this is great for equality constraints.
-  _.each(_.groupBy(self.input.constraints, 'package'), function (cs, p) {
-    var versions = self.input.catalogCache.getPackageVersions(p);
+  // this speeds up solving, especially when we have equality
+  // constraints.  we can't throw any errors yet, because
+  // `input.constraints` doesn't establish any dependencies (so we
+  // don't know if it's a problem that some package has no legal
+  // versions), but we can track such packages in packagesWithNoAllowedVersions
+  // so that we throw a good error later.
+  _.each(_.groupBy(input.constraints, 'package'), function (cs, p) {
+    var versions = cache.getPackageVersions(p);
     if (! versions.length) {
-      // let the main solver deal with this unknown package
+      // deal with wholly unknown packages later
       return;
     }
     _.each(cs, function (constr) {
@@ -55,23 +92,119 @@ CS.Solver.prototype.calculateAllowedVersions = function () {
       });
     });
     if (! versions.length) {
-      self.packagesWithNoAllowedVersions[p] = _.filter(cs, function (c) {
+      analysis.packagesWithNoAllowedVersions[p] = _.filter(cs, function (c) {
         return !! c.constraintString;
       });
     }
-    allowedVersions[p] = versions;
+    analysis.allowedVersions[p] = versions;
   });
 
-  return allowedVersions;
-};
+  ////////// ANALYZE ROOT DEPENDENCIES
 
-CS.Solver.prototype.getVersions = function (package) {
-  var self = this;
-  if (_.has(self.allowedVersions, package)) {
-    return self.allowedVersions[package];
-  } else {
-    return self.input.catalogCache.getPackageVersions(package);
+  // Collect root dependencies that we've never heard of.
+  analysis.unknownRootDeps = [];
+  // Collect "previous solution" versions of root dependencies.
+  analysis.previousRootDepVersions = [];
+
+  _.each(input.dependencies, function (p) {
+    if (! input.isKnownPackage(p)) {
+      analysis.unknownRootDeps.push(p);
+    } else if (input.isInPreviousSolution(p) &&
+               ! input.isUpgrading(p)) {
+      analysis.previousRootDepVersions.push(new CS.PackageAndVersion(
+        p, input.previousSolution[p]));
+    }
+  });
+
+  // throw if there are unknown packages in root deps
+  if (analysis.unknownRootDeps.length) {
+    _.each(analysis.unknownRootDeps, function (p) {
+      self.errors.push('unknown package in top-level dependencies: ' + p);
+    });
+    self.throwAnyErrors();
   }
+
+  ////////// ANALYZE REACHABILITY
+
+  // A "reachable" package is one that is either a root dependency or
+  // a strong dependency of any version of a reachable package.
+  // In other words, we walk all strong dependencies starting
+  // with the root dependencies, and visiting all versions of each
+  // package.
+  //
+  // This analysis is mainly done for performance, because if there are
+  // extraneous packages in the CatalogCache (for whatever reason) we
+  // want to spend as little time on them as possible.  It also establishes
+  // the universe of possible "known" and "unknown" packages we might
+  // come across.
+  //
+  // A more nuanced reachability analysis that takes versions into account
+  // is probably possible.
+
+  // package name -> true
+  analysis.reachablePackages = {};
+  // package name -> package versions asking for it (in pvVar form)
+  analysis.unknownPackages = {};
+
+  var markReachable = function (p) {
+    analysis.reachablePackages[p] = true;
+
+    _.each(self.getVersions(p), function (v) {
+      _.each(cache.getDependencyMap(p, v), function (dep) {
+        // `dep` is a CS.Dependency
+        var p2 = dep.packageConstraint.package;
+        if (! input.isKnownPackage(p2)) {
+          // record this package so we will generate a variable
+          // for it.  we'll try not to select it, and ultimately
+          // throw an error if we are forced to.
+          if (! _.has(analysis.unknownPackages, p2)) {
+            analysis.unknownPackages[p2] = [];
+          }
+          analysis.unknownPackages[p2].push(pvVar(p, v));
+        } else {
+          if (! dep.isWeak) {
+            if (analysis.reachablePackages[p2] !== true) {
+              markReachable(p2);
+            }
+          }
+        }
+      });
+    });
+  };
+
+  _.each(input.dependencies, markReachable);
+
+  ////////// ANALYZE CONSTRAINTS
+
+  // Array of CS.Solver.Constraint
+  analysis.constraints = [];
+
+  // top-level constraints
+  _.each(input.constraints, function (c) {
+    if (c.constraintString) {
+      analysis.constraints.push(new CS.Solver.Constraint(
+        null, c.package, c.versionConstraint,
+        "constraint#" + analysis.constraints.length));
+    }
+  });
+
+  // constraints specified in package dependencies
+  _.each(_.keys(self.analysis.reachablePackages), function (p) {
+    _.each(self.getVersions(p), function (v) {
+      var pv = pvVar(p, v);
+      _.each(cache.getDependencyMap(p, v), function (dep) {
+        // `dep` is a CS.Dependency
+        var p2 = dep.packageConstraint.package;
+        if (input.isKnownPackage(p2) &&
+            dep.packageConstraint.constraintString) {
+          analysis.constraints.push(new CS.Solver.Constraint(
+            pv, p2, dep.packageConstraint.versionConstraint,
+            "constraint#" + analysis.constraints.length));
+        }
+      });
+    });
+  });
+
 };
 
 // A Step consists of a name, an array of terms, and an array of weights.
@@ -230,99 +363,6 @@ CS.Solver.prototype.getStepContributions = function (step) {
   return contributions;
 };
 
-// A "reachable" package is one that is either a root dependency or
-// a strong dependency of any version of a reachable package.
-// In other words, we walk all strong dependencies starting
-// with the root dependencies, and visiting all versions of each
-// package.
-//
-// This analysis is mainly done for performance, because if there are
-// extraneous packages in the CatalogCache (for whatever reason) we
-// want to spend as little time on them as possible.  It also establishes
-// the universe of possible "known" and "unknown" packages we might
-// come across.
-//
-// A more nuanced reachability analysis that takes versions into account
-// is probably possible.
-CS.Solver.prototype.analyzeReachability = function () {
-  var self = this;
-  var input = self.input;
-  var cache = input.catalogCache;
-  // package name -> true
-  var reachablePackages = self.analysis.reachablePackages = {};
-  // package name -> package versions asking for it (in pvVar form)
-  var unknownPackages = self.analysis.unknownPackages = {};
-
-  var visit = function (p) {
-    reachablePackages[p] = true;
-
-    _.each(self.getVersions(p), function (v) {
-      _.each(cache.getDependencyMap(p, v), function (dep) {
-        // `dep` is a CS.Dependency
-        var p2 = dep.packageConstraint.package;
-        if (! input.isKnownPackage(p2)) {
-          // record this package so we will generate a variable
-          // for it.  we'll try not to select it, and ultimately
-          // throw an error if we are forced to.
-          if (! _.has(unknownPackages, p2)) {
-            unknownPackages[p2] = [];
-          }
-          unknownPackages[p2].push(pvVar(p, v));
-        } else {
-          if (! dep.isWeak) {
-            if (reachablePackages[p2] !== true) {
-              visit(p2);
-            }
-          }
-        }
-      });
-    });
-  };
-
-  _.each(input.dependencies, visit);
-};
-
-CS.Solver.prototype.analyzeConstraints = function () {
-  var self = this;
-  var input = self.input;
-  var cache = input.catalogCache;
-  var constraints = self.analysis.constraints = [];
-
-  // top-level constraints
-  _.each(input.constraints, function (c) {
-    if (c.constraintString) {
-      constraints.push(new CS.Solver.Constraint(
-        null, c.package, c.versionConstraint,
-        "constraint#" + constraints.length));
-    }
-  });
-
-  // constraints specified by package versions
-  _.each(_.keys(self.analysis.reachablePackages), function (p) {
-    _.each(self.getVersions(p), function (v) {
-      var pv = pvVar(p, v);
-      _.each(cache.getDependencyMap(p, v), function (dep) {
-        // `dep` is a CS.Dependency
-        var p2 = dep.packageConstraint.package;
-        if (input.isKnownPackage(p2) &&
-            dep.packageConstraint.constraintString) {
-          constraints.push(new CS.Solver.Constraint(
-            pv, p2, dep.packageConstraint.versionConstraint,
-            "constraint#" + constraints.length));
-        }
-      });
-    });
-  });
-};
-
-CS.Solver.prototype.getAllVersionVars = function (package) {
-  var self = this;
-  return _.map(self.getVersions(package),
-               function (v) {
-                 return pvVar(package, v);
-               });
-};
-
 var addCostsToSteps = function (package, versions, costs, steps) {
   var pvs = _.map(versions, function (v) {
     return pvVar(package, v);
@@ -428,22 +468,6 @@ CS.Solver.prototype.getSolution = function (options) {
   var cache = input.catalogCache;
   var allAnswers = (options && options.allAnswers); // for tests
 
-  // populate `analysis.unknownRootDeps`, `analysis.previousRootDepVersions`
-  self.analyzeRootDependencies();
-
-  if (analysis.unknownRootDeps.length) {
-    _.each(analysis.unknownRootDeps, function (p) {
-      self.errors.push('unknown package in top-level dependencies: ' + p);
-    });
-    self.throwAnyErrors();
-  }
-
-  // populate `analysis.reachablePackages`, `analysis.unknownPackages`
-  self.analyzeReachability();
-
-  // populate `analysis.constraints`
-  self.analyzeConstraints();
-
   var logic = self.logic = new Logic.Solver;
 
   // require root dependencies
@@ -453,8 +477,11 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // generate package version variables for known, reachable packages
   _.each(_.keys(analysis.reachablePackages), function (p) {
-    if (! self.packagesWithNoAllowedVersions[p]) {
-      var versionVars = self.getAllVersionVars(p);
+    if (! analysis.packagesWithNoAllowedVersions[p]) {
+      var versionVars = _.map(self.getVersions(p),
+                              function (v) {
+                                return pvVar(p, v);
+                              });
       // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
       logic.require(Logic.atMostOne(versionVars));
       // The variable "foo" is true if and only if at least one of the
@@ -491,6 +518,11 @@ CS.Solver.prototype.getSolution = function (options) {
   });
 
   // Establish the invariant of self.solution being a valid solution.
+  // From now on, if we add some new requirement to the solver that
+  // isn't necessarily true of `self.solution`, we must recalculate
+  // `self.solution` and throw an appropriate error if there isn't
+  // one.  (Usually this involves running `solveAssuming` so that we
+  // don't spoil the solver by putting it into an unsatisfiable state.)
   self.solution = logic.solve();
   if (! self.solution) {
     // There is always a solution at this point, namely,
@@ -505,7 +537,7 @@ CS.Solver.prototype.getSolution = function (options) {
   // which we didn't do earlier because we needed to establish an
   // initial solution before asking the solver if it's possible to
   // not use these packages.
-  _.each(self.packagesWithNoAllowedVersions, function (constrs, p) {
+  _.each(analysis.packagesWithNoAllowedVersions, function (constrs, p) {
     var newSolution = logic.solveAssuming(Logic.not(p));
     if (newSolution) {
       self.solution = newSolution;
@@ -715,34 +747,6 @@ CS.Solver.prototype.getSolution = function (options) {
   };
 
   return result;
-};
-
-CS.Solver.prototype.analyzeRootDependencies = function () {
-  var self = this;
-  var unknownRootDeps = self.analysis.unknownRootDeps = [];
-  var previousRootDepVersions = self.analysis.previousRootDepVersions = [];
-  var input = self.input;
-
-  _.each(input.dependencies, function (p) {
-    if (! input.isKnownPackage(p)) {
-      unknownRootDeps.push(p);
-    } else if (input.isInPreviousSolution(p) &&
-               ! input.isUpgrading(p)) {
-      previousRootDepVersions.push(new CS.PackageAndVersion(
-        p, input.previousSolution[p]));
-    }
-  });
-};
-
-
-CS.Solver.prototype.throwAnyErrors = function () {
-  if (this.errors.length) {
-    var multiline = _.any(this.errors, function (e) {
-      return /\n/.test(e);
-    });
-    CS.throwConstraintSolverError(this.errors.join(
-      multiline ? '\n\n' : '\n'));
-  }
 };
 
 var getOkVersions = function (toPackage, vConstraint, targetVersions) {
