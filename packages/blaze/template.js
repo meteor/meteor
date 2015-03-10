@@ -334,7 +334,7 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
  * server's `publish()` call.
  * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function
  * on server.
- * @param {Function|Object} [callbacks] Optional. May include `onError` and
+ * @param {Function|Object} [callbacks] Optional. May include `onStop` and
  * `onReady` callbacks. If a function is passed instead of an object, it is
  * interpreted as an `onReady` callback.
  */
@@ -490,10 +490,10 @@ Template.instance = function () {
  *
  * - Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns
  * the data context of the template.
+ * - Inside an event handler, returns the data context of the template on which
+ * this event handler was defined.
  * - Inside a helper, returns the data context of the DOM node where the helper
  * was used.
- * - Inside an event handler, returns the data context of the element that fired
- * the event.
  *
  * Establishes a reactive dependency on the result.
  * @locus Client

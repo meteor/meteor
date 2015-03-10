@@ -19,7 +19,6 @@ var inDocument = function (elem) {
   return false;
 };
 
-
 var clickIt = function (elem) {
   if (!inDocument(elem))
     throw new Error("Can't click on elements without first adding them to the document");
@@ -3098,45 +3097,6 @@ Tinytest.add("spacebars-tests - template_tests - custom block helper doesn't bre
   test.equal(canonicalizeHtml(div.innerHTML), "hello hello");
 });
 
-Tinytest.add(
-  "spacebars-tests - template_tests - currentData and parentData in event handlers and helpers",
-  function (test) {
-    var tmpl = Template.spacebars_template_test_currentData_and_parentData_in_events;
-
-    var clicked = false;
-    var currentInEvent;
-    var parentInEvent;
-    var currentInHelper;
-    var parentInHelper;
-
-    tmpl.events({
-      'click button': function () {
-        currentInEvent = Template.currentData();
-        parentInEvent = Template.parentData(1);
-      }
-    });
-
-    tmpl.helpers({
-      label: function () {
-        currentInHelper = Template.currentData();
-        parentInHelper = Template.parentData(1);
-      }
-    });
-
-    var div = renderToDiv(tmpl);
-    var button = div.querySelector('button');
-    document.body.appendChild(div);
-
-    clickIt(button);
-
-    test.equal(currentInEvent, {y: 2});
-    test.equal(parentInEvent, {x: 1});
-    test.equal(currentInHelper, {y: 2});
-    test.equal(parentInHelper, {x: 1});
-
-    document.body.removeChild(div);
-  });
-
 testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions", [
   function (test, expect) {
     var tmpl = Template.spacebars_template_test_template_level_subscriptions;
@@ -3147,9 +3107,12 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
     var stopCallback = expect();
     var stopCallback2 = expect();
 
+    var futureId = Random.id();
+
     // Make sure the HTML is what we expect when one subscription is ready
     var checkOneReady = expect(function () {
       test.equal(canonicalizeHtml(div.innerHTML), "");
+      Meteor.call('makeTemplateSubReady', futureId);
     });
 
     // Make sure the HTML is what we expect when both subscriptions are ready
@@ -3180,8 +3143,9 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
     });
 
     tmpl.onCreated(function () {
-      subHandle = this.subscribe("items", subscribeCallback);
-      subHandle2 = this.subscribe("items", 50, subscribeCallback);
+      var subHandle = this.subscribe("templateSub", subscribeCallback);
+      var subHandle2 = this.subscribe(
+        "templateSub", futureId, subscribeCallback);
 
       subHandle.stop = stopCallback;
       subHandle2.stop = stopCallback2;
@@ -3208,10 +3172,10 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions 
         return trueThenFalse.get();
       },
       subscribingHelper1: expect(function () {
-        subHandle = Template.instance().subscribe("items", 100);
+        subHandle = Template.instance().subscribe("templateSub");
       }),
       subscribingHelper2: expect(function () {
-        var subHandle2 = Template.instance().subscribe("items", 100);
+        var subHandle2 = Template.instance().subscribe("templateSub");
         test.isTrue(subHandle.subscriptionId === subHandle2.subscriptionId);
 
         // Make sure we didn't add two subscription handles to our internal list

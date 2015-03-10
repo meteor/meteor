@@ -1211,7 +1211,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional. May include <code>onError</code> and\n<code>onReady</code> callbacks. If a function is passed instead of an object, it is\ninterpreted as an <code>onReady</code> callback.</p>",
+        "description": "<p>Optional. May include <code>onStop</code> and\n<code>onReady</code> callbacks. If a function is passed instead of an object, it is\ninterpreted as an <code>onReady</code> callback.</p>",
         "name": "callbacks",
         "optional": true,
         "type": {
@@ -2546,6 +2546,15 @@ DocsData = {
         "type": {
           "names": [
             "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>On the server, <code>HTTP.call</code> is implemented by using the <a href=\"https://www.npmjs.com/package/request\">npm <code>request</code> module</a>. Any options in this object will be passed directly to the <code>request</code> invocation.</p>",
+        "name": "npmRequestOptions",
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       }
@@ -4523,7 +4532,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A function that takes in the package control 'api' object, which keeps track of dependencies and exports.</p>",
+        "description": "<p>A function that takes in the package control <code>api</code> object, which keeps track of dependencies and exports.</p>",
         "name": "func",
         "type": {
           "names": [
@@ -4602,7 +4611,7 @@ DocsData = {
     "options": [],
     "params": [],
     "scope": "global",
-    "summary": "The API object passed into the Packages.onUse function."
+    "summary": "Type of the API object passed into the `Package.onUse` function."
   },
   "PackageAPI#addFiles": {
     "kind": "function",
@@ -5102,7 +5111,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error)."
+    "summary": "Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onStop` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error)."
   },
   "Subscription#onStop": {
     "kind": "function",
@@ -5175,7 +5184,7 @@ DocsData = {
     "options": [],
     "params": [],
     "scope": "instance",
-    "summary": "Call inside the publish function.  Stops this client's subscription; the `onError` callback is *not* invoked on the client."
+    "summary": "Call inside the publish function.  Stops this client's subscription and invokes the client's `onStop` callback with no error."
   },
   "Subscription#userId": {
     "kind": "member",
@@ -5335,7 +5344,7 @@ DocsData = {
     "memberof": "Template",
     "name": "body",
     "scope": "static",
-    "summary": "The [template object](#templates_api) representing your `<body>` tag."
+    "summary": "The [template object](#templates_api) representing your `<body>`\ntag."
   },
   "Template.currentData": {
     "kind": "function",

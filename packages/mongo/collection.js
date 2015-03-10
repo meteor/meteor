@@ -103,6 +103,7 @@ Mongo.Collection = function (name, options) {
 
   self._collection = options._driver.open(name, self._connection);
   self._name = name;
+  self._driver = options._driver;
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
@@ -637,6 +638,23 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
   self._collection._createCappedCollection(byteSize, maxDocuments);
 };
 
+Mongo.Collection.prototype.rawCollection = function () {
+  var self = this;
+  if (! self._collection.rawCollection) {
+    throw new Error("Can only call rawCollection on server collections");
+  }
+  return self._collection.rawCollection();
+};
+
+Mongo.Collection.prototype.rawDatabase = function () {
+  var self = this;
+  if (! (self._driver.mongo && self._driver.mongo.db)) {
+    throw new Error("Can only call rawDatabase on server collections");
+  }
+  return self._driver.mongo.db;
+};
+
+
 /**
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
@@ -1020,13 +1038,10 @@ Mongo.Collection.prototype._validatedUpdate = function(
   if (!doc)  // none satisfied!
     return 0;
 
-  var factoriedDoc;
-
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
                      factoriedDoc,
                      fields,
@@ -1036,8 +1051,7 @@ Mongo.Collection.prototype._validatedUpdate = function(
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
                       factoriedDoc,
                       fields,

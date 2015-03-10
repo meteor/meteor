@@ -1,8 +1,6 @@
 @echo off
 
 set MSBUILD="%SystemRoot%\Microsoft.NET\Framework\v4.0.30319\msbuild.exe"
-set OUTLOG= ^>^>build.log
-rem set OUTLOG=
 
 
 IF "%1"=="" GOTO :BUILD
@@ -20,9 +18,9 @@ popd
 rem GOTO :Installer
 
 echo Building custom action collection 32-bit library (WiXHelper project)
-%MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=Win32 /p:DefineConstants="TRACE"%OUTLOG%
+%MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=Win32 /p:DefineConstants="TRACE" /clp:ErrorsOnly
 if %errorlevel% neq 0 (
-	echo Build failed
+	echo Build failed.
 	rem pause
 	goto :EOF
 )
@@ -30,9 +28,9 @@ if %errorlevel% neq 0 (
 
 rem We don't have a 64 bit msi package, so I will command this
 rem echo Building custom action collection 64-bit library (WiXHelper project)
-rem %MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=x64 /p:DefineConstants="TRACE"%OUTLOG%
+rem %MSBUILD% WiXHelper\WiXHelper.vcxproj /t:Rebuild /p:Configuration="Release" /p:Platform=x64 /p:DefineConstants="TRACE" /clp:ErrorsOnly
 rem if %errorlevel% neq 0 (
-rem 	echo Build failed
+rem 	echo Build failed.
 rem 	pause
 rem 	goto :EOF
 rem )
@@ -41,7 +39,7 @@ rem )
 :Installer
 
 echo Building Meteor installer package...
-%MSBUILD% MeteorSetup.sln /t:Rebuild /p:Configuration="Release" /p:Platform="x86" /p:DefineConstants="TRACE"%OUTLOG%
+%MSBUILD% MeteorSetup.sln /t:Rebuild /p:Configuration="Release" /p:Platform="x86" /p:DefineConstants="TRACE" /clp:ErrorsOnly
 if %errorlevel% neq 0 (
 	echo Build failed
 	rem pause

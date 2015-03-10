@@ -11,7 +11,7 @@ var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 // the packages from the internet. If we could fool it into using local packages
 // instead, or think that it alreayd has the packages, it would be ok). (This is
 // because it calls 'create' from a warehouse, to be specific).
-selftest.define("springboard", ['checkout', 'net', "yet-unsolved-windows-failure"], function () {
+selftest.define("springboard", ['checkout', 'net'], function () {
   var s = new Sandbox({
     warehouse: {
       v1: { },
@@ -73,17 +73,18 @@ selftest.define("springboard", ['checkout', 'net', "yet-unsolved-windows-failure
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
     run = s.run();
     run.matchErr("uses Meteor strange");
-    run.matchErr("don't have it either");
+
+    run.matchErr(/don't\s+have\s+it\s+either/);
     run.expectExit(1);
 
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
     run.matchErr("offline");
-    run.matchErr("it uses Meteor strange");
-    run.matchErr("don't have that version");
-    run.matchErr("of Meteor installed");
-    run.matchErr("update servers");
+    run.matchErr(/it\s+uses\s+Meteor\s+strange/);
+    run.matchErr(/don't\s+have\s+that\s+version/);
+    run.matchErr(/of\s+Meteor\s+installed/);
+    run.matchErr(/update\s+servers/);
     run.expectExit(1);
 
     // You create an app from a checkout, and then try to use it from an
@@ -215,7 +216,7 @@ selftest.define("download release", ['net', 'slow'], function () {
 });
 
 
-selftest.define("unknown release", ["yet-unsolved-windows-failure"], function () {
+selftest.define("unknown release", [], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }
@@ -230,21 +231,21 @@ selftest.define("unknown release", ["yet-unsolved-windows-failure"], function ()
   run.matchErr("Meteor bad: unknown release");
 
   // METEOR in the release file.
-  s.write('.meteor/release', "METEOR@0.9-bad");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + "@0.9-bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor 0.9-bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9-bad,\s+but/);
 
   // No METEOR in the release file.
   s.write('.meteor/release', "0.9.x-bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor 0.9.x-bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9.x-bad,\s+but/);
 
   // Non-standard track
   s.write('.meteor/release', "FOO@bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor release FOO@bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+release\s+FOO@bad,\s+but/);
 
 });

@@ -807,7 +807,7 @@ _.extend(Sandbox.prototype, {
       stubCatalog.collections.versions.push(versionRec);
 
       stubCatalog.collections.builds.push({
-        architecture: isopack.buildArchitectures(),
+        buildArchitectures: isopack.buildArchitectures(),
         versionId: versionRec._id,
         _id: utils.randomToken()
       });
@@ -847,11 +847,11 @@ _.extend(Sandbox.prototype, {
       root: self.warehouse,
       serverUrl: serverUrl
     });
-    var tmpCatalog = new catalogRemote.RemoteCatalog();
-    tmpCatalog.initialize({
+    self.warehouseOfficialCatalog = new catalogRemote.RemoteCatalog();
+    self.warehouseOfficialCatalog.initialize({
       packageStorage: dataFile
     });
-    tmpCatalog.insertData(stubCatalog);
+    self.warehouseOfficialCatalog.insertData(stubCatalog);
 
     // And a cherry on top
     // XXX this is hacky

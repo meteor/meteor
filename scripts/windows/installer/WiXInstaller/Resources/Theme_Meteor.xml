@@ -1,26 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Theme xmlns="http://wixtoolset.org/schemas/thmutil/2010">
 	<Window Width="624" Height="388" FontId="0">#(loc.Caption)</Window>
-	<Font Id="0" Height="-12" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
-	<Font Id="1" Height="-14" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
-	<Font Id="2" Height="-14" Weight="800" Foreground="333333" >Tahoma</Font>							<!-- Page header big font -->
-	<Font Id="3" Height="-22" Weight="500" Foreground="252525" >Segoe UI</Font>					<!-- Big light font to dispaly product name in welcome and finish pages -->
+	<Font Id="0" Height="-12" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="1" Height="-14" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="2" Height="-14" Weight="800" Foreground="333333" >Tahoma</Font>                               <!-- Page header big font -->
+	<Font Id="3" Height="-22" Weight="500" Foreground="252525" >Segoe UI</Font>                             <!-- Big light font to dispaly product name in welcome and finish pages -->
 	<Font Id="4" Height="-11" Weight="500" Foreground="000000" >Tahoma</Font>
-	<Font Id="5" Height="-10" Weight="500" Foreground="000000" >Segoe UI</Font>                         <!-- Version number on bottom left corner of all pages -->
-	<Font Id="6" Height="-12" Weight="500" Foreground="0000FF" Background="FFFFFF" >Segoe UI</Font>   	<!-- Installer default font with white background-->
-	<Font Id="7" Height="-12" Weight="500" Foreground="000000" >Segoe UI</Font>							<!-- Same as installer default font but transparent -->
+	<Font Id="5" Height="-10" Weight="500" Foreground="000000" >Segoe UI</Font>                             <!-- Version number on bottom left corner of all pages -->
+	<Font Id="6" Height="-12" Weight="500" Foreground="0000FF" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="7" Height="-12" Weight="500" Foreground="000000" >Segoe UI</Font>                             <!-- Same as installer default font but transparent -->
 
 
 
 	<Page Name="Help">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.HelpHeader)</Text>
 		<Text X="24" Y="78" Width="-24" Height="-100" FontId="0" DisablePrefix="yes">#(loc.HelpText)</Text>
 		<Button Name="HelpCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.HelpCloseButton)</Button>
 	</Page>
 	<Page Name="Install">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
         <Image X="84" Y="30" Width="450" Height="107" ImageFile="meteor-logo.png"/>
         <!--<Text X="178" Y="20" Width="-24" Height="32" FontId="2" DisablePrefix="yes">#(loc.InstallHeader)</Text>-->
         <Hypertext X="24" Y="-100" Width="-24" Height="14" TabStop="yes" FontId="4" HideWhenDisabled="yes">#(loc.InstallLicenseLinkText)</Hypertext> -->
@@ -33,8 +30,6 @@
 		<Button Name="NextButton" X="200" Y="-142" Width="-200" Height="44" TabStop="yes" FontId="3">#(loc.InstallMeteor)</Button>
 	</Page>
 	<Page Name="InstallDir">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.InstallDirHeader)</Text>
 		<Text X="24" Y="78" Width="-24" Height="32" FontId="1" DisablePrefix="yes">#(loc.InstallDirMessage)</Text>
 
@@ -46,14 +41,11 @@
 		<Editbox Name="InstallFolderEditbox" X="164" Y="216" Width="-144" Height="21" TabStop="yes" FontId="0" FileSystemAutoComplete="yes" HideWhenDisabled="no" />
 		<Button Name="BrowseButton" X="-64" Y="215" Width="75" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="no">#(loc.OptionsBrowseButton)</Button>
         
-
         <Button Name="BackButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.BackButton)</Button>
 		<Button Name="NextButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.NextButton)</Button>
 		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
 	</Page>
 	<Page Name="SvcOptions">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.RegistrationHeader)</Text>
 
         <Text X="24" Y="78" Width="-24" Height="24" FontId="1" DisablePrefix="yes">#(loc.RegistrationInfo)</Text>
@@ -61,6 +53,8 @@
         <Button Name="CreateRButton" X="48" Y="105" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.CreateRButton)</Button>
         <Button Name="SignInRButton" X="48" Y="125" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.SignInRButton)</Button>
 
+
+        <!-- for signup: -->
         <Text Name="RegisterEmailLabel" X="92" Y="154" Width="120" Height="17" FontId="0">#(loc.RegisterEmail):</Text>
         <Text Name="RegisterUserLabel" X="92" Y="182" Width="120" Height="17" FontId="0">#(loc.RegisterUser):</Text>
         <Text Name="RegisterPassLabel" X="92" Y="210" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
@@ -68,27 +62,31 @@
         <Editbox Name="RegisterEmail" X="220" Y="152" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterEmail]</Editbox>
         <Editbox Name="RegisterUser" X="220" Y="180" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterUser]</Editbox>
         <Editbox Name="RegisterPass" X="220" Y="208" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[RegisterPass]</Editbox>
-        <Checkbox Name="SkipRegistration" X="56" Y="-98" Width="-56" Height="21" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.SkipRegistration)</Checkbox>
 
 
-        <Button Name="BackButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.BackButton)</Button>
-		<Button Name="InstallButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallInstallButton)</Button>
-		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
+        <!-- for login: -->
+        <!-- XXX For some reason, Visible="no" below doesn't work.
+             instead, we set it imperatively when we switch to this
+             page. See #Hidden --> 
+        <Text Name="LoginUsernameOrEmailLabel" Visible="no" X="92" Y="154" Width="120" Height="17" FontId="0">#(loc.RegisterUsernameOrEmail):</Text>
+        <Text Name="LoginPassLabel" Visible="no" X="92" Y="182" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
+
+        <Editbox Name="LoginUsernameOrEmail" Visible="no" X="220" Y="152" Width="180" Height="21" TabStop="yes" FontId="0">[LoginUsernameOrEmail]</Editbox>
+        <Editbox Name="LoginPass" Visible="no" X="220" Y="180" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[LoginPass]</Editbox>
+
+
+        <!-- bottom buttons: -->
+        <Button Name="SkipButton" X="24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
+		<Button Name="InstallButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.Install)</Button>
 	</Page>
 
 	<Page Name="Progress">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text Name="ProgressHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varProgressHeader]</Text>
-		<Text Name="ProgressInfo" X="24" Y="78" Width="-24" Height="36" FontId="1" DisablePrefix="yes">[varProgressInfo]</Text>
-		<Text Name="OverallProgressPackageText" X="24" Y="161" Width="-24" Height="17" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressText)</Text>
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
-		<Text Name="ExecuteProgressActionDataText" X="98" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
+		<Text Name="ExecuteProgressActionDataText" X="24" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
 		<Button Name="ProgressCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
 	</Page>
 	<Page Name="Modify">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.ModifyHeader)</Text>
 		<Text X="24" Y="78" Width="-24" Height="140" FontId="1" DisablePrefix="yes">#(loc.ModifyInfo)</Text>
 		<Button Name="RepairButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.ModifyRepairButton)</Button>
@@ -96,8 +94,6 @@
 		<Button Name="ModifyCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ModifyCloseButton)</Button>
 	</Page>
 	<Page Name="Success">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text Name="SuccessHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varSuccessHeader]</Text>
 		<Text Name="SuccessInfo" X="24" Y="78" Width="-24" Height="72" FontId="1" TabStop="yes" HideWhenDisabled="yes">[varSuccessInfo]</Text>
 		<Text Name="SuccessErrorInfoText" X="24" Y="160" Width="-24" Height="17" FontId="0" TabStop="yes" HideWhenDisabled="yes" >[varSuccessErrorInfoText]</Text>		
@@ -110,8 +106,6 @@
 		<Button Name="SuccessCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SuccessCloseButton)</Button>
 	</Page>
 	<Page Name="Failure">
-		<Image X="0" Y="0" Width="618" Height="363" ImageFile="Background.png"/>
-		<Image X="0" Y="0" Width="618" Height="56" ImageFile="TopHeader.png"/>
 		<Text Name="FailureHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varFailureHeader]</Text>
 		<Hypertext Name="FailureLogFileLink" X="24" Y="78" Width="-24" Height="48" FontId="1" TabStop="yes" HideWhenDisabled="yes">#(loc.FailureHyperlinkLogText)</Hypertext>
 		<Hypertext Name="FailureMessageText" X="24" Y="130" Width="-24" Height="48" FontId="0" TabStop="yes" HideWhenDisabled="yes"/>
