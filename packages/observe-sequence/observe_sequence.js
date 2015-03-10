@@ -195,13 +195,28 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
         before);
     },
     movedBefore: function (id, before) {
+      if (id === before)
+        return;
+
       var prevPosition = posCur[idStringify(id)];
-      var position = before ? posCur[idStringify(before)] : lengthCur - 1;
+      var position = before ? posCur[idStringify(before)] : lengthCur;
+
+      // Moving the item forward. The new element is losing one position as it
+      // was removed from the old position before being inserted at the new
+      // position.
+      // Ex.:   0  *1*  2   3   4
+      //        0   2   3  *1*  4
+      // The original issued callback is "1" before "4".
+      // The position of "1" is 1, the position of "4" is 4.
+      // The generated move is (1) -> (3)
+      if (position > prevPosition) {
+        position--;
+      }
 
       _.each(posCur, function (pos, id) {
-        if (pos >= prevPosition && pos <= position)
+        if (pos > prevPosition && pos < position)
           posCur[id]--;
-        else if (pos <= prevPosition && pos >= position)
+        else if (pos < prevPosition && pos >= position)
           posCur[id]++;
       });
 
