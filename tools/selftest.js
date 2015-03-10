@@ -268,7 +268,6 @@ _.extend(Matcher.prototype, {
           self.matchFuture = null;
           self.matchStrict = null;
           self.matchPattern = null;
-          Console.info("Extra junk is: ", self.buf.substr(0, m.index));
           f['throw'](new TestFailure('junk-before', { run: self.run }));
           return;
         }
@@ -282,7 +281,6 @@ _.extend(Matcher.prototype, {
           self.matchFuture = null;
           self.matchStrict = null;
           self.matchPattern = null;
-          Console.info("Extra junk is: ", self.buf.substr(0, i));
           f['throw'](new TestFailure('junk-before', { run: self.run }));
           return;
         }

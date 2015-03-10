@@ -28,15 +28,6 @@ var randomizedReleaseName = function (username) {
     utils.randomToken().substring(0, 6).toUpperCase();
 }
 
-var escapeRegExp = function (str) {
-  return str.replace(/[\-\[\]\/\{\}\(\)\*\+\?\.\\\^\$\|]/g, "\\$&");
-};
-
-var notSpaceSensitive = function (string) {
-  string = "\\s*" + escapeRegExp(string).replace(/\s+/g, "\\s+") + "\\s*";
-  return new RegExp(string);
-};
-
 // Given a sandbox, that has the app as its currend cwd, read the packages file
 // and check that it contains exactly the packages specified, in order.
 //
@@ -1009,7 +1000,7 @@ var testShowPackage =  selftest.markStack(function (s, fullPackageName, options)
     run.read("Exports: " + options.exports + "\n");
   }
   if (options.implies) {
-    run.read(notSpaceSensitive("Implies: " + options.implies));
+    run.read("Implies: " + options.implies + "\n");
   }
   run.read("\n");
   if (_.has(options, "description")) {
@@ -1039,7 +1030,7 @@ var testShowPackage =  selftest.markStack(function (s, fullPackageName, options)
     run.read("\n");
   }
   if (options.addendum) {
-    run.read(notSpaceSensitive(options.addendum));
+    run.read(options.addendum);
   }
   run.expectExit(0);
 });
@@ -1106,7 +1097,7 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
       " on " + options.publishedOn + ".\n");
   }
   if (options.addendum) {
-    run.read(notSpaceSensitive(options.addendum));
+    run.read("\n" + options.addendum + "\n");
   }
   // Make sure that we exit without printing anything else.
   run.expectEnd(0);
@@ -1370,7 +1361,7 @@ selftest.define("show and search local overrides server",
     run.match("Directory:\n" + packageDir + "\n");
     run.match("Git: " + git + "\n");
     run.read("\n" + summary + "\n");
-    run.read(notSpaceSensitive(addendum));
+    run.read("\n" + addendum + "\n");
     run.expectEnd(0);
   });
 
@@ -1792,7 +1783,11 @@ var testShowRelease = selftest.markStack(function (s, options) {
     run.read("\n");
   }
   if (options.addendum) {
-    run.read(notSpaceSensitive(options.addendum));
+    var addendum = options.addendum;
+
+    addendum = addendum.replace(/\s+/g, "\\s+") + "\\s+";
+
+    run.read(new RegExp(addendum));
   }
   run.expectEnd(0);
 });
