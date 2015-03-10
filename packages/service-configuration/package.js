@@ -4,9 +4,10 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.use('accounts-base', ['client', 'server']);
+  api.use('accounts-connection', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.export('ServiceConfiguration');
   api.addFiles('service_configuration_common.js', ['client', 'server']);
+  api.addFiles('service_configuration_client.js', 'client');
   api.addFiles('service_configuration_server.js', 'server');
 });

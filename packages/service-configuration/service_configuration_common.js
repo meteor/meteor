@@ -8,7 +8,7 @@ if (typeof ServiceConfiguration === 'undefined') {
 ServiceConfiguration.configurations = new Mongo.Collection(
   "meteor_accounts_loginServiceConfiguration", {
     _preventAutopublish: true,
-    connection: Meteor.isClient ? Accounts.connection : Meteor.connection
+    connection: Meteor.isClient ? Accounts_connection : Meteor.connection
   });
 // Leave this collection open in insecure mode. In theory, someone could
 // hijack your oauth connect requests to a different endpoint or appId,
@@ -19,7 +19,7 @@ ServiceConfiguration.configurations = new Mongo.Collection(
 
 // Thrown when trying to use a login service which is not configured
 ServiceConfiguration.ConfigError = function (serviceName) {
-  if (Meteor.isClient && !Accounts.loginServicesConfigured()) {
+  if (Meteor.isClient && !ServiceConfiguration.servicesConfigured()) {
     this.message = "Login service configuration not yet loaded";
   } else if (serviceName) {
     this.message = "Service " + serviceName + " not configured";

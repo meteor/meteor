@@ -929,9 +929,6 @@ Meteor.startup(function () {
   if (!usingOAuthEncryption())
     return;
 
-  var ServiceConfiguration =
-    Package['service-configuration'].ServiceConfiguration;
-
   ServiceConfiguration.configurations.find( {$and: [
       { secret: {$exists: true} },
       { "secret.algorithm": {$exists: false} }
@@ -1246,13 +1243,6 @@ if (Package.autopublish) {
   });
 }
 
-// Publish all login service configuration fields other than secret.
-Meteor.publish("meteor.loginServiceConfiguration", function () {
-  var ServiceConfiguration =
-    Package['service-configuration'].ServiceConfiguration;
-  return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
-}, {is_auto: true}); // not techincally autopublish, but stops the warning.
-
 // Allow a one-time configuration for a login service. Modifications
 // to this collection are also allowed in insecure mode.
 Meteor.methods({
@@ -1269,8 +1259,6 @@ Meteor.methods({
       throw new Meteor.Error(403, "Service unknown");
     }
 
-    var ServiceConfiguration =
-      Package['service-configuration'].ServiceConfiguration;
     if (ServiceConfiguration.configurations.findOne({service: options.service}))
       throw new Meteor.Error(403, "Service " + options.service + " already configured");
 

@@ -11,10 +11,8 @@ Package.onUse(function (api) {
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');
   api.use('callback-hook', ['client', 'server']);
-
-  // use unordered to work around a circular dependency
-  // (service-configuration needs Accounts.connection)
-  api.use('service-configuration', ['client', 'server'], { unordered: true });
+  api.use('accounts-connection', ['client', 'server']);
+  api.use('service-configuration', ['client', 'server']);
 
   // needed for getting the currently logged-in user
   api.use('ddp', ['client', 'server']);
