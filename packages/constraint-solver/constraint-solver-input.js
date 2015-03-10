@@ -73,8 +73,10 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
 
 validatePackageName = function (name) {
   PV.validatePackageName(name);
-  // we have some hard constraints of our own, so check them
-  // in case validatePackageName isn't.
+  // We have some hard requirements of our own so that packages can be
+  // used as solver variables.  PV.validatePackageName should already
+  // enforce these requirements and more, so these checks are just a
+  // backstop in case it changes under us somehow.
   if ((name.charAt(0) === '$') || (name.charAt(0) === '-')) {
     throw new Error("First character of package name cannot be: " +
                     name.charAt(0));

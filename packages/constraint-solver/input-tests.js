@@ -504,7 +504,7 @@ Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
 Tinytest.add("constraint solver - input - bad package name", function (test) {
   test.throws(function () {
     new CS.Input(['-x'], [], new CS.CatalogCache());
-  }, /First character of package name cannot be: -/);
+  }, /may not begin with a hyphen/);
 
   test.throws(function () {
     new CS.Input([], [], new CS.CatalogCache(),
@@ -519,7 +519,7 @@ Tinytest.add("constraint solver - input - bad package name", function (test) {
   test.throws(function () {
     new CS.Input([], [], new CS.CatalogCache(),
                  { upgrade: ['-a'] });
-  }, /First character of package name cannot be: -/);
+  }, /may not begin with a hyphen/);
 });
 
 

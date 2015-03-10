@@ -1,5 +1,41 @@
 var currentTest = null;
 
+Tinytest.add("package-version-parser - validatePackageName", function (test) {
+  var badName = function (packageName, messageExpect) {
+    test.throws(function () {
+      try {
+        PackageVersion.validatePackageName(packageName);
+      } catch (e) {
+        if (! e.versionParserError) {
+          test.fail(e.message);
+        }
+        throw e;
+      }
+    }, messageExpect);
+  };
+
+  PackageVersion.validatePackageName('a');
+  PackageVersion.validatePackageName('a-b');
+  PackageVersion.validatePackageName('a.b');
+
+  badName("$foo", /can only contain/);
+  badName("", /must contain a lowercase/);
+  badName("foo$bar", /can only contain/);
+  badName("Foo", /can only contain/);
+  badName("a b", /can only contain/);
+  badName(".foo", /may not begin with a dot/);
+  badName("foo.", /may not end with a dot/);
+  badName("foo..bar", /not contain two consecutive dots/);
+  badName("-x", /not begin with a hyphen/);
+  badName("--x", /not begin with a hyphen/);
+  badName("0.0", /must contain/);
+
+  // these are ok
+  PackageVersion.validatePackageName('x-');
+  PackageVersion.validatePackageName('x--y');
+  PackageVersion.validatePackageName('x--');
+});
+
 Tinytest.add("package-version-parser - parse", function (test) {
   test.isTrue(new PackageVersion("1.2.3") instanceof PackageVersion);
 

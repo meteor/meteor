@@ -390,6 +390,17 @@ PV.validatePackageName = function (packageName, options) {
   if (packageName[0] === '.') {
     throwVersionParserError("Package names may not begin with a dot.");
   }
+  if (packageName.slice(-1) === '.') {
+    throwVersionParserError("Package names may not end with a dot.");
+  }
+  if (packageName.indexOf('..') >= 0) {
+    throwVersionParserError("Package names may not contain two consecutive dots.");
+  }
+  if (packageName[0] === '-') {
+    throwVersionParserError("Package names may not begin with a hyphen.");
+  }
+  // (There is already a package ending with a `-` and one with two consecutive `-`
+  // in troposphere, though they both look like typos.)
 };
 
 var throwVersionParserError = function (message) {
