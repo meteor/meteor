@@ -26,6 +26,7 @@ CS.Solver = function (input, options) {
   // package -> array of version strings.  If a package has an entry in
   // this map, then only the versions in the array are allowed for
   // consideration.
+  self.packagesWithNoAllowedVersions = {}; // package -> [constraints]
   self.allowedVersions = self.calculateAllowedVersions();
 
   self.analysis = {};
@@ -50,14 +51,8 @@ CS.Solver.prototype.calculateAllowedVersions = function () {
         return CS.isConstraintSatisfied(p, constr.versionConstraint, v);
       });
     });
-    // it's important to make sure we allow *some* version of every package
-    // in order for the rest of the solver to work
     if (! versions.length) {
-      CS.throwConstraintSolverError(
-        'No version of ' + p + ' satisfies top-level constraints: ' +
-          _.map(cs, function (constr) {
-            return '@' + constr.constraintString;
-          }).join(', '));
+      self.packagesWithNoAllowedVersions[p] = cs;
     }
     allowedVersions[p] = versions;
   });
@@ -450,12 +445,14 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // generate package version variables for known, reachable packages
   _.each(_.keys(analysis.reachablePackages), function (p) {
-    var versionVars = self.getAllVersionVars(p);
-    // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
-    logic.require(Logic.atMostOne(versionVars));
-    // The variable "foo" is true if and only if at least one of the
-    // variables ["foo 1.0.0", "foo 1.0.1", ...] is true.
-    logic.require(Logic.equiv(p, Logic.or(versionVars)));
+    if (! self.packagesWithNoAllowedVersions[p]) {
+      var versionVars = self.getAllVersionVars(p);
+      // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
+      logic.require(Logic.atMostOne(versionVars));
+      // The variable "foo" is true if and only if at least one of the
+      // variables ["foo 1.0.0", "foo 1.0.1", ...] is true.
+      logic.require(Logic.equiv(p, Logic.or(versionVars)));
+    }
   });
 
   // generate strong dependency requirements
@@ -490,10 +487,30 @@ CS.Solver.prototype.getSolution = function (options) {
   if (! self.solution) {
     // There is always a solution at this point, namely,
     // select all packages (including unknown packages), select
-    // any version of each known package, and set all conflictVars
+    // any version of each known package (excluding packages with
+    // "no allowed versions"), and set all conflictVars
     // to true.
     throw new Error("Unexpected unsatisfiability");
   }
+
+  // Forbid packages with no versions allowed by top-level constraints,
+  // which we didn't do earlier because we needed to establish an
+  // initial solution before asking the solver if it's possible to
+  // not use these packages.
+  _.each(self.packagesWithNoAllowedVersions, function (constrs, p) {
+    var newSolution = logic.solveAssuming(Logic.not(p));
+    if (newSolution) {
+      self.solution = newSolution;
+      logic.forbid(p);
+    } else {
+      self.errors.push(
+        'No version of ' + p + ' satisfies top-level constraints: ' +
+          _.map(constrs, function (constr) {
+            return '@' + constr.constraintString;
+          }).join(', '));
+    }
+  });
+  self.throwAnyErrors();
 
   // try not to use any unknown packages.  If the minimum is greater
   // than 0, we'll throw an error later, after we apply the constraints
