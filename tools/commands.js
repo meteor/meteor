@@ -217,7 +217,7 @@ var runCommandOptions = {
     clean: { type: Boolean},
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
-    breaking: { type: Boolean }
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -273,7 +273,7 @@ function doRunCommand (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    allowIncompatibleUpdate: options.breaking
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {

@@ -1472,7 +1472,7 @@ main.registerCommand({
   options: {
     patch: { type: Boolean },
     "packages-only": { type: Boolean },
-    breaking: { type: Boolean }
+    "allow-incompatible-update": { type: Boolean }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1517,7 +1517,7 @@ main.registerCommand({
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     alwaysWritePackageMap: true,
-    allowIncompatibleUpdate: options.breaking
+    allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
@@ -1637,7 +1637,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'add',
   options: {
-    breaking: { type: Boolean }
+    "allow-incompatible-update": { type: Boolean }
   },
   minArgs: 1,
   maxArgs: Infinity,
@@ -1646,7 +1646,7 @@ main.registerCommand({
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    allowIncompatibleUpdate: options.breaking
+    allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -1821,7 +1821,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'remove',
   options: {
-    breaking: { type: Boolean }
+    "allow-incompatible-update": { type: Boolean }
   },
   minArgs: 1,
   maxArgs: Infinity,
@@ -1830,7 +1830,7 @@ main.registerCommand({
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    allowIncompatibleUpdate: options.breaking
+    allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
