@@ -600,8 +600,26 @@ CS.Solver.prototype.getSolution = function (options) {
 
   self.minimize(self.getOldnesses('new_root', newRootDeps));
 
-  // lock down versions of all root, previous, and updating packages that
-  // are currently selected
+  // Lock down versions of all root, previous, and updating packages that
+  // are currently selected.  The reason to do this is to save the solver
+  // a bunch of work (i.e. improve performance) by not asking it to
+  // optimize the "unimportant" packages while also twiddling the versions
+  // of the "important" packages, which would just multiply the search space.
+  //
+  // The important packages are root deps, packages in the previous solution,
+  // and packages being upgraded.  At this point, we either have unique
+  // versions for them, or else there is some kind of trade-off, like a
+  // situation where raising the version of one package and lowering the
+  // version of another produces the same cost -- a tie between two solutions.
+  // If we have a tie, it probably won't be broken by the unimportant
+  // packages, so we'll end up going with whatever we picked anyway.  (Note
+  // that we have already taken the unimportant packages into account in that
+  // we are only considering solutions where SOME versions can be chosen for
+  // them.)  Even if optimizing the unimportant packages (coming up next)
+  // was able to break a tie in the important packages, we care so little
+  // about the versions of the unimportant packages that it's a very weak
+  // signal.  In other words, the user might be better off with some tie-breaker
+  // that looks only at the important packages anyway.
   _.each(self.currentVersionMap(), function (v, package) {
     if (input.isRootDependency(package) ||
         input.isInPreviousSolution(package) ||
