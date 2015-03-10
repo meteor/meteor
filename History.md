@@ -1,5 +1,11 @@
 ## v.NEXT
 
+### Tracker
+
+* Schedule the flush cycle using a better technique than `setTimeout` when
+  available.  #3889
+
+
 ### `meteor` command-line tool
 
 * Don't fail if `npm` prints more than 200K.  #3887
