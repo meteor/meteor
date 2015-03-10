@@ -379,7 +379,15 @@ var addCostsToSteps = function (package, versions, costs, steps) {
   }
 };
 
-CS.Solver.prototype.getOldnesses = function (stepBaseName, packages) {
+// Get an array of "Steps" that, when minimized in order, optimizes
+// the package version costs of `packages` (an array of String package
+// names) according to `pricerMode`, which may be
+// `CS.VersionPricer.MODE_UPDATE` or a similar mode constant.
+// Wraps `VersionPricer#priceVersions`, which is tasked with calculating
+// the cost of every version of every package.  This function iterates
+// over `packages` and puts the result into `Step` objects.
+CS.Solver.prototype.getVersionCostSteps = function (stepBaseName, packages,
+                                                    pricerMode) {
   var self = this;
   var major = new CS.Solver.Step(stepBaseName + '_major');
   var minor = new CS.Solver.Step(stepBaseName + '_minor');
@@ -388,34 +396,20 @@ CS.Solver.prototype.getOldnesses = function (stepBaseName, packages) {
 
   _.each(packages, function (p) {
     var versions = self.getVersions(p);
-    var costs = self.pricer.priceVersions(
-      versions, CS.VersionPricer.MODE_UPDATE);
-    addCostsToSteps(p, versions, costs,
-                    [major, minor, patch, rest]);
+    var costs = self.pricer.priceVersions(versions, pricerMode);
+    addCostsToSteps(p, versions, costs, [major, minor, patch, rest]);
   });
 
   return [major, minor, patch, rest];
 };
 
-CS.Solver.prototype.getGravityPotential = function (stepBaseName, packages) {
-  var self = this;
-  var major = new CS.Solver.Step(stepBaseName + '_major');
-  var minor = new CS.Solver.Step(stepBaseName + '_minor');
-  var patch = new CS.Solver.Step(stepBaseName + '_patch');
-  var rest = new CS.Solver.Step(stepBaseName + '_rest');
-
-  _.each(packages, function (p) {
-    var versions = self.getVersions(p);
-    var costs = self.pricer.priceVersions(
-      versions, CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES);
-    addCostsToSteps(p, versions, costs,
-                    [major, minor, patch, rest]);
-  });
-
-  return [major, minor, patch, rest];
-};
-
-CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
+// Like `getVersionCostSteps`, but wraps
+// `VersionPricer#priceVersionsWithPrevious` instead of `#priceVersions`.
+// The cost function is "distance" from the previous versions passed in
+// as `packageAndVersion`.  (Actually it's a complicated function of the
+// previous and new version.)
+CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
+                                                        packageAndVersions) {
   var self = this;
 
   var incompat = new CS.Solver.Step(stepBaseName + '_incompat');
@@ -582,7 +576,7 @@ CS.Solver.prototype.getSolution = function (options) {
 
   self.minimize('unanticipated_prereleases', unanticipatedPrereleases);
 
-  var previousRootSteps = self.getDistances(
+  var previousRootSteps = self.getVersionDistanceSteps(
     'previous_root', analysis.previousRootDepVersions);
   // the "previous_root_incompat" step
   var previousRootIncompat = previousRootSteps[0];
@@ -613,7 +607,8 @@ CS.Solver.prototype.getSolution = function (options) {
     self.minimize(previousRootIncompat);
   }
 
-  self.minimize(self.getOldnesses('update', toUpdate));
+  self.minimize(self.getVersionCostSteps(
+    'update', toUpdate, CS.VersionPricer.MODE_UPDATE));
 
   if (input.allowIncompatibleUpdate) {
     // If you pass `--allow-incompatible-update`, we will still try to minimize
@@ -632,13 +627,15 @@ CS.Solver.prototype.getSolution = function (options) {
       ! input.isRootDependency(p);
   });
 
-  self.minimize(self.getDistances('previous_indirect', otherPrevious));
+  self.minimize(self.getVersionDistanceSteps(
+    'previous_indirect', otherPrevious));
 
   var newRootDeps = _.filter(input.dependencies, function (p) {
     return ! input.isInPreviousSolution(p);
   });
 
-  self.minimize(self.getOldnesses('new_root', newRootDeps));
+  self.minimize(self.getVersionCostSteps(
+    'new_root', newRootDeps, CS.VersionPricer.MODE_UPDATE));
 
   // Lock down versions of all root, previous, and updating packages that
   // are currently selected.  The reason to do this is to save the solver
@@ -678,7 +675,9 @@ CS.Solver.prototype.getSolution = function (options) {
     }
   });
 
-  self.minimize(self.getGravityPotential('new_indirect', otherPackages));
+  self.minimize(self.getVersionCostSteps(
+    'new_indirect', otherPackages,
+    CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES));
 
   self.minimize('total_packages', _.keys(analysis.reachablePackages));
 
