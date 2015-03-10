@@ -269,7 +269,8 @@ _.extend(Matcher.prototype, {
           self.matchStrict = null;
           self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, m.index));
-          f['throw'](new TestFailure('junk-before', { run: self.run }));
+          f['throw'](new TestFailure(
+            'junk-before', { run: self.run, pattern: self.matchPattern }));
           return;
         }
         ret = m;
@@ -283,7 +284,8 @@ _.extend(Matcher.prototype, {
           self.matchStrict = null;
           self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, i));
-          f['throw'](new TestFailure('junk-before', { run: self.run }));
+          f['throw'](new TestFailure(
+            'junk-before', { run: self.run, pattern: self.matchPattern }));
           return;
         }
         ret = self.matchPattern;
@@ -1769,7 +1771,7 @@ var runTests = function (options) {
                                          frames[0].file);
         Console.rawError("  => " + failure.reason + " at " +
                          relpath + ":" + frames[0].line + "\n");
-        if (failure.reason === 'no-match') {
+        if (failure.reason === 'no-match' || failure.reason === 'junk-before') {
           Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
         if (failure.reason === "wrong-exit-code") {
