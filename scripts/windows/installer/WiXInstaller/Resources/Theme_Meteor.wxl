@@ -26,8 +26,9 @@
     <String Id="InstallCloseButton">&amp;Cancel</String>
     <String Id="BackButton">&lt; Back</String>
     <String Id="NextButton">Next &gt;</String>
-    <String Id="SkipButton">Skip</String>
-    <String Id="InstallMeteor">Install [WixBundleName]</String>
+    <String Id="SkipButton">I'll do this later</String>
+    <String Id="Install">Install</String>
+    <String Id="InstallMeteor">Install Meteor</String>
 
     <String Id="InstallUpgradeLinkText">Version [WixBundleVersion] &lt;a href="#"&gt;upgrade available&lt;/a&gt;</String>
     <String Id="CurrentUserPass">Current user password:</String>
@@ -40,11 +41,12 @@
     <String Id="PerUserInstallRButton">Only for me ([LogonUser])</String>
 
     <String Id="RegistrationHeader">[WixBundleName] registration</String>
-    <String Id="RegistrationInfo">In order to continue it is  recommended to configure your meteor developer account. </String>
-    <String Id="CreateRButton">Create a new developer account</String>
-    <String Id="SignInRButton">Sign In using an existing developer account</String>
-    <String Id="RegisterEmail">E-mail Address</String>
-    <String Id="RegisterUser">User Name</String>
+    <String Id="RegistrationInfo">Sign in with your Meteor developer account or create a new one now.</String>
+    <String Id="CreateRButton">Sign up for a new account</String>
+    <String Id="SignInRButton">Sign in with an existing account</String>
+    <String Id="RegisterEmail">Email Address</String>
+    <String Id="RegisterUser">Username</String>
+    <String Id="RegisterUsernameOrEmail">Username or Email</String>
     <String Id="RegisterPass">Password</String>
     <String Id="SkipRegistration">Skip [WixBundleName] registration and continue with setup</String>
 
