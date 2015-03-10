@@ -52,7 +52,9 @@ CS.Solver.prototype.calculateAllowedVersions = function () {
       });
     });
     if (! versions.length) {
-      self.packagesWithNoAllowedVersions[p] = cs;
+      self.packagesWithNoAllowedVersions[p] = _.filter(cs, function (c) {
+        return !! c.constraintString;
+      });
     }
     allowedVersions[p] = versions;
   });
@@ -504,7 +506,7 @@ CS.Solver.prototype.getSolution = function (options) {
       logic.forbid(p);
     } else {
       self.errors.push(
-        'No version of ' + p + ' satisfies top-level constraints: ' +
+        'No version of ' + p + ' satisfies all constraints: ' +
           _.map(constrs, function (constr) {
             return '@' + constr.constraintString;
           }).join(', '));
@@ -729,7 +731,11 @@ CS.Solver.prototype.analyzeRootDependencies = function () {
 
 CS.Solver.prototype.throwAnyErrors = function () {
   if (this.errors.length) {
-    CS.throwConstraintSolverError(this.errors.join('\n\n'));
+    var multiline = _.any(this.errors, function (e) {
+      return /\n/.test(e);
+    });
+    CS.throwConstraintSolverError(this.errors.join(
+      multiline ? '\n\n' : '\n'));
   }
 };
 

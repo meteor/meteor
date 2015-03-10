@@ -338,7 +338,7 @@ Tinytest.add("constraint solver - input - conflicting top-level constraints", fu
         "bar 1.0.0": ["foo"]
       }
     }
-  }, /No version of foo satisfies top-level constraints: @1.0.0, @2.0.0/);
+  }, /No version of foo satisfies all constraints: @1.0.0, @2.0.0/);
 });
 
 Tinytest.add("constraint solver - input - previous indirect deps", function (test) {
@@ -497,7 +497,7 @@ Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
   // It's not actually a good test of logic-solver overflowing the stack anymore,
   // because the constraint-solver is smarter now.
   doFailTest(test, STACK_OVERFLOW_BUG_INPUT,
-             /No version of follower-livedata satisfies top-level constraints: @0.9.0/);
+             /No version of follower-livedata satisfies all constraints: @0.9.0/);
 });
 
 
