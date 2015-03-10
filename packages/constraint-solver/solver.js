@@ -23,9 +23,55 @@ CS.Solver = function (input, options) {
   self.steps = [];
   self.stepsByName = {};
 
+  // package -> array of version strings.  If a package has an entry in
+  // this map, then only the versions in the array are allowed for
+  // consideration.
+  self.allowedVersions = self.calculateAllowedVersions();
+
   self.analysis = {};
 
   self.logic = null; // Logic.Solver, initialized later
+};
+
+CS.Solver.prototype.calculateAllowedVersions = function () {
+  var self = this;
+  var allowedVersions = {};
+  // process top-level constraints, applying them right now!
+  // we won't even consider versions that don't match them.
+  // in particular, this is great for equality constraints.
+  _.each(_.groupBy(self.input.constraints, 'package'), function (cs, p) {
+    var versions = self.input.catalogCache.getPackageVersions(p);
+    if (! versions.length) {
+      // let the main solver deal with this unknown package
+      return;
+    }
+    _.each(cs, function (constr) {
+      versions = _.filter(versions, function (v) {
+        return CS.isConstraintSatisfied(p, constr.versionConstraint, v);
+      });
+    });
+    // it's important to make sure we allow *some* version of every package
+    // in order for the rest of the solver to work
+    if (! versions.length) {
+      CS.throwConstraintSolverError(
+        'No version of ' + p + ' satisfies top-level constraints: ' +
+          _.map(cs, function (constr) {
+            return '@' + constr.constraintString;
+          }).join(', '));
+    }
+    allowedVersions[p] = versions;
+  });
+
+  return allowedVersions;
+};
+
+CS.Solver.prototype.getVersions = function (package) {
+  var self = this;
+  if (_.has(self.allowedVersions, package)) {
+    return self.allowedVersions[package];
+  } else {
+    return self.input.catalogCache.getPackageVersions(package);
+  }
 };
 
 // A Step consists of a name, an array of terms, and an array of weights.
@@ -207,7 +253,7 @@ CS.Solver.prototype.analyzeReachability = function () {
   var visit = function (p) {
     reachablePackages[p] = true;
 
-    _.each(cache.getPackageVersions(p), function (v) {
+    _.each(self.getVersions(p), function (v) {
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
         var p2 = dep.packageConstraint.package;
@@ -248,7 +294,7 @@ CS.Solver.prototype.analyzeConstraints = function () {
 
   // constraints specified by package versions
   _.each(_.keys(self.analysis.reachablePackages), function (p) {
-    _.each(cache.getPackageVersions(p), function (v) {
+    _.each(self.getVersions(p), function (v) {
       var pv = pvVar(p, v);
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
@@ -263,9 +309,9 @@ CS.Solver.prototype.analyzeConstraints = function () {
   });
 };
 
-CS.Solver.prototype.getAllVersions = function (package) {
+CS.Solver.prototype.getAllVersionVars = function (package) {
   var self = this;
-  return _.map(self.input.catalogCache.getPackageVersions(package),
+  return _.map(self.getVersions(package),
                function (v) {
                  return pvVar(package, v);
                });
@@ -295,7 +341,7 @@ CS.Solver.prototype.getOldnesses = function (stepBaseName, packages) {
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
 
   _.each(packages, function (p) {
-    var versions = self.input.catalogCache.getPackageVersions(p);
+    var versions = self.getVersions(p);
     var costs = self.pricer.priceVersions(
       versions, CS.VersionPricer.MODE_UPDATE);
     addCostsToSteps(p, versions, costs,
@@ -313,7 +359,7 @@ CS.Solver.prototype.getGravityPotential = function (stepBaseName, packages) {
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
 
   _.each(packages, function (p) {
-    var versions = self.input.catalogCache.getPackageVersions(p);
+    var versions = self.getVersions(p);
     var costs = self.pricer.priceVersions(
       versions, CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES);
     addCostsToSteps(p, versions, costs,
@@ -335,7 +381,7 @@ CS.Solver.prototype.getDistances = function (stepBaseName, packageAndVersions) {
   _.each(packageAndVersions, function (pvArg) {
     var package = pvArg.package;
     var previousVersion = pvArg.version;
-    var versions = self.input.catalogCache.getPackageVersions(package);
+    var versions = self.getVersions(package);
     var costs = self.pricer.priceVersionsWithPrevious(
       versions, previousVersion);
     addCostsToSteps(package, versions, costs,
@@ -401,7 +447,7 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // generate package version variables for known, reachable packages
   _.each(_.keys(analysis.reachablePackages), function (p) {
-    var versionVars = self.getAllVersions(p);
+    var versionVars = self.getAllVersionVars(p);
     // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
     logic.require(Logic.atMostOne(versionVars));
     // The variable "foo" is true if and only if at least one of the
@@ -411,7 +457,7 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // generate strong dependency requirements
   _.each(_.keys(analysis.reachablePackages), function (p) {
-    _.each(cache.getPackageVersions(p), function (v) {
+    _.each(self.getVersions(p), function (v) {
       _.each(cache.getDependencyMap(p, v), function (dep) {
         // `dep` is a CS.Dependency
         if (! dep.isWeak) {
@@ -465,7 +511,7 @@ CS.Solver.prototype.getSolution = function (options) {
   var unanticipatedPrereleases = [];
   _.each(_.keys(analysis.reachablePackages), function (p) {
     var anticipatedPrereleases = input.anticipatedPrereleases[p];
-    _.each(cache.getPackageVersions(p), function (v) {
+    _.each(self.getVersions(p), function (v) {
       if (/-/.test(v) && ! (anticipatedPrereleases &&
                             _.has(anticipatedPrereleases, v))) {
         unanticipatedPrereleases.push(pvVar(p, v));
@@ -493,7 +539,7 @@ CS.Solver.prototype.getSolution = function (options) {
     _.each(toUpdate, function (p) {
       if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
         var parts = self.pricer.partitionVersions(
-          cache.getPackageVersions(p), input.previousSolution[p]);
+          self.getVersions(p), input.previousSolution[p]);
         _.each(parts.older.concat(parts.higherMajor), function (v) {
           previousRootIncompat.addTerm(pvVar(p, v), 1);
         });
@@ -664,7 +710,7 @@ var getOkVersions = function (toPackage, vConstraint, targetVersions) {
 var _getConstraintFormula = function (toPackage, vConstraint) {
   var self = this;
 
-  var targetVersions = self.input.catalogCache.getPackageVersions(toPackage);
+  var targetVersions = self.getVersions(toPackage);
   var okVersions = getOkVersions(toPackage, vConstraint, targetVersions);
 
   if (okVersions.length === targetVersions.length) {
@@ -709,8 +755,7 @@ CS.Solver.prototype.throwConflicts = function () {
     // c is a CS.Solver.Constraint
     if (solution.evaluate(c.conflictVar)) {
       // skipped this constraint
-      var possibleVersions =
-            self.input.catalogCache.getPackageVersions(c.toPackage);
+      var possibleVersions = self.getVersions(c.toPackage);
       var chosenVersion = _.find(possibleVersions, function (v) {
         return solution.evaluate(pvVar(c.toPackage, v));
       });

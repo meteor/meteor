@@ -185,7 +185,7 @@ Tinytest.add("constraint solver - no results", function (test) {
   ]);
   testWithResolver(test, resolver, function (t, FAIL) {
     FAIL({foo: "w1.0.0", bar: "1.0.0"},
-         /Constraints:[^]+top level/);
+         /No version of foo satisfies top-level constraints: @1.0.0/);
   });
 });
 

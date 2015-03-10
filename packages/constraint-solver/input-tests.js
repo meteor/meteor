@@ -329,13 +329,15 @@ Tinytest.add("constraint solver - input - fake PackageConstraint", function (tes
   };
 
   doFailTest(test,
-             new CS.Input(["foo"], [fakeConstraint],
+             new CS.Input(["foo", "bar"], [fakeConstraint],
                           CS.CatalogCache.fromJSONable({
                             data: {
-                              "foo 1.0.0": []
+                              "foo 1.0.0": [],
+                              "foo 2.0.0": [],
+                              "bar 1.0.0": ["foo@1.0.0"]
                             }
                           })),
-             /constraint foo@2.0.0 is not satisfied by foo 1.0.0/);
+             /constraint foo@1.0.0 is not satisfied by foo 2.0.0/);
 });
 
 Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
@@ -345,8 +347,11 @@ Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
   // before logic-solver got smarter about avoiding recursion in formula
   // generation, and it also tests the case where an unsatisfiable constraint is
   // in .meteor/packages.
+  //
+  // It's not actually a good test of logic-solver overflowing the stack anymore,
+  // because the constraint-solver is smarter now.
   doFailTest(test, STACK_OVERFLOW_BUG_INPUT,
-             /constraint follower-livedata@0.9.0 is not satisfied by follower-livedata/);
+             /No version of follower-livedata satisfies top-level constraints: @0.9.0/);
 });
 
 
