@@ -432,7 +432,14 @@ _.extend(ProjectContext.prototype, {
         } catch (e) {
           if (!e.constraintSolverError && !e.versionParserError)
             throw e;
-          buildmessage.error(e.message, { tags: { refreshCouldHelp: true }});
+          // If the contraint solver gave us an error, refreshing
+          // might help to get new packages (see the comment on
+          // missingPreviousVersionIsError above).  If it's a
+          // package-version-parser error, print a nice message,
+          // but don't bother refreshing.
+          buildmessage.error(
+            e.message,
+            { tags: { refreshCouldHelp: !!e.constraintSolverError }});
         }
 
         if (buildmessage.jobHasMessages())
