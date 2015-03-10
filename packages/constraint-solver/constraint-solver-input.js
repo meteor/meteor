@@ -38,6 +38,18 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   check(self.previousSolution, Match.OneOf(Object, null));
 
   self.catalogCache = catalogCache;
+  check(self.catalogCache, CS.CatalogCache);
+  // The catalog presumably has valid package names in it, but make sure
+  // there aren't any characters in there somehow that will trip us up
+  // with creating valid variable strings.
+  self.catalogCache.eachPackage(function (packageName) {
+    validatePackageName(packageName);
+  });
+  self.catalogCache.eachPackageVersion(function (packageName, depsMap) {
+    _.each(depsMap, function (deps, depPackageName) {
+      validatePackageName(depPackageName);
+    });
+  });
 
   _.each(self.dependencies, validatePackageName);
   _.each(self.upgrade, validatePackageName);
@@ -59,13 +71,16 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   });
 };
 
-var validatePackageName = function (name) {
+validatePackageName = function (name) {
   PV.validatePackageName(name);
   // we have some hard constraints of our own, so check them
   // in case validatePackageName isn't.
   if ((name.charAt(0) === '$') || (name.charAt(0) === '-')) {
     throw new Error("First character of package name cannot be: " +
                     name.charAt(0));
+  }
+  if (/ /.test(name)) {
+    throw new Error("No space allowed in package name");
   }
 };
 

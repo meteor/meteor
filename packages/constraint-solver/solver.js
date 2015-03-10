@@ -71,15 +71,19 @@ CS.Solver.prototype.analyze = function () {
   analysis.allowedVersions = {};
   analysis.packagesWithNoAllowedVersions = {}; // package -> [constraints]
 
-  // process top-level constraints, applying them right now by limiting
-  // what package versions we even consider (e.g. create variables for).
-  // we won't even consider versions that don't match them.
-  // this speeds up solving, especially when we have equality
-  // constraints.  we can't throw any errors yet, because
-  // `input.constraints` doesn't establish any dependencies (so we
-  // don't know if it's a problem that some package has no legal
-  // versions), but we can track such packages in packagesWithNoAllowedVersions
-  // so that we throw a good error later.
+  // Process top-level constraints, applying them right now by
+  // limiting what package versions we even consider.  This speeds up
+  // solving, especially given the equality constraints on core
+  // packages.  For versions we don't allow, we get to avoid generating
+  // Constraint objects for their constraints, which saves us both
+  // clause generation time and solver work up through the point where we
+  // determine there are no conflicts between constraints.
+  //
+  // we can't throw any errors yet, because `input.constraints`
+  // doesn't establish any dependencies (so we don't know if it's a
+  // problem that some package has no legal versions), but we can
+  // track such packages in packagesWithNoAllowedVersions so that we
+  // throw a good error later.
   _.each(_.groupBy(input.constraints, 'package'), function (cs, p) {
     var versions = cache.getPackageVersions(p);
     if (! versions.length) {
@@ -127,9 +131,9 @@ CS.Solver.prototype.analyze = function () {
   ////////// ANALYZE REACHABILITY
 
   // A "reachable" package is one that is either a root dependency or
-  // a strong dependency of any version of a reachable package.
+  // a strong dependency of any "allowed" version of a reachable package.
   // In other words, we walk all strong dependencies starting
-  // with the root dependencies, and visiting all versions of each
+  // with the root dependencies, and visiting all allowed versions of each
   // package.
   //
   // This analysis is mainly done for performance, because if there are
@@ -471,7 +475,7 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // generate package version variables for known, reachable packages
   _.each(_.keys(analysis.reachablePackages), function (p) {
-    if (! analysis.packagesWithNoAllowedVersions[p]) {
+    if (! _.has(analysis.packagesWithNoAllowedVersions, p)) {
       var versionVars = _.map(self.getVersions(p),
                               function (v) {
                                 return pvVar(p, v);
@@ -853,15 +857,6 @@ CS.Solver.prototype.getPathsToPackageVersion = function (packageAndVersion) {
   var solution = self.solution;
 
   var versionMap = self.currentVersionMap();
-  // Return list of package names of strong dependencies of `package`
-  var getDeps = function (package) {
-    var deps = cache.getDependencyMap(package, versionMap[package]);
-    return _.map(_.filter(deps, function (dep) {
-      return ! dep.isWeak;
-    }), function (dep) {
-      return dep.packageConstraint.package;
-    });
-  };
   var hasDep = function (p1, p2) {
     // Include weak dependencies, because their constraints matter.
     return _.has(cache.getDependencyMap(p1, versionMap[p1]), p2);

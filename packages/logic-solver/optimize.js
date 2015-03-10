@@ -88,8 +88,7 @@ var minMax = function (solver, solution, costTerms, costWeights, options, isMin)
     }
     solver.forbid(nonZeroTerms);
   } else {
-    solver.require((isMin ? Logic.lessThanOrEqual : Logic.greaterThanOrEqual)(
-      weightedSum, Logic.constantBits(curCost)));
+    solver.require(Logic.equalBits(weightedSum, Logic.constantBits(curCost)));
   }
 
   if (progress) {
