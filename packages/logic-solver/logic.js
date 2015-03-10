@@ -355,7 +355,8 @@ Logic.Solver.prototype.toNameTerm = function (t) {
   }
 };
 
-Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
+Logic.Solver.prototype._addClause = function (cls, _extraTerms,
+                                              _useTermOverride) {
   var self = this;
 
   _check(cls, Logic.Clause);
@@ -387,7 +388,11 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
     } else if (v < 1 || v >= self._num2name.length) {
       throw new Error("Bad variable number: " + v);
     } else if (i < numRealTerms) {
-      self._useFormulaTerm(t);
+      if (_useTermOverride) {
+        _useTermOverride(t);
+      } else {
+        self._useFormulaTerm(t);
+      }
     }
   }
 
@@ -407,45 +412,90 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms) {
 // "-X v 5; -Y v 5" are equivalent to "-5 => -X; -5 => -Y" (or
 // "X => 5; Y => 5").
 
-Logic.Solver.prototype._useFormulaTerm = function (t) {
+Logic.Solver.prototype._useFormulaTerm = function (t, _addClausesOverride) {
   var self = this;
   _check(t, Logic.NumTerm);
   var v = (t < 0) ? -t : t;
 
-  if (_.has(self._ungeneratedFormulas, v)) {
-    // using a Formula's var; maybe have to generate clauses
-    // for the Formula
-    var formula = self._ungeneratedFormulas[v];
-    var info = self._getFormulaInfo(formula);
-    var positive = t > 0;
-    if (positive && ! info.occursPositively) {
-      // generate clauses for the formula.
-      // Eg, if we use variable `X` which represents the formula
-      // `A v B`, add the clause `A v B v -X`.
-      // By using the extraTerms argument to addClauses, we avoid
-      // treating this as a negative occurrence of X.
-      info.occursPositively = true;
-      var clauses = self._generateFormula(true, formula);
-      self._addClauses(clauses, [-v]);
-    } else if ((! positive) && ! info.occursNegatively) {
-      // Eg, if we have the term `-X` where `X` represents the
-      // formula `A v B`, add the clauses `-A v X` and `-B v X`.
-      // By using the extraTerms argument to addClauses, we avoid
-      // treating this as a positive occurrence of X.
-      info.occursNegatively = true;
-      var clauses = self._generateFormula(false, formula);
-      self._addClauses(clauses, [v]);
-    }
-    if (info.occursPositively && info.occursNegatively) {
-      delete self._ungeneratedFormulas[v];
-    }
+  if (! _.has(self._ungeneratedFormulas, v)) {
+    return;
+  }
+
+  // using a Formula's var; maybe have to generate clauses
+  // for the Formula
+  var formula = self._ungeneratedFormulas[v];
+  var info = self._getFormulaInfo(formula);
+  var positive = t > 0;
+
+  // To avoid overflowing the JS stack, defer calls to addClause.
+  // The way we get overflows is when Formulas are deeply nested
+  // (which happens naturally when you call Logic.sum or
+  // Logic.weightedSum on a long list of terms), which causes
+  // addClause to call useFormulaTerm to call addClause, and so
+  // on.  Approach:  The outermost useFormulaTerm keeps a list
+  // of clauses to add, and then adds them in a loop using a
+  // special argument to addClause that passes a special argument
+  // to useFormulaTerm that causes those clauses to go into the
+  // list too.  Code outside of `_useFormulaTerm` and `_addClause(s)`
+  // does not have to pass these special arguments to call them.
+  var deferredAddClauses = null;
+  var addClauses;
+  if (! _addClausesOverride) {
+    deferredAddClauses = [];
+    addClauses = function (clauses, extraTerms) {
+      deferredAddClauses.push({clauses: clauses,
+                               extraTerms: extraTerms});
+    };
+  } else {
+    addClauses = _addClausesOverride;
+  }
+
+  if (positive && ! info.occursPositively) {
+    // generate clauses for the formula.
+    // Eg, if we use variable `X` which represents the formula
+    // `A v B`, add the clause `A v B v -X`.
+    // By using the extraTerms argument to addClauses, we avoid
+    // treating this as a negative occurrence of X.
+    info.occursPositively = true;
+    var clauses = self._generateFormula(true, formula);
+    addClauses(clauses, [-v]);
+  } else if ((! positive) && ! info.occursNegatively) {
+    // Eg, if we have the term `-X` where `X` represents the
+    // formula `A v B`, add the clauses `-A v X` and `-B v X`.
+    // By using the extraTerms argument to addClauses, we avoid
+    // treating this as a positive occurrence of X.
+    info.occursNegatively = true;
+    var clauses = self._generateFormula(false, formula);
+    addClauses(clauses, [v]);
+  }
+  if (info.occursPositively && info.occursNegatively) {
+    delete self._ungeneratedFormulas[v];
+  }
+
+  if (! (deferredAddClauses && deferredAddClauses.length)) {
+    return;
+  }
+
+  var useTerm = function (t) {
+    self._useFormulaTerm(t, addClauses);
+  };
+  // This is the loop that turns recursion into iteration.
+  // When addClauses calls useTerm, which calls useFormulaTerm,
+  // the nested useFormulaTerm will add any clauses to our
+  // own deferredAddClauses list.
+  while (deferredAddClauses.length) {
+    var next = deferredAddClauses.pop();
+    self._addClauses(next.clauses, next.extraTerms, useTerm);
   }
 };
 
-Logic.Solver.prototype._addClauses = function (array, _extraTerms) {
+Logic.Solver.prototype._addClauses = function (array, _extraTerms,
+                                               _useTermOverride) {
   _check(array, [Logic.Clause]);
   var self = this;
-  _.each(array, function (cls) { self._addClause(cls, _extraTerms); });
+  _.each(array, function (cls) {
+    self._addClause(cls, _extraTerms, _useTermOverride);
+  });
 };
 
 Logic.Solver.prototype.require = function (/*formulaOrArray, ...*/) {
@@ -1159,12 +1209,13 @@ var binaryWeightedSum = function (varsByWeight) {
       bucket.push(sum);
       pushToNth(buckets, lowestWeight+1, carry);
     } else {
-      // Not clear whether it's better to take the three
-      // vars from the start or end of the bucket, but
-      // based on a quick test, the end seems faster for solving.
-      var c = bucket.pop();
-      var b = bucket.pop();
-      var a = bucket.pop();
+      // Whether we take variables from the start or end of the
+      // bucket determines the shape of the tree.  Taking them from
+      // the beginning seems faster (one particular case took 10
+      // seconds instead of 22 seconds).
+      var a = bucket.shift();
+      var b = bucket.shift();
+      var c = bucket.shift();
       var sum = new Logic.FullAdderSum(a, b, c);
       var carry = new Logic.FullAdderCarry(a, b, c);
       bucket.push(sum);
@@ -1320,7 +1371,6 @@ Logic._defineFormula(Logic.Assumption, 'assump', {
     }
   }
 });
-
 
 Logic.Solution = function (_solver, _assignment) {
   var self = this;

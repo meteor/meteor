@@ -339,9 +339,14 @@ Tinytest.add("constraint solver - input - fake PackageConstraint", function (tes
 });
 
 Tinytest.add("constraint solver - input - stack overflow bug", function (test) {
-  doTest(test, STACK_OVERFLOW_BUG_INPUT, {
-    // XXX put the right answer here, when this test stops throwing an error!
-  });
+  // This case is taken from the "solver-error" branch of the meteor/rectangles
+  // repo.  It's an app running from a release (new-version-solver-2) with an
+  // unsatisfiable constraint in .meteor/packages.  It caused a stack overflow
+  // before logic-solver got smarter about avoiding recursion in formula
+  // generation, and it also tests the case where an unsatisfiable constraint is
+  // in .meteor/packages.
+  doFailTest(test, STACK_OVERFLOW_BUG_INPUT,
+             /constraint follower-livedata@0.9.0 is not satisfied by follower-livedata/);
 });
 
 

@@ -321,11 +321,11 @@ Tinytest.add("logic-solver - Logic.and", function (test) {
                                              Logic.or("-A", "C"))),
                          "-D"));
     },
-    ["-A v $or1",
-     "-B v $or1",
+    ["-$or1 v -$or2 v $and1",
      "A v $or2",
      "-C v $or2",
-     "-$or1 v -$or2 v $and1",
+     "-A v $or1",
+     "-B v $or1",
      "-$and1 v -D"]
   ]);
 });
@@ -583,9 +583,9 @@ Tinytest.add("logic-solver - Logic.implies, Logic.equiv", function (test) {
     ["-A v B v -$implies1", "$implies1 v C"],
     function (s) {
       s.require(Logic.or(Logic.implies(Logic.or("A", "D"), "B"), "C")); },
-    ["-A v $or1",
+    ["-$or1 v B v -$implies1",
+     "-A v $or1",
      "-D v $or1",
-     "-$or1 v B v -$implies1",
      "$implies1 v C"],
     function (s) {
       s.require(Logic.equiv("A", "B")); },
@@ -1064,11 +1064,11 @@ Tinytest.add("logic-solver - sum of terms", function (test) {
      "B v C v -$hsum1",
      "-B v -C v -$hsum1",
      "-Z v $hsum1",
-     "-B v -C v $hcarry2",
      "A v -$hcarry2 v $hsum2",
+     "-A v $hcarry2 v $hsum2",
      "B v -$hcarry2",
      "C v -$hcarry2",
-     "-A v $hcarry2 v $hsum2",
+     "-B v -C v $hcarry2",
      "Y v -$hsum2",
      "A v $hcarry2 v -$hsum2",
      "-A v -$hcarry2 v -$hsum2",
@@ -1114,17 +1114,17 @@ Tinytest.add("logic-solver - sum of terms", function (test) {
      "$T",
      "-A v -B v $hcarry1",
      "-$hcarry1 v $T",
-     "A v -$hcarry1",
-     "B v -$hcarry1",
      "$hcarry1 v $T v -$xor1",
      "-$hcarry1 v -$T v -$xor1",
+     "A v -$hcarry1",
+     "B v -$hcarry1",
      "A v -B v $hsum1",
      "-A v B v $hsum1",
      "$xor1 v -$hsum1 v $F",
-     "A v B v -$hsum1",
-     "-A v -B v -$hsum1",
      "$hsum1 v $F v -$xor2",
      "-$hsum1 v -$F v -$xor2",
+     "A v B v -$hsum1",
+     "-A v -B v -$hsum1",
      "$xor2 v $xor1"]
   ]);
 });
@@ -1201,29 +1201,29 @@ Tinytest.add("logic-solver - assumptions", function (test) {
   test.equal(s.solveAssuming(atLeastOne).getMap(),
              { A: false, B: true, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
-             formatLines(["A v B v C v D v -$or1",
-                          "$or1 v -$assump1"]));
+             formatLines(["$or1 v -$assump1",
+                          "A v B v C v D v -$or1"]));
 
   // assume the same thing again
   test.equal(s.solveAssuming(atLeastOne).getMap(),
              { A: false, B: true, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
-             formatLines(["A v B v C v D v -$or1",
-                          "$or1 v -$assump1",
+             formatLines(["$or1 v -$assump1",
+                          "A v B v C v D v -$or1",
                           "$or1 v -$assump2"]));
 
   var none = Logic.and("-A", "-B", "-C", "-D");
   test.equal(s.solveAssuming(none).getMap(),
              { A: false, B: false, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
-             formatLines(["A v B v C v D v -$or1",
-                          "$or1 v -$assump1",
+             formatLines(["$or1 v -$assump1",
+                          "A v B v C v D v -$or1",
                           "$or1 v -$assump2",
+                          "$and1 v -$assump3",
                           "-A v -$and1",
                           "-B v -$and1",
                           "-C v -$and1",
-                          "-D v -$and1",
-                          "$and1 v -$assump3"]));
+                          "-D v -$and1"]));
 
   // require a formula that was previously just temporarily assumed!
   s.require(atLeastOne);
@@ -1231,28 +1231,28 @@ Tinytest.add("logic-solver - assumptions", function (test) {
              // any one could be true
              { A: false, B: true, C: false, D: false });
   test.equal(formatLines(s._clauseStrings()),
-             formatLines(["A v B v C v D v -$or1",
-                          "$or1 v -$assump1",
+             formatLines(["$or1 v -$assump1",
+                          "A v B v C v D v -$or1",
                           "$or1 v -$assump2",
+                          "$and1 v -$assump3",
                           "-A v -$and1",
                           "-B v -$and1",
                           "-C v -$and1",
                           "-D v -$and1",
-                          "$and1 v -$assump3",
                           "$or1"]));
 
   test.equal(s.solveAssuming("D").getMap(),
              // at least D is true; other than that, anything goes
              { A: false, B: true, C: false, D: true });
   test.equal(formatLines(s._clauseStrings()),
-             formatLines(["A v B v C v D v -$or1",
-                          "$or1 v -$assump1",
+             formatLines(["$or1 v -$assump1",
+                          "A v B v C v D v -$or1",
                           "$or1 v -$assump2",
+                          "$and1 v -$assump3",
                           "-A v -$and1",
                           "-B v -$and1",
                           "-C v -$and1",
                           "-D v -$and1",
-                          "$and1 v -$assump3",
                           "$or1",
                           "D v -$assump4"]));
 
