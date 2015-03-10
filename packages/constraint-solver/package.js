@@ -3,19 +3,22 @@ Package.describe({
   version: "1.0.18-vs.3"
 });
 
-Npm.depends({
-  'mori': '0.2.6'
-});
-
 Package.onUse(function (api) {
   api.export('ConstraintSolver');
-  api.use(['underscore', 'ejson', 'check', 'package-version-parser',
-           'binary-heap', 'random', 'logic-solver']);
-  api.addFiles(['datatypes.js', 'catalog-cache.js', 'catalog-loader.js',
-                'constraint-solver-input.js', 'version-pricer.js',
-                'solver.js', 'constraint-solver.js']);
-  api.addFiles(['resolver.js', 'constraints-list.js',
-                'resolver-state.js', 'priority-queue.js'], ['server']);
+  api.use([
+    'underscore',
+    'check',
+    'package-version-parser',
+    'logic-solver'
+  ]);
+  api.addFiles([
+    'datatypes.js',
+    'catalog-cache.js',
+    'catalog-loader.js',
+    'constraint-solver-input.js',
+    'version-pricer.js',
+    'solver.js',
+    'constraint-solver.js']);
 });
 
 Package.onTest(function (api) {
@@ -29,9 +32,7 @@ Package.onTest(function (api) {
   // modern browsers.
   var where = ['server'];
 
-  // data for big benchmarky tests
-  api.addFiles('test-data.js', where);
-
+  api.addFiles('gem-data.js', where); // data for old big, slow tests
   api.addFiles('stack-overflow-bug-data.js', where);
 
   api.addFiles('datatypes-tests.js', where);
