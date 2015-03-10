@@ -18,7 +18,7 @@ CS.Solver = function (input, options) {
                                            return p + "@" + vConstraint.raw;
                                          });
 
-  self.options = options;
+  self.options = options || {};
 
   self.steps = [];
   self.stepsByName = {};
@@ -180,8 +180,11 @@ CS.Solver.prototype.minimize = function (step, options) {
   self.solution = logic.minimize(
     self.solution, costTerms, costWeights, {
       progress: function (status, cost) {
-        if (status === 'improving') {
-          if (DEBUG) {
+        if (self.options.nudge) {
+          self.options.nudge();
+        }
+        if (DEBUG) {
+          if (status === 'improving') {
             console.log(cost + " ... trying to improve ...");
           }
         }

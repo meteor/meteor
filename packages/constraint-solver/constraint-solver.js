@@ -63,7 +63,11 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
 // - allAnswers (for testing, calculate all possible answers and put an extra
 //   property named "allAnswers" on the result)
 CS.PackagesResolver._resolveWithInput = function (input, options) {
-  var solver = new CS.Solver(input);
+  options = options || {};
+
+  var solver = new CS.Solver(input, {
+    nudge: options.nudge
+  });
 
   // Disable runtime type checks (they slow things down by a factor of 3)
   return Logic._disablingTypeChecks(function () {
