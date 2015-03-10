@@ -86,25 +86,38 @@ CS.Solver.Step.prototype.addTerm = function (term, weight) {
 var DEBUG = false;
 
 // Call as one of:
-// * minimize(step)
-// * minimize([step1, step2, ...])
-// * minimize(stepName, costTerms, costWeights)
-CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
+// * minimize(step, options)
+// * minimize([step1, step2, ...], options)
+// * minimize(stepName, costTerms, costWeights, options)
+CS.Solver.prototype.minimize = function (step, options) {
   var self = this;
 
   if (_.isArray(step)) {
+    // minimize([steps...], options)
     _.each(step, function (st) {
-      self.minimize(st);
+      self.minimize(st, options);
     });
     return;
   }
 
   if (typeof step === 'string') {
+    // minimize(stepName, costTerms, costWeights, options)
+    var stepName_ = arguments[0];
+    var costTerms_ = arguments[1];
+    var costWeights_ = arguments[2];
+    var options_ = arguments[3];
+    if (costWeights_ && typeof costWeights_ === 'object' &&
+        ! _.isArray(costWeights_)) {
+      options_ = costWeights_;
+      costWeights_ = null;
+    }
     var theStep = new CS.Solver.Step(
-      step, costTerms_, (costWeights_ == null ? 1 : costWeights_));
-    self.minimize(theStep);
+      stepName_, costTerms_, (costWeights_ == null ? 1 : costWeights_));
+    self.minimize(theStep, options_);
     return;
   }
+
+  // minimize(step, options);
 
   var logic = self.logic;
 
@@ -126,7 +139,8 @@ CS.Solver.prototype.minimize = function (step, costTerms_, costWeights_) {
             console.log(cost + " ... trying to improve ...");
           }
         }
-      }
+      },
+      strategy: (options && options.strategy)
     });
 
   if (! self.solution) {
@@ -441,7 +455,11 @@ CS.Solver.prototype.getSolution = function (options) {
   // try not to set the conflictVar on any constraint.  If the minimum
   // is greater than 0, we'll throw an error later, after we've run the
   // cost function, so we can show a better error.
-  self.minimize('conflicts', _.pluck(analysis.constraints, 'conflictVar'));
+  // If there are conflicts, this minimization can be time-consuming
+  // (several seconds or more).  The strategy 'bottom-up' helps by
+  // looking for solutions with few conflicts first.
+  self.minimize('conflicts', _.pluck(analysis.constraints, 'conflictVar'),
+                { strategy: 'bottom-up' });
 
   // Try not to use "unanticipated" prerelease versions
   var unanticipatedPrereleases = [];
