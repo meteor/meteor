@@ -430,7 +430,7 @@ _.extend(ProjectContext.prototype, {
             depsAndConstraints.deps, depsAndConstraints.constraints,
             resolveOptions);
         } catch (e) {
-          if (!e.constraintSolverError)
+          if (!e.constraintSolverError && !e.versionParserError)
             throw e;
           buildmessage.error(e.message, { tags: { refreshCouldHelp: true }});
         }
