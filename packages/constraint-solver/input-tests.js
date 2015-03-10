@@ -309,6 +309,152 @@ Tinytest.add("constraint solver - input - previous solution no longer needed", f
   });
 });
 
+Tinytest.add("constraint solver - input - conflicting top-level constraints", function (test) {
+  // conflicting dependencies don't matter if we don't need the package
+  doTest(test, {
+    dependencies: [],
+    constraints: ["foo@1.0.0", "foo@2.0.0"],
+    previousSolution: {},
+    catalogCache: {
+      data: {
+        "foo 1.0.0": [],
+        "foo 2.0.0": []
+      }
+    }
+  }, {
+    answer: {
+    }
+  });
+
+  // ... but they do if we do
+  doFailTest(test, {
+    dependencies: ["bar"],
+    constraints: ["foo@1.0.0", "foo@2.0.0"],
+    previousSolution: {},
+    catalogCache: {
+      data: {
+        "foo 1.0.0": [],
+        "foo 2.0.0": [],
+        "bar 1.0.0": ["foo"]
+      }
+    }
+  }, /No version of foo satisfies top-level constraints: @1.0.0, @2.0.0/);
+});
+
+Tinytest.add("constraint solver - input - previous indirect deps", function (test) {
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: [],
+    previousSolution: { c: "1.2.3" },
+    catalogCache: {
+      data: {
+        "a 1.0.0": ["b"],
+        "b 1.0.0": ["c"],
+        "c 1.0.0": [],
+        "c 1.2.2": [],
+        "c 1.2.3": [],
+        "c 1.2.4": [],
+        "c 1.3.0": [],
+        "c 2.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      a: "1.0.0",
+      b: "1.0.0",
+      c: "1.2.3" // take same version as in previous solution
+    }
+  });
+});
+
+Tinytest.add("constraint solver - input - new indirect deps", function (test) {
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: [],
+    previousSolution: {},
+    catalogCache: {
+      data: {
+        "a 1.0.0": ["b"],
+        "b 1.0.0": ["c@1.2.0"],
+        "c 1.0.0": [],
+        "c 1.2.2": [],
+        "c 1.2.3": [],
+        "c 1.2.4": [],
+        "c 1.3.0": [],
+        "c 2.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      a: "1.0.0",
+      b: "1.0.0",
+      c: "1.2.4" // take patches only (use oldest major/minor possible)
+    }
+  });
+});
+
+Tinytest.add("constraint solver - input - trade-off", function (test) {
+  doTest(test, {
+    dependencies: ["a"],
+    constraints: [],
+    previousSolution: { b: "1.0.0", c: "1.0.0" },
+    catalogCache: {
+      data: {
+        "a 1.0.0": ["b", "c"],
+        "b 1.0.0": ["x"],
+        "b 1.0.1": ["y@1.0.0"],
+        "b 1.0.2": ["y@2.0.0"],
+        "c 1.0.0": ["x"],
+        "c 1.0.1": ["y@2.0.0"],
+        "c 1.0.2": ["x"],
+        "c 1.0.3": ["y@1.0.0"],
+        "y 1.0.0": [],
+        "y 2.0.0": []
+      }
+    }
+  }, {
+    // given a choice between (b,c) being (1.0.1, 1.0.3) or (1.0.2, 1.0.1),
+    // the latter should be preferred; indirect dependencies with a previous
+    // solution should be jointly made as old as possible.
+    answer: {
+      a: "1.0.0",
+      b: "1.0.2",
+      c: "1.0.1",
+      y: "2.0.0"
+    }
+  });
+
+  doTest(test, {
+    dependencies: ["a", "b", "c"],
+    constraints: [],
+    previousSolution: {},
+    catalogCache: {
+      data: {
+        "a 1.0.0": ["b", "c"],
+        "b 1.0.0": ["x"],
+        "b 1.0.1": ["y@1.0.0"],
+        "b 1.0.2": ["y@2.0.0"],
+        "c 1.0.0": ["x"],
+        "c 1.0.1": ["y@2.0.0"],
+        "c 1.0.2": ["x"],
+        "c 1.0.3": ["y@1.0.0"],
+        "y 1.0.0": [],
+        "y 2.0.0": []
+      }
+    }
+  }, {
+    // now we should prefer "b" and "c" to jointly be as new as possible,
+    // because they are direct dependencies with no previous solution.
+    answer: {
+      a: "1.0.0",
+      b: "1.0.1",
+      c: "1.0.3",
+      y: "1.0.0"
+    }
+  });
+
+});
+
 Tinytest.add("constraint solver - input - fake PackageConstraint", function (test) {
   // The tool gives us PackageConstraint objects constructed with a different
   // copy of package-version-parser.  If we're not careful in CS.Input or
