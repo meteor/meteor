@@ -185,6 +185,11 @@
 
 * After killing existing `mongod` servers, also clear the `mongod.lock` file.
 
+* Stricter validation for package names: they cannot begin with a hyphen, end
+  with a dot, or contain two consecutive dots.  (No packages on Atmosphere fail
+  this validation.)
+
+
 
 ### Meteor Mobile
 
