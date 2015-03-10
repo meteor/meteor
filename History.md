@@ -1,5 +1,10 @@
 ## v.NEXT
 
+### `meteor` command-line tool
+
+* Don't fail if `npm` prints more than 200K.  #3887
+
+
 ## v1.0.4, 2015-Mar-??
 
 ### Mongo Driver and Livequery
