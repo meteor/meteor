@@ -712,7 +712,8 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
-    verbose: { type: Boolean, short: "v" }
+    verbose: { type: Boolean, short: "v" },
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -761,7 +762,8 @@ var buildCommand = function (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([bundleArch, archinfo.host()])
+    serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -1078,7 +1080,8 @@ main.registerCommand({
     // it contains binary packages that should be incompatible. A hack to allow
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
-    'override-architecture-with-local' : { type: Boolean }
+    'override-architecture-with-local' : { type: Boolean },
+    'allow-incompatible-update': { type: Boolean }
   },
   requiresApp: function (options) {
     return ! options.delete;
@@ -1125,7 +1128,8 @@ main.registerCommand({
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()])
+    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {

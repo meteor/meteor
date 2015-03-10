@@ -713,12 +713,13 @@ CS.Solver.prototype.getSolution = function (options) {
              var pv = CS.PackageAndVersion.fromString(pvStr);
              var prevVersion = input.previousSolution[pv.package];
              self.errors.push(
-               'Breaking change required to top-level dependency: ' +
+               'Potentially incompatible change required to top-level dependency: ' +
                  pvStr + ', was ' + prevVersion + '.\n' +
                  self.listConstraintsOnPackage(pv.package));
            });
-    self.errors.push('To allow breaking changes to top-level dependencies, you ' +
-                     'must pass --allow-incompatible-update to meteor [run], update, add, or remove.');
+    self.errors.push('To allow potentially incompatible changes to top-level ' +
+                     'dependencies, you must pass --allow-incompatible-update ' +
+                     'on the command line.');
     self.throwAnyErrors();
   }
 

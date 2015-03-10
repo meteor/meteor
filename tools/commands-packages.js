@@ -112,14 +112,18 @@ var formatArchitecture = function (s) {
 // whenever necessary!
 main.registerCommand({
   name: '--get-ready',
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
+  options: {
+    'allow-incompatible-update': { type: Boolean }
+  }
 }, function (options) {
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir || files.mkdtemp('meteor-get-ready'),
     neverWriteProjectConstraintsFile: true,
-    neverWritePackageMap: true
+    neverWritePackageMap: true,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.initializeCatalog();
@@ -157,10 +161,14 @@ main.registerCommand({
 main.registerCommand({
   name: '--prepare-app',
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  options: {
+    'allow-incompatible-update': { type: Boolean }
+  }
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
