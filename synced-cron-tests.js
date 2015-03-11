@@ -131,3 +131,20 @@ Tinytest.add('SyncedCron.add starts by it self when running', function(test) {
   test.equal(SyncedCron.running, false);
   test.equal(_.keys(SyncedCron._entries).length, 0);
 });
+
+Tinytest.add('SyncedCron.config can customize the options object', function(test) {
+  SyncedCron._reset();
+
+  SyncedCron.config({
+    log: false,
+    collectionName: 'foo',
+    utc: true,
+    collectionTTL: 0
+  });
+
+  test.equal(SyncedCron.options.log, false);
+  test.equal(SyncedCron.options.collectionName, 'foo');
+  test.equal(SyncedCron.options.utc, true);
+  test.equal(SyncedCron.options.collectionTTL, 0);
+});
+
