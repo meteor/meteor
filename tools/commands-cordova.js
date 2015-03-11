@@ -482,6 +482,12 @@ var installPlugin = function (cordovaPath, name, version, conf) {
      { cwd: cordovaPath, env: buildCordovaEnv() });
   if (! execRes.success)
     throw new Error("Failed to install plugin " + name + ": " + execRes.stderr);
+  // Starting with cordova-lib 4.0.0, `plugin add` fails to exit non-zero on
+  // this particular error, and it prints the error on stdout.  See
+  // https://github.com/meteor/meteor/issues/3914
+  if (execRes.stdout.match(/Variable\(s\) missing/)) {
+    throw new Error("Failed to install plugin " + name + ": " + execRes.stdout);
+  }
 
   if (utils.isUrlWithSha(version)) {
     var lock = getTarballPluginsLock(cordovaPath);
