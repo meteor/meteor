@@ -219,11 +219,13 @@ Another example where the subscription depends on the data context:
 
 ```js
 Template.comments.onCreated(function () {
-  // Use this.subscribe with the data context reactively
-  this.autorun(function () {
+  var self = this;
+
+  // Use self.subscribe with the data context reactively
+  self.autorun(function () {
     var dataContext = Template.currentData();
-    this.subscribe("comments", dataContext.postId);
-  })
+    self.subscribe("comments", dataContext.postId);
+  });
 });
 ```
 
