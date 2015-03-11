@@ -2,13 +2,13 @@ appcache@1.0.4-rc.0
 autoupdate@1.2.0-rc.0
 base64@1.0.3-rc.0
 binary-heap@1.0.3-rc.0
-blaze@2.1.0-rc.0
+blaze@2.1.0-rc.2
 blaze-tools@1.0.3-rc.0
 boilerplate-generator@1.0.3-rc.0
 callback-hook@1.0.3-rc.0
 check@1.0.5-rc.0
 coffeescript@1.0.6-rc.0
-ddp@1.1.0-rc.0
+ddp@1.1.0-rc.1
 deps@1.0.7-rc.0
 ejson@1.0.6-rc.0
 fastclick@1.0.3-rc.0
@@ -28,7 +28,7 @@ logging@1.0.7-rc.0
 markdown@1.0.4-rc.0
 meteor@1.1.5-rc.0
 meteor-platform@1.2.2-rc.0
-minifiers@1.1.4-rc.0
+minifiers@1.1.4-rc.1
 minimongo@1.0.7-rc.0
 mobile-status-bar@1.0.3-rc.0
 mongo@1.1.0-rc.0
@@ -49,10 +49,10 @@ spacebars@1.0.6-rc.0
 spacebars-compiler@1.0.5-rc.0
 spiderable@1.0.7-rc.0
 standard-app-packages@1.0.5-rc.0
-templating@1.1.0-rc.0
+templating@1.1.0-rc.1
 tracker@1.0.6-rc.0
 ui@1.0.6-rc.0
 underscore@1.0.3-rc.0
 url@1.0.4-rc.0
-webapp@1.2.0-rc.0
+webapp@1.2.0-rc.1
 webapp-hashing@1.0.3-rc.0
