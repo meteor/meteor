@@ -2,7 +2,7 @@
 
 ## v1.0.4, 2015-Mar-??
 
-### Mongo Driver and Livequery
+### Mongo Driver
 
 * Meteor is now tested against MongoDB 2.6 by default (and the bundled version
   used by `meteor run` has been upgraded). It should still work fine with
