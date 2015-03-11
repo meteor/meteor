@@ -15,6 +15,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['percolatestudio:synced-cron', 'tinytest']);
+  api.use(['percolate:synced-cron', 'tinytest']);
   api.add_files('synced-cron-tests.js', ['server']);
 });
