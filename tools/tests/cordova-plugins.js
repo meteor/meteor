@@ -171,10 +171,12 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run = s.run("add", "cordova:foo@1.0.0");
   run.waitSecs(5);
   run.match("added cordova plugin foo");
+  run.expectExit(0);
 
   run = s.run("remove", "cordova:foo");
   run.waitSecs(5);
   run.match("removed cordova plugin foo");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
