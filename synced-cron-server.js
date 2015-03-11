@@ -6,6 +6,8 @@ SyncedCron = {
     //Log job run details to console
     log: true,
 
+    logger: null,
+
     //Name of collection to use for synchronisation and logging
     collectionName: 'cronHistory',
 
@@ -24,8 +26,56 @@ SyncedCron = {
 
 Later = Npm.require('later');
 
+/*
+  Logger factory function. Takes a prefix string and options object
+  and uses an injected `logger` if provided, else falls back to
+  Meteor's `Log` package.
+
+  Will send a log object to the injected logger, on the following form:
+
+    message: String
+    level: String (info, warn, error, debug)
+    tag: 'SyncedCron'
+*/
+function createLogger(prefix, options) {
+  check(prefix, String);
+  check(options, Match.Optional(Object))
+
+  var logger = options && options.logger;
+
+  // Return noop if logging is disabled.
+  if(options.log === false) {
+    return function() {};
+  }
+
+  return function(level, message) {
+    check(level, Match.OneOf('info', 'error', 'warn', 'debug'));
+    check(message, String);
+
+    if(logger && _.isFunction(logger)) {
+
+      logger({
+        level: level,
+        message: message,
+        tag: prefix
+      });
+
+    } else {
+      Log[level]({ message: prefix + ': ' + message });
+    }
+  }
+}
+
+var log;
+
 Meteor.startup(function() {
   var options = SyncedCron.options;
+
+  log = createLogger('SyncedCron', options);
+
+  ['info', 'warn', 'error', 'debug'].forEach(function(level) {
+    log[level] = _.partial(log, level);
+  });
 
   // Don't allow TTL less than 5 minutes so we don't break synchronization
   var minTTL = 300;
@@ -45,23 +95,16 @@ Meteor.startup(function() {
       SyncedCron._collection._ensureIndex({startedAt: 1 },
         { expireAfterSeconds: options.collectionTTL } );
     else
-      console.log('Warning: Not going to use a TTL that is shorter than:' + minTTL);
+      log.warn('Not going to use a TTL that is shorter than:' + minTTL);
   }
 });
 
-var log = {
-  info: function(message) {
-    if (SyncedCron.options.log)
-      Log.info({message: message});
-  }
-}
-
 var scheduleEntry = function(entry) {
   var schedule = entry.schedule(Later.parse);
-  entry._timer = 
+  entry._timer =
     SyncedCron._laterSetInterval(SyncedCron._entryWrapper(entry), schedule);
 
-  log.info('SyncedCron: scheduled "' + entry.name + '" next run @'
+  log.info('Scheduled "' + entry.name + '" next run @'
     + Later.schedule(schedule).next(1));
 }
 
@@ -79,7 +122,7 @@ SyncedCron.add = function(entry) {
   // check
   if (!this._entries[entry.name]) {
     this._entries[entry.name] = entry;
-  
+
     // If cron is already running, start directly.
     if (this.running) {
       scheduleEntry(entry);
@@ -117,7 +160,7 @@ SyncedCron.remove = function(jobName) {
       entry._timer.clear();
 
     delete this._entries[jobName];
-    log.info('SyncedCron: Removed "' + entry.name);
+    log.info('Removed "' + entry.name);
   }
 }
 
@@ -149,7 +192,7 @@ SyncedCron._entryWrapper = function(entry) {
       // http://www.mongodb.org/about/contributors/error-codes/
       // 11000 == duplicate key error
       if (e.name === 'MongoError' && e.code === 11000) {
-        log.info('SyncedCron: Not running "' + entry.name + '" again.');
+        log.info('Not running "' + entry.name + '" again.');
         return;
       }
 
@@ -158,10 +201,10 @@ SyncedCron._entryWrapper = function(entry) {
 
     // run and record the job
     try {
-      log.info('SyncedCron: Starting "' + entry.name + '".');
+      log.info('Starting "' + entry.name + '".');
       var output = entry.job(intendedAt); // <- Run the actual job
 
-      log.info('SyncedCron: Finished "' + entry.name + '".');
+      log.info('Finished "' + entry.name + '".');
       self._collection.update({_id: jobHistory._id}, {
         $set: {
           finishedAt: new Date(),
@@ -169,7 +212,7 @@ SyncedCron._entryWrapper = function(entry) {
         }
       });
     } catch(e) {
-      log.info('SyncedCron: Exception "' + entry.name +'" ' + e.stack);
+      log.info('Exception "' + entry.name +'" ' + e.stack);
       self._collection.update({_id: jobHistory._id}, {
         $set: {
           finishedAt: new Date(),
