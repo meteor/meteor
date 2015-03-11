@@ -3803,9 +3803,9 @@ BOOL REST_SignInOrRegister(
 			else
 			{
 				JSONRoot = JSONResponse->AsObject();
-				if (JSONRoot.find(L"error") != JSONRoot.end() && JSONRoot[L"error"]->IsString())
+				if (JSONRoot.find(L"reason") != JSONRoot.end() && JSONRoot[L"reason"]->IsString())
 				{
-					StringCchPrintfW(wzErrorMessage, BUF_LEN, JSONRoot[L"error"]->AsString().c_str());
+					StringCchPrintfW(wzErrorMessage, BUF_LEN, JSONRoot[L"reason"]->AsString().c_str());
 				}
 				else
 				{
