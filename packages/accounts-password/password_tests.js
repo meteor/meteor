@@ -949,11 +949,23 @@ if (Meteor.isServer) (function () {
       test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
 
       // reset with the same password, see we get a different salted hash
-      Accounts.setPassword(userId, 'new password');
+      Accounts.setPassword(userId, 'new password', {logout: false});
       user = Meteor.users.findOne(userId);
       var newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
+      // No more reset token.
+      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
+      // But loginTokens are still here since we did logout: false.
+      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+
+      // reset again, see that the login tokens are gone.
+      Accounts.setPassword(userId, 'new password');
+      user = Meteor.users.findOne(userId);
+      var newerSaltedHash = user.services.password.bcrypt;
+      test.isTrue(newerSaltedHash);
+      test.notEqual(oldSaltedHash, newerSaltedHash);
+      test.notEqual(newSaltedHash, newerSaltedHash);
       // No more tokens.
       test.isFalse(Meteor.users.findOne(userId).services.password.reset);
       test.isFalse(Meteor.users.findOne(userId).services.resume.loginTokens);
