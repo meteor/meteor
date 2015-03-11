@@ -5,6 +5,9 @@
 * Schedule the flush cycle using a better technique than `setTimeout` when
   available.  #3889
 
+* Yield to the event loop during the flush cycle, unless we're executing a
+  synchronous `Tracker.flush()`.  #3901
+
 
 ### `meteor` command-line tool
 

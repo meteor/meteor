@@ -113,9 +113,9 @@ var requireFlush = function () {
   if (! willFlush) {
     // We want this code to work without Meteor, see debugFunc above
     if (typeof Meteor !== "undefined")
-      Meteor._setImmediate(Tracker.flush);
+      Meteor._setImmediate(Tracker._runFlush);
     else
-      setTimeout(Tracker.flush, 0);
+      setTimeout(Tracker._runFlush, 0);
     willFlush = true;
   }
 };
@@ -283,23 +283,22 @@ Tracker.Computation.prototype._compute = function () {
   }
 };
 
+Tracker.Computation.prototype._needsRecompute = function () {
+  var self = this;
+  return self.invalidated && ! self.stopped;
+};
+
 Tracker.Computation.prototype._recompute = function () {
   var self = this;
 
   self._recomputing = true;
   try {
-    while (self.invalidated && ! self.stopped) {
+    if (self._needsRecompute()) {
       try {
         self._compute();
       } catch (e) {
         _throwOrLog("recompute", e);
       }
-      // If _compute() invalidated us, we run again immediately.
-      // A computation that invalidates itself indefinitely is an
-      // infinite loop, of course.
-      //
-      // We could put an iteration counter here and catch run-away
-      // loops.
     }
   } finally {
     self._recomputing = false;
@@ -390,7 +389,15 @@ Tracker.Dependency.prototype.hasDependents = function () {
  * @summary Process all reactive updates immediately and ensure that all invalidated computations are rerun.
  * @locus Client
  */
-Tracker.flush = function (_opts) {
+Tracker.flush = function (options) {
+  Tracker._runFlush({ finishSynchronously: true,
+                      throwFirstError: options && options._throwFirstError });
+};
+
+// Run all pending computations and afterFlush callbacks.  If we were not called
+// directly via Tracker.flush, this may return before they're all done to allow
+// the event loop to run a little before continuing.
+Tracker._runFlush = function (options) {
   // XXX What part of the comment below is still true? (We no longer
   // have Spark)
   //
@@ -408,10 +415,13 @@ Tracker.flush = function (_opts) {
   if (inCompute)
     throw new Error("Can't flush inside Tracker.autorun");
 
+  options = options || {};
+
   inFlush = true;
   willFlush = true;
-  throwFirstError = !! (_opts && _opts._throwFirstError);
+  throwFirstError = !! options.throwFirstError;
 
+  var recomputedCount = 0;
   var finishedTry = false;
   try {
     while (pendingComputations.length ||
@@ -421,6 +431,14 @@ Tracker.flush = function (_opts) {
       while (pendingComputations.length) {
         var comp = pendingComputations.shift();
         comp._recompute();
+        if (comp._needsRecompute()) {
+          pendingComputations.unshift(comp);
+        }
+
+        if (! options.finishSynchronously && ++recomputedCount > 1000) {
+          finishedTry = true;
+          return;
+        }
       }
 
       if (afterFlushCallbacks.length) {
@@ -437,12 +455,25 @@ Tracker.flush = function (_opts) {
     finishedTry = true;
   } finally {
     if (! finishedTry) {
-      // we're erroring
+      // we're erroring due to throwFirstError being true.
       inFlush = false; // needed before calling `Tracker.flush()` again
-      Tracker.flush({_throwFirstError: false}); // finish flushing
+      // finish flushing
+      Tracker._runFlush({
+        finishSynchronously: options.finishSynchronously,
+        throwFirstError: false
+      });
     }
     willFlush = false;
     inFlush = false;
+    if (pendingComputations.length || afterFlushCallbacks.length) {
+      // We're yielding because we ran a bunch of computations and we aren't
+      // required to finish synchronously, so we'd like to give the event loop a
+      // chance. We should flush again soon.
+      if (options.finishSynchronously) {
+        throw new Error("still have more to do?");  // shouldn't happen
+      }
+      setTimeout(requireFlush, 10);
+    }
   }
 };
 
