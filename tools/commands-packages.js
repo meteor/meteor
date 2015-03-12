@@ -595,7 +595,7 @@ main.registerCommand({
     });
   });
 
-  var sourcePath = files.mkdtemp(name + '-' + versionString + '-source-');
+  var sourcePath = files.mkdtemp('package-source');
   // XXX check tarballHash!
   files.extractTarGz(sourceTarball, sourcePath);
 
