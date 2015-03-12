@@ -55,8 +55,8 @@ create a Meteor developer account.</Text>
 
 	    <Text X="24" Y="100" Width="-24" Height="110" FontId="1" DisablePrefix="yes">
 Registering tells us who's using Meteor for Windows and helps us make it better.
-You'll also need your account to deploy apps and get notified about critical
-security updates when they happen.
+You'll also need your account to deploy apps with our free service and get
+notified about critical security updates when they happen.
 		</Text>
 
         <Button Name="CreateRButton" X="30" Y="194" Width="200" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.CreateRButton)</Button>
