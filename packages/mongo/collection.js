@@ -619,6 +619,12 @@ Mongo.Collection.prototype._createIndex = function (index, options) {
     throw new Error("Can only call _createIndex on server collections");
   self._collection._createIndex(index, options);
 };
+Mongo.Collection.prototype._ensureIndex = function (index, options) {
+  if( typeof Log !== 'undefined' ){
+    Log.warn( '_ensureIndex is deprecated, please use _createIndex' );
+  }
+  self._collection._createIndex.apply( this, arguments );
+};
 Mongo.Collection.prototype._dropIndex = function (index) {
   var self = this;
   if (!self._collection._dropIndex)
