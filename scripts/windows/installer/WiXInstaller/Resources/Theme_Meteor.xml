@@ -37,8 +37,8 @@
 	</Page>
 	<Page Name="Progress">
         <Text X="24" Y="30" Width="-24" Height="75" FontId="3" DisablePrefix="yes">
-Installing Meteor, the complete open source
-platform for building apps in pure JavaScript.
+Installing Meteor, the complete open source platform
+for building apps in pure JavaScript.
         </Text>
 
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
