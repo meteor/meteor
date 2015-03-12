@@ -11,6 +11,9 @@
 #include "precomp.h"
 #include "regutil.h"
 #include "JSON.h"
+#include <windows.h>
+#include <string>
+#include <sstream>
 
 
 static const HRESULT E_WIXSTDBA_CONDITION_FAILED = MAKE_HRESULT(SEVERITY_ERROR, 500, 1);
@@ -3667,6 +3670,28 @@ LExit:
 		return hr;
 	}
 
+typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
+
+bool getWindowsUserAgent(std::string &str){
+ OSVERSIONINFOEX osvi;
+ SYSTEM_INFO si;
+ BOOL bOsVersionInfoEx;
+ ZeroMemory(&si, sizeof(SYSTEM_INFO));
+ ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX)); osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+ bOsVersionInfoEx = GetVersionEx((OSVERSIONINFO*) &osvi); if(bOsVersionInfoEx == 0)
+  return false;
+ PGNSI pGNSI = (PGNSI) GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetNativeSystemInfo");
+ if(NULL != pGNSI)
+  pGNSI(&si);
+ else GetSystemInfo(&si);
+ std::stringstream os;
+ os << "Installer/wix os/win32 (Windows_NT; ";
+ os << osvi.dwMajorVersion << "." << osvi.dwMinorVersion << "." << osvi.dwBuildNumber;
+ os << "; ia32; )";
+ str = os.str();
+ return true; 
+}
+
 
 	#pragma comment( lib,"Wininet.lib")
 
@@ -3682,7 +3707,14 @@ BOOL POSTRequest(
 	BOOL bRes = false;
 	StrAnsiAlloc(ppszResponseMessage, BUF_LEN);
 
-	LPCSTR header = "Content-Type: application/x-www-form-urlencoded";
+	std::string header = "Content-Type: application/x-www-form-urlencoded";
+
+	std::string userAgent;
+	if (getWindowsUserAgent(userAgent)) {
+		header += std::string("\nUser-Agent: ");
+		header += userAgent;
+	}
+
 	LPCSTR method = "POST";
 	LPCSTR agent  = "Mozilla/4.0 (compatible; MSIE 1.0)";
 
@@ -3708,9 +3740,9 @@ BOOL POSTRequest(
 				int datalen = 0;
 				if(szFormData != NULL) datalen = strlen(szFormData);
 				int headerlen = 0;
-				if(header != NULL) headerlen = strlen(header);
+				headerlen = (int)header.length();
 
-				if(HttpSendRequestA(request, header, headerlen, szFormData, datalen))
+				if(HttpSendRequestA(request, header.c_str(), headerlen, szFormData, datalen))
 				{
 					// We have succesfully sent the POST request
 					bRes = true;
