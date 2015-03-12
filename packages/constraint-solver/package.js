@@ -32,8 +32,13 @@ Package.onTest(function (api) {
   // modern browsers.
   var where = ['server'];
 
-  api.addFiles('gem-data.js', where); // data for old big, slow tests
-  api.addFiles('stack-overflow-bug-data.js', where);
+  // Data for old big, slow tests, which are hidden behind an environment
+  // variable
+  api.addFiles('gem-test-data.js', where);
+  // Data for a case that used to take 20 seconds with the old solver
+  api.addFiles('slow-test-data.js', where);
+  // Data for a case that used to cause a stack overflow
+  api.addFiles('stack-overflow-bug-test-data.js', where);
 
   api.addFiles('datatypes-tests.js', where);
   api.addFiles('catalog-cache-tests.js', where);
