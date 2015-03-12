@@ -2569,7 +2569,8 @@ LExit:
 		BOOL fClose = FALSE;
 
 		// If we've already succeeded or failed or showing the help page, just close (prompts are annoying if the bootstrapper is done).
-		if (WIXSTDBA_STATE_APPLIED <= m_state || WIXSTDBA_STATE_HELP == m_state)
+		// Also, allow people to simply close out at the signin stage
+		if (WIXSTDBA_STATE_APPLIED <= m_state || WIXSTDBA_STATE_HELP == m_state || WIXSTDBA_STATE_SVC_OPTIONS == m_state)
 		{
 			fClose = TRUE;
 		}
