@@ -37,20 +37,19 @@ Later = Npm.require('later');
     level: String (info, warn, error, debug)
     tag: 'SyncedCron'
 */
-function createLogger(prefix, options) {
+function createLogger(prefix) {
   check(prefix, String);
-  check(options, Match.Optional(Object))
-
-  var logger = options && options.logger;
 
   // Return noop if logging is disabled.
-  if(options.log === false) {
+  if(SyncedCron.options.log === false) {
     return function() {};
   }
 
   return function(level, message) {
     check(level, Match.OneOf('info', 'error', 'warn', 'debug'));
     check(message, String);
+
+    var logger = SyncedCron.options && SyncedCron.options.logger;
 
     if(logger && _.isFunction(logger)) {
 
@@ -71,7 +70,7 @@ var log;
 Meteor.startup(function() {
   var options = SyncedCron.options;
 
-  log = createLogger('SyncedCron', options);
+  log = createLogger('SyncedCron');
 
   ['info', 'warn', 'error', 'debug'].forEach(function(level) {
     log[level] = _.partial(log, level);
