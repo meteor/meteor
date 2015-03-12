@@ -148,3 +148,38 @@ Tinytest.add('SyncedCron.config can customize the options object', function(test
   test.equal(SyncedCron.options.collectionTTL, 0);
 });
 
+Tinytest.addAsync('SyncedCron can log to injected logger', function(test, done) {
+  SyncedCron._reset();
+
+  var logger = function() {
+    test.isTrue(true);
+    done();
+  };
+
+  SyncedCron.options.logger = logger;
+
+  SyncedCron.add(TestEntry);
+  SyncedCron.start();
+
+  SyncedCron.options.logger = null;
+});
+
+Tinytest.addAsync('SyncedCron should pass correct arguments to logger', function(test, done) {
+  SyncedCron._reset();
+
+  var logger = function(opts) {
+    test.include(opts, 'level');
+    test.include(opts, 'message');
+    test.include(opts, 'tag');
+    test.equal(opts.tag, 'SyncedCron');
+    
+    done();
+  };
+
+  SyncedCron.options.logger = logger;
+
+  SyncedCron.add(TestEntry);
+  SyncedCron.start();
+
+  SyncedCron.options.logger = null;
+});
