@@ -12,11 +12,6 @@
 
 
 
-	<Page Name="Help">
-		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.HelpHeader)</Text>
-		<Text X="24" Y="78" Width="-24" Height="-100" FontId="0" DisablePrefix="yes">#(loc.HelpText)</Text>
-		<Button Name="HelpCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.HelpCloseButton)</Button>
-	</Page>
 	<Page Name="Install">
         <Image X="84" Y="30" Width="450" Height="107" ImageFile="meteor-logo.png"/>
         <!--<Text X="178" Y="20" Width="-24" Height="32" FontId="2" DisablePrefix="yes">#(loc.InstallHeader)</Text>-->

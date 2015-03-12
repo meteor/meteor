@@ -439,7 +439,10 @@ LExit:
 			hrStatus = EvaluateConditions();
 		}
 
-		SetState(WIXSTDBA_STATE_DETECTED, hrStatus);
+		if (m_command.action == BOOTSTRAPPER_ACTION_UNINSTALL)
+			this->OnPlan(BOOTSTRAPPER_ACTION_UNINSTALL);
+		else
+			this->OnPlan(BOOTSTRAPPER_ACTION_INSTALL);
 
 		// Doing some custom vars handling
 		//if (BalStringVariableExists(WIXSTDBA_VARIABLE_DETECT_POSTGRES))
@@ -1072,8 +1075,10 @@ LExit:
 			::Sleep(250);
 		}
 
-		SetState(WIXSTDBA_STATE_APPLIED, hrStatus);
-		SetTaskbarButtonProgress(100); // show full progress bar, green, yellow, or red
+		if (m_command.action == BOOTSTRAPPER_ACTION_UNINSTALL)
+			SetState(WIXSTDBA_STATE_APPLIED, S_OK);
+		else
+			SetState(WIXSTDBA_STATE_SVC_OPTIONS, hrStatus);
 
 		// If we successfully applied an update close the window since the new Bundle should be running now.
 		if (SUCCEEDED(hrStatus) && m_fUpdating)
@@ -1902,11 +1907,11 @@ LExit:
 				return 0;
 
 			case WIXSTDBA_CONTROL_SKIP_BUTTON:
-				pBA->OnClickInstallButton(TRUE);
+ 				pBA->SetState(WIXSTDBA_STATE_APPLIED, S_OK);
 				return 0;
 
 			case WIXSTDBA_CONTROL_INSTALL_BUTTON:
-				pBA->OnClickInstallButton(FALSE);
+				pBA->OnSignIn();
 				return 0;
 
 			case WIXSTDBA_CONTROL_REPAIR_BUTTON:
@@ -2956,47 +2961,38 @@ LExit:
 
 
 
-	//
-	// OnClickInstallButton - start the install by planning the packages.
-	//
-	void OnClickInstallButton(BOOL bSkipRegistration)
+	void OnSignIn()
 	{
-		m_fOverallInstallationStarted = TRUE;
-		BOOL bOkToContinue = TRUE;
 		BOOL fSignIn = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_REGSIGNIN_RADIO);
-		BOOL fSkipReg = bSkipRegistration;
+		BOOL bOkToContinue = false;
 
 		SavePageSettings(WIXSTDBA_PAGE_SVC_OPTIONS);
 
-		if (!fSkipReg)
+		if (fSignIn)
 		{
-			if (fSignIn)
+			LPWSTR wzUserNameOrEmail = NULL;
+			LPWSTR wzUserPass = NULL;
+			if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_LOG_USERNAME_OR_MAIL, &wzUserNameOrEmail)) &&
+				SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_LOG_PASS, &wzUserPass)))
 			{
-				LPWSTR wzUserNameOrEmail = NULL;
-				LPWSTR wzUserPass = NULL;
-				if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_LOG_USERNAME_OR_MAIL, &wzUserNameOrEmail)) &&
-					SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_LOG_PASS, &wzUserPass)))
-				{
-					bOkToContinue = REST_SignInOrRegister(true, wzUserNameOrEmail, NULL, NULL, wzUserPass);
-				}
+				bOkToContinue = REST_SignInOrRegister(true, wzUserNameOrEmail, NULL, NULL, wzUserPass);
 			}
-			else
+		}
+		else
+		{
+			LPWSTR wzUserName = NULL;
+			LPWSTR wzEmail = NULL;
+			LPWSTR wzUserPass = NULL;
+			if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_MAIL, &wzEmail)) &&
+				SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_USER, &wzUserName)) &&
+				SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_PASS, &wzUserPass)))
 			{
-				LPWSTR wzUserName = NULL;
-				LPWSTR wzEmail = NULL;
-				LPWSTR wzUserPass = NULL;
-				if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_MAIL, &wzEmail)) &&
-					SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_USER, &wzUserName)) &&
-					SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_PASS, &wzUserPass)))
-				{
-					bOkToContinue = REST_SignInOrRegister(false, NULL, wzUserName, wzEmail, wzUserPass);
-				}
+				bOkToContinue = REST_SignInOrRegister(false, NULL, wzUserName, wzEmail, wzUserPass);
 			}
 		}
 
-		SavePageSettings(WIXSTDBA_PAGE_INSTALL);
-
-		if (bOkToContinue) this->OnPlan(BOOTSTRAPPER_ACTION_INSTALL);
+		if (bOkToContinue)
+			this->SetState(WIXSTDBA_STATE_APPLIED, S_OK);
 	}
 
 
@@ -3551,7 +3547,7 @@ LExit:
 
 		if (m_fTaskbarButtonOK)
 		{
-			hr = m_pTaskbarList->SetProgressValue(m_hWnd, dwOverallPercentage, 100UL);
+//			hr = m_pTaskbarList->SetProgressValue(m_hWnd, dwOverallPercentage, 100UL);
 			BalExitOnFailure1(hr, "Failed to set taskbar button progress to: %d%%.", dwOverallPercentage);
 		}
 
