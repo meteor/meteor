@@ -22,7 +22,7 @@
     <String Id="InstallCloseButton">&amp;Cancel</String>
     <String Id="BackButton">&lt; Back</String>
     <String Id="NextButton">Next &gt;</String>
-    <String Id="SkipButton">I'll do this later</String>
+    <String Id="SkipButton">Skip this step</String>
     <String Id="Install">Install</String>
     <String Id="InstallMeteor">Install Meteor</String>
 
