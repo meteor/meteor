@@ -29,6 +29,9 @@ Tinytest.add("package-version-parser - validatePackageName", function (test) {
   badName("-x", /not begin with a hyphen/);
   badName("--x", /not begin with a hyphen/);
   badName("0.0", /must contain/);
+  badName("a:a:a", /more than one colon/);
+  badName(":a", /start or end with a colon/);
+  badName("a:", /start or end with a colon/);
 
   // these are ok
   PackageVersion.validatePackageName('x-');

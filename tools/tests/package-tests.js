@@ -742,7 +742,7 @@ selftest.define("package skeleton creates correct versionsFrom", function () {
   var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
   var token = utils.randomToken();
   var fullPackageName = "test:" + token;
-  var fsPackageName = "test_" + token;
+  var fsPackageName = token;
 
   var run = s.run("create", "--package", fullPackageName);
   run.waitSecs(15);

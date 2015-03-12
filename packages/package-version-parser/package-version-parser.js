@@ -393,6 +393,14 @@ PV.validatePackageName = function (packageName, options) {
   }
   // (There is already a package ending with a `-` and one with two consecutive `-`
   // in troposphere, though they both look like typos.)
+
+  if (packageName.split(":").length > 2) {
+    throwVersionParserError("Package names may not have more than one colon.");
+  }
+
+  if (packageName[0] === ":" || __.last(packageName) === ":") {
+    throwVersionParserError("Package names may not start or end with a colon.");
+  }
 };
 
 var throwVersionParserError = function (message) {
