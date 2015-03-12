@@ -564,7 +564,7 @@ main.registerCommand({
     // where it was created.
     Console.info(
       packageName + ": created in",
-      Console.path(displayPackageDir + "/")
+      Console.path(displayPackageDir)
     );
 
     return 0;

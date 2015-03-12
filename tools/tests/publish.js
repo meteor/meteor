@@ -16,7 +16,7 @@ selftest.define("create-publish-and-search",
   testUtils.login(s, username, password);
   var packageName = utils.randomToken();
   var fullPackageName = username + ":" + packageName;
-  var fsPackageName = username + "_" + packageName;
+  var fsPackageName = packageName;
   var githubUrl = "http://github.com/foo/bar";
   var summary = "Package for test";
 
