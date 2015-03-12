@@ -67,7 +67,7 @@ security updates when they happen.
         <Text Name="RegisterPassLabel" X="92" Y="250" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
 
         <Editbox Name="RegisterEmail" X="220" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterEmail]</Editbox>
-        <Editbox Name="RegisterUser" X="220" Y="230" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterUser]</Editbox>
+        <Editbox Name="RegisterUser" X="220" Y="220" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterUser]</Editbox>
         <Editbox Name="RegisterPass" X="220" Y="248" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[RegisterPass]</Editbox>
 
 
@@ -95,21 +95,13 @@ security updates when they happen.
 		<Button Name="ModifyCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ModifyCloseButton)</Button>
 	</Page>
 	<Page Name="Success">
-		<Text Name="SuccessHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varSuccessHeader]</Text>
-		<Text Name="SuccessInfo" X="24" Y="78" Width="-24" Height="140" FontId="1" TabStop="yes" HideWhenDisabled="yes">
-Meteor is now installed on your computer.
-
+		<Text Name="SuccessHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">Meteor is now installed on your computer.</Text>
+		<Text Name="SuccessInfo" X="24" Y="78" Width="-24" Height="160" FontId="1" TabStop="yes" HideWhenDisabled="yes">
 To get started, open a new command prompt and type "meteor".
 
 To learn more about Meteor, check out the <a href="https://www.meteor.com/try">Meteor tutorial</a> and read the [official documentation](https://docs.meteor.com (https://docs.meteor.com/)).  You can get help with questions at [forums.meteor.com](https://forums.meteor.com (https://forums.meteor.com/)) and on [Stack Overflow](https://stackoverflow.com/questions/tagged/meteor)
 		</Text>
 
-		<Text Name="SuccessErrorInfoText" X="24" Y="160" Width="-24" Height="17" FontId="0" TabStop="yes" HideWhenDisabled="yes" >[varSuccessErrorInfoText]</Text>		
-		<Text Name="SuccessErrorMessageText" X="48" Y="180" Width="-24" Height="64" FontId="6" TabStop="yes" HideWhenDisabled="yes" >[varSuccessErrorMessageText]</Text>	
-		<Text Name="SuccessRestartText" X="24" Y="-90" Width="-24" Height="34" FontId="7" HideWhenDisabled="yes" DisablePrefix="yes">#(loc.SuccessRestartText)</Text>
-
-		<Button Name="LaunchButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.SuccessLaunchButton)</Button>
-		<Button Name="SuccessRestartButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.SuccessRestartButton)</Button>
 		<Button Name="SuccessCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SuccessCloseButton)</Button>
 	</Page>
 	<Page Name="Failure">
