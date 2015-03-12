@@ -44,7 +44,7 @@ platform for building apps in pure JavaScript.
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
 		<Text Name="ExecuteProgressActionDataText" X="24" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
 
-		<Image X="25" Y="-2" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+		<Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
 		<Button Name="ProgressCancelButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
 	</Page>
 	<Page Name="SvcOptions">
@@ -81,7 +81,7 @@ security updates when they happen.
         <Editbox Name="LoginUsernameOrEmail" Visible="no" X="220" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[LoginUsernameOrEmail]</Editbox>
         <Editbox Name="LoginPass" Visible="no" X="220" Y="220" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[LoginPass]</Editbox>
 
-        <Image X="25" Y="-2" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+        <Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
 
         <!-- bottom buttons: -->
         <Button Name="SkipButton" X="-140" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
@@ -102,7 +102,8 @@ To get started, open a new command prompt and type "meteor".
 To learn more about Meteor, check out the <a href="https://www.meteor.com/try">Meteor tutorial</a> and read the [official documentation](https://docs.meteor.com (https://docs.meteor.com/)).  You can get help with questions at [forums.meteor.com](https://forums.meteor.com (https://forums.meteor.com/)) and on [Stack Overflow](https://stackoverflow.com/questions/tagged/meteor)
 		</Text>
 
-		<Button Name="SuccessCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SuccessCloseButton)</Button>
+		<Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+		<Button Name="SuccessCancelButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SuccessCloseButton)</Button>
 	</Page>
 	<Page Name="Failure">
 		<Text Name="FailureHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varFailureHeader]</Text>
