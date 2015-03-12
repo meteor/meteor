@@ -413,7 +413,8 @@ CS.Solver.prototype.getVersionCostSteps = function (stepBaseName, packages,
 // as `packageAndVersion`.  (Actually it's a complicated function of the
 // previous and new version.)
 CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
-                                                        packageAndVersions) {
+                                                        packageAndVersions,
+                                                        takePatches) {
   var self = this;
 
   var incompat = new CS.Solver.Step(stepBaseName + '_incompat');
@@ -427,7 +428,7 @@ CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
     var previousVersion = pvArg.version;
     var versions = self.getVersions(package);
     var costs = self.pricer.priceVersionsWithPrevious(
-      versions, previousVersion);
+      versions, previousVersion, takePatches);
     addCostsToSteps(package, versions, costs,
                     [incompat, major, minor, patch, rest]);
   });
@@ -632,7 +633,8 @@ CS.Solver.prototype.getSolution = function (options) {
   });
 
   self.minimize(self.getVersionDistanceSteps(
-    'previous_indirect', otherPrevious));
+    'previous_indirect', otherPrevious,
+    input.upgradeIndirectDepPatchVersions));
 
   var newRootDeps = _.filter(input.dependencies, function (p) {
     return ! input.isInPreviousSolution(p);

@@ -118,6 +118,10 @@ _.extend(ProjectContext.prototype, {
     // Set by 'meteor update' to specify which packages may be updated. Array of
     // package names.
     self._upgradePackageNames = options.upgradePackageNames;
+    // Set by 'meteor update' to mean that we should upgrade the
+    // "patch" (and wrapNum, etc.) parts of indirect dependencies.
+    self._upgradeIndirectDepPatchVersions =
+      options.upgradeIndirectDepPatchVersions;
 
     // Set by publishing commands to ensure that published packages always have
     // a web.cordova slice (because we aren't yet smart enough to just default
@@ -422,8 +426,12 @@ _.extend(ProjectContext.prototype, {
           // exist.  They'll end up getting changed or removed if possible.
           missingPreviousVersionIsError: canRetry
         };
-        if (self._upgradePackageNames)
+        if (self._upgradePackageNames) {
           resolveOptions.upgrade = self._upgradePackageNames;
+        }
+        if (self._upgradeIndirectDepPatchVersions) {
+          resolveOptions.upgradeIndirectDepPatchVersions = true;
+        }
 
         try {
           var solution = resolver.resolve(

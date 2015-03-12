@@ -18,7 +18,6 @@
 
 * Prefer "patched" versions of new indirect dependencies, and take patches
   to them on `meteor update` (for example, `1.0.1` or `1.0.0_1` over `1.0.0`).
-  XXX finish implementing
 
 ### Tracker
 

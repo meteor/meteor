@@ -23,12 +23,23 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
     }
   });
 
+  // Note that `dependencies` and `constraints` are required (you can't
+  // omit them or pass null), while the other properties have defaults.
   self.dependencies = dependencies;
   self.constraints = constraints;
+  // If you add a property, make sure you add it to:
+  // - The `check` statements below
+  // - toJSONable (this file)
+  // - fromJSONable (this file)
+  // - the "input serialization" test in constraint-solver-tests.js
+  // If it's an option passed in from the tool, you'll also have to
+  // add it to CS.PackagesResolver#resolve.
   self.upgrade = options.upgrade || [];
   self.anticipatedPrereleases = options.anticipatedPrereleases || {};
   self.previousSolution = options.previousSolution || null;
   self.allowIncompatibleUpdate = options.allowIncompatibleUpdate || false;
+  self.upgradeIndirectDepPatchVersions =
+    options.upgradeIndirectDepPatchVersions || false;
 
   check(self.dependencies, [String]);
   check(self.constraints, [PV.PackageConstraint]);
@@ -36,6 +47,8 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   check(self.anticipatedPrereleases,
         Match.ObjectWithValues(Match.ObjectWithValues(Boolean)));
   check(self.previousSolution, Match.OneOf(Object, null));
+  check(self.allowIncompatibleUpdate, Boolean);
+  check(self.upgradeIndirectDepPatchVersions, Boolean);
 
   self.catalogCache = catalogCache;
   check(self.catalogCache, CS.CatalogCache);
@@ -132,6 +145,7 @@ CS.Input.prototype.toJSONable = function () {
     }),
     catalogCache: self.catalogCache.toJSONable()
   };
+
   // For readability of the resulting JSON, only include optional
   // properties that aren't the default.
   if (self.upgrade.length) {
@@ -146,6 +160,10 @@ CS.Input.prototype.toJSONable = function () {
   if (self.allowIncompatibleUpdate) {
     obj.allowIncompatibleUpdate = true;
   }
+  if (self.upgradeIndirectDepPatchVersions) {
+    obj.upgradeIndirectDepPatchVersions = true;
+  }
+
   return obj;
 };
 
@@ -158,7 +176,8 @@ CS.Input.fromJSONable = function (obj) {
       Match.ObjectWithValues(Match.ObjectWithValues(Boolean))),
     previousSolution: Match.Optional(Match.OneOf(Object, null)),
     upgrade: Match.Optional([String]),
-    allowIncompatibleUpdate: Match.Optional(Boolean)
+    allowIncompatibleUpdate: Match.Optional(Boolean),
+    upgradeIndirectDepPatchVersions: Match.Optional(Boolean)
   });
 
   return new CS.Input(
@@ -171,7 +190,8 @@ CS.Input.fromJSONable = function (obj) {
       upgrade: obj.upgrade,
       anticipatedPrereleases: obj.anticipatedPrereleases,
       previousSolution: obj.previousSolution,
-      allowIncompatibleUpdate: obj.allowIncompatibleUpdate
+      allowIncompatibleUpdate: obj.allowIncompatibleUpdate,
+      upgradeIndirectDepPatchVersions: obj.upgradeIndirectDepPatchVersions
     });
 };
 

@@ -318,6 +318,8 @@ Tinytest.add("constraint solver - input serialization", function (test) {
   test.equal(input1.upgrade, []);
   test.equal(input1.anticipatedPrereleases, {});
   test.equal(input1.previousSolution, null);
+  test.equal(input1.allowIncompatibleUpdate, false);
+  test.equal(input1.upgradeIndirectDepPatchVersions, false);
 
   var obj1 = input1.toJSONable();
   test.isFalse(_.has(obj1, 'upgrade'));
@@ -328,6 +330,31 @@ Tinytest.add("constraint solver - input serialization", function (test) {
 
   test.equal(JSON.stringify(obj1), json);
   test.equal(JSON.stringify(obj2), json);
+
+  ///// Now a different case:
+
+  var input2 = new CS.Input(
+    ['foo'], [PV.parsePackageConstraint('foo@1.0.0')],
+    new CS.CatalogCache(), {
+      upgrade: ['foo'],
+      anticipatedPrereleases: { foo: { '1.0.0-rc.0': true } },
+      previousSolution: { foo: '1.0.0' },
+      allowIncompatibleUpdate: true,
+      upgradeIndirectDepPatchVersions: true
+    });
+
+  var json2 = JSON.stringify(input2.toJSONable());
+  var input2prime = CS.Input.fromJSONable(JSON.parse(json2));
+  test.equal(input2prime.toJSONable(), {
+    dependencies: ["foo"],
+    constraints: ["foo@1.0.0"],
+    catalogCache: { data: {} },
+    upgrade: ['foo'],
+    anticipatedPrereleases: { foo: { '1.0.0-rc.0': true } },
+    previousSolution: { foo: '1.0.0' },
+    allowIncompatibleUpdate: true,
+    upgradeIndirectDepPatchVersions: true
+  });
 });
 
 Tinytest.add("constraint solver - non-existent indirect package", function (test) {

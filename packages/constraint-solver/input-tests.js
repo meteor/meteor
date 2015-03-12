@@ -3,6 +3,8 @@ var CS = ConstraintSolver;
 // "Input tests" are the new style of tests that operate by creating a
 // CS.Input (representing a problem statement) and passing it into
 // CS.PackagesResolver.
+// For tests of CS.Input serialization, see constraint-solver-tests.js.
+
 
 // Yeah, we rely on object key order here.  Specifically that
 // if you add a bunch of keys to an object (that look like package
@@ -600,4 +602,119 @@ Tinytest.add("constraint solver - input - slow solve", function (test) {
       },
       "neededToUseUnanticipatedPrereleases":false
     }));
+});
+
+Tinytest.add("constraint solver - input - update unknown", function (test) {
+  // trying to update an unknown package is currently not an error
+  // at the CS.Input level.  It IS an error in the tool, so this case
+  // won't make it through in actual tool usage.
+  doTest(test, {
+    dependencies: ["direct"],
+    constraints: [],
+    previousSolution: {
+      direct: "1.0.0"
+    },
+    upgrade: ["unknown"],
+    catalogCache: {
+      data: {
+        "direct 1.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      direct: "1.0.0"
+    }
+  });
+});
+
+Tinytest.add("constraint solver - input - update indirect deps", function (test) {
+  // test upgrading an indirect dependency explicitly.
+  // `meteor update indirect` takes it from 1.0.0 to 2.0.0 (with no concern
+  // about bumping the major version because it's not a top-level package,
+  // and the only package that uses it doesn't specify any constraint).
+  doTest(test, {
+    dependencies: ["direct"],
+    constraints: [],
+    previousSolution: {
+      direct: "1.0.0",
+      indirect: "1.0.0"
+    },
+    upgrade: ["indirect"],
+    catalogCache: {
+      data: {
+        "direct 1.0.0": ["indirect"],
+        "indirect 1.0.0": [],
+        "indirect 2.0.0": []
+      }
+    }
+  }, {
+    answer: {
+      direct: "1.0.0",
+      indirect: "2.0.0"
+    }
+  });
+
+  // Normally, we don't take patches to indirect dependencies, even when
+  // updating direct dependencies.  This is what would happen if the user
+  // typed `meteor update direct`.
+  doTest(test, {
+    dependencies: ["direct"],
+    constraints: [],
+    previousSolution: {
+      direct: "1.0.0",
+      indirect: "1.0.0"
+    },
+    upgrade: ["direct"],
+    catalogCache: {
+      data: {
+        "direct 1.0.0": ["indirect"],
+        "direct 1.5.0": ["indirect"],
+        "direct 2.0.0": ["indirect"],
+        "indirect 1.0.0": [],
+        "indirect 1.0.1": [],
+        "indirect 1.1.0": []
+      }
+    }
+  }, {
+    answer: {
+      direct: "1.5.0", // upgraded (but not to higher major version)
+      indirect: "1.0.0" // not upgraded
+    }
+  });
+
+  // If upgradeIndirectDepPatchVersions is true, user just typed
+  // `meteor update`.  Take the opportunity to take patches to indirect
+  // dependencies.
+  doTest(test, {
+    dependencies: ["direct"],
+    constraints: [],
+    previousSolution: {
+      direct: "1.0.0",
+      indirect: "1.0.0",
+      indirect2: "1.0.0"
+    },
+    upgrade: ["direct"],
+    upgradeIndirectDepPatchVersions: true,
+    catalogCache: {
+      data: {
+        "direct 1.0.0": ["indirect"],
+        "direct 1.5.0": ["indirect", "indirect2"],
+        "direct 2.0.0": ["indirect"],
+        "indirect 1.0.0": [],
+        "indirect 1.0.0_1": [],
+        "indirect 1.0.1": [],
+        "indirect 1.1.0": [],
+        "indirect2 1.0.0": [],
+        "indirect2 1.0.0_1": [],
+        "indirect2 1.0.0_2": [],
+        "indirect2 1.1.0": []
+      }
+    }
+  }, {
+    answer: {
+      direct: "1.5.0", // upgraded (but not to higher major version)
+      indirect: "1.0.1", // patch/wrapNum upgraded to latest
+      indirect2: "1.0.0_2" // patch/wrapNum upgraded to latest
+    }
+  });
 });

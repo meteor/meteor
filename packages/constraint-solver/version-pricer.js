@@ -216,14 +216,22 @@ CS.VersionPricer.prototype.partitionVersions = function (versions, target) {
 // Use a combination of calls to priceVersions with different modes in order
 // to generate costs for versions relative to a "previous solution" version
 // (called the "target" here).
-CS.VersionPricer.prototype.priceVersionsWithPrevious = function (versions, target) {
+CS.VersionPricer.prototype.priceVersionsWithPrevious = function (
+  versions, target, takePatches) {
+
   var self = this;
   var parts = self.partitionVersions(versions, target);
 
   var result1 = self.priceVersions(parts.older, CS.VersionPricer.MODE_UPDATE,
                                    { versionAfter: target });
+  // Usually, it's better to remain as close as possible to the target
+  // version, but prefer higher patch versions (and wrapNums, etc.) if
+  // we were passed `takePatches`.
   var result2 = self.priceVersions(parts.compatible,
-                                   CS.VersionPricer.MODE_GRAVITY);
+                                   (takePatches ?
+                                    CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES :
+                                    CS.VersionPricer.MODE_GRAVITY));
+  // If we're already bumping the major version, might as well take patches.
   var result3 = self.priceVersions(parts.higherMajor,
                                    CS.VersionPricer.MODE_GRAVITY_WITH_PATCHES,
                                    // not actually the version right before, but

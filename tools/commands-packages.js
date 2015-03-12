@@ -1536,10 +1536,14 @@ main.registerCommand({
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
   var upgradePackageNames = [];
+  // If no packages have been specified (`meteor update` with no positional
+  // args), take patches to indirect dependencies.
+  var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
       upgradePackageNames.push(constraint.package);
     });
+    upgradeIndirectDepPatchVersions = true;
   } else {
     upgradePackageNames = options.args;
   }
@@ -1561,7 +1565,8 @@ main.registerCommand({
   // Try to resolve constraints, allowing the given packages to be upgraded.
   projectContext.reset({
     releaseForConstraints: releaseRecordForConstraints,
-    upgradePackageNames: upgradePackageNames
+    upgradePackageNames: upgradePackageNames,
+    upgradeIndirectDepPatchVersions: upgradeIndirectDepPatchVersions
   });
   main.captureAndExit(
     "=> Errors while upgrading packages:", "upgrading packages", function () {

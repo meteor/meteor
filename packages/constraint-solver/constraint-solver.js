@@ -30,6 +30,8 @@ CS.PackagesResolver = function (catalog, options) {
 //  - allowIncompatibleUpdate: allows choosing versions of
 //    root dependencies that are incompatible with the previous solution,
 //    if necessary to satisfy all constraints
+//  - upgradeIndirectDepPatchVersions: also upgrade indirect dependencies
+//    to newer patch versions, proactively
 //  - missingPreviousVersionIsError - throw an error if a package version in
 //    previousSolution is not found in the catalog
 CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
@@ -37,9 +39,12 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   var self = this;
   options = options || {};
   var input = new CS.Input(dependencies, constraints, self.catalogCache,
-                           _.pick(options, 'upgrade', 'anticipatedPrereleases',
+                           _.pick(options,
+                                  'upgrade',
+                                  'anticipatedPrereleases',
                                   'previousSolution',
-                                  'allowIncompatibleUpdate'));
+                                  'allowIncompatibleUpdate',
+                                  'upgradeIndirectDepPatchVersions'));
   input.loadFromCatalog(self.catalogLoader);
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
