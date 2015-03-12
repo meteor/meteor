@@ -69,7 +69,7 @@ use one of the following as the first element of a path: `else`, `this`, `true`,
 reserved words like `var` and `for`.
 
 A Spacebars path is a series of one or more identifiers separated by either `.`
-or `/`, such as `foo`, `foo.bar`, `this.name`, `../title`, or `foo.[0]`.
+or `/`, such as `foo`, `foo.bar`, `this.name`, `../title`, or `foo.[0]` (numeric indices must be enclosed in brackets).
 
 ### Name Resolution
 
@@ -509,4 +509,3 @@ following elements:
   page.  It will be compiled to the `Template.body` component. If `<body>` is
   used multiple times (perhaps in different files), the contents of all of the
   `<body>` elements are concatenated.
-
