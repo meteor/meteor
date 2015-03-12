@@ -87,7 +87,7 @@ security updates when they happen.
 
         <!-- bottom buttons: -->
         <Button Name="SkipButton" X="-140" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
-		<Button Name="InstallButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">Finish</Button>
+		<Button Name="InstallButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">Sign In</Button>
 	</Page>
 	<Page Name="Modify">
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.ModifyHeader)</Text>
