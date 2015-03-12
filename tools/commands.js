@@ -486,7 +486,21 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
-    var fsName = colonConverter.convert(packageName);
+    // When we create a package, avoid introducing a colon into the file system
+    // by naming the directory after the package name without the prefix.
+    var fsName = packageName;
+    if (packageName.indexOf(":") !== -1) {
+      var split = packageName.split(":");
+
+      if (split.length > 2) {
+        Console.error(packageName +
+          ": Package name can't have more than one colon.");
+        return 1;
+      }
+
+      fsName = split[1];
+    }
+
     var packageDir;
     if (options.appDir) {
       packageDir = files.pathResolve(options.appDir, 'packages', fsName);
@@ -549,8 +563,8 @@ main.registerCommand({
     // match the name of the package exactly, therefore we should tell people
     // where it was created.
     Console.info(
-      packageName + ": created in ",
-      Console.path(displayPackageDir)
+      packageName + ": created in",
+      Console.path(displayPackageDir + "/")
     );
 
     return 0;
