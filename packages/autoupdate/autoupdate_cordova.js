@@ -13,7 +13,7 @@ var MAX_RETRY_COUNT = 5;
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
-ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
+ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions");
 
 Autoupdate = {};
 
