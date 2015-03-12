@@ -18,7 +18,7 @@
 
     <?define METEOR_Background     = "Resources\Background.png" ?>
     <?define METEOR_TopHeader      = "Resources\TopHeader.png" ?>
-    <?define METEOR_Logo           = "Resources\meteor-logo.png" ?>
+    <?define METEOR_Logo           = "Resources\meteor-logo-sm.jpg" ?>
     <?define METEOR_License        = "Resources\License.htm" ?>
     
     

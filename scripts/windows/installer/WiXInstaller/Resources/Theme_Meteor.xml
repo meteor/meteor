@@ -13,7 +13,6 @@
 
 
 	<Page Name="Install">
-        <Image X="84" Y="30" Width="450" Height="107" ImageFile="meteor-logo.png"/>
         <!--<Text X="178" Y="20" Width="-24" Height="32" FontId="2" DisablePrefix="yes">#(loc.InstallHeader)</Text>-->
         <Hypertext X="24" Y="-100" Width="-24" Height="14" TabStop="yes" FontId="4" HideWhenDisabled="yes">#(loc.InstallLicenseLinkText)</Hypertext> -->
         <!--<Checkbox Name="EulaAcceptCheckbox" X="178" Y="202" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.InstallAcceptCheckbox)</Checkbox>-->
@@ -37,7 +36,6 @@
 		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
 	</Page>
 	<Page Name="Progress">
-
         <Text X="24" Y="20" Width="-24" Height="75" FontId="3" DisablePrefix="yes">
 Installing Meteor, the complete open source
 platform for building apps in pure JavaScript.
@@ -45,9 +43,11 @@ platform for building apps in pure JavaScript.
 
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
 		<Text Name="ExecuteProgressActionDataText" X="24" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
-		<Button Name="ProgressCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
+
+		<Image X="25" Y="-21" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+		<Button Name="ProgressCancelButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
 	</Page>
-		<Page Name="SvcOptions">
+	<Page Name="SvcOptions">
 
 	    <Text X="24" Y="20" Width="-24" Height="120" FontId="1" DisablePrefix="yes">
 Before getting started, please take a moment to create your Meteor developer account.
@@ -81,13 +81,12 @@ security updates when they happen.
         <Editbox Name="LoginUsernameOrEmail" Visible="no" X="220" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[LoginUsernameOrEmail]</Editbox>
         <Editbox Name="LoginPass" Visible="no" X="220" Y="220" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[LoginPass]</Editbox>
 
+        <Image X="25" Y="-21" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
 
         <!-- bottom buttons: -->
-        <Button Name="SkipButton" X="24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
-		<Button Name="InstallButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.Install)</Button>
+        <Button Name="SkipButton" X="-140" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
+		<Button Name="InstallButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.Install)</Button>
 	</Page>
-
-
 	<Page Name="Modify">
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.ModifyHeader)</Text>
 		<Text X="24" Y="78" Width="-24" Height="140" FontId="1" DisablePrefix="yes">#(loc.ModifyInfo)</Text>
