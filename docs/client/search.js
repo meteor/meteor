@@ -1,4 +1,4 @@
-APICollection = new Meteor.Collection(null);
+APICollection = new Mongo.Collection(null);
 
 _.each(DocsData, function (val) {
   // XXX only insert things that are actually in the docs
