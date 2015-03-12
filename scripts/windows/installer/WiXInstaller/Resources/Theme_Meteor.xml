@@ -49,43 +49,45 @@ platform for building apps in pure JavaScript.
 	</Page>
 	<Page Name="SvcOptions">
 
-	    <Text X="24" Y="20" Width="-24" Height="120" FontId="1" DisablePrefix="yes">
-Before getting started, please take a moment to create your Meteor developer account.
+		<Text X="24" Y="30" Width="600" Height="100" FontId="3" DisablePrefix="yes">
+Before getting started, please take a moment to
+create a Meteor developer account.</Text>
 
+	    <Text X="24" Y="100" Width="-24" Height="110" FontId="1" DisablePrefix="yes">
 Registering tells us who's using Meteor for Windows and helps us make it better.
 You'll also need your account to deploy apps and get notified about critical
 security updates when they happen.
 		</Text>
 
-        <Button Name="CreateRButton" X="48" Y="145" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.CreateRButton)</Button>
-        <Button Name="SignInRButton" X="48" Y="165" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.SignInRButton)</Button>
+        <Button Name="CreateRButton" X="30" Y="194" Width="200" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.CreateRButton)</Button>
+        <Button Name="SignInRButton" X="30" Y="214" Width="200" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.SignInRButton)</Button>
 
 
         <!-- for signup: -->
-        <Text Name="RegisterEmailLabel" X="92" Y="194" Width="120" Height="17" FontId="0">#(loc.RegisterEmail):</Text>
-        <Text Name="RegisterUserLabel" X="92" Y="222" Width="120" Height="17" FontId="0">#(loc.RegisterUser):</Text>
-        <Text Name="RegisterPassLabel" X="92" Y="250" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
+        <Text Name="RegisterEmailLabel" X="292" Y="194" Width="120" Height="17" FontId="0">#(loc.RegisterEmail):</Text>
+        <Text Name="RegisterUserLabel" X="292" Y="222" Width="120" Height="17" FontId="0">#(loc.RegisterUser):</Text>
+        <Text Name="RegisterPassLabel" X="292" Y="250" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
 
-        <Editbox Name="RegisterEmail" X="220" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterEmail]</Editbox>
-        <Editbox Name="RegisterUser" X="220" Y="220" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterUser]</Editbox>
-        <Editbox Name="RegisterPass" X="220" Y="248" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[RegisterPass]</Editbox>
+        <Editbox Name="RegisterEmail" X="410" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterEmail]</Editbox>
+        <Editbox Name="RegisterUser" X="410" Y="220" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterUser]</Editbox>
+        <Editbox Name="RegisterPass" X="410" Y="248" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[RegisterPass]</Editbox>
 
 
         <!-- for login: -->
         <!-- XXX For some reason, Visible="no" below doesn't work.
              instead, we set it imperatively when we switch to this
              page. See #Hidden --> 
-        <Text Name="LoginUsernameOrEmailLabel" Visible="no" X="92" Y="194" Width="120" Height="17" FontId="0">#(loc.RegisterUsernameOrEmail):</Text>
-        <Text Name="LoginPassLabel" Visible="no" X="92" Y="222" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
+        <Text Name="LoginUsernameOrEmailLabel" Visible="no" X="292" Y="194" Width="120" Height="17" FontId="0">#(loc.RegisterUsernameOrEmail):</Text>
+        <Text Name="LoginPassLabel" Visible="no" X="292" Y="222" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
 
-        <Editbox Name="LoginUsernameOrEmail" Visible="no" X="220" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[LoginUsernameOrEmail]</Editbox>
-        <Editbox Name="LoginPass" Visible="no" X="220" Y="220" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[LoginPass]</Editbox>
+        <Editbox Name="LoginUsernameOrEmail" Visible="no" X="410" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[LoginUsernameOrEmail]</Editbox>
+        <Editbox Name="LoginPass" Visible="no" X="410" Y="220" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[LoginPass]</Editbox>
 
         <Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
 
         <!-- bottom buttons: -->
         <Button Name="SkipButton" X="-140" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
-		<Button Name="InstallButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.Install)</Button>
+		<Button Name="InstallButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">Finish</Button>
 	</Page>
 	<Page Name="Modify">
 		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.ModifyHeader)</Text>
@@ -96,7 +98,7 @@ security updates when they happen.
 	</Page>
 	<Page Name="Success">
 		<Text Name="SuccessHeader" X="24" Y="30" Width="420" Height="50" FontId="3" DisablePrefix="yes">Meteor is now installed on your computer.</Text>
-		<Hypertext Name="SuccessInfo" X="24" Y="80" Width="-24" Height="160" FontId="1" TabStop="yes" HideWhenDisabled="yes">
+		<Hypertext Name="SuccessInfo" X="24" Y="80" Width="-24" Height="160" FontId="1" TabStop="no" HideWhenDisabled="yes">
 To get started, open a new command prompt and type "meteor".
 
 To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
