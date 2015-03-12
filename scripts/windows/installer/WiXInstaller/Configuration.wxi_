@@ -23,6 +23,6 @@
     
     
     <?define METEOR_PkgFileName    = "meteor-bootstrap-os.windows.x86_32.tar.gz"?>
-    <?define METEOR_PkgDwnUrl      = "https://s3.amazonaws.com/com.meteor.static/packages-bootstrap/__METEOR_RELEASE__/meteor-bootstrap-os.windows.x86_32.tar.gz"?>
+    <?define METEOR_PkgDwnUrl      = "http://s3.amazonaws.com/com.meteor.static/packages-bootstrap/__METEOR_RELEASE__/meteor-bootstrap-os.windows.x86_32.tar.gz"?>
                                        
 </Include>
