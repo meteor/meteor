@@ -1,5 +1,25 @@
 ## v.NEXT
 
+### Version Solver
+
+* The code that selects compatible package versions for `meteor update`
+  and resolves conflicts on `meteor add` has been rewritten from the ground up.
+  The core solver algorithm is now based on MiniSat, an open-source SAT solver,
+  improving performance and maintainability.
+
+* Refresh the catalog instead of downgrading packages when the versions in
+  `.meteor/versions` aren't in the cache.  #3653
+
+* Don't downgrade packages listed in `.meteor/packages`, or upgrade to a new
+  major version, unless the new flag `--allow-incompatible-update` is passed
+  as an override.
+
+* Error messages are more detailed when constraints are unsatisfiable.
+
+* Prefer "patched" versions of new indirect dependencies, and take patches
+  to them on `meteor update` (for example, `1.0.1` or `1.0.0_1` over `1.0.0`).
+  XXX finish implementing
+
 ### Tracker
 
 * Schedule the flush cycle using a better technique than `setTimeout` when
