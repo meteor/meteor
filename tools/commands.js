@@ -491,13 +491,6 @@ main.registerCommand({
     var fsName = packageName;
     if (packageName.indexOf(":") !== -1) {
       var split = packageName.split(":");
-
-      if (split.length > 2) {
-        Console.error(packageName +
-          ": Package name can't have more than one colon.");
-        return 1;
-      }
-
       fsName = split[1];
     }
 
