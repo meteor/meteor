@@ -1,53 +1,13 @@
 ## v.NEXT
 
-### Version Solver
-
-* The code that selects compatible package versions for `meteor update`
-  and resolves conflicts on `meteor add` has been rewritten from the ground up.
-  The core solver algorithm is now based on MiniSat, an open-source SAT solver,
-  improving performance and maintainability.
-
-* Refresh the catalog instead of downgrading packages when the versions in
-  `.meteor/versions` aren't in the cache.  #3653
-
-* Don't downgrade packages listed in `.meteor/packages`, or upgrade to a new
-  major version, unless the new flag `--allow-incompatible-update` is passed
-  as an override.
-
-* Error messages are more detailed when constraints are unsatisfiable.
-
-* Prefer "patched" versions of new indirect dependencies, and take patches
-  to them on `meteor update` (for example, `1.0.1` or `1.0.0_1` over `1.0.0`).
-
-### Tracker
-
-* Schedule the flush cycle using a better technique than `setTimeout` when
-  available.  #3889
-
-* Yield to the event loop during the flush cycle, unless we're executing a
-  synchronous `Tracker.flush()`.  #3901
-
-
-### `meteor` command-line tool
-
-* Don't fail if `npm` prints more than 200K.  #3887
-
-
-### Other bug fixes and improvements
-
-* Upgraded dependencies:
-
-  - uglify-js: 2.4.17 (from 2.4.13)
-
-
 ## v1.0.4, 2015-Mar-??
 
-### Mongo Driver and Livequery
+### Mongo Driver
 
-* Meteor is now tested against MongoDB 2.6 (and the bundled version used by
-  `meteor run` has been upgraded). It should still work fine with MongoDB 2.4.
-  Previous versions of Meteor mostly worked with MongoDB 2.6, with a few
-  caveats:
+* Meteor is now tested against MongoDB 2.6 by default (and the bundled version
+  used by `meteor run` has been upgraded). It should still work fine with
+  MongoDB 2.4.  Previous versions of Meteor mostly worked with MongoDB 2.6, with
+  a few caveats:
 
     - Some upsert invocations did not work with MongoDB in previous versions of
       Meteor.
@@ -60,9 +20,10 @@
   driver is slightly different in MongoDB 2.6; see
   https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver for details.
 
-  (We have not tested Meteor against the recently-released MongoDB 3.0, but as
-  of this release, Meteor uses a version of the Node Mongo driver that is
-  compatible with MongoDB 3.0 and it is likely that it will work.)
+  We have also tested Meteor against the recently-released MongoDB 3.0.0.
+  While we are not shipping MongoDB 3.0 with Meteor in this release (preferring
+  to wait until its deployment is more widespread), we believe that Meteor
+  1.0.4 apps will work fine when used with MongoDB 3.0.0 servers.
 
 * Fix 0.8.1 regression where failure to connect to Mongo at startup would log a
   message but otherwise be ignored. Now it crashes the process, as it did before
@@ -147,14 +108,6 @@
   template instead of the actual user-defined template, making it difficult to
   use `Template.instance()` for local template state.
 
-* Fix/change behavior of `Template.currentData` and `Template.parentData`
-  inside event handlers. Previously, they returned the data context of the
-  enclosing template, but now they return the data context of the target
-  element.
-
-  The previous functionality can be reproduced by using
-  `Template.instance().data` instead of `Template.currentData()`.
-
 * `Template.instance()` now works inside `Template.body`.  #3631
 
 * Allow specifying attributes on `<body>` tags in templates.
@@ -190,6 +143,10 @@
 * Add a unique index to the collection that stores OAuth login configuration to
   ensure that only one configuration exists per service.  #3514
 
+* On the server, a new option
+  `Accounts.setPassword(user, password, { logout: false })` overrides the
+  default behavior of logging out all logged-in connections for the user.  #3846
+
 
 ### Webapp
 
@@ -221,11 +178,17 @@
 * Fix crashes in `meteor search --show-all` and `meteor search --maintainer`.
   \#3636
 
-* Kill PhantomJS processes after `meteor --test`.  #3205
+* Kill PhantomJS processes after `meteor --test`, and only run the app
+  once. #3205 #3793
 
 * Give a better error when Mongo fails to start up due to a full disk.  #2378
 
 * After killing existing `mongod` servers, also clear the `mongod.lock` file.
+
+* Stricter validation for package names: they cannot begin with a hyphen, end
+  with a dot, or contain two consecutive dots.  (No packages on Atmosphere fail
+  this validation.)
+
 
 
 ### Meteor Mobile
@@ -288,9 +251,6 @@
   - openssl in mongo: 1.0.2 (from 1.0.1j)
   - MongoDB driver: 1.4.32 (from 1.4.1)
   - bson: 0.2.18 (from 0.2.7)
-  - faye-websocket: 0.9.3 (from 0.8.1)
-  - websocket-driver: 0.5.3 (from 0.4.0)
-  - sockjs server: 0.3.14 (from 0.3.11)
   - request: 2.53.0 (from 2.47.0)
 
 

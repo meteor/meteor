@@ -328,7 +328,7 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  */
 Accounts.setPassword = function (userId, newPlaintextPassword, options) {
   options = _.extend({logout: true}, options);
-  
+
   var user = Meteor.users.findOne(userId);
   if (!user)
     throw new Meteor.Error(403, "User not found");
@@ -343,6 +343,18 @@ Accounts.setPassword = function (userId, newPlaintextPassword, options) {
   
   if (options.logout)
     update.$unset['services.resume.loginTokens'] = 1;
+
+  var update = {
+    $unset: {
+      'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
+      'services.password.reset': 1
+    },
+    $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)}
+  };
+
+  if (options.logout) {
+    update.$unset['services.resume.loginTokens'] = 1;
+  }
 
   Meteor.users.update({_id: user._id}, update);
 };

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Good defaults for the mobile status bar",
-  version: "1.0.3-winr.3"
+  version: "1.0.3-rc.0"
 });
 
 Package.onUse(function(api) {
