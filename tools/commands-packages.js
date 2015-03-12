@@ -26,6 +26,7 @@ var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
 var packageMapModule = require('./package-map.js');
 var packageVersionParser = require('./package-version-parser.js');
+var colonConverter = require("./colon-converter.js");
 
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if
@@ -601,7 +602,7 @@ main.registerCommand({
 
   // XXX Factor out with packageClient.bundleSource so that we don't
   // have knowledge of the tarball structure in two places.
-  var packageDir = files.pathJoin(sourcePath, name);
+  var packageDir = files.pathJoin(sourcePath, colonConverter.convert(name));
   if (! files.exists(packageDir)) {
     Console.error('Malformed source tarball');
     return 1;
