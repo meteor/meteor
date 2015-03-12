@@ -613,11 +613,11 @@ Mongo.Collection.prototype.upsert = function (selector, modifier,
 
 // We'll actually design an index API later. For now, we just pass through to
 // Mongo's, but make it synchronous.
-Mongo.Collection.prototype._ensureIndex = function (index, options) {
+Mongo.Collection.prototype._createIndex = function (index, options) {
   var self = this;
-  if (!self._collection._ensureIndex)
-    throw new Error("Can only call _ensureIndex on server collections");
-  self._collection._ensureIndex(index, options);
+  if (!self._collection._createIndex)
+    throw new Error("Can only call _createIndex on server collections");
+  self._collection._createIndex(index, options);
 };
 Mongo.Collection.prototype._dropIndex = function (index) {
   var self = this;
