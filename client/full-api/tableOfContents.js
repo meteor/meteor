@@ -178,7 +178,8 @@ var toc = [
       "Template.body",
       {name: "{{> Template.dynamic}}", id: "template_dynamic"},
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
+      {name: "Event maps", style: "noncode"},
+      {name: "Spacebars", style: "noncode"}
     ],
     "Blaze", [
       "Blaze.render",
