@@ -3687,7 +3687,7 @@ bool getWindowsUserAgent(std::string &str){
  std::stringstream os;
  os << "Installer/wix os/win32 (Windows_NT; ";
  os << osvi.dwMajorVersion << "." << osvi.dwMinorVersion << "." << osvi.dwBuildNumber;
- os << "; ia32; )";
+ os << "; ia32;)";
  str = os.str();
  return true; 
 }
