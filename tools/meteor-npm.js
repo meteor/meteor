@@ -359,8 +359,9 @@ var runNpmCommand = function (args, cwd) {
     cwd = files.convertToOSPath(cwd);
 
   var env = process.env;
-  // Some npm commands (such as build commands) rely on having a global node
-  // binary present. Sometimes users have a global node installed, so it is not
+  // It looks like some npm commands (such as build commands, specifically on
+  // Windows) rely on having a global node binary present.
+  // Sometimes users have a global node installed, so it is not
   // a problem, but a) it can be outdated and b) it can not be installed.
   // To solve this problem, we set the PATH env variable to have the path
   // containing the node binary we are running in right now as the highest
