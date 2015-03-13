@@ -1301,7 +1301,8 @@ var maybeUpdateRelease = function (options) {
   // do, that's great!)
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    alwaysWritePackageMap: true
+    alwaysWritePackageMap: true,
+    allowIncompatibleUpdate: true // disregard `.meteor/versions` if necessary
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
