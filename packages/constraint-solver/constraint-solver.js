@@ -70,6 +70,12 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
 CS.PackagesResolver._resolveWithInput = function (input, options) {
   options = options || {};
 
+  if (Meteor.isServer &&
+      process.env['METEOR_PRINT_CONSTRAINT_SOLVER_INPUT']) {
+    console.log("CONSTRAINT_SOLVER_INPUT = ");
+    console.log(JSON.stringify(input.toJSONable(), null, 2));
+  }
+
   var solver = new CS.Solver(input, {
     nudge: options.nudge
   });

@@ -718,3 +718,20 @@ Tinytest.add("constraint solver - input - update indirect deps", function (test)
     }
   });
 });
+
+Tinytest.add("constraint solver - input - package is only weak dep", function (test) {
+  doTest(test, {
+    dependencies: ["foo"],
+    constraints: [],
+    previousSolution: {},
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["?bar"]
+      }
+    }
+  }, {
+    answer: {
+      foo: "1.0.0"
+    }
+  });
+});
