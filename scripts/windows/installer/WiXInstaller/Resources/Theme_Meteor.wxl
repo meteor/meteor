@@ -81,7 +81,7 @@
     <String Id="SuccessHeaderRepair">Repair Successful</String>
     <String Id="SuccessHeaderUninstall">Meteor has been uninstalled.</String>
     <String Id="SuccessInfo">
-To get started, open a new command prompt and type "meteor".
+To get started, open a new command prompt and type "meteor". If you're running Windows 8.1, you may need to restart your machine.
 
 To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
 
