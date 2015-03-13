@@ -463,7 +463,8 @@ main.registerCommand({
     Console.info(
       "You can access Meteor provided build machines, pre-configured to",
       "support older versions of MacOS and Linux, by running:");
-    _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"],
+    _.each(["os.osx.x86_64", "os.linux.x86_64",
+            "os.linux.x86_32", "os.windows.x86_32"],
       function (a) {
         Console.info(
           Console.command("meteor admin get-machine " + a),
