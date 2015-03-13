@@ -186,16 +186,15 @@
 * After killing existing `mongod` servers, also clear the `mongod.lock` file.
 
 * Stricter validation for package names: they cannot begin with a hyphen, end
-  with a dot, or contain two consecutive dots.  (No packages on Atmosphere fail
+  with a dot, contain two consecutive dots, contain more than one colon, or
+  start or end with a colon.  (No packages on Atmosphere fail
   this validation.)
 
 * `meteor create --package` now no longer creates a directory with the full
   name of the package, since Windows file systems cannot have colon characters
   in file paths. Instead, the command now creates a directory named the same
   as the second part of the package name after the colon (without the username
-  prefix). Using the `meteor create --package` command to create a package
-  with more than one colon in the name is now disallowed and displays an error
-  message.
+  prefix).
 
 
 ### Meteor Mobile
