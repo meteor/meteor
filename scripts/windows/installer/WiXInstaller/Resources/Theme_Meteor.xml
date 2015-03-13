@@ -102,6 +102,8 @@ notified about critical security updates when they happen.
 To get started, open a new command prompt and type "meteor".
 
 To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
+
+Check out the &lt;a href="https://github.com/meteor/meteor/wiki/Preview-of-Meteor-on-Windows"&gt;Wiki page on GitHub&lt;/a&gt; to learn more about the Meteor Windows preview.
 		</Hypertext>
 
 		<Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
