@@ -12,7 +12,8 @@ CS.PackagesResolver = function (catalog, options) {
   self.catalogLoader = new CS.CatalogLoader(self.catalog, self.catalogCache);
 
   self._options = {
-    nudge: options && options.nudge
+    nudge: options && options.nudge,
+    Profile: options && options.Profile
   };
 };
 
@@ -38,35 +39,49 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                                   options) {
   var self = this;
   options = options || {};
-  var input = new CS.Input(dependencies, constraints, self.catalogCache,
-                           _.pick(options,
-                                  'upgrade',
-                                  'anticipatedPrereleases',
-                                  'previousSolution',
-                                  'allowIncompatibleUpdate',
-                                  'upgradeIndirectDepPatchVersions'));
-  input.loadFromCatalog(self.catalogLoader);
+  var Profile = (self._options.Profile || CS.DummyProfile);
+
+  var input;
+  Profile.time("new CS.Input", function () {
+    input = new CS.Input(dependencies, constraints, self.catalogCache,
+                         _.pick(options,
+                                'upgrade',
+                                'anticipatedPrereleases',
+                                'previousSolution',
+                                'allowIncompatibleUpdate',
+                                'upgradeIndirectDepPatchVersions'));
+  });
+
+  Profile.time(
+    "Input#loadFromCatalog (sqlite)",
+    function () {
+      input.loadFromCatalog(self.catalogLoader);
+    });
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
-    _.each(options.previousSolution, function (version, package) {
-      if (! input.catalogCache.hasPackageVersion(package, version)) {
-        CS.throwConstraintSolverError(
-          "Package version not in catalog: " + package + " " + version);
-      }
+    Profile.time("check for previous versions in catalog", function () {
+      _.each(options.previousSolution, function (version, package) {
+        if (! input.catalogCache.hasPackageVersion(package, version)) {
+          CS.throwConstraintSolverError(
+            "Package version not in catalog: " + package + " " + version);
+        }
+      });
     });
   }
 
   return CS.PackagesResolver._resolveWithInput(input, {
-    nudge: this._options.nudge
+    nudge: self._options.nudge,
+    Profile: self._options.Profile
   });
 };
 
 // Exposed for tests.
 //
-// Options:
+// Options (all optional):
 // - nudge (function to be called when possible to "nudge" the progress spinner)
 // - allAnswers (for testing, calculate all possible answers and put an extra
 //   property named "allAnswers" on the result)
+// - Profile (the profiler interface in `tools/profile.js`)
 CS.PackagesResolver._resolveWithInput = function (input, options) {
   options = options || {};
 
@@ -76,14 +91,18 @@ CS.PackagesResolver._resolveWithInput = function (input, options) {
     console.log(JSON.stringify(input.toJSONable(), null, 2));
   }
 
-  var solver = new CS.Solver(input, {
-    nudge: options.nudge
+  var solver;
+  (options.Profile || CS.DummyProfile).time("new CS.Solver", function () {
+    solver = new CS.Solver(input, {
+      nudge: options.nudge,
+      Profile: options.Profile
+    });
   });
 
   // Disable runtime type checks (they slow things down by a factor of 3)
   return Logic._disablingTypeChecks(function () {
     var result = solver.getAnswer({
-      allAnswers: (options && options.allAnswers)
+      allAnswers: options.allAnswers
     });
     // if we're here, no conflicts were found (or an error would have
     // been thrown)
@@ -132,4 +151,13 @@ CS.throwConstraintSolverError = function (message) {
   var e = new Error(message);
   e.constraintSolverError = true;
   throw e;
+};
+
+// Implements the Profile interface (as we use it) but doesn't do
+// anything.
+CS.DummyProfile = function (bucket, f) {
+  return f;
+};
+CS.DummyProfile.time = function (bucket, f) {
+  return f();
 };

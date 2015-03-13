@@ -271,7 +271,7 @@ Logic.Solver = function () {
 
   self._numClausesAddedToMiniSat = 0;
   self._unsat = false; // once true, no solution henceforth
-  self._minisat = null; // created lazily
+  self._minisat = new MiniSat(); // this takes some time
 
   self._termifier = new Logic.Termifier(self);
 };
@@ -1303,10 +1303,6 @@ Logic.Solver.prototype.solve = function (_assumpVar) {
 
   if (self._unsat) {
     return null;
-  }
-
-  if (! self._minisat) {
-    self._minisat = new MiniSat();
   }
 
   while (self._numClausesAddedToMiniSat < self.clauses.length) {

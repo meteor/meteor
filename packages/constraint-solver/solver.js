@@ -22,12 +22,16 @@ CS.Solver = function (input, options) {
                                          });
 
   self.options = options || {};
+  self.Profile = (self.options.Profile || CS.DummyProfile);
 
   self.steps = [];
   self.stepsByName = {};
 
   self.analysis = {};
-  self.analyze();
+
+  self.Profile.time("Solver#analyze", function () {
+    self.analyze();
+  });
 
   self.logic = null; // Logic.Solver, initialized later
 };
@@ -60,6 +64,7 @@ CS.Solver.prototype.analyze = function () {
   var analysis = self.analysis;
   var input = self.input;
   var cache = input.catalogCache;
+  var Profile = self.Profile;
 
   ////////// ANALYZE ALLOWED VERSIONS
   // (An "allowed version" is one that isn't ruled out by a top-level
@@ -84,23 +89,25 @@ CS.Solver.prototype.analyze = function () {
   // problem that some package has no legal versions), but we can
   // track such packages in packagesWithNoAllowedVersions so that we
   // throw a good error later.
-  _.each(_.groupBy(input.constraints, 'package'), function (cs, p) {
-    var versions = cache.getPackageVersions(p);
-    if (! versions.length) {
-      // deal with wholly unknown packages later
-      return;
-    }
-    _.each(cs, function (constr) {
-      versions = _.filter(versions, function (v) {
-        return CS.isConstraintSatisfied(p, constr.versionConstraint, v);
+  Profile.time("analyze allowed versions", function () {
+    _.each(_.groupBy(input.constraints, 'package'), function (cs, p) {
+      var versions = cache.getPackageVersions(p);
+      if (! versions.length) {
+        // deal with wholly unknown packages later
+        return;
+      }
+      _.each(cs, function (constr) {
+        versions = _.filter(versions, function (v) {
+          return CS.isConstraintSatisfied(p, constr.versionConstraint, v);
+        });
       });
+      if (! versions.length) {
+        analysis.packagesWithNoAllowedVersions[p] = _.filter(cs, function (c) {
+          return !! c.constraintString;
+        });
+      }
+      analysis.allowedVersions[p] = versions;
     });
-    if (! versions.length) {
-      analysis.packagesWithNoAllowedVersions[p] = _.filter(cs, function (c) {
-        return !! c.constraintString;
-      });
-    }
-    analysis.allowedVersions[p] = versions;
   });
 
   ////////// ANALYZE ROOT DEPENDENCIES
@@ -110,23 +117,25 @@ CS.Solver.prototype.analyze = function () {
   // Collect "previous solution" versions of root dependencies.
   analysis.previousRootDepVersions = [];
 
-  _.each(input.dependencies, function (p) {
-    if (! input.isKnownPackage(p)) {
-      analysis.unknownRootDeps.push(p);
-    } else if (input.isInPreviousSolution(p) &&
-               ! input.isUpgrading(p)) {
-      analysis.previousRootDepVersions.push(new CS.PackageAndVersion(
-        p, input.previousSolution[p]));
+  Profile.time("analyze root dependencies", function () {
+    _.each(input.dependencies, function (p) {
+      if (! input.isKnownPackage(p)) {
+        analysis.unknownRootDeps.push(p);
+      } else if (input.isInPreviousSolution(p) &&
+                 ! input.isUpgrading(p)) {
+        analysis.previousRootDepVersions.push(new CS.PackageAndVersion(
+          p, input.previousSolution[p]));
+      }
+    });
+
+    // throw if there are unknown packages in root deps
+    if (analysis.unknownRootDeps.length) {
+      _.each(analysis.unknownRootDeps, function (p) {
+        self.errors.push('unknown package in top-level dependencies: ' + p);
+      });
+      self.throwAnyErrors();
     }
   });
-
-  // throw if there are unknown packages in root deps
-  if (analysis.unknownRootDeps.length) {
-    _.each(analysis.unknownRootDeps, function (p) {
-      self.errors.push('unknown package in top-level dependencies: ' + p);
-    });
-    self.throwAnyErrors();
-  }
 
   ////////// ANALYZE REACHABILITY
 
@@ -176,39 +185,58 @@ CS.Solver.prototype.analyze = function () {
     });
   };
 
-  _.each(input.dependencies, markReachable);
+  Profile.time("analyze reachability", function () {
+    _.each(input.dependencies, markReachable);
+  });
 
   ////////// ANALYZE CONSTRAINTS
 
   // Array of CS.Solver.Constraint
   analysis.constraints = [];
 
-  // top-level constraints
-  _.each(input.constraints, function (c) {
-    if (c.constraintString) {
-      analysis.constraints.push(new CS.Solver.Constraint(
-        null, c.package, c.versionConstraint,
-        "constraint#" + analysis.constraints.length));
-    }
-  });
+  Profile.time("analyze constraints", function () {
+    // top-level constraints
+    _.each(input.constraints, function (c) {
+      if (c.constraintString) {
+        analysis.constraints.push(new CS.Solver.Constraint(
+          null, c.package, c.versionConstraint,
+          "constraint#" + analysis.constraints.length));
+      }
+    });
 
-  // constraints specified in package dependencies
-  _.each(_.keys(self.analysis.reachablePackages), function (p) {
-    _.each(self.getVersions(p), function (v) {
-      var pv = pvVar(p, v);
-      _.each(cache.getDependencyMap(p, v), function (dep) {
-        // `dep` is a CS.Dependency
-        var p2 = dep.packageConstraint.package;
-        if (input.isKnownPackage(p2) &&
-            dep.packageConstraint.constraintString) {
-          analysis.constraints.push(new CS.Solver.Constraint(
-            pv, p2, dep.packageConstraint.versionConstraint,
-            "constraint#" + analysis.constraints.length));
-        }
+    // constraints specified in package dependencies
+    _.each(_.keys(analysis.reachablePackages), function (p) {
+      _.each(self.getVersions(p), function (v) {
+        var pv = pvVar(p, v);
+        _.each(cache.getDependencyMap(p, v), function (dep) {
+          // `dep` is a CS.Dependency
+          var p2 = dep.packageConstraint.package;
+          if (input.isKnownPackage(p2) &&
+              dep.packageConstraint.constraintString) {
+            analysis.constraints.push(new CS.Solver.Constraint(
+              pv, p2, dep.packageConstraint.versionConstraint,
+              "constraint#" + analysis.constraints.length));
+          }
+        });
       });
     });
   });
 
+  ////////// ANALYZE PRE-RELEASES
+
+  Profile.time("analyze pre-releases", function () {
+    var unanticipatedPrereleases = [];
+    _.each(_.keys(analysis.reachablePackages), function (p) {
+      var anticipatedPrereleases = input.anticipatedPrereleases[p];
+      _.each(self.getVersions(p), function (v) {
+        if (/-/.test(v) && ! (anticipatedPrereleases &&
+                              _.has(anticipatedPrereleases, v))) {
+          unanticipatedPrereleases.push(pvVar(p, v));
+        }
+      });
+    });
+    analysis.unanticipatedPrereleases = unanticipatedPrereleases;
+  });
 };
 
 // A Step consists of a name, an array of terms, and an array of weights.
@@ -302,47 +330,50 @@ CS.Solver.prototype.minimize = function (step, options) {
 
   // minimize(step, options);
 
-  var logic = self.logic;
+  self.Profile.time("minimize " + step.name, function () {
 
-  self.steps.push(step);
-  self.stepsByName[step.name] = step;
+    var logic = self.logic;
 
-  if (DEBUG) {
-    console.log("--- MINIMIZING " + step.name);
-  }
+    self.steps.push(step);
+    self.stepsByName[step.name] = step;
 
-  var costWeights = step.weights;
-  var costTerms = step.terms;
-
-  self.setSolution(logic.minimize(
-    self.solution, costTerms, costWeights, {
-      progress: function (status, cost) {
-        if (self.options.nudge) {
-          self.options.nudge();
-        }
-        if (DEBUG) {
-          if (status === 'improving') {
-            console.log(cost + " ... trying to improve ...");
-          }
-        }
-      },
-      strategy: (options && options.strategy)
-    }));
-
-  step.optimum = self.solution.getWeightedSum(costTerms, costWeights);
-  if (DEBUG) {
-    console.log(step.optimum + " is optimal");
-
-    if (step.optimum) {
-      _.each(costTerms, function (t, i) {
-        var w = (typeof costWeights === 'number' ? costWeights :
-                 costWeights[i]);
-        if (w && self.solution.evaluate(t)) {
-          console.log("    " + w + ": " + t);
-        }
-      });
+    if (DEBUG) {
+      console.log("--- MINIMIZING " + step.name);
     }
-  }
+
+    var costWeights = step.weights;
+    var costTerms = step.terms;
+
+    self.setSolution(logic.minimize(
+      self.solution, costTerms, costWeights, {
+        progress: function (status, cost) {
+          if (self.options.nudge) {
+            self.options.nudge();
+          }
+          if (DEBUG) {
+            if (status === 'improving') {
+              console.log(cost + " ... trying to improve ...");
+            }
+          }
+        },
+        strategy: (options && options.strategy)
+      }));
+
+    step.optimum = self.solution.getWeightedSum(costTerms, costWeights);
+    if (DEBUG) {
+      console.log(step.optimum + " is optimal");
+
+      if (step.optimum) {
+        _.each(costTerms, function (t, i) {
+          var w = (typeof costWeights === 'number' ? costWeights :
+                   costWeights[i]);
+          if (w && self.solution.evaluate(t)) {
+            console.log("    " + w + ": " + t);
+          }
+        });
+      }
+    }
+  });
 };
 
 // Determine the non-zero contributions to the cost function in `step`
@@ -393,11 +424,15 @@ CS.Solver.prototype.getVersionCostSteps = function (stepBaseName, packages,
   var patch = new CS.Solver.Step(stepBaseName + '_patch');
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
 
-  _.each(packages, function (p) {
-    var versions = self.getVersions(p);
-    var costs = self.pricer.priceVersions(versions, pricerMode);
-    addCostsToSteps(p, versions, costs, [major, minor, patch, rest]);
-  });
+  self.Profile.time(
+    "calculate " + stepBaseName + " version costs",
+    function () {
+      _.each(packages, function (p) {
+        var versions = self.getVersions(p);
+        var costs = self.pricer.priceVersions(versions, pricerMode);
+        addCostsToSteps(p, versions, costs, [major, minor, patch, rest]);
+      });
+    });
 
   return [major, minor, patch, rest];
 };
@@ -418,15 +453,19 @@ CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
   var patch = new CS.Solver.Step(stepBaseName + '_patch');
   var rest = new CS.Solver.Step(stepBaseName + '_rest');
 
-  _.each(packageAndVersions, function (pvArg) {
-    var package = pvArg.package;
-    var previousVersion = pvArg.version;
-    var versions = self.getVersions(package);
-    var costs = self.pricer.priceVersionsWithPrevious(
-      versions, previousVersion, takePatches);
-    addCostsToSteps(package, versions, costs,
-                    [incompat, major, minor, patch, rest]);
-  });
+  self.Profile.time(
+    "calculate " + stepBaseName + " distance costs",
+    function () {
+      _.each(packageAndVersions, function (pvArg) {
+        var package = pvArg.package;
+        var previousVersion = pvArg.version;
+        var versions = self.getVersions(package);
+        var costs = self.pricer.priceVersionsWithPrevious(
+          versions, previousVersion, takePatches);
+        addCostsToSteps(package, versions, costs,
+                        [incompat, major, minor, patch, rest]);
+      });
+    });
 
   return [incompat, major, minor, patch, rest];
 };
@@ -468,58 +507,77 @@ CS.Solver.prototype.setSolution = function (solution) {
 
 CS.Solver.prototype.getAnswer = function (options) {
   var self = this;
+  return self.Profile.time("Solver#getAnswer", function () {
+    return self._getAnswer(options);
+  });
+};
+
+CS.Solver.prototype._getAnswer = function (options) {
+  var self = this;
   var input = self.input;
   var analysis = self.analysis;
   var cache = input.catalogCache;
   var allAnswers = (options && options.allAnswers); // for tests
+  var Profile = self.Profile;
 
-  var logic = self.logic = new Logic.Solver();
+  var logic;
+  Profile.time("new Logic.Solver (MiniSat start-up)", function () {
+    logic = self.logic = new Logic.Solver();
+  });
 
   // require root dependencies
-  _.each(input.dependencies, function (p) {
-    logic.require(p);
+  Profile.time("require root dependencies", function () {
+    _.each(input.dependencies, function (p) {
+      logic.require(p);
+    });
   });
 
   // generate package version variables for known, reachable packages
-  _.each(_.keys(analysis.reachablePackages), function (p) {
-    if (! _.has(analysis.packagesWithNoAllowedVersions, p)) {
-      var versionVars = _.map(self.getVersions(p),
-                              function (v) {
-                                return pvVar(p, v);
-                              });
-      // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
-      logic.require(Logic.atMostOne(versionVars));
-      // The variable "foo" is true if and only if at least one of the
-      // variables ["foo 1.0.0", "foo 1.0.1", ...] is true.
-      logic.require(Logic.equiv(p, Logic.or(versionVars)));
-    }
+  Profile.time("generate package variables", function () {
+    _.each(_.keys(analysis.reachablePackages), function (p) {
+      if (! _.has(analysis.packagesWithNoAllowedVersions, p)) {
+        var versionVars = _.map(self.getVersions(p),
+                                function (v) {
+                                  return pvVar(p, v);
+                                });
+        // At most one of ["foo 1.0.0", "foo 1.0.1", ...] is true.
+        logic.require(Logic.atMostOne(versionVars));
+        // The variable "foo" is true if and only if at least one of the
+        // variables ["foo 1.0.0", "foo 1.0.1", ...] is true.
+        logic.require(Logic.equiv(p, Logic.or(versionVars)));
+      }
+    });
   });
 
   // generate strong dependency requirements
-  _.each(_.keys(analysis.reachablePackages), function (p) {
-    _.each(self.getVersions(p), function (v) {
-      _.each(cache.getDependencyMap(p, v), function (dep) {
-        // `dep` is a CS.Dependency
-        if (! dep.isWeak) {
-          var p2 = dep.packageConstraint.package;
-          logic.require(Logic.implies(pvVar(p, v), p2));
-        }
+  Profile.time("generate dependency requirements", function () {
+    _.each(_.keys(analysis.reachablePackages), function (p) {
+      _.each(self.getVersions(p), function (v) {
+        _.each(cache.getDependencyMap(p, v), function (dep) {
+          // `dep` is a CS.Dependency
+          if (! dep.isWeak) {
+            var p2 = dep.packageConstraint.package;
+            logic.require(Logic.implies(pvVar(p, v), p2));
+          }
+        });
       });
     });
   });
 
   // generate constraints -- but technically don't enforce them, because
   // we haven't forced the conflictVars to be false
-  _.each(analysis.constraints, function (c) {
-    // We logically require that EITHER a constraint is marked as a
-    // conflict OR it comes from a package version that is not selected
-    // OR its constraint formula must be true.
-    // (The constraint formula says that if toPackage is selected,
-    // then a version of it that satisfies our constraint must be true.)
-    logic.require(
-      Logic.or(c.conflictVar,
-               c.fromVar ? Logic.not(c.fromVar) : [],
-               self.getConstraintFormula(c.toPackage, c.vConstraint)));
+  Profile.time("generate constraints", function () {
+    _.each(analysis.constraints, function (c) {
+      // We logically require that EITHER a constraint is marked as a
+      // conflict OR it comes from a package version that is not selected
+      // OR its constraint formula must be true.
+      // (The constraint formula says that if toPackage is selected,
+      // then a version of it that satisfies our constraint must be true.)
+      logic.require(
+        Logic.or(c.conflictVar,
+                 c.fromVar ? Logic.not(c.fromVar) : [],
+                 self.getConstraintFormula(c.toPackage, c.vConstraint)));
+    });
   });
 
   // Establish the invariant of self.solution being a valid solution.
@@ -538,7 +596,9 @@ CS.Solver.prototype.getAnswer = function (options) {
   //   using the solution if it exists
   // * Calling `minimize()`, which always maintains satisfiability
 
-  self.setSolution(logic.solve());
+  Profile.time("pre-solve", function () {
+    self.setSolution(logic.solve());
+  });
   // There is always a solution at this point, namely,
   // select all packages (including unknown packages), select
   // any version of each known package (excluding packages with
@@ -549,20 +609,22 @@ CS.Solver.prototype.getAnswer = function (options) {
   // which we didn't do earlier because we needed to establish an
   // initial solution before asking the solver if it's possible to
   // not use these packages.
-  _.each(analysis.packagesWithNoAllowedVersions, function (constrs, p) {
-    var newSolution = logic.solveAssuming(Logic.not(p));
-    if (newSolution) {
-      self.setSolution(newSolution);
-      logic.forbid(p);
-    } else {
-      self.errors.push(
-        'No version of ' + p + ' satisfies all constraints: ' +
-          _.map(constrs, function (constr) {
-            return '@' + constr.constraintString;
-          }).join(', '));
-    }
+  Profile.time("forbid packages with no matching versions", function () {
+    _.each(analysis.packagesWithNoAllowedVersions, function (constrs, p) {
+      var newSolution = logic.solveAssuming(Logic.not(p));
+      if (newSolution) {
+        self.setSolution(newSolution);
+        logic.forbid(p);
+      } else {
+        self.errors.push(
+          'No version of ' + p + ' satisfies all constraints: ' +
+            _.map(constrs, function (constr) {
+              return '@' + constr.constraintString;
+            }).join(', '));
+      }
+    });
+    self.throwAnyErrors();
   });
-  self.throwAnyErrors();
 
   // try not to use any unknown packages.  If the minimum is greater
   // than 0, we'll throw an error later, after we apply the constraints
@@ -580,19 +642,8 @@ CS.Solver.prototype.getAnswer = function (options) {
                 { strategy: 'bottom-up' });
 
   // Try not to use "unanticipated" prerelease versions
-  var unanticipatedPrereleases = [];
-  _.each(_.keys(analysis.reachablePackages), function (p) {
-    var anticipatedPrereleases = input.anticipatedPrereleases[p];
-    _.each(self.getVersions(p), function (v) {
-      if (/-/.test(v) && ! (anticipatedPrereleases &&
-                            _.has(anticipatedPrereleases, v))) {
-        unanticipatedPrereleases.push(pvVar(p, v));
-      }
-    });
-  });
-  analysis.unanticipatedPrereleases = unanticipatedPrereleases;
-
-  self.minimize('unanticipated_prereleases', unanticipatedPrereleases);
+  self.minimize('unanticipated_prereleases',
+                analysis.unanticipatedPrereleases);
 
   var previousRootSteps = self.getVersionDistanceSteps(
     'previous_root', analysis.previousRootDepVersions);
@@ -608,14 +659,16 @@ CS.Solver.prototype.getAnswer = function (options) {
   if (! input.allowIncompatibleUpdate) {
     // make sure packages that are being updated can still count as
     // a previous_root for the purposes of previous_root_incompat
-    _.each(toUpdate, function (p) {
-      if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
-        var parts = self.pricer.partitionVersions(
-          self.getVersions(p), input.previousSolution[p]);
-        _.each(parts.older.concat(parts.higherMajor), function (v) {
-          previousRootIncompat.addTerm(pvVar(p, v), 1);
-        });
-      }
+    Profile.time("add terms to previous_root_incompat", function () {
+      _.each(toUpdate, function (p) {
+        if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
+          var parts = self.pricer.partitionVersions(
+            self.getVersions(p), input.previousSolution[p]);
+          _.each(parts.older.concat(parts.higherMajor), function (v) {
+            previousRootIncompat.addTerm(pvVar(p, v), 1);
+          });
+        }
+      });
     });
 
     // Enforce that we don't make breaking changes to your root dependencies,
@@ -676,12 +729,14 @@ CS.Solver.prototype.getAnswer = function (options) {
   // about the versions of the unimportant packages that it's a very weak
   // signal.  In other words, the user might be better off with some tie-breaker
   // that looks only at the important packages anyway.
-  _.each(self.currentVersionMap(), function (v, package) {
-    if (input.isRootDependency(package) ||
-        input.isInPreviousSolution(package) ||
-        input.isUpgrading(package)) {
-      logic.require(Logic.implies(package, pvVar(package, v)));
-    }
+  Profile.time("lock down important versions", function () {
+    _.each(self.currentVersionMap(), function (v, package) {
+      if (input.isRootDependency(package) ||
+          input.isInPreviousSolution(package) ||
+          input.isUpgrading(package)) {
+        logic.require(Logic.implies(package, pvVar(package, v)));
+      }
+    });
   });
 
   // new, indirect packages are the lowest priority
@@ -702,19 +757,21 @@ CS.Solver.prototype.getAnswer = function (options) {
 
   // throw errors about unknown packages
   if (self.stepsByName['unknown_packages'].optimum > 0) {
-    var unknownPackages = _.keys(analysis.unknownPackages);
-    var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
-      return self.solution.evaluate(p);
-    });
-    _.each(unknownPackagesNeeded, function (p) {
-      var requirers = _.filter(analysis.unknownPackages[p], function (pv) {
-        return self.solution.evaluate(pv);
+    Profile.time("generate error for unknown packages", function () {
+      var unknownPackages = _.keys(analysis.unknownPackages);
+      var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
+        return self.solution.evaluate(p);
       });
-      var errorStr = 'unknown package: ' + p;
-      _.each(requirers, function (pv) {
-        errorStr += '\nRequired by: ' + pv;
+      _.each(unknownPackagesNeeded, function (p) {
+        var requirers = _.filter(analysis.unknownPackages[p], function (pv) {
+          return self.solution.evaluate(pv);
+        });
+        var errorStr = 'unknown package: ' + p;
+        _.each(requirers, function (pv) {
+          errorStr += '\nRequired by: ' + pv;
+        });
+        self.errors.push(errorStr);
       });
-      self.errors.push(errorStr);
     });
     self.throwAnyErrors();
   }
@@ -726,48 +783,55 @@ CS.Solver.prototype.getAnswer = function (options) {
 
   if ((! input.allowIncompatibleUpdate) &&
       self.stepsByName['previous_root_incompat'].optimum > 0) {
-    _.each(_.keys(
-      self.getStepContributions(self.stepsByName['previous_root_incompat'])),
-           function (pvStr) {
-             var pv = CS.PackageAndVersion.fromString(pvStr);
-             var prevVersion = input.previousSolution[pv.package];
-             self.errors.push(
-               'Potentially incompatible change required to top-level dependency: ' +
-                 pvStr + ', was ' + prevVersion + '.\n' +
-                 self.listConstraintsOnPackage(pv.package));
-           });
-    self.errors.push('To allow potentially incompatible changes to top-level ' +
-                     'dependencies, you must pass --allow-incompatible-update ' +
-                     'on the command line.');
+    Profile.time("generate error for incompatible root change", function () {
+      _.each(_.keys(
+        self.getStepContributions(self.stepsByName['previous_root_incompat'])),
+             function (pvStr) {
+               var pv = CS.PackageAndVersion.fromString(pvStr);
+               var prevVersion = input.previousSolution[pv.package];
+               self.errors.push(
+                 'Potentially incompatible change required to top-level dependency: ' +
+                   pvStr + ', was ' + prevVersion + '.\n' +
+                   self.listConstraintsOnPackage(pv.package));
+             });
+      self.errors.push('To allow potentially incompatible changes to top-level ' +
+                       'dependencies, you must pass --allow-incompatible-update ' +
+                       'on the command line.');
+    });
     self.throwAnyErrors();
   }
 
   var result = {
     neededToUseUnanticipatedPrereleases: (
       self.stepsByName['unanticipated_prereleases'].optimum > 0),
-    answer: self.currentVersionMap()
+    answer: Profile.time("generate version map", function () {
+      return self.currentVersionMap();
+    })
   };
 
   if (allAnswers) {
-    var allAnswersList = [result.answer];
-    var nextAnswer = function () {
-      var formula = self.solution.getFormula();
-      var newSolution = logic.solveAssuming(Logic.not(formula));
-      if (newSolution) {
-        self.setSolution(newSolution);
-        logic.forbid(formula);
+    Profile.time("generate all answers", function () {
+      var allAnswersList = [result.answer];
+      var nextAnswer = function () {
+        var formula = self.solution.getFormula();
+        var newSolution = logic.solveAssuming(Logic.not(formula));
+        if (newSolution) {
+          self.setSolution(newSolution);
+          logic.forbid(formula);
+        }
+        return newSolution;
+      };
+      while (nextAnswer()) {
+        allAnswersList.push(self.currentVersionMap());
       }
-      return newSolution;
-    };
-    while (nextAnswer()) {
-      allAnswersList.push(self.currentVersionMap());
-    }
-    result.allAnswers = allAnswersList;
+      result.allAnswers = allAnswersList;
+    });
   };
 
   return result;
 };
 
+// Get a list of package-version variables that satisfy a given constraint.
 var getOkVersions = function (toPackage, vConstraint, targetVersions) {
   return _.compact(_.map(targetVersions, function (v) {
     if (CS.isConstraintSatisfied(toPackage, vConstraint, v)) {
@@ -824,28 +888,30 @@ CS.Solver.prototype.throwConflicts = function () {
   var solution = self.solution;
   var constraints = self.analysis.constraints;
 
-  _.each(constraints, function (c) {
-    // c is a CS.Solver.Constraint
-    if (solution.evaluate(c.conflictVar)) {
-      // skipped this constraint
-      var possibleVersions = self.getVersions(c.toPackage);
-      var chosenVersion = _.find(possibleVersions, function (v) {
-        return solution.evaluate(pvVar(c.toPackage, v));
-      });
-      if (! chosenVersion) {
-        // this can't happen, because for a constraint to be a problem,
-        // we must have chosen some version of the package it applies to!
-        throw new Error("Internal error: Version not found");
+  self.Profile.time("generate error about conflicts", function () {
+    _.each(constraints, function (c) {
+      // c is a CS.Solver.Constraint
+      if (solution.evaluate(c.conflictVar)) {
+        // skipped this constraint
+        var possibleVersions = self.getVersions(c.toPackage);
+        var chosenVersion = _.find(possibleVersions, function (v) {
+          return solution.evaluate(pvVar(c.toPackage, v));
+        });
+        if (! chosenVersion) {
+          // this can't happen, because for a constraint to be a problem,
+          // we must have chosen some version of the package it applies to!
+          throw new Error("Internal error: Version not found");
+        }
+        var error = (
+          'Conflict: Constraint ' + (new PV.PackageConstraint(
+            c.toPackage, c.vConstraint)) +
+            ' is not satisfied by ' + c.toPackage + ' ' + chosenVersion + '.');
+
+        error += '\n' + self.listConstraintsOnPackage(c.toPackage);
+
+        self.errors.push(error);
       }
-      var error = (
-        'Conflict: Constraint ' + (new PV.PackageConstraint(
-          c.toPackage, c.vConstraint)) +
-          ' is not satisfied by ' + c.toPackage + ' ' + chosenVersion + '.');
-
-      error += '\n' + self.listConstraintsOnPackage(c.toPackage);
-
-      self.errors.push(error);
-    }
+    });
   });
 
   // always throws, never returns

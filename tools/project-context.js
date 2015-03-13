@@ -623,10 +623,11 @@ _.extend(ProjectContext.prototype, {
     var resolver =
           new constraintSolverPackage.ConstraintSolver.PackagesResolver(
             self.projectCatalog, {
-        nudge: function () {
-          Console.nudge(true);
-        }
-      });
+              nudge: function () {
+                Console.nudge(true);
+              },
+              Profile: Profile
+            });
     return resolver;
   },
 

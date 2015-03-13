@@ -1,6 +1,10 @@
 var PV = PackageVersion;
 var CS = ConstraintSolver;
 
+// `check` can be really slow, so this line is a valve that makes it
+// easy to turn off when debugging performance problems.
+var _check = check;
+
 // The "Input" object completely specifies the input to the resolver,
 // and it holds the data loaded from the Catalog as well.  It can be
 // serialized to JSON and read back in for testing purposes.
@@ -14,7 +18,6 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   // Convert them to our PackageConstraint class if necessary.  (This is
   // just top-level constraints from .meteor/packages or running from
   // checkout, so it's not a lot of data.)
-  check(constraints, [PackageConstraintType]);
   constraints = _.map(constraints, function (c) {
     if (c instanceof PV.PackageConstraint) {
       return c;
@@ -41,17 +44,17 @@ CS.Input = function (dependencies, constraints, catalogCache, options) {
   self.upgradeIndirectDepPatchVersions =
     options.upgradeIndirectDepPatchVersions || false;
 
-  check(self.dependencies, [String]);
-  check(self.constraints, [PV.PackageConstraint]);
-  check(self.upgrade, [String]);
-  check(self.anticipatedPrereleases,
+  _check(self.dependencies, [String]);
+  _check(self.constraints, [PV.PackageConstraint]);
+  _check(self.upgrade, [String]);
+  _check(self.anticipatedPrereleases,
         Match.ObjectWithValues(Match.ObjectWithValues(Boolean)));
-  check(self.previousSolution, Match.OneOf(Object, null));
-  check(self.allowIncompatibleUpdate, Boolean);
-  check(self.upgradeIndirectDepPatchVersions, Boolean);
+  _check(self.previousSolution, Match.OneOf(Object, null));
+  _check(self.allowIncompatibleUpdate, Boolean);
+  _check(self.upgradeIndirectDepPatchVersions, Boolean);
 
   self.catalogCache = catalogCache;
-  check(self.catalogCache, CS.CatalogCache);
+  _check(self.catalogCache, CS.CatalogCache);
   // The catalog presumably has valid package names in it, but make sure
   // there aren't any characters in there somehow that will trip us up
   // with creating valid variable strings.
@@ -168,7 +171,7 @@ CS.Input.prototype.toJSONable = function () {
 };
 
 CS.Input.fromJSONable = function (obj) {
-  check(obj, {
+  _check(obj, {
     dependencies: [String],
     constraints: [String],
     catalogCache: Object,
@@ -194,27 +197,3 @@ CS.Input.fromJSONable = function (obj) {
       upgradeIndirectDepPatchVersions: obj.upgradeIndirectDepPatchVersions
     });
 };
-
-// Type description of PackageConstraint that doesn't rely on the constructor
-// being correct.  Unrelatedly, objects with constructors (any constructors)
-// can't be checked by "check" in the same way as plain objects, so we
-// have to resort to examining the fields explicitly.
-
-var VersionConstraintType = Match.OneOf(
-  PV.VersionConstraint,
-  Match.Where(function (vc) {
-    check(vc.raw, String);
-    check(vc.alternatives, [{
-      versionString: Match.OneOf(String, null),
-      type: String
-    }]);
-    return vc.constructor !== Object;
-  }));
-var PackageConstraintType = Match.OneOf(
-  PV.PackageConstraint,
-  Match.Where(function (c) {
-    check(c.package, String);
-    check(c.constraintString, String);
-    check(c.versionConstraint, VersionConstraintType);
-    return c.constructor !== Object;
-  }));
