@@ -2006,6 +2006,14 @@ main.registerCommand({
 
   var child_process = require('child_process');
   var future = new Future;
+
+  if (arch.match(/win/)) {
+    // The ssh output from Windows machines is buggy, it can overlay your
+    // existing output on the top of the screen which is very ugly. Force the
+    // screen cleaning to assist.
+    Console.clear();
+  }
+
   var sshCommand = child_process.spawn(
     "ssh", connOptions,
     { stdio: 'inherit' }); // Redirect spawn stdio to process
