@@ -3742,7 +3742,7 @@ BOOL REST_SignInOrRegister(
 	char *path = fSignIn ? "/api/v1/private/login"
 	                     : "/api/v1/private/register";
 
-	if (POSTRequest("rest-accounts.meteor.com", path, pMBFormData, &pMBDataResponse))
+	if (POSTRequest("www.meteor.com", path, pMBFormData, &pMBDataResponse))
 	{
 		JSONValue *JSONResponse = JSON::Parse(pMBDataResponse);
 		if (JSONResponse != NULL)
