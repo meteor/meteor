@@ -14,6 +14,7 @@ var release = require('./release.js');
 var tropohouse = require('./tropohouse.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
+var Profile = require('./profile.js').Profile;
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
@@ -407,6 +408,8 @@ _.extend(ProjectContext.prototype, {
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
+    var resolverRunCount = 0;
+
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
     catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
@@ -433,10 +436,18 @@ _.extend(ProjectContext.prototype, {
           resolveOptions.upgradeIndirectDepPatchVersions = true;
         }
 
+        resolverRunCount++;
+
+        var solution;
         try {
-          var solution = resolver.resolve(
-            depsAndConstraints.deps, depsAndConstraints.constraints,
-            resolveOptions);
+          Profile.run(
+            "Select Package Versions" +
+              (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
+            function () {
+              solution = resolver.resolve(
+                depsAndConstraints.deps, depsAndConstraints.constraints,
+                resolveOptions);
+            });
         } catch (e) {
           if (!e.constraintSolverError && !e.versionParserError)
             throw e;
