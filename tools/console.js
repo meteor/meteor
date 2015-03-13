@@ -829,6 +829,15 @@ _.extend(Console.prototype, {
     self._print(LEVEL_ERROR, message);
   },
 
+  // Prints a special ANSI sequence that "clears" the screen (on most terminal
+  // emulators just scrolls the contents down and resets the position).
+  // References: http://en.wikipedia.org/wiki/ANSI_escape_code#CSI_codes
+  clear: function () {
+    var self = this;
+
+    self.rawInfo('\u001b[2J\u001b[0;0H');
+  },
+
   _prettifyMessage: function (msgArguments) {
     var self = this;
     var parsedArgs = self._parseVariadicInput(msgArguments);
