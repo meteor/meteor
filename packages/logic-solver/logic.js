@@ -278,15 +278,15 @@ Logic.Solver = function () {
 
 // Get a var number for vname, assigning it a number if it is new.
 // Setting "_createInternals" to true grants the ability to create $ variables.
-// Setting "_noCreate" to true refuses to create new variables.
+// Setting "_noCreate" to true causes the function to return 0 instead of
+// creating a new variable.
 Logic.Solver.prototype.getVarNum = function (vname, _createInternals, _noCreate) {
   var key = ' '+vname;
   if (_.has(this._name2num, key)) {
     return this._name2num[key];
+  } else if (_noCreate) {
+    return 0;
   } else {
-    if (_noCreate) {
-      throw new Error("No such variable: " + vname);
-    }
     if (vname.charAt(0) === "$" && ! _createInternals) {
       throw new Error("Only generated variable names can start with $");
     }
@@ -310,8 +310,10 @@ Logic.Solver.prototype.getVarName = function (vnum) {
 // Converts a Term to a NumTerm (if it isn't already).  This is done
 // when a Formula creates Clauses for a Solver, since Clauses require
 // NumTerms.  NumTerms stay the same, while a NameTerm like "-foo"
-// might become (say) the number -3.
-Logic.Solver.prototype.toNumTerm = function (t, _noCreate) {
+// might become (say) the number -3.  If a NameTerm names a variable
+// that doesn't exist, it is automatically created, unless noCreate
+// is passed, in which case 0 is returned instead.
+Logic.Solver.prototype.toNumTerm = function (t, noCreate) {
   var self = this;
 
   _check(t, Logic.Term);
@@ -324,8 +326,12 @@ Logic.Solver.prototype.toNumTerm = function (t, _noCreate) {
       t = t.slice(1);
       not = ! not;
     }
-    var n = self.getVarNum(t, false, _noCreate);
-    return (not ? -n : n);
+    var n = self.getVarNum(t, false, noCreate);
+    if (! n) {
+      return 0; // must be the noCreate case
+    } else {
+      return (not ? -n : n);
+    }
   }
 };
 
@@ -1393,6 +1399,12 @@ Logic.Solution = function (_solver, _assignment) {
   self._termifier.term = function (formula) {
     return self.evaluate(formula) ? Logic.NUM_TRUE : Logic.NUM_FALSE;
   };
+
+  // Read/write.  When true, evaluation doesn't throw errors when
+  // `evaluate` or `getWeightedSum` encounter named variables that are
+  // unknown or variables that weren't present when this Solution was
+  // generated.  Instead, the unknown variables are assumed to be false.
+  self.ignoreUnknownVariables = false;
 };
 
 // Get a map of variables to their assignments,
@@ -1447,10 +1459,14 @@ Logic.Solution.prototype.getFormula = function () {
   return Logic.and(terms);
 };
 
+// Returns a boolean if the argument is a Formula (or Term), and an integer
+// if the argument is a Logic.Bits.
 Logic.Solution.prototype.evaluate = function (formulaOrBits) {
   var self = this;
   _check(formulaOrBits, Match.OneOf(Logic.FormulaOrTerm, Logic.Bits));
+
   if (formulaOrBits instanceof Logic.Bits) {
+    // Evaluate to an integer
     var ret = 0;
     _.each(formulaOrBits.bits, function (f, i) {
       if (self.evaluate(f)) {
@@ -1459,7 +1475,9 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
     });
     return ret;
   }
+
   var solver = self._solver;
+  var ignoreUnknownVariables = self.ignoreUnknownVariables;
   var assignment = self._assignment;
   var formula = formulaOrBits;
   if (formula instanceof Logic.NotFormula) {
@@ -1494,8 +1512,18 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
     }
   } else {
     // Term; convert to numeric (possibly negative), but throw
-    // an error if the name is not found.
+    // an error if the name is not found.  If `ignoreUnknownVariables`
+    // is set, return false instead.
     var numTerm = solver.toNumTerm(formula, true);
+    if (! numTerm) {
+      if (ignoreUnknownVariables) {
+        return false;
+      } else {
+        // formula must be a NameTerm naming a variable that doesn't exist
+        var vname = String(formula).replace(/^-*/, '');
+        throw new Error("No such variable: " + vname);
+      }
+    }
     var v = numTerm;
     var isNot = false;
     if (numTerm < 0) {
@@ -1507,7 +1535,11 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
       if (v >= 1 && v < solver._num2name.length) {
         vname = solver._num2name[v];
       }
-      throw new Error("Variable not part of solution: " + vname);
+      if (ignoreUnknownVariables) {
+        return false;
+      } else {
+        throw new Error("Variable not part of solution: " + vname);
+      }
     }
     var ret = assignment[v];
     if (isNot) {

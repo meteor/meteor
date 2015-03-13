@@ -82,7 +82,7 @@ CS.PackagesResolver._resolveWithInput = function (input, options) {
 
   // Disable runtime type checks (they slow things down by a factor of 3)
   return Logic._disablingTypeChecks(function () {
-    var result = solver.getSolution({
+    var result = solver.getAnswer({
       allAnswers: (options && options.allAnswers)
     });
     // if we're here, no conflicts were found (or an error would have

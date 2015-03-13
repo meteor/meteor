@@ -6,7 +6,7 @@ var pvVar = function (p, v) {
 };
 
 // The "inner solver".  You construct it with a ConstraintSolver.Input object
-// (which specifies the problem) and then call .getSolution() on it.
+// (which specifies the problem) and then call .getAnswer() on it.
 
 CS.Solver = function (input, options) {
   var self = this;
@@ -314,7 +314,7 @@ CS.Solver.prototype.minimize = function (step, options) {
   var costWeights = step.weights;
   var costTerms = step.terms;
 
-  self.solution = logic.minimize(
+  self.setSolution(logic.minimize(
     self.solution, costTerms, costWeights, {
       progress: function (status, cost) {
         if (self.options.nudge) {
@@ -327,12 +327,7 @@ CS.Solver.prototype.minimize = function (step, options) {
         }
       },
       strategy: (options && options.strategy)
-    });
-
-  if (! self.solution) {
-    // Optimizing shouldn't change satisfiability
-    throw new Error("Unexpected unsatisfiability");
-  }
+    }));
 
   step.optimum = self.solution.getWeightedSum(costTerms, costWeights);
   if (DEBUG) {
@@ -460,14 +455,25 @@ CS.Solver.prototype.currentVersionMap = function () {
   return versionMap;
 };
 
-CS.Solver.prototype.getSolution = function (options) {
+// Called to re-assign `self.solution` after a call to `self.logic.solve()`,
+// `solveAssuming`, or `minimize`.
+CS.Solver.prototype.setSolution = function (solution) {
+  var self = this;
+  self.solution = solution;
+  if (! self.solution) {
+    throw new Error("Unexpected unsatisfiability");
+  }
+  self.solution.ignoreUnknownVariables = true;
+};
+
+CS.Solver.prototype.getAnswer = function (options) {
   var self = this;
   var input = self.input;
   var analysis = self.analysis;
   var cache = input.catalogCache;
   var allAnswers = (options && options.allAnswers); // for tests
 
-  var logic = self.logic = new Logic.Solver;
+  var logic = self.logic = new Logic.Solver();
 
   // require root dependencies
   _.each(input.dependencies, function (p) {
@@ -517,20 +523,27 @@ CS.Solver.prototype.getSolution = function (options) {
   });
 
   // Establish the invariant of self.solution being a valid solution.
-  // From now on, if we add some new requirement to the solver that
-  // isn't necessarily true of `self.solution`, we must recalculate
-  // `self.solution` and throw an appropriate error if there isn't
-  // one.  (Usually this involves running `solveAssuming` so that we
-  // don't spoil the solver by putting it into an unsatisfiable state.)
-  self.solution = logic.solve();
-  if (! self.solution) {
-    // There is always a solution at this point, namely,
-    // select all packages (including unknown packages), select
-    // any version of each known package (excluding packages with
-    // "no allowed versions"), and set all conflictVars
-    // to true.
-    throw new Error("Unexpected unsatisfiability");
-  }
+  // From now on, if we add some new logical requirement to the solver
+  // that isn't necessarily true of `self.solution`, we must
+  // recalculate `self.solution` and pass the new value to
+  // self.setSolution.  It is our job to obtain the new solution in a
+  // way that ensures the solution exists and doesn't put the solver
+  // in an unsatisfiable state.  There are several ways to do this:
+  //
+  // * Calling `logic.solve()` and immediately throwing a fatal error
+  //   if there's no solution (not calling `setSolution` at all)
+  // * Calling `logic.solve()` in a situation where we know we have
+  //   not made the problem unsatisfiable
+  // * Calling `logic.solveAssuming(...)` and checking the result, only
+  //   using the solution if it exists
+  // * Calling `minimize()`, which always maintains satisfiability
+
+  self.setSolution(logic.solve());
+  // There is always a solution at this point, namely,
+  // select all packages (including unknown packages), select
+  // any version of each known package (excluding packages with
+  // "no allowed versions"), and set all conflictVars
+  // to true.
 
   // Forbid packages with no versions allowed by top-level constraints,
   // which we didn't do earlier because we needed to establish an
@@ -539,7 +552,7 @@ CS.Solver.prototype.getSolution = function (options) {
   _.each(analysis.packagesWithNoAllowedVersions, function (constrs, p) {
     var newSolution = logic.solveAssuming(Logic.not(p));
     if (newSolution) {
-      self.solution = newSolution;
+      self.setSolution(newSolution);
       logic.forbid(p);
     } else {
       self.errors.push(
@@ -551,26 +564,11 @@ CS.Solver.prototype.getSolution = function (options) {
   });
   self.throwAnyErrors();
 
-  var unknownPackages = _.keys(analysis.unknownPackages);
-  if (unknownPackages.length) {
-    // XXX make sure we've created variables for these so we don't
-    // get an error from the solver.  there is probably a better
-    // way to address this.
-    _.each(unknownPackages, function (p) {
-      logic.getVarNum(p);
-    });
-    self.solution = logic.solve();
-    if (! self.solution) {
-      // all we did was add new, unconstrained variables
-      throw new Error("Unexpected unsatisfiability");
-    }
-  }
-
   // try not to use any unknown packages.  If the minimum is greater
   // than 0, we'll throw an error later, after we apply the constraints
   // and the cost function, so that we can explain the problem to the
   // user in a convincing way.
-  self.minimize('unknown_packages', unknownPackages);
+  self.minimize('unknown_packages', _.keys(analysis.unknownPackages));
 
   // try not to set the conflictVar on any constraint.  If the minimum
   // is greater than 0, we'll throw an error later, after we've run the
@@ -704,6 +702,7 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // throw errors about unknown packages
   if (self.stepsByName['unknown_packages'].optimum > 0) {
+    var unknownPackages = _.keys(analysis.unknownPackages);
     var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
       return self.solution.evaluate(p);
     });
@@ -755,7 +754,7 @@ CS.Solver.prototype.getSolution = function (options) {
       var formula = self.solution.getFormula();
       var newSolution = logic.solveAssuming(Logic.not(formula));
       if (newSolution) {
-        self.solution = newSolution;
+        self.setSolution(newSolution);
         logic.forbid(formula);
       }
       return newSolution;
