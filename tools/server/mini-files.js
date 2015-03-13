@@ -97,6 +97,7 @@ files.pathBasename = wrapPathFunction("basename");
 files.pathExtname = wrapPathFunction("extname");
 files.pathSep = '/';
 files.pathDelimiter = ':';
+files.pathOsDelimiter = path.delimiter;
 
 files.convertToStandardPath = convertToStandardPath;
 files.convertToOSPath = convertToOSPath;
