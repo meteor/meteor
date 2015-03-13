@@ -1980,12 +1980,13 @@ main.registerCommand({
 
   // Record the SSH Key in a temporary file on disk and give it the permissions
   // that ssh-agent requires it to have.
-  var idpath = "/tmp/meteor-key-" + utils.randomToken();
+  var tmpDir = files.mkdtemp('meteor-ssh-');
+  var idpath = tmpDir + '/id';
   maybeLog("Writing ssh key to " + idpath);
   files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
 
   // Add the known host key to a custom known hosts file.
-  var hostpath = "/tmp/meteor-host-" + utils.randomToken();
+  var hostpath = tmpDir + '/host';
   var addendum = ret.host + " " + ret.hostKey + "\n";
   maybeLog("Writing host key to " + hostpath);
   files.writeFile(hostpath, addendum, 'utf8');
