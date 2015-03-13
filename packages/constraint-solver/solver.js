@@ -167,7 +167,7 @@ CS.Solver.prototype.analyze = function () {
           analysis.unknownPackages[p2].push(pvVar(p, v));
         } else {
           if (! dep.isWeak) {
-            if (analysis.reachablePackages[p2] !== true) {
+            if (! _.has(analysis.reachablePackages, p2)) {
               markReachable(p2);
             }
           }
@@ -551,11 +551,26 @@ CS.Solver.prototype.getSolution = function (options) {
   });
   self.throwAnyErrors();
 
+  var unknownPackages = _.keys(analysis.unknownPackages);
+  if (unknownPackages.length) {
+    // XXX make sure we've created variables for these so we don't
+    // get an error from the solver.  there is probably a better
+    // way to address this.
+    _.each(unknownPackages, function (p) {
+      logic.getVarNum(p);
+    });
+    self.solution = logic.solve();
+    if (! self.solution) {
+      // all we did was add new, unconstrained variables
+      throw new Error("Unexpected unsatisfiability");
+    }
+  }
+
   // try not to use any unknown packages.  If the minimum is greater
   // than 0, we'll throw an error later, after we apply the constraints
   // and the cost function, so that we can explain the problem to the
   // user in a convincing way.
-  self.minimize('unknown_packages', _.keys(analysis.unknownPackages));
+  self.minimize('unknown_packages', unknownPackages);
 
   // try not to set the conflictVar on any constraint.  If the minimum
   // is greater than 0, we'll throw an error later, after we've run the
@@ -689,7 +704,6 @@ CS.Solver.prototype.getSolution = function (options) {
 
   // throw errors about unknown packages
   if (self.stepsByName['unknown_packages'].optimum > 0) {
-    var unknownPackages = _.keys(analysis.unknownPackages);
     var unknownPackagesNeeded = _.filter(unknownPackages, function (p) {
       return self.solution.evaluate(p);
     });
