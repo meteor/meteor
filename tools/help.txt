@@ -850,6 +850,7 @@ Valid machine architectures are:
   os.osx.x86_64
   os.linux.x86_64
   os.linux.x86_32
+  os.windows.x86_32
 
 Options:
   --json       return information in JSON form instead of opening a shell
