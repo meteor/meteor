@@ -8,7 +8,9 @@
         {{/if}}
         </span>
         {{#if filepath}}
-        <div class="src-code">{{filepath}}, line {{lineno}}</div>
+        <div class="src-code">
+            <a href="https://github.com/meteor/meteor/blob/devel/packages/{{filepath}}" target="_blank">{{filepath}}</a>
+            ,<a href="https://github.com/meteor/meteor/blob/devel/packages/{{filepath}}#L{{lineno}}" target="_blank"> line {{lineno}}</a></div>
         {{/if}}
     </div>
   </h3>
