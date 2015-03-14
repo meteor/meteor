@@ -38,6 +38,9 @@
 
 * Don't fail if `npm` prints more than 200K.  #3887
 
+* Avoid a race condition in `meteor --test` and work with newer versions of the
+  Velocity package.  #3957
+
 
 ### Other bug fixes and improvements
 
