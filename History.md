@@ -19,6 +19,12 @@
 * Prefer "patched" versions of new indirect dependencies, and take patches
   to them on `meteor update` (for example, `1.0.1` or `1.0.0_1` over `1.0.0`).
 
+* Version Solver is instrumented for profiling (`METEOR_PROFILE=1` in the
+  environment).
+
+* Setting the `METEOR_PRINT_CONSTRAINT_SOLVER_INPUT` environment variable
+  prints information useful for diagnosing constraint solver bugs.
+
 ### Tracker
 
 * Schedule the flush cycle using a better technique than `setTimeout` when
