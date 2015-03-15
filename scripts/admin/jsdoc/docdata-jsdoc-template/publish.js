@@ -67,6 +67,15 @@
       }
     });
 
+    // Callback descriptions are going to be embeded into Function descriptions
+    // when they are used as arguments, so we always attach them to reference
+    // them later.
+    var callbacks = helper.find(data, {kind: "typedef"});
+    _.each(callbacks, function (cb) {
+      delete cb.comment;
+      addToData(cb.longname, cb);
+    });
+
     var functions = helper.find(data, {kind: "function"});
     var constructors = helper.find(data, {kind: "class"});
 

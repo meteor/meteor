@@ -59,7 +59,7 @@ var typeNameTranslation = {
 
 Template.autoApiBox.helpers({
   apiData: apiData,
-  typeNames: function (nameList) {
+  typeNames: function typeNames (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
       // decode the "Array.<Type>" syntax
@@ -81,6 +81,10 @@ Template.autoApiBox.helpers({
 
       if (typeNameTranslation.hasOwnProperty(name)) {
         return typeNameTranslation[name];
+      }
+
+      if (DocsData[name]) {
+        return typeNames(DocsData[name].type);
       }
 
       return name;
