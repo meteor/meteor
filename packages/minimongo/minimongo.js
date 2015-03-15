@@ -144,12 +144,17 @@ LocalCollection.prototype.findOne = function (selector, options) {
 };
 
 /**
+ * @callback IterationCallback
+ * @param {Object} doc
+ * @param {Number} index
+ */
+/**
  * @summary Call `callback` once for each matching document, sequentially and synchronously.
  * @locus Anywhere
  * @method  forEach
  * @instance
  * @memberOf Mongo.Cursor
- * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
  * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
  */
 LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
@@ -185,7 +190,7 @@ LocalCollection.Cursor.prototype.getTransform = function () {
  * @method map
  * @instance
  * @memberOf Mongo.Cursor
- * @param {Function} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
+ * @param {IterationCallback} callback Function to call. It will be called with three arguments: the document, a 0-based index, and <em>cursor</em> itself.
  * @param {Any} [thisArg] An object which will be the value of `this` inside `callback`.
  */
 LocalCollection.Cursor.prototype.map = function (callback, thisArg) {
@@ -220,6 +225,7 @@ LocalCollection.Cursor.prototype.fetch = function () {
  * @method  count
  * @instance
  * @locus Anywhere
+ * @returns {Number}
  */
 LocalCollection.Cursor.prototype.count = function () {
   var self = this;

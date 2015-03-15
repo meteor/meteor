@@ -37,7 +37,7 @@
     data.___id = undefined;
     data.___s = undefined;
     data.tags = undefined;
-    
+
     names.push(location);
     dataContents[location] = data;
   };
