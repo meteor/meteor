@@ -2765,6 +2765,34 @@ DocsData = {
     "scope": "static",
     "summary": "Send an HTTP `PUT` request. Equivalent to calling [`HTTP.call`](#http_call) with \"PUT\" as the first argument."
   },
+  "IterationCallback": {
+    "kind": "typedef",
+    "longname": "IterationCallback",
+    "name": "IterationCallback",
+    "params": [
+      {
+        "name": "doc",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "name": "index",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      }
+    ],
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
+  },
   "Match": {
     "kind": "namespace",
     "longname": "Match",
@@ -4231,6 +4259,15 @@ DocsData = {
     "name": "count",
     "options": [],
     "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      }
+    ],
     "scope": "instance",
     "summary": "Returns the number of documents that match a query."
   },
@@ -4267,7 +4304,7 @@ DocsData = {
         "name": "callback",
         "type": {
           "names": [
-            "function"
+            "IterationCallback"
           ]
         }
       },
@@ -4298,7 +4335,7 @@ DocsData = {
         "name": "callback",
         "type": {
           "names": [
-            "function"
+            "IterationCallback"
           ]
         }
       },
@@ -5399,7 +5436,11 @@ DocsData = {
     "params": [],
     "returns": [
       {
-        "description": "<p>Blaze.TemplateInstance</p>"
+        "type": {
+          "names": [
+            "Blaze.TemplateInstance"
+          ]
+        }
       }
     ],
     "scope": "static",
@@ -5675,7 +5716,7 @@ DocsData = {
         "name": "runFunc",
         "type": {
           "names": [
-            "function"
+            "TrackerComputationFunction"
           ]
         }
       }
@@ -5758,6 +5799,25 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped."
+  },
+  "TrackerComputationFunction": {
+    "kind": "typedef",
+    "longname": "TrackerComputationFunction",
+    "name": "TrackerComputationFunction",
+    "params": [
+      {
+        "type": {
+          "names": [
+            "Tracker.Computation"
+          ]
+        }
+      }
+    ],
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
   },
   "check": {
     "kind": "function",

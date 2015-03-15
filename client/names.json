@@ -99,6 +99,7 @@
   "HTTP.get",
   "HTTP.post",
   "HTTP.put",
+  "IterationCallback",
   "Match",
   "Match.test",
   "Meteor",
@@ -223,6 +224,7 @@
   "Tracker.flush",
   "Tracker.nonreactive",
   "Tracker.onInvalidate",
+  "TrackerComputationFunction",
   "check",
   "currentUser",
   "loggingIn"
