@@ -554,7 +554,11 @@ selftest.define("package specifying a name",
   run.waitSecs(40);
   run.match("accounts-base");
 
-  run = s.run();
+  // Pass --allow-incompatible-update so that when we create a package
+  // that overrides accounts-base and has no version number (interpreted
+  // as version 0.0.0), we don't get an error about downgrading a
+  // a dependency.
+  run = s.run("--allow-incompatible-update");
   run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
