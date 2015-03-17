@@ -1,4 +1,5 @@
 if (Meteor.isServer) {
+/*
   Meteor.AppCache.config({
     // Turn off appcache on Safari. Apparently Safari 7's AppCache is totally
     // busted. In particular, this fact combined with our "RELOAD_SAFETYBELT"
@@ -9,4 +10,5 @@ if (Meteor.isServer) {
     // ... and Firefox too.  See eg https://github.com/meteor/meteor/issues/3248
     firefox: false
   });
+*/
 }
