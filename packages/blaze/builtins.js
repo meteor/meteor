@@ -142,15 +142,17 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
       },
       changedAt: function (id, newItem, oldItem, index) {
         Tracker.nonreactive(function () {
-          var itemView;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView._domrange) {
-            itemView = eachView._domrange.getMember(index).view;
           } else {
-            itemView = eachView.initialSubviews[index];
+            var itemView;
+            if (eachView._domrange) {
+              itemView = eachView._domrange.getMember(index).view;
+            } else {
+              itemView = eachView.initialSubviews[index];
+            }
+            itemView.dataVar.set(newItem);
           }
-          itemView.dataVar.set(newItem);
         });
       },
       movedTo: function (id, item, fromIndex, toIndex) {
