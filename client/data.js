@@ -494,7 +494,17 @@ DocsData = {
     "longname": "Accounts.setPassword",
     "memberof": "Accounts",
     "name": "setPassword",
-    "options": [],
+    "options": [
+      {
+        "description": "<p>Logout all current connections with this userId (default: true)</p>",
+        "name": "logout",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
     "params": [
       {
         "description": "<p>The id of the user to update.</p>",
@@ -511,6 +521,15 @@ DocsData = {
         "type": {
           "names": [
             "String"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       }
@@ -5392,7 +5411,7 @@ DocsData = {
     "options": [],
     "params": [],
     "scope": "static",
-    "summary": "- Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns\nthe data context of the template.\n- Inside a helper, returns the data context of the DOM node where the helper\nwas used.\n- Inside an event handler, returns the data context of the element that fired\nthe event.\n\nEstablishes a reactive dependency on the result."
+    "summary": "- Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns\nthe data context of the template.\n- Inside an event handler, returns the data context of the template on which\nthis event handler was defined.\n- Inside a helper, returns the data context of the DOM node where the helper\nwas used.\n\nEstablishes a reactive dependency on the result."
   },
   "Template.dynamic": {
     "istemplate": "true",

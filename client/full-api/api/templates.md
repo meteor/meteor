@@ -215,6 +215,26 @@ Template.notifications.onCreated(function () {
 </template>
 ```
 
+Another example where the subscription depends on the data context:
+
+```js
+Template.comments.onCreated(function () {
+  var self = this;
+
+  // Use self.subscribe with the data context reactively
+  self.autorun(function () {
+    var dataContext = Template.currentData();
+    self.subscribe("comments", dataContext.postId);
+  });
+});
+```
+
+```html
+{{dstache}}#with post}}
+  {{dstache}}> comments postId=_id}}
+{{dstache}}/with}}
+```
+
 {{> autoApiBox "Blaze.TemplateInstance#view"}}
 
 {{> autoApiBox "Template.registerHelper"}}
