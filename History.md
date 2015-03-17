@@ -260,6 +260,12 @@
   - request: 2.53.0 (from 2.47.0)
 
 
+Patches contributed by GitHub users 0a-, awatson1978, awwx, bwhitty,
+christianbundy, d4nyll, dandv, DanielDent, DenisGorbachev, fay-jai, gsuess,
+hwillson, jakozaur, meonkeys, mitar, netanelgilad, queso, rbabayoff, RobertLowe,
+romanzolotarev, Siilwyn, and tmeasday.
+
+
 ## v.1.0.3.2, 2015-Feb-25
 
 * Fix regression in 1.0.3 where the `meteor` tool could crash when downloading
