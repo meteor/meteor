@@ -1485,7 +1485,13 @@ var consumeControlFile = function (
   // If the remote server domain is known, allow access to it for xhr and DDP
   // connections.
   if (serverDomain) {
-    accessRules['*://' + serverDomain + '/*'] = false;
+    accessRules['*://' + serverDomain + '/*'] = true;
+    // Android talks to localhost over 10.0.2.2. This config file is used for
+    // multiple platforms, so any time that we say the server is on localhost we
+    // should also say it is on 10.0.2.2.
+    if (serverDomain === 'localhost') {
+      accessRules['*://10.0.2.2/*'] = true;
+    }
   }
 
   var setIcon = function (size, name) {

@@ -1089,8 +1089,8 @@ _.extend(Isopack.prototype, {
       '--full-tree',
       'HEAD',
       // The actual trees to copy!
-      'tools', 'examples', 'LICENSE.txt', 'meteor', 'meteor.bat',
-      'scripts/admin/launch-meteor',
+      'tools', 'examples', 'LICENSE.txt', 'LICENSES',
+      'meteor', 'meteor.bat', 'scripts/admin/launch-meteor',
       'packages/package-version-parser/package-version-parser.js',
       'packages/meteor/flush-buffers-on-exit-in-windows.js');
 

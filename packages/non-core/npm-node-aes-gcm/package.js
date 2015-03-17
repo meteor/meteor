@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Wrapper around the node-aes-gcm npm package",
-  version: '0.1.4-winr.1'
+  version: '0.1.3_1',
+  documentation: null
 });
 
 Npm.depends({

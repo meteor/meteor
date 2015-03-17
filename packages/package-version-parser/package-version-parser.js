@@ -396,16 +396,25 @@ PV.validatePackageName = function (packageName, options) {
     throwVersionParserError("Package name may not end with a dot: "
                             + JSON.stringify(packageName));
   }
+  if (packageName.slice(-1) === '.') {
+    throwVersionParserError("Package names may not end with a dot: " +
+                            JSON.stringify(packageName));
+  }
   if (packageName.indexOf('..') >= 0) {
-    throwVersionParserError("Package name may not contain two consecutive dots: "
-                            + JSON.stringify(packageName));
+    throwVersionParserError("Package names may not contain two consecutive dots: " +
+                            JSON.stringify(packageName));
   }
   if (packageName[0] === '-') {
-    throwVersionParserError("Package name may not begin with a hyphen: "
-                            + JSON.stringify(packageName));
+    throwVersionParserError("Package names may not begin with a hyphen: " +
+                            JSON.stringify(packageName));
   }
   // (There is already a package ending with a `-` and one with two consecutive `-`
   // in troposphere, though they both look like typos.)
+
+  if (packageName[0] === ":" || __.last(packageName) === ":") {
+    throwVersionParserError("Package names may not start or end with a colon: " +
+                            JSON.stringify(packageName));
+  }
 };
 
 var throwVersionParserError = function (message) {

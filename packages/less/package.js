@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The dynamic stylesheet language",
-  version: "1.0.13-winr.3"
+  version: "1.0.13"
 });
 
 Package.registerBuildPlugin({
