@@ -38,6 +38,30 @@ var setCurrentComputation = function (c) {
   Tracker.active = !! c;
 };
 
+var _debugFunc = function () {
+  // We want this code to work without Meteor, and also without
+  // "console" (which is technically non-standard and may be missing
+  // on some browser we come across, like it was on IE 7).
+  //
+  // Lazy evaluation because `Meteor` does not exist right away.(??)
+  return (typeof Meteor !== "undefined" ? Meteor._debug :
+          ((typeof console !== "undefined") && console.error ?
+           function () { console.error.apply(console, arguments); } :
+           function () {}));
+};
+
+var _maybeSupressMoreLogs = function (messagesLength) {
+  // Sometimes when running tests, we intentionally supress logs on expected
+  // printed errors. Since the current implementation of _throwOrLog can log
+  // multiple separate log messages, supress all of them if at least one supress
+  // is expected as we still want them to count as one.
+  if (typeof Meteor !== "undefined") {
+    if (Meteor._supressed_log_expected()) {
+      Meteor._suppress_log(messagesLength - 1);
+    }
+  }
+};
+
 var _throwOrLog = function (from, e) {
   if (throwFirstError) {
     throw e;
@@ -52,15 +76,10 @@ var _throwOrLog = function (from, e) {
       }
     }
     printArgs.push(e.stack);
+    _maybeSupressMoreLogs(printArgs.length);
 
-    if (typeof console !== "undefined") {
-      for (var i = 0; i < printArgs.length; i++) {
-        if (console.error) {
-          console.error(printArgs[i]);
-        } else if (console.log) {
-          console.log(printArgs[i]);
-        }
-      }
+    for (var i = 0; i < printArgs.length; i++) {
+      _debugFunc()(printArgs[i]);
     }
   }
 };
