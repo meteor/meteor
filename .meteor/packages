@@ -7,7 +7,6 @@ standard-app-packages
 jquery
 underscore
 showdown
-jquery-waypoints
 spiderable
 appcache
 reload-safetybelt
