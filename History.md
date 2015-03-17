@@ -186,9 +186,12 @@
 * After killing existing `mongod` servers, also clear the `mongod.lock` file.
 
 * Stricter validation for package names: they cannot begin with a hyphen, end
-  with a dot, contain two consecutive dots, contain more than one colon, or
-  start or end with a colon.  (No packages on Atmosphere fail
-  this validation.)
+  with a dot, contain two consecutive dots, or start or end with a colon.  (No
+  packages on Atmosphere fail this validation.)  Additionally, `meteor create
+  --package` applies the same validation as `meteor publish` and disallows
+  packages with multiple colons.  (Packages with multiple colons like
+  `local-test:iron:router` are used internally by `meteor test-packages` so that
+  is not a strict validation rule.)
 
 * `meteor create --package` now no longer creates a directory with the full
   name of the package, since Windows file systems cannot have colon characters
