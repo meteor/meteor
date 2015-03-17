@@ -9,9 +9,7 @@ underscore
 showdown
 jquery-waypoints
 spiderable
-appcache
 reload-safetybelt
 simple:markdown-templating
 simple:highlight.js
 less
-force-ssl
