@@ -12,6 +12,7 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('tinytest');
+  api.use('test-helpers');
   api.use('tracker');
   api.addFiles('tracker_tests.js', 'client');
 });
