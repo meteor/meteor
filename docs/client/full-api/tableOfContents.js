@@ -178,7 +178,8 @@ var toc = [
       "Template.body",
       {name: "{{> Template.dynamic}}", id: "template_dynamic"},
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
+      {name: "Event maps", style: "noncode"},
+      {name: "Spacebars", style: "noncode"}
     ],
     "Blaze", [
       "Blaze.render",
@@ -311,12 +312,14 @@ var toc = [
     "appcache",
     "accounts-ui",
     "audit-argument-checks",
+    {name: "blaze", link: "https://atmospherejs.com/meteor/blaze"},
     "coffeescript",
     "jquery",
     "less",
     "markdown",
     "oauth-encryption",
     "random",
+    {name: "spacebars", link: "https://atmospherejs.com/meteor/spacebars"},
     {name: "spiderable", link: "https://atmospherejs.com/meteor/spiderable"},
     "underscore",
     "webapp"
