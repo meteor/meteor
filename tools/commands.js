@@ -501,6 +501,7 @@ main.registerCommand({
         // here.
         Console.error(packageName +
           ": Package names may not have more than one colon.");
+        return 1;
       }
 
       fsName = split[1];
