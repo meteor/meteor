@@ -491,6 +491,18 @@ main.registerCommand({
     var fsName = packageName;
     if (packageName.indexOf(":") !== -1) {
       var split = packageName.split(":");
+
+      if (split.length > 2) {
+        // It may seem like this check should be inside package version parser's
+        // validatePackageName, but we decided to name test packages like this:
+        // local-test:prefix:name, so we have to support building packages
+        // with at least two colons. Therefore we will at least try to
+        // discourage people from putting a ton of colons in their package names
+        // here.
+        Console.error(packageName +
+          ": Package names may not have more than one colon.");
+      }
+
       fsName = split[1];
     }
 
