@@ -1,6 +1,6 @@
-//////////////////////////////////////////////////
+/////////////////////////////////////////////////////
 // Package docs at http://docs.meteor.com/#tracker //
-//////////////////////////////////////////////////
+/////////////////////////////////////////////////////
 
 /**
  * @namespace Tracker
@@ -25,6 +25,13 @@ Tracker.active = false;
  * @type {Tracker.Computation}
  */
 Tracker.currentComputation = null;
+
+// References to all computations created within the Tracker by id.
+// Keeping these references on an underscore property gives more control to
+// tooling and packages extending Tracker without increasing the API surface.
+// These can used to monkey-patch computations, their functions, use
+// computation ids for tracking, etc.
+Tracker._computations = {};
 
 var setCurrentComputation = function (c) {
   Tracker.currentComputation = c;
@@ -176,6 +183,9 @@ Tracker.Computation = function (f, parent) {
   self._func = f;
   self._recomputing = false;
 
+  // Register the computation within the global Tracker.
+  Tracker._computations[self._id] = self;
+
   var errored = true;
   try {
     self._compute();
@@ -248,6 +258,8 @@ Tracker.Computation.prototype.stop = function () {
   if (! this.stopped) {
     this.stopped = true;
     this.invalidate();
+    // Unregister from global Tracker.
+    delete Tracker._computations[this._id];
   }
 };
 

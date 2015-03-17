@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.1.3"
+  version: "1.2.0"
 });
 
 Package.onUse(function (api) {
@@ -10,7 +10,7 @@ Package.onUse(function (api) {
   api.use('check', 'server');
   api.use('random', ['client', 'server']);
   api.use('ejson', 'server');
-  api.use('callback-hook', 'server');
+  api.use('callback-hook', ['client', 'server']);
 
   // use unordered to work around a circular dependency
   // (service-configuration needs Accounts.connection)

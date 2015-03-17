@@ -8,25 +8,27 @@ var httpHelpers = require('../http-helpers.js');
 // Poll the given app looking for the correct settings. Throws an error
 // if the settings aren't found after a timeout.
 var checkForSettings = selftest.markStack(function (appName, settings, timeoutSecs) {
-  var timer = setTimeout(selftest.markStack(function () {
-    selftest.fail('Expected settings not found on app ' + appName);
-  }), timeoutSecs * 1000);
+  var timeoutDate = new Date(new Date().valueOf() + timeoutSecs * 1000);
   while (true) {
+    if (new Date() >= timeoutDate) {
+      selftest.fail('Expected settings not found on app ' + appName);
+    }
+
     var result = httpHelpers.request('http://' + appName);
 
     // XXX This is brittle; the test will break if we start formatting the
     // __meteor_runtime_config__ JS differently. Ideally we'd do something
     // like point a phantom at the deployed app and actually evaluate
     // Meteor.settings.
-    var configRegexp  = /__meteor_runtime_config__ = (.+);<\/script>/;
-    var configMatch = result.body.match(configRegexp);
-    if (configMatch && configMatch[1]) {
-      var stringifiedConfig = configMatch[1].trim();
-      var parsedConfig = JSON.parse(stringifiedConfig);
-      if (_.isEqual(parsedConfig.PUBLIC_SETTINGS, settings['public'])) {
-        clearTimeout(timer);
-        return;
-      }
+    try {
+      var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result.body);
+    } catch (e) {
+      // ignore
+      continue;
+    }
+
+    if (_.isEqual(mrc.PUBLIC_SETTINGS, settings['public'])) {
+      return;
     }
   }
 });

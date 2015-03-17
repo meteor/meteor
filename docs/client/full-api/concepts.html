@@ -185,34 +185,43 @@ in a real app could go.
 
 ### File Load Order
 
-It is best to write your application in such a way that it is insensitive to the
-order in which files are loaded, for example by using
-[Meteor.startup](#meteor_startup), or by moving load order sensitive code into
-[packages](#usingpackages), which can explicitly control both the load order of
-their contents and their load order with respect to other packages. However
-sometimes load order dependencies in your application are unavoidable.
+It is best to write your application in such a way that it is insensitive to
+the order in which files are loaded, for example by using [Meteor.startup](#meteor_startup),
+or by moving load order sensitive code into [packages](#usingpackages),
+which can explicitly control both the load order of their contents and their
+load order with respect to other packages. However, sometimes load order
+dependencies in your application are unavoidable.
 
-When not using special filenames and directories:
+There are several load ordering rules. They are *applied sequentially* to all
+applicable files in the application, in the priority given below:
 
-- Files in subdirectories are loaded before files in parent directories, so that
-files in the deepest subdirectory are loaded first, and files in the root
-directory are loaded last. - Within a directory, files are loaded in
-alphabetical order by filename.
+1. HTML template files are *always* loaded before everything else
+2. Files beginning with `main.` are loaded last
+3. Files inside *any* `lib/` directory are loaded next
+4. Files with deeper paths are loaded next
+5. Files are then loaded in alphabetical order of the entire path
 
-Below is a complete list of special file and directory names that control file
-load order:
+```js
+nav.html
+main.html
+client/lib/methods.js
+client/lib/styles.js
+lib/feature/styles.js
+lib/collections.js
+client/feature-y.js
+feature-x.js
+client/main.js
+```
 
-- **lib**
+For example, the files above are arranged in the correct load order.
+`main.html` is loaded second because HTML templates are always loaded first,
+even if it begins with `main.`, since rule 1 has priority over rule 2.
+However, it will be loaded after `nav.html` because rule 2 has priority over
+rule 5.
 
-    After sorting as described above, all files under directories named `lib`
-    are moved before everything else, preserving their order.
-
-- **main.***
-
-    All files that match `main.*` are moved after everything else, preserving
-    their order.
-
-
+`client/lib/styles.js` and `lib/feature/styles.js` have identical load order
+up to rule 4; however, since `client` comes before `lib` alphabetically,
+it will be loaded first.
 
 ### Organizing Your Project
 
@@ -881,7 +890,7 @@ To get started, run
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
-0.10.33.) You can then run the application by invoking node, specifying the
+0.10.36.) You can then run the application by invoking node, specifying the
 HTTP port for the application to listen on, and the MongoDB endpoint.
 
 ```bash
@@ -907,7 +916,8 @@ Writing Meteor packages is easy. To initialize a meteor package, run
 Developer username. This will create a package from scratch and prefill the
 directory with a package.js control file and some javascript. By default, Meteor
 will take the package name from the name of the directory that contains the
-package.js file.
+package.js file. Don't forget to run `meteor add [packagename]`, even if the
+package is internal to the app, in order to use it.
 
 Meteor promises repeatable builds for both packages and applications. This means
 that, if you built your package on a machine, then checked the code into a

@@ -671,7 +671,7 @@ if (Meteor.isClient) (function () {
     validateLoginsStep
   ]);
 
-  testAsyncMulti("passwords - onLogin hook", [
+  testAsyncMulti("passwords - server onLogin hook", [
     function (test, expect) {
       Meteor.call("testCaptureLogins", expect(function (error) {
         test.isFalse(error);
@@ -695,13 +695,34 @@ if (Meteor.isClient) (function () {
         var attempt = login.attempt;
         test.equal(attempt.type, "password");
         test.isTrue(attempt.allowed);
-        test.equal(attempt.methodName, "createUser");
         test.equal(attempt.methodArguments[0].username, self.username);
       }));
     }
   ]);
 
-  testAsyncMulti("passwords - onLoginFailed hook", [
+  testAsyncMulti("passwords - client onLogin hook", [
+    function (test, expect) {
+      var self = this;
+      this.username = Random.id();
+      this.password = "password";
+      this.attempt = false;
+
+      this.onLogin = Accounts.onLogin(function (attempt) {
+        self.attempt = true;
+      });
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    function (test, expect) {
+      this.onLogin.stop();
+      test.isTrue(this.attempt);
+      expect(function () {})();
+    }
+  ]);
+
+  testAsyncMulti("passwords - server onLoginFailure hook", [
     function (test, expect) {
       this.username = Random.id();
       this.password = "password";
@@ -754,6 +775,39 @@ if (Meteor.isClient) (function () {
         test.isFalse(attempt.allowed);
         test.equal(attempt.error.reason, "User not found");
       }));
+    }
+  ]);
+
+  testAsyncMulti("passwords - client onLoginFailure hook", [
+    function (test, expect) {
+      var self = this;
+      this.username = Random.id();
+      this.password = "password";
+      this.attempt = false;
+
+      this.onLoginFailure = Accounts.onLoginFailure(function () {
+        self.attempt = true;
+      })
+
+      Accounts.createUser(
+        {username: this.username, password: this.password},
+        loggedInAs(this.username, test, expect));
+    },
+    logoutStep,
+    function (test, expect) {
+      Meteor.call("testCaptureLogins", expect(function (error) {
+        test.isFalse(error);
+      }));
+    },
+    function (test, expect) {
+      Meteor.loginWithPassword(this.username, "incorrect", expect(function (error) {
+        test.isTrue(error);
+      }));
+    },
+    function (test, expect) {
+      this.onLoginFailure.stop();
+      test.isTrue(this.attempt);
+      expect(function () {})();
     }
   ]);
 
@@ -895,11 +949,23 @@ if (Meteor.isServer) (function () {
       test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
 
       // reset with the same password, see we get a different salted hash
-      Accounts.setPassword(userId, 'new password');
+      Accounts.setPassword(userId, 'new password', {logout: false});
       user = Meteor.users.findOne(userId);
       var newSaltedHash = user.services.password.bcrypt;
       test.isTrue(newSaltedHash);
       test.notEqual(oldSaltedHash, newSaltedHash);
+      // No more reset token.
+      test.isFalse(Meteor.users.findOne(userId).services.password.reset);
+      // But loginTokens are still here since we did logout: false.
+      test.isTrue(Meteor.users.findOne(userId).services.resume.loginTokens);
+
+      // reset again, see that the login tokens are gone.
+      Accounts.setPassword(userId, 'new password');
+      user = Meteor.users.findOne(userId);
+      var newerSaltedHash = user.services.password.bcrypt;
+      test.isTrue(newerSaltedHash);
+      test.notEqual(oldSaltedHash, newerSaltedHash);
+      test.notEqual(newSaltedHash, newerSaltedHash);
       // No more tokens.
       test.isFalse(Meteor.users.findOne(userId).services.password.reset);
       test.isFalse(Meteor.users.findOne(userId).services.resume.loginTokens);

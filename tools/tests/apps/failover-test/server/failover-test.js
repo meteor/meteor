@@ -23,8 +23,7 @@ var originalMasterName = null;
 steps.initialized = function () {
   // Great, we got the first thing. Let's get another thing.
   C.insert({step: 'next'});
-  var db = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
-  var master = db.serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig._state.master;
   if (!master) {
     console.log("No master in initialized?");
     process.exit(1);
@@ -35,8 +34,7 @@ steps.initialized = function () {
 
 steps.next = function () {
   // Great, we can continue to add things. Now trigger a failover.
-  var db = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
-  db.admin().command({replSetStepDown: 60, force: true});
+  C.rawDatabase().admin().command({replSetStepDown: 60, force: true});
   while (true) {
     try {
       console.log("trying to insert");
@@ -51,8 +49,7 @@ steps.next = function () {
 
 steps.steppedDown = function () {
   console.log("Write succeeded after stepdown.");
-  var db = MongoInternals.defaultRemoteCollectionDriver().mongo.db;
-  var master = db.serverConfig._state.master;
+  var master = C.rawDatabase().serverConfig._state.master;
   if (!master) {
     console.log("No master in steppedDown?");
     process.exit(1);

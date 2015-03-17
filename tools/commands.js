@@ -22,9 +22,10 @@ var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
+var colonConverter = require('./colon-converter.js');
 
-// The architecture used by Galaxy servers; it's the architecture used
-// by 'meteor deploy'.
+// The architecture used by MDG's hosted servers; it's the architecture used by
+// 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -34,7 +35,47 @@ var DEFAULT_PORT = '3000';
 var VALID_ARCHITECTURES = {
   "os.osx.x86_64": true,
   "os.linux.x86_64": true,
-  "os.linux.x86_32": true
+  "os.linux.x86_32": true,
+  "os.windows.x86_32": true
+};
+
+
+// __dirname - the location of the current executing file
+var __dirnameConverted = files.convertToStandardPath(__dirname);
+
+/**
+ * Display a message that we can't do mobile things on Windows, and then
+ * either crash or continue with no mobile platforms.
+ * @param  {String[]} platforms The platforms we are trying to build for. This
+ * function does nothing if this is empty.
+ * @param  {Object} options
+ * @param {Boolean} exit If true, exit if there are any selected platforms.
+ * Use for situations where the program should not continue running if we are
+ * trying to do mobile things on Windows.
+ * @param {Function} messageFunc Print this to warn people that you can't
+ * build for mobile. Takes the platforms as an argument.
+ * @return {String[]} an empty array on Windows, the platforms unchanged
+ * everywhere else
+ */
+var dontBuildMobileOnWindows = function (platforms, options) {
+  options = options || {};
+
+  if (! _.isEmpty(platforms) && process.platform === "win32") {
+    // Default message to print when we can't Cordova on Windows
+    var MESSAGE_NOTHING_ON_WINDOWS =
+      "Currently, it is not possible to build mobile apps on a Windows system.";
+
+    Console.failWarn(options.messageFunc ?
+      options.messageFunc(platforms) : MESSAGE_NOTHING_ON_WINDOWS);
+
+    if (options.exit) {
+      throw new main.ExitWithCode(2);
+    }
+
+    return [];
+  }
+
+  return platforms;
 };
 
 // Given a site name passed on the command line (eg, 'mysite'), return
@@ -53,14 +94,6 @@ var qualifySitename = function (site) {
   while (site.length && site[site.length - 1] === ".")
     site = site.substring(0, site.length - 1);
   return site;
-};
-
-// Given a (non necessarily fully qualified) site name from the
-// command line, return true if the site is hosted by a Galaxy, else
-// false.
-var hostedWithGalaxy = function (site) {
-  var site = qualifySitename(site);
-  return !! require('./deploy-galaxy.js').discoverGalaxy(site);
 };
 
 // Display a message showing valid Meteor architectures.
@@ -213,6 +246,14 @@ function doRunCommand (options) {
     return 1;
   }
 
+  options.args = dontBuildMobileOnWindows(options.args, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run on the following platforms on Windows: " +
+        platforms.join(", ");
+    }
+  });
+
   try {
     var parsedMobileServer = utils.mobileServerForRun(options);
   } catch (err) {
@@ -250,6 +291,7 @@ function doRunCommand (options) {
   // If additional args were specified, then also start a mobile build.
   // XXX We should defer this work until after the proxy is listening!
   //     eg, move it into a CordovaBuildRunner or something.
+
   if (options.args.length) {
     // will asynchronously start mobile emulators/devices
     try {
@@ -330,6 +372,7 @@ function doRunCommand (options) {
   //
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
+    options.once = true;
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
     var velocity = require('./run-velocity.js');
@@ -382,6 +425,8 @@ main.registerCommand(_.extend(
 
 main.registerCommand({
   name: 'shell',
+  requiresRelease: false,
+  requiresApp: true,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -391,7 +436,16 @@ main.registerCommand({
       "in a Meteor app directory."
     );
   } else {
-    require('./server/shell.js').connect(options.appDir);
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir
+    });
+
+    // Convert to OS path here because shell/server.js doesn't know how to
+    // convert paths, since it exists in the app and in the tool.
+    require('./shell-client.js').connect(
+      files.convertToOSPath(projectContext.getMeteorShellDirectory())
+    );
+
     throw new main.WaitForExit;
   }
 });
@@ -432,9 +486,34 @@ main.registerCommand({
     utils.validatePackageNameOrExit(
       packageName, {detailedColonExplanation: true});
 
-    var packageDir = options.appDir
-          ? files.pathResolve(options.appDir, 'packages', packageName)
-          : files.pathResolve(packageName);
+    // When we create a package, avoid introducing a colon into the file system
+    // by naming the directory after the package name without the prefix.
+    var fsName = packageName;
+    if (packageName.indexOf(":") !== -1) {
+      var split = packageName.split(":");
+
+      if (split.length > 2) {
+        // It may seem like this check should be inside package version parser's
+        // validatePackageName, but we decided to name test packages like this:
+        // local-test:prefix:name, so we have to support building packages
+        // with at least two colons. Therefore we will at least try to
+        // discourage people from putting a ton of colons in their package names
+        // here.
+        Console.error(packageName +
+          ": Package names may not have more than one colon.");
+        return 1;
+      }
+
+      fsName = split[1];
+    }
+
+    var packageDir;
+    if (options.appDir) {
+      packageDir = files.pathResolve(options.appDir, 'packages', fsName);
+    } else {
+      packageDir = files.pathResolve(fsName);
+    }
+
     var inYourApp = options.appDir ? " in your app" : "";
 
     if (files.exists(packageDir)) {
@@ -443,7 +522,8 @@ main.registerCommand({
     }
 
     var transform = function (x) {
-      var xn = x.replace(/~name~/g, packageName);
+      var xn =
+        x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
       // If we are running from checkout, comment out the line sourcing packages
       // from a release, with the latest release filled in (in case they do want
@@ -463,25 +543,36 @@ main.registerCommand({
       // If we are not in checkout, write the current release here.
       return xn.replace(/~release~/g, relString);
     };
+
     try {
-      files.cp_r(files.pathJoin(__dirname, 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirnameConverted, 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
-      },
-      transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
-      },
-      ignore: [/^local$/]
-    });
-   } catch (err) {
-     Console.error("Could not create package: " + err.message);
-     return 1;
-   }
+        },
+        transformContents: function (contents, f) {
+          if ((/(\.html|\.js|\.css)/).test(f))
+            return new Buffer(transform(contents.toString()));
+          else
+            return contents;
+        },
+        ignore: [/^local$/]
+      });
+    } catch (err) {
+      Console.error("Could not create package: " + err.message);
+      return 1;
+    }
 
-    Console.info(packageName + ": created" + inYourApp);
+    var displayPackageDir =
+      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+
+    // Since the directory can't have colons, the directory name will often not
+    // match the name of the package exactly, therefore we should tell people
+    // where it was created.
+    Console.info(
+      packageName + ": created in",
+      Console.path(displayPackageDir)
+    );
+
     return 0;
   }
 
@@ -501,7 +592,7 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = files.pathJoin(__dirname, '..', 'examples');
+  var exampleDir = files.pathJoin(__dirnameConverted, '..', 'examples');
   var examples = _.reject(files.readdir(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
   });
@@ -562,7 +653,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(files.pathJoin(__dirname, 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirnameConverted, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },
@@ -705,6 +796,14 @@ var buildCommand = function (options) {
   if (! options._serverOnly) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
+
+  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms, {
+    messageFunc: function (platforms) {
+      return "Can't build for mobile on Windows. Skipping the following " +
+        "platforms: " + platforms.join(", ");
+    }
+  });
+
   var appName = files.pathBasename(options.appDir);
 
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
@@ -913,13 +1012,8 @@ main.registerCommand({
     var site = qualifySitename(options.args[0]);
     config.printUniverseBanner();
 
-    if (hostedWithGalaxy(site)) {
-      var deployGalaxy = require('./deploy-galaxy.js');
-      mongoUrl = deployGalaxy.temporaryMongoUrl(site);
-    } else {
-      mongoUrl = deploy.temporaryMongoUrl(site);
-      usedMeteorAccount = true;
-    }
+    mongoUrl = deploy.temporaryMongoUrl(site);
+    usedMeteorAccount = true;
 
     if (! mongoUrl)
       // temporaryMongoUrl() will have printed an error message
@@ -993,14 +1087,9 @@ main.registerCommand({
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
     settings: { type: String },
-    star: { type: String },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
     password: { type: String },
-    // Shouldn't be documented until the Galaxy release. Marks the
-    // application as an admin app, so that it will be available in
-    // Galaxy admin interface.
-    admin: { type: Boolean },
     // Override architecture to deploy whatever stuff we have locally, even if
     // it contains binary packages that should be incompatible. A hack to allow
     // people to deploy from checkout or do other weird shit. We are not
@@ -1008,42 +1097,24 @@ main.registerCommand({
     'override-architecture-with-local' : { type: Boolean }
   },
   requiresApp: function (options) {
-    return options.delete || options.star ? false : true;
+    return ! options.delete;
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
-  var useGalaxy = hostedWithGalaxy(site);
-  var deployGalaxy;
 
   if (options.delete) {
-    if (useGalaxy) {
-      deployGalaxy = require('./deploy-galaxy.js');
-      return deployGalaxy.deleteApp(site);
-    } else {
-      return deploy.deleteApp(site);
-    }
+    return deploy.deleteApp(site);
   }
 
   if (options.password) {
-    if (useGalaxy) {
-      Console.error("Galaxy does not support --password.");
-    } else {
-      Console.error(
-        "Setting passwords on apps is no longer supported. Now there are " +
+    Console.error(
+      "Setting passwords on apps is no longer supported. Now there are " +
         "user accounts and your apps are associated with your account so " +
         "that only you (and people you designate) can access them. See the " +
         Console.command("'meteor claim'") + " and " +
         Console.command("'meteor authorized'") + " commands.");
-    }
-    return 1;
-  }
-
-  var starball = options.star;
-  if (starball && ! useGalaxy) {
-    // XXX it would be nice to support this for non-Galaxy deploys too
-    Console.error("--star: only supported when deploying to Galaxy.");
     return 1;
   }
 
@@ -1070,8 +1141,7 @@ main.registerCommand({
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
-    requireControlProgram: useGalaxy
+    serverArchitectures: _.uniq([buildArch, archinfo.host()])
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -1085,25 +1155,12 @@ main.registerCommand({
     serverArch: buildArch
   };
 
-  var deployResult;
-  if (useGalaxy) {
-    deployGalaxy = require('./deploy-galaxy.js');
-    deployResult = deployGalaxy.deploy({
-      projectContext: projectContext,
-      app: site,
-      settingsFile: options.settings,
-      starball: starball,
-      buildOptions: buildOptions,
-      admin: options.admin
-    });
-  } else {
-    deployResult = deploy.bundleAndDeploy({
-      projectContext: projectContext,
-      site: site,
-      settingsFile: options.settings,
-      buildOptions: buildOptions
-    });
-  }
+  var deployResult = deploy.bundleAndDeploy({
+    projectContext: projectContext,
+    site: site,
+    settingsFile: options.settings,
+    buildOptions: buildOptions
+  });
 
   if (deployResult === 0) {
     auth.maybePrintRegistrationLink({
@@ -1126,27 +1183,11 @@ main.registerCommand({
   name: 'logs',
   minArgs: 1,
   maxArgs: 1,
-  options: {
-    // XXX once Galaxy is released, document this
-    stream: { type: Boolean, short: 'f' }
-  },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
 
-  if (hostedWithGalaxy(site)) {
-    var deployGalaxy = require('./deploy-galaxy.js');
-    var ret = deployGalaxy.logs({
-      app: site,
-      streaming: options.stream
-    });
-    if (options.stream && ret === null) {
-      throw new main.WaitForExit;
-    }
-    return ret;
-  } else {
-    return deploy.logs(site);
-  }
+  return deploy.logs(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1187,14 +1228,6 @@ main.registerCommand({
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
-  if (hostedWithGalaxy(site)) {
-    Console.error(
-      "Sites hosted on Galaxy do not have an authorized user list. " +
-      "Instead, go to your Galaxy dashboard to change the authorized users " +
-      "of your Galaxy.\n");
-    return 1;
-  }
-
   if (! auth.isLoggedIn()) {
     Console.error(
       "You must be logged in for that. Try " +
@@ -1232,12 +1265,6 @@ main.registerCommand({
       Console.command("'Sign in'") + " and then " +
       Console.command("'Create account'") + " at www.meteor.com.");
     Console.error();
-    return 1;
-  }
-
-  if (hostedWithGalaxy(site)) {
-    Console.error(
-      "Sorry, you can't claim sites that are hosted on Galaxy.");
     return 1;
   }
 
@@ -1370,16 +1397,15 @@ main.registerCommand({
   // Use the driver package and meteor-platform as well.
   packagesToAdd.unshift('meteor-platform', options['driver-package']);
   var constraintsToAdd = _.map(packagesToAdd, function (p) {
-    return utils.parseConstraint(p);
+    return utils.parsePackageConstraint(p);
   });
   // Add the packages to our in-memory representation of .meteor/packages.  (We
   // haven't yet resolved constraints, so this will affect constraint
   // resolution.)  This will get written to disk once we prepareProjectForBuild,
   // either in the Cordova code below, right before deploying below, or in the
-  // app runner.
-  // XXX We need to also remove all other constraints from the file, or else
-  //     if you use --test-app-path twice it will keep testing stuff from the
-  //     previous iteration!  #3446
+  // app runner.  (Note that removeAllPackages removes any comments from
+  // .meteor/packages, but that's OK since this isn't a real user project.)
+  projectContext.projectConstraintsFile.removeAllPackages();
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
 
   // The rest of the projectContext preparation process will happen inside the
@@ -1391,6 +1417,14 @@ main.registerCommand({
   _.each(mobileOptions, function (option) {
     if (options[option])
       mobileTargets.push(option);
+  });
+
+  mobileTargets = dontBuildMobileOnWindows(mobileTargets, {
+    exit: true,
+    messageFunc: function (platforms) {
+      return "Can't run test-packages on Windows using platforms: " +
+        platforms.join(", ");
+    }
   });
 
   if (! _.isEmpty(mobileTargets)) {
@@ -1584,10 +1618,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'login',
   options: {
-    email: { type: String },
-    // Undocumented: get credentials on a specific Galaxy. Do we still
-    // need this?
-    galaxy: { type: String }
+    email: { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -2010,6 +2041,52 @@ main.registerCommand({
 
 
 ///////////////////////////////////////////////////////////////////////////////
+// admin progressbar-test
+///////////////////////////////////////////////////////////////////////////////
+
+// A test command to print a progressbar. Useful for manual testing.
+main.registerCommand({
+  name: 'admin progressbar-test',
+  options: {
+    secs: { type: Number, default: 20 },
+    spinner: { type: Boolean, default: false }
+  },
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  buildmessage.enterJob({ title: "A test progressbar" }, function () {
+    var doneFuture = new Future;
+    var progress = buildmessage.getCurrentProgressTracker();
+    var totalProgress = { current: 0, end: options.secs, done: false };
+    var i = 0;
+    var n = options.secs;
+
+    if (options.spinner) {
+      totalProgress.end = undefined;
+    }
+
+    var updateProgress = function () {
+      i++;
+      if (! options.spinner) {
+        totalProgress.current = i;
+      }
+
+      if (i === n) {
+        totalProgress.done = true;
+        progress.reportProgress(totalProgress);
+        doneFuture.return();
+      } else {
+        progress.reportProgress(totalProgress);
+        setTimeout(updateProgress, 1000);
+      }
+    };
+    setTimeout(updateProgress);
+    doneFuture.wait();
+  });
+});
+
+
+///////////////////////////////////////////////////////////////////////////////
 // dummy
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2019,7 +2096,7 @@ main.registerCommand({
 main.registerCommand({
   name: 'dummy',
   options: {
-    email: { type: String, short: "e", required: true },
+    ething: { type: String, short: "e", required: true },
     port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
@@ -2036,7 +2113,7 @@ main.registerCommand({
     return 'none';
   };
 
-  Console.info(p('email') + " " + p('port') + " " + p('changed') +
+  Console.info(p('ething') + " " + p('port') + " " + p('changed') +
                        " " + p('args'));
   if (options.url)
     Console.info('url');

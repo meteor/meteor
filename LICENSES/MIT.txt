@@ -1,0 +1,1160 @@
+====================================================================
+For the license for Meteor itself, see LICENSE.txt in the root of
+the repository.  This file contains the licenses for externally
+maintained libraries.
+====================================================================
+
+
+The following libraries are licensed under the MIT License:
+
+"""
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+"""
+
+Although they are distributed under the same license as Meteor, they
+retain the copyright of the original author.
+
+
+
+
+----------
+connect: https://github.com/senchalabs/connect
+----------
+
+Copyright (c) 2010 Sencha Inc.
+Copyright (c) 2011 LearnBoost
+Copyright (c) 2011 TJ Holowaychuk
+
+----------
+gzippo: https://github.com/tomgco/gzippo
+----------
+
+Copyright (c) 2011 Tom Gallacher <http://www.tomg.co>
+
+
+----------
+coffee-script: https://github.com/jashkenas/coffee-script
+----------
+
+Copyright (c) 2009-2012 Jeremy Ashkenas
+
+
+----------
+mime: https://github.com/bentomas/node-mime
+----------
+
+Copyright (c) 2010 Benjamin Thomas, Robert Kieffer
+
+
+----------
+handlebars: https://github.com/wycats/handlebars.js/
+----------
+
+Copyright (C) 2011 by Yehuda Katz
+
+
+----------
+clean-css: https://github.com/GoalSmashers/clean-css
+----------
+
+Copyright (c) 2011 GoalSmashers.com
+
+
+----------
+progress: https://github.com/visionmedia/node-progress
+qs: https://github.com/visionmedia/node-querystring
+debug: https://github.com/visionmedia/debug
+nib: https://github.com/visionmedia/nib
+bytes: https://github.com/visionmedia/bytes.js
+commander: https://github.com/visionmedia/commander.js
+fresh: https://github.com/visionmedia/node-fresh
+github-url-from-git: https://github.com/visionmedia/node-github-url-from-git
+pause: https://github.com/visionmedia/node-pause
+range-parser: https://github.com/visionmedia/node-range-parser
+send: https://github.com/visionmedia/send
+methods: https://github.com/visionmedia/node-methods
+css-parse: https://github.com/reworkcss/css-parse
+css-stringify: https://github.com/reworkcss/css-stringify
+callsite: https://github.com/visionmedia/callsite
+indexof: https://registry.npmjs.org/indexof/-/indexof-0.0.1.tgz
+escape-html: https://github.com/component/escape-html
+express: https://github.com/strongloop/express
+----------
+
+Copyright (c) 2010 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2011 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2012 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2013 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2011, 2013 TJ Holowaychuk <tj@vision-media.ca>
+Copyright (c) 2009-2014 TJ Holowaychuk <tj@vision-media.ca>
+
+
+----------
+fibers: https://github.com/laverdet/node-fibers
+----------
+
+Copyright 2011 Marcel Laverdet
+
+
+----------
+http-proxy: https://github.com/nodejitsu/node-http-proxy
+----------
+
+Copyright (c) 2010 Charlie Robbins, Mikeal Rogers, Fedor Indutny, & Marak Squires
+
+
+----------
+sockjs: https://github.com/sockjs/sockjs-client
+----------
+
+Copyright (C) 2011 VMware, Inc.
+
+
+----------
+alea: http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
+----------
+
+Copyright (C) 2010 by Johannes Baagøe <baagoe@baagoe.org>
+
+
+----------
+jquery: https://github.com/jquery/jquery
+----------
+
+Copyright (c) 2011 John Resig, http://jquery.com/
+
+
+----------
+underscore: https://github.com/documentcloud/underscore
+backbone: https://github.com/documentcloud/backbone/
+underscore-contrib: https://github.com/documentcloud/underscore-contrib
+----------
+
+Copyright (c) 2009-2012 Jeremy Ashkenas, DocumentCloud
+Copyright (c) 2013 Jeremy Ashkenas, Michael Fogus, DocumentCloud and Investigative Reporters & Editors
+
+
+----------
+amplify: https://github.com/appendto/amplify
+----------
+
+Copyright 2011 appendTo LLC. (http://appendto.com/team)
+
+
+----------
+connect-gzip: https://github.com/nateps/connect-gzip
+----------
+
+Copyright (c) 2011 Nate Smith <nate@nateps.com>
+
+
+----------
+socket.io: https://github.com/learnboost/socket.io
+ms: https://github.com/guille/ms.js
+----------
+
+Copyright (c) 2011 Guillermo Rauch <guillermo@learnboost.com>
+
+
+----------
+stylus: https://github.com/learnboost/stylus
+----------
+
+Copyright (c) 2010 LearnBoost <dev@learnboost.com>
+
+
+----------
+jquery-waypoints: https://github.com/imakewebthings/jquery-waypoints
+----------
+
+Copyright (c) 2011-2012 Caleb Troughton
+
+
+----------
+jquery-layout: http://layout.jquery-dev.net/
+----------
+
+Copyright (c) 2008
+  Fabrizio Balliano (http://www.fabrizioballiano.net)
+  Kevin Dalman (http://allpro.net)
+
+
+----------
+rbytes: https://github.com/akdubya/rbytes
+----------
+
+Copyright (c) 2010 Aleksander Williams
+
+
+----------
+colors: https://github.com/Marak/colors.js
+----------
+
+Copyright (c) 2010
+Marak Squires
+Alexis Sellier (cloudhead)
+
+
+----------
+pkginfo: https://github.com/indexzero/node-pkginfo
+----------
+
+Copyright (c) 2010 Charlie Robbins.
+
+----------
+underscore.string: https://github.com/epeli/underscore.string
+----------
+
+Copyright (c) 2011 Esa-Matti Suuronen esa-matti@suuronen.org
+
+
+----------
+node-gyp: https://github.com/TooTallNate/node-gyp
+keypress: https://github.com/TooTallNate/keypress
+bindings: https://github.com/TooTallNate/node-bindings
+plist-with-patches: https://github.com/agrieve/node-plist
+util-deprecate: https://github.com/TooTallNate/util-deprecate
+----------
+
+Copyright (c) 2010-2011- Nathan Rajlich
+Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
+
+
+
+----------
+node-uuid: https://github.com/broofa/node-uuid
+----------
+
+Copyright (c) 2010 Robert Kieffer
+
+
+----------
+ansi: https://github.com/TooTallNate/ansi.js
+plist: https://github.com/TooTallNate/plist.js
+----------
+
+Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
+
+
+----------
+faye-websocket: https://github.com/faye/faye-websocket-node
+websocket-driver: https://github.com/faye/websocket-driver-node
+----------
+
+Copyright (c) 2009-2013 James Coglan
+Copyright (c) 2010-2013 James Coglan
+
+
+----------
+cssom: https://github.com/NV/CSSOM
+----------
+
+Copyright (c) Nikita Vasilyev
+
+
+----------
+yamlparser: https://github.com/h4evr/commonjs-javascript-yaml-parser
+----------
+
+Copyright (c) 2011 Diogo Costa (costa.h4evr@gmail.com)
+
+
+----------
+semver: https://github.com/isaacs/node-semver
+abbrev: https://github.com/isaacs/abbrev-js
+graceful-fs: https://github.com/isaacs/node-graceful-fs
+lru-cache: https://github.com/isaacs/node-lru-cache
+proto-list: https://github.com/isaacs/proto-list
+rimraf: https://github.com/isaacs/rimraf
+minimatch: https://github.com/isaacs/minimatch
+ini: https://github.com/isaacs/ini
+nopt: https://github.com/isaacs/nopt
+slide: https://github.com/isaacs/slide-flow-control
+which: https://github.com/isaacs/node-which
+minimatch: https://github.com/isaacs/minimatch
+core-util-is: https://github.com/isaacs/core-util-is
+rimraf: https://github.com/isaacs/rimraf
+----------
+
+Copyright 2009, 2010, 2011 Isaac Z. Schlueter.
+All rights reserved.
+
+
+----------
+archy: https://github.com/substack/node-archy
+astw: https://github.com/substack/astw
+binary: https://github.com/substack/node-binary
+browser-pack: https://github.com/substack/browser-pack
+buffers: https://github.com/substack/node-buffers
+chainsaw: https://github.com/substack/node-chainsaw
+commondir: https://github.com/substack/node-commondir
+deep-equal: https://github.com/substack/node-deep-equal
+defined: https://github.com/substack/defined
+deps-sort: https://github.com/substack/deps-sort
+detective: https://github.com/substack/node-detective
+editor: https://github.com/substack/node-editor
+http-browserify: https://github.com/substack/http-browserify
+https-browserify: https://github.com/substack/https-browserify
+insert-module-globals: https://github.com/substack/insert-module-globals
+lexical-scope: https://github.com/substack/lexical-scope
+minimist: https://github.com/substack/minimist
+mkdirp: https://github.com/substack/node-mkdirp
+module-deps: https://github.com/substack/module-deps
+optimist: https://github.com/substack/node-optimist
+parents: https://github.com/substack/node-parents
+path-browserify: https://github.com/substack/path-browserify
+quotemeta: https://github.com/substack/quotemeta
+resolve: https://github.com/substack/node-resolve
+shallow-copy: https://github.com/substack/shallow-copy
+shell-quote: https://github.com/substack/node-shell-quote
+stream-browserify: https://github.com/substack/stream-browserify
+subarg: https://github.com/substack/subarg
+syntax-error: https://github.com/substack/node-syntax-error
+text-table: https://github.com/substack/text-table
+traverse: https://github.com/substack/js-traverse
+tty-browserify: https://github.com/substack/tty-browserify
+typedarray: https://github.com/substack/typedarray
+vm-browserify: https://github.com/substack/vm-browserify
+wordwrap: https://github.com/substack/node-wordwrap
+yargs: https://github.com/chevex/yargs
+json-stable-stringify: https://github.com/substack/json-stable-stringify
+labeled-stream-splicer: https://github.com/substack/labeled-stream-splicer
+stream-splicer: https://github.com/substack/stream-splicer
+----------
+
+Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
+
+
+----------
+config-chain: https://github.com/dominictarr/config-chain
+JSONStream: https://github.com/dominictarr/JSONStream/
+crypto-browserify: https://github.com/dominictarr/crypto-browserify
+rc: https://github.com/dominictarr/rc
+stream-combiner: https://github.com/dominictarr/stream-combiner
+through: http://github.com/dominictarr/through
+shasum: https://github.com/dominictarr/shasum
+stream-combiner2: https://github.com/substack/stream-combiner2
+----------
+
+Copyright (c) 2011 Dominic Tarr
+Copyright (c) 2012 'Dominic Tarr'
+Copyright (c) 2013 Dominic Tarr
+
+
+
+----------
+async: https://github.com/caolan/async
+----------
+
+Copyright (c) 2010 Caolan McMahon
+
+
+----------
+combined-stream: https://github.com/felixge/node-combined-stream
+delayed-stream: https://github.com/felixge/node-delayed-stream
+----------
+
+Copyright (c) 2011 Debuggable Limited <felix@debuggable.com>
+
+
+----------
+retry: https://github.com/felixge/node-retry
+----------
+
+Copyright (c) 2011:
+Tim Koschützki (tim@debuggable.com)
+Felix Geisendörfer (felix@debuggable.com)
+
+----------
+form-data: https://github.com/felixge/node-form-data
+multiparty: https://github.com/superjoe30/node-multiparty
+----------
+
+Copyright (c) 2012 Felix Geisendörfer (felix@debuggable.com) and contributors
+
+
+----------
+kexec: https://github.com/jprichardson/node-kexec
+----------
+
+Copyright (c) 2011-2012 JP Richardson
+
+
+----------
+setimmediate: https://github.com/NobleJS/setImmediate
+----------
+
+Copyright (c) 2012 Barnesandnoble.com, llc, Donavon West, and Domenic Denicola
+
+
+----------
+asn1: https://github.com/mcavage/node-asn1
+assert-plus: https://github.com/mcavage/node-assert-plus
+----------
+
+Copyright (c) 2011 Mark Cavage, All rights reserved.
+
+
+----------
+awssum: https://github.com/awssum/awssum
+----------
+
+Copyright 2011-2013 Apps Attic Ltd.  All rights reserved.
+Copyright 2013 Andrew Chilton.  All rights reserved.
+
+
+----------
+data2xml: https://github.com/chilts/data2xml
+----------
+
+Copyright 2011-2012 Apps Attic Ltd.  All rights reserved.
+
+
+----------
+buffer-crc32: https://github.com/brianloveswords/buffer-crc32
+----------
+
+Copyright (c) 2013 Brian J. Brennan
+
+
+----------
+child-process-close: https://github.com/piscisaureus/child-process-close
+----------
+
+Copyright (C) 2012 Bert Belder
+
+
+----------
+cli-color: https://github.com/medikoo/cli-color
+es5-ext: https://github.com/medikoo/es5-ext
+event-emitter: https://github.com/medikoo/event-emitter
+memoizee: https://github.com/medikoo/memoize
+next-tick: https://github.com/medikoo/next-tick
+d: https://github.com/medikoo/d
+es6-iterator: https://github.com/medikoo/es6-iterator
+es6-symbol: https://github.com/medikoo/es6-symbol
+es6-weak-map: https://github.com/medikoo/es6-weak-map
+----------
+
+Copyright (C) 2011, 2012 Mariusz Nowak (www.medikoo.com)
+
+
+----------
+connect-jsonp: https://github.com/steelThread/connect-jsonp
+----------
+
+Copyright (c) 2010 Sean McDaniel
+
+
+----------
+cookie: https://github.com/shtylman/node-cookie
+process: https://github.com/shtylman/node-process
+----------
+
+Copyright (C) Roman Shtylman <shtylman@gmail.com>
+Copyright (c) 2013 Roman Shtylman <shtylman@gmail.com>
+
+
+----------
+cookie-signature: https://github.com/visionmedia/node-cookie-signature
+----------
+
+Copyright (c) 2012 LearnBoost <tj@learnboost.com>
+
+
+----------
+dateformat: https://github.com/felixge/node-dateformat
+----------
+
+(c) 2007-2009 Steven Levithan <stevenlevithan.com>
+
+
+----------
+eyes: https://github.com/cloudhead/eyes.js
+vows: https://github.com/cloudhead/vows
+----------
+
+Copyright (c) 2009 cloudhead
+
+
+----------
+fmt: https://github.com/appsattic/fmt
+----------
+
+Copyright © 2012-2013 AppsAttic Ltd <chilts@appsattic.com>
+
+
+----------
+http-signature: https://github.com/joyent/node-http-signature
+----------
+
+Copyright Joyent, Inc. All rights reserved.
+
+
+----------
+i: https://github.com/pksunkara/inflect
+----------
+
+Copyright Pavan Kumar Sunkara (pavan.sss1991@gmail.com)
+
+
+----------
+ncp: https://github.com/AvianFlu/ncp
+----------
+
+Copyright (C) 2011 by Charlie McConnell
+
+
+----------
+passgen: https://github.com/SDA/passgen
+----------
+
+Copyright (c) 2011 SDA Software Associates Inc.
+
+
+----------
+sha: https://github.com/ForbesLindesay/sha
+type-of: https://github.com/ForbesLindesay/type-of
+uglify-to-browserify: https://github.com/ForbesLindesay/uglify-to-browserify
+umd: https://github.com/ForbesLindesay/umd
+rfile: https://github.com/ForbesLindesay/rfile
+ruglify: https://github.com/ForbesLindesay/ruglify
+----------
+
+Copyright (c) 2013 Forbes Lindesay
+
+
+----------
+source-map-support: https://github.com/evanw/node-source-map-support
+----------
+
+Copyright Evan Wallace
+
+
+----------
+utile: https://github.com/flatiron/utile
+----------
+
+Copyright (c) 2010 Nodejitsu Inc.
+
+
+----------
+xml: https://github.com/dylang/node-xml
+----------
+
+Copyright (c) 2011 Dylan Greene <dylang@gmail.com>
+
+
+----------
+xml2js: https://github.com/Leonidas-from-XIV/node-xml2js
+----------
+
+Copyright 2010, 2011, 2012, 2013. All rights reserved.
+
+
+----------
+ctype: https://github.com/rmustacc/node-ctype
+----------
+
+Copyright 2011, Robert Mustacchi. All rights reserved.
+Copyright 2011, Joyent, Inc. All rights reserved.
+
+
+----------
+eachline: https://github.com/williamwicks/node-eachline
+----------
+
+Copyright (c) 2013 William Wicks
+
+
+----------
+eventemitter2: https://github.com/hij1nx/EventEmitter2
+----------
+
+Copyright (c) 2011 hij1nx http://www.twitter.com/hij1nx
+
+
+----------
+stream-counter: https://github.com/superjoe30/node-stream-counter
+----------
+
+Copyright (c) 2013 Andrew Kelley
+
+----------
+uid2: https://github.com/coreh/uid2
+----------
+
+Copyright (c) 2013 Marco Aurelio
+
+----------
+geojson-utils: https://github.com/maxogden/geojson-js-utils
+concat-stream: https://github.com/maxogden/concat-stream
+----------
+
+Copyright (c) 2010 Max Ogden
+Copyright (c) 2013 Max Ogden
+
+
+----------
+bcrypt: https://github.com/ncb000gt/node.bcrypt.js
+----------
+
+Copyright (c) 2010 Nicholas Campbell
+
+
+----------
+html5: https://github.com/aredridel/html5
+----------
+
+Copyright (c) 2010 Aria Stewart <aredridel@nbtsc.org>
+
+
+----------
+node-aes-gcm: https://github.com/xorbit/node-aes-gcm
+----------
+
+Copyright (c) 2013 Patrick Van Oosterwijck
+
+
+----------
+isarray: https://github.com/juliangruber/isarray
+builtins: https://github.com/juliangruber/builtins
+constants-browserify: https://github.com/juliangruber/constants-browserify
+----------
+
+Copyright (c) 2013 Julian Gruber <julian@juliangruber.com>
+
+
+----------
+keep-alive-agent: https://github.com/ceejbot/keep-alive-agent
+----------
+
+Copyright (c) 2012 C J Silverio
+
+
+----------
+match-stream: https://github.com/EvanOxfeld/match-stream
+slice-stream: https://github.com/EvanOxfeld/slice-stream
+----------
+
+Copyright (c) 2013 Evan Oxfeld
+
+
+----------
+unzip: https://github.com/joeferner/node-unzip
+over: https://github.com/joeferner/node-over
+pullstream: https://github.com/EvanOxfeld/node-pullstream
+bplist-parser: https://github.com/joeferner/node-bplist-parser
+----------
+
+Copyright (c) 2012 Near Infinity Corporation
+
+
+----------
+assert: https://github.com/defunctzombie/commonjs-assert
+browser-resolve: https://github.com/defunctzombie/node-browser-resolve
+events: https://github.com/Gozala/events
+url: https://github.com/defunctzombie/node-url
+util: https://github.com/defunctzombie/node-util
+----------
+
+Copyright Joyent, Inc. and other Node contributors. All rights reserved.
+
+
+----------
+aws-sign: https://github.com/egorFiNE/node-aws-sign
+----------
+
+Egor Egorov, me@egorfine.com.
+
+
+----------
+base64-js: https://github.com/beatgammit/base64-js
+----------
+
+Copyright (c) 2014
+
+
+----------
+beep: https://github.com/mscdex/beepjs
+----------
+
+Copyright Brian White. All rights reserved.
+
+
+----------
+browserify-zlib: https://github.com/devongovett/browserify-zlib
+----------
+
+Devon Govett <devongovett@gmail.com>
+
+
+----------
+buffer: https://github.com/feross/buffer/
+----------
+
+Copyright (c) Feross Aboukhadijeh, and other contributors.
+
+
+----------
+catharsis: https://github.com/hegemonic/catharsis
+requizzle: https://github.com/hegemonic/requizzle
+----------
+
+Copyright (c) 2014 Google Inc.
+Copyright (c) 2012-2014 Jeff Williams
+Copyright (c) 2012-2013 Johannes Ewald
+
+
+----------
+console-browserify: https://github.com/Raynos/console-browserify
+duplexer: https://github.com/Raynos/duplexer
+xtend: https://github.com/Raynos/xtend
+----------
+
+Copyright (c) 2012 Raynos.
+Copyright (c) 2012-2014 Raynos.
+
+----------
+deep-extend: https://github.com/unclechu/node-deep-extend
+----------
+
+Copyright (c) 2013 Viacheslav Lotsmanov
+
+
+----------
+dep-graph: http://github.com/TrevorBurnham/dep-graph
+----------
+
+©2011 Trevor Burnham
+
+
+----------
+derequire: https://github.com/calvinmetcalf/derequire
+browserify-aes: https://github.com/crypto-browserify/browserify-aes
+browserify-rsa: https://github.com/calvinmetcalf/browserify-rsa
+create-ecdh: https://github.com/crypto-browserify/createECDH
+create-hash: https://github.com/crypto-browserify/createHash
+create-hmac: https://github.com/crypto-browserify/createHMAC
+diffie-hellman: https://github.com/crypto-browserify/diffie-hellman
+pbkdf2-compat: https://github.com/crypto-browserify/pbkdf2
+public-encrypt: https://github.com/crypto-browserify/publicEncrypt
+randombytes: https://github.com/crypto-browserify/randombytes
+----------
+
+Calvin Metcalf
+
+
+----------
+domain-browser: https://github.com/bevry/domain-browser
+----------
+
+Copyright © Bevry Pty Ltd us@bevry.me (http://bevry.me)
+
+
+----------
+jsonparse: https://github.com/creationix/jsonparse
+----------
+
+Copyright (c) 2012 Tim Caswell
+
+
+----------
+marked: https://github.com/chjj/marked
+----------
+
+Copyright (c) 2011-2014, Christopher Jeffrey (https://github.com/chjj/)
+
+
+----------
+object-keys: https://github.com/ljharb/object-keys
+----------
+
+Copyright (C) 2013 Jordan Harband
+
+
+----------
+os-browserify: https://github.com/drewyoung1/os-browserify
+----------
+
+Copyright (c) 2014 Drew Young
+
+
+----------
+pako: https://github.com/nodeca/pako
+----------
+
+Copyright (C) 2014 by Vitaly Puzrin
+
+
+----------
+q: https://github.com/kriskowal/q
+----------
+
+Copyright 2009–2014 Kristopher Michael Kowal. All rights reserved.
+
+
+----------
+querystring-es3: https://github.com/mike-spainhower/querystring
+----------
+
+Copyright 2012 Irakli Gozalishvili. All rights reserved. 
+
+
+----------
+ansi-regex:             https://github.com/sindresorhus/ansi-regex
+ansi-styles:            https://github.com/sindresorhus/ansi-styles
+escape-string-regexp:   https://github.com/sindresorhus/escape-string-regexp
+chalk:                  https://github.com/sindresorhus/chalk
+get-stdin:              https://github.com/sindresorhus/get-stdin
+has-ansi:               https://github.com/sindresorhus/has-ansi
+strip-ansi:             https://github.com/sindresorhus/strip-ansi
+strip-json-comments:    https://github.com/sindresorhus/strip-json-comments
+supports-color:         https://github.com/sindresorhus/supports-color
+----------
+
+Copyright (c) Sindre Sorhus <sindresorhus@gmail.com> (sindresorhus.com)
+
+----------
+timers-browserify: https://github.com/jryans/timers-browserify
+----------
+
+Copyright © 2012 J. Ryan Stinnett <jryans@gmail.com>
+
+
+----------
+wrench: https://github.com/ryanmcgrath/wrench-js
+----------
+
+Copyright (c) 2010 Ryan McGrath
+
+
+----------
+xmlbuilder: http://github.com/oozcitak/xmlbuilder-js
+----------
+
+Copyright (c) 2013 Ozgur Ozcitak
+
+
+----------
+xmldom: https://github.com/jindw/xmldom
+----------
+
+jindw <jindw@xidea.org> (http://www.xidea.org)
+
+
+----------
+properties-parser: https://github.com/xavi-/node-properties-parser
+----------
+
+Xavi Ramirez
+
+----------
+js2xmlparser: https://github.com/michaelkourlas/node-js2xmlparser/
+----------
+
+Copyright © 2012 Michael Kourlas and other contributors
+
+
+----------
+pegjs: https://github.com/dmajda/pegjs
+----------
+Copyright (c) 2010-2013 David Majda
+
+----------
+foo: https://github.com/coolaj86/node-pakman
+----------
+
+Copyright (c) 2011 AJ ONeal
+
+
+----------
+ios-sim: https://github.com/phonegap/ios-sim
+----------
+
+Author: Landon Fuller <landonf@plausiblelabs.com>
+Copyright (c) 2008-2011 Plausible Labs Cooperative, Inc.
+All rights reserved.
+
+Modifications made by the following entities are licensed as above:
+- Jeff Haynie, Appcelerator, Inc.
+- https://github.com/hborders
+- http://pivotallabs.com/users/scoward/blog
+- Eloy Duran, Fingertips <eloy@fngtps.com>
+
+
+----------
+accepts: https://github.com/jshttp/accepts
+merge-descriptors: https://github.com/component/merge-descriptors
+type-is: https://github.com/jshttp/type-is
+mime-types: https://github.com/jshttp/mime-types
+mime-db: https://github.com/jshttp/mime-db
+----------
+
+Copyright (c) 2013 Jonathan Ong me@jongleberry.com
+Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
+
+
+----------
+parseurl: https://github.com/expressjs/parseurl
+----------
+
+Copyright (c) 2014 Jonathan Ong <me@jongleberry.com>
+Copyright (c) 2014 Douglas Christopher Wilson <doug@somethingdoug.com>
+
+
+----------
+serve-static: https://github.com/expressjs/serve-static
+----------
+
+Copyright (c) 2010 Sencha Inc.
+Copyright (c) 2011 LearnBoost
+Copyright (c) 2011 TJ Holowaychuk
+Copyright (c) 2014 Douglas Christopher Wilson
+
+
+----------
+negotiator: https://github.com/jshttp/negotiator
+----------
+
+Original "Negotiator" program Copyright Federico Romero
+Port to JavaScript Copyright Isaac Z. Schlueter
+
+
+----------
+options: https://github.com/einaros/options.js
+tinycolor: https://github.com/einaros/tinycolor
+ws: https://github.com/einaros/ws
+----------
+
+Copyright (c) 2011 Einar Otto Stangvik <einaros@gmail.com>
+Copyright (c) 2012 Einar Otto Stangvik <einaros@gmail.com>
+
+
+----------
+path-to-regexp: https://github.com/component/path-to-regexp
+----------
+
+Copyright (c) 2014 Blake Embrey (hello@blakeembrey.com)
+
+
+----------
+truncate: https://github.com/FGRibreau/node-truncate
+----------
+
+Copyright (c) 2013 Francois-Guillaume Ribreau
+
+
+----------
+utils-merge: https://github.com/jaredhanson/utils-merge
+----------
+
+Copyright (c) 2013 Jared Hanson
+
+
+----------
+bl: https://github.com/rvagg/bl
+----------
+
+Copyright (c) 2014 bl contributors
+bl contributors listed at https://github.com/rvagg/bl#contributors
+
+
+----------
+isstream: https://github.com/rvagg/isstream
+----------
+
+Copyright (c) 2015 Rod Vagg
+
+
+----------
+lodash-node: https://github.com/lodash/lodash-node
+----------
+
+Copyright 2012-2014 The Dojo Foundation <http://dojofoundation.org/>
+Based on Underscore.js 1.6.0, copyright 2009-2014 Jeremy Ashkenas,
+DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
+
+
+----------
+netroute: https://github.com/indutny/node-netroute
+asn1.js: https://github.com/indutny/asn1.js
+asn1.js-rfc3280: https://github.com/indutny/asn1.js
+bn.js: https://github.com/indutny/bn.js
+brorand: https://github.com/indutny/brorand.js
+elliptic: https://github.com/indutny/elliptic
+hash.js: https://github.com/indutny/hash.js
+miller-rabin: https://github.com/indutny/miller-rabin
+----------
+
+Copyright Fedor Indutny, 2012.
+
+
+----------
+stringstream: https://github.com/mhart/StringStream
+----------
+
+Copyright 2012 Michael Hart (michael.hart.au@gmail.com)
+
+
+----------
+clone: https://github.com/pvorb/node-clone
+----------
+
+Copyright © 2011-2014 Paul Vorbach <paul@vorba.ch>
+
+
+----------
+defaults: https://github.com/tmpvar/defaults
+----------
+
+----------
+throttleit: https://github.com/component/throttle
+----------
+
+
+----------
+emissary: https://github.com/atom/emissary
+event-kit: https://github.com/atom/event-kit
+fs-plus: https://github.com/atom/fs-plus
+grim: https://github.com/atom/grim
+mixto: https://github.com/atom/mixto
+pathwatcher: https://github.com/atom/node-pathwatcher
+property-accessors: https://github.com/atom/property-accessors
+runas: https://github.com/atom/node-runas
+underscore-plus: https://github.com/atom/underscore-plus
+----------
+
+Copyright (c) 2013 GitHub Inc.
+Copyright (c) 2014 GitHub Inc.
+
+
+----------
+harmony-collections: https://github.com/Benvie/harmony-collections
+----------
+
+Copyright (c) 2012 Brandon Benvie http://bbenvie.com
+
+
+----------
+iconv-lite: https://github.com/ashtuchkin/iconv-lite
+----------
+
+Copyright (c) 2011 Alexander Shtuchkin
+
+
+----------
+request-progress: https://github.com/IndigoUnited/node-request-progress
+----------
+
+Copyright (c) 2012 IndigoUnited
+
+
+----------
+wcwidth: https://github.com/mycoboco/wcwidth.js
+----------
+
+Copyright (C) 2012-2014 by Jun Woong and Tim Oxley.
+
+
+----------
+adm-zip: https://github.com/cthackers/adm-zip
+----------
+
+Copyright (c) 2012 Another-D-Mention Software and other contributors, 
+http://www.another-d-mention.ro/
+
+
+----------
+node-exit: https://github.com/cowboy/node-exit
+----------
+
+Copyright (c) 2013 "Cowboy" Ben Alman
+Licensed under the MIT license.
+
+
+----------
+acorn: http://marijnhaverbeke.nl/git/acorn
+----------
+
+Copyright (C) 2012-2014 by various contributors (see AUTHORS)
+
+
+----------
+d8: https://github.com/constantology/d8
+m8: https://github.com/constantology/m8
+----------
+
+Copyright (c) 2011 christos "constantology" constandinou http://muigui.com
+
+
+----------
+date-now: https://github.com/Raynos/date-now
+----------
+
+Copyright (c) 2012 Colingo.
+
+
+----------
+deep-is: https://github.com/thlorenz/deep-is
+----------
+
+Copyright (c) 2012, 2013 Thorsten Lorenz <thlorenz@gmx.de>
+Copyright (c) 2012 James Halliday <mail@substack.net>
+Copyright (c) 2009 Thomas Robinson <280north.com>
+
+
+----------
+fast-levenshtein: https://github.com/hiddentao/fast-levenshtein
+----------
+
+Copyright (c) 2013 Ramesh Nair
+
+
+----------
+is-array: https://github.com/retrofox/is-array
+----------
+
+Damián Suárez
+
+
+----------
+levn: https://github.com/gkz/levn
+optionator: https://github.com/gkz/optionator
+prelude-ls: https://github.com/gkz/prelude-ls
+type-check: https://github.com/gkz/type-check
+----------
+
+Copyright (c) George Zahariev
+
+
+----------
+moment: https://github.com/moment/moment
+----------
+
+Copyright (c) 2011-2014 Tim Wood, Iskren Chernev, Moment.js contributors
+
+
+----------
+mongodb-uri: https://github.com/mongolab/mongodb-uri-node
+----------
+
+Copyright (c) 2013 ObjectLabs Corporation
+
+
+----------
+querystring: https://github.com/Gozala/querystring
+----------
+
+Copyright 2012 Irakli Gozalishvili.
+
+
+----------
+sha.js: https://github.com/crypto-browserify/sha.js
+----------
+
+Copyright (c) 2013-2014 sha.js contributors

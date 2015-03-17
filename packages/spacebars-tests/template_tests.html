@@ -1015,3 +1015,30 @@ Hi there!
 <template name="spacebars_template_test_inclusion_with_data_remove_inner">
   <b>{{.}}</b>
 </template>
+
+<!-- issue meteor/meteor #3540 -->
+<template name="spacebars_template_test_template_instance_wrapper_outer">
+  {{#spacebars_template_test_template_instance_wrapper_wrapper}}
+    {{thisShouldOutputHello}}
+  {{/spacebars_template_test_template_instance_wrapper_wrapper}}
+  {{thisShouldOutputHello}}
+</template>
+
+<template name="spacebars_template_test_template_instance_wrapper_wrapper">
+  {{> Template.contentBlock}}
+</template>
+
+<template name="spacebars_template_test_template_level_subscriptions">
+  {{#if Template.subscriptionsReady}}
+    ready!
+  {{/if}}
+  {{Template.subscriptionsReady}}
+</template>
+
+<template name="spacebars_template_test_template_level_subs_resubscribe">
+  {{#if ifArg}}
+    {{subscribingHelper1}}
+  {{else}}
+    {{subscribingHelper2}}
+  {{/if}}
+</template>

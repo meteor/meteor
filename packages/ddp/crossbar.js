@@ -1,13 +1,15 @@
 // A "crossbar" is a class that provides structured notification registration.
+// See _match for the definition of how a notification matches a trigger.
+// All notifications and triggers must have a string key named 'collection'.
 
 DDPServer._Crossbar = function (options) {
   var self = this;
   options = options || {};
 
   self.nextId = 1;
-  // map from listener id to object. each object has keys 'trigger',
-  // 'callback'.
-  self.listeners = {};
+  // map from collection name (string) -> listener id -> object. each object has
+  // keys 'trigger', 'callback'.
+  self.listenersByCollection = {};
   self.factPackage = options.factPackage || "livedata";
   self.factName = options.factName || null;
 };
@@ -26,18 +28,33 @@ _.extend(DDPServer._Crossbar.prototype, {
   listen: function (trigger, callback) {
     var self = this;
     var id = self.nextId++;
-    self.listeners[id] = {trigger: EJSON.clone(trigger), callback: callback};
+
+    if (typeof(trigger.collection) !== 'string') {
+      throw Error("Trigger lacks collection!");
+    }
+
+    var collection = trigger.collection;  // save in case trigger is mutated
+    var record = {trigger: EJSON.clone(trigger), callback: callback};
+    if (! _.has(self.listenersByCollection, collection)) {
+      self.listenersByCollection[collection] = {};
+    }
+    self.listenersByCollection[collection][id] = record;
+
     if (self.factName && Package.facts) {
       Package.facts.Facts.incrementServerFact(
         self.factPackage, self.factName, 1);
     }
+
     return {
       stop: function () {
         if (self.factName && Package.facts) {
           Package.facts.Facts.incrementServerFact(
             self.factPackage, self.factName, -1);
         }
-        delete self.listeners[id];
+        delete self.listenersByCollection[collection][id];
+        if (_.isEmpty(self.listenersByCollection[collection])) {
+          delete self.listenersByCollection[collection];
+        }
       }
     };
   },
@@ -52,20 +69,36 @@ _.extend(DDPServer._Crossbar.prototype, {
   // The listeners may be invoked in parallel, rather than serially.
   fire: function (notification) {
     var self = this;
-    // Listener callbacks can yield, so we need to first find all the ones that
-    // match in a single iteration over self.listeners (which can't be mutated
-    // during this iteration), and then invoke the matching callbacks, checking
-    // before each call to ensure they are still in self.listeners.
-    var matchingCallbacks = {};
-    // XXX consider refactoring to "index" on "collection"
-    _.each(self.listeners, function (l, id) {
-      if (self._matches(notification, l.trigger))
-        matchingCallbacks[id] = l.callback;
+
+    if (typeof(notification.collection) !== 'string') {
+      throw Error("Notification lacks collection!");
+    }
+
+    if (! _.has(self.listenersByCollection, notification.collection))
+      return;
+
+    var listenersForCollection =
+          self.listenersByCollection[notification.collection];
+    var callbackIds = [];
+    _.each(listenersForCollection, function (l, id) {
+      if (self._matches(notification, l.trigger)) {
+        callbackIds.push(id);
+      }
     });
 
-    _.each(matchingCallbacks, function (c, id) {
-      if (_.has(self.listeners, id))
-        c(notification);
+    // Listener callbacks can yield, so we need to first find all the ones that
+    // match in a single iteration over self.listenersByCollection (which can't
+    // be mutated during this iteration), and then invoke the matching
+    // callbacks, checking before each call to ensure they haven't stopped.
+    // Note that we don't have to check that
+    // self.listenersByCollection[notification.collection] still ===
+    // listenersForCollection, because the only way that stops being true is if
+    // listenersForCollection first gets reduced down to the empty object (and
+    // then never gets increased again).
+    _.each(callbackIds, function (id) {
+      if (_.has(listenersForCollection, id)) {
+        listenersForCollection[id].callback(notification);
+      }
     });
   },
 
@@ -87,6 +120,22 @@ _.extend(DDPServer._Crossbar.prototype, {
   //    (a targeted write to a collection does not match a targeted query
   //     targeted at a different document)
   _matches: function (notification, trigger) {
+    // Most notifications that use the crossbar have a string `collection` and
+    // maybe an `id` that is a string or ObjectID. We're already dividing up
+    // triggers by collection, but let's fast-track "nope, different ID" (and
+    // avoid the overly generic EJSON.equals). This makes a noticeable
+    // performance difference; see https://github.com/meteor/meteor/pull/3697
+    if (typeof(notification.id) === 'string' &&
+        typeof(trigger.id) === 'string' &&
+        notification.id !== trigger.id) {
+      return false;
+    }
+    if (notification.id instanceof LocalCollection._ObjectID &&
+        trigger.id instanceof LocalCollection._ObjectID &&
+        ! notification.id.equals(trigger.id)) {
+      return false;
+    }
+
     return _.all(trigger, function (triggerValue, key) {
       return !_.has(notification, key) ||
         EJSON.equals(triggerValue, notification[key]);

@@ -194,11 +194,11 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-// Like packageVersionParser.parseConstraint, but if called in a buildmessage
-// context uses buildmessage to raise errors.
-exports.parseConstraint = function (constraintString, options) {
+// Like packageVersionParser.parsePackageConstraint, but if called in a
+// buildmessage context uses buildmessage to raise errors.
+exports.parsePackageConstraint = function (constraintString, options) {
   try {
-    return packageVersionParser.parseConstraint(constraintString);
+    return packageVersionParser.parsePackageConstraint(constraintString);
   } catch (e) {
     if (! (e.versionParserError && options && options.useBuildmessage))
       throw e;
@@ -223,16 +223,16 @@ exports.validatePackageName = function (name, options) {
 exports.parsePackageAtVersion = function (packageAtVersionString, options) {
   // A string that has to look like "package@version" isn't really a
   // constraint, it's just a string of the form (package + "@" + version).
-  // However, using parseConstraint in the implementation is too convenient
-  // to pass up (especially in terms of error-handling quality).
-  var parsedConstraint = exports.parseConstraint(packageAtVersionString,
-                                                 options);
+  // However, using parsePackageConstraint in the implementation is too
+  // convenient to pass up (especially in terms of error-handling quality).
+  var parsedConstraint = exports.parsePackageConstraint(packageAtVersionString,
+                                                        options);
   if (! parsedConstraint) {
     // It must be that options.useBuildmessage and an error has been
-    // registered.  Otherwise, parseConstraint would succeed or throw.
+    // registered.  Otherwise, parsePackageConstraint would succeed or throw.
     return null;
   }
-  var alternatives = parsedConstraint.vConstraint.alternatives;
+  var alternatives = parsedConstraint.versionConstraint.alternatives;
   if (! (alternatives.length === 1 &&
          alternatives[0].type === 'compatible-with')) {
     if (options && options.useBuildmessage) {
@@ -243,7 +243,7 @@ exports.parsePackageAtVersion = function (packageAtVersionString, options) {
       throw new Error("Malformed package@version: " + packageAtVersionString);
     }
   }
-  return { name: parsedConstraint.name,
+  return { package: parsedConstraint.package,
            version: alternatives[0].versionString };
 };
 
@@ -686,14 +686,6 @@ exports.longformDate = function (date) {
 // (September is the longest month name, so "September 24th, 2014" would be an
 // example).
 exports.maxDateLength = "September 24th, 2014".length;
-
-exports.escapePackageNameForPath = function (packageName) {
-  return packageName.replace(":", "_");
-};
-
-exports.unescapePackageNameForPath = function (escapedPackageName) {
-  return escapedPackageName.replace("_", ":");
-};
 
 // If we have failed to update the catalog, informs the user and advises them to
 // go online for up to date inforation.

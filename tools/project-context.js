@@ -1,3 +1,4 @@
+var assert = require("assert");
 var _ = require('underscore');
 var files = require('./files.js');
 
@@ -32,14 +33,17 @@ var watch = require('./watch.js');
 //
 // Classes in this file follow the standard protocol where names beginning with
 // _ should not be externally accessed.
-exports.ProjectContext = function (options) {
+function ProjectContext(options) {
   var self = this;
+  assert.ok(self instanceof ProjectContext);
+
   if (!options.projectDir)
     throw Error("missing projectDir!");
 
   self.originalOptions = options;
   self.reset();
-};
+}
+exports.ProjectContext = ProjectContext;
 
 // The value is the name of the method to call to continue.
 var STAGE = {
@@ -52,7 +56,7 @@ var STAGE = {
   SAVE_CHANGED_METADATA: 'DONE'
 };
 
-_.extend(exports.ProjectContext.prototype, {
+_.extend(ProjectContext.prototype, {
   reset: function (moreOptions, resetOptions) {
     var self = this;
     // Allow overriding some options until the next call to reset; used by
@@ -88,6 +92,13 @@ _.extend(exports.ProjectContext.prototype, {
     // checkout.
     self._ignorePackageDirsEnvVar = options.ignorePackageDirsEnvVar;
 
+    // Set by some tests where we want to pretend that we don't have packages in
+    // the git checkout (because they're using a fake warehouse).
+    self._ignoreCheckoutPackages = options.ignoreCheckoutPackages;
+
+    // Set by some tests to override the official catalog.
+    self._officialCatalog = options.officialCatalog || catalog.official;
+
     if (options.alwaysWritePackageMap && options.neverWritePackageMap)
       throw Error("always or never?");
 
@@ -108,9 +119,6 @@ _.extend(exports.ProjectContext.prototype, {
     // Set by 'meteor update' to specify which packages may be updated. Array of
     // package names.
     self._upgradePackageNames = options.upgradePackageNames;
-
-    // Set when deploying to a previous Galaxy prototype.
-    self._requireControlProgram = options.requireControlProgram;
 
     // Set by publishing commands to ensure that published packages always have
     // a web.cordova slice (because we aren't yet smart enough to just default
@@ -217,6 +225,10 @@ _.extend(exports.ProjectContext.prototype, {
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
     return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
+  },
+
+  getMeteorShellDirectory: function(projectDir) {
+    return this.getProjectLocalDirectory("shell");
   },
 
   // You can call this manually if you want to do some work before resolving
@@ -442,7 +454,7 @@ _.extend(exports.ProjectContext.prototype, {
       });
     }
 
-    if (files.inCheckout()) {
+    if (! self._ignoreCheckoutPackages && files.inCheckout()) {
       // Running from a checkout, so use the Meteor core packages from the
       // checkout.
       searchDirs.push(files.pathJoin(files.getCurrentToolsDir(), 'packages'));
@@ -465,7 +477,7 @@ _.extend(exports.ProjectContext.prototype, {
         function () {
           self.localCatalog = new catalogLocal.LocalCatalog;
           self.projectCatalog = new catalog.LayeredCatalog(
-            self.localCatalog, catalog.official);
+            self.localCatalog, self._officialCatalog);
 
           var searchDirs = self._localPackageSearchDirs();
           self.localCatalog.initialize({
@@ -493,7 +505,6 @@ _.extend(exports.ProjectContext.prototype, {
     self._addAppConstraints(depsAndConstraints);
     self._addLocalPackageConstraints(depsAndConstraints);
     self._addReleaseConstraints(depsAndConstraints);
-    self._addGalaxyPrototypeConstraints(depsAndConstraints);
     return depsAndConstraints;
   },
 
@@ -503,7 +514,7 @@ _.extend(exports.ProjectContext.prototype, {
     self.projectConstraintsFile.eachConstraint(function (constraint) {
       // Add a dependency ("this package must be used") and a constraint
       // ("... at this version (maybe 'any reasonable')").
-      depsAndConstraints.deps.push(constraint.name);
+      depsAndConstraints.deps.push(constraint.package);
       depsAndConstraints.constraints.push(constraint);
     });
   },
@@ -512,8 +523,8 @@ _.extend(exports.ProjectContext.prototype, {
     var self = this;
     _.each(self.localCatalog.getAllPackageNames(), function (packageName) {
       var versionRecord = self.localCatalog.getLatestVersion(packageName);
-      var constraint =
-            utils.parseConstraint(packageName + "@=" + versionRecord.version);
+      var constraint = utils.parsePackageConstraint(
+        packageName + "@=" + versionRecord.version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
@@ -525,22 +536,12 @@ _.extend(exports.ProjectContext.prototype, {
     if (! self._releaseForConstraints)
       return;
     _.each(self._releaseForConstraints.packages, function (version, packageName) {
-      var constraint = utils.parseConstraint(packageName + "@=" + version);
+      var constraint = utils.parsePackageConstraint(
+        packageName + "@=" + version);
       // Add a constraint ("this is the only version available") but no
       // dependency (we don't automatically use all local packages!)
       depsAndConstraints.constraints.push(constraint);
     });
-  },
-
-  // We only need to build ctl if deploying to the legacy Galaxy
-  // prototype. (Note that this means that we will need a new constraint
-  // solution when deploying vs when running locally. This code will be deleted
-  // soon anyway.)
-  _addGalaxyPrototypeConstraints: function (depsAndConstraints) {
-    var self = this;
-    if (self._requireControlProgram) {
-      depsAndConstraints.deps.push('ctl');
-    }
   },
 
   _getAnticipatedPrereleases: function (rootConstraints, cachedVersions) {
@@ -560,9 +561,9 @@ _.extend(exports.ProjectContext.prototype, {
     // Pre-release versions that are root constraints (in .meteor/packages, in
     // the release, or the version of a local package) are anticipated.
     _.each(rootConstraints, function (constraintObject) {
-      _.each(constraintObject.vConstraint.alternatives, function (alternative) {
-        var version = alternative.versionString;
-        version && add(constraintObject.name, version);
+      _.each(constraintObject.versionConstraint.alternatives, function (alt) {
+        var version = alt.versionString;
+        version && add(constraintObject.package, version);
       });
     });
 
@@ -666,7 +667,7 @@ exports.ProjectConstraintsFile = function (options) {
   self._modified = null;
   // List of each line in the file; object with keys:
   // - leadingSpace (string of spaces before the constraint)
-  // - constraint (as returned by utils.parseConstraint)
+  // - constraint (as returned by utils.parsePackageConstraint)
   // - trailingSpaceAndComment (string of spaces/comments after the constraint)
   // This allows us to rewrite the file preserving comments.
   self._constraintLines = null;
@@ -720,22 +721,22 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       // No constraint? Leave lineRecord.constraint null and continue.
       if (line === '')
         return;
-      lineRecord.constraint = utils.parseConstraint(line, {
+      lineRecord.constraint = utils.parsePackageConstraint(line, {
         useBuildmessage: true,
         buildmessageFile: self.filename
       });
       if (! lineRecord.constraint)
         return;  // recover by ignoring
 
-      if (_.has(self._constraintMap, lineRecord.constraint.name)) {
+      if (_.has(self._constraintMap, lineRecord.constraint.package)) {
         buildmessage.error(
-          "Package name appears twice: " + lineRecord.constraint.name, {
+          "Package name appears twice: " + lineRecord.constraint.package, {
             // XXX should this be relative?
             file: self.filename
           });
         return;  // recover by ignoring
       }
-      self._constraintMap[lineRecord.constraint.name] = lineRecord;
+      self._constraintMap[lineRecord.constraint.package] = lineRecord;
     });
   },
 
@@ -749,7 +750,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     var lines = _.map(self._constraintLines, function (lineRecord) {
       var lineParts = [lineRecord.leadingSpace];
       if (lineRecord.constraint) {
-        lineParts.push(lineRecord.constraint.name);
+        lineParts.push(lineRecord.constraint.package);
         if (lineRecord.constraint.constraintString) {
           lineParts.push('@', lineRecord.constraint.constraintString);
         }
@@ -769,7 +770,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   },
 
   // Iterates over all constraints, in the format returned by
-  // utils.parseConstraint.
+  // utils.parsePackageConstraint.
   eachConstraint: function (iterator) {
     var self = this;
     _.each(self._constraintLines, function (lineRecord) {
@@ -778,8 +779,8 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     });
   },
 
-  // Returns the constraint in the format returned by utils.parseConstraint, or
-  // null.
+  // Returns the constraint in the format returned by
+  // utils.parsePackageConstraint, or null.
   getConstraint: function (name) {
     var self = this;
     if (_.has(self._constraintMap, name))
@@ -788,7 +789,7 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   },
 
   // Adds constraints, an array of objects as returned from
-  // utils.parseConstraint.
+  // utils.parsePackageConstraint.
   // Does not write to disk immediately; changes are written to disk by
   // writeIfModified() which is called in the _saveChangedMetadata step
   // of project preparation.
@@ -796,18 +797,18 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     var self = this;
     _.each(constraintsToAdd, function (constraintToAdd) {
       var lineRecord;
-      if (! _.has(self._constraintMap, constraintToAdd.name)) {
+      if (! _.has(self._constraintMap, constraintToAdd.package)) {
         lineRecord = {
           leadingSpace: '',
           constraint: constraintToAdd,
           trailingSpaceAndComment: ''
         };
         self._constraintLines.push(lineRecord);
-        self._constraintMap[constraintToAdd.name] = lineRecord;
+        self._constraintMap[constraintToAdd.package] = lineRecord;
         self._modified = true;
         return;
       }
-      lineRecord = self._constraintMap[constraintToAdd.name];
+      lineRecord = self._constraintMap[constraintToAdd.package];
       if (_.isEqual(constraintToAdd, lineRecord.constraint))
         return;  // nothing changed
       lineRecord.constraint = constraintToAdd;
@@ -826,11 +827,23 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
     self._constraintLines = _.filter(
       self._constraintLines, function (lineRecord) {
         return ! (lineRecord.constraint &&
-                  _.contains(packagesToRemove, lineRecord.constraint.name));
+                  _.contains(packagesToRemove, lineRecord.constraint.package));
       });
     _.each(packagesToRemove, function (p) {
       delete self._constraintMap[p];
     });
+    self._modified = true;
+  },
+
+  // Removes all constraints. Generally this should only be used in situations
+  // where the project is not a real user app: while you can use
+  // removeAllPackages followed by addConstraints to fully replace the
+  // constraints in a project, this will also lose all user comments and
+  // (cosmetic) ordering from the file.
+  removeAllPackages: function () {
+    var self = this;
+    self._constraintLines = [];
+    self._constraintMap = {};
     self._modified = true;
   }
 });
@@ -878,10 +891,10 @@ _.extend(exports.PackageMapFile.prototype, {
       // the second one. This file is more meteor-controlled than
       // .meteor/packages and people shouldn't be surprised to see it
       // automatically fixed.
-      if (_.has(self._versions, packageVersion.name))
+      if (_.has(self._versions, packageVersion.package))
         return;
 
-      self._versions[packageVersion.name] = packageVersion.version;
+      self._versions[packageVersion.package] = packageVersion.version;
     });
   },
 
@@ -1036,9 +1049,9 @@ _.extend(exports.CordovaPluginsFile.prototype, {
       if (line === '')
         return;
 
-      // We just do a standard split here, not utils.parseConstraint, since
-      // cordova plugins don't necessary obey the same naming conventions as
-      // Meteor packages.
+      // We just do a standard split here, not utils.parsePackageConstraint,
+      // since cordova plugins don't necessary obey the same naming conventions
+      // as Meteor packages.
       var parts = line.split('@');
       if (parts.length !== 2) {
         buildmessage.error("Cordova plugin must specify version: " + line, {

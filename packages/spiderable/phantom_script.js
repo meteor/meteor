@@ -37,4 +37,3 @@ setInterval(function() {
     phantom.exit();
   }
 }, 100);
-

@@ -14,6 +14,7 @@
 # (Note that this script always outputs GITHUB so you should manually
 # check to see if they are an MDG employee!)
 
+GITHUB: 0a- <a@0a.io>
 GITHUB: adnissen <andrew_nissen@yahoo.com>
 GITHUB: aldeed <eric@dairystatedesigns.com>
 GITHUB: AlexeyMK <alexey@alexeymk.com>
@@ -21,19 +22,25 @@ GITHUB: andylash <andy@squidnet.com>
 GITHUB: ansman <nicklas@ansman.se>
 GITHUB: anstarovoyt <andrey.starovoyt@jetbrains.com>
 GITHUB: apendua <apendua@gmail.com>
+GITHUB: awatson1978 <awatson1978@gmail.com>
 GITHUB: awwx <andrew.wilcox@gmail.com>
 GITHUB: babenzele <tim.p.phillips@gmail.com>
 GITHUB: benweissmann <benweissmann@gmail.com>
+GITHUB: bwhitty <bwhitten518@gmail.com>
 GITHUB: Cangit <fredricendrerud@gmail.com>
 GITHUB: chrisbridgett <me@chrisbridgett.com>
+GITHUB: christianbundy <christianbundy@fraction.io>
 GITHUB: cmather <mather.chris@gmail.com>
 GITHUB: codeinthehole <david.winterbottom@gmail.com>
 GITHUB: colllin <collindo@gmail.com>
 GITHUB: cryptoquick <faustianightmare@gmail.com>
+GITHUB: d4nyll <dan@danyll.com>
 GITHUB: dandv <ddascalescu+github@gmail.com>
+GITHUB: DanielDent <DanielDent@users.noreply.github.com>
 GITHUB: DanielDent <sourcecode@contactdaniel.net>
 GITHUB: DanielDornhardt <daniel@dornhardt.com>
 GITHUB: davegonzalez <gonzalez.dalex@gmail.com>
+GITHUB: DenisGorbachev <Denis.D.Gorbachev@gmail.com>
 GITHUB: DenisGorbachev <Denis.Gorbachev@faster-than-wind.ru>
 GITHUB: ducdigital <duc@ducdigital.com>
 GITHUB: duckspeaker <gallo.j@gmail.com>
@@ -46,9 +53,12 @@ GITHUB: FooBarWidget <honglilai@gmail.com>
 GITHUB: FredericoC <frederico.carvalho@3stack.com.au>
 GITHUB: Gaelan <gbs@canishe.com>
 GITHUB: graemian <graeme@graemep.co.za>
+GITHUB: gsuess <garic.suess@gmail.com>
+GITHUB: hwillson <hugh@octonary.com>
 GITHUB: icellan <icellan@icellan.com>
 GITHUB: ImtiazMajeed <imtiazmaj@gmail.com>
 GITHUB: jacott <geoffjacobsen@gmail.com>
+GITHUB: jakozaur <jacek@migdal.pl>
 GITHUB: JamesLefrere <jlefrere@gmail.com>
 GITHUB: jbruni <contato@jbruni.com.br>
 GITHUB: jfhamlin <jfhamlin@gmail.com>
@@ -73,8 +83,9 @@ GITHUB: mquandalle <maxime@quandalle.com>
 GITHUB: musically-ut <musically.ut@gmail.com>
 GITHUB: nathan-muir <ndmuir@gmail.com>
 GITHUB: Neftedollar <oildollar@gmail.com>
-GITHUB: ograycode <jason@theograys.com>
+GITHUB: netanelgilad <netanelgilad@gmail.com>
 GITHUB: ogourment <ogourment@smarterportal.com>
+GITHUB: ograycode <jason@theograys.com>
 GITHUB: OyoKooN <nathan@sxnlabs.com>
 GITHUB: paulswartz <paulswartz@gmail.com>
 GITHUB: pcjpcj2 <pcjpcj2@gmail.com>
@@ -86,6 +97,7 @@ GITHUB: prapicault <pascal@rapicorp.com>
 GITHUB: Primigenus <rchoudhury@gmail.com>
 GITHUB: pscanf <paolo.scanferla@mondora.com>
 GITHUB: queso <joshua.owens@gmail.com>
+GITHUB: rbabayoff <ronen@lavaina.com>
 GITHUB: rcy <rcyeske@gmail.com>
 GITHUB: rdickert <robert.dickert@gmail.com>
 GITHUB: restebanez <restebanez@mdsol.com>
@@ -96,10 +108,12 @@ GITHUB: richguan <guan.rich@gmail.com>
 GITHUB: rick-golden-healthagen <rick.golden@healthagen.com>
 GITHUB: rissem <rissem@gmail.com>
 GITHUB: RobertLowe <robert@iblargz.com>
+GITHUB: romanzolotarev <romanzolotarev@me.com>
 GITHUB: rosh93 <rosh93@gmail.com>
 GITHUB: ryw <ry@rywalker.com>
 GITHUB: rzymek <rzymek@gmail.com>
 GITHUB: sdarnell <stephen@darnell.plus.com>
+GITHUB: Siilwyn <Siilwyn@users.noreply.github.com>
 GITHUB: smallhelm <smallhelm@users.noreply.github.com>
 GITHUB: subhog <hubert@orlikarnia.com>
 GITHUB: svda <svdakker@gmail.com>
@@ -139,5 +153,7 @@ METEOR: sixolet <naomi@meteor.com>
 METEOR: Slava <imslavko@gmail.com>
 METEOR: Slava <slava@meteor.com>
 METEOR: stubailo <s.stubailo@gmail.com>
+METEOR: stubailo <sashko@meteor.com>
 METEOR: stubailo <sashko@mit.edu>
+METEOR: stubailo <sashko@stubailo.com>
 METEOR: yyx990803 <yyx990803@gmail.com>

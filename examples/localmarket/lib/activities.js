@@ -39,19 +39,16 @@ Meteor.methods({
 });
 
 if (Meteor.isServer) {
-  // Uses the Npm request module directly as provided by the request local pkg
-  var callTwitter = function(options) {
+  var twitterOauth = function(options) {
     var config = Meteor.settings.twitter
     var userConfig = Meteor.user().services.twitter;
 
-    options.oauth = {
+    return {
       consumer_key: config.consumerKey,
       consumer_secret: config.secret,
       token: userConfig.accessToken,
       token_secret: userConfig.accessTokenSecret
     };
-
-    return Request(options);
   }
   
   var tweetActivity = function(activity) {
@@ -68,25 +65,30 @@ if (Meteor.isServer) {
     // we need to strip the "data:image/jpeg;base64," bit off the data url
     var image = activity.image.replace(/^data.*base64,/, '');
 
-    var response = callTwitter({
-      method: 'post',
-      url: 'https://upload.twitter.com/1.1/media/upload.json',
-      form: { media: image }
-    });
+    var response = HTTP.post(
+      'https://upload.twitter.com/1.1/media/upload.json', {
+        params: { media: image },
+        npmRequestOptions: { oauth: twitterOauth() }
+      }
+    );
     
     if (response.statusCode !== 200)
       throw new Meteor.Error(500, 'Unable to post image to twitter');
 
-    var attachment = JSON.parse(response.body);
-    
-    var response = callTwitter({
-      method: 'post',
-      url: 'https://api.twitter.com/1.1/statuses/update.json',
-      form: {
-        status: appendTweet(activity.text, ' #localmarket'),
-        media_ids: attachment.media_id_string
+    if (! response.data)
+      throw new Meteor.Error(500, 'Did not receive attachment from twitter');
+
+    var attachment = response.data;
+
+    response = HTTP.post(
+      'https://api.twitter.com/1.1/statuses/update.json', {
+        params: {
+          status: appendTweet(activity.text, ' #localmarket'),
+          media_ids: attachment.media_id_string
+        },
+        npmRequestOptions: { oauth: twitterOauth() }
       }
-    });
+    );
 
     if (response.statusCode !== 200)
       throw new Meteor.Error(500, 'Unable to create tweet');
@@ -100,11 +102,11 @@ if (Meteor.isServer) {
       + '&lat=' + loc.coords.latitude
       + '&long=' + loc.coords.longitude;
     
-    var response = callTwitter({ method: 'get', url: url });
+    var response = HTTP.get(url,
+                            {npmRequestOptions: { oauth: twitterOauth() } });
 
-    if (response.statusCode === 200) {
-      var data = JSON.parse(response.body);
-      var place = _.find(data.result.places, function(place) {
+    if (response.statusCode === 200 && response.data) {
+      var place = _.find(response.data.result.places, function(place) {
         return place.place_type === 'neighborhood';
       });
       

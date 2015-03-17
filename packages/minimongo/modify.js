@@ -41,16 +41,22 @@ LocalCollection._modify = function (doc, mod, options) {
       if (!modFunc)
         throw MinimongoError("Invalid modifier specified " + op);
       _.each(operand, function (arg, keypath) {
-        // XXX mongo doesn't allow mod field names to end in a period,
-        // but I don't see why.. it allows '' as a key, as does JS
-        if (keypath.length && keypath[keypath.length-1] === '.')
-          throw MinimongoError(
-            "Invalid mod field name, may not end in a period");
+        if (keypath === '') {
+          throw MinimongoError("An empty update path is not valid.");
+        }
 
-        if (keypath === '_id')
+        if (keypath === '_id') {
           throw MinimongoError("Mod on _id not allowed");
+        }
 
         var keyparts = keypath.split('.');
+
+        if (! _.all(keyparts, _.identity)) {
+          throw MinimongoError(
+            "The update path '" + keypath +
+              "' contains an empty field name, which is not allowed.");
+        }
+
         var noCreate = _.has(NO_CREATE_MODIFIERS, op);
         var forbidArray = (op === "$rename");
         var target = findModTarget(newDoc, keyparts, {
@@ -69,11 +75,7 @@ LocalCollection._modify = function (doc, mod, options) {
     // Note: this used to be for (var k in doc) however, this does not
     // work right in Opera. Deleting from a doc while iterating over it
     // would sometimes cause opera to skip some keys.
-
-    // isInsert: if we're constructing a document to insert (via upsert)
-    // and we're in replacement mode, not modify mode, DON'T take the
-    // _id from the query.  This matches mongo's behavior.
-    if (k !== '_id' || options.isInsert)
+    if (k !== '_id')
       delete doc[k];
   });
   _.each(newDoc, function (v, k) {

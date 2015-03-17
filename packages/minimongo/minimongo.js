@@ -96,10 +96,10 @@ LocalCollection.Cursor = function (collection, selector, options) {
   if (LocalCollection._selectorIsId(selector)) {
     // stash for fast path
     self._selectorId = selector;
-    self.matcher = new Minimongo.Matcher(selector, self);
+    self.matcher = new Minimongo.Matcher(selector);
   } else {
     self._selectorId = undefined;
-    self.matcher = new Minimongo.Matcher(selector, self);
+    self.matcher = new Minimongo.Matcher(selector);
     if (self.matcher.hasGeoQuery() || options.sort) {
       self.sorter = new Minimongo.Sorter(options.sort || [],
                                          { matcher: self.matcher });
@@ -109,8 +109,7 @@ LocalCollection.Cursor = function (collection, selector, options) {
   self.limit = options.limit;
   self.fields = options.fields;
 
-  if (self.fields)
-    self.projectionFn = LocalCollection._compileProjection(self.fields);
+  self._projectionFn = LocalCollection._compileProjection(self.fields || {});
 
   self._transform = LocalCollection.wrapTransform(options.transform);
 
@@ -167,13 +166,8 @@ LocalCollection.Cursor.prototype.forEach = function (callback, thisArg) {
   }
 
   _.each(objects, function (elt, i) {
-    if (self.projectionFn) {
-      elt = self.projectionFn(elt);
-    } else {
-      // projection functions always clone the pieces they use, but if not we
-      // have to do it here.
-      elt = EJSON.clone(elt);
-    }
+    // This doubles as a clone operation.
+    elt = self._projectionFn(elt);
 
     if (self._transform)
       elt = self._transform(elt);
@@ -337,7 +331,7 @@ _.extend(LocalCollection.Cursor.prototype, {
       resultsSnapshot: null,
       ordered: ordered,
       cursor: self,
-      projectionFn: self.projectionFn
+      projectionFn: self._projectionFn
     };
     var qid;
 
@@ -359,7 +353,7 @@ _.extend(LocalCollection.Cursor.prototype, {
 
     // furthermore, callbacks enqueue until the operation we're working on is
     // done.
-    var wrapCallback = function (f, fieldsIndex, ignoreEmptyFields) {
+    var wrapCallback = function (f) {
       if (!f)
         return function () {};
       return function (/*args*/) {
@@ -369,22 +363,16 @@ _.extend(LocalCollection.Cursor.prototype, {
         if (self.collection.paused)
           return;
 
-        if (fieldsIndex !== undefined && self.projectionFn) {
-          args[fieldsIndex] = self.projectionFn(args[fieldsIndex]);
-          if (ignoreEmptyFields && _.isEmpty(args[fieldsIndex]))
-            return;
-        }
-
         self.collection._observeQueue.queueTask(function () {
           f.apply(context, args);
         });
       };
     };
-    query.added = wrapCallback(options.added, 1);
-    query.changed = wrapCallback(options.changed, 1, true);
+    query.added = wrapCallback(options.added);
+    query.changed = wrapCallback(options.changed);
     query.removed = wrapCallback(options.removed);
     if (ordered) {
-      query.addedBefore = wrapCallback(options.addedBefore, 1);
+      query.addedBefore = wrapCallback(options.addedBefore);
       query.movedBefore = wrapCallback(options.movedBefore);
     }
 
@@ -398,8 +386,8 @@ _.extend(LocalCollection.Cursor.prototype, {
 
         delete fields._id;
         if (ordered)
-          query.addedBefore(doc._id, fields, null);
-        query.added(doc._id, fields);
+          query.addedBefore(doc._id, self._projectionFn(fields), null);
+        query.added(doc._id, self._projectionFn(fields));
       });
     }
 
@@ -582,7 +570,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
 
   _.each(queriesToRecompute, function (qid) {
     if (self.queries[qid])
-      LocalCollection._recomputeResults(self.queries[qid]);
+      self._recomputeResults(self.queries[qid]);
   });
   self._observeQueue.drain();
 
@@ -641,7 +629,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
     return result;
   }
 
-  var matcher = new Minimongo.Matcher(selector, self);
+  var matcher = new Minimongo.Matcher(selector);
   var remove = [];
   self._eachPossiblyMatchingDoc(selector, function (doc, id) {
     if (matcher.documentMatches(doc).result)
@@ -676,7 +664,7 @@ LocalCollection.prototype.remove = function (selector, callback) {
   _.each(queriesToRecompute, function (qid) {
     var query = self.queries[qid];
     if (query)
-      LocalCollection._recomputeResults(query);
+      self._recomputeResults(query);
   });
   self._observeQueue.drain();
   result = remove.length;
@@ -697,7 +685,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   }
   if (!options) options = {};
 
-  var matcher = new Minimongo.Matcher(selector, self);
+  var matcher = new Minimongo.Matcher(selector);
 
   // Save the original results of any query that we might need to
   // _recomputeResults on, because _modifyAndNotify will mutate the objects in
@@ -708,7 +696,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   _.each(self.queries, function (query, qid) {
     // XXX for now, skip/limit implies ordered observe, so query.results is
     // always an array
-    if ((query.cursor.skip || query.cursor.limit) && !query.paused)
+    if ((query.cursor.skip || query.cursor.limit) && ! self.paused)
       qidToOriginalResults[qid] = EJSON.clone(query.results);
   });
   var recomputeQids = {};
@@ -731,8 +719,7 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   _.each(recomputeQids, function (dummy, qid) {
     var query = self.queries[qid];
     if (query)
-      LocalCollection._recomputeResults(query,
-                                        qidToOriginalResults[qid]);
+      self._recomputeResults(query, qidToOriginalResults[qid]);
   });
   self._observeQueue.drain();
 
@@ -844,7 +831,7 @@ LocalCollection._insertInResults = function (query, doc) {
   delete fields._id;
   if (query.ordered) {
     if (!query.sorter) {
-      query.addedBefore(doc._id, fields, null);
+      query.addedBefore(doc._id, query.projectionFn(fields), null);
       query.results.push(doc);
     } else {
       var i = LocalCollection._insertInSortedList(
@@ -855,11 +842,11 @@ LocalCollection._insertInResults = function (query, doc) {
         next = next._id;
       else
         next = null;
-      query.addedBefore(doc._id, fields, next);
+      query.addedBefore(doc._id, query.projectionFn(fields), next);
     }
-    query.added(doc._id, fields);
+    query.added(doc._id, query.projectionFn(fields));
   } else {
-    query.added(doc._id, fields);
+    query.added(doc._id, query.projectionFn(fields));
     query.results.set(doc._id, doc);
   }
 };
@@ -879,7 +866,10 @@ LocalCollection._removeFromResults = function (query, doc) {
 LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
-  var changedFields = LocalCollection._makeChangedFields(doc, old_doc);
+  var projectionFn = query.projectionFn;
+  var changedFields = LocalCollection._makeChangedFields(
+    projectionFn(doc), projectionFn(old_doc));
+
   if (!query.ordered) {
     if (!_.isEmpty(changedFields)) {
       query.changed(doc._id, changedFields);
@@ -919,17 +909,21 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 // old results (and there's no need to pass in oldResults), because these
 // operations don't mutate the documents in the collection. Update needs to pass
 // in an oldResults which was deep-copied before the modifier was applied.
-LocalCollection._recomputeResults = function (query, oldResults) {
-  if (!oldResults)
+//
+// oldResults is guaranteed to be ignored if the query is not paused.
+LocalCollection.prototype._recomputeResults = function (query, oldResults) {
+  var self = this;
+  if (! self.paused && ! oldResults)
     oldResults = query.results;
   if (query.distances)
     query.distances.clear();
   query.results = query.cursor._getRawObjects({
     ordered: query.ordered, distances: query.distances});
 
-  if (!query.paused) {
+  if (! self.paused) {
     LocalCollection._diffQueryChanges(
-      query.ordered, oldResults, query.results, query);
+      query.ordered, oldResults, query.results, query,
+      { projectionFn: query.projectionFn });
   }
 };
 
@@ -1044,7 +1038,8 @@ LocalCollection.prototype.resumeObservers = function () {
     // Diff the current results against the snapshot and send to observers.
     // pass the query object for its observer callbacks.
     LocalCollection._diffQueryChanges(
-      query.ordered, query.resultsSnapshot, query.results, query);
+      query.ordered, query.resultsSnapshot, query.results, query,
+      { projectionFn: query.projectionFn });
     query.resultsSnapshot = null;
   }
   self._observeQueue.drain();

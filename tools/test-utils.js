@@ -1,5 +1,3 @@
-var _ = require('underscore');
-var release = require('./release.js');
 var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var utils = require('./utils.js');
@@ -170,7 +168,7 @@ exports.createOrganization = function (username, password) {
   var orgName = exports.randomOrgName();
   auth.withAccountsConnection(function (conn) {
     try {
-      var result = conn.call("login", {
+      conn.call("login", {
         meteorAccountsLoginInfo: { username: username, password: password },
         clientInfo: {}
       });
@@ -187,4 +185,12 @@ exports.createOrganization = function (username, password) {
   })();
 
   return orgName;
+};
+
+exports.getMeteorRuntimeConfigFromHTML = function (html) {
+  var m = html.match(/__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]+?)"\)\)/);
+  if (! m) {
+    selftest.fail("Can't find __meteor_runtime_config__");
+  }
+  return JSON.parse(decodeURIComponent(m[1]));
 };

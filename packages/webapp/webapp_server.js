@@ -20,6 +20,13 @@ var LONG_SOCKET_TIMEOUT = 120*1000;
 WebApp = {};
 WebAppInternals = {};
 
+WebAppInternals.NpmModules = {
+  connect: {
+    version: Npm.require('connect/package.json').version,
+    module: connect
+  }
+};
+
 WebApp.defaultArch = 'web.browser';
 
 // XXX maps archs to manifests
@@ -267,7 +274,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
   var jsCssPrefix;
   if (arch === 'web.cordova') {
     // in cordova we serve assets up directly from disk so it doesn't make
-    // sense to use the prefix (ordinarily something like a CDN) and go out 
+    // sense to use the prefix (ordinarily something like a CDN) and go out
     // to the internet for those files.
     jsCssPrefix = '';
   } else {
@@ -289,7 +296,14 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
             };
           }
         ),
-        meteorRuntimeConfig: JSON.stringify(runtimeConfig),
+        // Convert to a JSON string, then get rid of most weird characters, then
+        // wrap in double quotes. (The outermost JSON.stringify really ought to
+        // just be "wrap in double quotes" but we use it to be safe.) This might
+        // end up inside a <script> tag so we need to be careful to not include
+        // "</script>", but normal {{spacebars}} escaping escapes too much! See
+        // https://github.com/meteor/meteor/issues/3730
+        meteorRuntimeConfig: JSON.stringify(
+          encodeURIComponent(JSON.stringify(runtimeConfig))),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
         bundledJsCssPrefix: jsCssPrefix,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
@@ -701,39 +715,6 @@ var runWebAppServer = function () {
   httpServer.on('request', WebApp._timeoutAdjustmentRequestCallback);
 
 
-  // For now, handle SIGHUP here.  Later, this should be in some centralized
-  // Meteor shutdown code.
-  process.on('SIGHUP', Meteor.bindEnvironment(function () {
-    shuttingDown = true;
-    // tell others with websockets open that we plan to close this.
-    // XXX: Eventually, this should be done with a standard meteor shut-down
-    // logic path.
-    httpServer.emit('meteor-closing');
-
-    httpServer.close(Meteor.bindEnvironment(function () {
-      if (proxy) {
-        try {
-          proxy.call('removeBindingsForJob', process.env.GALAXY_JOB);
-        } catch (e) {
-          Log.error("Error removing bindings: " + e.message);
-          process.exit(1);
-        }
-      }
-      process.exit(0);
-
-    }, "On http server close failed"));
-
-    // Ideally we will close before this hits.
-    Meteor.setTimeout(function () {
-      Log.warn("Closed by SIGHUP but one or more HTTP requests may not have finished.");
-      process.exit(1);
-    }, 5000);
-
-  }, function (err) {
-    console.log(err);
-    process.exit(1);
-  }));
-
   // start up app
   _.extend(WebApp, {
     connectHandlers: packageAndAppHandlers,
@@ -748,21 +729,13 @@ var runWebAppServer = function () {
         onListeningCallbacks.push(f);
       else
         f();
-    },
-    // Hack: allow http tests to call connect.basicAuth without making them
-    // Npm.depends on another copy of connect. (That would be fine if we could
-    // have test-only NPM dependencies but is overkill here.)
-    __basicAuth__: connect.basicAuth
+    }
   });
 
   // Let the rest of the packages (and Meteor.startup hooks) insert connect
   // middlewares and update __meteor_runtime_config__, then keep going to set up
   // actually serving HTML.
   main = function (argv) {
-    // main happens post startup hooks, so we don't need a Meteor.startup() to
-    // ensure this happens after the galaxy package is loaded.
-    var AppConfig = Package["application-configuration"].AppConfig;
-
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
@@ -772,49 +745,6 @@ var runWebAppServer = function () {
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
       if (process.env.METEOR_PRINT_ON_LISTEN)
         console.log("LISTENING"); // must match run-app.js
-      var proxyBinding;
-
-      AppConfig.configurePackage('webapp', function (configuration) {
-        if (proxyBinding)
-          proxyBinding.stop();
-        if (configuration && configuration.proxy) {
-          // TODO: We got rid of the place where this checks the app's
-          // configuration, because this wants to be configured for some things
-          // on a per-job basis.  Discuss w/ teammates.
-          proxyBinding = AppConfig.configureService(
-            "proxy",
-            "pre0",
-            function (proxyService) {
-              if (proxyService && ! _.isEmpty(proxyService)) {
-                var proxyConf;
-                // XXX Figure out a per-job way to specify bind location
-                // (besides hardcoding the location for ADMIN_APP jobs).
-                if (process.env.ADMIN_APP) {
-                  var bindPathPrefix = "";
-                  if (process.env.GALAXY_APP !== "panel") {
-                    bindPathPrefix = "/" + bindPathPrefix +
-                      encodeURIComponent(
-                        process.env.GALAXY_APP
-                      ).replace(/\./g, '_');
-                  }
-                  proxyConf = {
-                    bindHost: process.env.GALAXY_NAME,
-                    bindPathPrefix: bindPathPrefix,
-                    requiresAuth: true
-                  };
-                } else {
-                  proxyConf = configuration.proxy;
-                }
-                Log("Attempting to bind to proxy at " +
-                    proxyService);
-                WebAppInternals.bindToProxy(_.extend({
-                  proxyEndpoint: proxyService
-                }, proxyConf));
-              }
-            }
-          );
-        }
-      });
 
       var callbacks = onListeningCallbacks;
       onListeningCallbacks = null;
@@ -829,289 +759,6 @@ var runWebAppServer = function () {
   };
 };
 
-
-var proxy;
-WebAppInternals.bindToProxy = function (proxyConfig) {
-  var securePort = proxyConfig.securePort || 4433;
-  var insecurePort = proxyConfig.insecurePort || 8080;
-  var bindPathPrefix = proxyConfig.bindPathPrefix || "";
-  // XXX also support galaxy-based lookup
-  if (!proxyConfig.proxyEndpoint)
-    throw new Error("missing proxyEndpoint");
-  if (!proxyConfig.bindHost)
-    throw new Error("missing bindHost");
-  if (!process.env.GALAXY_JOB)
-    throw new Error("missing $GALAXY_JOB");
-  if (!process.env.GALAXY_APP)
-    throw new Error("missing $GALAXY_APP");
-  if (!process.env.LAST_START)
-    throw new Error("missing $LAST_START");
-
-  // XXX rename pid argument to bindTo.
-  // XXX factor out into a 'getPid' function in a 'galaxy' package?
-  var pid = {
-    job: process.env.GALAXY_JOB,
-    lastStarted: +(process.env.LAST_START),
-    app: process.env.GALAXY_APP
-  };
-  var myHost = os.hostname();
-
-  WebAppInternals.usingDdpProxy = true;
-
-  // This is run after packages are loaded (in main) so we can use
-  // Follower.connect.
-  if (proxy) {
-    // XXX the concept here is that our configuration has changed and
-    // we have connected to an entirely new follower set, which does
-    // not have the state that we set up on the follower set that we
-    // were previously connected to, and so we need to recreate all of
-    // our bindings -- analogous to getting a SIGHUP and rereading
-    // your configuration file. so probably this should actually tear
-    // down the connection and make a whole new one, rather than
-    // hot-reconnecting to a different URL.
-    proxy.reconnect({
-      url: proxyConfig.proxyEndpoint
-    });
-  } else {
-    proxy = Package["follower-livedata"].Follower.connect(
-      proxyConfig.proxyEndpoint, {
-        group: "proxy"
-      }
-    );
-  }
-
-  var route = process.env.ROUTE;
-  var ourHost = route.split(":")[0];
-  var ourPort = +route.split(":")[1];
-
-  var outstanding = 0;
-  var startedAll = false;
-  var checkComplete = function () {
-    if (startedAll && ! outstanding)
-      Log("Bound to proxy.");
-  };
-  var makeCallback = function () {
-    outstanding++;
-    return function (err) {
-      if (err)
-        throw err;
-      outstanding--;
-      checkComplete();
-    };
-  };
-
-  // for now, have our (temporary) requiresAuth flag apply to all
-  // routes created by this process.
-  var requiresDdpAuth = !! proxyConfig.requiresAuth;
-  var requiresHttpAuth = (!! proxyConfig.requiresAuth) &&
-        (pid.app !== "panel" && pid.app !== "auth");
-
-  // XXX a current limitation is that we treat securePort and
-  // insecurePort as a global configuration parameter -- we assume
-  // that if the proxy wants us to ask for 8080 to get port 80 traffic
-  // on our default hostname, that's the same port that we would use
-  // to get traffic on some other hostname that our proxy listens
-  // for. Likewise, we assume that if the proxy can receive secure
-  // traffic for our domain, it can assume secure traffic for any
-  // domain! Hopefully this will get cleaned up before too long by
-  // pushing that logic into the proxy service, so we can just ask for
-  // port 80.
-
-  // XXX BUG: if our configuration changes, and bindPathPrefix
-  // changes, it appears that we will not remove the routes derived
-  // from the old bindPathPrefix from the proxy (until the process
-  // exits). It is not actually normal for bindPathPrefix to change,
-  // certainly not without a process restart for other reasons, but
-  // it'd be nice to fix.
-
-  _.each(routes, function (route) {
-    var parsedUrl = url.parse(route.url, /* parseQueryString */ false,
-                              /* slashesDenoteHost aka workRight */ true);
-    if (parsedUrl.protocol || parsedUrl.port || parsedUrl.search)
-      throw new Error("Bad url");
-    parsedUrl.host = null;
-    parsedUrl.path = null;
-    if (! parsedUrl.hostname) {
-      parsedUrl.hostname = proxyConfig.bindHost;
-      if (! parsedUrl.pathname)
-        parsedUrl.pathname = "";
-      if (! parsedUrl.pathname.indexOf("/") !== 0) {
-        // Relative path
-        parsedUrl.pathname = bindPathPrefix + parsedUrl.pathname;
-      }
-    }
-    var version = "";
-
-    var AppConfig = Package["application-configuration"].AppConfig;
-    version = AppConfig.getStarForThisJob() || "";
-
-
-    var parsedDdpUrl = _.clone(parsedUrl);
-    parsedDdpUrl.protocol = "ddp";
-    // Node has a hardcoded list of protocols that get '://' instead
-    // of ':'. ddp needs to be added to that whitelist. Until then, we
-    // can set the undocumented attribute 'slashes' to get the right
-    // behavior. It's not clear whether than is by design or accident.
-    parsedDdpUrl.slashes = true;
-    parsedDdpUrl.port = '' + securePort;
-    var ddpUrl = url.format(parsedDdpUrl);
-
-    var proxyToHost, proxyToPort, proxyToPathPrefix;
-    if (! _.has(route, 'forwardTo')) {
-      proxyToHost = ourHost;
-      proxyToPort = ourPort;
-      proxyToPathPrefix = parsedUrl.pathname;
-    } else {
-      var parsedFwdUrl = url.parse(route.forwardTo, false, true);
-      if (! parsedFwdUrl.hostname || parsedFwdUrl.protocol)
-        throw new Error("Bad forward url");
-      proxyToHost = parsedFwdUrl.hostname;
-      proxyToPort = parseInt(parsedFwdUrl.port || "80");
-      proxyToPathPrefix = parsedFwdUrl.pathname || "";
-    }
-
-    if (route.ddp) {
-      proxy.call('bindDdp', {
-        pid: pid,
-        bindTo: {
-          ddpUrl: ddpUrl,
-          insecurePort: insecurePort
-        },
-        proxyTo: {
-          tags: [version],
-          host: proxyToHost,
-          port: proxyToPort,
-          pathPrefix: proxyToPathPrefix + '/websocket'
-        },
-        requiresAuth: requiresDdpAuth
-      }, makeCallback());
-    }
-
-    if (route.http) {
-      proxy.call('bindHttp', {
-        pid: pid,
-        bindTo: {
-          host: parsedUrl.hostname,
-          port: insecurePort,
-          pathPrefix: parsedUrl.pathname
-        },
-        proxyTo: {
-          tags: [version],
-          host: proxyToHost,
-          port: proxyToPort,
-          pathPrefix: proxyToPathPrefix
-        },
-        requiresAuth: requiresHttpAuth
-      }, makeCallback());
-
-      // Only make the secure binding if we've been told that the
-      // proxy knows how terminate secure connections for us (has an
-      // appropriate cert, can bind the necessary port..)
-      if (proxyConfig.securePort !== null) {
-        proxy.call('bindHttp', {
-          pid: pid,
-          bindTo: {
-            host: parsedUrl.hostname,
-            port: securePort,
-            pathPrefix: parsedUrl.pathname,
-            ssl: true
-          },
-          proxyTo: {
-            tags: [version],
-            host: proxyToHost,
-            port: proxyToPort,
-            pathPrefix: proxyToPathPrefix
-          },
-          requiresAuth: requiresHttpAuth
-        }, makeCallback());
-      }
-    }
-  });
-
-  startedAll = true;
-  checkComplete();
-};
-
-// (Internal, unsupported interface -- subject to change)
-//
-// Listen for HTTP and/or DDP traffic and route it somewhere. Only
-// takes effect when using a proxy service.
-//
-// 'url' is the traffic that we want to route, interpreted relative to
-// the default URL where this app has been told to serve itself. It
-// may not have a scheme or port, but it may have a host and a path,
-// and if no host is provided the path need not be absolute. The
-// following cases are possible:
-//
-//   //somehost.com
-//     All incoming traffic for 'somehost.com'
-//   //somehost.com/foo/bar
-//     All incoming traffic for 'somehost.com', but only when
-//     the first two path components are 'foo' and 'bar'.
-//   /foo/bar
-//     Incoming traffic on our default host, but only when the
-//     first two path components are 'foo' and 'bar'.
-//   foo/bar
-//     Incoming traffic on our default host, but only when the path
-//     starts with our default path prefix, followed by 'foo' and
-//     'bar'.
-//
-// (Yes, these scheme-less URLs that start with '//' are legal URLs.)
-//
-// You can select either DDP traffic, HTTP traffic, or both. Both
-// secure and insecure traffic will be gathered (assuming the proxy
-// service is capable, eg, has appropriate certs and port mappings).
-//
-// With no 'forwardTo' option, the traffic is received by this process
-// for service by the hooks in this 'webapp' package. The original URL
-// is preserved (that is, if you bind "/a", and a user visits "/a/b",
-// the app receives a request with a path of "/a/b", not a path of
-// "/b").
-//
-// With 'forwardTo', the process is instead sent to some other remote
-// host. The URL is adjusted by stripping the path components in 'url'
-// and putting the path components in the 'forwardTo' URL in their
-// place. For example, if you forward "//somehost/a" to
-// "//otherhost/x", and the user types "//somehost/a/b" into their
-// browser, then otherhost will receive a request with a Host header
-// of "somehost" and a path of "/x/b".
-//
-// The routing continues until this process exits. For now, all of the
-// routes must be set up ahead of time, before the initial
-// registration with the proxy. Calling addRoute from the top level of
-// your JS should do the trick.
-//
-// When multiple routes are present that match a given request, the
-// most specific route wins. When routes with equal specificity are
-// present, the proxy service will distribute the traffic between
-// them.
-//
-// options may be:
-// - ddp: if true, the default, include DDP traffic. This includes
-//   both secure and insecure traffic, and both websocket and sockjs
-//   transports.
-// - http: if true, the default, include HTTP/HTTPS traffic.
-// - forwardTo: if provided, should be a URL with a host, optional
-//   path and port, and no scheme (the scheme will be derived from the
-//   traffic type; for now it will always be a http or ws connection,
-//   never https or wss, but we could add a forwardSecure flag to
-//   re-encrypt).
-var routes = [];
-WebAppInternals.addRoute = function (url, options) {
-  options = _.extend({
-    ddp: true,
-    http: true
-  }, options || {});
-
-  if (proxy)
-    // In the future, lift this restriction
-    throw new Error("Too late to add routes");
-
-  routes.push(_.extend({ url: url }, options));
-};
-
-// Receive traffic on our default URL.
-WebAppInternals.addRoute("");
 
 runWebAppServer();
 

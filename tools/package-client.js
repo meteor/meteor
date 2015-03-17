@@ -1,18 +1,18 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
-var auth = require('./auth.js');
+var child_process = require("child_process");
+
 var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var release = require('./release.js');
 var files = require('./files.js');
-var ServiceConnection = require('./service-connection.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./compiler.js');
-var packageVersionParser = require('./package-version-parser.js');
 var authClient = require('./auth-client.js');
 var catalog = require('./catalog.js');
 var projectContextModule = require('./project-context.js');
+var colonConverter = require("./colon-converter.js");
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -249,11 +249,12 @@ var bundleSource = function (isopack, includeSources, packageDir) {
 
   var tempDir = files.mkdtemp('build-source-package-');
   var packageTarName = name + '-' + isopack.version + '-source';
-  var dirToTar = files.pathJoin(tempDir, 'source', packageTarName);
+  var dirToTar = files.pathJoin(tempDir, 'source',
+    colonConverter.convert(packageTarName));
   // XXX name probably needs to be escaped for windows?
   // XXX note that publish-for-arch thinks it knows how this tarball is laid
   //     out, which is a bit of a shame
-  var sourcePackageDir = files.pathJoin(dirToTar, name);
+  var sourcePackageDir = files.pathJoin(dirToTar, colonConverter.convert(name));
   if (! files.mkdir_p(sourcePackageDir)) {
     buildmessage.error('Failed to create temporary source directory: ' +
                        sourcePackageDir);
@@ -340,7 +341,7 @@ exports.uploadFile = uploadFile;
 var bundleBuild = function (isopack) {
   buildmessage.assertInJob();
 
-  var tempDir = files.mkdtemp('build-package-');
+  var tempDir = files.mkdtemp('bp-');
   var packageTarName = isopack.tarballName();
   var tarInputDir = files.pathJoin(tempDir, packageTarName);
 
@@ -351,6 +352,7 @@ var bundleBuild = function (isopack) {
   isopack.saveToPath(tarInputDir);
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
+
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
@@ -376,7 +378,7 @@ var bundleBuild = function (isopack) {
 
 exports.bundleBuild = bundleBuild;
 
-var createAndPublishBuiltPackage = function (conn, isopack) {
+var createBuiltPackage = function (conn, isopack) {
   buildmessage.assertInJob();
   var name = isopack.name;
 
@@ -388,6 +390,13 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
   });
   if (buildmessage.jobHasMessages())
     return;
+
+  return bundleResult;
+};
+
+var publishBuiltPackage = function (conn, isopack, bundleResult) {
+  buildmessage.assertInJob();
+  var name = isopack.name;
 
   var uploadInfo;
   buildmessage.enterJob('creating package build for ' + name, function () {
@@ -415,6 +424,10 @@ var createAndPublishBuiltPackage = function (conn, isopack) {
   });
   if (buildmessage.jobHasMessages())
     return;
+};
+
+var createAndPublishBuiltPackage = function (conn, isopack) {
+  publishBuiltPackage(conn, isopack, createBuiltPackage(conn, isopack));
 };
 
 exports.createAndPublishBuiltPackage = createAndPublishBuiltPackage;
@@ -475,10 +488,11 @@ exports.updatePackageMetadata = function (options) {
     buildmessage.error("Summary must be under 100 chars.");
     return;
   }
+
   if (dataToUpdate["longDescription"].length > 1500) {
     buildmessage.error(
-      "Longform package description is too long. Meteor uses the section of",
-      "the Markdown documentation file between the first and second",
+      "Longform package description is too long. Meteor uses the section of " +
+      "the Markdown documentation file between the first and second " +
       "headings. That section must be less than 1500 characters long.");
     return;
   }
@@ -595,14 +609,14 @@ exports.publishPackage = function (options) {
       "set 'documentation: null' in your Package.describe");
     return;
   }
+
   if (readmeInfo && readmeInfo.excerpt.length > 1500) {
     buildmessage.error(
-      "Longform package description is too long. Meteor uses the section of",
-      "the Markdown documentation file between the first and second",
+      "Longform package description is too long. Meteor uses the section of " +
+      "the Markdown documentation file between the first and second " +
       "headings. That section must be less than 1500 characters long.");
     return;
   }
-
 
   // We don't let the user upload a blank README for UX reasons, but we would
   // prefer that the server move to a world with 'readme' files for everything
@@ -700,6 +714,12 @@ exports.publishPackage = function (options) {
       return;
     }
 
+    if (! options.doNotPublishBuild) {
+      createAndPublishBuiltPackage(conn, isopack);
+      if (buildmessage.jobHasMessages())
+        return;
+    }
+
     // XXX check that we're actually providing something new?
   } else {
     var uploadInfo;
@@ -740,6 +760,12 @@ exports.publishPackage = function (options) {
     if (buildmessage.jobHasMessages())
       return;
 
+    if (! options.doNotPublishBuild) {
+      var bundleResult = createBuiltPackage(conn, isopack);
+      if (buildmessage.jobHasMessages())
+        return;
+    }
+
     var hashes = {
       tarballHash: sourceBundleResult.tarballHash,
       treeHash: sourceBundleResult.treeHash,
@@ -751,11 +777,12 @@ exports.publishPackage = function (options) {
     });
     if (buildmessage.jobHasMessages())
       return;
-  }
-  if (! options.doNotPublishBuild) {
-    createAndPublishBuiltPackage(conn, isopack);
-    if (buildmessage.jobHasMessages())
-      return;
+
+    if (! options.doNotPublishBuild) {
+      publishBuiltPackage(conn, isopack, bundleResult);
+      if (buildmessage.jobHasMessages())
+        return;
+    }
   }
 
   return;

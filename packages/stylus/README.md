@@ -15,4 +15,4 @@ your `.styl` files to enable cross-browser mixins such as
 If you want to `@import` a file, give it the extension `.import.styl`
 to prevent Meteor from processing it independently.
 
-See <http://visionmedia.github.com/nib> for documentation of the nib extensions of Stylus.
+See <http://tj.github.io/nib/> for documentation of the nib extensions of Stylus.

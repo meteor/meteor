@@ -1,19 +1,60 @@
+///  This class provides a set of utility functions for printing to the terminal
+///  in the Meteor tool.
 ///
-/// A set of utility functions for formatting output sent to the screen.
+///  When you intend for your messages to be read by humans, you should use the
+///  following functions to print to the terminal. They will automatically line
+///  wrap output to either the width of the terminal, or 80 characters. They
+///  will also end in a new line.
 ///
-/// Console offers several pieces of functionality:
-///  - debug / info / warn messages: Output to the screen, optionally with
-///    colors (when pretty == true).  Wrap the output to the width of the user's
-///    terminal, making sure to not split the same word over multiple
-///    lines. (Also provides 'rawInfo', 'rawDebug' (etc) for when you DON'T want
-///    to pre-process the output.)
-///  - Progress bar support
-///    Display a progress bar on the screen, but hide it around log messages.
+////   - Console.info : Print to stdout.
+///    - Console.error: Print to stderr.
+///    - Console.warn: Prints to stderr, if warnings are enabled.
+///    - Console.debug: Prints to stdout, if debug is enabled.
 ///
-/// In future, we might do things like move all support for verbose mode in
-/// here, and also integrate the buildmessage functionality into here
+/// Sometimes, there is a phrase that shouldn't be split up over multiple
+/// lines (for example, 'meteor update'). When applicable, please use the
+/// following functions (Some of them add aditional formatting, especially when
+/// pretty-print is turned on):
 ///
-
+///    - Console.command: things to enter on the command-line, such as
+///      'meteor update' or 'cd foobar'.
+///    - Console.url: URLs, such as 'www.meteor.com'
+///    - Console.path: filepaths outside of Console.command.
+///    - Console.noWrap: anything else that you don't want line-wrapped.
+///
+/// Here is a contrived example:
+///   Console.info(
+///     "For more information, please run", Console.command("meteor show"),
+///     "or check out the new releases at", Console.url("www.meteor.com"),
+///     "or look at", Console.path(filepath), ". You are currently running",
+///     "Console.noWrap("Meteor version 1.5") + ".");
+///
+/// The Console.info/Console.error/Console.warn/Console.debug functions also
+/// take in Console.options, as a last (optional) argument. These allow you to
+/// set an indent or use a bulletpoint. You can check out their API below. If
+/// possible, you might also want to use one of the existing wrapper functions,
+/// such as Console.labelWarning or Console.arrowInfo.
+///
+/// Output intended for machines (or pre-formatted in specific ways) should NOT
+/// be line-wrapped. Do not wrap these things: JSON output, error stack traces,
+/// logs from other programs, etc. For those, you should use the 'raw'
+/// version of the API:
+///
+///    - Console.rawInfo: Like Console.info, but without formatting.
+///    - Console.rawError: Like Console.error, but without formatting.
+///    - Console.rawWarn: Like Console.warn, but without formatting.
+///    - Console.rawDebug: Like Console.debug, but without formatting.
+///
+/// DO NOT use Console.command/Console.url/Console.path with the raw functions!
+/// (They will change your output in ways that you probably do not want). These
+/// don't auto-linewrap, end in a newline, or take in Console.options.
+///
+/// Here is are some examples:
+///     Console.rawInfo(JSON.stringify(myData, null, 2));
+///     Console.rawError(err.stack + "\n");
+///
+/// In addition to printing functions, the Console class provides progress bar
+/// support, that is mostly handled through buildmessage.js.
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
@@ -28,6 +69,9 @@ var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;
 var FORCE_PRETTY=undefined;
+var CARRIAGE_RETURN =
+  (process.platform === 'win32' ? new Array(249).join('\b') : '\r');
+
 if (process.env.METEOR_PRETTY_OUTPUT) {
   FORCE_PRETTY = process.env.METEOR_PRETTY_OUTPUT != '0';
 }
@@ -131,7 +175,7 @@ _.extend(ProgressDisplayStatus.prototype, {
     // clear some characters that we printed with a trailing `\r`.
     if (self._wroteStatusMessage) {
       var spaces = spacesString(TEMP_STATUS_LENGTH + 1);
-      self._stream.write(spaces + '\r');
+      self._stream.write(spaces + CARRIAGE_RETURN);
       self._wroteStatusMessage = false;
     }
   },
@@ -162,7 +206,7 @@ _.extend(ProgressDisplayStatus.prototype, {
     if (text) {
       // the number of characters besides `text` here must
       // be accounted for in TEMP_STATUS_LENGTH.
-      self._stream.write('  (  ' + text + '  ... )\r');
+      self._stream.write('  (  ' + text + '  ... )' + CARRIAGE_RETURN);
       self._wroteStatusMessage = true;
     }
   }
@@ -279,7 +323,7 @@ _.extend(ProgressDisplayFull.prototype, {
   depaint: function () {
     var self = this;
 
-    self._stream.write(spacesString(self._printedLength) + "\r");
+    self._stream.write(spacesString(self._printedLength) + CARRIAGE_RETURN);
   },
 
   updateStatus: function (status) {
@@ -324,7 +368,7 @@ _.extend(ProgressDisplayFull.prototype, {
     // This also means it appears less important, which is good
     var indentColumns = 3;
 
-    var streamColumns = this._stream.columns;
+    var streamColumns = this._console.width();
     var statusColumns;
     var progressColumns;
     if (! streamColumns) {
@@ -360,7 +404,7 @@ _.extend(ProgressDisplayFull.prototype, {
         length += statusColumns;
       }
 
-      line += progressGraphic + "\r";
+      line += progressGraphic + CARRIAGE_RETURN;
       length += progressGraphic.length;
 
       self.depaint();
@@ -588,6 +632,18 @@ _.extend(Console.prototype, {
     if (stream && stream.isTTY && stream.columns) {
       width = stream.columns;
     }
+
+    // On Windows cmd.exe splits long lines into smaller chunks by inserting the
+    // '\r\n' symbols into the stream, this is what cmd.exe does instead of
+    // reflowing the text. We cannot control it. For some unknown reason, even
+    // when the output line is less than number of columns (usually 80), cmd.exe
+    // would still insert new-line chars. These chars break our repainting that
+    // relies on the previous chars to be erasable with '\b' (end-line chars
+    // can't be erased this way). This is why we report a smaller number than it
+    // is in reality, for safety.
+    if (process.platform === 'win32')
+      width -= 5;
+
     return width;
   },
 
@@ -615,10 +671,29 @@ _.extend(Console.prototype, {
     }
   },
 
-  // Initializes and returns a new ConsoleOptions object. This allows us to call
-  // 'instance of' on the ConsoleOptions in parseVariadicInput, by ensuring that
-  // the object created with Console.options is, in fact, a new object.
+  // Initializes and returns a new ConsoleOptions object. Takes in the following
+  // Console options to pass to _wrapText eventually.
+  //
+  //   - bulletPoint: start the first line with a given string, then offset the
+  //     subsequent lines by the length of that string. For example, if the
+  //     bulletpoint is " => ", we would get:
+  //     " => some long message starts here
+  //          and then continues here."
+  //   - indent: offset the entire string by a specific number of
+  //     characters. For example:
+  //     "  This entire message is indented
+  //        by two characters."
+  //
+  // Passing in both options will offset the bulletPoint by the indentation,
+  // like so:
+  //  "  this message is indented by two."
+  //  "  => this mesage indented by two and
+  //        and also starts with an arrow."
+  //
   options: function (o) {
+    // (This design pattern allows us to call 'instance of' on the
+    // ConsoleOptions in parseVariadicInput, by ensuring that the object created
+    // with Console.options is, in fact, a new object.
     return new ConsoleOptions(o);
   },
 
@@ -1036,25 +1111,9 @@ _.extend(Console.prototype, {
   //
   // text: the text to wrap
   // options:
-
-  //   - bulletPoint: start the first line with a given string, then offset the
-  //     subsequent lines by the length of that string. For example, if the
-  //     bulletpoint is " => ", we would get:
-  //     " => some long message starts here
-  //          and then continues here."
-  //   - indent: offset the entire string by a specific number of
-  //     characters. For example:
-  //     "  This entire message is indented
-  //        by two characters."
+  //   - bulletPoint: (see: Console.options)
+  //   - indent: (see: Console.options)
   //
-  // Passing in both options will offset the bulletPoint by the indentation,
-  // like so:
-  //  "  this message is indented by two."
-  //  "  => this mesage indented by two and
-  //        and also starts with an arrow."
-  //
-  // When printing commands in-line, it is best to wrap commands in with Console.command
-  // to make sure that they don't get line-wrapped. See Console.command for more details.
   _wrapText: function (text, options) {
     var self = this;
     options = options || {};
@@ -1219,3 +1278,5 @@ Console.prototype.readLine = function (options) {
 
 
 exports.Console = new Console;
+exports.Console.CARRIAGE_RETURN = CARRIAGE_RETURN;
+

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.2'
+  version: '1.0.3'
 });
 
 // These tests are in a separate package to avoid a circular dependency
@@ -15,6 +15,8 @@ Package.onTest(function (api) {
   api.use('showdown');
   api.use('minimongo');
   api.use('tracker');
+  api.use('mongo');
+  api.use('random');
 
   api.use('templating', 'client');
   api.addFiles([

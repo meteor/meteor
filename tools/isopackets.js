@@ -11,6 +11,9 @@ var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var fiberHelpers = require('./fiber-helpers.js');
 
+// TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
+// meteor-tool.
+
 // An isopacket is a predefined set of isopackages which the meteor command-line
 // tool can load into its process. This is how we use the DDP client and many
 // other packages inside the tool. The isopackets are listed below in the
@@ -50,7 +53,6 @@ var ISOPACKETS = {
   'mongo': ['mongo'],
   'ejson': ['ejson'],
   'minifiers': ['minifiers'],
-  'dev-bundle-fetcher': ['dev-bundle-fetcher'],
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],

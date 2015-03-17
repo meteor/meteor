@@ -110,13 +110,13 @@ var updateTimer = function (timer) {
     ((timer.elapsed === 1) ? "" : "s");
 };
 
-Template.timer.created = function () {
+Template.timer.onCreated(function () {
   var self = this;
   self.elapsed = 0;
   self.node = null;
-};
+});
 
-Template.timer.rendered = function () {
+Template.timer.onRendered(function () {
   var self = this;
   self.node = this.find(".elapsed");
   updateTimer(self);
@@ -129,11 +129,11 @@ Template.timer.rendered = function () {
     };
     tick();
   }
-};
+});
 
-Template.timer.destroyed = function () {
+Template.timer.onDestroyed(function () {
   clearInterval(this.timer);
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -196,10 +196,10 @@ Template.circles.disabled = function () {
     '' : 'disabled';
 };
 
-Template.circles.created = function () {
-};
+Template.circles.onCreated(function () {
+});
 
-Template.circles.rendered = function () {
+Template.circles.onRendered(function () {
   var self = this;
   self.node = self.find("svg");
 
@@ -266,8 +266,8 @@ Template.circles.rendered = function () {
         rect.attr("display", 'none');
     });
   }
-};
+});
 
-Template.circles.destroyed = function () {
+Template.circles.onDestroyed(function () {
   this.handle && this.handle.stop();
-};
+});

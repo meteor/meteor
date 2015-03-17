@@ -11,6 +11,10 @@ manipulates the DOM.  Instead, familiar template directives like
 [Minimongo's](https://meteor.com/mini-databases) database cursors so
 that the DOM updates automatically.
 
+Read more on the Blaze [project page](http://www.meteor.com/blaze).
+
+## Details
+
 Blaze has two major parts:
 
 * A template compiler that compiles template files into JavaScript
@@ -31,8 +35,6 @@ system.  What sets Blaze apart is a relentless focus on the developer
 experience, using templating, transparent reactivity, and
 interoperability with existing libraries to create a gentle learning
 curve while enabling you to build world-class apps.
-
-Read more on the Blaze [project page](http://www.meteor.com/blaze).
 
 ## Examples
 

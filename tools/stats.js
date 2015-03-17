@@ -1,13 +1,10 @@
 var Fiber = require("fibers");
 var _ = require("underscore");
-var os = require("os");
 
 var config = require("./config.js");
 var files = require("./files.js");
 var auth = require("./auth.js");
 var ServiceConnection = require("./service-connection.js");
-var release = require("./release.js");
-var buildmessage = require("./buildmessage.js");
 var httpHelpers = require("./http-helpers.js");
 var Console = require("./console.js").Console;
 
@@ -25,6 +22,7 @@ var packageList = function (projectContext) {
     versions.push({
       name: name,
       version: info.version,
+      local: info.kind === 'local',
       direct: !! projectContext.projectConstraintsFile.getConstraint(name)
     });
   });

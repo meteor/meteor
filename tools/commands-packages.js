@@ -20,6 +20,7 @@ var catalog = require('./catalog.js');
 var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
 var isopack = require('./isopack.js');
+var updater = require('./updater.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
@@ -129,7 +130,7 @@ main.registerCommand({
   var addPackages = function (packageNames) {
     projectContext.projectConstraintsFile.addConstraints(
       _.map(packageNames, function (p) {
-        return utils.parseConstraint(p);
+        return utils.parsePackageConstraint(p);
       })
     );
   };
@@ -395,7 +396,7 @@ main.registerCommand({
     if (projectContext.projectConstraintsFile.getConstraint(name))
       return;
     projectContext.projectConstraintsFile.addConstraints(
-      [utils.parseConstraint(name)]);
+      [utils.parsePackageConstraint(name)]);
   });
 
   // Now resolve constraints and build packages.
@@ -626,7 +627,7 @@ main.registerCommand({
     projectContext.initializeCatalog();
   });
   projectContext.projectConstraintsFile.addConstraints(
-    [utils.parseConstraint(name + "@=" + versionString)]);
+    [utils.parsePackageConstraint(name + "@=" + versionString)]);
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
   });
@@ -833,7 +834,7 @@ main.registerCommand({
     var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
     projectContext.projectConstraintsFile.addConstraints(
       _.map(allPackagesWithTests, function (p) {
-        return utils.parseConstraint(p);
+        return utils.parsePackageConstraint(p);
       })
     );
 
@@ -1095,7 +1096,7 @@ main.registerCommand({
   // Iterate over packages that are used directly by this app (not indirect
   // dependencies).
   projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-    var packageName = constraint.name;
+    var packageName = constraint.package;
     var mapInfo = projectContext.packageMap.getInfo(packageName);
     if (! mapInfo)
       throw Error("no version for used package " + packageName);
@@ -1526,7 +1527,7 @@ main.registerCommand({
   var upgradePackageNames = [];
   if (options.args.length === 0) {
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-      upgradePackageNames.push(constraint.name);
+      upgradePackageNames.push(constraint.package);
     });
   } else {
     upgradePackageNames = options.args;
@@ -1612,6 +1613,69 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// admin run-background-updater
+///////////////////////////////////////////////////////////////////////////////
+
+// For testing the background updater during development.
+main.registerCommand({
+  name: 'admin run-background-updater',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  updater.tryToDownloadUpdate({
+    showBanner: true,
+    printErrors: true
+  });
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// admin check-package-versions
+///////////////////////////////////////////////////////////////////////////////
+
+// Run before publish-release --from-checkout to make sure that all of our
+// version numbers are up to date
+main.registerCommand({
+  name: 'admin check-package-versions',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+}, function (options) {
+  if (!files.inCheckout()) {
+    Console.error("Must run from checkout.");
+    return 1;
+  };
+
+  // Set up a temporary project context and build everything.
+  var tempProjectDir = files.mkdtemp('meteor-release-build');
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: tempProjectDir,  // won't have a packages dir, that's OK
+    // seriously, we only want checkout packages
+    ignorePackageDirsEnvVar: true,
+    // When we publish, we should always include web.cordova unibuilds, even
+    // though this temporary directory does not have any cordova platforms
+    forceIncludeCordovaUnibuild: true
+  });
+
+  // Read metadata and initialize catalog.
+  main.captureAndExit("=> Errors while building for release:", function () {
+    projectContext.initializeCatalog();
+  });
+
+  var allPackages = projectContext.localCatalog.getAllNonTestPackageNames();
+
+  Console.info("Listing packages where the checkout version doesn't match the",
+    "latest version on the package server.");
+
+  _.each(allPackages, function (packageName) {
+    var checkoutVersion = projectContext.localCatalog.getLatestVersion(packageName).version;
+    var remoteLatestVersion = catalog.official.getLatestVersion(packageName).version;
+
+    if (checkoutVersion !== remoteLatestVersion) {
+      Console.info(packageName, checkoutVersion, remoteLatestVersion);
+    }
+  });
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // add
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1674,7 +1738,7 @@ main.registerCommand({
   var messages = buildmessage.capture(function () {
     _.each(args, function (packageReq) {
       buildmessage.enterJob("adding package " + packageReq, function () {
-        var constraint = utils.parseConstraint(packageReq, {
+        var constraint = utils.parsePackageConstraint(packageReq, {
           useBuildmessage: true
         });
         if (buildmessage.jobHasMessages())
@@ -1683,37 +1747,37 @@ main.registerCommand({
         // It's OK to make errors based on looking at the catalog, because this
         // is a OnceAtStart command.
         var packageRecord = projectContext.projectCatalog.getPackage(
-          constraint.name);
+          constraint.package);
         if (! packageRecord) {
           buildmessage.error("no such package");
           return;
         }
 
-        _.each(constraint.vConstraint.alternatives, function (subConstraint) {
-          if (subConstraint.versionString === null)
+        _.each(constraint.versionConstraint.alternatives, function (subConstr) {
+          if (subConstr.versionString === null)
             return;
           // Figure out if this version exists either in the official catalog or
           // the local catalog. (This isn't the same as using the combined
           // catalog, since it's OK to type "meteor add foo@1.0.0" if the local
           // package is 1.1.0 as long as 1.0.0 exists.)
           var versionRecord = projectContext.localCatalog.getVersion(
-            constraint.name, subConstraint.versionString);
+            constraint.package, subConstr.versionString);
           if (! versionRecord) {
             // XXX #2846 here's an example of something that might require a
             // refresh
             versionRecord = catalog.official.getVersion(
-              constraint.name, subConstraint.versionString);
+              constraint.package, subConstr.versionString);
           }
           if (! versionRecord) {
-            buildmessage.error("no such version " + constraint.name + "@" +
-                               subConstraint.versionString);
+            buildmessage.error("no such version " + constraint.package + "@" +
+                               subConstr.versionString);
           }
         });
         if (buildmessage.jobHasMessages())
           return;
 
         var current = projectContext.projectConstraintsFile.getConstraint(
-          constraint.name);
+          constraint.package);
 
         // Check that the constraint is new. If we are already using the package
         // at the same constraint in the app, we will log an info message later
@@ -1724,21 +1788,21 @@ main.registerCommand({
         } else if (! current.constraintString &&
                    ! constraint.constraintString) {
           infoMessages.push(
-            constraint.name +
+            constraint.package +
               " without a version constraint has already been added.");
         } else if (current.constraintString === constraint.constraintString) {
           infoMessages.push(
-            constraint.name + " with version constraint " +
+            constraint.package + " with version constraint " +
               constraint.constraintString + " has already been added.");
         } else {
           // We are changing an existing constraint.
           if (current.constraintString) {
             infoMessages.push(
-              "Currently using " + constraint.name +
+              "Currently using " + constraint.package +
                 " with version constraint " + current.constraintString + ".");
           } else {
             infoMessages.push(
-              "Currently using " +  constraint.name +
+              "Currently using " +  constraint.package +
                 " without any version constraint.");
           }
           if (constraint.constraintString) {
@@ -1780,11 +1844,11 @@ main.registerCommand({
   // Show descriptions of directly added packages.
   Console.info();
   _.each(constraintsToAdd, function (constraint) {
-    var version = projectContext.packageMap.getInfo(constraint.name).version;
+    var version = projectContext.packageMap.getInfo(constraint.package).version;
     var versionRecord = projectContext.projectCatalog.getVersion(
-      constraint.name, version);
+      constraint.package, version);
     Console.info(
-      constraint.name +
+      constraint.package +
         (versionRecord.description ? (": " + versionRecord.description) : ""));
   });
 
@@ -2007,13 +2071,23 @@ main.registerCommand({
   maxArgs: 2,
   hidden: true,
 
+  options: {
+    // Copy the tarball contents to the output directory instead of making a
+    // tarball (useful for testing the release process)
+    "unpacked": { type: Boolean, required: false },
+    // Build a tarball only for a specific arch
+    "target-arch": { type: String, required: false }
+  },
+
   // In this function, we want to use the official catalog everywhere, because
   // we assume that all packages have been published (along with the release
   // obviously) and we want to be sure to only bundle the published versions.
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
   var releaseNameAndVersion = options.args[0];
-  var outputDirectory = options.args[1];
+
+  // We get this as an argument, so it is an OS path. Make it a standard path.
+  var outputDirectory = files.convertToStandardPath(options.args[1]);
 
   var trackAndVersion = utils.splitReleaseName(releaseNameAndVersion);
   var releaseTrack = trackAndVersion[0];
@@ -2031,7 +2105,7 @@ main.registerCommand({
         utils.parsePackageAtVersion(releaseRecord.tool);
   if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseRecord.tool);
-  var toolPackage = toolPackageVersion.name;
+  var toolPackage = toolPackageVersion.package;
   var toolVersion = toolPackageVersion.version;
 
   var toolPkgBuilds = catalog.official.getAllBuilds(
@@ -2060,6 +2134,19 @@ main.registerCommand({
     }
     return osArches[0];
   });
+
+  if (options['target-arch']) {
+    // check if the passed arch is in the list
+    var arch = options['target-arch'];
+    if (! _.contains(osArches, arch)) {
+      throw new Error(
+        arch + ": the arch is not available for the release. Available arches: "
+        + osArches.join(', '));
+    }
+
+    // build only for the selected arch
+    osArches = [arch];
+  }
 
   Console.error(
     'Building bootstrap tarballs for architectures ' + osArches.join(', '));
@@ -2115,8 +2202,19 @@ main.registerCommand({
   _.each(osArches, function (osArch) {
     var tmpdir = files.mkdtemp();
     Console.info("Building tarball for " + osArch);
+
+    // when building for Windows architectures, build Windows-specific
+    // tropohouse and bootstrap tarball
+    var targetPlatform;
+    if (/win/i.test(osArch)) {
+      targetPlatform = "win32";
+    }
+
     // We're going to build and tar up a tropohouse in a temporary directory.
-    var tmpTropo = new tropohouse.Tropohouse(files.pathJoin(tmpdir, '.meteor'));
+    var tmpTropo = new tropohouse.Tropohouse(
+      files.pathJoin(tmpdir, '.meteor'),
+      { platform: targetPlatform });
+
     main.captureAndExit(
       "=> Errors downloading packages for " + osArch + ":",
       function () {
@@ -2143,16 +2241,20 @@ main.registerCommand({
     var toolRecord = _.findWhere(toolIsopack.toolsOnDisk, {arch: osArch});
     if (!toolRecord)
       throw Error("missing tool for " + osArch);
-    files.symlink(
-      files.pathJoin(
+
+    tmpTropo.linkToLatestMeteor(files.pathJoin(
         tmpTropo.packagePath(toolPackage, toolVersion, true),
         toolRecord.path,
-        'meteor'),
-      files.pathJoin(tmpTropo.root, 'meteor'));
+        'meteor'));
 
-    files.createTarball(
-      tmpTropo.root,
-      files.pathJoin(outputDirectory, 'meteor-bootstrap-' + osArch + '.tar.gz'));
+    if (options.unpacked) {
+      files.cp_r(tmpTropo.root, outputDirectory);
+    } else {
+      files.createTarball(
+        tmpTropo.root,
+        files.pathJoin(outputDirectory,
+          'meteor-bootstrap-' + osArch + '.tar.gz'));
+    }
   });
 
   return 0;

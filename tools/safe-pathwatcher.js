@@ -1,8 +1,12 @@
 var files = require("./files.js");
 
-// Set this env variable to a truthy value to force files.watchFile instead
-// of pathwatcher.watch.
+// Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
+// force the use of files.watchFile instead of pathwatcher.watch.
+// Enabled on Mac and Linux and disabled on Windows by default.
 var PATHWATCHER_ENABLED = !process.env.METEOR_WATCH_FORCE_POLLING;
+if (process.platform === "win32") {
+  PATHWATCHER_ENABLED = false;
+}
 
 var DEFAULT_POLLING_INTERVAL =
       ~~process.env.METEOR_WATCH_POLLING_INTERVAL_MS || 5000;
@@ -40,15 +44,13 @@ exports.watch = function watch(absPath, callback) {
       if (! suggestedRaisingWatchLimit &&
           // Note: the not-super-documented require('constants') maps from
           // strings to SYSTEM errno values. System errno values aren't the same
-          // as the numbers used internally by libuv! It would be nice to just
-          // make pathwatcher process the system errno into a string for us, but
-          // this is a pain, because posix doesn't give us a function to give us
-          // 'ENOSPC'-style strings (just the longer strings that strerror gives
-          // you). While libuv does give us uv_err_name, it takes in a *UV*
-          // errno value, which is different from the system errno value, and
-          // the translation function is not exposed:
-          // https://github.com/libuv/libuv/issues/79
-          e.code === constants.ENOSPC &&
+          // as the numbers used internally by libuv! Once we're upgraded
+          // to Node 0.12, we'll have the system errno as a string (on 'code'),
+          // but the support for that wasn't in Node 0.10's uv.
+          // See our PR https://github.com/atom/node-pathwatcher/pull/53
+          // (and make sure to read the final commit message, not the original
+          // proposed PR, which had a slightly different interface).
+          e.errno === constants.ENOSPC &&
           // The only suggestion we currently have is for Linux.
           archinfo.matches(archinfo.host(), 'os.linux')) {
         suggestedRaisingWatchLimit = true;
@@ -62,7 +64,7 @@ exports.watch = function watch(absPath, callback) {
       // ... ignore the error.  We'll still have watchFile, which is good
       // enough.
     }
-  }
+  };
 
   var pollingInterval = watcher
         ? DEFAULT_POLLING_INTERVAL : NO_PATHWATCHER_POLLING_INTERVAL;

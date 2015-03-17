@@ -1,7 +1,5 @@
 var files = require('./files.js');
 var _ = require('underscore');
-var Future = require('fibers/future');
-var fiberHelpers = require('./fiber-helpers.js');
 var pathwatcher = require("./safe-pathwatcher.js");
 
 // Watch for changes to a set of files, and the first time that any of
@@ -150,7 +148,7 @@ _.extend(WatchSet.prototype, {
 
   clone: function () {
     var self = this;
-    var ret = new WatchSet;
+    var ret = new WatchSet();
 
     // XXX doesn't bother to deep-clone the directory info
     // #WatchSetShallowClone
@@ -193,9 +191,9 @@ _.extend(WatchSet.prototype, {
 });
 
 WatchSet.fromJSON = function (json) {
-  var set = new WatchSet;
+  var set = new WatchSet();
 
-  if (!json)
+  if (! json)
     return set;
 
   if (json.alwaysFire) {
@@ -223,7 +221,26 @@ WatchSet.fromJSON = function (json) {
   return set;
 };
 
-function readDirectory(options) {
+var readFile = function (absPath) {
+  try {
+    return files.readFile(absPath);
+  } catch (e) {
+    // Rethrow most errors.
+    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
+      throw e;
+    // File does not exist (or is a directory).
+    return null;
+  }
+};
+
+var sha1 = function (contents) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha1');
+  hash.update(contents);
+  return hash.digest('hex');
+};
+
+var readDirectory = function (options) {
   // Read the directory.
   try {
     var contents = files.readdir(options.absPath);
@@ -250,7 +267,6 @@ function readDirectory(options) {
       }
       throw e;
     }
-    // XXX if we're on windows, I guess it's possible for files to end with '/'.
     if (stats.isDirectory())
       entry += '/';
     contentsWithSlashes.push(entry);
@@ -260,7 +276,7 @@ function readDirectory(options) {
   var filtered = _.filter(contentsWithSlashes, function (entry) {
     return _.any(options.include, function (re) {
       return re.test(entry);
-    }) && !_.any(options.exclude, function (re) {
+    }) && ! _.any(options.exclude, function (re) {
       return re.test(entry);
     });
   });
@@ -268,7 +284,7 @@ function readDirectory(options) {
   // Sort it!
   filtered.sort();
   return filtered;
-}
+};
 
 // All fields are private.
 var Watcher = function (options) {
@@ -286,7 +302,7 @@ var Watcher = function (options) {
     throw new Error("onChange option is required");
 
   self.stopped = false;
-  self.justCheckOnce = !!options._justCheckOnce;
+  self.justCheckOnce = !! options._justCheckOnce;
 
   self.watches = {
     // <absolute path of watched file or directory>: {
@@ -361,7 +377,7 @@ _.extend(Watcher.prototype, {
     });
 
     // If the directory has changed (including being deleted or created).
-    if (!_.isEqual(info.contents, newContents)) {
+    if (! _.isEqual(info.contents, newContents)) {
       self._fire();
       return true;
     }
@@ -674,25 +690,6 @@ var readAndWatchFileWithHash = function (watchSet, absPath) {
 
 var readAndWatchFile = function (watchSet, absPath) {
   return readAndWatchFileWithHash(watchSet, absPath).contents;
-};
-
-function readFile(absPath) {
-  try {
-    return files.readFile(absPath);
-  } catch (e) {
-    // Rethrow most errors.
-    if (!e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
-      throw e;
-    // File does not exist (or is a directory).
-    return null;
-  }
-}
-
-var sha1 = function (contents) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha1');
-  hash.update(contents);
-  return hash.digest('hex');
 };
 
 _.extend(exports, {

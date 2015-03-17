@@ -3,6 +3,8 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var catalog = require('../catalog.js');
 
+var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
+
 // XXX: Why is this an internet using test? Because our warehouse is a
 // hackhackhack. If we clean up the hackhackhackhack, then this does not need
 // the internets. (Or, to be more specific: our warehouse code tries to fetch
@@ -25,7 +27,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   run.expectExit(0);
 
   // ... unless you asked for a different one.
-  run = s.run("--version", "--release", "METEOR@v1");
+  run = s.run("--version", "--release", DEFAULT_RELEASE_TRACK + "@v1");
   run.read('Meteor v1\n');
   run.expectEnd();
   run.expectExit(0);
@@ -41,7 +43,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   });
 
   // ... unless you asked for a different one.
-  run = s.run("create", "myapp2", "--release", "METEOR@v1").expectExit(0);
+  run = s.run("create", "myapp2", "--release", DEFAULT_RELEASE_TRACK + "@v1").expectExit(0);
   s.cd('myapp2', function () {
     run = s.run("--version");
     run.read('Meteor v1\n');
@@ -71,17 +73,18 @@ selftest.define("springboard", ['checkout', 'net'], function () {
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
     run = s.run();
     run.matchErr("uses Meteor strange");
-    run.matchErr("don't have it either");
+
+    run.matchErr(/don't\s+have\s+it\s+either/);
     run.expectExit(1);
 
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
     run = s.run();
     run.matchErr("offline");
-    run.matchErr("it uses Meteor strange");
-    run.matchErr("don't have that version");
-    run.matchErr("of Meteor installed");
-    run.matchErr("update servers");
+    run.matchErr(/it\s+uses\s+Meteor\s+strange/);
+    run.matchErr(/don't\s+have\s+that\s+version/);
+    run.matchErr(/of\s+Meteor\s+installed/);
+    run.matchErr(/update\s+servers/);
     run.expectExit(1);
 
     // You create an app from a checkout, and then try to use it from an
@@ -213,7 +216,7 @@ selftest.define("download release", ['net', 'slow'], function () {
 });
 
 
-selftest.define("unknown release", [], function () {
+selftest.define("unknown release", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }

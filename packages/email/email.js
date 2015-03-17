@@ -31,29 +31,14 @@ var makePool = function (mailUrlString) {
   return pool;
 };
 
-// We construct smtpPool at the first call to Email.send, so that
-// Meteor.startup code can set $MAIL_URL.
-var smtpPoolFuture = new Future;;
-var configured = false;
-
-var getPool = function () {
-  // We check MAIL_URL in case someone else set it in Meteor.startup code.
-  if (!configured) {
-    configured = true;
-    AppConfig.configurePackage('email', function (config) {
-      // XXX allow reconfiguration when the app config changes
-      if (smtpPoolFuture.isResolved())
-        return;
-      var url = config.url || process.env.MAIL_URL;
-      var pool = null;
-      if (url)
-        pool = makePool(url);
-      smtpPoolFuture.return(pool);
-    });
-  }
-
-  return smtpPoolFuture.wait();
-};
+var getPool = _.once(function () {
+  // We delay this check until the first call to Email.send, in case someone
+  // set process.env.MAIL_URL in startup code.
+  var url = process.env.MAIL_URL;
+  if (! url)
+    return null;
+  return makePool(url);
+});
 
 var next_devmode_mail_id = 0;
 var output_stream = process.stdout;
@@ -135,7 +120,7 @@ EmailTest.hookSend = function (f) {
  * @param {String|String[]} options.to,cc,bcc,replyTo
  *   "To:", "Cc:", "Bcc:", and "Reply-To:" addresses
  * @param {String} [options.subject]  "Subject:" line
- * @param {String} [options.text|html] Mail body (in plain text or HTML)
+ * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
  */
 Email.send = function (options) {

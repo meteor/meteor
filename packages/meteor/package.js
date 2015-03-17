@@ -2,12 +2,16 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.4'
+  version: '1.1.5'
 });
 
 Package.registerBuildPlugin({
   name: "basicFileTypes",
   sources: ['plugin/basic-file-types.js']
+});
+
+Npm.depends({
+  "double-ended-queue": "2.1.0-0"
 });
 
 Package.onUse(function (api) {
@@ -37,6 +41,10 @@ Package.onUse(function (api) {
   // in this case server must load first.
   api.addFiles('url_server.js', 'server');
   api.addFiles('url_common.js', ['client', 'server']);
+
+  // People expect process.exit() to not swallow console output.
+  // On Windows, it sometimes does, so we fix it for all apps and packages
+  api.addFiles('flush-buffers-on-exit-in-windows.js', 'server');
 });
 
 Package.onTest(function (api) {

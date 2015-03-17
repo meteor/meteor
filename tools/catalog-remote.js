@@ -273,7 +273,7 @@ _.extend(Db.prototype, {
     }
 
     Console.debug("Opening db file", dbFile);
-    return new sqlite3.Database(dbFile);
+    return new sqlite3.Database(files.convertToOSPath(dbFile));
   },
 
   // Runs a query synchronously, returning all rows
@@ -810,6 +810,7 @@ _.extend(RemoteCatalog.prototype, {
     // 'recommended' and 'orderKey' in their own columns this could be faster
     var result = self._contentQuery(
       "SELECT content FROM releaseVersions WHERE track=?", track);
+
     var recommended = _.filter(result, function (v) {
       if (!v.recommended)
         return false;
@@ -990,8 +991,14 @@ _.extend(RemoteCatalog.prototype, {
 
 exports.RemoteCatalog = RemoteCatalog;
 
-//We put this constant here because we don't have any better place that would otherwise cause a cycle
+// We put this constant here because we don't have any better place that would otherwise cause a cycle
 exports.DEFAULT_TRACK = 'METEOR';
 
-//The catalog as provided by troposhere (aka atomospherejs.com)
+// XXX HACK for windows, because we don't have any working releases
+// in other tracks
+if (process.platform === "win32") {
+  exports.DEFAULT_TRACK = "WINDOWS-PREVIEW";
+}
+
+// The catalog as provided by troposhere (aka atomospherejs.com)
 exports.official = new RemoteCatalog();

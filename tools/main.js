@@ -5,6 +5,7 @@ if (showRequireProfile)
 var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
+var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var warehouse = require('./warehouse.js');
@@ -14,6 +15,14 @@ var projectContextModule = require('./project-context.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
 var main = exports;
+
+// On Node 0.10 on Windows, stdout and stderr don't get flushed when calling
+// `process.exit`. We use a workaround for now, but this should be fixed on
+// Node 0.12, so when we upgrade let's remember to remove this clause, and the
+// file it requires. See https://github.com/joyent/node/issues/3584
+if (process.platform === "win32") {
+  require('./flush-buffers-on-exit-in-windows.js');
+}
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
 // in especially insufficient when using fibers, because you get
@@ -37,7 +46,8 @@ function Command(options) {
     requiresApp: false,
     requiresRelease: true,
     hidden: false,
-    pretty: true
+    pretty: true,
+    notOnWindows: false
   }, options);
 
   if (! _.has(options, 'maxArgs'))
@@ -284,7 +294,8 @@ require('./commands-packages-query.js');
 // - body (contents of body, trimmed to end with a newline but no blank lines)
 var loadHelp = function () {
   var ret = [];
-  var raw = files.readFile(files.pathJoin(__dirname, 'help.txt'), 'utf8');
+  var dirname = files.convertToStandardPath(__dirname);
+  var raw = files.readFile(files.pathJoin(dirname, 'help.txt'), 'utf8');
   return _.map(raw.split(/^>>>/m).slice(1), function (r) {
     var lines = r.split('\n');
     var name = lines.shift().trim();
@@ -322,15 +333,12 @@ var longHelp = exports.longHelp = function (commandName) {
     _.each(node, function (n, shortName) {
       var fullName = commandName + (commandName.length > 0 ? " " : "") +
         shortName;
-      // For now, we don't include commands with subcommands in the
-      // list -- if you have a command 'admin grant' then 'admin' does
-      // not appear in the top-level help. If we one day want to make
-      // these kinds of commands visible to casual users, we'll need a
-      // way to mark them as visible or hidden.
 
-      // Also, use helpDict to only include commands that have help text,
-      // otherwise there is nothing to display
-      if (n instanceof Command && ! n.hidden && helpDict[fullName])
+      // Use helpDict to only include commands that have help text, otherwise
+      // there is nothing to display.
+      // For now, there's no way to mark commands with subcommands (eg 'admin')
+      // as hidden.
+      if (! n.hidden && helpDict[fullName])
         commandsWanted[fullName] = { name: shortName };
     });
 
@@ -396,6 +404,25 @@ var springboard = function (rel, options) {
   versionMap[toolsPkg] = toolsVersion;
   var packageMap = new packageMapModule.PackageMap(versionMap);
 
+  if (process.platform === "win32") {
+    // Make sure the tool we are trying to download has been built for Windows
+    var buildsForHostArch = catalog.official.getBuildsForArches(
+      rel.getToolsPackage(), rel.getToolsVersion(), [archinfo.host()]);
+
+    if (! buildsForHostArch) {
+      var release = catalog.official.getDefaultReleaseVersion();
+      var releaseName = release.track + "@" + release.version;
+
+      Console.error(
+        "This project uses " + rel.getDisplayName() + ", which isn't",
+        "available on Windows. To work with this app on all supported",
+        "platforms, use", Console.command("meteor update --release " + releaseName),
+        "to pin this app to the newest Windows-compatible release.");
+
+      process.exit(1);
+    }
+  }
+
   // XXX split better
   Console.withProgressDisplayVisible(function () {
     var messages = buildmessage.capture(
@@ -405,19 +432,21 @@ var springboard = function (rel, options) {
         });
       }
     );
+
     if (messages.hasMessages()) {
       // We have failed to download the tool that we are supposed to springboard
       // to! That's bad. Let's exit.
       if (options.fromApp) {
         Console.error(
-          "Sorry, this project uses " + rel.getDisplayName() + ", which is not",
-          "installed and could not be downloaded. Please check to make sure",
-          "that you are online.");
+          "Sorry, this project uses " + rel.getDisplayName() + ", which is",
+          "not installed and could not be downloaded. Please check to make",
+          "sure that you are online.");
       } else {
         Console.error(
           "Sorry, " + rel.getDisplayName() + " is not installed and could not",
           "be downloaded. Please check to make sure that you are online.");
       }
+
       process.exit(1);
     }
   });
@@ -442,6 +471,17 @@ var springboard = function (rel, options) {
     // like other --release options.  So now we use an environment
     // variable. #SpringboardEnvironmentVar
     process.env['METEOR_SPRINGBOARD_RELEASE'] = options.releaseOverride;
+  }
+
+  if (process.platform === 'win32') {
+    var ret = new Future();
+    var child = require("child_process").spawn(
+      files.convertToOSPath(executable + ".bat"), newArgv,
+      { env: process.env, stdio: 'inherit' });
+    child.on('exit', function (code) {
+      ret.return(code);
+    });
+    process.exit(ret.wait());
   }
 
   // Now exec; we're not coming back.
@@ -487,7 +527,7 @@ Fiber(function () {
 
   // Check required Node version.
   // This code is duplicated in tools/server/boot.js.
-  var MIN_NODE_VERSION = 'v0.10.33';
+  var MIN_NODE_VERSION = 'v0.10.36';
   if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
     Console.error(
       'Meteor requires Node ' + MIN_NODE_VERSION + ' or later.');
@@ -1285,6 +1325,11 @@ Fiber(function () {
 
   Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);
+
+  if (command.notOnWindows && process.platform === 'win32') {
+    Console.error('This command is not yet available on Windows.');
+    process.exit(1);
+  }
 
   // Run the command!
   try {

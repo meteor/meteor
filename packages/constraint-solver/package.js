@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.17"
+  version: "1.0.18"
 });
 
 Npm.depends({
@@ -25,8 +25,8 @@ Package.onTest(function (api) {
   // data for big benchmarky tests
   api.addFiles('test-data.js', ['server']);
 
-  api.addFiles('datatypes-tests.js', ['client', 'server']);
-  api.addFiles('catalog-cache-tests.js', ['client', 'server']);
+  api.addFiles('datatypes-tests.js', ['server']);
+  api.addFiles('catalog-cache-tests.js', ['server']);
   api.addFiles('constraint-solver-tests.js', ['server']);
   api.addFiles('benchmark-tests.js', ['server']);
   api.addFiles('resolver-tests.js', ['server']);

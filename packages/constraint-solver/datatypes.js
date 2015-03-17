@@ -38,13 +38,13 @@ CS.PackageAndVersion.fromString = function (str) {
 CS.Dependency = function (packageConstraint, flags) {
   check(packageConstraint, Match.OneOf(PV.PackageConstraint, String));
   if (typeof packageConstraint === 'string') {
-    packageConstraint = PV.parseConstraint(packageConstraint);
+    packageConstraint = PV.parsePackageConstraint(packageConstraint);
   }
   if (flags) {
     check(flags, Object);
   }
 
-  this.pConstraint = packageConstraint;
+  this.packageConstraint = packageConstraint;
   this.isWeak = false;
 
   if (flags) {
@@ -57,7 +57,7 @@ CS.Dependency = function (packageConstraint, flags) {
 // The string form of a Dependency is `?foo@1.0.0` for a weak
 // reference to package "foo" with VersionConstraint "1.0.0".
 CS.Dependency.prototype.toString = function () {
-  var ret = this.pConstraint.toString();
+  var ret = this.packageConstraint.toString();
   if (this.isWeak) {
     ret = '?' + ret;
   }

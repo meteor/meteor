@@ -1,6 +1,15 @@
 // Only create a server if we are in an environment with a HTTP server
 // (as opposed to, eg, a command-line tool).
 //
+// Note: this whole conditional is a total hack to get around the fact that this
+// package logically should be split into a ddp-client and ddp-server package;
+// see https://github.com/meteor/meteor/issues/3452
+//
+// Until we do that, this conditional (and the weak dependency on webapp that
+// should really be a strong dependency of the ddp-server package) allows you to
+// build projects which use `ddp` in Node without wanting to run a DDP server
+// (ie, allows you to act as if you were using the nonexistent `ddp-client`
+// server package).
 if (Package.webapp) {
   if (process.env.DDP_DEFAULT_CONNECTION_URL) {
     __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL =
@@ -24,6 +33,13 @@ if (Package.webapp) {
   Meteor.server = null;
   Meteor.refresh = function (notification) {
   };
+
+  // Make these empty/no-ops too, so that non-webapp apps can still
+  // depend on/use packages that use those functions.
+  _.each(['publish', 'methods', 'onConnection'],
+      function (name) {
+        Meteor[name] = function () { };
+      });
 }
 
 // Meteor.server used to be called Meteor.default_server. Provide

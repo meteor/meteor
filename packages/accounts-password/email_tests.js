@@ -38,6 +38,9 @@ testAsyncMulti("accounts emails - reset password flow", [
         test.isTrue(match);
         resetPasswordToken = match[1];
         test.isTrue(options.html.match(re));
+
+        test.equal(options.from, 'test@meteor.com');
+        test.equal(options.headers['My-Custom-Header'], 'Cool');
       }));
   },
   function (test, expect) {
@@ -79,6 +82,9 @@ var getVerifyEmailToken = function (email, test, expect) {
       test.isTrue(match);
       verifyEmailToken = match[1];
       test.isTrue(options.html.match(re));
+
+      test.equal(options.from, 'test@meteor.com');
+      test.equal(options.headers['My-Custom-Header'], 'Cool');
     }));
 };
 
@@ -173,6 +179,9 @@ var getEnrollAccountToken = function (email, test, expect) {
       test.isTrue(match);
       enrollAccountToken = match[1];
       test.isTrue(options.html.match(re));
+
+      test.equal(options.from, 'test@meteor.com');
+      test.equal(options.headers['My-Custom-Header'], 'Cool');
     }));
 };
 

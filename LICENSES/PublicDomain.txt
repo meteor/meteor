@@ -1,0 +1,75 @@
+====================================================================
+For the license for Meteor itself, see LICENSE.txt in the root of
+the repository.  This file contains the licenses for externally
+maintained libraries.
+====================================================================
+
+
+
+
+----------
+json2: https://github.com/douglascrockford/JSON-js
+----------
+
+By Douglas Crockford
+2011-10-19
+
+Public Domain.
+
+NO WARRANTY EXPRESSED OR IMPLIED. USE AT YOUR OWN RISK.
+
+
+----------
+meyerweb-reset: http://meyerweb.com/eric/tools/css/reset/
+----------
+
+By Eric A. Meyer
+v2.0 | 20110126
+License: none (public domain)
+
+
+----------
+enable2k word list: http://personal.riverusers.com/~thegrendel/software.html
+----------
+
+The ENABLE list has been placed in the Public Domain. This means it is free
+and freely distributable. No fees, registrations, or "contributions" are
+required for its use.
+
+
+
+----------
+stream-buffers: https://github.com/samcday/node-stream-buffer
+----------
+
+This is free and unencumbered software released into the public domain.
+
+Anyone is free to copy, modify, publish, use, compile, sell, or
+distribute this software, either in source code form or as a compiled
+binary, for any purpose, commercial or non-commercial, and by any
+means.
+
+In jurisdictions that recognize copyright laws, the author or authors
+of this software dedicate any and all copyright interest in the
+software to the public domain. We make this dedication for the benefit
+of the public at large and to the detriment of our heirs and
+successors. We intend this dedication to be an overt act of
+relinquishment in perpetuity of all present and future rights to this
+software under copyright law.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+OTHER DEALINGS IN THE SOFTWARE.
+
+For more information, please refer to <http://unlicense.org/>
+
+
+----------
+jsonify: https://github.com/substack/jsonify
+----------
+
+public domain

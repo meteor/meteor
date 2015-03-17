@@ -1,3 +1,1 @@
-# Package Version Parser
-
-This is an internal package.
+This is an internal Meteor package.

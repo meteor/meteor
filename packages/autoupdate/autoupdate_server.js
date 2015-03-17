@@ -163,11 +163,11 @@ Meteor.startup(function () {
 
 var fut = new Future();
 
-// We only want SIGUSR2 to trigger 'updateVersions' AFTER onListen,
-// so we add a queued task that waits for onListen before SIGUSR2 can queue
+// We only want 'refresh' to trigger 'updateVersions' AFTER onListen,
+// so we add a queued task that waits for onListen before 'refresh' can queue
 // tasks. Note that the `onListening` callbacks do not fire until after
-// Meteor.startup, so there is no concern that the 'updateVersions' calls
-// from SIGUSR2 will overlap with the `updateVersions` call from Meteor.startup.
+// Meteor.startup, so there is no concern that the 'updateVersions' calls from
+// 'refresh' will overlap with the `updateVersions` call from Meteor.startup.
 
 syncQueue.queueTask(function () {
   fut.wait();
@@ -177,9 +177,22 @@ WebApp.onListening(function () {
   fut.return();
 });
 
-// Listen for SIGUSR2, which signals that a client asset has changed.
-process.on('SIGUSR2', Meteor.bindEnvironment(function () {
+var enqueueVersionsRefresh = function () {
   syncQueue.queueTask(function () {
     updateVersions(true);
   });
+};
+
+// Listen for the special {refresh: 'client'} message, which signals that a
+// client asset has changed.
+process.on('message', Meteor.bindEnvironment(function (m) {
+  if (m && m.refresh === 'client') {
+    enqueueVersionsRefresh();
+  }
 }));
+
+// Another way to tell the process to refresh: send SIGHUP signal
+process.on('SIGHUP', Meteor.bindEnvironment(function () {
+  enqueueVersionsRefresh();
+}));
+

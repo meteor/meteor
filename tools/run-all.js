@@ -1,5 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 
@@ -36,8 +35,8 @@ var Runner = function (options) {
 
   self.stopped = false;
   self.quiet = options.quiet;
-  self.banner =
-    options.banner || files.prettyPath(self.projectContext.projectDir);
+  self.banner = options.banner ||
+    files.convertToOSPath(files.prettyPath(self.projectContext.projectDir));
   if (options.rootUrl) {
     self.rootUrl = options.rootUrl;
   } else if (options.proxyHost) {
@@ -170,6 +169,11 @@ _.extend(Runner.prototype, {
     if (! self.stopped && ! self.quiet) {
       runLog.log("");
       runLog.log("App running at: " + self.rootUrl,  { arrow: true });
+
+      if (process.platform === "win32") {
+        runLog.log("   Type Control-C twice to stop.");
+        runLog.log("");
+      }
     }
 
     if (self.selenium && ! self.stopped) {

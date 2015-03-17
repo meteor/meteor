@@ -1,10 +1,10 @@
 var TWEETING_KEY = 'shareOverlayTweeting';
 var IMAGE_KEY = 'shareOverlayAttachedImage';
 
-Template.shareOverlay.created = function() {
+Template.shareOverlay.onCreated(function() {
   Session.set(TWEETING_KEY, true);
   Session.set(IMAGE_KEY, null);
-}
+});
 
 Template.shareOverlay.helpers({
   attachedImage: function() {

@@ -1,0 +1,48 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!--
+  <copyright file="BalExtension.wixproj" company="Outercurve Foundation">
+    Copyright (c) 2004, Outercurve Foundation.
+    This software is released under Microsoft Reciprocal License (MS-RL).
+    The license and further copyright text can be found in the file
+    LICENSE.TXT at the root directory of the distribution.
+  </copyright>
+-->
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
+  <PropertyGroup>
+    <ProjectGuid>{3444d952-f21c-496f-ab6b-56435bfd0787}</ProjectGuid>
+    <OutputName>balExt</OutputName>
+    <OutputType>Library</OutputType>
+    <BindFiles>True</BindFiles>
+    <Pedantic>True</Pedantic>
+    <TreatWarningsAsErrors>True</TreatWarningsAsErrors>
+    <Cultures>en-us</Cultures>
+    <WixTargetsPath Condition=" '$(WixTargetsPath)' == '' ">$(MSBuildExtensionsPath)\Microsoft\WiX\v3.x\Wix.targets</WixTargetsPath>
+    <OutputPath>$(Configuration)\$(Platform)</OutputPath>
+    <LibBindFiles>True</LibBindFiles>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <OutputPath>..\build\</OutputPath>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <OutputPath>..\build\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="BalExtension.wxs" />
+    <Compile Include="wixstdba.wxs" />
+    <Compile Include="wixstdba_x86.wxs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="wixstdba_platform.wxi" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\wixstdba\wixstdba.vcxproj">
+      <Name>wixextba</Name>
+      <Project>{41085a22-e6aa-4e8b-ab1b-ddee0dc89dfa}</Project>
+      <Private>True</Private>
+      <DoNotHarvest>True</DoNotHarvest>
+      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
+      <RefTargetDir>INSTALLFOLDER</RefTargetDir>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(WixTargetsPath)" />
+</Project>

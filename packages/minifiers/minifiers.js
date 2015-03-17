@@ -1,7 +1,7 @@
 var cssParse = Npm.require('css-parse');
 var cssStringify = Npm.require('css-stringify');
-var path = Npm.require('path');
 var url = Npm.require('url');
+var path = Npm.require('path');
 UglifyJS = Npm.require('uglify-js');
 UglifyJSMinify = UglifyJS.minify;
 
@@ -89,7 +89,7 @@ CssTools = {
     };
 
     _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
-      var basePath = path.dirname(rule.position.source);
+      var basePath = pathDirname(rule.position.source);
 
       // Set the correct basePath based on how the linked asset will be served.
       // XXX This is wrong. We are coupling the information about how files will
@@ -121,7 +121,7 @@ CssTools = {
           // We don't rewrite urls starting with a protocol definition such as
           // http, https, or data.
           if (isRelative(resource.path) && resource.protocol === null) {
-            absolutePath = path.join(basePath, resource.path);
+            absolutePath = pathJoin(basePath, resource.path);
             newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
             value = value.replace(oldCssUrl, newCssUrl);
           }
@@ -133,3 +133,28 @@ CssTools = {
   }
 };
 
+// These are duplicates of functions in tools/files.js, because we don't have
+// a good way of exporting them into packages.
+// XXX deduplicate files.js into a package at somepoint so that we can use it
+// in core
+var toOSPath = function (p) {
+  if (process.platform === 'win32')
+    return p.replace(/\//g, '\\');
+  return p;
+}
+
+var toStandardPath = function (p) {
+  if (process.platform === 'win32')
+    return p.replace(/\\/g, '/');
+  return p;
+};
+
+var pathJoin = function (a, b) {
+  return toStandardPath(path.join(
+    toOSPath(a),
+    toOSPath(b)));
+};
+
+var pathDirname = function (p) {
+  return toStandardPath(path.dirname(toOSPath(p)));
+};

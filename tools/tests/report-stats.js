@@ -9,6 +9,7 @@ var release = require("../release.js");
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
+var tropohouseModule = require('../tropohouse.js');
 var Sandbox = selftest.Sandbox;
 var projectContextModule = require('../project-context.js');
 var buildmessage = require('../buildmessage.js');
@@ -52,9 +53,21 @@ selftest.define("report-stats", ["slow", "net"], function () {
       });
       s.cd("foo");
 
-      var projectContext = new projectContextModule.ProjectContext({
-        projectDir: s.cwd
-      });
+      var projectContextOptions = { projectDir: s.cwd };
+      if (useFakeRelease) {
+        // Make sure that our projectContext knows where the fake tropohouse is.
+        projectContextOptions.tropohouse =
+          new tropohouseModule.Tropohouse(s.warehouse);
+        // This ProjectContext shouldn't notice the packages in the checkout.
+        projectContextOptions.ignoreCheckoutPackages = true;
+        // It should use the stub official catalog.
+        projectContextOptions.officialCatalog = s.warehouseOfficialCatalog;
+        // It should be pinned to METEOR@v1.
+        projectContextOptions.releaseForConstraints =
+          s.warehouseOfficialCatalog.getReleaseVersion("METEOR", "v1");
+      }
+      var projectContext = new projectContextModule.ProjectContext(
+        projectContextOptions);
       selftest.doOrThrow(function () {
         projectContext.prepareProjectForBuild();
       });
@@ -92,11 +105,11 @@ selftest.define("report-stats", ["slow", "net"], function () {
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
                            _.sortBy(stats.packageList(projectContext), "name"));
 
-      // Check that the direct dependency was recorded as such.
+      // Check that the direct and local dependency was recorded as such.
       _.each(usage.packages, function (package) {
-        if (package.name === "local-package" &&
-            ! package.direct) {
-          selftest.fail("local-package is not marked as a direct dependency");
+        if (package.name === "local-package") {
+          selftest.expectTrue(package.direct);
+          selftest.expectTrue(package.local);
         }
       });
 

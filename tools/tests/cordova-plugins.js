@@ -92,7 +92,7 @@ var checkUserPlugins = function(sand, plugins) {
 
 // Add plugins to an app. Change the contents of the plugins and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change cordova plugins", function () {
+selftest.define("change cordova plugins", ["cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -134,7 +134,7 @@ selftest.define("change cordova plugins", function () {
 
 // Add plugins through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add cordova plugins", ["slow"], function () {
+selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -171,10 +171,12 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run = s.run("add", "cordova:foo@1.0.0");
   run.waitSecs(5);
   run.match("added cordova plugin foo");
+  run.expectExit(0);
 
   run = s.run("remove", "cordova:foo");
   run.waitSecs(5);
   run.match("removed cordova plugin foo");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
@@ -260,7 +262,7 @@ selftest.define("remove cordova plugins", function () {
   checkUserPlugins(s, []);
 });
 
-selftest.define("meteor exits when cordova platforms change", ["slow"], function () {
+selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -326,7 +328,7 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   run.expectExit(254);
 });
 
-selftest.define("meteor exits when cordova plugins change", ["slow"], function () {
+selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -464,7 +466,7 @@ var buildAndCheckPluginInStar = selftest.markStack(function (s, name, version) {
   selftest.expectEqual(plugins[name], version);
 });
 
-selftest.define("cordova plugins in star.json, direct and transitive", ["slow"], function () {
+selftest.define("cordova plugins in star.json, direct and transitive", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 

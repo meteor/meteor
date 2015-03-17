@@ -10,8 +10,10 @@ var files = require('./files.js');
 var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
+var colonConverter = require('./colon-converter.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
+var Profile = require('./profile.js').Profile;
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -117,7 +119,8 @@ _.extend(Unibuild.prototype, {
   // is resolved at bundle time. (On the other hand, when it comes to
   // the extension handlers we'll use, we previously commited to those
   // versions at package build ('compile') time.)
-  getResources: function (bundleArch, options) {
+  getResources: Profile(
+    "Unibuild#getResources", function (bundleArch, options) {
     var self = this;
     var isopackCache = options.isopackCache;
     if (! isopackCache)
@@ -177,35 +180,26 @@ _.extend(Unibuild.prototype, {
     });
 
     return _.union(self.resources, jsResources); // union preserves order
-  }
+  })
 });
 
 ///////////////////////////////////////////////////////////////////////////////
 // Isopack
 ///////////////////////////////////////////////////////////////////////////////
 
-var convertIsopackFormat = function (data, versionFrom, versionTo) {
-  var convertedData = _.clone(data);
-  if (versionFrom === versionTo) {
-    return convertedData;
-  }
-
-  // XXX COMPAT WITH 0.9.3
-  if (versionFrom === "unipackage-pre2" && versionTo === "isopack-1") {
-    convertedData.builds = convertedData.unibuilds;
-    delete convertedData.unibuilds;
-    return convertedData;
-  } else if (versionFrom === "isopack-1" && versionTo === "unipackage-pre2") {
-    convertedData.unibuilds = convertedData.builds;
-    convertedData.format = "unipackage-pre2";
-    delete convertedData.builds;
-    return convertedData;
-  }
-};
-
-var currentFormat = "isopack-1";
-
-// XXX document
+// Meteor has a packaging system called "Isobuild". Isobuild knows how to
+// compile the same JavaScript code-base to different architectures: browser,
+// node.js-like server environment (could be Rhino or other) or a webview in a
+// Cordova mobile app.
+//
+// Each package used by Isobuild forms an Isopack. Isopack is a package format
+// containing source code for each architecture it can be ran on.
+// Each separate part built for a separate architecture is called "Unibuild".
+//
+// There are multiple reasons why we can't call it just "build" and historically
+// the name "Unibuild" has been associated with parts of Isopacks. We also can't
+// call it "Isobuild" because this is the brand-name of the whole
+// build/packaging system.
 var Isopack = function () {
   var self = this;
 
@@ -263,6 +257,101 @@ var Isopack = function () {
   self.pluginProviderPackageMap = null;
 };
 
+Isopack.currentFormat = "isopack-1";
+
+Isopack.knownFormats = ["unipackage-pre2", "isopack-1"];
+Isopack.convertOneStepForward = function (data, fromFormat) {
+  var convertedData = _.clone(data);
+  // XXX COMPAT WITH 0.9.3
+  if (fromFormat === "unipackage-pre2") {
+    convertedData.builds = convertedData.unibuilds;
+    delete convertedData.unibuilds;
+    return convertedData;
+  }
+};
+Isopack.convertOneStepBackward = function (data, fromFormat) {
+  var convertedData = _.clone(data);
+  if (fromFormat === "isopack-1") {
+    convertedData.unibuilds = convertedData.builds;
+    convertedData.format = "unipackage-pre2";
+    delete convertedData.builds;
+    return convertedData;
+  }
+};
+Isopack.convertIsopackFormat = Profile(
+  "Isopack.convertIsopackFormat", function (data, fromFormat, toFormat) {
+  var fromPos = _.indexOf(Isopack.knownFormats, fromFormat);
+  var toPos = _.indexOf(Isopack.knownFormats, toFormat);
+  var step = fromPos < toPos ? 1 : -1;
+
+  if (fromPos === -1)
+    throw new Error("Can't convert from unknown Isopack format: " + fromFormat);
+  if (toPos === -1)
+    throw new Error("Can't convert to unknown Isopack format: " + toFormat);
+
+  while (fromPos !== toPos) {
+    if (step > 0) {
+      data = Isopack.convertOneStepForward(data, fromFormat);
+    } else {
+      data = Isopack.convertOneStepBackward(data, fromFormat);
+    }
+
+    fromPos += step;
+    fromFormat = Isopack.knownFormats[fromPos];
+  }
+
+  return data;
+});
+
+// Read the correct file from isopackDirectory and convert to current format
+// of the isopack metadata. Returns null if there is no package here.
+Isopack.readMetadataFromDirectory =
+  Profile("Isopack.readMetadataFromDirectory", function (isopackDirectory) {
+  var metadata;
+
+  // deal with different versions of "isopack.json", backwards compatible
+  var isopackJsonPath = files.pathJoin(isopackDirectory, "isopack.json");
+  var unipackageJsonPath = files.pathJoin(isopackDirectory, "unipackage.json");
+
+  if (files.exists(isopackJsonPath)) {
+    var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
+
+    if (isopackJson[Isopack.currentFormat]) {
+      metadata = isopackJson[Isopack.currentFormat];
+    } else {
+      // This file is from the future and no longer supports this version
+      throw new Error("Could not find isopack data with format " + Isopack.currentFormat + ".\n" +
+        "This isopack was likely built with a much newer version of Meteor.");
+    }
+  } else if (files.exists(unipackageJsonPath)) {
+    // super old version with different file name
+    // XXX COMPAT WITH 0.9.3
+    if (files.exists(unipackageJsonPath)) {
+      metadata = JSON.parse(files.readFile(unipackageJsonPath));
+
+      // in the old format, builds were called unibuilds
+      // use string to make sure this doesn't get caught in a find/replace
+      metadata.builds = metadata["unibuilds"];
+
+      metadata = Isopack.convertIsopackFormat(metadata,
+        "unipackage-pre2", Isopack.currentFormat);
+    }
+
+    if (metadata.format !== "unipackage-pre2") {
+      // We don't support pre-0.9.0 isopacks, but we do know enough to delete
+      // them if we find them in an isopack cache somehow (rather than crash).
+      if (metadata.format === "unipackage-pre1") {
+        throw new exports.OldIsopackFormatError();
+      }
+
+      throw new Error("Unsupported isopack format: " +
+                      JSON.stringify(metadata.format));
+    }
+  }
+
+  return metadata;
+});
+
 _.extend(Isopack.prototype, {
   // Make a dummy (empty) package that contains nothing of interest.
   // XXX used?
@@ -301,7 +390,8 @@ _.extend(Isopack.prototype, {
     self.pluginProviderPackageMap = pluginProviderPackageMap;
   },
 
-  getSourceFilesUnderSourceRoot: function (sourceRoot) {
+  getSourceFilesUnderSourceRoot: Profile(
+    "Isopack#getSourceFilesUnderSourceRoot", function (sourceRoot) {
     var self = this;
     var sourceFiles = {};
     var anySourceFiles = false;
@@ -326,10 +416,10 @@ _.extend(Isopack.prototype, {
     if (! anySourceFiles)
       return null;
     return _.keys(sourceFiles);
-  },
+  }),
 
   // An sorted array of all the architectures included in this package.
-  architectures: function () {
+  architectures: Profile("Isopack#architectures", function () {
     var self = this;
     var archSet = {};
     _.each(self.unibuilds, function (unibuild) {
@@ -354,7 +444,7 @@ _.extend(Isopack.prototype, {
       arches = _.without(arches, 'os');
     }
     return arches;
-  },
+  }),
 
   // A sorted plus-separated string of all the architectures included in this
   // package.
@@ -374,7 +464,7 @@ _.extend(Isopack.prototype, {
 
   tarballName: function () {
     var self = this;
-    return self.name + '-' + self.version + '-' + self.buildArchitectures();
+    return colonConverter.convert(self.name) + '-' + self.version;
   },
 
   _toolArchitectures: function () {
@@ -387,7 +477,7 @@ _.extend(Isopack.prototype, {
   // Return the unibuild of the package to use for a given target architecture
   // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
-  getUnibuildAtArch: function (arch) {
+  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch) {
     var self = this;
 
     var chosenArch = archinfo.mostSpecificMatch(
@@ -401,7 +491,7 @@ _.extend(Isopack.prototype, {
       return null;
     }
     return _.findWhere(self.unibuilds, { arch: chosenArch });
-  },
+  }),
 
   // Load this package's plugins into memory, if they haven't already
   // been loaded, and return the list of source file handlers
@@ -415,7 +505,8 @@ _.extend(Isopack.prototype, {
 
   // If this package has plugins, initialize them (run the startup
   // code in them so that they register their extensions). Idempotent.
-  _ensurePluginsInitialized: function () {
+  _ensurePluginsInitialized: Profile(
+    "Isopack#_ensurePluginsInitialized", function () {
     var self = this;
 
     if (self._pluginsInitialized)
@@ -499,20 +590,21 @@ _.extend(Isopack.prototype, {
     });
 
     self._pluginsInitialized = true;
-  },
+  }),
 
   // Load a Isopack on disk.
   //
   // options:
   // - isopackBuildInfoJson: parsed isopack-buildinfo.json object,
   //   if loading from an IsopackCache.
-  initFromPath: function (name, dir, options) {
+  initFromPath: Profile(
+    "Isopack#initFromPath", function (name, dir, options) {
     var self = this;
     options = _.clone(options || {});
     options.firstIsopack = true;
 
     return self._loadUnibuildsFromPath(name, dir, options);
-  },
+  }),
 
   _loadUnibuildsFromPath: function (name, dir, options) {
     var self = this;
@@ -524,49 +616,7 @@ _.extend(Isopack.prototype, {
     // realpath'ing dir.
     dir = files.realpath(dir);
 
-    var mainJson;
-
-    // deal with different versions of "isopack.json", backwards compatible
-    var isopackJsonPath = files.pathJoin(dir, "isopack.json");
-    if (files.exists(isopackJsonPath)) {
-      var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
-
-      if (isopackJson[currentFormat]) {
-        mainJson = isopackJson[currentFormat];
-      } else {
-        // This file is from the future and no longer supports this version
-        throw new Error("Could not find isopack data with format " + currentFormat + ".\n" +
-          "This isopack was likely built with a much newer version of Meteor.");
-      }
-    } else {
-      // super old version with different file name
-      // XXX COMPAT WITH 0.9.3
-      var unipackageJsonPath = files.pathJoin(dir, "unipackage.json");
-      if (files.exists(unipackageJsonPath)) {
-        mainJson = JSON.parse(files.readFile(unipackageJsonPath));
-
-        // in the old format, builds were called unibuilds
-        // use string to make sure this doesn't get caught in a find/replace
-        mainJson.builds = mainJson["unibuilds"];
-
-        mainJson = convertIsopackFormat(mainJson,
-          "unipackage-pre2", currentFormat);
-      }
-
-      if (mainJson.format !== "unipackage-pre2") {
-        // We don't support pre-0.9.0 isopacks, but we do know enough to delete
-        // them if we find them in an isopack cache somehow (rather than crash).
-        if (mainJson.format === "unipackage-pre1") {
-          throw new exports.OldIsopackFormatError();
-        }
-
-        throw new Error("Unsupported isopack format: " +
-                        JSON.stringify(mainJson.format));
-      }
-    }
-
-    // done dealing with different versions, below here
-    // mainJson is the data we want
+    var mainJson = Isopack.readMetadataFromDirectory(dir);
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
@@ -575,8 +625,10 @@ _.extend(Isopack.prototype, {
     }
 
     // If we're loading from an IsopackCache, we need to load the WatchSets
-    // which will be used by the bundler. (pluginProviderPackageMap and builtBy
-    // are only used by IsopackCache._checkUpToDate.)
+    // which will be used by the bundler.  (builtBy is only used by
+    // IsopackCache._checkUpToDate. pluginProviderPackageMap will actually be
+    // set by IsopackCache afterwards, because it has access to an appropriate
+    // PackageMap which can be subset to create a new PackageMap object.)
     var unibuildWatchSets = {};
     if (options.isopackBuildInfoJson) {
       if (! options.firstIsopack)
@@ -639,6 +691,7 @@ _.extend(Isopack.prototype, {
 
       var unibuildJson = JSON.parse(
         files.readFile(files.pathJoin(dir, unibuildMeta.path)));
+
       var unibuildBasePath =
         files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
@@ -736,7 +789,7 @@ _.extend(Isopack.prototype, {
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
-  saveToPath: function (outputDir, options) {
+  saveToPath: Profile("Isopack#saveToPath", function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
     options = options || {};
@@ -940,7 +993,8 @@ _.extend(Isopack.prototype, {
           builder.copyDirectory({
             from: unibuild.nodeModulesPath,
             to: nodeModulesPath,
-            npmDiscards: self.npmDiscards
+            npmDiscards: self.npmDiscards,
+            symlink: false
           });
         }
 
@@ -951,14 +1005,16 @@ _.extend(Isopack.prototype, {
       // Plugins
       _.each(self.plugins, function (pluginsByArch, name) {
         _.each(pluginsByArch, function (plugin) {
-          var pluginDir =
-                builder.generateFilename('plugin.' + name + '.' + plugin.arch,
-                                         { directory: true });
-          var relPath = plugin.write(builder.enter(pluginDir));
+          // XXX the name of the plugin doesn't typically contain a colon, but
+          // escape it just in case.
+          var pluginDir = builder.generateFilename(
+            'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
+            { directory: true });
+          var pluginBuild = plugin.write(builder.enter(pluginDir));
           mainJson.plugins.push({
             name: name,
             arch: plugin.arch,
-            path: files.pathJoin(pluginDir, relPath)
+            path: files.pathJoin(pluginDir, pluginBuild.controlFile)
           });
         });
       });
@@ -977,7 +1033,8 @@ _.extend(Isopack.prototype, {
         delete toolMeta.rootDir;
         builder.copyDirectory({
           from: files.pathJoin(rootDir, toolMeta.path),
-          to: toolMeta.path
+          to: toolMeta.path,
+          symlink: false
         });
         if (!mainJson.tools) {
           mainJson.tools = [];
@@ -988,7 +1045,7 @@ _.extend(Isopack.prototype, {
       // old unipackage.json format/filename
       // XXX COMPAT WITH 0.9.3
       builder.writeJson("unipackage.json",
-        convertIsopackFormat(mainJson, currentFormat, "unipackage-pre2"));
+        Isopack.convertIsopackFormat(mainJson, Isopack.currentFormat, "unipackage-pre2"));
 
       // write several versions of the file
       // add your new format here, and define some stuff
@@ -997,8 +1054,8 @@ _.extend(Isopack.prototype, {
       var isopackJson = {};
       _.each(formats, function (format) {
         // new, extensible format - forwards-compatible
-        isopackJson[format] = convertIsopackFormat(mainJson,
-          currentFormat, format);
+        isopackJson[format] = Isopack.convertIsopackFormat(mainJson,
+          Isopack.currentFormat, format);
       });
 
       // writes one file with all of the new formats, so that it is possible
@@ -1020,9 +1077,9 @@ _.extend(Isopack.prototype, {
       builder.abort();
       throw e;
     }
-  },
+  }),
 
-  _writeTool: function (builder) {
+  _writeTool: Profile("Isopack#_writeTool", function (builder) {
     var self = this;
 
     var pathsToCopy = files.runGitInCheckout(
@@ -1032,8 +1089,10 @@ _.extend(Isopack.prototype, {
       '--full-tree',
       'HEAD',
       // The actual trees to copy!
-      'tools', 'examples', 'LICENSE.txt', 'meteor',
-      'scripts/admin/launch-meteor');
+      'tools', 'examples', 'LICENSE.txt', 'LICENSES',
+      'meteor', 'meteor.bat', 'scripts/admin/launch-meteor',
+      'packages/package-version-parser/package-version-parser.js',
+      'packages/meteor/flush-buffers-on-exit-in-windows.js');
 
     // Trim blank line and unnecessary examples.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
@@ -1044,7 +1103,7 @@ _.extend(Isopack.prototype, {
     var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
 
 
-    var toolPath = 'meteor-tool-' + archinfo.host();
+    var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
     builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
@@ -1052,7 +1111,8 @@ _.extend(Isopack.prototype, {
     builder.copyDirectory({
       from: files.getCurrentToolsDir(),
       to: '',
-      specificFiles: pathsToCopy
+      specificFiles: pathsToCopy,
+      symlink: false
     });
 
     // Include the dev bundle, but drop a few things that are only used by
@@ -1062,7 +1122,8 @@ _.extend(Isopack.prototype, {
     builder.copyDirectory({
       from: files.pathJoin(files.getDevBundle()),
       to: 'dev_bundle',
-      ignore: devBundleIgnore
+      ignore: devBundleIgnore,
+      symlink: false
     });
 
     // Build all of the isopackets now, so that no build step is required when
@@ -1110,19 +1171,20 @@ _.extend(Isopack.prototype, {
       arch: archinfo.host(),
       path: toolPath
     }];
-  },
+  }),
 
-  getMergedWatchSet: function () {
+  getMergedWatchSet: Profile("Isopack#getMergedWatchSet", function () {
     var self = this;
     var watchSet = self.pluginWatchSet.clone();
     _.each(self.unibuilds, function (unibuild) {
       watchSet.merge(unibuild.watchSet);
     });
     return watchSet;
-  },
+  }),
 
   // Similar to PackageSource.getPackagesToLoadFirst.
-  getStrongOrderedUsedAndImpliedPackages: function () {
+  getStrongOrderedUsedAndImpliedPackages: Profile(
+    "Isopack#getStrongOrderedUsedAndImpliedPackages", function () {
     var self = this;
     var packages = {};
     var processUse = function (use) {
@@ -1136,7 +1198,7 @@ _.extend(Isopack.prototype, {
       _.each(unibuild.implies, processUse);
     });
     return _.keys(packages);
-  }
+  })
 });
 
 exports.Isopack = Isopack;

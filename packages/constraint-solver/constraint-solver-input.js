@@ -32,7 +32,7 @@ CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
     packagesToLoad[package] = true;
   });
   _.each(self.constraints, function (constraint) {
-    packagesToLoad[constraint.name] = true;
+    packagesToLoad[constraint.package] = true;
   });
   _.each(self.previousSolution, function (version, package) {
     packagesToLoad[package] = true;
@@ -79,7 +79,7 @@ CS.Input.fromJSONable = function (obj) {
   return new CS.Input(
     obj.dependencies,
     _.map(obj.constraints, function (cstr) {
-      return PV.parseConstraint(cstr);
+      return PV.parsePackageConstraint(cstr);
     }),
     CS.CatalogCache.fromJSONable(obj.catalogCache),
     {
@@ -109,8 +109,8 @@ var VersionConstraintType = Match.OneOf(
 var PackageConstraintType = Match.OneOf(
   PV.PackageConstraint,
   Match.Where(function (c) {
-    check(c.name, String);
+    check(c.package, String);
     check(c.constraintString, String);
-    check(c.vConstraint, VersionConstraintType);
+    check(c.versionConstraint, VersionConstraintType);
     return c.constructor !== Object;
   }));
