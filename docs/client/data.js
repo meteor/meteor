@@ -5595,6 +5595,27 @@ DocsData = {
     "scope": "instance",
     "summary": "True if this computation has been stopped."
   },
+  "Tracker.ComputationFunction": {
+    "kind": "typedef",
+    "longname": "Tracker.ComputationFunction",
+    "memberof": "Tracker",
+    "name": "ComputationFunction",
+    "params": [
+      {
+        "type": {
+          "names": [
+            "Tracker.Computation"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
+  },
   "Tracker.Dependency": {
     "instancename": "dependency",
     "kind": "class",
@@ -5716,7 +5737,7 @@ DocsData = {
         "name": "runFunc",
         "type": {
           "names": [
-            "TrackerComputationFunction"
+            "Tracker.ComputationFunction"
           ]
         }
       }
@@ -5799,25 +5820,6 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Registers a new [`onInvalidate`](#computation_oninvalidate) callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped."
-  },
-  "TrackerComputationFunction": {
-    "kind": "typedef",
-    "longname": "TrackerComputationFunction",
-    "name": "TrackerComputationFunction",
-    "params": [
-      {
-        "type": {
-          "names": [
-            "Tracker.Computation"
-          ]
-        }
-      }
-    ],
-    "type": {
-      "names": [
-        "function"
-      ]
-    }
   },
   "check": {
     "kind": "function",

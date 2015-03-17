@@ -213,6 +213,7 @@
   "Tracker.Computation#onInvalidate",
   "Tracker.Computation#stop",
   "Tracker.Computation#stopped",
+  "Tracker.ComputationFunction",
   "Tracker.Dependency",
   "Tracker.Dependency#changed",
   "Tracker.Dependency#depend",
@@ -224,7 +225,6 @@
   "Tracker.flush",
   "Tracker.nonreactive",
   "Tracker.onInvalidate",
-  "TrackerComputationFunction",
   "check",
   "currentUser",
   "loggingIn"
