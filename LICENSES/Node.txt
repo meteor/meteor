@@ -13,6 +13,8 @@ npm: https://github.com/isaacs/npm
 init-package-json: https://github.com/isaacs/init-package-json
 string_decoder: https://github.com/rvagg/string_decoder
 util-extend: https://github.com/isaacs/util-extend
+path-platform: https://github.com/tjfontaine/node-path-platform
+readable-wrap: https://github.com/substack/readable-wrap
 ----------
 
 

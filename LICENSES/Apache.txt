@@ -47,6 +47,7 @@ cookie-jar: https://github.com/mikeal/cookie-jar
 forever-agent: https://github.com/mikeal/forever-agent
 oauth-sign: https://github.com/mikeal/oauth-sign
 tunnel-agent: https://github.com/mikeal/tunnel-agent
+caseless: https://github.com/request/caseless
 ----------
 
 Copyright (c) 2011, 2012, 2013 Mikeal Rogers
@@ -196,3 +197,9 @@ kew: https://github.com/Medium/kew
 Copyright 2012 The Obvious Corporation.
 http://obvious.com/
 
+
+----------
+valid-identifier: https://github.com/purplecabbage/valid-identifier
+----------
+
+Jesse MacFadyen

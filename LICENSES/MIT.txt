@@ -217,6 +217,7 @@ node-gyp: https://github.com/TooTallNate/node-gyp
 keypress: https://github.com/TooTallNate/keypress
 bindings: https://github.com/TooTallNate/node-bindings
 plist-with-patches: https://github.com/agrieve/node-plist
+util-deprecate: https://github.com/TooTallNate/util-deprecate
 ----------
 
 Copyright (c) 2010-2011- Nathan Rajlich
@@ -233,6 +234,7 @@ Copyright (c) 2010 Robert Kieffer
 
 ----------
 ansi: https://github.com/TooTallNate/ansi.js
+plist: https://github.com/TooTallNate/plist.js
 ----------
 
 Copyright (c) 2012 Nathan Rajlich <nathan@tootallnate.net>
@@ -319,6 +321,9 @@ typedarray: https://github.com/substack/typedarray
 vm-browserify: https://github.com/substack/vm-browserify
 wordwrap: https://github.com/substack/node-wordwrap
 yargs: https://github.com/chevex/yargs
+json-stable-stringify: https://github.com/substack/json-stable-stringify
+labeled-stream-splicer: https://github.com/substack/labeled-stream-splicer
+stream-splicer: https://github.com/substack/stream-splicer
 ----------
 
 Copyright 2010, 2011, 2012, 2013 James Halliday (mail@substack.net)
@@ -331,6 +336,8 @@ crypto-browserify: https://github.com/dominictarr/crypto-browserify
 rc: https://github.com/dominictarr/rc
 stream-combiner: https://github.com/dominictarr/stream-combiner
 through: http://github.com/dominictarr/through
+shasum: https://github.com/dominictarr/shasum
+stream-combiner2: https://github.com/substack/stream-combiner2
 ----------
 
 Copyright (c) 2011 Dominic Tarr
@@ -427,6 +434,10 @@ es5-ext: https://github.com/medikoo/es5-ext
 event-emitter: https://github.com/medikoo/event-emitter
 memoizee: https://github.com/medikoo/memoize
 next-tick: https://github.com/medikoo/next-tick
+d: https://github.com/medikoo/d
+es6-iterator: https://github.com/medikoo/es6-iterator
+es6-symbol: https://github.com/medikoo/es6-symbol
+es6-weak-map: https://github.com/medikoo/es6-weak-map
 ----------
 
 Copyright (C) 2011, 2012 Mariusz Nowak (www.medikoo.com)
@@ -724,6 +735,15 @@ dep-graph: http://github.com/TrevorBurnham/dep-graph
 
 ----------
 derequire: https://github.com/calvinmetcalf/derequire
+browserify-aes: https://github.com/crypto-browserify/browserify-aes
+browserify-rsa: https://github.com/calvinmetcalf/browserify-rsa
+create-ecdh: https://github.com/crypto-browserify/createECDH
+create-hash: https://github.com/crypto-browserify/createHash
+create-hmac: https://github.com/crypto-browserify/createHMAC
+diffie-hellman: https://github.com/crypto-browserify/diffie-hellman
+pbkdf2-compat: https://github.com/crypto-browserify/pbkdf2
+public-encrypt: https://github.com/crypto-browserify/publicEncrypt
+randombytes: https://github.com/crypto-browserify/randombytes
 ----------
 
 Calvin Metcalf
@@ -872,6 +892,7 @@ accepts: https://github.com/jshttp/accepts
 merge-descriptors: https://github.com/component/merge-descriptors
 type-is: https://github.com/jshttp/type-is
 mime-types: https://github.com/jshttp/mime-types
+mime-db: https://github.com/jshttp/mime-db
 ----------
 
 Copyright (c) 2013 Jonathan Ong me@jongleberry.com
@@ -944,6 +965,13 @@ bl contributors listed at https://github.com/rvagg/bl#contributors
 
 
 ----------
+isstream: https://github.com/rvagg/isstream
+----------
+
+Copyright (c) 2015 Rod Vagg
+
+
+----------
 lodash-node: https://github.com/lodash/lodash-node
 ----------
 
@@ -954,6 +982,13 @@ DocumentCloud and Investigative Reporters & Editors <http://underscorejs.org/>
 
 ----------
 netroute: https://github.com/indutny/node-netroute
+asn1.js: https://github.com/indutny/asn1.js
+asn1.js-rfc3280: https://github.com/indutny/asn1.js
+bn.js: https://github.com/indutny/bn.js
+brorand: https://github.com/indutny/brorand.js
+elliptic: https://github.com/indutny/elliptic
+hash.js: https://github.com/indutny/hash.js
+miller-rabin: https://github.com/indutny/miller-rabin
 ----------
 
 Copyright Fedor Indutny, 2012.
@@ -1040,3 +1075,86 @@ node-exit: https://github.com/cowboy/node-exit
 
 Copyright (c) 2013 "Cowboy" Ben Alman
 Licensed under the MIT license.
+
+
+----------
+acorn: http://marijnhaverbeke.nl/git/acorn
+----------
+
+Copyright (C) 2012-2014 by various contributors (see AUTHORS)
+
+
+----------
+d8: https://github.com/constantology/d8
+m8: https://github.com/constantology/m8
+----------
+
+Copyright (c) 2011 christos "constantology" constandinou http://muigui.com
+
+
+----------
+date-now: https://github.com/Raynos/date-now
+----------
+
+Copyright (c) 2012 Colingo.
+
+
+----------
+deep-is: https://github.com/thlorenz/deep-is
+----------
+
+Copyright (c) 2012, 2013 Thorsten Lorenz <thlorenz@gmx.de>
+Copyright (c) 2012 James Halliday <mail@substack.net>
+Copyright (c) 2009 Thomas Robinson <280north.com>
+
+
+----------
+fast-levenshtein: https://github.com/hiddentao/fast-levenshtein
+----------
+
+Copyright (c) 2013 Ramesh Nair
+
+
+----------
+is-array: https://github.com/retrofox/is-array
+----------
+
+Damián Suárez
+
+
+----------
+levn: https://github.com/gkz/levn
+optionator: https://github.com/gkz/optionator
+prelude-ls: https://github.com/gkz/prelude-ls
+type-check: https://github.com/gkz/type-check
+----------
+
+Copyright (c) George Zahariev
+
+
+----------
+moment: https://github.com/moment/moment
+----------
+
+Copyright (c) 2011-2014 Tim Wood, Iskren Chernev, Moment.js contributors
+
+
+----------
+mongodb-uri: https://github.com/mongolab/mongodb-uri-node
+----------
+
+Copyright (c) 2013 ObjectLabs Corporation
+
+
+----------
+querystring: https://github.com/Gozala/querystring
+----------
+
+Copyright 2012 Irakli Gozalishvili.
+
+
+----------
+sha.js: https://github.com/crypto-browserify/sha.js
+----------
+
+Copyright (c) 2013-2014 sha.js contributors
