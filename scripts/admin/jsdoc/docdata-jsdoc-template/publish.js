@@ -33,11 +33,22 @@
     _.extend(data, getTagDict(data));
 
     data.comment = undefined;
-    data.meta = undefined;
     data.___id = undefined;
     data.___s = undefined;
     data.tags = undefined;
-    
+
+    if (data.meta && data.meta.path) {
+      var packagesFolder = 'packages/';
+      var index = data.meta.path.indexOf(packagesFolder);
+      if (index != -1) {
+        var fullFilePath = data.meta.path.substr(index + packagesFolder.length) + '/' + data.meta.filename;
+        data.filepath = fullFilePath;
+        data.lineno = data.meta.lineno;
+      }
+    }
+
+    data.meta = undefined;
+
     names.push(location);
     dataContents[location] = data;
   };
