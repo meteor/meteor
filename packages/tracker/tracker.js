@@ -488,9 +488,13 @@ Tracker._runFlush = function (options) {
 // so that it is stopped if the current computation is invalidated.
 
 /**
+ * @callback Tracker.ComputationFunction
+ * @param {Tracker.Computation}
+ */
+/**
  * @summary Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning.
  * @locus Client
- * @param {Function} runFunc The function to run. It receives one argument: the Computation object that will be returned.
+ * @param {Tracker.ComputationFunction} runFunc The function to run. It receives one argument: the Computation object that will be returned.
  * @returns {Tracker.Computation}
  */
 Tracker.autorun = function (f) {
