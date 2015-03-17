@@ -41,48 +41,72 @@ Example:
 Now you can invoke this helper with `{{dstache}}foo}}` in the template defined
 with `<{{! }}template name="myTemplate">`.
 
+Helpers can accept positional and keyword arguments:
+
+```javascript
+Template.myTemplate.helpers({
+  displayName: function (firstName, lastName, keyword) {
+    var prefix = keyword.hash.title ? keyword.hash.title + " " : "";
+    return prefix + firstName + " " + lastName;
+  }
+});
+```
+
+Then you can call this helper from template like this:
+
+```
+{{dstache}}displayName "John" "Doe" title="President"}}
+```
+
+You can learn more about arguments to helpers in [Spacebars
+Readme](https://atmospherejs.com/meteor/spacebars).
+
+Under the hood, each helper starts a new
+[`Tracker.autorun`](#/full/tracker_autorun).  When its reactive
+dependencies change, the helper is rerun. Helpers depend on their data
+context, passed arguments and other reactive data sources accessed during
+execution.
+
 To create a helper that can be used in any template, use
 [`Template.registerHelper`](#template_registerhelper).
 
 
-{{> autoApiBox "Template#rendered"}}
+{{> autoApiBox "Template#onRendered"}}
 
-This callback is called once when an instance of Template.*myTemplate* is
-rendered into DOM nodes and put into the document for the first time.
+Callbacks added with this method are called once when an instance of
+Template.*myTemplate* is rendered into DOM nodes and put into the document for
+the first time.
 
-In the body of the callback, `this` is a [template
-instance](#template_inst) object that is unique to this occurrence of
-the template and persists across re-renderings.  Use the `created` and
-`destroyed` callbacks to perform initialization or clean-up on the
-object.
+In the body of a callback, `this` is a [template instance](#template_inst)
+object that is unique to this occurrence of the template and persists across
+re-renderings. Use the `onCreated` and `onDestroyed` callbacks to perform
+initialization or clean-up on the object.
 
 Because your template has been rendered, you can use functions like
 [`this.findAll`](#template_findAll) which look at its DOM nodes.
 
-{{> autoApiBox "Template#created"}}
+{{> autoApiBox "Template#onCreated"}}
 
-This callback is called before your template's logic is evaluated for the first
-time.  Inside the callback, `this` is the new [template
-instance](#template_inst) object.  Properties you set on this object will be
-visible from the `rendered` and `destroyed` callbacks and from event handlers.
+Callbacks added with this method called before your template's logic is
+evaluated for the first time. Inside a callback, `this` is the new [template
+instance](#template_inst) object. Properties you set on this object will be
+visible from the callbacks added with `onRendered` and `onDestroyed` methods and
+from event handlers.
 
-This callback fires once and is the first callback to fire.  Every
-`created` has a corresponding `destroyed`; that is, if you get a
-`created` callback with a certain template instance object in `this`,
-you will eventually get a `destroyed` callback for the same object.
+These callbacks fire once and are the first group of callbacks to fire.
+Handling the `created` event is a useful way to set up values on template
+instance that are read from template helpers using `Template.instance()`.
 
-`created` is a useful way to set up values on template instance that are
-read from template helpers using `Template.instance()`.
+{{> autoApiBox "Template#onDestroyed"}}
 
-{{> autoApiBox "Template#destroyed"}}
-
-This callback is called when an occurrence of a template is taken off
+These callbacks are called when an occurrence of a template is taken off
 the page for any reason and not replaced with a re-rendering.  Inside
-the callback, `this` is the [template instance](#template_inst) object
+a callback, `this` is the [template instance](#template_inst) object
 being destroyed.
 
-This callback is most useful for cleaning up or undoing any external effects of
-`created` or `rendered`.  It fires once and is the last callback to fire.
+This group of callbacks is most useful for cleaning up or undoing any external
+effects of `created` or `rendered` groups. This group fires once and is the last
+callback to fire.
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
@@ -92,19 +116,18 @@ the document.  It can be used to access the DOM and it can be
 assigned properties that persist as the template is reactively updated.
 
 Template instance objects are found as the value of `this` in the
-`created`, `rendered`, and `destroyed` template callbacks, and as an
+`onCreated`, `onRendered`, and `onDestroyed` template callbacks, and as an
 argument to event handlers.  You can access the current template instance
 from helpers using [`Template.instance()`](#template_instance).
 
 In addition to the properties and functions described below, you can assign
 additional properties of your choice to the object. Use the
-[`created`](#template_created) and [`destroyed`](#template_destroyed) callbacks
-to perform initialization or clean-up on the object.
+[`onCreated`](#template_onCreated) and [`onDestroyed`](#template_onDestroyed)
+methods to add callbacks performing initialization or clean-up on the object.
 
-You can only access `findAll`, `find`, `firstNode`, and `lastNode`
-from the `rendered` callback and event handlers, not from `created`
-and `destroyed`, because they require the template instance to be
-in the DOM.
+You can only access `findAll`, `find`, `firstNode`, and `lastNode` from the
+`onRendered` callback and event handlers, not from `onCreated` and
+`onDestroyed`, because they require the template instance to be in the DOM.
 
 Template instance objects are `instanceof Blaze.TemplateInstance`.
 
@@ -149,12 +172,68 @@ Access is read-only and non-reactive.
 
 {{> autoApiBox "Blaze.TemplateInstance#autorun"}}
 
-You can use `this.autorun` from a [`created`](#template_created) or
-[`rendered`](#template_rendered) callback to reactively update the DOM
+You can use `this.autorun` from a [`onCreated`](#template_onCreated) or
+[`onRendered`](#template_onRendered) callback to reactively update the DOM
 or the template instance.  The Computation is automatically stopped
 when the template is destroyed.
 
 Alias for `template.view.autorun`.
+
+{{> autoApiBox "Blaze.TemplateInstance#subscribe"}}
+
+You can use `this.subscribe` from an [`onCreated`](#template_onCreated) callback
+to specify which data publications this template depends on. The subscription is
+automatically stopped when the template is destroyed.
+
+There is a complementary function `Template.instance().subscriptionsReady()`
+which returns true when all of the subscriptions called with `this.subscribe`
+are ready.
+
+Inside the template's HTML, you can use the built-in helper
+`Template.subscriptionsReady`, which is an easy pattern for showing loading
+indicators in your templates when they depend on data loaded from subscriptions.
+
+Example:
+
+```js
+Template.notifications.onCreated(function () {
+  // Use this.subscribe inside onCreated callback
+  this.subscribe("notifications");
+});
+```
+
+```html
+<template name="notifications">
+  {{dstache}}#if Template.subscriptionsReady}}
+    <!-- This is displayed when all data is ready. -->
+    {{dstache}}#each notifications}}
+      {{dstache}}> notification}}
+    {{dstache}}/each}}
+  {{dstache}}else}}
+    Loading...
+  {{dstache}}/if}}
+</template>
+```
+
+Another example where the subscription depends on the data context:
+
+```js
+Template.comments.onCreated(function () {
+  var self = this;
+
+  // Use self.subscribe with the data context reactively
+  self.autorun(function () {
+    var dataContext = Template.currentData();
+    self.subscribe("comments", dataContext.postId);
+  });
+});
+```
+
+```html
+{{dstache}}#with post}}
+  {{dstache}}> comments postId=_id}}
+{{dstache}}/with}}
+```
 
 {{> autoApiBox "Blaze.TemplateInstance#view"}}
 

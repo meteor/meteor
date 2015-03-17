@@ -31,8 +31,8 @@ rest of this section will explain the specific API commands in greater detail.
       // Use Underscore package, but only on the server.
       // Version not specified, so it will be as of Meteor 0.9.0.
       api.use('underscore', 'server');
-      // Use application-configuration package, version 1.0.0 or newer.
-      api.use('application-configuration@1.0.0');
+      // Use iron:router package, version 1.0.0 or newer.
+      api.use('iron:router@1.0.0');
       // Give users of this package access to the Templating package.
       api.imply('templating')
       // Export the object 'Email' to packages or apps that use this package.

@@ -26,6 +26,16 @@ Tracker.autorun(function () {
 Session.set("currentRoomId", "home");
 ```
 
+`Session.set` can also be called with an object of keys and values, which is
+equivalent to calling `Session.set` individually on each key/value pair.
+
+```js
+Session.set({
+  a: "foo",
+  b: "bar"
+});
+```
+
 {{> autoApiBox "Session.setDefault"}}
 
 This is useful in initialization code, to avoid re-initializing a session
