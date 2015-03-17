@@ -2,15 +2,18 @@
   <h3 id="{{id}}" class="api-title">
     <a class="name selflink" href="{{link}}">{{{name}}}</a>
     <div class="locus">
-        <span>
         {{#if locus}}
+        <span>
           {{locus}}
-        {{/if}}
         </span>
+        {{/if}}
+
         {{#if filepath}}
         <div class="src-code">
-            <a href="https://github.com/meteor/meteor/blob/devel/packages/{{filepath}}" target="_blank">{{filepath}}</a>,
-            <a href="https://github.com/meteor/meteor/blob/devel/packages/{{filepath}}#L{{lineno}}" target="_blank"> line {{lineno}}</a></div>
+            <a href="https://github.com/meteor/meteor/blob/devel/packages/{{filepath}}#L{{lineno}}" target="_blank">
+                {{filepath}}, line {{lineno}}
+            </a>
+        </div>
         {{/if}}
     </div>
   </h3>
