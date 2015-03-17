@@ -498,17 +498,21 @@ Tracker._runFlush = function (options) {
  * @locus Client
  * @param {Tracker.ComputationFunction} runFunc The function to run. It receives
  * one argument: the Computation object that will be returned.
- * @param {Function} [onError] Optional. The function to run when an error
+ * @param {Object} [options]
+ * @param {Function} options.onError Optional. The function to run when an error
  * happens in the Computation. The only argument it recieves is the Error
  * thrown. Defaults to the error being logged to the console.
  * @returns {Tracker.Computation}
  */
-Tracker.autorun = function (f, onError) {
+Tracker.autorun = function (f, options) {
   if (typeof f !== 'function')
     throw new Error('Tracker.autorun requires a function argument');
 
+  options = options || {};
+
   constructingComputation = true;
-  var c = new Tracker.Computation(f, Tracker.currentComputation, onError);
+  var c = new Tracker.Computation(
+    f, Tracker.currentComputation, options.onError);
 
   if (Tracker.active)
     Tracker.onInvalidate(function () {

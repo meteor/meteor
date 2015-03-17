@@ -494,7 +494,17 @@ DocsData = {
     "longname": "Accounts.setPassword",
     "memberof": "Accounts",
     "name": "setPassword",
-    "options": [],
+    "options": [
+      {
+        "description": "<p>Logout all current connections with this userId (default: true)</p>",
+        "name": "logout",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
     "params": [
       {
         "description": "<p>The id of the user to update.</p>",
@@ -511,6 +521,15 @@ DocsData = {
         "type": {
           "names": [
             "String"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       }
@@ -5392,7 +5411,7 @@ DocsData = {
     "options": [],
     "params": [],
     "scope": "static",
-    "summary": "- Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns\nthe data context of the template.\n- Inside a helper, returns the data context of the DOM node where the helper\nwas used.\n- Inside an event handler, returns the data context of the element that fired\nthe event.\n\nEstablishes a reactive dependency on the result."
+    "summary": "- Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns\nthe data context of the template.\n- Inside an event handler, returns the data context of the template on which\nthis event handler was defined.\n- Inside a helper, returns the data context of the DOM node where the helper\nwas used.\n\nEstablishes a reactive dependency on the result."
   },
   "Template.dynamic": {
     "istemplate": "true",
@@ -5730,14 +5749,33 @@ DocsData = {
     "longname": "Tracker.autorun",
     "memberof": "Tracker",
     "name": "autorun",
-    "options": [],
+    "options": [
+      {
+        "description": "<p>Optional. The function to run when an error\nhappens in the Computation. The only argument it recieves is the Error\nthrown. Defaults to the error being logged to the console.</p>",
+        "name": "onError",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
     "params": [
       {
-        "description": "<p>The function to run. It receives one argument: the Computation object that will be returned.</p>",
+        "description": "<p>The function to run. It receives\none argument: the Computation object that will be returned.</p>",
         "name": "runFunc",
         "type": {
           "names": [
             "Tracker.ComputationFunction"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       }
@@ -5752,7 +5790,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."
+    "summary": "Run a function now and rerun it later whenever its dependencies\nchange. Returns a Computation object that can be used to stop or observe the\nrerunning."
   },
   "Tracker.currentComputation": {
     "kind": "member",
