@@ -85,6 +85,33 @@ initialization or clean-up on the object.
 Because your template has been rendered, you can use functions like
 [`this.findAll`](#template_findAll) which look at its DOM nodes.
 
+This can be a good place to apply any DOM manipulations you want, after the
+template is rendered for the first time, without interfering with Blaze.
+
+```handlebars
+<template name="myPictures">
+  <div class="container">
+    {{#each pictures}}
+      <img class=".item" src="/{{.}}"/>
+    {{/each}}
+  </div>
+</template>
+```
+
+```javascript
+Template.myPictures.onRendered(function () {
+  // Use the Packery jQuery plugin
+  this.$('.container').packery({
+    itemSelector: '.item',
+    gutter: 10
+  });
+});
+
+Template.myPicture.helpers({
+  pictures: ["cat1.jpg", "cat2.jpg", "cat3.jpg", "cat4.jpg", "cat5.jpg"]
+});
+```
+
 {{> autoApiBox "Template#onCreated"}}
 
 Callbacks added with this method called before your template's logic is
