@@ -5,20 +5,19 @@ limitations.
 
 This package exposes the Babel API on the symbol `Babel`.  It does not
 cause `.es` files in your project to be run through Babel (see the
-`babel-plugin` package for that).
-
-*XXX create babel-plugin*
+`babel-plugin` package for that). (XXX it doesn't exist yet)
 
 For example,
 
 ```js
 Babel.transform('var square = (x) => x*x;',
                 { whitelist: ['es6.arrowFunctions'] })
-=> {
-  code: 'var square = function (x) {\n  return x * x;\n};'
-  ast: ...
-  ...
-}
+// Outputs:
+// {
+//   code: 'var square = function (x) {\n  return x * x;\n};'
+//   ast: ...
+//   ...
+// }
 ```
 
 Babel resources:
