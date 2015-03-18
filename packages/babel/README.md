@@ -54,7 +54,7 @@ interpolation.
 * Babel link: http://babeljs.io/docs/learn-es6/#template-strings
 * Babel source code: https://github.com/babel/babel/blob/master/src/babel/transformation/transformers/es6/template-literals.js
 * TC9 link: http://tc39wiki.calculist.org/es6/template-strings/
-* Deviations from spec:  The first argument to a tag function
+* **Deviations from spec:**  The first argument to a tag function
   (as in ``myTagFunction`Hello ${name}` ``) should be immutable
   according to the spec, but is mutable when using Meteor's
   version of the Babel runtime helpers.  A tag function that
