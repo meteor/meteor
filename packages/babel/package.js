@@ -12,10 +12,3 @@ Package.onUse(function (api) {
 
   api.export('Babel', 'server');
 });
-
-Package.onTest(function (api) {
-  api.use('tinytest', 'server');
-  api.use('babel', 'server');
-
-  api.addFiles('babel-tests.js', 'server');
-});
