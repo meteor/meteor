@@ -60,6 +60,8 @@ interpolation.
   version of the Babel runtime helpers.  A tag function that
   relies on mutating its first argument will not be ES6-compatible.
 
+TODO: more!
+  
 ## Checklist for Feature Approval
 
 * Write some tests in `babel-tests/transpile-tests.es6` that explore
