@@ -1,0 +1,331 @@
+{
+  "dependencies": {
+    "babel-core": {
+      "version": "4.7.13",
+      "dependencies": {
+        "acorn-babel": {
+          "version": "0.11.1-38"
+        },
+        "ast-types": {
+          "version": "0.7.0"
+        },
+        "chalk": {
+          "version": "1.0.0",
+          "dependencies": {
+            "ansi-styles": {
+              "version": "2.0.1"
+            },
+            "escape-string-regexp": {
+              "version": "1.0.3"
+            },
+            "has-ansi": {
+              "version": "1.0.3",
+              "dependencies": {
+                "ansi-regex": {
+                  "version": "1.1.1"
+                },
+                "get-stdin": {
+                  "version": "4.0.1"
+                }
+              }
+            },
+            "strip-ansi": {
+              "version": "2.0.1",
+              "dependencies": {
+                "ansi-regex": {
+                  "version": "1.1.1"
+                }
+              }
+            },
+            "supports-color": {
+              "version": "1.3.1"
+            }
+          }
+        },
+        "commander": {
+          "version": "2.7.1",
+          "dependencies": {
+            "graceful-readlink": {
+              "version": "1.0.1"
+            }
+          }
+        },
+        "convert-source-map": {
+          "version": "0.5.1"
+        },
+        "core-js": {
+          "version": "0.6.1"
+        },
+        "debug": {
+          "version": "2.1.3",
+          "dependencies": {
+            "ms": {
+              "version": "0.7.0"
+            }
+          }
+        },
+        "detect-indent": {
+          "version": "3.0.1",
+          "dependencies": {
+            "get-stdin": {
+              "version": "4.0.1"
+            },
+            "minimist": {
+              "version": "1.1.1"
+            }
+          }
+        },
+        "estraverse": {
+          "version": "1.9.3"
+        },
+        "esutils": {
+          "version": "1.1.6"
+        },
+        "fs-readdir-recursive": {
+          "version": "0.1.0"
+        },
+        "globals": {
+          "version": "6.3.0"
+        },
+        "is-integer": {
+          "version": "1.0.4",
+          "dependencies": {
+            "is-finite": {
+              "version": "1.0.0"
+            },
+            "is-nan": {
+              "version": "1.0.1"
+            }
+          }
+        },
+        "js-tokens": {
+          "version": "1.0.0"
+        },
+        "leven": {
+          "version": "1.0.1"
+        },
+        "line-numbers": {
+          "version": "0.2.0",
+          "dependencies": {
+            "left-pad": {
+              "version": "0.0.3"
+            }
+          }
+        },
+        "lodash": {
+          "version": "3.5.0"
+        },
+        "output-file-sync": {
+          "version": "1.1.0",
+          "dependencies": {
+            "mkdirp": {
+              "version": "0.5.0",
+              "dependencies": {
+                "minimist": {
+                  "version": "0.0.8"
+                }
+              }
+            },
+            "xtend": {
+              "version": "4.0.0"
+            }
+          }
+        },
+        "path-is-absolute": {
+          "version": "1.0.0"
+        },
+        "private": {
+          "version": "0.1.6"
+        },
+        "regenerator-babel": {
+          "version": "0.8.13-2",
+          "dependencies": {
+            "commoner": {
+              "version": "0.10.1",
+              "dependencies": {
+                "q": {
+                  "version": "1.1.2"
+                },
+                "recast": {
+                  "version": "0.9.18",
+                  "dependencies": {
+                    "esprima-fb": {
+                      "version": "10001.1.0-dev-harmony-fb"
+                    },
+                    "source-map": {
+                      "version": "0.1.43",
+                      "dependencies": {
+                        "amdefine": {
+                          "version": "0.1.0"
+                        }
+                      }
+                    },
+                    "ast-types": {
+                      "version": "0.6.16"
+                    }
+                  }
+                },
+                "commander": {
+                  "version": "2.5.1"
+                },
+                "graceful-fs": {
+                  "version": "3.0.6"
+                },
+                "glob": {
+                  "version": "4.2.2",
+                  "dependencies": {
+                    "inflight": {
+                      "version": "1.0.4",
+                      "dependencies": {
+                        "wrappy": {
+                          "version": "1.0.1"
+                        }
+                      }
+                    },
+                    "inherits": {
+                      "version": "2.0.1"
+                    },
+                    "minimatch": {
+                      "version": "1.0.0",
+                      "dependencies": {
+                        "lru-cache": {
+                          "version": "2.5.0"
+                        },
+                        "sigmund": {
+                          "version": "1.0.0"
+                        }
+                      }
+                    },
+                    "once": {
+                      "version": "1.3.1",
+                      "dependencies": {
+                        "wrappy": {
+                          "version": "1.0.1"
+                        }
+                      }
+                    }
+                  }
+                },
+                "mkdirp": {
+                  "version": "0.5.0",
+                  "dependencies": {
+                    "minimist": {
+                      "version": "0.0.8"
+                    }
+                  }
+                },
+                "install": {
+                  "version": "0.1.8"
+                },
+                "iconv-lite": {
+                  "version": "0.4.7"
+                }
+              }
+            },
+            "through": {
+              "version": "2.3.6"
+            }
+          }
+        },
+        "regexpu": {
+          "version": "1.1.2",
+          "dependencies": {
+            "recast": {
+              "version": "0.10.9",
+              "dependencies": {
+                "esprima-fb": {
+                  "version": "13001.1.0-dev-harmony-fb"
+                }
+              }
+            },
+            "regenerate": {
+              "version": "1.2.1"
+            },
+            "regjsgen": {
+              "version": "0.2.0"
+            },
+            "regjsparser": {
+              "version": "0.1.4",
+              "dependencies": {
+                "jsesc": {
+                  "version": "0.5.0"
+                }
+              }
+            }
+          }
+        },
+        "repeating": {
+          "version": "1.1.2",
+          "dependencies": {
+            "is-finite": {
+              "version": "1.0.0"
+            },
+            "meow": {
+              "version": "3.1.0",
+              "dependencies": {
+                "camelcase-keys": {
+                  "version": "1.0.0",
+                  "dependencies": {
+                    "camelcase": {
+                      "version": "1.0.2"
+                    },
+                    "map-obj": {
+                      "version": "1.0.0"
+                    }
+                  }
+                },
+                "indent-string": {
+                  "version": "1.2.1",
+                  "dependencies": {
+                    "get-stdin": {
+                      "version": "4.0.1"
+                    }
+                  }
+                },
+                "minimist": {
+                  "version": "1.1.1"
+                },
+                "object-assign": {
+                  "version": "2.0.0"
+                }
+              }
+            }
+          }
+        },
+        "shebang-regex": {
+          "version": "1.0.0"
+        },
+        "slash": {
+          "version": "1.0.0"
+        },
+        "source-map": {
+          "version": "0.4.2",
+          "dependencies": {
+            "amdefine": {
+              "version": "0.1.0"
+            }
+          }
+        },
+        "source-map-support": {
+          "version": "0.2.10",
+          "dependencies": {
+            "source-map": {
+              "version": "0.1.32",
+              "dependencies": {
+                "amdefine": {
+                  "version": "0.1.0"
+                }
+              }
+            }
+          }
+        },
+        "to-fast-properties": {
+          "version": "1.0.1"
+        },
+        "trim-right": {
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}
