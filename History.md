@@ -46,6 +46,12 @@
   - uglify-js: 2.4.17 (from 2.4.13)
 
 
+## v1.0.4.1, 2015-Mar-18
+
+* Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
+  packages without colons in their name.  #3951
+
+
 ## v1.0.4, 2015-Mar-17
 
 ### Mongo Driver
