@@ -43,8 +43,6 @@ Resources:
 * [API docs](https://babeljs.io/docs/usage/api/)
 * [List of transformers](https://babeljs.io/docs/usage/transformers/)
 
-See [`babel-tests.js`](babel-tests.js) for example input and output.
-
 ## Meteor-Approved Features
 
 ### Template Literals
