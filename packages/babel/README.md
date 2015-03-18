@@ -4,8 +4,8 @@ to be used in today's browsers and runtimes, generally with some
 limitations.
 
 This package exposes the Babel API on the symbol `Babel`.  It does not
-cause `.es` files in your project to be run through Babel (see
-[`../babel-plugin`][] for that).
+cause `.es` files in your project to be run through Babel (see the
+`babel-plugin` package for that).
 
 *XXX create babel-plugin*
 
@@ -26,4 +26,4 @@ Babel resources:
 * [API docs](https://babeljs.io/docs/usage/api/)
 * [List of transformers](https://babeljs.io/docs/usage/transformers/)
 
-See [`babel-tests.js`][] for example input and output.
+See [`babel-tests.js`](babel-tests.js) for example input and output.
