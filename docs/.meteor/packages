@@ -8,6 +8,7 @@ jquery
 underscore
 showdown
 spiderable
+appcache
 reload-safetybelt
 simple:markdown-templating
 simple:highlight.js
