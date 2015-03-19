@@ -24,8 +24,15 @@ pkill -f "$PROJDIR/.meteor/local/db" || true
 ../../../meteor reset || true
 
 # start the benchmark app
-../../../meteor --production --settings "scenarios/${SCENARIO}.json" --port ${PORT} &
+../../../meteor build ../dist/
+export METEOR_SETTINGS=`cat scenarios/${SCENARIO}.json`
+pushd ../dist/bundle
+(cd programs/server && npm install)
+export ROOT_URL='http://localhost:3000'
+export PORT
+node main.js &
 OUTER_PID=$!
+popd
 
 echo "Waiting for server to come up"
 function wait_for_port {
