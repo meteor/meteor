@@ -13,7 +13,7 @@ echo CHECKOUT DIR IS "$CHECKOUT_DIR"
 echo BUILDING NODE "v$NODE_VERSION" IN "$DIR"
 
 # For now, use our fork with https://github.com/npm/npm/pull/5821
-git clone --depth 1 \
+git clone --branch "v$NODE_VERSION" --depth 1 \
     https://github.com/joyent/node.git
 cd node
 rm -rf .git
