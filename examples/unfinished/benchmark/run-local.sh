@@ -30,7 +30,7 @@ pushd ../dist/bundle
 (cd programs/server && npm install)
 export ROOT_URL='http://localhost:3000'
 export PORT
-node main.js &
+node --perf-basic-prof main.js &
 OUTER_PID=$!
 popd
 
