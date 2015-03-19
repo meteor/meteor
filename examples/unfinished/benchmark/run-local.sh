@@ -24,7 +24,7 @@ pkill -f "$PROJDIR/.meteor/local/db" || true
 ../../../meteor reset || true
 
 # start the benchmark app
-../../../meteor build ../dist/
+../../../meteor build --directory ../dist/
 export METEOR_SETTINGS=`cat scenarios/${SCENARIO}.json`
 pushd ../dist/bundle
 (cd programs/server && npm install)
