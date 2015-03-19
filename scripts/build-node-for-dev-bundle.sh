@@ -6,15 +6,15 @@ set -u
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/main.js and tools/server/boot.js, and the text in
 # docs/client/full-api/concepts.html and the README in tools/bundler.js.
-NODE_VERSION=0.10.36
+NODE_VERSION=0.12.0
 
 source "$(dirname $0)/build-dev-bundle-common.sh"
 echo CHECKOUT DIR IS "$CHECKOUT_DIR"
 echo BUILDING NODE "v$NODE_VERSION" IN "$DIR"
 
 # For now, use our fork with https://github.com/npm/npm/pull/5821
-git clone --branch "v${NODE_VERSION}-with-npm-5821" --depth 1 \
-    https://github.com/meteor/node.git
+git clone --depth 1 \
+    https://github.com/joyent/node.git
 cd node
 rm -rf .git
 ./configure --prefix="$DIR"
