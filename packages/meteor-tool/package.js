@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The Meteor command-line tool",
-  version: '1.0.43'
+  version: '1.0.44'
 });
 
 Package.includeTool();
