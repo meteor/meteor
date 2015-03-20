@@ -375,7 +375,10 @@ var ensureCordovaProject = function (projectContext, appName) {
     try {
       var creation = execFileSyncOrThrow(localCordova,
         ['create', files.pathBasename(cordovaPath),
-          'com.meteor.' + appName, appName.replace(/\s/g, '')],
+         // Cordova app identifiers have to look like Java namespaces.
+         // Change weird characters (especially hyphens) into underscores.
+         'com.meteor.userapps.' + appName.replace(/[^a-zA-Z\d_$.]/g, '_'),
+         appName.replace(/\s/g, '')],
         { cwd: files.pathDirname(cordovaPath), env: buildCordovaEnv() });
 
       // create a folder for storing local plugins
