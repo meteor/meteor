@@ -2,6 +2,7 @@
 
 var _ = require('underscore');
 var files = require('./files.js');
+var Console = require('./console.js').Console;
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -24,6 +25,21 @@ var maybePrintNoticeHeader = function () {
   console.log();
   printedNoticeHeaderThisProcess = true;
 };
+
+// How to do package-specific notices:
+// (a) A notice that occurs if a package is used indirectly or directly.
+//     if (projectContext.packageMap.getInfo('accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
+//
+// (b) A notice that occurs if a package is used directly.
+//     if (projectContext.projectConstraintsFile.getConstraint('accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
 
 var upgradersByName = {
    "notices-for-0.9.0": function (projectContext) {
@@ -54,20 +70,6 @@ var upgradersByName = {
 "       out the available packages by typing 'meteor search <term>' or by\n" +
 "       visiting atmospherejs.com.\n");
      }
-     // How to do package-specific notices:
-     // (a) A notice that occurs if a package is used indirectly or directly.
-     //     if (projectContext.packageMap.getInfo('accounts-ui')) {
-     //       console.log(
-     // "\n" +
-     // "       Accounts UI has totally changed, yo.");
-     //     }
-     //
-     // (b) A notice that occurs if a package is used directly.
-     //     if (projectContext.projectConstraintsFile.getConstraint('accounts-ui')) {
-     //       console.log(
-     // "\n" +
-     // "       Accounts UI has totally changed, yo.");
-     //     }
     console.log();
   },
 
@@ -102,6 +104,27 @@ var upgradersByName = {
     // This method will automatically add "server" and "browser" and sort, etc.
     projectContext.platformList.write(oldPlatforms);
     files.unlink(oldPlatformsPath);
+  },
+
+  "notices-for-facebook-graph-api-2": function (projectContext) {
+    // Note: this will print if the app has facebook as a dependency, whether
+    // direct or indirect. (This is good, since most apps will be pulling it in
+    // indirectly via accounts-facebook.)
+    if (projectContext.packageMap.getInfo('facebook')) {
+      maybePrintNoticeHeader();
+      Console.info(
+        "This version of Meteor now uses version 2.2 of the Facebook API",
+        "for authentication, instead of 1.0. If you use additional Facebook",
+        "API methods beyond login, you may need to request new",
+        "permissions.\n\n",
+        "Facebook will automatically switch all apps to API",
+        "version 2.0 on April 30th, 2015. Please make sure to update your",
+        "application's permissions and API calls by that date.\n\n",
+        "For more details, see",
+        "https://github.com/meteor/meteor/wiki/Facebook-Graph-API-Upgrade",
+        Console.options({ bulletPoint: "1.0.5: " })
+      );
+    }
   }
 
   ////////////
@@ -111,6 +134,8 @@ var upgradersByName = {
   //
   // 1.x.y: Lorem ipsum messages go here...
   //        ...and linewrapped on the right column
+  //
+  // (Or just use Console.info with bulletPoint)
   ////////////
 };
 
