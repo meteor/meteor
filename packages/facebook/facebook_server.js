@@ -2,8 +2,8 @@ Facebook = {};
 
 var querystring = Npm.require('querystring');
 
-
 OAuth.registerService('facebook', 2, null, function(query) {
+  
 
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
@@ -48,16 +48,32 @@ var getTokenResponse = function (query) {
 
   var responseContent;
   try {
-    // Request an access token
-    responseContent = HTTP.get(
-      "https://graph.facebook.com/oauth/access_token", {
-        params: {
-          client_id: config.appId,
-          redirect_uri: OAuth._redirectUri('facebook', config),
-          client_secret: OAuth.openSecret(config.secret),
-          code: query.code
-        }
-      }).content;
+    // Request an access token, or request access token info if it was already given
+    // DDP clients should make a post request sending the accessToken before logging in with oauth credentialtoken/secret
+    if (query.accessToken) {
+      var response = HTTP.get(
+        "https://graph.facebook.com/app", {
+          params: {
+            access_token: query.accessToken
+          }
+        }).content;
+      response = JSON.parse(response);
+	  if (response.id == config.appId) {
+        responseContent = "access_token=" + query.accessToken + "&expires=5184000";
+	  } else {
+		throw new Error("Failed to complete OAuth handshake with Facebook. The access token's app ID and the server's app ID did not match.");
+	  }
+    } else {
+      responseContent = HTTP.get(
+        "https://graph.facebook.com/oauth/access_token", {
+          params: {
+            client_id: config.appId,
+            redirect_uri: OAuth._redirectUri('facebook', config),
+            client_secret: OAuth.openSecret(config.secret),
+            code: query.code
+          }
+        }).content;
+    }
   } catch (err) {
     throw _.extend(new Error("Failed to complete OAuth handshake with Facebook. " + err.message),
                    {response: err.response});
