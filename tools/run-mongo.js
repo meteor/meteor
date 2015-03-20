@@ -179,7 +179,7 @@ var findMongoPort = function (appDir) {
   if (process.platform === 'win32') {
     var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
     if (files.exists(portFile)) {
-      return files.readFile(portFile).replace(/\s/g, '');
+      return files.readFile(portFile, 'utf8').replace(/\s/g, '');
     }
   }
 
