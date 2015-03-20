@@ -1,5 +1,11 @@
 ## v.NEXT
 
+## v1.0.4.2, 2015-Mar-20
+
+* Fix regression in 1.0.4 where using Cordova for the first time in a project
+  with hyphens in its directory name would fail.  #3950
+
+
 ## v1.0.4.1, 2015-Mar-18
 
 * Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
