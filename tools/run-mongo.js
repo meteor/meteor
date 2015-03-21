@@ -169,6 +169,20 @@ if (process.platform === 'win32') {
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
 var findMongoPort = function (appDir) {
+  // On Windows, finding the Mongo pid, checking it and extracting the port is
+  // often unreliable. There is an easier way to find the port of running Mongo:
+  // look it up in a METEOR-PORT file that we generate when running. This may
+  // result into problems where we try to connect to a mongod that is not
+  // running, or a wrong mongod if our current app is not running but there is a
+  // left-over file lying around. This still can be better than always failing
+  // to connect.
+  if (process.platform === 'win32') {
+    var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
+    if (files.exists(portFile)) {
+      return files.readFile(portFile, 'utf8').replace(/\s/g, '');
+    }
+  }
+
   var pids = findMongoPids(appDir);
 
   if (pids.length !== 1) {
