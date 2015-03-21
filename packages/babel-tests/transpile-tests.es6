@@ -4,7 +4,11 @@
 
 // TODO: Make a nice page showing these examples, with commentary!
 
-var groups = [
+BabelTests = {
+  Transpile: {}
+};
+
+BabelTests.Transpile.groups = [
   {
     groupName: 'arrow functions',
     features: ['es6.arrowFunctions'],
@@ -58,7 +62,7 @@ var groups = [
   }
 ];
 
-var stripPipes = function (str) {
+BabelTests.Transpile.stripPipes = function (str) {
   var lines = str.split('\n');
   if (lines.length && /^\s*\|/.test(lines[0])) {
     var match = /^\s*\|(\s*)/.exec(lines[0]);
@@ -74,20 +78,3 @@ var stripPipes = function (str) {
     return str;
   }
 };
-
-_.each(groups, function (group) {
-  if (! (group.features && group.features.length)) {
-    throw new Error("Non-empty `features` array required in group");
-  }
-  _.each(group.cases, function (c) {
-    Tinytest.add("babel - transpilation - " + group.groupName + " - " + c.name,
-                 function (test) {
-                   test.equal(
-                     Babel.transform(c.input, {
-                       whitelist: group.features,
-                       externalHelpers: true
-                     }).code,
-                     stripPipes(c.expected));
-                 });
-  });
-});
