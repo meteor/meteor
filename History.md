@@ -1,5 +1,51 @@
 ## v.NEXT
 
+### Version Solver
+
+* The code that selects compatible package versions for `meteor update`
+  and resolves conflicts on `meteor add` has been rewritten from the ground up.
+  The core solver algorithm is now based on MiniSat, an open-source SAT solver,
+  improving performance and maintainability.
+
+* Refresh the catalog instead of downgrading packages when the versions in
+  `.meteor/versions` aren't in the cache.  #3653
+
+* Don't downgrade packages listed in `.meteor/packages`, or upgrade to a new
+  major version, unless the new flag `--allow-incompatible-update` is passed
+  as an override.
+
+* Error messages are more detailed when constraints are unsatisfiable.
+
+* Prefer "patched" versions of new indirect dependencies, and take patches
+  to them on `meteor update` (for example, `1.0.1` or `1.0.0_1` over `1.0.0`).
+
+* Version Solver is instrumented for profiling (`METEOR_PROFILE=1` in the
+  environment).
+
+* Setting the `METEOR_PRINT_CONSTRAINT_SOLVER_INPUT` environment variable
+  prints information useful for diagnosing constraint solver bugs.
+
+### Tracker
+
+* Schedule the flush cycle using a better technique than `setTimeout` when
+  available.  #3889
+
+* Yield to the event loop during the flush cycle, unless we're executing a
+  synchronous `Tracker.flush()`.  #3901
+
+
+### `meteor` command-line tool
+
+* Don't fail if `npm` prints more than 200K.  #3887
+
+
+### Other bug fixes and improvements
+
+* Upgraded dependencies:
+
+  - uglify-js: 2.4.17 (from 2.4.13)
+
+
 ## v1.0.4.2, 2015-Mar-20
 
 * Fix regression in 1.0.4 where using Cordova for the first time in a project

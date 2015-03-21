@@ -1,4 +1,4 @@
-BookmarkCounts = new Meteor.Collection('bookmarkCounts');
+BookmarkCounts = new Mongo.Collection('bookmarkCounts');
 
 Meteor.methods({
   'bookmarkRecipe': function(recipeName) {

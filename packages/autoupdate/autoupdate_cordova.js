@@ -13,7 +13,7 @@ var MAX_RETRY_COUNT = 5;
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
-ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
+ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions");
 
 Autoupdate = {};
 
@@ -138,20 +138,20 @@ var downloadNewVersion = function (program) {
               JSON.stringify(program, undefined, 2), wroteManifest);
   });
 
-  var dowloadUrl = function (url) {
-    console.log(DEBUG_TAG + "start dowloading " + url);
+  var downloadUrl = function (url) {
+    console.log(DEBUG_TAG + "start downloading " + url);
     // Add a cache buster to ensure that we don't cache an old asset.
     var uri = encodeURI(urlPrefix + url + '?' + Random.id());
 
-    // Try to dowload the file a few times.
+    // Try to download the file a few times.
     var tries = 0;
     var tryDownload = function () {
       ft.download(uri, versionPrefix + encodeURI(url), function (entry) {
         if (entry) {
-          console.log(DEBUG_TAG + "done dowloading " + url);
+          console.log(DEBUG_TAG + "done downloading " + url);
           // start downloading next queued url
           if (queue.length)
-            dowloadUrl(queue.shift());
+            downloadUrl(queue.shift());
           afterAllFilesDownloaded();
         }
       }, function (err) {
@@ -172,7 +172,7 @@ var downloadNewVersion = function (program) {
     var nextUrl = queue.shift();
     // XXX defer the next download so iOS doesn't rate limit us on concurrent
     // downloads
-    Meteor.setTimeout(dowloadUrl.bind(null, nextUrl), 50);
+    Meteor.setTimeout(downloadUrl.bind(null, nextUrl), 50);
   });
 };
 

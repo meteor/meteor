@@ -1185,11 +1185,13 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
 
   var newScript = [
     "@echo off",
-    "set METEOR_INSTALLATION=%~dp0%",
+    "SETLOCAL",
+    "SET METEOR_INSTALLATION=%~dp0%",
 
     // always convert to Windows path since this function can also be
     // called on Linux or Mac when we are building bootstrap tarballs
     "\"" + scriptLocationConverted + "\" %*",
+    "ENDLOCAL",
     // add a comment with the destination of the link, so it can be read later
     // by files.readLinkToMeteorScript
     "rem " + scriptLocationConverted,

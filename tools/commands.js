@@ -214,7 +214,10 @@ var runCommandOptions = {
     // With --clean, meteor cleans the application directory and uses the
     // bundled assets only. Encapsulates the behavior of once (does not rerun)
     // and does not monitor for file changes. Not for end-user use.
-    clean: { type: Boolean}
+    clean: { type: Boolean},
+    // Allow the version solver to make breaking changes to the versions
+    // of top-level dependencies.
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -269,7 +272,8 @@ function doRunCommand (options) {
   options.httpProxyPort = options['http-proxy-port'];
 
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -728,7 +732,8 @@ var buildCommands = {
     server: { type: String },
     // XXX COMPAT WITH 0.9.2.2
     "mobile-port": { type: String },
-    verbose: { type: Boolean, short: "v" }
+    verbose: { type: Boolean, short: "v" },
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -777,7 +782,8 @@ var buildCommand = function (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([bundleArch, archinfo.host()])
+    serverArchitectures: _.uniq([bundleArch, archinfo.host()]),
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -1094,7 +1100,8 @@ main.registerCommand({
     // it contains binary packages that should be incompatible. A hack to allow
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
-    'override-architecture-with-local' : { type: Boolean }
+    'override-architecture-with-local' : { type: Boolean },
+    'allow-incompatible-update': { type: Boolean }
   },
   requiresApp: function (options) {
     return ! options.delete;
@@ -1141,7 +1148,8 @@ main.registerCommand({
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    serverArchitectures: _.uniq([buildArch, archinfo.host()])
+    serverArchitectures: _.uniq([buildArch, archinfo.host()]),
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -1923,11 +1931,11 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    json: { type: Boolean, required: false },
-    verbose: { type: Boolean, short: "v", required: false },
+    json: { type: Boolean },
+    verbose: { type: Boolean, short: "v" },
     // By default, we give you a machine for 5 minutes. You can request up to
     // 15. (MDG can reserve machines for longer than that.)
-    minutes: { type: Number, required: false }
+    minutes: { type: Number }
   },
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
@@ -1992,12 +2000,13 @@ main.registerCommand({
 
   // Record the SSH Key in a temporary file on disk and give it the permissions
   // that ssh-agent requires it to have.
-  var idpath = "/tmp/meteor-key-" + utils.randomToken();
+  var tmpDir = files.mkdtemp('meteor-ssh-');
+  var idpath = tmpDir + '/id';
   maybeLog("Writing ssh key to " + idpath);
   files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
 
   // Add the known host key to a custom known hosts file.
-  var hostpath = "/tmp/meteor-host-" + utils.randomToken();
+  var hostpath = tmpDir + '/host';
   var addendum = ret.host + " " + ret.hostKey + "\n";
   maybeLog("Writing host key to " + hostpath);
   files.writeFile(hostpath, addendum, 'utf8');
@@ -2018,6 +2027,14 @@ main.registerCommand({
 
   var child_process = require('child_process');
   var future = new Future;
+
+  if (arch.match(/win/)) {
+    // The ssh output from Windows machines is buggy, it can overlay your
+    // existing output on the top of the screen which is very ugly. Force the
+    // screen cleaning to assist.
+    Console.clear();
+  }
+
   var sshCommand = child_process.spawn(
     "ssh", connOptions,
     { stdio: 'inherit' }); // Redirect spawn stdio to process

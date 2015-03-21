@@ -2784,6 +2784,34 @@ DocsData = {
     "scope": "static",
     "summary": "Send an HTTP `PUT` request. Equivalent to calling [`HTTP.call`](#http_call) with \"PUT\" as the first argument."
   },
+  "IterationCallback": {
+    "kind": "typedef",
+    "longname": "IterationCallback",
+    "name": "IterationCallback",
+    "params": [
+      {
+        "name": "doc",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "name": "index",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      }
+    ],
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
+  },
   "Match": {
     "kind": "namespace",
     "longname": "Match",
@@ -4250,6 +4278,15 @@ DocsData = {
     "name": "count",
     "options": [],
     "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      }
+    ],
     "scope": "instance",
     "summary": "Returns the number of documents that match a query."
   },
@@ -4286,7 +4323,7 @@ DocsData = {
         "name": "callback",
         "type": {
           "names": [
-            "function"
+            "IterationCallback"
           ]
         }
       },
@@ -4317,7 +4354,7 @@ DocsData = {
         "name": "callback",
         "type": {
           "names": [
-            "function"
+            "IterationCallback"
           ]
         }
       },
@@ -5418,7 +5455,11 @@ DocsData = {
     "params": [],
     "returns": [
       {
-        "description": "<p>Blaze.TemplateInstance</p>"
+        "type": {
+          "names": [
+            "Blaze.TemplateInstance"
+          ]
+        }
       }
     ],
     "scope": "static",
@@ -5573,6 +5614,27 @@ DocsData = {
     "scope": "instance",
     "summary": "True if this computation has been stopped."
   },
+  "Tracker.ComputationFunction": {
+    "kind": "typedef",
+    "longname": "Tracker.ComputationFunction",
+    "memberof": "Tracker",
+    "name": "ComputationFunction",
+    "params": [
+      {
+        "type": {
+          "names": [
+            "Tracker.Computation"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
+  },
   "Tracker.Dependency": {
     "instancename": "dependency",
     "kind": "class",
@@ -5694,7 +5756,7 @@ DocsData = {
         "name": "runFunc",
         "type": {
           "names": [
-            "function"
+            "Tracker.ComputationFunction"
           ]
         }
       }

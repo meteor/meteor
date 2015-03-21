@@ -1,6 +1,5 @@
 var assert = require("assert");
 var _ = require('underscore');
-var files = require('./files.js');
 
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
@@ -15,6 +14,7 @@ var release = require('./release.js');
 var tropohouse = require('./tropohouse.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
+var Profile = require('./profile.js').Profile;
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
@@ -119,6 +119,10 @@ _.extend(ProjectContext.prototype, {
     // Set by 'meteor update' to specify which packages may be updated. Array of
     // package names.
     self._upgradePackageNames = options.upgradePackageNames;
+    // Set by 'meteor update' to mean that we should upgrade the
+    // "patch" (and wrapNum, etc.) parts of indirect dependencies.
+    self._upgradeIndirectDepPatchVersions =
+      options.upgradeIndirectDepPatchVersions;
 
     // Set by publishing commands to ensure that published packages always have
     // a web.cordova slice (because we aren't yet smart enough to just default
@@ -145,6 +149,12 @@ _.extend(ProjectContext.prototype, {
     } else {
       self._cachedVersionsBeforeReset = null;
     }
+
+    // The --allow-incompatible-update command-line switch, which allows
+    // the version solver to choose versions of root dependencies that are
+    // incompatible with the previously chosen versions (i.e. to downgrade
+    // them or change their major version).
+    self._allowIncompatibleUpdate = options.allowIncompatibleUpdate;
 
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
@@ -398,27 +408,57 @@ _.extend(ProjectContext.prototype, {
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
+    var resolverRunCount = 0;
+
     // Nothing before this point looked in the official or project catalog!
     // However, the resolver does, so it gets run in the retry context.
-    catalog.runAndRetryWithRefreshIfHelpful(function () {
+    catalog.runAndRetryWithRefreshIfHelpful(function (canRetry) {
       buildmessage.enterJob("selecting package versions", function () {
         var resolver = self._buildResolver();
 
         var resolveOptions = {
           previousSolution: cachedVersions,
-          anticipatedPrereleases: anticipatedPrereleases
+          anticipatedPrereleases: anticipatedPrereleases,
+          allowIncompatibleUpdate: self._allowIncompatibleUpdate,
+          // Not finding an exact match for a previous version in the catalog
+          // is considered an error if we haven't refreshed yet, and will
+          // trigger a refresh and another attempt.  That way, if a previous
+          // version exists, you'll get it, even if we don't have a record
+          // of it yet.  It's not actually fatal, though, for previousSolution
+          // to refer to package versions that we don't have access to or don't
+          // exist.  They'll end up getting changed or removed if possible.
+          missingPreviousVersionIsError: canRetry
         };
-        if (self._upgradePackageNames)
+        if (self._upgradePackageNames) {
           resolveOptions.upgrade = self._upgradePackageNames;
+        }
+        if (self._upgradeIndirectDepPatchVersions) {
+          resolveOptions.upgradeIndirectDepPatchVersions = true;
+        }
 
+        resolverRunCount++;
+
+        var solution;
         try {
-          var solution = resolver.resolve(
-            depsAndConstraints.deps, depsAndConstraints.constraints,
-            resolveOptions);
+          Profile.run(
+            "Select Package Versions" +
+              (resolverRunCount > 1 ? (" (Try " + resolverRunCount + ")") : ""),
+            function () {
+              solution = resolver.resolve(
+                depsAndConstraints.deps, depsAndConstraints.constraints,
+                resolveOptions);
+            });
         } catch (e) {
-          if (!e.constraintSolverError)
+          if (!e.constraintSolverError && !e.versionParserError)
             throw e;
-          buildmessage.error(e.message, { tags: { refreshCouldHelp: true }});
+          // If the contraint solver gave us an error, refreshing
+          // might help to get new packages (see the comment on
+          // missingPreviousVersionIsError above).  If it's a
+          // package-version-parser error, print a nice message,
+          // but don't bother refreshing.
+          buildmessage.error(
+            e.message,
+            { tags: { refreshCouldHelp: !!e.constraintSolverError }});
         }
 
         if (buildmessage.jobHasMessages())
@@ -583,10 +623,11 @@ _.extend(ProjectContext.prototype, {
     var resolver =
           new constraintSolverPackage.ConstraintSolver.PackagesResolver(
             self.projectCatalog, {
-        nudge: function () {
-          Console.nudge(true);
-        }
-      });
+              nudge: function () {
+                Console.nudge(true);
+              },
+              Profile: Profile
+            });
     return resolver;
   },
 

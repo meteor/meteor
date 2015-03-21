@@ -4,12 +4,21 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
   // in Chrome and Firefox, other browsers don't give us an ability to get
   // stacktrace.
   if ((new Error).stack) {
-    test.equal(details.file, Meteor.isServer ?
-                             'tinytest.js' : 'local-test_logging.js');
+    if (Meteor.isServer) {
+      test.equal(details.file, 'tinytest.js');
+    } else {
+      // Note that we want this to work in --production too, so we need to allow
+      // for the minified filename.
+      test.matches(details.file,
+                   /^(?:local-test_logging\.js|[a-f0-9]{40}\.js)$/);
+    }
 
     // evaled statements shouldn't crash
     var code = "Log._getCallerDetails().file";
-    test.matches(eval(code), /^eval|local-test_logging.js$/);
+    // Note that we want this to work in --production too, so we need to allow
+    // for the minified filename
+    test.matches(eval(code),
+                 /^(?:eval|local-test_logging\.js|[a-f0-9]{40}\.js)/);
   }
 });
 
