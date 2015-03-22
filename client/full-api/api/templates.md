@@ -86,7 +86,7 @@ Because your template has been rendered, you can use functions like
 [`this.findAll`](#template_findAll) which look at its DOM nodes.
 
 This can be a good place to apply any DOM manipulations you want, after the
-template is rendered for the first time, without interfering with Blaze.
+template is rendered for the first time.
 
 ```handlebars
 <template name="myPictures">
@@ -105,10 +105,6 @@ Template.myPictures.onRendered(function () {
     itemSelector: '.item',
     gutter: 10
   });
-});
-
-Template.myPicture.helpers({
-  pictures: ["cat1.jpg", "cat2.jpg", "cat3.jpg", "cat4.jpg", "cat5.jpg"]
 });
 ```
 
