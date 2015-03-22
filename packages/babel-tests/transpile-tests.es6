@@ -62,7 +62,18 @@ BabelTests.Transpile.groups = [
   }
 ];
 
-BabelTests.Transpile.stripPipes = function (str) {
+// Parse the "pipe form" that we use so that multiline strings with leading
+// whitespace can be indented nicely in source code (by Emacs js2-mode, at
+// lesat):
+//
+// ```
+//  expected:
+//  ` | var square = function (x) {
+//    |   return x * x;
+//    | };`
+// ```
+
+var stripPipes = function (str) {
   var lines = str.split('\n');
   if (lines.length && /^\s*\|/.test(lines[0])) {
     var match = /^\s*\|(\s*)/.exec(lines[0]);
@@ -78,3 +89,10 @@ BabelTests.Transpile.stripPipes = function (str) {
     return str;
   }
 };
+
+_.each(BabelTests.Transpile.groups, function (group) {
+  _.each(group.cases, function (c) {
+    c.input = stripPipes(c.input);
+    c.expected = stripPipes(c.expected);
+  });
+});

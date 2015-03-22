@@ -8,11 +8,11 @@ _.each(BabelTests.Transpile.groups, function (group) {
     Tinytest.add("babel - transpilation - " + group.groupName + " - " + c.name,
                  function (test) {
                    test.equal(
-                     Babel.transform(stripPipes(c.input), {
+                     Babel.transform(c.input, {
                        whitelist: group.features,
                        externalHelpers: true
                      }).code,
-                     stripPipes(c.expected));
+                     c.expected);
                  });
   });
 });

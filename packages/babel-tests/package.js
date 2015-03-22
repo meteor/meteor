@@ -13,6 +13,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.export('BabelTests');
 
+  api.use('underscore');
   api.use('babel-plugin');
 
   // Tests that call the transpiler (which is only possible on the server)
