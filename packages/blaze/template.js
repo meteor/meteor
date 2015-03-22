@@ -377,9 +377,15 @@ Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
       oldStopped(error);
     }
   };
+  var options = {};
+  if('connection' in callbacks)
+  {
+    options['connection'] = callbacks['connection'];
+    delete(callbacks['connection']);
+  }
   args.push(callbacks);
 
-  subHandle = self.view.subscribe.call(self.view, args);
+  subHandle = self.view.subscribe.call(self.view, args, options);
 
   if (! _.has(subHandles, subHandle.subscriptionId)) {
     subHandles[subHandle.subscriptionId] = subHandle;
