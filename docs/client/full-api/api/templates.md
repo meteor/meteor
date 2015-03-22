@@ -85,6 +85,29 @@ initialization or clean-up on the object.
 Because your template has been rendered, you can use functions like
 [`this.findAll`](#template_findAll) which look at its DOM nodes.
 
+This can be a good place to apply any DOM manipulations you want, after the
+template is rendered for the first time.
+
+```handlebars
+<template name="myPictures">
+  <div class="container">
+    {{#each pictures}}
+      <img class=".item" src="/{{.}}"/>
+    {{/each}}
+  </div>
+</template>
+```
+
+```javascript
+Template.myPictures.onRendered(function () {
+  // Use the Packery jQuery plugin
+  this.$('.container').packery({
+    itemSelector: '.item',
+    gutter: 10
+  });
+});
+```
+
 {{> autoApiBox "Template#onCreated"}}
 
 Callbacks added with this method called before your template's logic is
@@ -97,6 +120,16 @@ These callbacks fire once and are the first group of callbacks to fire.
 Handling the `created` event is a useful way to set up values on template
 instance that are read from template helpers using `Template.instance()`.
 
+```javascript
+Template.myPictures.onCreated(function () {
+  // set up local reactive variables
+  this.dataVar = new ReactiveVar("some value");
+
+  // register this template within some central store
+  GalleryTemplates.push(this);
+});
+```
+
 {{> autoApiBox "Template#onDestroyed"}}
 
 These callbacks are called when an occurrence of a template is taken off
@@ -107,6 +140,15 @@ being destroyed.
 This group of callbacks is most useful for cleaning up or undoing any external
 effects of `created` or `rendered` groups. This group fires once and is the last
 callback to fire.
+
+```javascript
+Template.myPictures.onDestroyed(function () {
+  // deregister from some central store
+  var positionInStore = GalleryTemplates.indexOf(this);
+  if (positionInStore !== -1)
+    GalleryTemplates.splice(positionInStore, 1);
+});
+```
 
 
 <h2 id="template_inst"><span>Template instances</span></h2>
