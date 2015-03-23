@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "babel-core": {
-      "version": "4.7.13",
+      "version": "4.7.16",
       "dependencies": {
         "acorn-babel": {
           "version": "0.11.1-38"
@@ -82,7 +82,7 @@
           "version": "1.1.6"
         },
         "fs-readdir-recursive": {
-          "version": "0.1.0"
+          "version": "0.1.1"
         },
         "globals": {
           "version": "6.3.0"

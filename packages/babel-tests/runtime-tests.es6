@@ -1,4 +1,4 @@
-Tinytest.add("babel - run - template literals", function (test) {
+Tinytest.add("babel - runtime - template literals", function (test) {
   var dump = function (pieces) {
     return [_.extend({}, pieces),
             _.toArray(arguments).slice(1)];

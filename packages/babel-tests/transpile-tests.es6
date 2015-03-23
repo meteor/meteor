@@ -10,7 +10,53 @@ BabelTests = {
 
 BabelTests.Transpile.groups = [
   {
-    groupName: 'arrow functions',
+    groupName: 'Template Strings',
+    features: ['es6.templateLiterals'],
+    cases: [
+      {
+        name: 'basic interpolation',
+        commentary: `Template strings are a nice alternative to string concatenation for generating messages.`,
+        input: 'print(`Yo, ${name}!`)',
+        expected: 'print("Yo, " + name + "!");'
+      },
+      {
+        name: 'fancier interpolation',
+        commentary: `You can put any expression inside the curly braces (which are required).`,
+        input:
+        ` | print(\`\${x} times \${y} is \${x*y}.\`);
+          | print(\`\${x} plus \${y} is \${x+y}.\`);`,
+        expected:
+        ` | print("" + x + " times " + y + " is " + x * y + ".");
+          | print("" + x + " plus " + y + " is " + (x + y) + ".");`
+      },
+      {
+        name: 'basic multiline',
+        commentary: `Template strings may span multiple lines.`,
+        input: 'print(`foo\nbar`)',
+        expected: 'print("foo\\nbar");'
+      },
+      {
+        name: 'multiline with whitespace',
+        commentary: `All leading whitespace is included.`,
+        input: 'print(`foo\n  bar`)',
+        expected: 'print("foo\\n  bar");'
+      },
+      {
+        name: 'basic tag',
+        commentary: `You can "tag" a template string with a function that receives the parts of the string.`,
+        input: 'print(fn`Yo, ${name}!`)',
+        expected: 'print(fn(babelHelpers.taggedTemplateLiteral(["Yo, ", "!"], ["Yo, ", "!"]), name));'
+      },
+      {
+        name: 'tag raw',
+        commentary: `The tag function receives both the parsed and the "raw" forms of the string parts (but only the value of the interpolated expressions like \`name\`).`,
+        input: 'print(fn`Yo,\\u0020${name}!`)',
+        expected: 'print(fn(babelHelpers.taggedTemplateLiteral(["Yo, ", "!"], ["Yo,\\\\u0020", "!"]), name));'
+      }
+    ]
+  },
+  {
+    groupName: 'Arrow Functions',
     features: ['es6.arrowFunctions'],
     cases: [
       {
@@ -24,39 +70,13 @@ BabelTests.Transpile.groups = [
     ]
   },
   {
-    groupName: 'block scoping',
+    groupName: 'Let and Const',
     features: ['es6.blockScoping'],
     cases: [
       {
         name: 'basic let',
         input: 'let x = 3; print(x)',
         expected: 'var x = 3;print(x);'
-      }
-    ]
-  },
-  {
-    groupName: 'template literals',
-    features: ['es6.templateLiterals'],
-    cases: [
-      {
-        name: 'basic multiline',
-        input: 'print(`foo\nbar`)',
-        expected: 'print("foo\\nbar");'
-      },
-      {
-        name: 'basic interpolation',
-        input: 'print(`Yo, ${name}!`)',
-        expected: 'print("Yo, " + name + "!");'
-      },
-      {
-        name: 'basic tag',
-        input: 'print(fn`Yo, ${name}!`)',
-        expected: 'print(fn(babelHelpers.taggedTemplateLiteral(["Yo, ", "!"], ["Yo, ", "!"]), name));'
-      },
-      {
-        name: 'tag raw',
-        input: 'print(fn`Yo,\\u0020${name}!`)',
-        expected: 'print(fn(babelHelpers.taggedTemplateLiteral(["Yo, ", "!"], ["Yo,\\\\u0020", "!"]), name));'
       }
     ]
   }

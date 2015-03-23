@@ -1,8 +1,6 @@
 Package.describe({
   summary: "Runtime support for output of Babel transpiler",
-  // keep this version === the `babel` version, and bump the wrap
-  // numbers of both if you need to increment it.
-  version: '4.7.13'
+  version: '1.0.0'
 });
 
 Package.onUse(function (api) {
