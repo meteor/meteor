@@ -3738,11 +3738,11 @@ BOOL REST_SignInOrRegister(
 		StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&email=%s&password=%s", wzRegisterUserName, wzRegisterEmail, wzPassword);
 	}
 
-	size_t   i;
-    char *pMBFormData = (char *)malloc( BUF_LEN );
-    wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
+  size_t i;
+  char *pMBFormData = (char *)malloc( BUF_LEN );
+  wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
 
-    char *pMBDataResponse = NULL;
+  char *pMBDataResponse = NULL;
 	wchar_t wzErrorMessage[BUF_LEN] = L"";
 
 	char *path = fSignIn ? "/api/v1/private/login"
