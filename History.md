@@ -1,5 +1,19 @@
 ## v.NEXT
 
+## v1.0.5, 2015-Mar-??
+
+* This version of Meteor now uses version 2.2 of the Facebook API for
+  authentication, instead of 1.0. If you use additional Facebook API methods
+  beyond login, you may need to request new permissions.
+
+  Facebook will automatically switch all apps to API version 2.0 on April
+  30th, 2015. Please make sure to update your application's permissions and API
+  calls by that date.
+
+  For more details, see
+  https://github.com/meteor/meteor/wiki/Facebook-Graph-API-Upgrade
+
+
 ## v1.0.4.2, 2015-Mar-20
 
 * Fix regression in 1.0.4 where using Cordova for the first time in a project
