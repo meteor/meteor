@@ -1192,6 +1192,10 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
     // called on Linux or Mac when we are building bootstrap tarballs
     "\"" + scriptLocationConverted + "\" %*",
     "ENDLOCAL",
+
+    // always exit with the same exit code as the child script
+    "EXIT /b %ERRORLEVEL%",
+
     // add a comment with the destination of the link, so it can be read later
     // by files.readLinkToMeteorScript
     "rem " + scriptLocationConverted,
