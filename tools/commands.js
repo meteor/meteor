@@ -2039,6 +2039,20 @@ main.registerCommand({
     "ssh", connOptions,
     { stdio: 'inherit' }); // Redirect spawn stdio to process
 
+  sshCommand.on('error', function (err) {
+    if (err.code === "ENOENT") {
+      if (process.platform === "win32") {
+        Console.error("Could not find the `ssh` command in your PATH.",
+          "Please read this page about using the get-machine command on Windows:",
+          Console.url("https://github.com/meteor/meteor/wiki/Accessing-Meteor-provided-build-machines-from-Windows"));
+      } else {
+        Console.error("Could not find the `ssh` command in your PATH.");
+      }
+
+      future.return(1);
+    }
+  });
+
   sshCommand.on('exit', function (code, signal) {
     if (signal) {
       // XXX: We should process the signal in some way, but I am not sure we
