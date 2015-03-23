@@ -131,3 +131,55 @@ Tinytest.add('SyncedCron.add starts by it self when running', function(test) {
   test.equal(SyncedCron.running, false);
   test.equal(_.keys(SyncedCron._entries).length, 0);
 });
+
+Tinytest.add('SyncedCron.config can customize the options object', function(test) {
+  SyncedCron._reset();
+
+  SyncedCron.config({
+    log: false,
+    collectionName: 'foo',
+    utc: true,
+    collectionTTL: 0
+  });
+
+  test.equal(SyncedCron.options.log, false);
+  test.equal(SyncedCron.options.collectionName, 'foo');
+  test.equal(SyncedCron.options.utc, true);
+  test.equal(SyncedCron.options.collectionTTL, 0);
+});
+
+Tinytest.addAsync('SyncedCron can log to injected logger', function(test, done) {
+  SyncedCron._reset();
+
+  var logger = function() {
+    test.isTrue(true);
+    done();
+  };
+
+  SyncedCron.options.logger = logger;
+
+  SyncedCron.add(TestEntry);
+  SyncedCron.start();
+
+  SyncedCron.options.logger = null;
+});
+
+Tinytest.addAsync('SyncedCron should pass correct arguments to logger', function(test, done) {
+  SyncedCron._reset();
+
+  var logger = function(opts) {
+    test.include(opts, 'level');
+    test.include(opts, 'message');
+    test.include(opts, 'tag');
+    test.equal(opts.tag, 'SyncedCron');
+    
+    done();
+  };
+
+  SyncedCron.options.logger = logger;
+
+  SyncedCron.add(TestEntry);
+  SyncedCron.start();
+
+  SyncedCron.options.logger = null;
+});
