@@ -10,6 +10,12 @@ BabelTests = {
 
 BabelTests.Transpile.groups = [
   {
+    groupName: 'Classes',
+    features: ['es6.classes', 'es6.blockScoping'],
+    commentary: `Here's a good reference: [Classes in ECMAScript 6 (final semantics)](http://www.2ality.com/2015/02/es6-classes-final.html).  Note that the transpiler emits \`let\` statements for class definitions, so we need to transpile those too.`,
+    cases: []
+  },
+  {
     groupName: 'Template Strings',
     features: ['es6.templateLiterals'],
     cases: [
