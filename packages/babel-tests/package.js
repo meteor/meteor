@@ -34,5 +34,5 @@ Package.onTest(function (api) {
 
   // Tests of runtime behavior.  These confirm that the runtime library
   // is functioning correctly, among other things.
-  api.addFiles('run-tests.es6', ['server', 'client']);
+  api.addFiles('runtime-tests.es6', ['server', 'client']);
 });
