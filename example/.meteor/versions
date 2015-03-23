@@ -28,7 +28,7 @@ minimongo@1.0.2
 mongo@1.0.4
 observe-sequence@1.0.2
 ordered-dict@1.0.0
-percolatestudio:synced-cron@1.0.0
+percolate:synced-cron@1.2.0
 random@1.0.0
 reactive-dict@1.0.2
 reactive-var@1.0.1
