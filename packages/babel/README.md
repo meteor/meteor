@@ -61,7 +61,29 @@ interpolation.
   relies on mutating its first argument will not be ES6-compatible.
 
 TODO: more!
-  
+
+## Under Research
+
+### Classes
+
+* Babel doesn't yet check that you called `super` in subclass constructor,
+  while ES 6 will.  (The check is coming in the next major version, according
+  to a comment.)
+* Babel generates a `let` from a class definition, so transpilation of block
+  scope needs to be enabled as well.
+* Babel's runtime helpers use `Object.create`, `Object.defineProperty`, and
+  `__proto__`, which require IE 9, IE 9, and IE 11 respectively.  We'll do
+  something different.
+* ...
+
+### For-of
+
+* Babel's transpilation generates TWO try-finallys for every for-of loop,
+  and requires extensive runtime support.  Therefore, it is unusable for
+  real code.
+* If we just want for-of on arrays, we could probably write our own
+  lightweight transformer.
+
 ## Checklist for Feature Approval
 
 * Write some tests in `babel-tests/transpile-tests.es6` that explore

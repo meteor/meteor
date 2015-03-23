@@ -4,7 +4,11 @@ var handler = function (compileStep) {
 
   var result = Babel.transform(source, {
     whitelist: [
-      'es6.templateLiterals'
+      'es6.templateLiterals',
+      // we haven't completely finished support for these, but it
+      // is looking good and we want to be able to write runtime tests:
+      'es6.classes',
+      'es6.blockScoping'
     ],
     externalHelpers: true,
     sourceMap: true,

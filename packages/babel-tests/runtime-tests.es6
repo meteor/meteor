@@ -9,3 +9,36 @@ Tinytest.add("babel - runtime - template literals", function (test) {
              [{0:'A', 1: 'C', raw: {value: ['\\u0041', 'C']}},
               ['B']]);
 });
+
+Tinytest.add("babel - runtime - classes", function (test) {
+  (function () {
+    class Foo {
+      constructor(x) {
+        this.x = x;
+      }
+    }
+
+    test.throws(function () {
+      Foo();
+    });
+
+    test.equal((new Foo(3)).x, 3);
+  })();
+
+  (function () {
+    class Bar {
+      constructor(x) {
+        this.x = x;
+      }
+    }
+    class Foo extends Bar {}
+
+    test.throws(function () {
+      Foo();
+    });
+
+    test.equal((new Foo(3)).x, 3);
+    test.isTrue((new Foo(3)) instanceof Foo);
+    test.isTrue((new Foo(3)) instanceof Bar);
+  })();
+});

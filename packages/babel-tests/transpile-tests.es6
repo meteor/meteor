@@ -13,7 +13,43 @@ BabelTests.Transpile.groups = [
     groupName: 'Classes',
     features: ['es6.classes', 'es6.blockScoping'],
     commentary: `Here's a good reference: [Classes in ECMAScript 6 (final semantics)](http://www.2ality.com/2015/02/es6-classes-final.html).  Note that the transpiler emits \`let\` statements for class definitions, so we need to transpile those too.`,
-    cases: []
+    cases: [
+      {
+        name: 'basic class',
+        commentary: `This is a basic class definition with a constructor.  The \`classCallCheck\` helper makes sure the constructor is being called with \`new\`, because calling it as a function is disallowed.`,
+        input:
+        ` | class Foo {
+          |   constructor(x) {
+          |     this.x = x;
+          |   }
+          | }`,
+        expected:
+        ` | var Foo = function Foo(x) {
+          |   babelHelpers.classCallCheck(this, Foo);
+          |
+          |   this.x = x;
+          | };`
+      },
+      {
+        name: 'empty subclass',
+        commentary: `This is a basic class definition with a constructor.  The \`classCallCheck\` helper makes sure the constructor is being called with \`new\`, because calling it as a function is disallowed.`,
+        input:
+        ` | class Foo extends Bar {}`,
+        expected:
+        ` | var Foo = (function (_Bar) {
+          |   function Foo() {
+          |     babelHelpers.classCallCheck(this, Foo);
+          |
+          |     if (_Bar != null) {
+          |       _Bar.apply(this, arguments);
+          |     }
+          |   }
+          |
+          |   babelHelpers.inherits(Foo, _Bar);
+          |   return Foo;
+          | })(Bar);`
+      }
+    ]
   },
   {
     groupName: 'Template Strings',
