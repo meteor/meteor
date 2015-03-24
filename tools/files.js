@@ -738,17 +738,6 @@ files.createTarGzStream = function (dirPath, options) {
         return true;
       }
 
-      // Error about long paths on Windows.
-      // As far as we know the tarball creation seems to fail silently when path
-      // is too long (the files don't get copied to tarball). To avoid it, we
-      // shout at the core developer early so she/he takes an action.
-      // When the tarball is created on Mac or Linux it doesn't seem to matter.
-      var maxPath = 260; // Longest allowed path length on Windows
-      if (entry.path.length > maxPath) {
-        throw new Error("Path too long: " + entry.path + " is " +
-          entry.path.length + " characters.");
-      }
-
       // Refuse to create a directory that isn't listable. Tarballs
       // created on Windows will have non-executable directories (since
       // executable isn't a thing in Windows directory permissions), and
