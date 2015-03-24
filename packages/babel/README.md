@@ -60,7 +60,13 @@ interpolation.
   version of the Babel runtime helpers.  A tag function that
   relies on mutating its first argument will not be ES6-compatible.
 
-TODO: more!
+### Arrow Functions
+
+No problems here!
+
+* Babel name: `es6.arrowFunctions`
+
+**TODO: more!**
 
 ## Under Research
 

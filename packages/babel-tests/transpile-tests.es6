@@ -102,12 +102,62 @@ BabelTests.Transpile.groups = [
     features: ['es6.arrowFunctions'],
     cases: [
       {
-        name: 'basic',
-        input: 'var square = (x) => x*x;',
+        name: 'basic expression',
+        commentary: `Arrow functions are, for one thing, a shorter way to write function literals.
+
+          The body can be an expression (with no return statement), or a block (which must have an explicit return statement to return a value).  The parentheses around the argument list can be omitted if there is exactly one argument.`,
+        input:
+        ` | var sum = (x,y) => x + y;
+          | var square = x => x*x;
+          | var printAndReturn = x => { print(x); return x; };
+          | var returnZero = () => 0;`,
         expected:
-        ` | var square = function (x) {
+        ` | var sum = function (x, y) {
+          |   return x + y;
+          | };
+          | var square = function (x) {
           |   return x * x;
+          | };
+          | var printAndReturn = function (x) {
+          |   print(x);return x;
+          | };
+          | var returnZero = function () {
+          |   return 0;
           | };`
+      },
+      {
+        name: 'binding this',
+        commentary: `Unlike normal function literals, arrow functions do not have their own \`this\` that depends on how they are called.  They always use the enclosing value of \`this\`.  This behavior is implemented efficiently by the transpiler using a closure.`,
+        input:
+        ` | var f = function () {
+          |   return () => { this.frob(); }
+          | };`,
+        expected:
+        ` | var f = function () {
+          |   var _this = this;
+          |
+          |   return function () {
+          |     _this.frob();
+          |   };
+          | };`
+      },
+      {
+        name: 'binding this doesn\'t clobber variables',
+        commentary: `If you name a variable \`_this\`, the transpiler is smart and won't clobber it.`,
+        input:
+        ` | var f = function () {
+          |   return () => this;
+          | };
+          | var _this = null;`,
+        expected:
+        ` | var f = function () {
+          |   var _this2 = this;
+          |
+          |   return function () {
+          |     return _this2;
+          |   };
+          | };
+          | var _this = null;`
       }
     ]
   },
