@@ -676,7 +676,10 @@ main.registerCommand({
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: appPath,
     // Write .meteor/versions even if --release is specified.
-    alwaysWritePackageMap: true
+    alwaysWritePackageMap: true,
+    // examples come with a .meteor/versions file, but we shouldn't take it
+    // too seriously
+    allowIncompatibleUpdate: true
   });
 
   main.captureAndExit("=> Errors while creating your project", function () {
@@ -1329,7 +1332,11 @@ main.registerCommand({
     ios: { type: Boolean },
     'ios-device': { type: Boolean },
     android: { type: Boolean },
-    'android-device': { type: Boolean }
+    'android-device': { type: Boolean },
+
+    // This could theoretically be useful/necessary in conjunction with
+    // --test-app-path.
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1389,7 +1396,8 @@ main.registerCommand({
     // packages subdirectory, not the test runner app's empty one.
     projectDirForLocalPackages: options.appDir,
     explicitlyAddedLocalPackageDirs: packagesByPath,
-    serverArchitectures: serverArchitectures
+    serverArchitectures: serverArchitectures,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1603,12 +1611,14 @@ main.registerCommand({
   maxArgs: Infinity,
   hidden: true,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   var projectContextModule = require('./project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    forceRebuildPackages: options.args.length ? options.args : true
+    forceRebuildPackages: options.args.length ? options.args : true,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while rebuilding packages:", function () {

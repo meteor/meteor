@@ -261,7 +261,8 @@ main.registerCommand({
   requiresPackage: true,
   // We optimize the workflow by using up-to-date package data to weed out
   // obviously incorrect submissions before they ever hit the wire.
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
@@ -298,7 +299,8 @@ main.registerCommand({
       alwaysWritePackageMap: true,
       // When we publish, we should always include web.cordova unibuilds, even
       // though this temporary directory does not have any cordova platforms
-      forceIncludeCordovaUnibuild: true
+      forceIncludeCordovaUnibuild: true,
+      allowIncompatibleUpdate: options['allow-incompatible-update']
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
@@ -311,7 +313,8 @@ main.registerCommand({
       neverWritePackageMap: true,
       // When we publish, we should always include web.cordova unibuilds, even
       // if this project does not have any cordova platforms
-      forceIncludeCordovaUnibuild: true
+      forceIncludeCordovaUnibuild: true,
+      allowIncompatibleUpdate: options['allow-incompatible-update']
     });
   }
 
@@ -500,7 +503,11 @@ main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
+  // in theory, this option shouldn't be necessary, because when you run
+  // publish-for-arch you want to reproduce the exact same setup as when
+  // you ran 'publish', but support the option in case it comes up.
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   // argument processing
   var all = options.args[0].split('@');
@@ -629,7 +636,8 @@ main.registerCommand({
     explicitlyAddedLocalPackageDirs: [packageDir],
     // When we publish, we should always include web.cordova unibuilds, even
     // though this temporary directory does not have any cordova platforms
-    forceIncludeCordovaUnibuild: true
+    forceIncludeCordovaUnibuild: true,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   // Just get up to initializing the catalog. We're going to mutate the
   // constraints file a bit before we prepare the build.
@@ -1612,10 +1620,12 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
