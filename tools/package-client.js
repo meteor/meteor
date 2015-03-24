@@ -328,7 +328,8 @@ var uploadFile = function (putUrl, filepath) {
       bodyStreamLength: size
     });
   } catch (err) {
-    buildmessage.error(err.error.toString());
+    // XXX: getUrl's error handling is terrible and we should fix it there.
+    buildmessage.error(typeof err === "string" ? err : err.error.toString());
     return false;
   } finally {
     rs.close();
