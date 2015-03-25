@@ -1,6 +1,6 @@
 {
- "track": "METEOR",
- "version": "1.0.4-rc.6",
+ "track": "WINDOWS-PREVIEW",
+ "version": "0.4.0",
  "recommended": false,
  "official": false,
  "description": "Preview of Meteor on Windows"

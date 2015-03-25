@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.18"
+  version: "1.0.19-pre.win.1"
 });
 
 Package.onUse(function (api) {
