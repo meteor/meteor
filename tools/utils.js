@@ -387,10 +387,15 @@ exports.displayRelease = function (track, version, options) {
   options = options || {};
   var prefix = options.noPrefix ? "" : "Meteor ";
 
-  if (track === catalog.DEFAULT_TRACK) {
-    return prefix + version;
+  if (catalog.DEFAULT_TRACK !== "WINDOWS-PREVIEW") {
+    // XXX HACK for windows. In the bottom of catalog-remote.js, we make the
+    // default track for windows be "WINDOWS-PREVIEW", but we want `meteor
+    // --version` to actually show "WINDOWS-PREVIEW@x.y.z" instead of just
+    // "x.y.z".
+    if (track === catalog.DEFAULT_TRACK) {
+      return prefix + version;
+    }
   }
-
   return track + '@' + version;
 };
 
