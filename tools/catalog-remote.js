@@ -846,6 +846,8 @@ _.extend(RemoteCatalog.prototype, {
   getDefaultReleaseVersion: function (track) {
     var self = this;
     var versionRecord = self.getDefaultReleaseVersionRecord(track);
+    if (! versionRecord)
+      throw new Error("Can't get default release version for track " + track);
     return _.pick(versionRecord, ["track", "version" ]);
   },
 
@@ -993,12 +995,6 @@ exports.RemoteCatalog = RemoteCatalog;
 
 // We put this constant here because we don't have any better place that would otherwise cause a cycle
 exports.DEFAULT_TRACK = 'METEOR';
-
-// XXX HACK for windows, because we don't have any working releases
-// in other tracks
-if (process.platform === "win32") {
-  exports.DEFAULT_TRACK = "WINDOWS-PREVIEW";
-}
 
 // The catalog as provided by troposhere (aka atomospherejs.com)
 exports.official = new RemoteCatalog();
