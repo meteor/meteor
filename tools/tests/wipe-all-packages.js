@@ -99,7 +99,7 @@ selftest.define("wipe all packages", function () {
   // since the warehouse faking system is weak and under-developed, add more
   // faking, such as making the v3 the latest version
   files.linkToMeteorScript(
-    files.pathJoin(s.warehouse, 'packages', 'meteor-tool', '33.0.3', 'mt-' + archinfo.host(), 'meteor'),
+    files.pathJoin('packages', 'meteor-tool', '33.0.3', 'mt-' + archinfo.host(), 'meteor'),
     files.pathJoin(s.warehouse, 'meteor'));
 
 
