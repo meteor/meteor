@@ -1205,12 +1205,18 @@ files._getLocationFromScriptLinkToMeteorScript = function (script) {
 
   var scriptLocation = _.last(lines)
     .replace(/^rem /g, '');
+  var isAbsolute = true;
+
+  if (scriptLocation.match(/^%~dp0/)) {
+    isAbsolute = false;
+    scriptLocation = scriptLocation.replace(/^%~dp0\\?/g, '');
+  }
 
   if (! scriptLocation) {
     throw new Error('Failed to parse script location from meteor.bat');
   }
 
-  return files.convertToPosixPath(scriptLocation);
+  return files.convertToPosixPath(scriptLocation, ! isAbsolute);
 };
 
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {
