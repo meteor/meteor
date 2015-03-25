@@ -10,9 +10,11 @@ set -u
 
 cd "`dirname "$0"`"
 
+arg=$1
+
 TARGET="s3://com.meteor.static/test/"
 TEST=no
-if [ $# -ge 1 -a $1 = '--prod' ]; then
+if [ $# -ge 1 -a ${arg} = '--prod' ]; then
     shift
     TARGET="s3://com.meteor.static/"
 else
@@ -24,7 +26,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(dev-bundle-.+--'$1'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(dev-bundle-.+--'${arg}'--.+)/!')
 
 if [ -z "$DIRNAME" ]; then
     echo "build not found" 1>&2

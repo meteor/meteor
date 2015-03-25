@@ -19,7 +19,7 @@ if [ $# -ne 1 ]; then
 fi
 
 # installer-windows--${METEOR_RELEASE}--${BUILD_ID}--${BUILD_NUMBER}--${GIT_COMMIT}
-DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(installer-windows--.+--.+--'$1'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(installer-windows--.+--.+--'$1'--.+)/!')
 RELEASE=$(echo $DIRNAME | perl -pe 's/^installer-windows--(.+)--.+--.+--.+$/$1/')
 
 if [ -z "$DIRNAME" ]; then
