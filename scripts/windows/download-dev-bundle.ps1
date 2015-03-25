@@ -26,8 +26,6 @@ if ("$env:USE_TEST_DEV_BUNDLE_SERVER" -ne "") {
     $DEV_BUNDLE_URL_ROOT="https://s3.amazonaws.com/com.meteor.static/test/"
 }
 
-echo $DEV_BUNDLE_URL_ROOT
-
 $devbundle_link = $DEV_BUNDLE_URL_ROOT + $TARBALL
 $devbundle_zip = $CHECKOUT_DIR + "\" + $TARBALL
 
