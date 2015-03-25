@@ -74,7 +74,6 @@
 * Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
   packages without colons in their name.  #3951
 
-
 ## v1.0.4, 2015-Mar-17
 
 ### Mongo Driver

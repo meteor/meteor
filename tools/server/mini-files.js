@@ -63,7 +63,9 @@ var convertToOSLineEndings = function (fileContents) {
 };
 
 var convertToStandardLineEndings = function (fileContents) {
-  return fileContents.replace(new RegExp(os.EOL, "g"), "\n");
+  // Convert all kinds of end-of-line chars to linuxy "\n".
+  return fileContents.replace(new RegExp("\r\n", "g"), "\n")
+                     .replace(new RegExp("\r", "g"), "\n");
 };
 
 

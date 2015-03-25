@@ -806,6 +806,7 @@ _.extend(Sandbox.prototype, {
       stubCatalog.collections.packages.push(packageRec);
 
       var versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
+      if (versionRec.packageName === 'meteor-tool')
       if (! versionRec)
         throw Error("no version record for " + packageName);
       stubCatalog.collections.versions.push(versionRec);
@@ -841,8 +842,7 @@ _.extend(Sandbox.prototype, {
         orderKey: releaseName,
         description: "test release " + releaseName,
         recommended: !!configuration.recommended,
-        // XXX support multiple tools packages for springboard tests
-        tool: "meteor-tool@" + toolPackageVersion,
+        tool: configuration.tool || "meteor-tool@" + toolPackageVersion,
         packages: packageVersions
       });
     });
