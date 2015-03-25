@@ -34,6 +34,7 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
   // https://developers.google.com/accounts/docs/OAuth2WebServer#formingtheurl
   var accessType = options.requestOfflineToken ? 'offline' : 'online';
   var approvalPrompt = options.forceApprovalPrompt ? 'force' : 'auto';
+  var includeGrantedScopes = options.includeGrantedScopes ? 'true' : 'false';
 
   var loginStyle = OAuth._loginStyle('google', config, options);
 
@@ -45,7 +46,8 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
         '&redirect_uri=' + OAuth._redirectUri('google', config) +
         '&state=' + OAuth._stateParam(loginStyle, credentialToken) +
         '&access_type=' + accessType +
-        '&approval_prompt=' + approvalPrompt;
+        '&approval_prompt=' + approvalPrompt +
+        '&include_granted_scopes=' + includeGrantedScopes;
 
   // Use Google's domain-specific login page if we want to restrict creation to
   // a particular email domain. (Don't use it if restrictCreationByEmailDomain
