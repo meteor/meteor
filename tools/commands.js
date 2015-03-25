@@ -2063,10 +2063,7 @@ main.registerCommand({
     }
   });
   var sshEnd = future.wait();
-  maybeLog("Removing hostkey at " + hostpath);
-  files.unlink(hostpath);
-  maybeLog("Removing sshkey at " + idpath);
-  files.unlink(idpath);
+
   return sshEnd;
 });
 
