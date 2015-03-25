@@ -299,8 +299,7 @@ Blaze._materializeView = function (view, parentView) {
       view._isInRender = false;
 
       Tracker.nonreactive(function doMaterialize() {
-        var materializer = new Blaze._DOMMaterializer({parentView: view});
-        var rangesAndNodes = materializer.visit(htmljs, []);
+        var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
         if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
           if (c.firstRun) {
             domrange = new Blaze._DOMRange(rangesAndNodes);
