@@ -325,7 +325,6 @@ _.extend(exports.Tropohouse.prototype, {
     var self = this;
 
     if (self.platform === "win32") {
-      // XXX wipeAllPackages won't work on Windows until we fix that function
       isopack.saveToPath(self.packagePath(packageName, isopack.version));
     } else {
       // Note: wipeAllPackages depends on this filename structure

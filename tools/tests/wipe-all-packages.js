@@ -112,16 +112,22 @@ selftest.define("wipe all packages", function () {
   // OK, wiped all packages, now let's go and check that everything is removed
   // except for the tool we are running right now and the latest tool. i.e. v1
   // and v3
-  _.each(files.readdir(prefix), function (f) {
-    if (f[0] === '.') return;
+  var notHidden = function (f) { return f[0] !== '.'; };
+  var meteorToolDirs = _.filter(files.readdir(prefix), notHidden);
+  selftest.expectTrue(meteorToolDirs.length === 2);
+  _.each(meteorToolDirs, function (f) {
+    var fPath = files.pathJoin(prefix, f);
     if (process.platform === 'win32') {
       // this is a dir
-      selftest.expectTrue(files.lstat(files.pathJoin(prefix, f)).isDirectory());
+      selftest.expectTrue(files.lstat(fPath).isDirectory());
     } else {
       // this is a symlink to a dir and this dir exists
-      selftest.expectTrue(files.lstat(files.pathJoin(prefix, f)).isSymbolicLink());
-      selftest.expectTrue(files.exists(files.pathJoin(prefix, files.readlink(files.pathJoin(prefix, f)))));
+      selftest.expectTrue(files.lstat(fPath).isSymbolicLink());
+      selftest.expectTrue(files.exists(files.pathJoin(prefix, files.readlink(fPath))));
     }
+
+    // check that the version is either the running one, or the latest one
+    selftest.expectTrue(_.contains(['33.0.1', '33.0.3'], f));
   });
 
   // Check that all other packages are wiped
@@ -129,7 +135,7 @@ selftest.define("wipe all packages", function () {
     if (p[0] === '.') return;
     if (p === 'meteor-tool') return;
     var contents = files.readdir(files.pathJoin(s.warehouse, 'packages', p));
-    contents = _.filter(contents, function (f) { return f[0] !== '.'; });
+    contents = _.filter(contents, notHidden);
     selftest.expectTrue(contents.length === 0);
   });
 });
