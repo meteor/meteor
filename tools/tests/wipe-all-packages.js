@@ -31,6 +31,13 @@ selftest.define("wipe all packages", function () {
       containsPlugins: false
     };
   };
+  var meteorToolBuild = function (v) {
+    return {
+      buildArchitectures: [archinfo.host()],
+      versionId: 'VID' + v.replace(/\./g, ''),
+      _id: utils.randomToken()
+    };
+  };
 
   // insert the new tool versions into the catalog
   s.warehouseOfficialCatalog.insertData({
@@ -39,7 +46,7 @@ selftest.define("wipe all packages", function () {
     collections: {
       packages: [],
       versions: [meteorToolVersion('33.0.1'), meteorToolVersion('33.0.2'), meteorToolVersion('33.0.3')],
-      builds: [],
+      builds: [meteorToolBuild('33.0.1'), meteorToolBuild('33.0.2'), meteorToolBuild('33.0.3')],
       releaseTracks: [],
       releaseVersions: []
     }
