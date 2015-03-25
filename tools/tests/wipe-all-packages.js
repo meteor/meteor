@@ -8,9 +8,9 @@ var _ = require('underscore');
 selftest.define("wipe all packages", function () {
   var s = new Sandbox({
     warehouse: {
-      v1: { tool: "meteor-tool@33.0.1" },
-      v2: { tool: "meteor-tool@33.0.2" },
-      v3: { tool: "meteor-tool@33.0.3" }
+      v1: { tool: "meteor-tool@33.0.1", recommended: true },
+      v2: { tool: "meteor-tool@33.0.2", recommended: true },
+      v3: { tool: "meteor-tool@33.0.3", recommended: true }
     }
   });
   var meteorToolVersion = function (v) {
@@ -33,7 +33,7 @@ selftest.define("wipe all packages", function () {
   };
   var meteorToolBuild = function (v) {
     return {
-      buildArchitectures: [archinfo.host()],
+      buildArchitectures: archinfo.host(),
       versionId: 'VID' + v.replace(/\./g, ''),
       _id: utils.randomToken()
     };
