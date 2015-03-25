@@ -3233,7 +3233,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure. The callback cannot be called if you are using the &quot;redirect&quot; <code>loginStyle</code>, because the app will have reloaded in the meantime; try using <a href=\"#accounts_onlogin\">client-side login hooks</a> instead.</p>",
         "name": "callback",
         "optional": true,
         "type": {
