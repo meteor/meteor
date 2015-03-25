@@ -1,6 +1,6 @@
 ## v.NEXT
 
-## v1.0.5, 2015-Mar-??
+## v1.0.5, 2015-Mar-25
 
 * This version of Meteor now uses version 2.2 of the Facebook API for
   authentication, instead of 1.0. If you use additional Facebook API methods
