@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v1.1, 2015-??
+
 ### Windows Support
 
 * The Meteor command line tool now officially supports Windows 7, Windows 8.1,
