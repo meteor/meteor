@@ -841,8 +841,7 @@ _.extend(Sandbox.prototype, {
         orderKey: releaseName,
         description: "test release " + releaseName,
         recommended: !!configuration.recommended,
-        // XXX support multiple tools packages for springboard tests
-        tool: "meteor-tool@" + toolPackageVersion,
+        tool: configuration.tool || "meteor-tool@" + toolPackageVersion,
         packages: packageVersions
       });
     });

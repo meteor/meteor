@@ -846,6 +846,8 @@ _.extend(RemoteCatalog.prototype, {
   getDefaultReleaseVersion: function (track) {
     var self = this;
     var versionRecord = self.getDefaultReleaseVersionRecord(track);
+    if (! versionRecord)
+      throw new Error("Can't get default release version for track " + track);
     return _.pick(versionRecord, ["track", "version" ]);
   },
 
