@@ -51,6 +51,10 @@
 * Introduce a new option for `Tracker.autorun` - `onError`. This callback can be
   used to handle errors caught in the reactive computations. #3822
 
+### Blaze
+
+* Fix stack overflow from nested templates and helpers by avoiding recursion
+  during rendering.  #3028
 
 ### `meteor` command-line tool
 
