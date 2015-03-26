@@ -130,7 +130,7 @@ Sp.onConnection = function onConnection(socket) {
       prompt: "> ",
       terminal: true,
       useColors: true,
-      useGlobal: true,
+      useGlobal: false,
       ignoreUndefined: true,
     });
 
@@ -246,7 +246,13 @@ function getTerminalWidth() {
 function evalCommand(command, context, filename, callback) {
   Fiber(function() {
     try {
-      var result = vm.runInThisContext(command, filename);
+      var result = vm.createScript(command, {
+        filename: filename,
+        displayErrors: false
+      }).runInContext(context, {
+        displayErrors: false
+      });
+
     } catch (error) {
       if (process.domain) {
         process.domain.emit("error", error);
