@@ -281,7 +281,46 @@ Blaze._createView = function (view, parentView, forExpansion) {
   Blaze._fireCallbacks(view, 'created');
 };
 
-Blaze._materializeView = function (view, parentView) {
+var doFirstRender = function (view, initialContent) {
+  var domrange = new Blaze._DOMRange(initialContent);
+  view._domrange = domrange;
+  domrange.view = view;
+  view.isRendered = true;
+  Blaze._fireCallbacks(view, 'rendered');
+
+  var teardownHook = null;
+
+  domrange.onAttached(function attached(range, element) {
+    view._isAttached = true;
+
+    teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
+      element, function teardown() {
+        Blaze._destroyView(view, true /* _skipNodes */);
+      });
+  });
+
+  // tear down the teardown hook
+  view.onViewDestroyed(function () {
+    teardownHook && teardownHook.stop();
+    teardownHook = null;
+  });
+
+  return domrange;
+};
+
+// Take an uncreated View `view` and create and render it to DOM,
+// setting up the autorun that updates the View.  Returns a new
+// DOMRange, which has been associated with the View.
+//
+// The private arguments `_workStack` and `_intoArray` are passed in
+// by Blaze._materializeDOM.  If provided, then we avoid the mutual
+// recursion of calling back into Blaze._materializeDOM so that deep
+// View hierarchies don't blow the stack.  Instead, we push tasks onto
+// workStack for the initial rendering and subsequent setup of the
+// View, and they are done after we return.  When there is a
+// _workStack, we do not return the new DOMRange, but instead push it
+// into _intoArray from a _workStack task.
+Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
   Blaze._createView(view, parentView);
 
   var domrange;
@@ -298,20 +337,16 @@ Blaze._materializeView = function (view, parentView) {
       var htmljs = view._render();
       view._isInRender = false;
 
-      Tracker.nonreactive(function doMaterialize() {
-        var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
-        if (c.firstRun || ! Blaze._isContentEqual(lastHtmljs, htmljs)) {
-          if (c.firstRun) {
-            domrange = new Blaze._DOMRange(rangesAndNodes);
-            view._domrange = domrange;
-            domrange.view = view;
-            view.isRendered = true;
-          } else {
+      if (! c.firstRun) {
+        Tracker.nonreactive(function doMaterialize() {
+          // re-render
+          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
+          if (! Blaze._isContentEqual(lastHtmljs, htmljs)) {
             domrange.setMembers(rangesAndNodes);
+            Blaze._fireCallbacks(view, 'rendered');
           }
-          Blaze._fireCallbacks(view, 'rendered');
-        }
-      });
+        });
+      }
       lastHtmljs = htmljs;
 
       // Causes any nested views to stop immediately, not when we call
@@ -323,25 +358,37 @@ Blaze._materializeView = function (view, parentView) {
       });
     }, undefined, 'materialize');
 
-    var teardownHook = null;
-
-    domrange.onAttached(function attached(range, element) {
-      view._isAttached = true;
-
-      teardownHook = Blaze._DOMBackend.Teardown.onElementTeardown(
-        element, function teardown() {
-          Blaze._destroyView(view, true /* _skipNodes */);
-        });
-    });
-
-    // tear down the teardown hook
-    view.onViewDestroyed(function () {
-      teardownHook && teardownHook.stop();
-      teardownHook = null;
-    });
+    // first render.  lastHtmljs is the first htmljs.
+    var initialContents;
+    if (! _workStack) {
+      initialContents = Blaze._materializeDOM(lastHtmljs, [], view);
+      domrange = doFirstRender(view, initialContents);
+      initialContents = null; // help GC because we close over this scope a lot
+    } else {
+      // We're being called from Blaze._materializeDOM, so to avoid
+      // recursion and save stack space, provide a description of the
+      // work to be done instead of doing it.  Tasks pushed onto
+      // _workStack will be done in LIFO order after we return.
+      // The work will still be done within a Tracker.nonreactive,
+      // because it will be done by some call to Blaze._materializeDOM
+      // (which is always called in a Tracker.nonreactive).
+      initialContents = [];
+      // push this function first so that it happens last
+      _workStack.push(function () {
+        domrange = doFirstRender(view, initialContents);
+        initialContents = null; // help GC because of all the closures here
+        _intoArray.push(domrange);
+      });
+      // now push the task that calculates initialContents
+      _workStack.push([lastHtmljs, initialContents, view]);
+    }
   });
 
-  return domrange;
+  if (! _workStack) {
+    return domrange;
+  } else {
+    return null;
+  }
 };
 
 // Expands a View to HTMLjs, calling `render` recursively on all
