@@ -1,5 +1,16 @@
 ## v.NEXT
 
+### Windows Support
+
+* The Meteor command line tool now officially supports Windows 7, Windows 8.1,
+  Windows Server 2008, and Windows Server 2012.
+
+* There is a native Windows installer that will be available for download from
+  <https://www.meteor.com/install> starting with this release.
+
+* In this release, Meteor on Windows supports all features available on Linux
+  and Mac except building mobile apps with PhoneGap.
+
 ### Version Solver
 
 * The code that selects compatible package versions for `meteor update`
