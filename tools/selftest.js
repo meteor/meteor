@@ -806,7 +806,6 @@ _.extend(Sandbox.prototype, {
       stubCatalog.collections.packages.push(packageRec);
 
       var versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
-      if (versionRec.packageName === 'meteor-tool')
       if (! versionRec)
         throw Error("no version record for " + packageName);
       stubCatalog.collections.versions.push(versionRec);
