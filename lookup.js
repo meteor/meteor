@@ -28,7 +28,9 @@ var bindDataContext = function (x) {
 
 Blaze._OLDSTYLE_HELPER = {};
 
-Blaze._getTemplateHelper = function (template, name) {
+// templateInstance argument is provided to be available for possible
+// alternative implementations of this function by 3rd party packages.
+Blaze._getTemplateHelper = function (template, name, templateInstance) {
   // XXX COMPAT WITH 0.9.3
   var isKnownOldStyleHelper = false;
 
@@ -106,7 +108,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
     return Blaze._parentData(name.length - 1, true /*_functionWrapped*/);
 
   } else if (template &&
-             ((helper = Blaze._getTemplateHelper(template, name)) != null)) {
+             ((helper = Blaze._getTemplateHelper(template, name, templateInstance)) != null)) {
     return wrapHelper(bindDataContext(helper), boundTmplInstance);
   } else if (lookupTemplate && (name in Blaze.Template) &&
              (Blaze.Template[name] instanceof Blaze.Template)) {
