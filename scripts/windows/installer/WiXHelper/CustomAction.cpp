@@ -257,15 +257,9 @@ HRESULT UnzipToFolder(
 	StringCchPrintf(packedTarball, BUF_LEN, L"%s%s", szTmpDir, L"meteor-bootstrap-os.windows.x86_32.tar.gz");
 
 	DWORD pdwAttr;
-	if (FileExistsEx(sz7Zip, &pdwAttr) == FALSE)
-	{
-		hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
-	}
 
-	if (FileExistsEx(packedTarball, &pdwAttr) == FALSE)
-	{
-		hr = ExtractBinaryToFile(L"BootstrapTarball", packedTarball);
-	}
+	hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
+	hr = ExtractBinaryToFile(L"BootstrapTarball", packedTarball);
 
 	DWORD nRes=0;
 
