@@ -7,49 +7,79 @@
 // - `intoArray`: the array of DOM nodes and DOMRanges to push the output
 //   into (required)
 // - `parentView`: the View we are materializing content for (optional)
+//
+// Returns `intoArray`, which is especially useful if you pass in `[]`.
 Blaze._materializeDOM = function (htmljs, intoArray, parentView) {
+  // In order to use fewer stack frames, materializeDOMInner can push
+  // tasks onto `workStack`, and they will be popped off
+  // and run, last first, after materializeDOMInner returns.  The
+  // reason we use a stack instead of a queue is so that we recurse
+  // depth-first, doing newer tasks first.
+  var workStack = [];
+  materializeDOMInner(htmljs, intoArray, parentView, workStack);
+
+  // A "task" is either an array of arguments to materializeDOM or
+  // a function to execute.  If we only allowed functions as tasks,
+  // we would have to generate the functions using _.bind or close
+  // over a loop variable, either of which is a little less efficient.
+  while (workStack.length) {
+    // Note that running the workStack task may push new items onto
+    // the workStack.
+    var task = workStack.pop();
+    if (typeof task === 'function') {
+      task();
+    } else {
+      // assume array
+      materializeDOMInner(task[0], task[1], task[2], workStack);
+    }
+  }
+
+  return intoArray;
+};
+
+var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
   if (htmljs == null) {
     // null or undefined
-    return intoArray;
+    return;
   }
 
   switch (typeof htmljs) {
   case 'string': case 'boolean': case 'number':
     intoArray.push(document.createTextNode(String(htmljs)));
-    return intoArray;
+    return;
   case 'object':
     if (htmljs.htmljsType) {
       switch (htmljs.htmljsType) {
       case HTML.Tag.htmljsType:
-        intoArray.push(materializeTag(htmljs, parentView));
-        return intoArray;
+        intoArray.push(materializeTag(htmljs, parentView, workStack));
+        return;
       case HTML.CharRef.htmljsType:
         intoArray.push(document.createTextNode(htmljs.str));
-        return intoArray;
+        return;
       case HTML.Comment.htmljsType:
         intoArray.push(document.createComment(htmljs.sanitizedValue));
-        return intoArray;
+        return;
       case HTML.Raw.htmljsType:
         // Get an array of DOM nodes by using the browser's HTML parser
         // (like innerHTML).
         var nodes = Blaze._DOMBackend.parseHTML(htmljs.value);
         for (var i = 0; i < nodes.length; i++)
           intoArray.push(nodes[i]);
-        return intoArray;
+        return;
       }
     } else if (HTML.isArray(htmljs)) {
-      for (var i = 0; i < htmljs.length; i++) {
-        Blaze._materializeDOM(htmljs[i], intoArray, parentView);
+      for (var i = htmljs.length-1; i >= 0; i--) {
+        workStack.push([htmljs[i], intoArray, parentView]);
       }
-      return intoArray;
+      return;
     } else {
       if (htmljs instanceof Blaze.Template) {
         htmljs = htmljs.constructView();
         // fall through to Blaze.View case below
       }
       if (htmljs instanceof Blaze.View) {
-        intoArray.push(Blaze._materializeView(htmljs, parentView));
-        return intoArray;
+        Blaze._materializeView(htmljs, parentView, workStack, intoArray);
+        return;
       }
     }
   }
@@ -57,7 +87,7 @@ Blaze._materializeDOM = function (htmljs, intoArray, parentView) {
   throw new Error("Unexpected object in htmljs: " + htmljs);
 };
 
-var materializeTag = function (tag, parentView) {
+var materializeTag = function (tag, parentView, workStack) {
   var tagName = tag.tagName;
   var elem;
   if ((HTML.isKnownSVGElement(tagName) || isSVGAnchor(tag))
@@ -118,13 +148,20 @@ var materializeTag = function (tag, parentView) {
     });
   }
 
-  var childNodesAndRanges = Blaze._materializeDOM(children, [], parentView);
-  for (var i = 0; i < childNodesAndRanges.length; i++) {
-    var x = childNodesAndRanges[i];
-    if (x instanceof Blaze._DOMRange)
-      x.attach(elem);
-    else
-      elem.appendChild(x);
+  if (children.length) {
+    var childNodesAndRanges = [];
+    // push this function first so that it's done last
+    workStack.push(function () {
+      for (var i = 0; i < childNodesAndRanges.length; i++) {
+        var x = childNodesAndRanges[i];
+        if (x instanceof Blaze._DOMRange)
+          x.attach(elem);
+        else
+          elem.appendChild(x);
+      }
+    });
+    // now push the task that calculates childNodesAndRanges
+    workStack.push([children, childNodesAndRanges, parentView]);
   }
 
   return elem;
