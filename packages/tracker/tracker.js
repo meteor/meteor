@@ -45,28 +45,42 @@ var _debugFunc = function () {
   //
   // Lazy evaluation because `Meteor` does not exist right away.(??)
   return (typeof Meteor !== "undefined" ? Meteor._debug :
-          ((typeof console !== "undefined") && console.log ?
-           function () { console.log.apply(console, arguments); } :
+          ((typeof console !== "undefined") && console.error ?
+           function () { console.error.apply(console, arguments); } :
            function () {}));
+};
+
+var _maybeSupressMoreLogs = function (messagesLength) {
+  // Sometimes when running tests, we intentionally supress logs on expected
+  // printed errors. Since the current implementation of _throwOrLog can log
+  // multiple separate log messages, supress all of them if at least one supress
+  // is expected as we still want them to count as one.
+  if (typeof Meteor !== "undefined") {
+    if (Meteor._supressed_log_expected()) {
+      Meteor._suppress_log(messagesLength - 1);
+    }
+  }
 };
 
 var _throwOrLog = function (from, e) {
   if (throwFirstError) {
     throw e;
   } else {
-    var messageAndStack;
-    if (e.stack && e.message) {
+    var printArgs = ["Exception from Tracker " + from + " function:"];
+    if (e.stack && e.message && e.name) {
       var idx = e.stack.indexOf(e.message);
-      if (idx >= 0 && idx <= 10) // allow for "Error: " (at least 7)
-        messageAndStack = e.stack; // message is part of e.stack, as in Chrome
-      else
-        messageAndStack = e.message +
-        (e.stack.charAt(0) === '\n' ? '' : '\n') + e.stack; // e.g. Safari
-    } else {
-      messageAndStack = e.stack || e.message;
+      if (idx < 0 || idx > e.name.length + 2) { // check for "Error: "
+        // message is not part of the stack
+        var message = e.name + ": " + e.message;
+        printArgs.push(message);
+      }
     }
-    _debugFunc()("Exception from Tracker " + from + " function:",
-                 messageAndStack);
+    printArgs.push(e.stack);
+    _maybeSupressMoreLogs(printArgs.length);
+
+    for (var i = 0; i < printArgs.length; i++) {
+      _debugFunc()(printArgs[i]);
+    }
   }
 };
 
@@ -136,7 +150,7 @@ var constructingComputation = false;
  * computation.
  * @instancename computation
  */
-Tracker.Computation = function (f, parent) {
+Tracker.Computation = function (f, parent, onError) {
   if (! constructingComputation)
     throw new Error(
       "Tracker.Computation constructor is private; use Tracker.autorun");
@@ -185,6 +199,7 @@ Tracker.Computation = function (f, parent) {
   // to constrain the order that computations are processed
   self._parent = parent;
   self._func = f;
+  self._onError = onError;
   self._recomputing = false;
 
   // Register the computation within the global Tracker.
@@ -297,7 +312,11 @@ Tracker.Computation.prototype._recompute = function () {
       try {
         self._compute();
       } catch (e) {
-        _throwOrLog("recompute", e);
+        if (self._onError) {
+          self._onError(e);
+        } else {
+          _throwOrLog("recompute", e);
+        }
       }
     }
   } finally {
@@ -492,17 +511,27 @@ Tracker._runFlush = function (options) {
  * @param {Tracker.Computation}
  */
 /**
- * @summary Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning.
+ * @summary Run a function now and rerun it later whenever its dependencies
+ * change. Returns a Computation object that can be used to stop or observe the
+ * rerunning.
  * @locus Client
- * @param {Tracker.ComputationFunction} runFunc The function to run. It receives one argument: the Computation object that will be returned.
+ * @param {Tracker.ComputationFunction} runFunc The function to run. It receives
+ * one argument: the Computation object that will be returned.
+ * @param {Object} [options]
+ * @param {Function} options.onError Optional. The function to run when an error
+ * happens in the Computation. The only argument it recieves is the Error
+ * thrown. Defaults to the error being logged to the console.
  * @returns {Tracker.Computation}
  */
-Tracker.autorun = function (f) {
+Tracker.autorun = function (f, options) {
   if (typeof f !== 'function')
     throw new Error('Tracker.autorun requires a function argument');
 
+  options = options || {};
+
   constructingComputation = true;
-  var c = new Tracker.Computation(f, Tracker.currentComputation);
+  var c = new Tracker.Computation(
+    f, Tracker.currentComputation, options.onError);
 
   if (Tracker.active)
     Tracker.onInvalidate(function () {

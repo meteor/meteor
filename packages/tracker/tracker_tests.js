@@ -469,3 +469,21 @@ Tinytest.add('tracker - Tracker.flush finishes', function (test) {
   Tracker.flush();
   test.equal(n, 2000);
 });
+
+testAsyncMulti('tracker - Tracker.autorun, onError option', [function (test, expect) {
+  var d = new Tracker.Dependency;
+  var c = Tracker.autorun(function (c) {
+    d.depend();
+
+    if (! c.firstRun)
+      throw new Error("foo");
+  }, {
+    onError: expect(function (err) {
+      test.equal(err.message, "foo");
+    })
+  });
+
+  d.changed();
+  Tracker.flush();
+}]);
+
