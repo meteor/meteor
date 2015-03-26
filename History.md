@@ -46,6 +46,11 @@
 * Yield to the event loop during the flush cycle, unless we're executing a
   synchronous `Tracker.flush()`.  #3901
 
+* Fix error reporting not being source-mapped properly. #3655
+
+* Introduce a new option for `Tracker.autorun` - `onError`. This callback can be
+  used to handle errors caught in the reactive computations. #3822
+
 
 ### `meteor` command-line tool
 
