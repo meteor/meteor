@@ -358,7 +358,7 @@ var compileUnibuild = function (options) {
     var handler = null;
     if (! fileOptions.isAsset) {
       var parts = filename.split('.');
-      for (var i = 0; i < parts.length; i++) {
+      for (var i = 1; i < parts.length; i++) {
         var extension = parts.slice(i).join('.');
         if (_.has(allHandlersWithPkgs, extension)) {
           handler = allHandlersWithPkgs[extension].handler;
