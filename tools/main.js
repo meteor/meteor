@@ -937,10 +937,10 @@ Fiber(function () {
               // Warn if we didn't already warn.
               Console.warn(
                 "Unable to contact release server (are you offline?)");
-                Console.warn(
-                  "\n",
-                  "If you are using Meteor behind a proxy, set HTTP_PROXY and HTTPS_PROXY environment variables or see this page for more details: ",
-                  Console.url("https://github.com/meteor/meteor/wiki/Using-Meteor-behind-a-proxy"));
+              Console.warn();
+              Console.warn(
+                "If you are using Meteor behind a proxy, set HTTP_PROXY and HTTPS_PROXY environment variables or see this page for more details: ",
+                Console.url("https://github.com/meteor/meteor/wiki/Using-Meteor-behind-a-proxy"));
             }
             // Treat this like a failure to refresh the catalog
             // (map the old world to the new world)

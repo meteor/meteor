@@ -69,8 +69,8 @@ catalog.refreshOrWarn = function (options) {
     // XXX is throwing correct for SQLite errors too? probably.
 
     Console.warn("Unable to update package catalog (are you offline?)");
+    Console.warn();
     Console.warn(
-      "\n",
       "If you are using Meteor behind a proxy, set HTTP_PROXY and HTTPS_PROXY environment variables or see this page for more details: ",
       Console.url("https://github.com/meteor/meteor/wiki/Using-Meteor-behind-a-proxy"));
 
