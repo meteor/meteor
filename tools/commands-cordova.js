@@ -1430,9 +1430,11 @@ var consumeControlFile = function (
     code = files.readFile(controlFilePath, 'utf8');
   }
 
+  var defaultBuildNumber = Date.now();
   var metadata = {
     id: 'com.id' + projectContext.appIdentifier,
     version: '0.0.1',
+    buildNumber: defaultBuildNumber,
     name: appName,
     description: 'New Meteor Mobile App',
     author: 'A Meteor Developer',
@@ -1685,6 +1687,8 @@ var consumeControlFile = function (
   _.each({
     id: metadata.id,
     version: metadata.version,
+    'android-versionCode': metadata.buildNumber,
+    'ios-CFBundleVersion': metadata.buildNumber,
     xmlns: 'http://www.w3.org/ns/widgets',
     'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
   }, function (val, key) {
