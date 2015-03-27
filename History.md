@@ -1,6 +1,28 @@
-* Blaze: Improve parsing of `<script>` and `<style>` tags.  #3797
-
 ## v.NEXT
+
+## Blaze
+
+* Improve parsing of `<script>` and `<style>` tags.  #3797
+
+
+## `meteor` command-line tool
+
+* Avoid a race condition in `meteor --test` and work with newer versions of the
+  Velocity package.  #3957
+
+
+## v1.1, 2015-??
+
+### Windows Support
+
+* The Meteor command line tool now officially supports Windows 7, Windows 8.1,
+  Windows Server 2008, and Windows Server 2012.
+
+* There is a native Windows installer that will be available for download from
+  <https://www.meteor.com/install> starting with this release.
+
+* In this release, Meteor on Windows supports all features available on Linux
+  and Mac except building mobile apps with PhoneGap.
 
 ### Version Solver
 
@@ -35,13 +57,19 @@
 * Yield to the event loop during the flush cycle, unless we're executing a
   synchronous `Tracker.flush()`.  #3901
 
+* Fix error reporting not being source-mapped properly. #3655
+
+* Introduce a new option for `Tracker.autorun` - `onError`. This callback can be
+  used to handle errors caught in the reactive computations. #3822
+
+### Blaze
+
+* Fix stack overflow from nested templates and helpers by avoiding recursion
+  during rendering.  #3028
 
 ### `meteor` command-line tool
 
 * Don't fail if `npm` prints more than 200K.  #3887
-
-* Avoid a race condition in `meteor --test` and work with newer versions of the
-  Velocity package.  #3957
 
 
 ### Other bug fixes and improvements
