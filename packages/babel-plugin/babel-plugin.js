@@ -4,6 +4,7 @@ var handler = function (compileStep) {
 
   var result = Babel.transform(source, {
     whitelist: [
+      'flow',
       'es6.arrowFunctions',
       'es6.templateLiterals',
       // we haven't completely finished support for these, but it

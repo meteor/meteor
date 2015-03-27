@@ -171,6 +171,18 @@ BabelTests.Transpile.groups = [
         expected: 'var x = 3;print(x);'
       }
     ]
+  },
+  {
+    groupName: 'Flow',
+    features: ['flow'],
+    commentary: `Strip Flow type annotations.`,
+    cases: [
+      {
+        name: 'basic flow',
+        input: 'var foo = function (one: any, two: number, three?): string {};',
+        expected: 'var foo = function (one, two, three) {};'
+      }
+    ]
   }
 ];
 
