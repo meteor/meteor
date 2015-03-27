@@ -32,7 +32,7 @@ BabelTests.Transpile.groups = [
       },
       {
         name: 'empty subclass',
-        commentary: `This is a basic class definition with a constructor.  The \`classCallCheck\` helper makes sure the constructor is being called with \`new\`, because calling it as a function is disallowed.`,
+        commentary: `A subclass (also called a derived class) gets a default constructor that calls the super constructor.`,
         input:
         ` | class Foo extends Bar {}`,
         expected:
@@ -105,7 +105,7 @@ BabelTests.Transpile.groups = [
         name: 'basic expression',
         commentary: `Arrow functions are, for one thing, a shorter way to write function literals.
 
-          The body can be an expression (with no return statement), or a block (which must have an explicit return statement to return a value).  The parentheses around the argument list can be omitted if there is exactly one argument.`,
+The body can be an expression (with no return statement), or a block (which must have an explicit return statement to return a value).  The parentheses around the argument list can be omitted if there is exactly one argument.`,
         input:
         ` | var sum = (x,y) => x + y;
           | var square = x => x*x;
