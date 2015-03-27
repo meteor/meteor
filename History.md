@@ -5,10 +5,22 @@
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
 
+## Isobuild
+
+* Plugins should not process files whose names match the extension exactly (with
+  no extra dot).  #3985
+
+
 ## `meteor` command-line tool
 
 * Avoid a race condition in `meteor --test` and work with newer versions of the
   Velocity package.  #3957
+
+* Improve error handling when publishing packages.  #3977
+
+* Improve messaging around publishing binary packages.  #3961
+
+* Preserve the value of `_` in `meteor shell`.  #4010
 
 
 ## v1.1, 2015-??
