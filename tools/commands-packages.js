@@ -457,8 +457,9 @@ main.registerCommand({
     // Normal publish flow. Tell the user nicely.
     Console.warn();
     Console.warn(
-      "This package contains binary code and must be built on",
-      "multiple architectures.");
+      "You're not done publishing yet! This package contains binary code and",
+      "must be built on all of Meteor's architectures, including this",
+      "machine's architecture.");
     Console.warn();
     Console.info(
       "You can access Meteor provided build machines, pre-configured to",
