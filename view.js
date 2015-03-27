@@ -313,13 +313,15 @@ var doFirstRender = function (view, initialContent) {
 // DOMRange, which has been associated with the View.
 //
 // The private arguments `_workStack` and `_intoArray` are passed in
-// by Blaze._materializeDOM.  If provided, then we avoid the mutual
-// recursion of calling back into Blaze._materializeDOM so that deep
-// View hierarchies don't blow the stack.  Instead, we push tasks onto
-// workStack for the initial rendering and subsequent setup of the
-// View, and they are done after we return.  When there is a
-// _workStack, we do not return the new DOMRange, but instead push it
-// into _intoArray from a _workStack task.
+// by Blaze._materializeDOM and are only present for recursive calls
+// (when there is some other _materializeView on the stack).  If
+// provided, then we avoid the mutual recursion of calling back into
+// Blaze._materializeDOM so that deep View hierarchies don't blow the
+// stack.  Instead, we push tasks onto workStack for the initial
+// rendering and subsequent setup of the View, and they are done after
+// we return.  When there is a _workStack, we do not return the new
+// DOMRange, but instead push it into _intoArray from a _workStack
+// task.
 Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
   Blaze._createView(view, parentView);
 
@@ -380,7 +382,8 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
         _intoArray.push(domrange);
       });
       // now push the task that calculates initialContents
-      _workStack.push([lastHtmljs, initialContents, view]);
+      _workStack.push(_.bind(Blaze._materializeDOM, null,
+                             lastHtmljs, initialContents, view, _workStack));
     }
   });
 
