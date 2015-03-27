@@ -74,7 +74,7 @@ var wrapHelper = function (f, templateFunc) {
 };
 
 // Looks up a name, like "foo" or "..", as a helper of the
-// current template; a global helper; the name of a template;
+// current template; the name of a template; a global helper;
 // or a property of the data context.  Called on the View of
 // a template (i.e. a View with a `.template` property,
 // where the helpers are).  Used for the first name in a
