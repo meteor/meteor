@@ -48,6 +48,7 @@ Package.onTest(function (api) {
   api.use(['test-helpers', 'session', 'tracker',
            'minimongo'], 'client');
   api.use('spacebars-compiler');
+  api.use('minifiers'); // ensure compiler output is beautified
 
   api.addFiles([
     'plugin/html_scanner.js',

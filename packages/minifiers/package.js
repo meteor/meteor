@@ -12,7 +12,7 @@ Npm.depends({
 Npm.strip({
   "uglify-js": ["test/"],
   "css-parse": ["test/"],
-  "css-stringify": ["test/"],
+  "css-stringify": ["test/"]
 });
 
 Package.onUse(function (api) {
