@@ -23,7 +23,7 @@ html_scanner = {
 
     var throwParseError = function (msg, overrideIndex) {
       var ret = new html_scanner.ParseError;
-      ret.message = msg || "bad formatting in HTML template";
+      ret.message = msg || "bad formatting in template file";
       ret.file = source_name;
       var theIndex = (typeof overrideIndex === 'number' ? overrideIndex : index);
       ret.line = contents.substring(0, theIndex).split('\n').length;
@@ -39,7 +39,8 @@ html_scanner = {
 
       var match = rOpenTag.exec(rest);
       if (! match)
-        throwParseError(); // unknown text encountered
+        throwParseError("Expected <template>, <head>, or <body> tag" +
+                        " in template file");
 
       var matchToken = match[1];
       var matchTokenTagName =  match[3];
@@ -55,7 +56,7 @@ html_scanner = {
         // top-level HTML comment
         var commentEnd = /--\s*>/.exec(rest);
         if (! commentEnd)
-          throwParseError("unclosed HTML comment");
+          throwParseError("unclosed HTML comment in template file");
         advance(commentEnd.index + commentEnd[0].length);
         continue;
       }
