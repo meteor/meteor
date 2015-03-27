@@ -90,7 +90,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
 };
 
 SpacebarsCompiler._beautify = function (code) {
-  if (Package.minifiers) {
+  if (Package.minifiers && Package.minifiers.UglifyJSMinify) {
     var result = Package.minifiers.UglifyJSMinify(
       code,
       { fromString: true,
