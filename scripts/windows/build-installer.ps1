@@ -39,7 +39,7 @@ Push-Location installer
 Invoke-Expression ("cmd /c build.bat")
 Pop-Location
 
-move-item ($script_path + "installer\Release\Setup_Meteor.exe") ($script_path + "InstallMeteor.exe") -Force
+move-item ($script_path + "installer\Release\InstallMeteor.exe") ($script_path + "InstallMeteor.exe") -Force
 
 echo "Clean up"
 rm $conf_path
