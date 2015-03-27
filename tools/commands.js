@@ -1066,7 +1066,6 @@ main.registerCommand({
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
-
   var findMongoPort = require('./run-mongo.js').findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
