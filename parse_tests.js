@@ -13,6 +13,7 @@ var A = HTML.A;
 var DIV = HTML.DIV;
 var P = HTML.P;
 var TEXTAREA = HTML.TEXTAREA;
+var SCRIPT = HTML.SCRIPT;
 
 Tinytest.add("html-tools - parser getContent", function (test) {
 
@@ -149,6 +150,8 @@ Tinytest.add("html-tools - parser getContent", function (test) {
   succeed('<br x="\r\r">', BR({x:'\n\n'}));
   succeed('<br x=y\r>', BR({x:'y'}));
   fatal('<br x=\r>');
+  succeed('<script>var x="<div>";</script>',SCRIPT('var x="<div>";'));
+  succeed('<script>var x=1 && 0;</script>',SCRIPT('var x=1 && 0;'));
 });
 
 Tinytest.add("html-tools - parseFragment", function (test) {
