@@ -1,3 +1,5 @@
+* Blaze: Improve parsing of `<script>` and `<style>` tags.  #3797
+
 ## v.NEXT
 
 ### Version Solver
