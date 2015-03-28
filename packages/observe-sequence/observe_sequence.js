@@ -292,7 +292,7 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
                item === undefined) {
       id = item;
     } else if (typeof item === 'object') {
-      id = (item && item._id) || index;
+      id = (item && _.has(item, '_id')) ? item._id : index;
     } else {
       throw new Error("{{#each}} doesn't support arrays with " +
                       "elements of type " + typeof item);
