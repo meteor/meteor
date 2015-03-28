@@ -2,27 +2,14 @@ var auth = require('./auth.js');
 var Console = require('./console.js').Console;
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('./http-helpers.js');
-var uniload = require('./uniload.js');
 
 exports.AlreadyPrintedMessageError = function () {};
-
-// Use uniload to load the packages that we need to open a meteor developer
-// accounts ddp connection.
-//
-// meteor: base package and prerequsite for all others.
-// ddp: DDP client interface to make a connection to the package server.
-var getDDPPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp']
-  });
-};
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
 // using a current user-agent header composed by http-helpers.js.
 exports.openServiceConnection = function (serverUrl) {
   return new ServiceConnection(
-    getDDPPackages(),
     serverUrl,
     {headers: {"User-Agent": httpHelpers.getUserAgent()},
      _dontPrintErrors: true});
@@ -34,7 +21,7 @@ exports.openServiceConnection = function (serverUrl) {
 //
 // err: error
 // label: name of the service that we are trying to use (ex: "package server")
-exports.handlerConnectionError = function (error, label) {
+exports.handleConnectionError = function (error, label) {
   if (error instanceof exports.AlreadyPrintedMessageError) {
     // do nothing
   } else if (error.errorType === 'Meteor.Error') {
@@ -71,9 +58,10 @@ exports.loggedInConnection = function (url, domain, sessionType) {
 
   if (! auth.isLoggedIn()) {
     // XXX we should have a better account signup page.
-    Console.stderr.write(
-"Please log in with your Meteor developer account. If you don't have one,\n" +
-"you can quickly create one at www.meteor.com.\n");
+    Console.error(
+      "Please log in with your Meteor developer account.",
+      "If you don't have one,",
+      "you can quickly create one at www.meteor.com.");
     auth.doUsernamePasswordLogin({ retry: true });
   }
 
@@ -91,10 +79,10 @@ exports.loggedInConnection = function (url, domain, sessionType) {
     if (err.message === "access-denied") {
       // Maybe we thought we were logged in, but our token had been
       // revoked.
-      Console.stderr.write(
-"It looks like you have been logged out! Please log in with your Meteor\n" +
-"developer account. If you don't have one, you can quickly create one\n" +
-"at www.meteor.com.\n");
+      Console.error(
+        "It looks like you have been logged out!",
+        "Please log in with your Meteor developer account. If you don't have",
+        "one, you can quickly create one at www.meteor.com.");
       auth.doUsernamePasswordLogin({ retry: true });
       auth.loginWithTokenOrOAuth(
         conn,

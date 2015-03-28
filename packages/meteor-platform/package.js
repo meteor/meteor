@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Include a standard set of Meteor packages in your app",
-  version: '1.2.0'
+  version: '1.2.2'
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   // The "imply" here means that if your app uses "meteor-platform", it is
   // treated as if it also directly included all of these packages (and it gets
   // their exports, plugins, etc).
@@ -71,9 +71,4 @@ Package.on_use(function(api) {
     // no-op browser version anyway.
     'launch-screen'
   ], 'web');
-});
-
-Cordova.depends({
-  'org.apache.cordova.device': '0.2.11',
-  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2'
 });

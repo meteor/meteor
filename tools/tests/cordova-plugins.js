@@ -2,9 +2,6 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var _ = require('underscore');
-var utils = require('../utils.js');
-var fs = require('fs');
-var path = require('path');
 
 // Copy the contents of one file to another.  In these series of tests, we often
 // want to switch contents of package.js files. It is more legible to copy in
@@ -21,7 +18,7 @@ var copyFile = function(from, to, sand) {
 };
 
 
-var localCordova = path.join(files.getCurrentToolsDir(), "tools",
+var localCordova = files.pathJoin(files.getCurrentToolsDir(), "tools",
   "cordova-scripts", "cordova.sh");
 // Given a sandbox, that has the app as its currend cwd, read the versions file
 // and check that it contains the plugins that we are looking for. We don't
@@ -33,7 +30,7 @@ var localCordova = path.join(files.getCurrentToolsDir(), "tools",
 var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
   var lines = selftest.execFileSync(localCordova, ['plugins'],
     {
-      cwd: path.join(sand.cwd, '.meteor', 'local', 'cordova-build'),
+      cwd: files.pathJoin(sand.cwd, '.meteor', 'local', 'cordova-build'),
       env: {
         METEOR_WAREHOUSE_DIR: sand.warehouse
       }
@@ -95,14 +92,13 @@ var checkUserPlugins = function(sand, plugins) {
 
 // Add plugins to an app. Change the contents of the plugins and their
 // dependencies, make sure that the app still refreshes.
-selftest.define("change cordova plugins", function () {
+selftest.define("change cordova plugins", ["cordova"], function () {
   var s = new Sandbox();
   var run;
 
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   run = s.run();
   run.waitSecs(5);
   run.match("myapp");
@@ -124,22 +120,27 @@ selftest.define("change cordova plugins", function () {
   run.waitSecs(2);
   run.match("restarted");
 
+  // Introduce an error.
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
   run.waitSecs(2);
   run.match("exact version");
+
+  // Fix the error.
+  s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
+  run.waitSecs(2);
+  run.match("restarted");
 });
 
 
 // Add plugins through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
-selftest.define("add cordova plugins", ["slow"], function () {
+selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("remove", "meteor-platform");
@@ -150,32 +151,39 @@ selftest.define("add cordova plugins", ["slow"], function () {
   run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
+  run.waitSecs(2);
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
   run.waitSecs(5);
   run.match("added cordova plugin org.apache.cordova.camera");
+  run.expectExit(0);
 
   run = s.run("add", "cordova:org.apache.cordova.file");
-  run.matchErr("Must declare exact version");
+  run.matchErr("exact version or tarball url");
+  run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
   // build time.
   run = s.run("add", "cordova:foo@1.0.0");
   run.waitSecs(5);
   run.match("added cordova plugin foo");
+  run.expectExit(0);
 
   run = s.run("remove", "cordova:foo");
   run.waitSecs(5);
   run.match("removed cordova plugin foo");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
-  run.match("added");
+  run.match("added,");
+  run.match("contains a cordova plugin");
+  run.expectExit(0);
 
   checkUserPlugins(s, ["org.apache.cordova.camera"]);
 
@@ -243,18 +251,18 @@ selftest.define("remove cordova plugins", function () {
   run = s.run("remove", "cordova:blahblah");
   run.matchErr("not in this project");
   run.forbidAll("removed");
-  run.expectExit(0);
+  run.expectExit(1);
 
   run = s.run("remove", "cordova:blahblah",
               "cordova:org.apache.cordova.camera");
   run.waitSecs(5);
   run.matchErr("not in this project");
   run.match("removed");
-  run.expectExit(0);
+  run.expectExit(1);
   checkUserPlugins(s, []);
 });
 
-selftest.define("meteor exits when cordova platforms change", ["slow"], function () {
+selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -269,7 +277,7 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   var platformRun = s.run("add-platform", "android");
   platformRun.match("Do you agree");
   platformRun.write("Y\n");
-  platformRun.extraTime = 90; // Huge download
+  platformRun.waitSecs(90); // Huge download
   platformRun.match("added platform");
 
   run.waitSecs(60);
@@ -296,9 +304,9 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   run.waitSecs(30);
   run.match("Started your app");
 
-  var platforms = s.read(path.join(".meteor", "platforms"));
+  var platforms = s.read(files.pathJoin(".meteor", "platforms"));
   platforms = platforms + "\nandroid";
-  s.write(path.join(".meteor", "platforms"), platforms);
+  s.write(files.pathJoin(".meteor", "platforms"), platforms);
 
   run.waitSecs(60);
   run.matchErr("Your app's platforms have changed");
@@ -310,9 +318,9 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   run.waitSecs(30);
   run.match("Started your app");
 
-  platforms = s.read(path.join(".meteor", "platforms"));
+  platforms = s.read(files.pathJoin(".meteor", "platforms"));
   platforms = platforms.replace(/android/g, "");
-  s.write(path.join(".meteor", "platforms"), platforms);
+  s.write(files.pathJoin(".meteor", "platforms"), platforms);
 
   run.waitSecs(60);
   run.matchErr("Your app's platforms have changed");
@@ -320,7 +328,7 @@ selftest.define("meteor exits when cordova platforms change", ["slow"], function
   run.expectExit(254);
 });
 
-selftest.define("meteor exits when cordova plugins change", ["slow"], function () {
+selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
@@ -330,7 +338,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow"], function (
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   run = s.run();
@@ -458,20 +466,19 @@ var buildAndCheckPluginInStar = selftest.markStack(function (s, name, version) {
   selftest.expectEqual(plugins[name], version);
 });
 
-selftest.define("cordova plugins in star.json, direct and transitive", ["slow"], function () {
+selftest.define("cordova plugins in star.json, direct and transitive", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
   // Starting a run
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added platform");
 
   // Add a direct dependency: it should appear in star.json after we

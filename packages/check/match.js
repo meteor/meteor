@@ -8,7 +8,7 @@ var currentArgumentChecker = new Meteor.EnvironmentVariable;
 /**
  * @summary Check that a value matches a [pattern](#matchpatterns).
  * If the value does not match the pattern, throw a `Match.Error`.
- * 
+ *
  * Particularly useful to assert that arguments to a function have the right
  * types and structure.
  * @locus Anywhere
@@ -37,6 +37,10 @@ check = function (value, pattern) {
   }
 };
 
+/**
+ * @namespace Match
+ * @summary The namespace for all Match types and methods.
+ */
 Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
@@ -76,7 +80,7 @@ Match = {
   // XXX maybe also implement a Match.match which returns more information about
   //     failures but without using exception handling or doing what check()
   //     does with _failIfArgumentsAreNotAllChecked and Meteor.Error conversion
-  
+
   /**
    * @summary Returns true if the value matches the pattern.
    * @locus Anywhere
@@ -245,8 +249,8 @@ var checkSubtree = function (value, pattern) {
   if (pattern instanceof Function) {
     if (value instanceof pattern)
       return;
-    // XXX what if .name isn't defined
-    throw new Match.Error("Expected " + pattern.name);
+    throw new Match.Error("Expected " + (pattern.name ||
+                                         "particular constructor"));
   }
 
   var unknownKeysAllowed = false;
@@ -339,7 +343,8 @@ _.extend(ArgumentChecker.prototype, {
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
-      if (value === self.args[i]) {
+      // (NaN is not === to itself, so we have to check specially.)
+      if (value === self.args[i] || (_.isNaN(value) && _.isNaN(self.args[i]))) {
         self.args.splice(i, 1);
         return true;
       }

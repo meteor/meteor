@@ -1,6 +1,4 @@
-var _ = require('underscore');
-var release = require('./release.js');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var utils = require('./utils.js');
 var auth = require('./auth.js');
@@ -27,67 +25,6 @@ exports.randomAppName = randomAppName;
 
 exports.randomUserEmail = function () {
   return 'selftest-user-' + randomString(15) + '@guerrillamail.com';
-};
-
-var ensureLegacyReleaseDownloaded = function (sandbox) {
-  // Ensure we have 0.7.0.1 downloaded.  This version didn't actually support
-  // --get-ready for a built release, but it's an easy way to verify we're
-  // actually running an old version.
-  var run = sandbox.run('--release', '0.7.0.1', '--get-ready');
-  run.waitSecs(75);
-  run.matchErr('only works in a checkout\n');
-  run.expectExit(1);
-};
-
-// Creates an app and deploys it with an old release. 'password' is
-// optional. Returns the name of the deployed app.
-exports.createAndDeployLegacyApp = function (sandbox, password) {
-  var name = randomAppName();
-  sandbox.createApp(name, 'empty');
-  sandbox.cd(name);
-
-  ensureLegacyReleaseDownloaded(sandbox);
-
-  name = name + "." + config.getDeployHostname();
-  var runArgs = ['deploy', '--release', '0.7.0.1', name];
-  if (password)
-    runArgs.push('-P');
-
-  var run = sandbox.run.apply(sandbox, runArgs);
-
-  if (password) {
-    run.waitSecs(10);
-    run.match('New Password:');
-    run.write(password + '\n');
-    run.match('New Password (again):');
-    run.write(password + '\n');
-  }
-
-  run.waitSecs(90);
-  run.match('Now serving at ' + name);
-  // XXX: We should wait for it to exit with code 0, but it times out for some reason.
-  run.stop();
-  return name;
-};
-
-exports.cleanUpLegacyApp = function (sandbox, name, password) {
-  ensureLegacyReleaseDownloaded(sandbox);
-
-  if (name.indexOf(".") === -1) {
-    name = name + "." + config.getDeployHostname();
-  }
-
-  var run = sandbox.run('deploy', '--release', '0.7.0.1', '-D', name);
-  if (password) {
-    run.waitSecs(10);
-    run.matchErr('Password:');
-    run.write(password + '\n');
-  }
-  run.waitSecs(60);
-  run.match('Deleted');
-  // XXX same as above, we should be waiting for exit code 0, but the
-  // process appears to never exit.
-  run.stop();
 };
 
 // Creates an app and deploys it. Assumes the sandbox is already logged
@@ -189,9 +126,7 @@ exports.deployWithNewEmail = function (s, email, appName) {
 };
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: ['meteor', 'ddp']
-  });
+  return isopackets.load('ddp');
 };
 
 var ddpConnect = function (url) {
@@ -233,7 +168,7 @@ exports.createOrganization = function (username, password) {
   var orgName = exports.randomOrgName();
   auth.withAccountsConnection(function (conn) {
     try {
-      var result = conn.call("login", {
+      conn.call("login", {
         meteorAccountsLoginInfo: { username: username, password: password },
         clientInfo: {}
       });
@@ -250,4 +185,12 @@ exports.createOrganization = function (username, password) {
   })();
 
   return orgName;
+};
+
+exports.getMeteorRuntimeConfigFromHTML = function (html) {
+  var m = html.match(/__meteor_runtime_config__ = JSON.parse\(decodeURIComponent\("([^"]+?)"\)\)/);
+  if (! m) {
+    selftest.fail("Can't find __meteor_runtime_config__");
+  }
+  return JSON.parse(decodeURIComponent(m[1]));
 };

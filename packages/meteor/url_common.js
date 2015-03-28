@@ -1,5 +1,5 @@
 /**
- * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor bundle`.
+ * @summary Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor build`.
  * @locus Anywhere
  * @param {String} [path] A path to append to the root URL. Do not include a leading "`/`".
  * @param {Object} [options]

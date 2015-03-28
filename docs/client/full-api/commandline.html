@@ -4,6 +4,11 @@
 
 <h1 id="commandline">Command line</h1>
 
+The following are some of the more commonly used commands in the `meteor`
+command-line tool. This is just an overview and does not mention every command
+or every option to every command; for more details, use the `meteor help`
+command.
+
 <!-- XXX some intro text? -->
 
 <h3 id="meteorhelp">meteor help</h3>
@@ -33,6 +38,22 @@ To pass additional options to Node.js use the `NODE_OPTIONS` environment variabl
 For example: `NODE_OPTIONS='--debug'` or `NODE_OPTIONS='--debug-brk'`
 
 Run `meteor help run` to see the full list of options.
+
+
+<h3 id="meteordebug">meteor debug</h3>
+
+Run the project, but suspend the server process for debugging.
+
+The server process will be suspended just before the first statement of
+server code that would normally execute. In order to continue execution of
+server code, use either the web-based Node Inspector or the command-line
+debugger (further instructions will be printed in the console).
+
+Breakpoints can be set using the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger" target="_blank">`debugger` keyword</a>, or through the web UI of Node Inspector ("Sources" tab).
+
+The server process debugger will listen for incoming connections from debugging clients, such as node-inspector, on port 5858 by default. To specify a different port use the `--debug-port <port>` option.
+
+The same debugging functionality can be achieved by adding the `--debug-port <port>` option to other `meteor` tool commands, such as `meteor run` and `meteor test-packages`.
 
 
 <h3 id="meteorcreate">meteor create <i>name</i></h3>
@@ -334,8 +355,9 @@ app that runs at `localhost:3000` by default. If you need to, you can pass the
 Catch-all for miscellaneous commands that require authorization to use.
 
 Some example uses of `meteor admin` include adding and removing package
-maintainers and setting a homepage for a package. It also includes
-various help functions for managing a Meteor release.
+maintainers and setting a homepage for a package. It also includes various
+helpful functions for managing a Meteor release.  Run `meteor help admin` for
+more information.
 
 
 {{/markdown}}

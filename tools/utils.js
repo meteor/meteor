@@ -2,13 +2,12 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
-var fs = require('fs');
 var url = require('url');
-var child_process = require('child_process');
 
 var utils = exports;
 
@@ -111,49 +110,8 @@ exports.printPackageList = function (items, options) {
   };
   rows = _.sortBy(rows, alphaSort);
 
-  return utils.printTwoColumns(rows, options);
-};
-
-// XXX: Move to e.g. formatters.js?
-// Prints a two column table in a nice format:
-//  The first column is printed entirely, the second only as space permits
-exports.printTwoColumns = function (rows, options) {
-  options = options || {};
-
-  var longest = '';
-  _.each(rows, function (row) {
-    var col0 = row[0] || '';
-    if (col0.length > longest.length)
-      longest = col0;
-  });
-
-  var pad = longest.replace(/./g, ' ');
-
-  var width = 80;
-  var stream = process.stdout;
-  if (stream && stream.isTTY && stream.columns) {
-    width = stream.columns;
-  }
-
-  var Console = require("./console.js").Console;
-
-  var out = '';
-  _.each(rows, function (row) {
-    var col0 = row[0] || '';
-    var col1 = row[1] || '';
-    var line = Console.bold(col0) + pad.substr(col0.length);
-    line += "  " + col1;
-    if (line.length > width) {
-      line = line.substr(0, width - 3) + '...';
-    }
-    out += line + "\n";
-  });
-
-  // XXX: Naughty call to 'private' function
-  var level = options.level || Console.LEVEL_INFO;
-  Console._print(level, out);
-
-  return out;
+  var Console = require('./console.js').Console;
+  return Console.printTwoColumns(rows, options);
 };
 
 // Determine a human-readable hostname for this computer. Prefer names
@@ -236,29 +194,58 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
-exports.parseConstraint = packageVersionParser.parseConstraint;
-exports.validatePackageName = packageVersionParser.validatePackageName;
-
-// XXX should unify this with utils.parseConstraint
-exports.splitConstraint = function (constraint) {
-  var m = constraint.split("@");
-  var ret = { package: m[0] };
-  if (m.length > 1) {
-    ret.constraint = m[1];
-  } else {
-    ret.constraint = null;
+// Like packageVersionParser.parsePackageConstraint, but if called in a
+// buildmessage context uses buildmessage to raise errors.
+exports.parsePackageConstraint = function (constraintString, options) {
+  try {
+    return packageVersionParser.parsePackageConstraint(constraintString);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
   }
-  return ret;
 };
 
-
-// XXX should unify this with utils.parseConstraint
-exports.dealConstraint = function (constraint, pkg) {
-  return { package: pkg, constraint: constraint};
+exports.validatePackageName = function (name, options) {
+  try {
+    return packageVersionParser.validatePackageName(name, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
+  }
 };
 
-
+// Parse a string of the form package@version into an object of the form
+// {name, version}.
+exports.parsePackageAtVersion = function (packageAtVersionString, options) {
+  // A string that has to look like "package@version" isn't really a
+  // constraint, it's just a string of the form (package + "@" + version).
+  // However, using parsePackageConstraint in the implementation is too
+  // convenient to pass up (especially in terms of error-handling quality).
+  var parsedConstraint = exports.parsePackageConstraint(packageAtVersionString,
+                                                        options);
+  if (! parsedConstraint) {
+    // It must be that options.useBuildmessage and an error has been
+    // registered.  Otherwise, parsePackageConstraint would succeed or throw.
+    return null;
+  }
+  var alternatives = parsedConstraint.versionConstraint.alternatives;
+  if (! (alternatives.length === 1 &&
+         alternatives[0].type === 'compatible-with')) {
+    if (options && options.useBuildmessage) {
+      buildmessage.error("Malformed package@version: " + packageAtVersionString,
+                         { file: options.buildmessageFile });
+      return null;
+    } else {
+      throw new Error("Malformed package@version: " + packageAtVersionString);
+    }
+  }
+  return { package: parsedConstraint.package,
+           version: alternatives[0].versionString };
+};
 
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
@@ -292,7 +279,8 @@ exports.validatePackageNameOrExit = function (packageName, options) {
   } catch (e) {
     if (!e.versionParserError)
       throw e;
-    process.stderr.write("Error: " + e.message + "\n");
+    var Console = require('./console.js').Console;
+    Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file
     var main = require('./main.js');
@@ -376,10 +364,11 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   return ret + '$';
 };
 
+// XXX should be in files.js
 exports.isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK
-    var stats = fs.statSync(dir);
+    var stats = files.stat(dir);
   } catch (e) {
     return false;
   }
@@ -397,8 +386,16 @@ exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
   options = options || {};
   var prefix = options.noPrefix ? "" : "Meteor ";
-  if (track === catalog.DEFAULT_TRACK)
-    return prefix + version;
+
+  if (catalog.DEFAULT_TRACK !== "WINDOWS-PREVIEW") {
+    // XXX HACK for windows. In the bottom of catalog-remote.js, we make the
+    // default track for windows be "WINDOWS-PREVIEW", but we want `meteor
+    // --version` to actually show "WINDOWS-PREVIEW@x.y.z" instead of just
+    // "x.y.z".
+    if (track === catalog.DEFAULT_TRACK) {
+      return prefix + version;
+    }
+  }
   return track + '@' + version;
 };
 
@@ -475,7 +472,7 @@ exports.isUrlWithSha = function (x) {
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
-// This is talking about NPM versions specifically, not Meteor versions.
+// This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
@@ -483,12 +480,16 @@ exports.ensureOnlyExactVersions = function (dependencies) {
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+    if (! exports.isExactVersion(version)) {
       throw new Error(
-        "Must declare exact version of dependency: " +
-          name + '@' + version);
+        "Must declare exact version of dependency: " + name + '@' + version);
+    }
   });
 };
+exports.isExactVersion = function (version) {
+  return semver.valid(version) || exports.isUrlWithSha(version);
+};
+
 
 exports.execFileSync = function (file, args, opts) {
   var future = new Future;
@@ -592,7 +593,17 @@ _.extend(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {
-      utils.sleepMs(1);
+      var f = new Future;
+      // setImmediate allows signals and IO to be processed but doesn't
+      // otherwise add time-based delays. It is better for yielding than
+      // process.nextTick (which doesn't allow signals or IO to be processed) or
+      // setTimeout 1 (which adds a minimum of 1 ms and often more in delays).
+      // XXX Actually, setImmediate is so fast that we might not even need
+      // to use the throttler at all?
+      setImmediate(function () {
+        f.return();
+      });
+      f.wait();
     }
   }
 });
@@ -659,12 +670,46 @@ exports.mobileServerForRun = function (options) {
     };
   }
 
-
   // we are running a simulator, use localhost:3000
-
   return {
     host: "localhost",
     port: parsedUrl.port,
     protocol: "http://"
   };
+};
+
+// Use this to convert dates into our preferred human-readable format.
+//
+// Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
+// date object and returns a long-form human-readable date (ex: December 9th,
+// 2014) or unknown for null.
+exports.longformDate = function (date) {
+  if (! date) return "Unknown";
+  var moment = require('moment');
+  var pubDate = moment(date).format('MMMM Do, YYYY');
+  return pubDate;
+};
+
+// Length of the longest possible string that could come out of longformDate
+// (September is the longest month name, so "September 24th, 2014" would be an
+// example).
+exports.maxDateLength = "September 24th, 2014".length;
+
+// If we have failed to update the catalog, informs the user and advises them to
+// go online for up to date inforation.
+exports.explainIfRefreshFailed = function () {
+  var Console = require("./console.js").Console;
+  var catalog = require('./catalog.js');
+  if (catalog.official.offline || catalog.refreshFailed) {
+    Console.info("Your package catalog may be out of date.\n" +
+      "Please connect to the internet and try again.");
+  }
+};
+
+// Returns a sha256 hash of a given string.
+exports.sha256 = function (contents) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.update(contents);
+  return hash.digest('base64');
 };

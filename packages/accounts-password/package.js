@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.0.4"
+  version: "1.1.1-rc.0"
 });
 
-Package.on_use(function(api) {
-  api.use('npm-bcrypt@=0.7.7', 'server');
+Package.onUse(function(api) {
+  api.use('npm-bcrypt@=0.7.8_2');
 
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
@@ -17,17 +17,17 @@ Package.on_use(function(api) {
   api.use('underscore');
   api.use('ddp', ['client', 'server']);
 
-  api.add_files('email_templates.js', 'server');
-  api.add_files('password_server.js', 'server');
-  api.add_files('password_client.js', 'client');
+  api.addFiles('email_templates.js', 'server');
+  api.addFiles('password_server.js', 'server');
+  api.addFiles('password_client.js', 'client');
 });
 
-Package.on_test(function(api) {
+Package.onTest(function(api) {
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'underscore', 'check',
            'ddp']);
-  api.add_files('password_tests_setup.js', 'server');
-  api.add_files('password_tests.js', ['client', 'server']);
-  api.add_files('email_tests_setup.js', 'server');
-  api.add_files('email_tests.js', 'client');
+  api.addFiles('password_tests_setup.js', 'server');
+  api.addFiles('password_tests.js', ['client', 'server']);
+  api.addFiles('email_tests_setup.js', 'server');
+  api.addFiles('email_tests.js', 'client');
 });

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.0.4"
+  version: "1.0.6"
 });
 
 Npm.depends({
@@ -10,16 +10,15 @@ Npm.depends({
   simplesmtp: "0.3.10",
   "stream-buffers": "0.2.5"});
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('underscore', 'server');
-  api.use('application-configuration');
   api.export('Email', 'server');
   api.export('EmailTest', 'server', {testOnly: true});
-  api.add_files('email.js', 'server');
+  api.addFiles('email.js', 'server');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('email', 'server');
   api.use('tinytest');
-  api.add_files('email_tests.js', 'server');
+  api.addFiles('email_tests.js', 'server');
 });

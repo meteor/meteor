@@ -50,7 +50,7 @@ var getTokenResponse = function (query) {
   try {
     // Request an access token
     responseContent = HTTP.get(
-      "https://graph.facebook.com/oauth/access_token", {
+      "https://graph.facebook.com/v2.2/oauth/access_token", {
         params: {
           client_id: config.appId,
           redirect_uri: OAuth._redirectUri('facebook', config),
@@ -87,7 +87,7 @@ var getTokenResponse = function (query) {
 
 var getIdentity = function (accessToken) {
   try {
-    return HTTP.get("https://graph.facebook.com/me", {
+    return HTTP.get("https://graph.facebook.com/v2.2/me", {
       params: {access_token: accessToken}}).data;
   } catch (err) {
     throw _.extend(new Error("Failed to fetch identity from Facebook. " + err.message),

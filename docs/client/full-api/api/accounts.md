@@ -25,7 +25,7 @@ the [`Meteor.users`](#meteor_users) collection.
 On the client, this will be the subset of the fields in the document that
 are published from the server (other fields won't be available on the
 client). By default the server publishes `username`, `emails`, and
-`profile`. See [`Meteor.users`](#meteor_users) for more on
+`profile` (writable by user). See [`Meteor.users`](#meteor_users) for more on
 the fields used in user documents.
 
 {{> autoApiBox "Meteor.userId"}}
@@ -71,8 +71,9 @@ treats the following fields specially:
   a Boolean which is true if the user has [verified the
   address](#accounts_verifyemail) with a token sent over email.
 - `createdAt`: the Date at which the user document was created.
-- `profile`: an Object which (by default) the user can create
-  and update with any data.
+- `profile`: an Object which the user can create and update with any data.
+  Do not store anything on `profile` that you wouldn't want the user to edit
+  unless you have a deny rule on the `Meteor.users` collection.
 - `services`: an Object containing data used by particular
   login services. For example, its `reset` field contains
   tokens used by [forgot password](#accounts_forgotpassword) links,
@@ -191,16 +192,16 @@ meteor add service-configuration
 Then, in your app:
 
 ```js
-// first, remove configuration entry in case service is already configured
-ServiceConfiguration.configurations.remove({
-  service: "weibo"
-});
-ServiceConfiguration.configurations.insert({
-  service: "weibo",
-  clientId: "1292962797",
-  loginStyle: "popup",
-  secret: "75a730b58f5691de5522789070c319bc"
-});
+ServiceConfiguration.configurations.upsert(
+  { service: "weibo" },
+  {
+    $set: {
+      clientId: "1292962797",
+      loginStyle: "popup",
+      secret: "75a730b58f5691de5522789070c319bc"
+    }
+  }
+);
 ```
 
 Each external service has its own login provider package and login function. For
@@ -335,8 +336,8 @@ are called with a single argument, the attempt info object:
 {{/dtdd}}
 
 {{#dtdd name="user" type="Object"}}
-  When it is known which user was attempting to login, the Meteor user
-  object.  This will always be present for successful logins.
+  When it is known which user was attempting to login, the Meteor user object.
+  This will always be present for successful logins.
 {{/dtdd}}
 
 {{#dtdd name="connection" type="Object"}}
@@ -387,6 +388,7 @@ called after a login attempt is denied.
 These functions return an object with a single method, `stop`.  Calling
 `stop()` unregisters the callback.
 
-The callbacks are called with a single argument, the same attempt info
-object as [`validateLoginAttempt`](#accounts_validateloginattempt).
+On the server, the callbacks get a single argument, the same attempt info
+object as [`validateLoginAttempt`](#accounts_validateloginattempt). On the
+client, no arguments are passed.
 {{/template}}

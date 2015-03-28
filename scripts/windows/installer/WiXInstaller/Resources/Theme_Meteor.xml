@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Theme xmlns="http://wixtoolset.org/schemas/thmutil/2010">
+	<Window Width="624" Height="388" FontId="0">#(loc.Caption)</Window>
+	<Font Id="0" Height="-12" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="1" Height="-14" Weight="500" Foreground="000000" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="2" Height="-14" Weight="800" Foreground="333333" >Tahoma</Font>                               <!-- Page header big font -->
+	<Font Id="3" Height="-22" Weight="500" Foreground="252525" >Segoe UI</Font>                             <!-- Big light font to dispaly product name in welcome and finish pages -->
+	<Font Id="4" Height="-11" Weight="500" Foreground="000000" >Tahoma</Font>
+	<Font Id="5" Height="-10" Weight="500" Foreground="000000" >Segoe UI</Font>                             <!-- Version number on bottom left corner of all pages -->
+	<Font Id="6" Height="-12" Weight="500" Foreground="0000FF" Background="FFFFFF" >Segoe UI</Font>         <!-- Installer default font with white background-->
+	<Font Id="7" Height="-12" Weight="500" Foreground="000000" >Segoe UI</Font>                             <!-- Same as installer default font but transparent -->
+
+
+
+	<Page Name="Install">
+        <!--<Text X="178" Y="20" Width="-24" Height="32" FontId="2" DisablePrefix="yes">#(loc.InstallHeader)</Text>-->
+        <Hypertext X="24" Y="-100" Width="-24" Height="14" TabStop="yes" FontId="4" HideWhenDisabled="yes">#(loc.InstallLicenseLinkText)</Hypertext> -->
+        <!--<Checkbox Name="EulaAcceptCheckbox" X="178" Y="202" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.InstallAcceptCheckbox)</Checkbox>-->
+
+		<Button Name="NextButton" X="200" Y="-142" Width="-200" Height="44" TabStop="yes" FontId="3">#(loc.InstallMeteor)</Button>
+	</Page>
+	<Page Name="InstallDir">
+		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.InstallDirHeader)</Text>
+		<Text X="24" Y="78" Width="-24" Height="32" FontId="1" DisablePrefix="yes">#(loc.InstallDirMessage)</Text>
+
+        <Text X="64" Y="130" Width="-24" Height="17" FontId="0">#(loc.InstallScopeLabel)</Text>
+        <Button Name="PerMachineInstall" X="120" Y="150" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.PerMachineInstallRButton)</Button>
+        <Button Name="PerUserInstall" X="120" Y="170" Width="-24" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.PerUserInstallRButton)</Button>
+
+        <Text X="64" Y="218" Width="92" Height="17" FontId="0">#(loc.InstallDirPathLabel)</Text>
+		<Editbox Name="InstallFolderEditbox" X="164" Y="216" Width="-144" Height="21" TabStop="yes" FontId="0" FileSystemAutoComplete="yes" HideWhenDisabled="no" />
+		<Button Name="BrowseButton" X="-64" Y="215" Width="75" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="no">#(loc.OptionsBrowseButton)</Button>
+        
+        <Button Name="BackButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.BackButton)</Button>
+		<Button Name="NextButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.NextButton)</Button>
+		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
+	</Page>
+	<Page Name="Progress">
+        <Text X="24" Y="30" Width="-24" Height="75" FontId="3" DisablePrefix="yes">
+Installing Meteor, the complete open source platform
+for building apps in pure JavaScript.
+        </Text>
+
+		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />
+		<Text Name="ExecuteProgressActionDataText" X="24" Y="205" Width="-24" Height="52" FontId="0" DisablePrefix="yes">#(loc.ExecuteProgressActionDataText)</Text>
+
+		<Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+		<Button Name="ProgressCancelButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ProgressCancelButton)</Button>
+	</Page>
+	<Page Name="SvcOptions">
+
+		<Text X="24" Y="30" Width="600" Height="100" FontId="3" DisablePrefix="yes">
+Before getting started, please take a moment to
+create a Meteor developer account.</Text>
+
+	    <Text X="24" Y="100" Width="-24" Height="110" FontId="1" DisablePrefix="yes">
+Registering tells us who's using Meteor for Windows and helps us make it better.
+You'll also need your account to deploy apps with our free service and get
+notified about critical security updates when they happen.
+		</Text>
+
+        <Button Name="CreateRButton" X="30" Y="194" Width="200" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.CreateRButton)</Button>
+        <Button Name="SignInRButton" X="30" Y="214" Width="200" Height="17" TabStop="yes" FontId="0" HideWhenDisabled="no" HexStyle="0x0000009">#(loc.SignInRButton)</Button>
+
+
+        <!-- for signup: -->
+        <Text Name="RegisterEmailLabel" X="292" Y="194" Width="120" Height="17" FontId="0">#(loc.RegisterEmail):</Text>
+        <Text Name="RegisterUserLabel" X="292" Y="222" Width="120" Height="17" FontId="0">#(loc.RegisterUser):</Text>
+        <Text Name="RegisterPassLabel" X="292" Y="250" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
+
+        <Editbox Name="RegisterEmail" X="410" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterEmail]</Editbox>
+        <Editbox Name="RegisterUser" X="410" Y="220" Width="180" Height="21" TabStop="yes" FontId="0">[RegisterUser]</Editbox>
+        <Editbox Name="RegisterPass" X="410" Y="248" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[RegisterPass]</Editbox>
+
+
+        <!-- for login: -->
+        <!-- XXX For some reason, Visible="no" below doesn't work.
+             instead, we set it imperatively when we switch to this
+             page. See #Hidden --> 
+        <Text Name="LoginUsernameOrEmailLabel" Visible="no" X="292" Y="194" Width="120" Height="17" FontId="0">#(loc.RegisterUsernameOrEmail):</Text>
+        <Text Name="LoginPassLabel" Visible="no" X="292" Y="222" Width="120" Height="17" FontId="0">#(loc.RegisterPass):</Text>
+
+        <Editbox Name="LoginUsernameOrEmail" Visible="no" X="410" Y="192" Width="180" Height="21" TabStop="yes" FontId="0">[LoginUsernameOrEmail]</Editbox>
+        <Editbox Name="LoginPass" Visible="no" X="410" Y="220" Width="180" Height="21" TabStop="yes" FontId="0" HexStyle="0x20">[LoginPass]</Editbox>
+
+        <Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+
+        <!-- bottom buttons: -->
+        <Button Name="SkipButton" X="-140" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SkipButton)</Button>
+		<Button Name="InstallButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">Sign In</Button>
+	</Page>
+	<Page Name="Modify">
+		<Text X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">#(loc.ModifyHeader)</Text>
+		<Text X="24" Y="78" Width="-24" Height="140" FontId="1" DisablePrefix="yes">#(loc.ModifyInfo)</Text>
+		<Button Name="RepairButton" X="-256" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.ModifyRepairButton)</Button>
+		<Button Name="UninstallButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ModifyUninstallButton)</Button>
+		<Button Name="ModifyCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ModifyCloseButton)</Button>
+	</Page>
+	<Page Name="Success">
+		<Text Name="SuccessHeader" X="24" Y="30" Width="420" Height="50" FontId="3" DisablePrefix="yes">[varSuccessHeader]</Text>
+		<Hypertext Name="SuccessInfo" X="24" Y="80" Width="-24" Height="160" FontId="1" TabStop="no" HideWhenDisabled="yes">[varSuccessInfo]</Hypertext>
+
+		<Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
+		<Button Name="SuccessCancelButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SuccessCloseButton)</Button>
+	</Page>
+	<Page Name="Failure">
+		<Text Name="FailureHeader" X="24" Y="20" Width="-220" Height="24" FontId="2" DisablePrefix="yes">[varFailureHeader]</Text>
+		<Hypertext Name="FailureLogFileLink" X="24" Y="78" Width="-24" Height="48" FontId="1" TabStop="yes" HideWhenDisabled="yes">#(loc.FailureHyperlinkLogText)</Hypertext>
+		<Hypertext Name="FailureMessageText" X="24" Y="130" Width="-24" Height="48" FontId="0" TabStop="yes" HideWhenDisabled="yes"/>
+
+		<Text Name="FailureRestartText" X="24" Y="-100" Width="-24" Height="34" FontId="0" HideWhenDisabled="yes" DisablePrefix="yes">#(loc.FailureRestartText)</Text>
+		<Button Name="FailureRestartButton" X="-140" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0" HideWhenDisabled="yes">#(loc.FailureRestartButton)</Button>
+		<Button Name="FailureCloseButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.FailureCloseButton)</Button>
+	</Page>
+</Theme>

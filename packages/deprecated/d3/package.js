@@ -3,7 +3,7 @@ Package.describe({
   version: "1.0.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('d3', 'client');
-  api.add_files('d3.v3.js', 'client');
+  api.addFiles('d3.v3.js', 'client');
 });

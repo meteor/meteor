@@ -5,6 +5,8 @@
 /dev_bundle*.tar.gz
 /android_bundle
 /android_bundle*.tar.gz
+/node_*.tar.gz
+/mongo_*.tar.gz
 /dist
 \#*\#
 .\#*

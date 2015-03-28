@@ -19,12 +19,14 @@ pushState](https://developer.mozilla.org/en-US/docs/DOM/Manipulating_the_browser
 to alter the URL on the client without triggering a page reload. See the [Todos
 example](http://meteor.com/examples/todos) for a demonstration.
 
-If you deploy your application with `meteor bundle`, you must install
-`phantomjs` ([http://phantomjs.org](http://phantomjs.org/)) somewhere in your
-`$PATH`. If you use `meteor deploy` this is already taken care of.
-
 When running your page, `spiderable` will wait for all publications
 to be ready. Make sure that all of your [`publish functions`](#meteor_publish)
 either return a cursor (or an array of cursors), or eventually call
 [`this.ready()`](#publish_ready). Otherwise, the `phantomjs` executions
 will fail.
+
+## Notes
+
+If you deploy your application with `meteor bundle`, you must install
+`phantomjs` ([http://phantomjs.org](http://phantomjs.org/)) somewhere in your
+`$PATH`. If you use `meteor deploy` this is already taken care of.

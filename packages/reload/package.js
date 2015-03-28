@@ -1,16 +1,16 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.1.1'
+  version: '1.1.3'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['underscore', 'logging', 'json'], 'client');
   api.export('Reload', 'client');
-  api.add_files('reload.js', 'client');
-  api.add_files('deprecated.js', 'client');
+  api.addFiles('reload.js', 'client');
+  api.addFiles('deprecated.js', 'client');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use(['tinytest', 'reload'], 'client');
-  api.add_files('reload_tests.js', 'client');
+  api.addFiles('reload_tests.js', 'client');
 });

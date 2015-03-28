@@ -1,16 +1,16 @@
 Package.describe({
   summary: "Base64 encoding and decoding",
-  version: '1.0.1'
+  version: '1.0.3'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('Base64');
-  api.add_files('base64.js', ['client', 'server']);
+  api.addFiles('base64.js', ['client', 'server']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('base64', ['client', 'server']);
   api.use(['tinytest', 'underscore', 'ejson']);
 
-  api.add_files('base64_test.js', ['client', 'server']);
+  api.addFiles('base64_test.js', ['client', 'server']);
 });

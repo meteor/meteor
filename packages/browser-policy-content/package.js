@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Configure content security policies",
-  version: "1.0.2"
+  version: "1.0.4"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.imply(["browser-policy-common"], "server");
-  api.add_files("browser-policy-content.js", "server");
+  api.addFiles("browser-policy-content.js", "server");
   api.use(["underscore", "browser-policy-common", "webapp"], "server");
 });

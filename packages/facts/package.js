@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Publish internal app statistics",
-  version: '1.0.2'
+  version: '1.0.4'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['underscore'], ['client', 'server']);
   api.use(['templating', 'mongo', 'ddp'], ['client']);
 
@@ -14,8 +14,8 @@ Package.on_use(function (api) {
   // us.
   api.use('ddp', 'server', {unordered: true});
 
-  api.add_files('facts.html', ['client']);
-  api.add_files('facts.js', ['client', 'server']);
+  api.addFiles('facts.html', ['client']);
+  api.addFiles('facts.js', ['client', 'server']);
 
   api.export('Facts');
 });

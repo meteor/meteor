@@ -45,6 +45,9 @@ Inside your method definition, `this` is bound to a method invocation object,
 which has several useful properties, including `this.userId`, which
 identifies the currently logged-in user.
 
+You don't have to put all your method definitions into a single `Meteor.methods`
+call; you may call it multiple times, as long as each method has a unique name.
+
 ### Latency Compensation
 
 Calling a method on the server requires a round-trip over the network. It would
@@ -96,7 +99,7 @@ On the server, you don't have to pass a callback &mdash; the method call
 will simply block until the method is complete, returning a result or
 throwing an exception, just as if you called the function directly:
 
-```
+```js
 // Synchronous call on the server with no callback
 var result = Meteor.call('commentOnPost', comment, postId);
 ```

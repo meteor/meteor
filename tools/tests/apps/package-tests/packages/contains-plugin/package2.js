@@ -3,7 +3,7 @@ Package.describe({
   version: "1.1.0"
 });
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: "myPlugin",
   use: [],
   sources: [
@@ -11,6 +11,6 @@ Package._transitional_registerBuildPlugin({
   ],
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('accounts-base');
 });

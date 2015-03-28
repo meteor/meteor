@@ -1,16 +1,16 @@
 Package.describe({
   summary: "Reload safety belt for multi-server deployments",
-  version: '1.0.1'
+  version: '1.0.3'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use("webapp", "server");
-  api.add_files("reload-safety-belt.js", "server");
-  api.add_files("safetybelt.js", "server", { isAsset: true });
+  api.addFiles("reload-safety-belt.js", "server");
+  api.addFiles("safetybelt.js", "server", { isAsset: true });
 });
 
-Package.on_test(function (api) {
-  api.add_files("safetybelt.js", "server", { isAsset: true });
+Package.onTest(function (api) {
+  api.addFiles("safetybelt.js", "server", { isAsset: true });
   api.use(["reload-safetybelt", "tinytest", "http", "webapp"]);
-  api.add_files("reload-safety-belt-tests.js", "server");
+  api.addFiles("reload-safety-belt-tests.js", "server");
 });

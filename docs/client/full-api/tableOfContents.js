@@ -127,7 +127,7 @@ var toc = [
       "Accounts.onCreateUser",
       "Accounts.validateLoginAttempt",
       "Accounts.onLogin",
-      {name: "Accounts.onLoginFailure", id: "accounts_onlogin"}
+      "Accounts.onLoginFailure"
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [
@@ -156,9 +156,9 @@ var toc = [
       {prefix: "Template", instance: "myTemplate", id: "templates_api"}, [
         {name: "events", id: "template_events"},
         {name: "helpers", id: "template_helpers"},
-        {name: "rendered", id: "template_rendered"},
-        {name: "created", id: "template_created"},
-        {name: "destroyed", id: "template_destroyed"}
+        {name: "onRendered", id: "template_onRendered"},
+        {name: "onCreated", id: "template_onCreated"},
+        {name: "onDestroyed", id: "template_onDestroyed"}
       ],
       {name: "Template instances", id: "template_inst"}, [
         {instance: "template", name: "findAll", id: "template_findAll"},
@@ -168,6 +168,7 @@ var toc = [
         {instance: "template", name: "lastNode", id: "template_lastNode"},
         {instance: "template", name: "data", id: "template_data"},
         {instance: "template", name: "autorun", id: "template_autorun"},
+        {instance: "template", name: "subscribe", id: "Blaze-TemplateInstance-subscribe"},
         {instance: "template", name: "view", id: "template_view"}
       ],
       "Template.registerHelper",
@@ -177,7 +178,8 @@ var toc = [
       "Template.body",
       {name: "{{> Template.dynamic}}", id: "template_dynamic"},
       {type: "spacer"},
-      {name: "Event maps", style: "noncode"}
+      {name: "Event maps", style: "noncode"},
+      {name: "Spacebars", style: "noncode"}
     ],
     "Blaze", [
       "Blaze.render",
@@ -299,6 +301,7 @@ var toc = [
     {name: "mobile-config.js", id: "mobileconfigjs"}, [
       {name: "App.info", id: "App-info"},
       {name: "App.setPreference", id: "App-setPreference"},
+      {name: "App.accessRule", id: "App-accessRule"},
       {name: "App.configurePlugin", id: "App-configurePlugin"},
       {name: "App.icons", id: "App-icons"},
       {name: "App.launchScreens", id: "App-launchScreens"}
@@ -306,16 +309,16 @@ var toc = [
   ],
 
   "Packages", [ [
+    "appcache",
     "accounts-ui",
     "audit-argument-checks",
     "coffeescript",
-    "fastclick",
     "jquery",
     "less",
+    "markdown",
     "oauth-encryption",
     "random",
-    "stylus",
-    "showdown",
+    {name: "spiderable", link: "https://atmospherejs.com/meteor/spiderable"},
     "underscore",
     "webapp"
   ] ],
@@ -323,6 +326,7 @@ var toc = [
   "Command line", [ [
     "meteor help",
     "meteor run",
+    "meteor debug",
     "meteor create",
     "meteor deploy",
     "meteor logs",
@@ -362,9 +366,12 @@ Template.nav.helpers({
         else {
           if (typeof(item) === "string")
             item = {name: item};
+
+          var id = item.id || (item.name && name_to_id(item.name)) || "";
+
           ret.push(_.extend({
             type: "section",
-            id: item.name && name_to_id(item.name) || undefined,
+            link: "#/full/" + id,
             depth: depth,
             style: ''
           }, item));
@@ -390,4 +397,3 @@ Template.nav_section.helpers({
     return this.depth === n;
   }
 });
-

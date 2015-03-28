@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Meteor developer accounts OAuth flow",
-  version: "1.1.1"
+  version: "1.1.3"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('oauth2', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
   api.use('http', ['server']);
@@ -12,9 +12,9 @@ Package.on_use(function (api) {
 
   api.export('MeteorDeveloperAccounts');
 
-  api.add_files('meteor_developer_common.js');
-  api.add_files(['meteor_developer_configure.html',
+  api.addFiles('meteor_developer_common.js');
+  api.addFiles(['meteor_developer_configure.html',
                  'meteor_developer_configure.js'], 'client');
-  api.add_files('meteor_developer_server.js', 'server');
-  api.add_files('meteor_developer_client.js', 'client');
+  api.addFiles('meteor_developer_server.js', 'server');
+  api.addFiles('meteor_developer_client.js', 'client');
 });

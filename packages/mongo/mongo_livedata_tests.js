@@ -1481,6 +1481,7 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       test.isFalse(err);
       test.isTrue(id);
       docId = id;
+      self.docId = docId;
       var cursor = self.coll.find();
       test.equal(cursor.count(), 1);
       var inColl = self.coll.findOne();
@@ -1493,6 +1494,12 @@ testAsyncMulti('mongo-livedata - document with a custom type, ' + idGeneration, 
       test.isTrue(err);
       test.isFalse(id);
     }));
+  }, function (test, expect) {
+    var self = this;
+    self.coll.update(
+      self.docId, new Dog("rover", "orange"), expect(function (err) {
+        test.isTrue(err);
+      }));
   }
 ]);
 
@@ -2060,20 +2067,21 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
                       {_id: 'bar', x: 1}]);
 
       coll.remove({});
+      ret = upsert(coll, useUpdate, {_id: 'traq'}, {x: 1});
 
-      ret = upsert(coll, useUpdate, {_id: 'traz'}, {x: 1});
       test.equal(ret.numberAffected, 1);
       var myId = ret.insertedId;
-      if (! useUpdate) {
-        test.isTrue(myId);
-        // upsert with entire document does NOT take _id from
-        // the query.
-        test.notEqual(myId, 'traz');
-      } else {
+      if (useUpdate) {
         myId = coll.findOne()._id;
       }
+      // Starting with Mongo 2.6, upsert with entire document takes _id from the
+      // query, so the above upsert actually does an insert with _id traq
+      // instead of a random _id.  Whenever we are using our simulated upsert,
+      // we have this behavior (whether running against Mongo 2.4 or 2.6).
+      // https://jira.mongodb.org/browse/SERVER-5289
+      test.equal(myId, 'traq');
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId}]);
+                     [{x: 1, _id: 'traq'}]);
 
       // this time, insert as _id 'traz'
       ret = upsert(coll, useUpdate, {_id: 'traz'}, {_id: 'traz', x: 2});
@@ -2081,7 +2089,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       if (! useUpdate)
         test.equal(ret.insertedId, 'traz');
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 2, _id: 'traz'}]);
 
       // now update _id 'traz'
@@ -2089,7 +2097,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 3, _id: 'traz'}]);
 
       // now update, passing _id (which is ok as long as it's the same)
@@ -2097,7 +2105,7 @@ _.each(Meteor.isServer ? [true, false] : [true], function (minimongo) {
       test.equal(ret.numberAffected, 1);
       test.isFalse(ret.insertedId);
       compareResults(test, useUpdate, coll.find().fetch(),
-                     [{x: 1, _id: myId},
+                     [{x: 1, _id: 'traq'},
                       {x: 4, _id: 'traz'}]);
 
     });
@@ -3044,3 +3052,51 @@ Meteor.isServer && testAsyncMulti("mongo-livedata - observe limit bug", [
     test.equal(_.keys(state), [self.id1]);
   }
 ]);
+
+Meteor.isServer && testAsyncMulti("mongo-livedata - update with replace forbidden", [
+  function (test, expect) {
+    var c = new Mongo.Collection(Random.id());
+
+    var id = c.insert({ foo: "bar" });
+
+    c.update(id, { foo2: "bar2" });
+    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+
+    test.throws(function () {
+      c.update(id, { foo3: "bar3" }, { _forbidReplace: true });
+    }, "Replacements are forbidden");
+    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+
+    test.throws(function () {
+      c.update(id, { foo3: "bar3", $set: { blah: 1 } });
+    }, "cannot have both modifier and non-modifier fields");
+    test.equal(c.findOne(id), { _id: id, foo2: "bar2" });
+  }
+]);
+
+Meteor.isServer && Tinytest.add(
+  "mongo-livedata - connection failure throws",
+  function (test) {
+    test.throws(function () {
+      new MongoInternals.Connection('mongodb://this-does-not-exist.test/asdf');
+    });
+  }
+);
+
+Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) {
+  // Make sure the version number looks like a version number.
+  test.matches(MongoInternals.NpmModules.mongodb.version, /^1\.(\d+)\.(\d+)/);
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module), 'function');
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.connect),
+             'function');
+  test.equal(typeof(MongoInternals.NpmModules.mongodb.module.ObjectID),
+             'function');
+
+  var c = new Mongo.Collection(Random.id());
+  var rawCollection = c.rawCollection();
+  test.isTrue(rawCollection);
+  test.isTrue(rawCollection.findAndModify);
+  var rawDb = c.rawDatabase();
+  test.isTrue(rawDb);
+  test.isTrue(rawDb.admin);
+});

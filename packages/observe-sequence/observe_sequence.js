@@ -176,10 +176,14 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
     addedBefore: function (id, doc, before) {
       var position = before ? posCur[idStringify(before)] : lengthCur;
 
-      _.each(posCur, function (pos, id) {
-        if (pos >= position)
-          posCur[id]++;
-      });
+      if (before) {
+        // If not adding at the end, we need to update indexes.
+        // XXX this can still be improved greatly!
+        _.each(posCur, function (pos, id) {
+          if (pos >= position)
+            posCur[id]++;
+        });
+      }
 
       lengthCur++;
       posCur[idStringify(id)] = position;
@@ -191,23 +195,48 @@ var diffArray = function (lastSeqArray, seqArray, callbacks) {
         before);
     },
     movedBefore: function (id, before) {
-      var prevPosition = posCur[idStringify(id)];
-      var position = before ? posCur[idStringify(before)] : lengthCur - 1;
+      if (id === before)
+        return;
 
-      _.each(posCur, function (pos, id) {
-        if (pos >= prevPosition && pos <= position)
+      var oldPosition = posCur[idStringify(id)];
+      var newPosition = before ? posCur[idStringify(before)] : lengthCur;
+
+      // Moving the item forward. The new element is losing one position as it
+      // was removed from the old position before being inserted at the new
+      // position.
+      // Ex.:   0  *1*  2   3   4
+      //        0   2   3  *1*  4
+      // The original issued callback is "1" before "4".
+      // The position of "1" is 1, the position of "4" is 4.
+      // The generated move is (1) -> (3)
+      if (newPosition > oldPosition) {
+        newPosition--;
+      }
+
+      // Fix up the positions of elements between the old and the new positions
+      // of the moved element.
+      //
+      // There are two cases:
+      //   1. The element is moved forward. Then all the positions in between
+      //   are moved back.
+      //   2. The element is moved back. Then the positions in between *and* the
+      //   element that is currently standing on the moved element's future
+      //   position are moved forward.
+      _.each(posCur, function (elCurPosition, id) {
+        if (oldPosition < elCurPosition && elCurPosition < newPosition)
           posCur[id]--;
-        else if (pos <= prevPosition && pos >= position)
+        else if (newPosition <= elCurPosition && elCurPosition < oldPosition)
           posCur[id]++;
       });
 
-      posCur[idStringify(id)] = position;
+      // Finally, update the position of the moved element.
+      posCur[idStringify(id)] = newPosition;
 
       callbacks.movedTo(
         id,
         seqArray[posNew[idStringify(id)]].item,
-        prevPosition,
-        position,
+        oldPosition,
+        newPosition,
         before);
     },
     removed: function (id) {

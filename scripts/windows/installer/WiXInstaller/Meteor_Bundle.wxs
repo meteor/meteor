@@ -1,0 +1,77 @@
+<?xml version="1.0"?>
+<!-- This example demonstrates the use of an external theme file to create the same UI as  Hyperlink2License built in to WixBalExtensionExt.  It also shows the use of two folder selections and radio buttons on the options page. -->
+<Wix
+    RequiredVersion="3.7.1224.0"
+    xmlns="http://schemas.microsoft.com/wix/2006/wi"
+    xmlns:bal="http://schemas.microsoft.com/wix/BalExtension"
+    xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+    <?include Configuration.wxi?>
+
+    <Bundle	Name="$(var.METEOR_ProductName)" Version="$(var.METEOR_Version)" Manufacturer="$(var.METEOR_Manufacturer)"
+		UpgradeCode="$(var.BUNDLE_UpgradeCode)" AboutUrl="$(var.METEOR_ProductUrl)"
+		IconSourceFile="Resources\Product.ico" Condition="(VersionNT &gt;= v5.1)" >
+
+        <Update Location="$(var.METEOR_UpgradeUrl)"/>
+
+        <BootstrapperApplicationRef Id="WixExtendedBootstrapperApplication.HyperlinkLicense">
+            <Payload SourceFile="$(var.METEOR_Background)" />
+            <Payload SourceFile="$(var.METEOR_TopHeader)" />
+            <Payload SourceFile="$(var.METEOR_Logo)" />
+            <Payload SourceFile="$(var.METEOR_License)" Compressed="yes" />
+        </BootstrapperApplicationRef>
+
+
+        <WixVariable Id="WixExtbaLicenseUrl" Value="License.htm" />
+        <WixVariable Id="WixExtbaThemeXml"   Value="$(var.METEOR_Theme)" />
+        <WixVariable Id="WixExtbaThemeWxl"   Value="$(var.METEOR_Localization)" />
+        <WixVariable Id="WixBundleElevated"  Value="1"/>
+		
+		<Variable Name="TermsUrl" 			Type="string" Value="$(var.METEOR_TermsUrl)" />
+		<Variable Name="PrivacyUrl" 		Type="string" Value="$(var.METEOR_PrivacyUrl)" />
+
+        <Variable Name="MeteorVersion"  Type="string" Persisted="yes" Value="$(var.METEOR_Version)" Hidden="yes" />
+        <Variable Name="PerMachineInstall"  Type="numeric" Persisted="yes" Value="0" />
+        <Variable Name="PerUserInstall"     Type="numeric" Persisted="yes" Value="1" />
+        <Variable Name="CreateRButton" 		Type="numeric" Persisted="yes" Value="1" />
+        <Variable Name="SignInRButton" 		Type="numeric" Persisted="yes" Value="0" />
+        <Variable Name="RegisterEmail"   	Type="string"  Persisted="yes" Value="" Hidden="yes" />
+		<Variable Name="RegisterUser"   	Type="string"  Persisted="yes" Value="" Hidden="yes" />
+        <Variable Name="RegisterPass"    	Type="string"  Persisted="yes" Value="" Hidden="yes" />
+		
+		<!-- For now I disable and hide the Skip registration checkbox -->
+        <Variable Name="SkipRegistrationState"	Type="string"  Persisted="yes" Value="disable"/>
+        <Variable Name="SkipRegistration"	    Type="numeric" Persisted="yes" Value="0"/>
+
+        <Variable Name="UserMeteorSessionFile" 	    Type="string" Persisted="yes" Value="[LocalAppDataFolder]\.meteorsession" />
+        <Variable Name="PerMachineInstallFolder"    Type="string" Persisted="yes" Value="[ProgramFilesFolder][WixBundleName]" />
+        <Variable Name="PerUserInstallFolder"       Type="string" Persisted="yes" Value="[LocalAppDataFolder]" />
+        <Variable Name="InstallFolder"              Type="string" Persisted="yes" Value="[PerUserInstallFolder]" />
+
+        <Variable Name="InstallRegPath"             Type="string" Persisted="yes" Value="SOFTWARE\$(var.METEOR_Manufacturer)\$(var.METEOR_ProductName)\Install" />
+        <Variable Name="MSICustomErrFile" 	        Type="string" Persisted="yes" Value="[WixBundleLog].err" />
+
+
+
+        <Chain DisableSystemRestore="yes">
+
+            <!-- Here we set MSI propertyies if user chose perUser install -->
+            <MsiPackage Id="SetupMeteor_MachineInstall" Compressed="yes" InstallCondition="NOT Installed AND (PerMachineInstall = 1)"
+				SourceFile="bin\$(var.Configuration)\$(var.Platform)\SetupMeteor.msi" Vital="yes" ForcePerMachine="yes" >
+                <MsiProperty Name="METEOR_DIR" Value="[InstallFolder]" />
+                <MsiProperty Name="INSTALL_REG_PATH" Value="[InstallRegPath]"/>
+                <MsiProperty Name="MSICUSTOMERRFILE" Value="[MSICustomErrFile]" />
+                <MsiProperty Name="PERMACHINE_INSTALL" Value="1" />
+            </MsiPackage>
+
+            <!-- Here we set MSI propertyies if user chose perUser install -->
+            <MsiPackage Id="SetupMeteor_UserInstall" Compressed="yes" InstallCondition="NOT Installed AND (PerUserInstall = 1)"
+				SourceFile="bin\$(var.Configuration)\$(var.Platform)\SetupMeteor.msi" Vital="yes" >
+                <MsiProperty Name="METEOR_DIR" Value="[InstallFolder]" />
+                <MsiProperty Name="INSTALL_REG_PATH" Value="[InstallRegPath]"/>
+                <MsiProperty Name="MSICUSTOMERRFILE" Value="[MSICustomErrFile]" />
+                <MsiProperty Name="PERUSER_INSTALL" Value="1" />
+            </MsiPackage>
+        </Chain>
+    </Bundle>
+</Wix>

@@ -89,7 +89,7 @@ Template.welcomePage.helpers({
 
 then you can display every person's name as a list of `<p>` tags:
 
-```
+```html
 {{dstache}}#each people}}
   <p>{{dstache}}name}}</p>
 {{dstache}}/each}}
@@ -97,9 +97,9 @@ then you can display every person's name as a list of `<p>` tags:
 
 or use the "nametag" template from above instead of `<p>` tags:
 
-```
+```html
 {{dstache}}#each people}}
-  <p>{{dstache}}> nametag}}</p>
+  {{dstache}}> nametag}}
 {{dstache}}/each}}
 ```
 
@@ -145,7 +145,7 @@ Pass in arguments by putting them inside the curly braces after the name of the
 helper:
 
 ```html
-<p>There are {{dstache}}commentCount 3}} comments.</p>
+<p>There are {{dstache}}commentCount 3}}.</p>
 ```
 
 The helpers above have all been associated with specific templates, but
@@ -170,13 +170,13 @@ To attach event handlers to the following template
 
 ```
 <template name="example">
-  {{#with myHelper}}
+  {{dstache}}#with myHelper}}
     <button class="my-button">My button</button>
     <form>
       <input type="text" name="myInput" />
       <input type="submit" value="Submit Form" />
     </form>
-  {{/with}}
+  {{dstache}}/with}}
 </template>
 ```
 
@@ -210,27 +210,26 @@ event object and template instance. See the [Event Maps section](#eventmaps)
 for details.
 <!-- TODO Update the link to full docs for Event Maps -->
 
-{{> autoApiBox "Template#rendered"}}
+{{> autoApiBox "Template#onRendered"}}
 
-The function assigned to this property is called once for every instance of
+The functions added with this method are called once for every instance of
 *Template.myTemplate* when it is inserted into the page for the first time.
 
-This _rendered_ callback can be used to integrate external libraries that aren't
-familiar with Meteor's automatic view rendering, and need to be initialized
-every time HTML is inserted into the page. Use the
-[`created`](#template_created) and
-[`destroyed`](#template_destroyed) callbacks to perform
-initialization or clean-up on any objects.
+These callbacks can be used to integrate external libraries that
+aren't familiar with Meteor's automatic view rendering, and need to be
+initialized every time HTML is inserted into the page.
+You can perform initialization or clean-up on any objects in
+[`onCreated`](#template_oncreated) and [`onDestroyed`](#template_ondestroyed)
+callbacks.
 
 For example, to use the HighlightJS library to apply code highlighting to
 all `<pre>` elements inside the `codeSample` template, you might assign
 the following function to `Template.codeSample.rendered`:
 
-<!-- XXX Why is this not a function like Meteor.startup? -->
 ```
-Template.codeSample.rendered = function () {
+Template.codeSample.onRendered(function () {
   hljs.highlightBlock(this.findAll('pre'));
-};
+});
 ```
 
 In the callback function, `this` is bound to a [template
@@ -257,8 +256,8 @@ You can assign additional properties of your choice to the template instance to
 keep track of any state relevant to the template. For example, when using the
 Google Maps API you could attach the `map` object to the current template
 instance to be able to refer to it in helpers and event handlers. Use the
-[`created`](#template_created) and [`destroyed`](#template_destroyed) callbacks
-to perform initialization or clean-up.
+[`onCreated`](#template_onCreated) and [`onDestroyed`](#template_onDestroyed)
+callbacks to perform initialization or clean-up.
 
 {{> autoApiBox "Blaze.TemplateInstance#findAll"}}
 

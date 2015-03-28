@@ -9,8 +9,9 @@ var release = require("../release.js");
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var stats = require('../stats.js');
+var tropohouseModule = require('../tropohouse.js');
 var Sandbox = selftest.Sandbox;
-var project = require('../project.js');
+var projectContextModule = require('../project-context.js');
 var buildmessage = require('../buildmessage.js');
 
 var testStatsServer = "https://test-package-stats.meteor.com";
@@ -21,6 +22,9 @@ var clientAddress;
 // NOTE: This test will fail if your machine's time is skewed by more
 // than 30 minutes. This is because the `fetchAppPackageUsage` method
 // works by passing an hour time range.
+// XXX I have not managed to get this test passing since introducing
+//     isopack-cache, though it seems to just be major server slowness
+//     and perhaps preexisting.
 selftest.define("report-stats", ["slow", "net"], function () {
   _.each(
     // If we are currently running from a checkout, then we run this
@@ -44,22 +48,29 @@ selftest.define("report-stats", ["slow", "net"], function () {
 
       var run;
 
-      if (useFakeRelease) {
-        // This makes packages not depend on meteor (specifically, makes
-        // our empty control program not depend on meteor). We don't
-        // want to depend on meteor when running from a fake release,
-        // because fake releases don't have any packages.
-        s.set("NO_METEOR_PACKAGE", "t");
-      }
-
-      s.createApp("foo", "package-stats-tests");
+      s.createApp("foo", "package-stats-tests", {
+        release: useFakeRelease ? 'METEOR@v1' : undefined
+      });
       s.cd("foo");
-      if (useFakeRelease) {
-        s.write('.meteor/release', 'METEOR@v1');
-      }
 
-      var sandboxProject = new project.Project();
-      sandboxProject.setRootDir(s.cwd);
+      var projectContextOptions = { projectDir: s.cwd };
+      if (useFakeRelease) {
+        // Make sure that our projectContext knows where the fake tropohouse is.
+        projectContextOptions.tropohouse =
+          new tropohouseModule.Tropohouse(s.warehouse);
+        // This ProjectContext shouldn't notice the packages in the checkout.
+        projectContextOptions.ignoreCheckoutPackages = true;
+        // It should use the stub official catalog.
+        projectContextOptions.officialCatalog = s.warehouseOfficialCatalog;
+        // It should be pinned to METEOR@v1.
+        projectContextOptions.releaseForConstraints =
+          s.warehouseOfficialCatalog.getReleaseVersion("METEOR", "v1");
+      }
+      var projectContext = new projectContextModule.ProjectContext(
+        projectContextOptions);
+      selftest.doOrThrow(function () {
+        projectContext.prepareProjectForBuild();
+      });
 
       // XXX Copied from http-helpers.js
       var version;
@@ -75,33 +86,35 @@ selftest.define("report-stats", ["slow", "net"], function () {
       var sessionId;
 
       // verify that identifier file exists for new apps
-      var identifier = readProjectId(s);
+      var identifier = projectContext.appIdentifier;
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
 
       // verify that identifier file when running 'meteor run' on apps
       // with no identifier file (eg pre-0.9.0 apps)
-      runWithFreshIdentifier(s, sandboxProject);
-      identifier = readProjectId(s);
+      runWithFreshIdentifier(s, projectContext);
+      var oldIdentifier = identifier;
+      identifier = projectContext.appIdentifier;
       selftest.expectEqual(!! identifier, true);
       selftest.expectEqual(identifier.length > 0, true);
+      selftest.expectEqual(oldIdentifier !== identifier, true);
 
       // we just ran 'meteor run' so let's test that we actually sent
       // package usage stats
       var usage = fetchPackageUsageForApp(identifier);
       selftest.expectEqual(_.sortBy(usage.packages, "name"),
-                           _.sortBy(packageList(sandboxProject), "name"));
+                           _.sortBy(stats.packageList(projectContext), "name"));
 
-      // Check that the direct dependency was recorded as such.
+      // Check that the direct and local dependency was recorded as such.
       _.each(usage.packages, function (package) {
-        if (package.name === "local-package" &&
-            ! package.direct) {
-          selftest.fail("local-package is not marked as a direct dependency");
+        if (package.name === "local-package") {
+          selftest.expectTrue(package.direct);
+          selftest.expectTrue(package.local);
         }
       });
 
       // verify that the stats server recorded that with no userId
-      var appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      var appPackages = stats.getPackagesForAppIdInTest(projectContext);
       if (! appPackages) {
         selftest.fail("No packages for app " + identifier + "?");
       }
@@ -115,7 +128,8 @@ selftest.define("report-stats", ["slow", "net"], function () {
       };
 
       expected.details.appId = identifier,
-      expected.details.packages = _.sortBy(packageList(sandboxProject), "name");
+      expected.details.packages = _.sortBy(
+        stats.packageList(projectContext), "name");
 
       // read our new session id; we should have one at this point
       sessionId = auth.getSessionId(config.getAccountsDomain(),
@@ -142,13 +156,13 @@ selftest.define("report-stats", ["slow", "net"], function () {
         sessionId
       );
 
-      runWithFreshIdentifier(s, sandboxProject);
-      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      runWithFreshIdentifier(s, projectContext);
+      appPackages = stats.getPackagesForAppIdInTest(projectContext);
       delete appPackages._id;
       delete appPackages.when;
       delete appPackages.host;
 
-      expected.details.appId = sandboxProject.getAppIdentifier();
+      expected.details.appId = projectContext.appIdentifier;
       expected.who = testUtils.getUserId(s);
       delete expected.previousSession;
       selftest.expectEqual(appPackages, expected);
@@ -158,7 +172,7 @@ selftest.define("report-stats", ["slow", "net"], function () {
       run = s.run("run");
       run.waitSecs(15);
       run.match("PACKAGE STATS SENT");
-      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      appPackages = stats.getPackagesForAppIdInTest(projectContext);
       delete appPackages._id;
       delete appPackages.when;
       delete appPackages.host;
@@ -185,63 +199,59 @@ selftest.define("report-stats", ["slow", "net"], function () {
       run = s.run("add", "package-stats-opt-out");
       run.waitSecs(15);
       run.expectExit(0);
-      runWithFreshIdentifier(s, sandboxProject, false /* don't expect stats */);
-      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      runWithFreshIdentifier(s, projectContext, false /* don't expect stats */);
+      appPackages = stats.getPackagesForAppIdInTest(projectContext);
       selftest.expectEqual(appPackages, undefined);
 
       // Remove the opt-out package, verify that stats get sent again.
       run = s.run("remove", "package-stats-opt-out");
       run.waitSecs(15);
       run.expectExit(0);
-      runApp(s, sandboxProject);
-      appPackages = stats.getPackagesForAppIdInTest(sandboxProject);
+      runApp(s, projectContext);
+      appPackages = stats.getPackagesForAppIdInTest(projectContext);
       selftest.expectEqual(appPackages.who, testUtils.getUserId(s));
       selftest.expectEqual(_.sortBy(appPackages.details.packages, "name"),
-                           _.sortBy(packageList(sandboxProject), "name"));
+                           _.sortBy(stats.packageList(projectContext), "name"));
     }
   );
 });
+
+var refreshProject = function (projectContext) {
+  projectContext.reset();
+  selftest.doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+};
 
 // Run the app in the current working directory after deleting its
 // project ID file (meaning a new one will be created).
 // @param s {Sandbox}
 // @param sandboxProject {Project}
 // @param expectStats {Boolean} (defaults to true)
-var runWithFreshIdentifier = function (s, sandboxProject, expectStats) {
+var runWithFreshIdentifier = function (s, projectContext, expectStats) {
   s.unlink(".meteor/.id");
-  runApp(s, sandboxProject, expectStats);
-};
-
-var readProjectId = function (s) {
-  var raw = s.read(".meteor/.id");
-  var lines = raw.split(/\r*\n\r*/);
-  return _.find(_.map(lines, files.trimLine), _.identity);
+  runApp(s, projectContext, expectStats);
 };
 
 // Bundle the app in the current working directory.
 // @param s {Sandbox}
 // @param sandboxProject {Project}
 // @param expectStats {Boolean} (defaults to true)
-var runApp = function (s, sandboxProject, expectStats) {
+var runApp = function (s, projectContext, expectStats) {
   if (expectStats === undefined) {
     expectStats = true;
   }
 
   var run = s.run();
-  run.waitSecs(30);
+  run.waitSecs(90);
   if (expectStats) {
     run.match("PACKAGE STATS SENT");
   } else {
     run.match("PACKAGE STATS NOT SENT");
   }
   run.stop();
-  // Pick up new app identifier and/or packages added/removed. Usually the
-  // changes to .meteor/packages and .meteor/.id would be handled by the
-  // code that handles the hotcodepush, so the project does not cache them.
-  //
-  // Calling `sandboxProject.reload` here doesn't work because `reload`
-  // does not update `sandboxProject.dependencies`.
-  sandboxProject.setRootDir(s.cwd);
+  // Pick up new app identifier and/or packages added/removed.
+  refreshProject(projectContext);
 };
 
 // Contact the package stats server and look for a given app
@@ -280,14 +290,3 @@ var getClientAddress = _.once(function () {
   var stats = testUtils.ddpConnect(testStatsServer);
   return stats.call("getClientAddress");
 });
-
-var packageList = function (proj) {
-  var ret;
-  var messages = buildmessage.capture(function () {
-    ret = stats.packageList(proj);
-  });
-  if (messages.hasMessages()) {
-    selftest.fail(messages.formatMessages());
-  }
-  return ret;
-};

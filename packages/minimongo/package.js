@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '1.0.5'
+  version: '1.0.8-pre.win.1'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('LocalCollection');
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
@@ -11,7 +11,7 @@ Package.on_use(function (api) {
            'random', 'ordered-dict']);
   // This package is used for geo-location queries such as $near
   api.use('geojson-utils');
-  api.add_files([
+  api.addFiles([
     'minimongo.js',
     'wrap_transform.js',
     'helpers.js',
@@ -26,19 +26,19 @@ Package.on_use(function (api) {
   ]);
 
   // Functionality used only by oplog tailing on the server side
-  api.add_files([
+  api.addFiles([
     'selector_projection.js',
     'selector_modifier.js',
     'sorter_projection.js'
   ], 'server');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('minimongo', ['client', 'server']);
   api.use('test-helpers', 'client');
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
            'random', 'tracker', 'reactive-var']);
-  api.add_files('minimongo_tests.js', 'client');
-  api.add_files('wrap_transform_tests.js');
-  api.add_files('minimongo_server_tests.js', 'server');
+  api.addFiles('minimongo_tests.js', 'client');
+  api.addFiles('wrap_transform_tests.js');
+  api.addFiles('minimongo_server_tests.js', 'server');
 });

@@ -20,7 +20,7 @@ Blaze.With = function (data, contentFunc) {
       // `data` is a reactive function
       view.autorun(function () {
         view.dataVar.set(data());
-      }, view.parentView);
+      }, view.parentView, 'setData');
     } else {
       view.dataVar.set(data);
     }
@@ -48,7 +48,7 @@ Blaze.If = function (conditionFunc, contentFunc, elseFunc, _not) {
     this.autorun(function () {
       var cond = Blaze._calculateCondition(conditionFunc());
       conditionVar.set(_not ? (! cond) : cond);
-    }, this.parentView);
+    }, this.parentView, 'condition');
   });
 
   return view;
@@ -96,7 +96,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     // passing argFunc straight to ObserveSequence).
     eachView.autorun(function () {
       eachView.argVar.set(argFunc());
-    }, eachView.parentView);
+    }, eachView.parentView, 'collection');
 
     eachView.stopHandle = ObserveSequence.observe(function () {
       return eachView.argVar.get();
@@ -142,15 +142,17 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
       },
       changedAt: function (id, newItem, oldItem, index) {
         Tracker.nonreactive(function () {
-          var itemView;
           if (eachView.expandedValueDep) {
             eachView.expandedValueDep.changed();
-          } else if (eachView._domrange) {
-            itemView = eachView._domrange.getMember(index).view;
           } else {
-            itemView = eachView.initialSubviews[index];
+            var itemView;
+            if (eachView._domrange) {
+              itemView = eachView._domrange.getMember(index).view;
+            } else {
+              itemView = eachView.initialSubviews[index];
+            }
+            itemView.dataVar.set(newItem);
           }
-          itemView.dataVar.set(newItem);
         });
       },
       movedTo: function (id, item, fromIndex, toIndex) {
@@ -184,7 +186,7 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
   return eachView;
 };
 
-Blaze._TemplateWith = function (arg, contentBlock) {
+Blaze._TemplateWith = function (arg, contentFunc) {
   var w;
 
   var argFunc = arg;
@@ -217,7 +219,23 @@ Blaze._TemplateWith = function (arg, contentBlock) {
     }
   };
 
-  w = Blaze.With(wrappedArgFunc, contentBlock);
+  var wrappedContentFunc = function () {
+    var content = contentFunc.call(this);
+
+    // Since we are generating the Blaze._TemplateWith view for the
+    // user, set the flag on the child view.  If `content` is a template,
+    // construct the View so that we can set the flag.
+    if (content instanceof Blaze.Template) {
+      content = content.constructView();
+    }
+    if (content instanceof Blaze.View) {
+      content._hasGeneratedParent = true;
+    }
+
+    return content;
+  };
+
+  w = Blaze.With(wrappedArgFunc, wrappedContentFunc);
   w.__isTemplateWith = true;
   return w;
 };

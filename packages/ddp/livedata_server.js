@@ -233,7 +233,7 @@ var Session = function (server, version, socket, options) {
 
   // set to null when the session is destroyed. multiple places below
   // use this to determine if the session is alive or not.
-  self.inQueue = [];
+  self.inQueue = new Meteor._DoubleEndedQueue();
 
   self.blocked = false;
   self.workerRunning = false;
@@ -420,6 +420,10 @@ _.extend(Session.prototype, {
     if (! self.inQueue)
       return;
 
+    // Drop the merge box data immediately.
+    self.inQueue = null;
+    self.collectionViews = {};
+
     if (self.heartbeat) {
       self.heartbeat.stop();
       self.heartbeat = null;
@@ -429,10 +433,6 @@ _.extend(Session.prototype, {
       self.socket.close();
       self.socket._meteorSession = null;
     }
-
-    // Drop the merge box data immediately.
-    self.collectionViews = {};
-    self.inQueue = null;
 
     Package.facts && Package.facts.Facts.incrementServerFact(
       "livedata", "sessions", -1);
@@ -773,7 +773,10 @@ _.extend(Session.prototype, {
   _stopSubscription: function (subId, error) {
     var self = this;
 
+    var subName = null;
+
     if (subId && self._namedSubs[subId]) {
+      subName = self._namedSubs[subId]._name;
       self._namedSubs[subId]._removeAllDocuments();
       self._namedSubs[subId]._deactivate();
       delete self._namedSubs[subId];
@@ -781,8 +784,12 @@ _.extend(Session.prototype, {
 
     var response = {msg: 'nosub', id: subId};
 
-    if (error)
-      response.error = wrapInternalException(error, "from sub " + subId);
+    if (error) {
+      response.error = wrapInternalException(
+        error,
+        subName ? ("from sub " + subName + " id " + subId)
+          : ("from sub id " + subId));
+    }
 
     self.send(response);
   },
@@ -901,7 +908,7 @@ var Subscription = function (
   self._ready = false;
 
   // Part of the public API: the user of this sub.
-  
+
   /**
    * @summary Access inside the publish function. The id of the logged-in user, or `null` if no user is logged in.
    * @locus Server
@@ -975,7 +982,12 @@ _.extend(Subscription.prototype, {
       return c && c._publishCursor;
     };
     if (isCursor(res)) {
-      res._publishCursor(self);
+      try {
+        res._publishCursor(self);
+      } catch (e) {
+        self.error(e);
+        return;
+      }
       // _publishCursor only returns after the initial added callbacks have run.
       // mark subscription as ready.
       self.ready();
@@ -1000,9 +1012,14 @@ _.extend(Subscription.prototype, {
         collectionNames[collectionName] = true;
       };
 
-      _.each(res, function (cur) {
-        cur._publishCursor(self);
-      });
+      try {
+        _.each(res, function (cur) {
+          cur._publishCursor(self);
+        });
+      } catch (e) {
+        self.error(e);
+        return;
+      }
       self.ready();
     } else if (res) {
       // truthy values other than cursors or arrays are probably a
@@ -1065,7 +1082,7 @@ _.extend(Subscription.prototype, {
   },
 
   /**
-   * @summary Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onError` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error).
+   * @summary Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onStop` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error).
    * @locus Server
    * @param {Error} error The error to pass to the client.
    * @instance
@@ -1082,9 +1099,9 @@ _.extend(Subscription.prototype, {
   // server (and clean up its _subscriptions table) we don't actually provide a
   // mechanism for an app to notice this (the subscribe onError callback only
   // triggers if there is an error).
-  
+
   /**
-   * @summary Call inside the publish function.  Stops this client's subscription; the `onError` callback is *not* invoked on the client.
+   * @summary Call inside the publish function.  Stops this client's subscription and invokes the client's `onStop` callback with no error.
    * @locus Server
    * @instance
    * @memberOf Subscription
@@ -1364,7 +1381,7 @@ _.extend(Server.prototype, {
    *    (it lets us determine whether to print a warning suggesting
    *    that you turn off autopublish.)
    */
-  
+
   /**
    * @summary Publish a record set.
    * @memberOf Meteor
@@ -1514,6 +1531,7 @@ _.extend(Server.prototype, {
             handler, invocation, EJSON.clone(args), "internal call to '" +
               name + "'");
         });
+        result = EJSON.clone(result);
       } catch (e) {
         exception = e;
       }

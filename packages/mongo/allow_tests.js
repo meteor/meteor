@@ -93,6 +93,9 @@ if (Meteor.isServer) {
         transform: null,
         insert: function (userId, doc) {
           return !!doc.topLevelField;
+        },
+        update: function (userId, doc) {
+          return !!doc.topLevelField;
         }
       });
       restrictedCollectionForInvalidTransformTest.allow({
@@ -306,30 +309,28 @@ if (Meteor.isClient) {
         restrictedCollectionForFetchTest.update(
           fetchId, {$set: {updated: true}}, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3");
           }));
         restrictedCollectionForFetchTest.remove(
           fetchId, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3");
           }));
 
         restrictedCollectionForFetchAllTest.update(
           fetchAllId, {$set: {updated: true}}, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,field4,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3,field4");
           }));
         restrictedCollectionForFetchAllTest.remove(
           fetchAllId, expect(function (err, res) {
             test.equal(err.reason,
-                       "Test: Fields in doc: field1,field2,field3,field4,_id");
+                       "Test: Fields in doc: _id,field1,field2,field3,field4");
           }));
       }
     ]);
 
     (function(){
-      var item1;
-      var item2;
       testAsyncMulti("collection - restricted factories " + idGeneration, [
         function (test, expect) {
           restrictedCollectionWithTransform.callClearMethod(expect(function () {
@@ -337,12 +338,13 @@ if (Meteor.isClient) {
           }));
         },
         function (test, expect) {
+          var self = this;
           restrictedCollectionWithTransform.insert({
             a: {foo: "foo", bar: "bar", baz: "baz"}
           }, expect(function (e, res) {
             test.isFalse(e);
             test.isTrue(res);
-            item1 = res;
+            self.item1 = res;
           }));
           restrictedCollectionWithTransform.insert({
             a: {foo: "foo", bar: "quux", baz: "quux"},
@@ -350,7 +352,7 @@ if (Meteor.isClient) {
           }, expect(function (e, res) {
             test.isFalse(e);
             test.isTrue(res);
-            item2 = res;
+            self.item2 = res;
           }));
           restrictedCollectionWithTransform.insert({
             a: {foo: "adsfadf", bar: "quux", baz: "quux"},
@@ -364,18 +366,32 @@ if (Meteor.isClient) {
           }, expect(function (e, res) {
             test.isFalse(e);
             test.isTrue(res);
+            self.item3 = res;
           }));
         },
         function (test, expect) {
+          var self = this;
+          // This should work, because there is an update allow for things with
+          // topLevelField.
+          restrictedCollectionWithTransform.update(
+            self.item3, { $set: { xxx: true } }, expect(function (e, res) {
+              test.isFalse(e);
+              test.equal(1, res);
+            }));
+        },
+        function (test, expect) {
+          var self = this;
           test.equal(
-            _.omit(restrictedCollectionWithTransform.findOne({"a.bar": "bar"}), '_id'),
-            {foo: "foo", bar: "bar", baz: "baz"});
-          restrictedCollectionWithTransform.remove(item1, expect(function (e, res) {
-            test.isFalse(e);
-          }));
-          restrictedCollectionWithTransform.remove(item2, expect(function (e, res) {
-            test.isTrue(e);
-          }));
+            restrictedCollectionWithTransform.findOne(self.item1),
+            {_id: self.item1, foo: "foo", bar: "bar", baz: "baz"});
+          restrictedCollectionWithTransform.remove(
+            self.item1, expect(function (e, res) {
+              test.isFalse(e);
+            }));
+          restrictedCollectionWithTransform.remove(
+            self.item2, expect(function (e, res) {
+              test.isTrue(e);
+            }));
         }
       ]);
     })();

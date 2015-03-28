@@ -12,7 +12,7 @@
     {{/if}}
     {{#if type "section"}}
       {{#nav_section}}
-        <a href="#/full/{{id}}" class="{{maybe_current}} {{style}}">
+        <a href="{{link}}" class="{{maybe_current}} {{style}}">
           {{#if prefix}}{{prefix}}.{{/if}}{{#if instance}}<i>{{instance}}</i>.{{/if}}{{name}}
         </a>
       {{/nav_section}}

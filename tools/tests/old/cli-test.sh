@@ -105,7 +105,7 @@ tar tvzf "$DIR.tar.gz" >>$OUTPUT
 cd .. # we're now back to $DIR
 echo "... run"
 
-MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --nohttpinterface --port 9101'
+MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --port 9101'
 # kill any old test meteor
 # there is probably a better way to do this, but it is at least portable across macos and linux
 # (the || true is needed on linux, whose xargs will invoke kill even with no args)
@@ -162,9 +162,9 @@ Package.describe({
   summary: "die-now",
   version: "1.0.0"
 });
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('deps'); // try to use a core package
-  api.add_files(['die-now.js'], 'server');
+  api.addFiles(['die-now.js'], 'server');
 });
 EOF
 cat > "$TEST_TMPDIR/local-packages/die-now/die-now.js" <<EOF
@@ -249,8 +249,8 @@ Package.describe({
 });
 Npm.depends({gcd: '0.0.0'});
 
-Package.on_use(function(api) {
-  api.add_files(['call_gcd.js'], 'server');
+Package.onUse(function(api) {
+  api.addFiles(['call_gcd.js'], 'server');
 });
 EOF
 

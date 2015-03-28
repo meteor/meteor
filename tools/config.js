@@ -1,5 +1,3 @@
-var fs = require('fs');
-var path = require('path');
 var url = require('url');
 var files = require('./files.js');
 var _ = require('underscore');
@@ -21,8 +19,7 @@ var tropohouse = require('./tropohouse.js');
 // We're not quite there yet though:
 // - When developing locally, you may need to set DISCOVERY_PORT (see
 //   getDiscoveryPort below)
-// - GALAXY can still be used to override Galaxy discovery, and
-//   DELPOY_HOSTNAME can still be set to override classic-style
+// - DEPLOY_HOSTNAME can still be set to override classic-style
 //   deploys
 // - The update/warehouse system hasn't been touched and still has its
 //   hardcoded URLs for now (update.meteor.com and
@@ -35,9 +32,9 @@ var getUniverse = function () {
     universe = "www.meteor.com";
 
     if (files.inCheckout()) {
-      var p = path.join(files.getCurrentToolsDir(), 'universe');
-      if (fs.existsSync(p))
-        universe = fs.readFileSync(p, 'utf8').trim();
+      var p = files.pathJoin(files.getCurrentToolsDir(), 'universe');
+      if (files.exists(p))
+        universe = files.readFile(p, 'utf8').trim();
     }
   }
 
@@ -214,7 +211,7 @@ _.extend(exports, {
 
     var prefix = config.getPackageServerFilePrefix(serverUrl);
     if (prefix !== 'packages') {
-      prefix = path.join('packages-from-server', prefix);
+      prefix = files.pathJoin('packages-from-server', prefix);
     }
 
     return prefix;
@@ -229,16 +226,20 @@ _.extend(exports, {
     return prefix + ".data.db";
   },
 
-  getPackageStorage: function (tropo) {
+  getPackageStorage: function (options) {
     var self = this;
-    tropo = tropo || tropohouse.default;
-    return path.join(tropo.root, "package-metadata", "v2.0.1",
-                     self.getLocalPackageCacheFilename());
+    options = options || {};
+    var root = options.root || tropohouse.default.root;
+    return files.pathJoin(root, "package-metadata", "v2.0.1",
+                     self.getLocalPackageCacheFilename(options.serverUrl));
   },
 
-  getBannersShownFilename: function() {
-    return path.join(tropohouse.default.root,
-                     "package-metadata", "v1.1", "banners-shown.json");
+  getIsopacketRoot: function () {
+    if (files.inCheckout()) {
+      return files.pathJoin(files.getCurrentToolsDir(), '.meteor', 'isopackets');
+    } else {
+      return files.pathJoin(files.getCurrentToolsDir(), 'isopackets');
+    }
   },
 
   // Return the domain name of the current Meteor Accounts server in
@@ -290,7 +291,7 @@ _.extend(exports, {
   getSessionFilePath: function () {
     // METEOR_SESSION_FILE is for automated testing purposes only.
     return process.env.METEOR_SESSION_FILE ||
-      path.join(process.env.HOME, '.meteorsession');
+      files.pathJoin(files.getHomeDir(), '.meteorsession');
   },
 
   // Port to use when querying URLs for the deploy server that backs

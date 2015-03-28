@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Login service for Google accounts",
-  version: "1.0.2"
+  version: "1.0.4"
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   api.use(['underscore', 'random']);
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
@@ -11,7 +11,7 @@ Package.on_use(function(api) {
   api.use('accounts-oauth', ['client', 'server']);
   api.use('google', ['client', 'server']);
 
-  api.add_files('google_login_button.css', 'client');
+  api.addFiles('google_login_button.css', 'client');
 
-  api.add_files("google.js");
+  api.addFiles("google.js");
 });

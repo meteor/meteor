@@ -481,13 +481,6 @@ pre {
             margin-right: 3px;
         }
     }
-
-    .open-sidebar {
-        position: absolute;
-        left: 10px;
-        top: 10px;
-        font-size: 30px;
-    }
 }
 
 .sidebar-open {
@@ -605,4 +598,126 @@ pre {
     .top-bar {
         display: none;
     }
+}
+
+.search-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 3;
+    background: white;
+
+    overflow: hidden;
+
+    .close-search {
+        float: right;
+        font-size: 2em;
+
+        .hotkey {
+            font-size: 0.6em;
+            color: #777;
+            vertical-align: middle;
+        }
+
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: none;
+            background: none;
+        }
+    }
+
+    .search-box {
+        margin: 40px;
+
+        h3 {
+            font-size: 2em;
+        }
+
+        input {
+            font-size: 2em;
+            padding: 0.5em 0;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #777;
+            width: 80%;
+
+            &:focus {
+                outline: 0;
+            }
+        }
+    }
+
+    .search-results {
+        margin: 40px;
+
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        top: 170px;
+
+        overflow-y: scroll;
+        list-style: none;
+
+        padding: 0;
+
+        li {
+            font-size: 1em;
+            margin-bottom: 0.5em;
+            padding: 10px;
+            white-space: nowrap;
+
+            p {
+                margin: 0;
+                display: inline;
+            }
+
+            strong {
+                font-weight: bold;
+            }
+
+            &.selected {
+                background: yellow;
+            }
+        }
+    }
+}
+
+// This menu icon is inspired by
+// http://www.codesynthesis.co.uk/code-snippets/create-a-hamburger-icon-with-css
+@hamburger-icon-size: 18px;
+
+// Make the target larger than the icon
+.hamburger-menu-target {
+    height: @hamburger-icon-size;
+    width: @hamburger-icon-size;
+    padding: 19px 10px;
+    display: inline-block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.hamburger-menu, .hamburger-menu:after, .hamburger-menu:before {
+    height: @hamburger-icon-size / 6;
+    width: @hamburger-icon-size;
+    background-color: #111;
+    border-radius: 10px;
+    position: relative;
+}
+
+.hamburger-menu:after, .hamburger-menu:before {
+    content: '';
+    position: absolute;
+}
+
+.hamburger-menu:after {
+    top: @hamburger-icon-size / 3;
+}
+
+.hamburger-menu:before {
+    top: @hamburger-icon-size / 1.5;
 }

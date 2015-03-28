@@ -1,6 +1,5 @@
 var _ = require('underscore');
-var uniload = require('./uniload.js');
-var release = require('./release.js');
+var isopackets = require("./isopackets.js");
 var Console = require('./console.js').Console;
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
@@ -19,9 +18,7 @@ var Console = require('./console.js').Console;
 
 
 var getLoggingPackage = function () {
-  var Log = uniload.load({
-    packages: ['logging']
-  }).logging.Log;
+  var Log = isopackets.load('logging').logging.Log;
 
   // Since no other process will be listening to stdout and parsing it,
   // print directly in the same format as log messages from other apps
@@ -65,17 +62,17 @@ _.extend(RunLog.prototype, {
 
     if (self.consecutiveRestartMessages) {
       self.consecutiveRestartMessages = null;
-      Console.stdout.write("\n");
+      Console.info();
     }
 
     if (self.consecutiveClientRestartMessages) {
       self.consecutiveClientRestartMessages = null;
-      Console.stdout.write("\n");
+      Console.info();
     }
 
     if (self.temporaryMessageLength) {
       var spaces = new Array(self.temporaryMessageLength + 1).join(' ');
-      process.stdout.write(spaces + '\r');
+      process.stdout.write(spaces + Console.CARRIAGE_RETURN);
       self.temporaryMessageLength = null;
     }
   },
@@ -96,16 +93,20 @@ _.extend(RunLog.prototype, {
 
     self._clearSpecial();
     if (self.rawLogs)
-      Console[isStderr ? "stderr" : "stdout"].write(line + "\n");
+      Console[isStderr ? "rawError" : "rawInfo"](line + "\n");
     else
-      Console.stdout.write(Log.format(obj, { color: true }) + "\n");
+      Console.rawInfo(Log.format(obj, { color: true }) + "\n");
 
     // XXX deal with test server logging differently?!
   },
 
-  log: function (msg) {
+  // Log the message.
+  //  msg: message
+  //  options:
+  //    - arrow: if true, preface with => and wrap accordingly.
+  log: function (msg, options) {
     var self = this;
-
+    options = options || {};
     var obj = {
       time: new Date,
       message: msg
@@ -116,7 +117,11 @@ _.extend(RunLog.prototype, {
     self._record(obj);
 
     self._clearSpecial();
-    Console.stdout.write(msg + "\n");
+
+    // Process the options. By default, we want to wordwrap the message with
+    // Console.info. If we ask for raw output, then we don't want to do that. If
+    // we ask for an arrow, we want to wrap around with => as the bulletPoint.
+    Console[options.arrow ? 'arrowInfo' : 'info'](msg);
   },
 
   // Write a message to the terminal that will get overwritten by the
@@ -131,7 +136,7 @@ _.extend(RunLog.prototype, {
     var self = this;
 
     self._clearSpecial();
-    process.stdout.write(msg + "\r");
+    process.stdout.write(msg + Console.CARRIAGE_RETURN);
     self.temporaryMessageLength = msg.length;
   },
 
@@ -141,7 +146,7 @@ _.extend(RunLog.prototype, {
     if (self.consecutiveRestartMessages) {
       // replace old message in place. this assumes that the new restart message
       // is not shorter than the old one.
-      process.stdout.write("\r");
+      process.stdout.write(Console.CARRIAGE_RETURN);
       self.messages.pop();
       self.consecutiveRestartMessages ++;
     } else {
@@ -168,7 +173,7 @@ _.extend(RunLog.prototype, {
     if (self.consecutiveClientRestartMessages) {
       // replace old message in place. this assumes that the new restart message
       // is not shorter than the old one.
-      process.stdout.write("\r");
+      process.stdout.write(Console.CARRIAGE_RETURN);
       self.messages.pop();
       self.consecutiveClientRestartMessages ++;
     } else {

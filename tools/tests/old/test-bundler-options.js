@@ -1,41 +1,31 @@
 var _ = require('underscore');
-var path = require('path');
-var fs = require('fs');
 var assert = require('assert');
 var bundler = require('../../bundler.js');
 var release = require('../../release.js');
 var files = require('../../files.js');
 var catalog = require('../../catalog.js');
-var project = require('../../project.js');
-var compiler = require('../../compiler.js');
 var buildmessage = require('../../buildmessage.js');
+var isopackets = require("../../isopackets.js");
+var projectContextModule = require('../../project-context.js');
 
-// an empty app. notably this app has no .meteor/release file.
-var emptyAppDir = path.join(__dirname, 'empty-app');
 
 var lastTmpDir = null;
 var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var setAppDir = function (appDir) {
-  project.project.setRootDir(appDir);
-
-  if (files.usesWarehouse()) {
-    throw Error("This old test doesn't support non-checkout");
-  }
-  var appPackageDir = path.join(appDir, 'packages');
-  var checkoutPackageDir = path.join(
-    files.getCurrentToolsDir(), 'packages');
-
-  doOrThrow(function () {
-    catalog.uniload.initialize({
-      localPackageDirs: [checkoutPackageDir]
-    });
-    catalog.complete.initialize({
-      localPackageDirs: [appPackageDir, checkoutPackageDir]
-    });
+var makeProjectContext = function (appName) {
+  var projectDir = files.mkdtemp("test-bundler-options");
+  files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), appName),
+    projectDir);
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: projectDir
   });
+  doOrThrow(function () {
+    projectContext.prepareProjectForBuild();
+  });
+
+  return projectContext;
 };
 
 var doOrThrow = function (f) {
@@ -50,43 +40,38 @@ var doOrThrow = function (f) {
 };
 
 var runTest = function () {
-   // As preparation, let's initialize the official catalog. It servers as our
-   // data store, so we will probably need it.
-   catalog.official.initialize();
+  // As preparation, let's initialize the official catalog. It servers as our
+  // data store, so we will probably need it.
+  catalog.official.initialize();
 
   var readManifest = function (tmpOutputDir) {
-    return JSON.parse(fs.readFileSync(
-      path.join(tmpOutputDir, "programs", "web.browser", "program.json"),
+    return JSON.parse(files.readFile(
+      files.pathJoin(tmpOutputDir, "programs", "web.browser", "program.json"),
       "utf8")).manifest;
   };
 
-  setAppDir(emptyAppDir);
-  var loader;
-  var messages = buildmessage.capture(function () {
-    loader = project.project.getPackageLoader();
-  });
-  if (messages.hasMessages()) {
-    throw Error("failed to get package loader: " + messages.formatMessages());
-  }
+  // an empty app. notably this app has no .meteor/release file.
+  var projectContext = makeProjectContext('empty-app');
 
-  console.log("nodeModules: 'skip'");
+  console.log("basic version");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: true },
-      packageLoader: loader
+      buildOptions: { minify: true }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
     // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
+    assert.strictEqual(
+      files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
+      bundler._mainJsContents);
     // no top level node_modules directory
-    assert(!fs.existsSync(path.join(tmpOutputDir,
-                                    "programs", "server", "node_modules")));
+    assert(!files.exists(files.pathJoin(tmpOutputDir,
+                                        "programs", "server", "node_modules")));
     // yes package node_modules directory
-    assert(fs.lstatSync(path.join(
+    assert(files.lstat(files.pathJoin(
       tmpOutputDir, "programs", "server", "npm", "ddp"))
            .isDirectory());
 
@@ -100,18 +85,18 @@ var runTest = function () {
     });
   });
 
-  console.log("nodeModules: 'skip', no minify");
+  console.log("no minify");
   assert.doesNotThrow(function () {
     var tmpOutputDir = tmpDir();
     var result = bundler.bundle({
+      projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: false },
-      packageLoader: loader
+      buildOptions: { minify: false }
     });
     assert.strictEqual(result.errors, false);
 
     // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
+    assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
                        bundler._mainJsContents);
 
     // verify that contents are not minified
@@ -134,35 +119,42 @@ var runTest = function () {
     assert(foundTracker);
   });
 
-  console.log("includeNodeModulesSymlink");
-  assert.doesNotThrow(function () {
-    var tmpOutputDir = tmpDir();
-    var result = bundler.bundle({
-      outputPath: tmpOutputDir,
-      includeNodeModulesSymlink: true,
-      packageLoader: loader
-    });
-    assert.strictEqual(result.errors, false);
+  if (process.platform !== "win32") { // Windows doesn't have symlinks
+    console.log("includeNodeModules");
+    assert.doesNotThrow(function () {
+      var tmpOutputDir = tmpDir();
+      var result = bundler.bundle({
+        projectContext: projectContext,
+        outputPath: tmpOutputDir,
+        includeNodeModules: 'symlink'
+      });
+      assert.strictEqual(result.errors, false);
 
-    // sanity check -- main.js has expected contents.
-    assert.strictEqual(fs.readFileSync(path.join(tmpOutputDir, "main.js"), "utf8"),
-                       bundler._mainJsContents);
-    // node_modules directory exists and is a symlink
-    assert(fs.lstatSync(path.join(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
-    // node_modules contains fibers
-    assert(fs.existsSync(path.join(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
-    // package node_modules directory also a symlink
-    // XXX might be breaking this
-    assert(fs.lstatSync(path.join(
-      tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
-           .isSymbolicLink());
-  });
+      // sanity check -- main.js has expected contents.
+      assert.strictEqual(files.readFile(files.pathJoin(tmpOutputDir, "main.js"), "utf8"),
+                         bundler._mainJsContents);
+      // node_modules directory exists and is a symlink
+      assert(files.lstat(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules")).isSymbolicLink());
+      // node_modules contains fibers
+      assert(files.exists(files.pathJoin(tmpOutputDir, "programs", "server", "node_modules", "fibers")));
+      // package node_modules directory also a symlink
+      // XXX might be breaking this
+      assert(files.lstat(files.pathJoin(
+        tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
+             .isSymbolicLink());
+    });
+  }
 };
 
 
 var Fiber = require('fibers');
 Fiber(function () {
-  release._setCurrentForOldTest();
+  if (! files.inCheckout()) {
+    throw Error("This old test doesn't support non-checkout");
+  }
+
+  release.setCurrent(release.load(null));
+  isopackets.ensureIsopacketsLoadable();
 
   try {
     runTest();

@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Login service for Twitter accounts",
-  version: "1.0.2"
+  version: "1.0.4"
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   api.use('underscore', ['server']);
   api.use('accounts-base', ['client', 'server']);
   // Export Accounts (etc) to packages using this one.
@@ -13,7 +13,7 @@ Package.on_use(function(api) {
 
   api.use('http', ['client', 'server']);
 
-  api.add_files('twitter_login_button.css', 'client');
+  api.addFiles('twitter_login_button.css', 'client');
 
-  api.add_files("twitter.js");
+  api.addFiles("twitter.js");
 });

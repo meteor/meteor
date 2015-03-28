@@ -1,12 +1,15 @@
 var Fiber = require("fibers");
 var fs = require("fs");
 var path = require("path");
-var Future = require(path.join("fibers", "future"));
+var Future = require("fibers/future");
 var _ = require('underscore');
 var sourcemap_support = require('source-map-support');
 
+var bootUtils = require('./boot-utils.js');
+var files = require('./mini-files.js');
+
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.29';
+var MIN_NODE_VERSION = 'v0.10.36';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -77,6 +80,38 @@ sourcemap_support.install({
   handleUncaughtExceptions: false
 });
 
+// Only enabled by default in development.
+if (process.env.METEOR_SHELL_DIR) {
+  require('./shell-server.js').listen(process.env.METEOR_SHELL_DIR);
+}
+
+// As a replacement to the old keepalives mechanism, check for a running
+// parent every few seconds. Exit if the parent is not running.
+//
+// Two caveats to this strategy:
+// * Doesn't catch the case where the parent is CPU-hogging (but maybe we
+//   don't want to catch that case anyway, since the bundler not yielding
+//   is what caused #2536).
+// * Could be fooled by pid re-use, i.e. if another process comes up and
+//   takes the parent process's place before the child process dies.
+var startCheckForLiveParent = function (parentPid) {
+  if (parentPid) {
+    if (! bootUtils.validPid(parentPid)) {
+      console.error("METEOR_PARENT_PID must be a valid process ID.");
+      process.exit(1);
+    }
+
+    setInterval(function () {
+      try {
+        process.kill(parentPid, 0);
+      } catch (err) {
+        console.error("Parent process is dead! Exiting.");
+        process.exit(1);
+      }
+    }, 3000);
+  }
+};
+
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
@@ -95,18 +130,25 @@ Fiber(function () {
           return require(name);
         }
 
-        var nodeModuleDir =
-          path.resolve(serverDir, fileInfo.node_modules, name);
+        var nodeModuleBase = path.resolve(serverDir,
+          files.convertToOSPath(fileInfo.node_modules));
+        var nodeModuleDir = path.resolve(nodeModuleBase, name);
 
-        if (fs.existsSync(nodeModuleDir)) {
+        // If the user does `Npm.require('foo/bar')`, then we should resolve to
+        // the package's node modules if `foo` was one of the modules we
+        // installed.  (`foo/bar` might be implemented as `foo/bar.js` so we
+        // can't just naively see if all of nodeModuleDir exists.
+        if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
           return require(nodeModuleDir);
-          }
+        }
+
         try {
           return require(name);
         } catch (e) {
           // Try to guess the package name so we can print a nice
           // error message
-          var filePathParts = fileInfo.path.split(path.sep);
+          // fileInfo.path is a standard path, use files.pathSep
+          var filePathParts = fileInfo.path.split(files.pathSep);
           var packageName = filePathParts[1].replace(/\.js$/, '');
 
           // XXX better message
@@ -136,11 +178,15 @@ Fiber(function () {
         console.log("Exception in callback of getAsset", e.stack);
       });
 
+      // Convert a DOS-style path to Unix-style in case the application code was
+      // written on Windows.
+      assetPath = files.convertToStandardPath(assetPath);
+
       if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
-        fs.readFile(filePath, encoding, _callback);
+        fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
       }
       if (fut)
         return fut.wait();
@@ -161,9 +207,17 @@ Fiber(function () {
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
     // urls.
-    var absoluteFilePath = path.resolve(__dirname, fileInfo.path);
+
+    // fileInfo.path is a standard path, convert it to OS path to join with
+    // __dirname
+    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
+    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+
     var scriptPath =
-      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfo.path;
+      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
+    // The final 'true' is an undocumented argument to runIn[Foo]Context that
+    // causes it to print out a descriptive error message on parse error. It's
+    // what require() uses to generate its errors.
     var func = require('vm').runInThisContext(wrapped, scriptPath, true);
     func.call(global, Npm, Assets); // Coffeescript
   });
@@ -202,4 +256,8 @@ Fiber(function () {
   // XXX hack, needs a better way to keep alive
   if (exitCode !== 'DAEMON')
     process.exit(exitCode);
+
+  if (process.env.METEOR_PARENT_PID) {
+    startCheckForLiveParent(process.env.METEOR_PARENT_PID);
+  }
 }).run();

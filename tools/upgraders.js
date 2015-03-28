@@ -1,18 +1,20 @@
+/* eslint no-console: 0 */
+
 var _ = require('underscore');
-var fs = require('fs');
-var path = require('path');
-var project = require('./project.js');
 var files = require('./files.js');
+var Console = require('./console.js').Console;
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
 //
-// You can test upgraders by running "meteor run-upgrader myupgradername".
+// You can test upgraders by running "meteor admin run-upgrader myupgradername".
 //
 // Upgraders are run automatically by "meteor update". It looks at the
 // .meteor/.finished-upgraders file in the app and runs every upgrader listed
 // here that is not in that file; then it appends their names to that file.
 // Upgraders are run in the order they are listed in upgradersByName below.
+//
+// Upgraders receive a projectContext that has been fully prepared for build.
 
 var printedNoticeHeaderThisProcess = false;
 var maybePrintNoticeHeader = function () {
@@ -24,10 +26,29 @@ var maybePrintNoticeHeader = function () {
   printedNoticeHeaderThisProcess = true;
 };
 
+// How to do package-specific notices:
+// (a) A notice that occurs if a package is used indirectly or directly.
+//     if (projectContext.packageMap.getInfo('accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
+//
+// (b) A notice that occurs if a package is used directly.
+//     if (projectContext.projectConstraintsFile.getConstraint('accounts-ui')) {
+//       console.log(
+// "\n" +
+// "       Accounts UI has totally changed, yo.");
+//     }
+
 var upgradersByName = {
-   "notices-for-0.9.0": function () {
+   "notices-for-0.9.0": function (projectContext) {
      maybePrintNoticeHeader();
-     if (fs.existsSync(path.join(project.project.rootDir, 'smart.json'))) {
+
+     var smartJsonPath =
+       files.pathJoin(projectContext.projectDir, 'smart.json');
+
+     if (files.exists(smartJsonPath)) {
        // Meteorite apps:
        console.log(
 "0.9.0: Welcome to the new Meteor package system! You can now add any Meteor\n" +
@@ -49,12 +70,6 @@ var upgradersByName = {
 "       out the available packages by typing 'meteor search <term>' or by\n" +
 "       visiting atmospherejs.com.\n");
      }
-     // How to do package-specific notices:
-//     if (_.has(project.project.getConstraints(), 'accounts-ui')) {
-//       console.log(
-// "\n" +
-// "       Accounts UI has totally changed, yo.");
-//     }
     console.log();
   },
 
@@ -69,28 +84,47 @@ var upgradersByName = {
   },
 
   // In 0.9.4, the platforms file contains "server" and "browser" as platforms,
-  // and before it only had "ios" and/or "android"
-  "0.9.4-platform-file": function () {
+  // and before it only had "ios" and/or "android". We auto-fix that in
+  // PlatformList anyway, but we also need to pull platforms from the old
+  // cordova-platforms filename.
+  "0.9.4-platform-file": function (projectContext) {
     var oldPlatformsPath =
-      path.join(project.project.rootDir, ".meteor", "cordova-platforms");
+      files.pathJoin(projectContext.projectDir, ".meteor", "cordova-platforms");
 
-    var newPlatformsPath =
-      path.join(project.project.rootDir, ".meteor", "platforms");
-
-    var platforms = ["server", "browser"];
-    var oldPlatforms = [];
-
-    if (fs.existsSync(oldPlatformsPath)) {
-      // App already has a platforms file, add "server" and "browser" to the top
-      oldPlatforms = fs.readFileSync(oldPlatformsPath, {encoding: "utf-8"});
-      oldPlatforms = _.compact(_.map(oldPlatforms.split("\n"), files.trimLine));
-
-      fs.unlinkSync(oldPlatformsPath);
+    try {
+      var oldPlatformsFile = files.readFile(oldPlatformsPath);
+    } catch (e) {
+      // If the file doesn't exist, there's no transition to do.
+      if (e && e.code === 'ENOENT')
+        return;
+      throw e;
     }
+    var oldPlatforms = _.compact(_.map(
+      files.splitBufferToLines(oldPlatformsFile), files.trimSpaceAndComments));
+    // This method will automatically add "server" and "browser" and sort, etc.
+    projectContext.platformList.write(oldPlatforms);
+    files.unlink(oldPlatformsPath);
+  },
 
-    platforms = _.union(platforms, oldPlatforms);
-
-    fs.writeFileSync(newPlatformsPath, platforms.join("\n") + "\n", "utf-8");
+  "notices-for-facebook-graph-api-2": function (projectContext) {
+    // Note: this will print if the app has facebook as a dependency, whether
+    // direct or indirect. (This is good, since most apps will be pulling it in
+    // indirectly via accounts-facebook.)
+    if (projectContext.packageMap.getInfo('facebook')) {
+      maybePrintNoticeHeader();
+      Console.info(
+        "This version of Meteor now uses version 2.2 of the Facebook API",
+        "for authentication, instead of 1.0. If you use additional Facebook",
+        "API methods beyond login, you may need to request new",
+        "permissions.\n\n",
+        "Facebook will automatically switch all apps to API",
+        "version 2.0 on April 30th, 2015. Please make sure to update your",
+        "application's permissions and API calls by that date.\n\n",
+        "For more details, see",
+        "https://github.com/meteor/meteor/wiki/Facebook-Graph-API-Upgrade",
+        Console.options({ bulletPoint: "1.0.5: " })
+      );
+    }
   }
 
   ////////////
@@ -100,24 +134,26 @@ var upgradersByName = {
   //
   // 1.x.y: Lorem ipsum messages go here...
   //        ...and linewrapped on the right column
+  //
+  // (Or just use Console.info with bulletPoint)
   ////////////
 };
 
-exports.runUpgrader = function (upgraderName) {
+exports.runUpgrader = function (projectContext, upgraderName) {
   // This should only be called from the hidden run-upgrader command or by
   // "meteor update" with an upgrader from one of our releases, so it's OK if
   // error handling is just an exception.
   if (! _.has(upgradersByName, upgraderName))
     throw new Error("Unknown upgrader: " + upgraderName);
-  upgradersByName[upgraderName]();
+  upgradersByName[upgraderName](projectContext);
 };
 
-exports.upgradersToRun = function () {
+exports.upgradersToRun = function (projectContext) {
   var ret = [];
-  var finishedUpgraders = project.project.getFinishedUpgraders();
+  var finishedUpgraders = projectContext.finishedUpgraders.readUpgraders();
   // This relies on the fact that Node guarantees object iteration ordering.
   _.each(upgradersByName, function (func, name) {
-    if (!_.contains(finishedUpgraders, name)) {
+    if (! _.contains(finishedUpgraders, name)) {
       ret.push(name);
     }
   });

@@ -1,17 +1,18 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.0.1'
+  version: '1.0.5-pre.win.1'
 });
 
-Package.on_use(function (api) {
-  api.use('npm-node-aes-gcm@=0.1.3');
+Package.onUse(function (api) {
+  api.use("npm-node-aes-gcm@=0.1.3_5");
+
   api.export("OAuthEncryption", ["server"]);
   api.use("underscore");
-  api.add_files("encrypt.js", ["server"]);
+  api.addFiles("encrypt.js", ["server"]);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use("tinytest");
   api.use("oauth-encryption");
-  api.add_files("encrypt_tests.js", ["server"]);
+  api.addFiles("encrypt_tests.js", ["server"]);
 });

@@ -4,17 +4,19 @@
 
 Package.describe({
   summary: "JavaScript code analysis for Meteor",
-  version: '1.0.3'
+  version: '1.0.5'
 });
 
 // Use some packages from the Esprima project.  If it turns out we need these on
 // the client too, can copy them in (or implement a way to serve files out of
 // Npm modules).
 Npm.depends({
-  // This code was originally written against the unreleased 1.1 branch. We can
-  // probably switch to a built NPM version when it gets released.
-  esprima: "https://github.com/ariya/esprima/tarball/2a41dbf0ddadade0b09a9a7cc9a0c8df9c434018",
-  escope: "1.0.0"
+  esprima: "1.2.2",
+  escope: "1.0.1"
+});
+
+Npm.strip({
+  esprima: ["test/"]
 });
 
 // This package may not depend on ANY other Meteor packages, even in the test
@@ -24,7 +26,7 @@ Npm.depends({
 // would be impossible to load at link time (or all transitive dependencies
 // packages would need to function without the analysis provided by this
 // package).
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('JSAnalyze', 'server');
-  api.add_files('js_analyze.js', 'server');
+  api.addFiles('js_analyze.js', 'server');
 });

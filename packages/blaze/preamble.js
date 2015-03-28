@@ -1,3 +1,7 @@
+/**
+ * @namespace Blaze
+ * @summary The namespace for all Blaze-related methods and classes.
+ */
 Blaze = {};
 
 // Utility to HTML-escape a string.  Included for legacy reasons.

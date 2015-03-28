@@ -354,3 +354,19 @@ if (Meteor.isServer) {
       throw "unexpected options";
   });
 }
+
+
+/// Helper for "livedata - result by value"
+var resultByValueArrays = {};
+Meteor.methods({
+  'getArray': function (testId) {
+    if (! _.has(resultByValueArrays, testId))
+      resultByValueArrays[testId] = [];
+    return resultByValueArrays[testId];
+  },
+  'pushToArray': function (testId, value) {
+    if (! _.has(resultByValueArrays, testId))
+      resultByValueArrays[testId] = [];
+    resultByValueArrays[testId].push(value);
+  }
+});

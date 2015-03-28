@@ -136,6 +136,7 @@ if (Meteor.isClient) {
 /**
  * @summary A [Mongo.Collection](#collections) containing user documents.
  * @locus Anywhere
+ * @type {Mongo.Collection}
  */
 Meteor.users = new Mongo.Collection("users", {
   _preventAutopublish: true,
@@ -182,4 +183,31 @@ Accounts._tokenExpiresSoon = function (when) {
   if (minLifetimeMs > minLifetimeCapMs)
     minLifetimeMs = minLifetimeCapMs;
   return new Date() > (new Date(when) - minLifetimeMs);
+};
+
+// Callback exceptions are printed with Meteor._debug and ignored.
+onLoginHook = new Hook({
+  debugPrintExceptions: "onLogin callback"
+});
+onLoginFailureHook = new Hook({
+  debugPrintExceptions: "onLoginFailure callback"
+});
+
+
+/**
+ * @summary Register a callback to be called after a login attempt succeeds.
+ * @locus Anywhere
+ * @param {Function} func The callback to be called when login is successful.
+ */
+Accounts.onLogin = function (func) {
+  return onLoginHook.register(func);
+};
+
+/**
+ * @summary Register a callback to be called after a login attempt fails.
+ * @locus Anywhere
+ * @param {Function} func The callback to be called after the login has failed.
+ */
+Accounts.onLoginFailure = function (func) {
+  return onLoginFailureHook.register(func);
 };

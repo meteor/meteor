@@ -11,7 +11,6 @@
 
 var _ = require('underscore');
 var Future = require('fibers/future');
-var consolejs = require('./console.js');
 
 var Progress = function (options) {
   var self = this;
@@ -23,6 +22,10 @@ var Progress = function (options) {
   self._watchers = options.watchers || [];
 
   self._title = options.title;
+  if (self._title) {
+    // Capitalize job titles when displayed in the progress bar.
+    self._title = self._title[0].toUpperCase() + self._title.slice(1);
+  }
 
   // XXX: Should we have a strict/mdg mode that enables this test?
   //if (!self._title && self._parent) {
@@ -37,6 +40,8 @@ var Progress = function (options) {
   self._state = _.clone(self._selfState);
 
   self._isDone = false;
+
+  self.startTime = +(new Date);
 };
 
 _.extend(Progress.prototype, {
@@ -147,7 +152,7 @@ _.extend(Progress.prototype, {
     self._updateTotalState();
 
     // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
-    consolejs.Console.nudge(false);
+    require('./console.js').Console.nudge(false);
 
     self._notifyState();
   },
@@ -177,8 +182,6 @@ _.extend(Progress.prototype, {
   // Recomputes state, incorporating children's states
   _updateTotalState: function () {
     var self = this;
-
-    var state = _.clone(self._selfState);
 
     var allChildrenDone = true;
     var state = _.clone(self._selfState);

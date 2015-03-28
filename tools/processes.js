@@ -69,7 +69,7 @@ _.extend(RunCommand.prototype, {
     self.process.stdout.on('data', function (data) {
       self.stdout = self.stdout + data;
       if (self.options.pipeOutput) {
-        Console.stdout.write(data);
+        Console.rawInfo(data);
       }
       if (self.options.onStdout) {
         self.options.onStdout(data);
@@ -79,7 +79,7 @@ _.extend(RunCommand.prototype, {
     self.process.stderr.on('data', function (data) {
       self.stderr = self.stderr + data;
       if (self.options.pipeOutput) {
-        Console.stderr.write(data);
+        Console.rawError(data);
       }
       if (self.options.onStderr) {
         self.options.onStderr(data);
@@ -121,4 +121,3 @@ _.extend(RunCommand.prototype, {
 });
 
 exports.RunCommand = RunCommand;
-

@@ -1,6 +1,4 @@
 var _ = require('underscore');
-var path = require('path');
-var fs = require('fs');
 var utils = require('./utils.js');
 var files = require('./files.js');
 var config = require('./config.js');
@@ -11,15 +9,13 @@ var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require('./isopackets.js');
 var Console = require('./console.js').Console;
 
 var auth = exports;
 
 var getLoadedPackages = function () {
-  return uniload.load({
-    packages: [ 'meteor', 'ddp', 'mongo' ]
-  });
+  return isopackets.load('ddp');
 };
 
 // Opens and returns a DDP connection to the accounts server. Remember
@@ -133,9 +129,9 @@ var sessionMethodCaller = function (methodName, options) {
 
 var readSessionData = function () {
   var sessionPath = config.getSessionFilePath();
-  if (! fs.existsSync(sessionPath))
+  if (! files.exists(sessionPath))
     return {};
-  return JSON.parse(fs.readFileSync(sessionPath, { encoding: 'utf8' }));
+  return JSON.parse(files.readFile(sessionPath, { encoding: 'utf8' }));
 };
 
 var writeSessionData = function (data) {
@@ -152,10 +148,10 @@ var writeSessionData = function (data) {
     // it, and make it readable and writable only by the current
     // user (mode 0600).
     var tempPath =
-          path.join(path.dirname(sessionPath), '.meteorsession.' +
+          files.pathJoin(files.pathDirname(sessionPath), '.meteorsession.' +
                     Math.floor(Math.random() * 999999));
     try {
-      var fd = fs.openSync(tempPath, 'wx', 0600);
+      var fd = files.open(tempPath, 'wx', 0600);
     } catch (e) {
       continue;
     }
@@ -163,14 +159,14 @@ var writeSessionData = function (data) {
     try {
       // Write `data` to the file.
       var buf = new Buffer(JSON.stringify(data, undefined, 2), 'utf8');
-      fs.writeSync(fd, buf, 0, buf.length, 0);
+      files.write(fd, buf, 0, buf.length, 0);
     } finally {
-      fs.closeSync(fd);
+      files.close(fd);
     }
 
     // Atomically remove the old file (if any) and replace it with
     // the temporary file we just created.
-    fs.renameSync(tempPath, sessionPath);
+    files.rename(tempPath, sessionPath);
     return;
   }
 };
@@ -185,7 +181,8 @@ var getSession = function (sessionData, domain) {
 
 // types:
 // - "meteor-account": a login to your Meteor Account
-// - "galaxy": a login to a Galaxy
+// We previously used:
+// - "galaxy": a login to a legacy Galaxy prototype server
 var ensureSessionType = function (session, type) {
   if (! _.has(session, 'type'))
     session.type = type;
@@ -263,53 +260,6 @@ var removePendingRevoke = function (domain, tokenIds) {
   writeSessionData(data);
 };
 
-var tryRevokeGalaxyTokens = function (domain, tokenIds, options) {
-  var oauthInfo = fetchGalaxyOAuthInfo(domain, options.timeout);
-  if (oauthInfo) {
-    url = oauthInfo.revokeUri;
-  } else {
-    return false;
-  }
-
-  try {
-    var result = httpHelpers.request({
-      url: url,
-      method: "POST",
-      form: {
-        tokenId: tokenIds.join(',')
-      },
-      useSessionHeader: true,
-      timeout: options.timeout
-    });
-  } catch (e) {
-    // most likely we don't have a net connection
-    return false;
-  }
-  var response = result.response;
-
-  if (response.statusCode === 200 &&
-      response.body) {
-    try {
-      var body = JSON.parse(response.body);
-      if (body.tokenRevoked) {
-        // Server confirms that the tokens have been revoked. Checking for a
-        // `tokenRevoked` key in the response confirms that we hit an actual
-        // galaxy auth server that understands that we were trying to revoke some
-        // tokens, not just a random URL that happened to return a 200
-        // response.
-
-        // (Be careful to reread session data in case httpHelpers changed it)
-        removePendingRevoke(domain, tokenIds);
-      }
-    } catch (e) {
-      return false;
-    }
-    return true;
-  } else {
-    return false;
-  }
-};
-
 // If there are any logged out (pendingRevoke) tokens that haven't
 // been sent to the server for revocation yet, try to send
 // them. Reads the session file and then writes it back out to
@@ -338,11 +288,10 @@ var tryRevokeOldTokens = function (options) {
   var logoutFailWarning = function (domain) {
     if (! warned) {
       // This isn't ideal but is probably better that saying nothing at all
-      process.stderr.write("warning: " +
-                           (options.firstTry ?
-                            "couldn't" : "still trying to") +
-                           " confirm logout with " + domain +
-                           "\n");
+      Console.error("warning: " +
+                    (options.firstTry ?
+                    "couldn't" : "still trying to") +
+                     " confirm logout with " + domain);
       warned = true;
     }
   };
@@ -369,49 +318,16 @@ var tryRevokeOldTokens = function (options) {
       }
       return;
     } else if (session.type === "galaxy") {
-      if (! tryRevokeGalaxyTokens(domain, tokenIds, options)) {
-        logoutFailWarning(domain);
-      }
+      // These are tokens from a legacy Galaxy prototype, which cannot be
+      // revoked (because the prototype no longer exists), but we can at least
+      // remove them from the file.
+      removePendingRevoke(domain, tokenIds);
     } else {
       // don't know how to revoke tokens of this type
       logoutFailWarning(domain);
       return;
     }
   });
-};
-
-// Sends a request to https://<galaxyName>:<DISCOVERY_PORT> to find out the
-// galaxy's OAuth client id and redirect_uri that should be used for
-// authorization codes for this galaxy. Returns an object with keys
-// 'oauthClientId', 'redirectUri', and 'revokeUri', or null if the
-// request failed.
-//
-// 'timeout' is an optional request timeout in milliseconds.
-var fetchGalaxyOAuthInfo = function (galaxyName, timeout) {
-  var galaxyAuthUrl = 'https://' + galaxyName + ':' +
-    config.getDiscoveryPort() + '/_GALAXYAUTH_';
-  try {
-    var result = httpHelpers.request({
-      url: galaxyAuthUrl,
-      json: true,
-      // on by default in our version of request, but just in case
-      strictSSL: true,
-      followRedirect: false,
-      timeout: timeout || 5000
-    });
-  } catch (e) {
-    return null;
-  }
-
-  if (result.response.statusCode === 200 &&
-      result.body &&
-      result.body.oauthClientId &&
-      result.body.redirectUri &&
-      result.body.revokeUri) {
-    return result.body;
-  } else {
-    return null;
-  }
 };
 
 var sendAuthorizeRequest = function (clientId, redirectUri, state) {
@@ -511,77 +427,6 @@ var oauthFlow = function (conn, options) {
   }
 };
 
-// Uses meteor accounts to log in to the specified galaxy. Returns an
-// object with keys `token` and `tokenId` if the login was
-// successful. If an error occurred, returns one of:
-//   { error: 'access-denied' }
-//   { error: 'no-galaxy' }
-//   { error: 'no-account-server' }
-var logInToGalaxy = function (galaxyName) {
-  var oauthInfo = fetchGalaxyOAuthInfo(galaxyName);
-  if (! oauthInfo) {
-    return { error: 'no-galaxy' };
-  }
-
-  var galaxyClientId = oauthInfo.oauthClientId;
-  var galaxyRedirect = oauthInfo.redirectUri;
-
-  // If the redirect URI is not in the DNS namespace that belongs to the
-  // Galaxy, then something is wrong.
-  if (url.parse(galaxyRedirect).hostname !== galaxyName) {
-    // XXX It's more like 'bad-galaxy' than 'no-galaxy'.
-    return { error: 'no-galaxy' };
-  }
-
-  // Ask the accounts server for an authorization code.
-  var crypto = require('crypto');
-  var session = crypto.randomBytes(16).toString('hex');
-  var stateInfo = { session: session };
-
-  var authorizeResult;
-
-  try {
-    authorizeResult = sendAuthorizeRequest(
-      galaxyClientId,
-      galaxyRedirect,
-      encodeURIComponent(JSON.stringify(stateInfo))
-    );
-  } catch (err) {
-    return { error: err.message };
-  }
-
-  // Ask the galaxy to log us in with our auth code.
-  try {
-    var galaxyResult = httpHelpers.request({
-      url: authorizeResult.location,
-      method: 'GET',
-      strictSSL: true,
-      headers: {
-        cookie: 'GALAXY_OAUTH_SESSION=' + session +
-          '; GALAXY_USER_AGENT_TOOL=' +
-          encodeURIComponent(JSON.stringify(utils.getAgentInfo()))
-      }
-    });
-    var body = JSON.parse(galaxyResult.body);
-  } catch (e) {
-    return { error: (body && body.error) || 'no-galaxy' };
-  }
-  var response = galaxyResult.response;
-
-  // 'access-denied' isn't exactly right because it's possible that the galaxy
-  // went down since our last request, but close enough.
-
-  if (response.statusCode !== 200 ||
-      ! body ||
-      ! _.has(galaxyResult.setCookie, 'GALAXY_AUTH'))
-    return { error: (body && body.error) || 'access-denied' };
-
-  return {
-    token: galaxyResult.setCookie.GALAXY_AUTH,
-    tokenId: body.tokenId
-  };
-};
-
 // Prompt the user for a password, and then log in. Returns true if a
 // successful login was accomplished, else false.
 //
@@ -605,7 +450,7 @@ var doInteractivePasswordLogin = function (options) {
 
   var loginFailed = function () {
     if (! options.suppressErrorMessage) {
-      process.stderr.write("Login failed.\n");
+      Console.error("Login failed.");
     }
   };
 
@@ -636,7 +481,7 @@ var doInteractivePasswordLogin = function (options) {
     } else {
       loginFailed();
       if (options.retry) {
-        process.stderr.write("\n");
+        Console.error();
         continue;
       } else {
         maybeCloseConnection();
@@ -686,11 +531,9 @@ exports.loginCommand = withAccountsConnection(function (options,
   config.printUniverseBanner();
 
   var data = readSessionData();
-  var galaxy = options.galaxy;
 
-  if (! galaxy &&
-      (! getSession(data, config.getAccountsDomain()).token ||
-       options.overwriteExistingToken)) {
+  if (! getSession(data, config.getAccountsDomain()).token ||
+       options.overwriteExistingToken) {
     var loginOptions = {};
 
     if (options.email) {
@@ -712,41 +555,13 @@ exports.loginCommand = withAccountsConnection(function (options,
     }
   }
 
-  // XXX Make the galaxy login not do a login if there is an existing token, just like MA
-  if (galaxy) {
-    var galaxyLoginResult = logInToGalaxy(galaxy);
-    if (galaxyLoginResult.error) {
-      // XXX add human readable error messages
-      process.stderr.write('\nLogin to ' + galaxy + ' failed. ');
-
-      if (galaxyLoginResult.error === 'unauthorized') {
-        process.stderr.write('You are not authorized for this galaxy.\n');
-      } else if (galaxyLoginResult.error === 'no_oauth_server') {
-        process.stderr.write('The galaxy could not ' +
-                             'contact Meteor Accounts.\n');
-      } else if (galaxyLoginResult.error === 'no_identity') {
-        process.stderr.write('Your login information could not be found.\n');
-      } else {
-        process.stderr.write('Error: ' + galaxyLoginResult.error + '\n');
-      }
-
-      return 1;
-    }
-    data = readSessionData(); // be careful to reread data file after RPC
-    var session = getSession(data, galaxy);
-    ensureSessionType(session, "galaxy");
-    session.token = galaxyLoginResult.token;
-    session.tokenId = galaxyLoginResult.tokenId;
-    writeSessionData(data);
-  }
-
   tryRevokeOldTokens({ firstTry: true, connection: connection });
 
   data = readSessionData();
-  process.stderr.write("\nLogged in" + (galaxy ? " to " + galaxy : "") +
-                       (currentUsername(data) ?
-                        " as " + currentUsername(data) : "") + ".\n" +
-                       "Thanks for being a Meteor developer!\n");
+  Console.error();
+  Console.error("Logged in" +
+                (currentUsername(data) ? " as " + currentUsername(data) : "") +
+                ". Thanks for being a Meteor developer!");
   return 0;
 });
 
@@ -761,11 +576,11 @@ exports.logoutCommand = function (options) {
   tryRevokeOldTokens({ firstTry: true });
 
   if (wasLoggedIn)
-    process.stderr.write("Logged out.\n");
+    Console.error("Logged out.");
   else
     // We called logOutAllSessions/writeSessionData anyway, out of an
     // abundance of caution.
-    process.stderr.write("Not logged in.\n");
+    Console.error("Not logged in.");
 };
 
 // If this is fully set up account (with a username and password), or
@@ -847,25 +662,25 @@ exports.whoAmICommand = function (options) {
 
   var data = readSessionData();
   if (! loggedIn(data)) {
-    process.stderr.write("Not logged in. 'meteor login' to log in.\n");
+    Console.error(
+      "Not logged in. " + Console.command("'meteor login'") + " to log in.");
     return 1;
   }
 
   var username = currentUsername(data);
   if (username) {
-    process.stdout.write(username + "\n");
+    Console.rawInfo(username + "\n");
     return 0;
   }
 
   var url = getSession(data, config.getAccountsDomain()).registrationUrl;
   if (url) {
-    process.stderr.write(
-"You haven't chosen your username yet. To pick it, go here:\n" +
-"\n" +
-url + "\n");
+    Console.error("You haven't chosen your username yet. To pick it, go here:");
+    Console.error();
+    Console.error(Console.url(url));
   } else {
     // Won't happen in normal operation
-    process.stderr.write("You haven't chosen your username yet.\n");
+    Console.error("You haven't chosen your username yet.");
   }
 
   return 1;
@@ -895,11 +710,13 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       break;
     } catch (err) {
       if (err.error === 400 && ! utils.validEmail(email)) {
-        if (email.trim().length)
-          process.stderr.write("Please double-check that address.\n\n");
+        if (email.trim().length) {
+          Console.error("Please double-check that address.");
+          Console.error();
+        }
       } else {
-        process.stderr.write("\nCouldn't connect to server. " +
-                             "Check your internet connection.\n");
+        Console.error("\nCouldn't connect to server. " +
+                             "Check your internet connection.");
         return false;
       }
     }
@@ -919,10 +736,11 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     writeSessionData(data);
     return true;
   } else if (result.alreadyExisted && result.sentRegistrationEmail) {
-    process.stderr.write(
-"\n" +
-"You need to pick a password for your account so that you can log in.\n" +
-"An email has been sent to you with the link.\n\n");
+    Console.error();
+    Console.error(
+      "You need to pick a password for your account so that you can log in.",
+      "An email has been sent to you with the link.");
+    Console.error();
 
     var animationFrame = 0;
     var lastLinePrinted = "";
@@ -930,12 +748,12 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       var spinner = ['-', '\\', '|', '/'];
       lastLinePrinted = "Waiting for you to register on the web... " +
         spinner[animationFrame];
-      process.stderr.write(lastLinePrinted + "\r");
+      Console.rawError(lastLinePrinted + Console.CARRIAGE_RETURN);
       animationFrame = (animationFrame + 1) % spinner.length;
     }, 200);
     var stopSpinner = function () {
-      process.stderr.write(new Array(lastLinePrinted.length + 1).join(' ') +
-                           "\r");
+      Console.rawError(new Array(lastLinePrinted.length + 1).join(' ') +
+                       Console.CARRIAGE_RETURN);
       clearInterval(timer);
     };
 
@@ -948,14 +766,14 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
       stopSpinner();
       if (e.errorType !== "Meteor.Error")
         throw e;
-      process.stderr.write(
-        "When you've picked your password, run 'meteor login' to log in.\n")
+      Console.error(
+        "When you've picked your password, run " +
+        Console.command("'meteor login'") + " to log in.");
       return false;
     }
 
     stopSpinner();
-    process.stderr.write("Username: " +
-                         waitForRegistrationResult.username + "\n");
+    Console.error("Username: " + waitForRegistrationResult.username);
     loginResult = doInteractivePasswordLogin({
       username: waitForRegistrationResult.username,
       retry: true,
@@ -963,7 +781,7 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     });
     return loginResult;
   } else if (result.alreadyExisted && result.username) {
-    process.stderr.write("\nLogging in as " + result.username + ".\n");
+    Console.error("\nLogging in as " + Console.command(result.username) + ".");
 
     loginResult = doInteractivePasswordLogin({
       username: result.username,
@@ -973,8 +791,9 @@ exports.registerOrLogIn = withAccountsConnection(function (connection) {
     return loginResult;
   } else {
     // Hmm, got an email we don't understand.
-    process.stderr.write(
-      "\nThere was a problem. Please log in with 'meteor login'.\n");
+    Console.error(
+      "\nThere was a problem. Please log in with " +
+      Console.command("'meteor login'") + ".");
     return false;
   }
 });
@@ -991,26 +810,29 @@ exports.maybePrintRegistrationLink = function (options) {
 
   if (session.userId && ! session.username && session.registrationUrl) {
     if (options.leadingNewline)
-      process.stderr.write("\n");
+      Console.error();
     if (options.onlyAllowIfRegistered) {
       // A stronger message: we're going to not allow whatever they were trying
       // to do!
-      process.stderr.write(
-"You need to claim a username and set a password on your Meteor developer\n" +
-"account to run this command. It takes about a minute at:\n" +
-"  " + session.registrationUrl + "\n");
+      Console.error(
+        "You need to claim a username and set a password on your Meteor",
+        "developer account to run this command. It takes about a minute at:",
+        session.registrationUrl);
+      Console.error();
     } else if (! options.firstTime) {
       // If they've already been prompted to set a password then this
       // is more of a friendly reminder, so we word it slightly
       // differently than the first time they're being shown a
       // registration url.
-      process.stderr.write(
-"You should set a password on your Meteor developer account. It takes\n" +
-"about a minute at: " + session.registrationUrl + "\n\n");
+      Console.error(
+        "You should set a password on your Meteor developer account.",
+        "It takes about a minute at:", session.registrationUrl);
+      Console.error();
     } else {
-      process.stderr.write(
-"You can set a password on your account or change your email address at:\n" +
-session.registrationUrl + "\n\n");
+      Console.error(
+        "You can set a password on your account or change your email",
+        "address at:", session.registrationUrl);
+      Console.error();
     }
     return true;
   }
@@ -1050,17 +872,24 @@ exports.getAccountsConfiguration = function (conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
   var Package = getLoadedPackages();
-  var serviceConfigurations = new Package.mongo.Mongo.Collection(
-    'meteor_accounts_loginServiceConfiguration',
-    { connection: conn.connection }
-  );
-  var serviceConfigurationsSub = conn.
-        subscribeAndWait('meteor.loginServiceConfiguration');
+  var accountsConfiguration = null;
 
-  var accountsConfiguration = serviceConfigurations.findOne({
-    service: 'meteor-developer'
+  // We avoid the overhead of creating a 'ddp-and-mongo' isopacket (or
+  // always loading mongo whenever we load ddp) by just using the low-level
+  // DDP client API here.
+  conn.connection.registerStore('meteor_accounts_loginServiceConfiguration', {
+    update: function (msg) {
+      if (msg.msg === 'added' && msg.fields &&
+          msg.fields.service === 'meteor-developer') {
+        // Note that this doesn't include the _id (which we'd have to parse),
+        // but that's OK.
+        accountsConfiguration = msg.fields;
+      }
+    }
   });
 
+  var serviceConfigurationsSub = conn.subscribeAndWait(
+    'meteor.loginServiceConfiguration');
   if (! accountsConfiguration || ! accountsConfiguration.clientId) {
     throw new Error('no-accounts-configuration');
   }
@@ -1109,7 +938,20 @@ exports.loginWithTokenOrOAuth = function (conn, accountsConfiguration,
 
   // Either we didn't have an existing token, or it didn't work. Do an
   // OAuth flow to log in.
-  var redirectUri = url + '/_oauth/meteor-developer?close';
+  var redirectUri = url + '/_oauth/meteor-developer';
+
+  // Duplicate code from packages/oauth/oauth_common.js. In Meteor 0.9.1, we
+  // switched to a new URL style for Oauth that no longer has the "?close"
+  // parameter at the end. However, we need all of our backend services to be
+  // compatible with old Meteor tools which were written before 0.9.1. These old
+  // meteor tools only know how to deal with oauth URLs that have the "?close"
+  // query parameter, so our services (packages.meteor.com, etc) have to use the
+  // old-style URL. This means that all new Meteor tools also need to use the
+  // old-style URL to be compatible with the new servers which are backwards-
+  // compatible with the old tool.
+  if (! accountsConfiguration.loginStyle) {
+    redirectUri = redirectUri + "?close";
+  }
   loginResult = oauthFlow(conn, {
     clientId: clientId,
     redirectUri: redirectUri,

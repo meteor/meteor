@@ -5,7 +5,9 @@ var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../files.js');
-var httpHelpers = require('../http-helpers.js');
+var catalog = require('../catalog.js');
+
+var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
@@ -23,7 +25,7 @@ selftest.define("run", function () {
   // Starting a run
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.mkdtemp());
+  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));
   run = s.run();
   run.match("myapp");
   run.match("proxy");
@@ -61,8 +63,7 @@ selftest.define("run", function () {
   run.match("restarted");
   s.write("crash.js", "process.kill(process.pid, 'SIGKILL');");
   run.waitSecs(5);
-  run.match("from signal: SIGKILL");
-  run.waitSecs(5);
+  run.match("Exited");
   run.match("is crashing");
 
   // Bundle failure
@@ -95,9 +96,20 @@ selftest.define("run", function () {
   run.waitSecs(5);
   run.match("restarted");
   run.stop();
+  s.unlink("crash.js");
+
+  run = s.run('--settings', 's.json');
+  run.waitSecs(5);
+  run.match('s.json: file not found (settings file)');
+  run.match('Waiting for file change');
+  s.write('s.json', '}');
+  run.match('s.json: parse error reading settings file');
+  run.match('Waiting for file change');
+  s.write('s.json', '{}');
+  run.match('App running at');
+  run.stop();
 
   // How about a bundle failure right at startup
-  s.unlink("crash.js");
   s.write("junk.js", "]");
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
@@ -113,7 +125,7 @@ selftest.define("run", function () {
 // XXX --port, --production, --raw-logs, --settings, --program
 });
 
-selftest.define("run --once", function () {
+selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox({ fakeMongo: true });
   var run;
 
@@ -141,7 +153,6 @@ selftest.define("run --once", function () {
   s.set("RUN_ONCE_OUTCOME", "exit");
   s.write("junk.js", "]");
   run = s.run("--once");
-  run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.matchErr("Build failed");
   run.matchErr("Unexpected token");
@@ -162,20 +173,6 @@ selftest.define("run --once", function () {
   run.forbidAll("updated");
   s.unlink('empty.js');
   s.write('.meteor/release', originalRelease);
-
-  // running a different program
-  run = s.run("--once", "--program", "other");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(8);
-  run.match("other program\n");
-  run.expectExit(44);
-
-  // bad program name
-  run = s.run("--once", "--program", "xyzzy");
-  run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(5);
-  run.match("'xyzzy' not found");
-  run.expectExit(254);
 
   // Try it with a real Mongo. Make sure that it actually starts one.
   s = new Sandbox;
@@ -201,7 +198,7 @@ selftest.define("run errors", function () {
   f.wait();
 
   var run = s.run("-p", proxyPort);
-  _.times(3, function () {
+  _.times(2, function () {
     run.waitSecs(30);
     run.match("Unexpected mongo exit code 48. Restarting.");
   });
@@ -240,30 +237,25 @@ selftest.define("update during run", ["checkout"], function () {
   });
   var run;
 
-  s.createApp("myapp", "packageless");
+  s.createApp("myapp", "packageless", { release: DEFAULT_RELEASE_TRACK + '@v1' });
   s.cd("myapp");
 
-  // This makes packages not depend on meteor (specifically, makes our empty
-  // control program not depend on meteor).
-  s.set("NO_METEOR_PACKAGE", "t");
-
   // If the app version changes, we exit with an error message.
-  s.write('.meteor/release', 'METEOR@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
-  run.waitSecs(2);
+  run.waitSecs(10);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   run.matchErr('to Meteor v2 from Meteor v1');
   run.expectExit(254);
 
   // But not if the release was forced (case 1)
-  s.write('.meteor/release', 'METEOR@v1');
-  run = s.run("--release", "METEOR@v3");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
+  run = s.run("--release", DEFAULT_RELEASE_TRACK + "@v3");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -271,12 +263,12 @@ selftest.define("update during run", ["checkout"], function () {
   run.forbidAll("updated");
 
   // But not if the release was forced (case 2)
-  s.write('.meteor/release', 'METEOR@v1');
-  run = s.run("--release", "METEOR@v1");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
+  run = s.run("--release", DEFAULT_RELEASE_TRACK + "@v1");
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -288,12 +280,12 @@ selftest.define("update during run", ["checkout"], function () {
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  s.write('.meteor/release', 'METEOR@v1');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');
-  s.write('.meteor/release', 'METEOR@v2');
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
   s.write('empty.js', '');
   run.waitSecs(2);
   run.match('restarted');
@@ -333,7 +325,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.match("prevented startup");
   run.match("file change.\n");
   run.tellMongo({exit: 23});
-  run.read('Unexpected mongo exit code 23. Restarting.\n');
+  run.match('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});
   run.read('Unexpected mongo exit code 46. Restarting.\n');
   run.tellMongo({exit: 47});
@@ -346,7 +338,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
 // Test that when the parent runner process is SIGKILLed, the child
 // process exits also.
-selftest.define("run and SIGKILL parent process", function () {
+selftest.define("run and SIGKILL parent process", ["yet-unsolved-windows-failure"], function () {
   var s = new Sandbox();
   var run;
 
@@ -384,7 +376,7 @@ selftest.define("run and SIGKILL parent process", function () {
 
   run.stop();
 
-  // Test that passing a bad pid in --parent-pid logs an error and exits
+  // Test that passing a bad pid in $METEOR_PARENT_PID logs an error and exits
   // immediately.
   s.set("METEOR_BAD_PARENT_PID_FOR_TEST", "t");
   run = s.run();

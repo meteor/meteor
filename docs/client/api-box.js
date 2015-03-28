@@ -4,11 +4,7 @@ var apiData = function (options) {
     options = {name: options};
   }
 
-  var root = DocsData;
-
-  _.each(options.name.split("."), function (pathSegment) {
-    root = root[pathSegment];
-  });
+  var root = DocsData[options.name];
 
   if (! root) {
     console.log("API Data not found: " + options.name);
@@ -63,7 +59,7 @@ var typeNameTranslation = {
 
 Template.autoApiBox.helpers({
   apiData: apiData,
-  typeNames: function (nameList) {
+  typeNames: function typeNames (nameList) {
     // change names if necessary
     nameList = _.map(nameList, function (name) {
       // decode the "Array.<Type>" syntax
@@ -85,6 +81,10 @@ Template.autoApiBox.helpers({
 
       if (typeNameTranslation.hasOwnProperty(name)) {
         return typeNameTranslation[name];
+      }
+
+      if (DocsData[name]) {
+        return typeNames(DocsData[name].type);
       }
 
       return name;
@@ -175,9 +175,9 @@ Template.apiBoxTitle.helpers({
   }
 });
 
-Template.autoApiBox.rendered = function () {
+Template.autoApiBox.onRendered(function () {
   this.$('pre code').each(function(i, block) {
     hljs.highlightBlock(block);
   });
-};
+});
 

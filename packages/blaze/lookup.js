@@ -6,13 +6,10 @@ Blaze.registerHelper = function (name, func) {
   Blaze._globalHelpers[name] = func;
 };
 
-
 var bindIfIsFunction = function (x, target) {
   if (typeof x !== 'function')
     return x;
-  return function () {
-    return x.apply(target, arguments);
-  };
+  return _.bind(x, target);
 };
 
 // If `x` is a function, binds the value of `this` for that function
@@ -61,8 +58,19 @@ var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
   return null;
 };
 
-var wrapHelper = function (f) {
-  return Blaze._wrapCatchingExceptions(f, 'template helper');
+var wrapHelper = function (f, templateFunc) {
+  if (typeof f !== "function") {
+    return f;
+  }
+
+  return function () {
+    var self = this;
+    var args = arguments;
+
+    return Blaze.Template._withTemplateInstanceFunc(templateFunc, function () {
+      return Blaze._wrapCatchingExceptions(f, 'template helper').apply(self, args);
+    });
+  };
 };
 
 // Looks up a name, like "foo" or "..", as a helper of the
@@ -83,6 +91,11 @@ Blaze.View.prototype.lookup = function (name, _options) {
   var template = this.template;
   var lookupTemplate = _options && _options.template;
   var helper;
+  var boundTmplInstance;
+
+  if (this.templateInstance) {
+    boundTmplInstance = _.bind(this.templateInstance, this);
+  }
 
   if (/^\./.test(name)) {
     // starts with a dot. must be a series of dots which maps to an
@@ -94,12 +107,13 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
   } else if (template &&
              ((helper = getTemplateHelper(template, name)) != null)) {
-    return wrapHelper(bindDataContext(helper));
+    return wrapHelper(bindDataContext(helper), boundTmplInstance);
   } else if (lookupTemplate && (name in Blaze.Template) &&
              (Blaze.Template[name] instanceof Blaze.Template)) {
     return Blaze.Template[name];
   } else if (Blaze._globalHelpers[name] != null) {
-    return wrapHelper(bindDataContext(Blaze._globalHelpers[name]));
+    return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
+      boundTmplInstance);
   } else {
     return function () {
       var isCalledAsFunction = (arguments.length > 0);
@@ -128,6 +142,10 @@ Blaze.View.prototype.lookup = function (name, _options) {
 // Implement Spacebars' {{../..}}.
 // @param height {Number} The number of '..'s
 Blaze._parentData = function (height, _functionWrapped) {
+  // If height is null or undefined, we default to 1, the first parent.
+  if (height == null) {
+    height = 1;
+  }
   var theWith = Blaze.getView('with');
   for (var i = 0; (i < height) && theWith; i++) {
     theWith = Blaze.getView(theWith, 'with');

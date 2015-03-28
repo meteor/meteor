@@ -6,6 +6,8 @@ policies that will be enforced by newer browsers. These policies help
 you prevent and mitigate common attacks like cross-site scripting and
 clickjacking.
 
+## Details
+
 When you add `browser-policy` to your app, you get default configurations for
 the HTTP headers X-Frame-Options and Content-Security-Policy. X-Frame-Options
 tells the browser which websites are allowed to frame your app. You should only

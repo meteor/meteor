@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "MSIPackage", "WiXInstaller\MSIPackage.wixproj", "{E053726B-937B-40C7-8F3D-25A3226979D9}"
+EndProject
+Project("{930C7802-8A8C-48F9-8165-68863BCCD9DD}") = "SetupPackage", "WiXInstaller\SetupPackage.wixproj", "{7B569F5B-5D73-4E7B-BE41-041A2F22A521}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E053726B-937B-40C7-8F3D-25A3226979D9} = {E053726B-937B-40C7-8F3D-25A3226979D9}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E053726B-937B-40C7-8F3D-25A3226979D9}.Release|x64.ActiveCfg = Release|x64
+		{E053726B-937B-40C7-8F3D-25A3226979D9}.Release|x64.Build.0 = Release|x64
+		{E053726B-937B-40C7-8F3D-25A3226979D9}.Release|x86.ActiveCfg = Release|x86
+		{E053726B-937B-40C7-8F3D-25A3226979D9}.Release|x86.Build.0 = Release|x86
+		{7B569F5B-5D73-4E7B-BE41-041A2F22A521}.Release|x64.ActiveCfg = Release|x64
+		{7B569F5B-5D73-4E7B-BE41-041A2F22A521}.Release|x64.Build.0 = Release|x64
+		{7B569F5B-5D73-4E7B-BE41-041A2F22A521}.Release|x86.ActiveCfg = Release|x86
+		{7B569F5B-5D73-4E7B-BE41-041A2F22A521}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.1'
+  version: '1.0.3'
 });
 
 // These tests are in a separate package to avoid a circular dependency
 // between the `spacebars` and `templating` packages.
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('underscore');
   api.use('spacebars');
   api.use('tinytest');
@@ -15,9 +15,11 @@ Package.on_test(function (api) {
   api.use('showdown');
   api.use('minimongo');
   api.use('tracker');
+  api.use('mongo');
+  api.use('random');
 
   api.use('templating', 'client');
-  api.add_files([
+  api.addFiles([
     'template_tests.html',
     'template_tests.js',
     'templating_tests.html',
@@ -27,9 +29,9 @@ Package.on_test(function (api) {
     'old_templates_tests.js'
   ], 'client');
 
-  api.add_files('template_tests_server.js', 'server');
+  api.addFiles('template_tests_server.js', 'server');
 
-  api.add_files([
+  api.addFiles([
     'assets/markdown_basic.html',
     'assets/markdown_if1.html',
     'assets/markdown_if2.html',

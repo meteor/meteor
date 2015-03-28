@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.4"
+  version: "1.0.6"
 });
 
-Package._transitional_registerBuildPlugin({
+Package.registerBuildPlugin({
   name: "compileCoffeescript",
   use: [],
   sources: [
@@ -12,12 +12,12 @@ Package._transitional_registerBuildPlugin({
   npmDependencies: {"coffee-script": "1.7.1", "source-map": "0.1.32"}
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use(['coffeescript', 'tinytest']);
   api.use(['coffeescript-test-helper'], ['client', 'server']);
-  api.add_files('bare_test_setup.coffee', ['client'], {bare: true});
-  api.add_files('bare_tests.js', ['client']);
-  api.add_files([
+  api.addFiles('bare_test_setup.coffee', ['client'], {bare: true});
+  api.addFiles('bare_tests.js', ['client']);
+  api.addFiles([
     'coffeescript_test_setup.js',
     'tests/coffeescript_tests.coffee',
     'tests/coffeescript_strict_tests.coffee',

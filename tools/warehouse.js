@@ -36,15 +36,11 @@
 /// CHECKOUT/packages or within a directory in the PACKAGE_DIRS
 /// environment variable). The setup of that is handled by release.js.
 
-var path = require("path");
-var fs = require("fs");
 var os = require("os");
 var Future = require("fibers/future");
 var _ = require("underscore");
 
 var files = require('./files.js');
-var utils = require('./utils.js');
-var updater = require('./updater.js');
 var httpHelpers = require('./http-helpers.js');
 var fiberHelpers = require('./fiber-helpers.js');
 
@@ -63,7 +59,7 @@ _.extend(warehouse, {
   getWarehouseDir: function () {
     // a hook for tests, or i guess for users.
     if (process.env.METEOR_WAREHOUSE_DIR)
-      return process.env.METEOR_WAREHOUSE_DIR;
+      return files.convertToStandardPath(process.env.METEOR_WAREHOUSE_DIR);
 
     // This function should never be called unless we have a warehouse
     // (an installed version, or with process.env.METEOR_WAREHOUSE_DIR
@@ -71,23 +67,23 @@ _.extend(warehouse, {
     if (!files.usesWarehouse())
       throw new Error("There's no warehouse in a git checkout");
 
-    return path.join(process.env.HOME, '.meteor');
+    return files.pathJoin(files.getHomeDir(), '.meteor');
   },
 
   getToolsDir: function (version) {
-    return path.join(warehouse.getWarehouseDir(), 'tools', version);
+    return files.pathJoin(warehouse.getWarehouseDir(), 'tools', version);
   },
 
   getToolsFreshFile: function (version) {
-    return path.join(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
+    return files.pathJoin(warehouse.getWarehouseDir(), 'tools', version, '.fresh');
   },
 
   _latestReleaseSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'releases', 'latest');
+    return files.pathJoin(warehouse.getWarehouseDir(), 'releases', 'latest');
   },
 
   _latestToolsSymlinkPath: function () {
-    return path.join(warehouse.getWarehouseDir(), 'tools', 'latest');
+    return files.pathJoin(warehouse.getWarehouseDir(), 'tools', 'latest');
   },
 
   // Ensure the passed release version is stored in the local
@@ -112,26 +108,28 @@ _.extend(warehouse, {
     // particular file name ("package.js") inside the directory, but since we
     // always install packages by untarring to a temporary directory and
     // renaming atomically, we shouldn't worry about partial packages.)
-    return fs.existsSync(
-      path.join(warehouse.getWarehouseDir(), 'packages', name, version));
+    return files.exists(
+      files.pathJoin(warehouse.getWarehouseDir(), 'packages', name, version));
   },
 
   getPackageFreshFile: function (name, version) {
-    return path.join(warehouse.getWarehouseDir(), 'packages', name, version, '.fresh');
+    return files.pathJoin(
+      warehouse.getWarehouseDir(),
+      'packages', name, version, '.fresh');
   },
 
   toolsExistsInWarehouse: function (version) {
-    return fs.existsSync(warehouse.getToolsDir(version));
+    return files.exists(warehouse.getToolsDir(version));
   },
 
   // Returns true if we already have the release file on disk, and it's not a
   // fake "red pill" release --- we should never springboard to those!
   realReleaseExistsInWarehouse: function (version) {
-    var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
-    var releaseManifestPath = path.join(releasesDir,
+    var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
+    var releaseManifestPath = files.pathJoin(releasesDir,
                                         version + '.release.json');
     try {
-      var manifest = JSON.parse(fs.readFileSync(releaseManifestPath, 'utf8'));
+      var manifest = JSON.parse(files.readFile(releaseManifestPath, 'utf8'));
       return !manifest.redPill;
     } catch (e) {
       return false;
@@ -152,14 +150,14 @@ _.extend(warehouse, {
     var toolsVersion = releaseManifest.tools;
     if (!warehouse.toolsExistsInWarehouse(toolsVersion)) {
       newPieces.tools = {version: toolsVersion, needsDownload: true};
-    } else if (fs.existsSync(warehouse.getToolsFreshFile(toolsVersion))) {
+    } else if (files.exists(warehouse.getToolsFreshFile(toolsVersion))) {
       newPieces.tools = {version: toolsVersion, needsDownload: false};
     }
 
     _.each(releaseManifest.packages, function (version, name) {
       if (!warehouse.packageExistsInWarehouse(name, version)) {
         newPieces.packages[name] = {version: version, needsDownload: true};
-      } else if (fs.existsSync(warehouse.getPackageFreshFile(name, version))) {
+      } else if (files.exists(warehouse.getPackageFreshFile(name, version))) {
         newPieces.packages[name] = {version: version, needsDownload: false};
       }
     });
@@ -189,17 +187,17 @@ _.extend(warehouse, {
   // @param releaseVersion {String} eg "0.1"
   _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
     var future = new Future;
-    var releasesDir = path.join(warehouse.getWarehouseDir(), 'releases');
+    var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0755);
-    var releaseManifestPath = path.join(releasesDir,
-                                        releaseVersion + '.release.json');
+    var releaseManifestPath = files.pathJoin(releasesDir,
+                                             releaseVersion + '.release.json');
 
     // If the release already exists, we don't have to do anything, except maybe
     // print a message if this release has never been used before (and we only
     // have it due to a background download).
     var releaseAlreadyExists = true;
     try {
-      var releaseManifestText = fs.readFileSync(releaseManifestPath);
+      var releaseManifestText = files.readFile(releaseManifestPath);
     } catch (e) {
       releaseAlreadyExists = false;
     }
@@ -266,8 +264,8 @@ _.extend(warehouse, {
         // If the 'tools/latest' symlink doesn't exist, this must be the first
         // legacy tools we've downloaded into this warehouse. Add the symlink,
         // so that the tools doesn't get confused when it tries to readlink it.
-        if (!fs.existsSync(warehouse._latestToolsSymlinkPath())) {
-          fs.symlinkSync(newPieces.tools.version,
+        if (!files.exists(warehouse._latestToolsSymlinkPath())) {
+          files.symlink(newPieces.tools.version,
                          warehouse._latestToolsSymlinkPath());
         }
       }
@@ -299,22 +297,23 @@ _.extend(warehouse, {
         // Real notices are valid JSON.
         JSON.parse(notices);
 
-        fs.writeFileSync(
-          path.join(releasesDir, releaseVersion + '.notices.json'), notices);
+        files.writeFile(
+          files.pathJoin(releasesDir, releaseVersion + '.notices.json'),
+          notices);
       } catch (e) {
         // no notices, proceed
       }
 
       // Now that we have written all packages, it's safe to write the
       // release manifest.
-      fs.writeFileSync(releaseManifestPath, releaseManifestText);
+      files.writeFile(releaseManifestPath, releaseManifestText);
 
       // If the 'releases/latest' symlink doesn't exist, this must be the first
       // legacy release manifest we've downloaded into this warehouse. Add the
       // symlink, so that the tools doesn't get confused when it tries to
       // readlink it.
-      if (!fs.existsSync(warehouse._latestReleaseSymlinkPath())) {
-        fs.symlinkSync(releaseVersion + '.release.json',
+      if (!files.exists(warehouse._latestReleaseSymlinkPath())) {
+        files.symlink(releaseVersion + '.release.json',
                        warehouse._latestReleaseSymlinkPath());
       }
     }
@@ -325,7 +324,7 @@ _.extend(warehouse, {
     if (newPieces && showInstalling) {
       var unlinkIfExists = function (file) {
         try {
-          fs.unlinkSync(file);
+          files.unlink(file);
         } catch (e) {
           // If two processes populate the warehouse in parallel, the other
           // process may have deleted the fresh file. That's OK!
@@ -363,10 +362,10 @@ _.extend(warehouse, {
       url: WAREHOUSE_URLBASE + toolsTarballPath,
       encoding: null
     });
-    files.extractTarGz(toolsTarball,
-                       path.join(warehouseDirectory, 'tools', toolsVersion));
+    files.extractTarGz(
+      toolsTarball, files.pathJoin(warehouseDirectory, 'tools', toolsVersion));
     if (!dontWriteFreshFile)
-      fs.writeFileSync(warehouse.getToolsFreshFile(toolsVersion), '');
+      files.writeFile(warehouse.getToolsFreshFile(toolsVersion), '');
   },
 
   // this function is also used by bless-release.js
@@ -376,7 +375,7 @@ _.extend(warehouse, {
                                          dontWriteFreshFile) {
     fiberHelpers.parallelEach(
       packagesToDownload, function (version, name) {
-        var packageDir = path.join(
+        var packageDir = files.pathJoin(
           warehouseDirectory, 'packages', name, version);
         var packageUrl = WAREHOUSE_URLBASE + "/packages/" + name +
               "/" + version +
@@ -385,7 +384,7 @@ _.extend(warehouse, {
         var tarball = httpHelpers.getUrl({url: packageUrl, encoding: null});
         files.extractTarGz(tarball, packageDir);
         if (!dontWriteFreshFile)
-          fs.writeFileSync(warehouse.getPackageFreshFile(name, version), '');
+          files.writeFile(warehouse.getPackageFreshFile(name, version), '');
       });
   },
 

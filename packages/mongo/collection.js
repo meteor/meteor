@@ -103,6 +103,7 @@ Mongo.Collection = function (name, options) {
 
   self._collection = options._driver.open(name, self._connection);
   self._name = name;
+  self._driver = options._driver;
 
   if (self._connection && self._connection.registerStore) {
     // OK, we're going to be a slave, replicating some remote
@@ -262,6 +263,7 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Mongo.Cursor}
    */
   find: function (/* selector, options */) {
     // Collection.find() (return all docs) behaves differently
@@ -286,6 +288,7 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Object}
    */
   findOne: function (/* selector, options */) {
     var self = this;
@@ -500,7 +503,7 @@ _.each(["insert", "update", "remove"], function (name) {
             if (!(typeof options.insertedId === 'string'
                   || options.insertedId instanceof Mongo.ObjectID))
               throw new Error("insertedId must be string or ObjectID");
-          } else {
+          } else if (! args[0]._id) {
             options.insertedId = self._makeNewID();
           }
         }
@@ -634,6 +637,23 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
     throw new Error("Can only call _createCappedCollection on server collections");
   self._collection._createCappedCollection(byteSize, maxDocuments);
 };
+
+Mongo.Collection.prototype.rawCollection = function () {
+  var self = this;
+  if (! self._collection.rawCollection) {
+    throw new Error("Can only call rawCollection on server collections");
+  }
+  return self._collection.rawCollection();
+};
+
+Mongo.Collection.prototype.rawDatabase = function () {
+  var self = this;
+  if (! (self._driver.mongo && self._driver.mongo.db)) {
+    throw new Error("Can only call rawDatabase on server collections");
+  }
+  return self._driver.mongo.db;
+};
+
 
 /**
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
@@ -855,7 +875,7 @@ Mongo.Collection.prototype._defineMutationMethods = function() {
             //     we get from the network to this function, we should actually
             //     know the correct arguments for the function and pass just
             //     them.  For example, if you have an extraneous extra null
-            //     argument and this is Mongo on the server, the _wrapAsync'd
+            //     argument and this is Mongo on the server, the .wrapAsync'd
             //     functions like update will get confused and pass the
             //     "fut.resolver()" in the wrong slot, where _update will never
             //     invoke it. Bam, broken DDP connection.  Probably should just
@@ -964,7 +984,9 @@ Mongo.Collection.prototype._validatedUpdate = function(
     userId, selector, mutator, options) {
   var self = this;
 
-  options = options || {};
+  check(mutator, Object);
+
+  options = _.clone(options) || {};
 
   if (!LocalCollection._selectorIsIdPerhapsAsObject(selector))
     throw new Error("validated update should be of a single ID");
@@ -975,12 +997,18 @@ Mongo.Collection.prototype._validatedUpdate = function(
     throw new Meteor.Error(403, "Access denied. Upserts not " +
                            "allowed in a restricted collection.");
 
+  var noReplaceError = "Access denied. In a restricted collection you can only" +
+        " update documents, not replace them. Use a Mongo update operator, such " +
+        "as '$set'.";
+
   // compute modified fields
   var fields = [];
+  if (_.isEmpty(mutator)) {
+    throw new Meteor.Error(403, noReplaceError);
+  }
   _.each(mutator, function (params, op) {
     if (op.charAt(0) !== '$') {
-      throw new Meteor.Error(
-        403, "Access denied. In a restricted collection you can only update documents, not replace them. Use a Mongo update operator, such as '$set'.");
+      throw new Meteor.Error(403, noReplaceError);
     } else if (!_.has(ALLOWED_UPDATE_OPERATIONS, op)) {
       throw new Meteor.Error(
         403, "Access denied. Operator " + op + " not allowed in a restricted collection.");
@@ -1010,13 +1038,10 @@ Mongo.Collection.prototype._validatedUpdate = function(
   if (!doc)  // none satisfied!
     return 0;
 
-  var factoriedDoc;
-
   // call user validators.
   // Any deny returns true means denied.
   if (_.any(self._validators.update.deny, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return validator(userId,
                      factoriedDoc,
                      fields,
@@ -1026,8 +1051,7 @@ Mongo.Collection.prototype._validatedUpdate = function(
   }
   // Any allow returns true means proceed. Throw error if they all fail.
   if (_.all(self._validators.update.allow, function(validator) {
-    if (!factoriedDoc)
-      factoriedDoc = transformDoc(validator, doc);
+    var factoriedDoc = transformDoc(validator, doc);
     return !validator(userId,
                       factoriedDoc,
                       fields,
@@ -1035,6 +1059,8 @@ Mongo.Collection.prototype._validatedUpdate = function(
   })) {
     throw new Meteor.Error(403, "Access denied");
   }
+
+  options._forbidReplace = true;
 
   // Back when we supported arbitrary client-provided selectors, we actually
   // rewrote the selector to include an _id clause before passing to Mongo to

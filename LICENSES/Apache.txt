@@ -1,0 +1,205 @@
+====================================================================
+For the license for Meteor itself, see LICENSE.txt in the root of
+the repository.  This file contains the licenses for externally
+maintained libraries.
+====================================================================
+
+
+The following libraries are licensed under the Apache License, version 2.0:
+
+"""
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+"""
+
+----------
+mongodb: (Node driver) https://github.com/mongodb/node-mongodb-native
+kerberos: https://github.com/christkv/kerberos
+----------
+
+Copyright 2009 - 2010 Christian Amor Kvalheim.
+
+
+----------
+less: https://github.com/cloudhead/less.js
+----------
+
+Copyright (c) 2009-2010 Alexis Sellier
+
+
+----------
+useragent: https://github.com/fintanf/node-useragent
+----------
+
+This parser is based on the user agent parser; code.google.com/p/ua-parser/
+which is released under Apache license:
+
+Copyright 2009 Google Inc.
+
+
+----------
+request: https://github.com/mikeal/request
+aws-sign2: https://github.com/mikeal/aws-sign
+cookie-jar: https://github.com/mikeal/cookie-jar
+forever-agent: https://github.com/mikeal/forever-agent
+oauth-sign: https://github.com/mikeal/oauth-sign
+tunnel-agent: https://github.com/mikeal/tunnel-agent
+caseless: https://github.com/request/caseless
+----------
+
+Copyright (c) 2011, 2012, 2013 Mikeal Rogers
+
+
+----------
+code-prettify: http://code.google.com/p/google-code-prettify/
+----------
+
+Copyright 2011 Mike Samuel et al
+
+
+----------
+bootstrap: https://github.com/twitter/bootstrap
+----------
+
+Copyright 2012 Twitter, Inc.
+
+
+----------
+bson: https://github.com/mongodb/js-bson
+----------
+
+Copyright (c) 2012 Christian Amor Kvalheim <christkv@gmail.com>
+
+
+----------
+websocket: https://github.com/Worlize/WebSocket-Node/blob/master/LICENSE
+----------
+
+Brian McKelvey
+
+
+----------
+amdefine: https://github.com/jrburke/amdefine
+----------
+
+Copyright (c) 2011, The Dojo Foundation
+
+
+----------
+nlogger: https://github.com/igo/nlogger
+----------
+
+Copyright (c) 2010 by Igor Urmincek
+
+
+----------
+Diff Match and Patch: http://code.google.com/p/google-diff-match-patch/
+----------
+
+Copyright 2006 Google Inc.
+
+
+----------
+ansicolors: https://github.com/thlorenz/ansicolors
+ansistyles: https://github.com/thlorenz/ansistyles
+combine-source-map: https://github.com/thlorenz/combine-source-map
+convert-source-map: https://github.com/thlorenz/convert-source-map
+inline-source-map: https://github.com/thlorenz/inline-source-map
+----------
+
+Copyright 2013 Thorsten Lorenz. All rights reserved.
+
+
+----------
+columnify: https://github.com/timoxley/columnify
+----------
+
+Copyright Tim Oxley
+
+
+----------
+eventemitter3: https://github.com/3rd-Eden/EventEmitter3
+----------
+
+Copyright Arnout Kazemier
+
+
+----------
+punycode: https://github.com/bestiejs/punycode.js
+----------
+
+Copyright Mathias Bynens <http://mathiasbynens.be/>
+
+
+----------
+browserstack-webdriver: https://github.com/browserstack/selenium-webdriver-nodejs
+----------
+
+Copyright 2009-2014 Software Freedom Conservancy
+
+
+----------
+node-inspector: https://github.com/node-inspector/node-inspector
+----------
+
+Copyright (c) 2011, Danny Coates
+
+
+----------
+phantomjs: https://github.com/Medium/phantomjs (npm installer)
+----------
+
+Copyright 2012 The Obvious Corporation.
+
+
+----------
+elementtree: https://github.com/racker/node-elementtree
+----------
+
+Copyright (c) 2011, Rackspace, Inc.
+The ElementTree toolkit is Copyright (c) 1999-2007 by Fredrik Lundh
+
+
+----------
+xcode: https://github.com/alunny/node-xcode
+----------
+
+Copyright 2012 Andrew Lunny, Adobe Systems
+
+
+----------
+cordova: https://git-wip-us.apache.org/repos/asf/cordova-cli.git
+cordova-js: https://git-wip-us.apache.org/repos/asf/cordova-js.git
+cordova-lib: https://git-wip-us.apache.org/repos/asf/cordova-lib.git
+----------
+
+Apache Cordova
+Copyright 2012 The Apache Software Foundation
+
+This product includes software developed at
+The Apache Software Foundation (http://www.apache.org/).
+
+
+----------
+ip: https://github.com/indutny/node-ip
+----------
+
+Copyright Fedor Indutny, 2012
+
+
+----------
+kew: https://github.com/Medium/kew
+----------
+
+Copyright 2012 The Obvious Corporation.
+http://obvious.com/
+
+
+----------
+valid-identifier: https://github.com/purplecabbage/valid-identifier
+----------
+
+Jesse MacFadyen

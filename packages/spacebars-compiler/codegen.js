@@ -27,7 +27,9 @@ var builtInTemplateMacros = {
   // Confusingly, this makes `{{> Template.dynamic}}` an alias
   // for `{{> __dynamic}}`, where "__dynamic" is the template that
   // implements the dynamic template feature.
-  'dynamic': 'Template.__dynamic'
+  'dynamic': 'Template.__dynamic',
+
+  'subscriptionsReady': 'view.templateInstance().subscriptionsReady()'
 };
 
 // A "reserved name" can't be used as a <template> name.  This
@@ -67,7 +69,8 @@ _.extend(CodeGen.prototype, {
           // Reactive attributes are already wrapped in a function,
           // and there's no fine-grained reactivity.
           // Anywhere else, we need to create a View.
-          code = 'Blaze.View(function () { return ' + code + '; })';
+          code = 'Blaze.View("lookup:' + tag.path.join('.') + '", ' +
+            'function () { return ' + code + '; })';
         }
         return BlazeTools.EmitCode(code);
       } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
@@ -150,6 +153,8 @@ _.extend(CodeGen.prototype, {
 
           return BlazeTools.EmitCode(includeCode);
         }
+      } else if (tag.type === 'ESCAPE') {
+        return tag.value;
       } else {
         // Can't get here; TemplateTag validation should catch any
         // inappropriate tag types that might come out of the parser.

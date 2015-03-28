@@ -1,17 +1,17 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
-  version: "1.0.2"
+  version: "1.0.4"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('webapp', 'server');
   api.use('underscore');
   // make sure we come after livedata, so we load after the sockjs
   // server has been instantiated.
   api.use('ddp', 'server');
 
-  api.add_files('force_ssl_common.js', ['client', 'server']);
-  api.add_files('force_ssl_server.js', 'server');
+  api.addFiles('force_ssl_common.js', ['client', 'server']);
+  api.addFiles('force_ssl_server.js', 'server');
 
   // Another thing we could do is add a force_ssl_client.js file that
   // makes sure document.location.protocol is 'https'. If it detected

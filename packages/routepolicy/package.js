@@ -1,19 +1,19 @@
 Package.describe({
   summary: "route policy declarations",
-  version: '1.0.2'
+  version: '1.0.5'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('underscore', 'server');
   // Resolve circular dependency with webapp. We can only use WebApp via
   // Package.webapp and only after initial load.
   api.use('webapp', 'server', {unordered: true});
   api.export('RoutePolicy', 'server');
   api.export('RoutePolicyTest', 'server', {testOnly: true});
-  api.add_files('routepolicy.js', 'server');
+  api.addFiles('routepolicy.js', 'server');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use(['routepolicy', 'tinytest']);
-  api.add_files(['routepolicy_tests.js'], 'server');
+  api.addFiles(['routepolicy_tests.js'], 'server');
 });

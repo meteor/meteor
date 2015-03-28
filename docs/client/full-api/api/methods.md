@@ -62,9 +62,19 @@ their stub version that update the local cache, and sending the same write
 request to the server. When the server responds, the client updates the local
 cache with the writes that actually occurred on the server.
 
+You don't have to put all your method definitions into a single `Meteor.methods`
+call; you may call it multiple times, as long as each method has a unique name.
+
 Since methods usually expect particular types as arguments,
 use [`check`](#check) liberally to ensure your method arguments have
 the correct [types and structure](#matchpatterns).
+
+If a client calls a method and is disconnected before it receives a response,
+it will re-call the method when it reconnects. This means that a client may
+call a method multiple times when it only means to call it once. If this
+behavior is problematic for your method, consider attaching a unique ID
+to each method call on the client, and checking on the server whether a call
+with this ID has already been made.
 
 {{> autoApiBox "MethodInvocation#userId"}}
 

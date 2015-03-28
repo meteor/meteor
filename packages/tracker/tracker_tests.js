@@ -242,6 +242,13 @@ Tinytest.add("tracker - flush", function (test) {
       Tracker.flush(); // illegal to flush from a computation
     });
   });
+
+  test.throws(function () {
+    Tracker.autorun(function () {
+      Tracker.autorun(function () {});
+      Tracker.flush();
+    });
+  });
 });
 
 Tinytest.add("tracker - lifecycle", function (test) {
@@ -428,3 +435,55 @@ Tinytest.add('tracker - throwFirstError', function (test) {
     Tracker.flush({_throwFirstError: true});
   }, /foo/);
 });
+
+Tinytest.addAsync('tracker - no infinite recomputation', function (test, onComplete) {
+  var reran = false;
+  var c = Tracker.autorun(function (c) {
+    if (! c.firstRun)
+      reran = true;
+    c.invalidate();
+  });
+  test.isFalse(reran);
+  setTimeout(function () {
+    c.stop();
+    Tracker.afterFlush(function () {
+      test.isTrue(reran);
+      test.isTrue(c.stopped);
+      onComplete();
+    });
+  }, 100);
+});
+
+Tinytest.add('tracker - Tracker.flush finishes', function (test) {
+  // Currently, _runFlush will "yield" every 1000 computations... unless run in
+  // Tracker.flush. So this test validates that Tracker.flush is capable of
+  // running 2000 computations. Which isn't quite the same as infinity, but it's
+  // getting there.
+  var n = 0;
+  var c = Tracker.autorun(function (c) {
+    if (++n < 2000) {
+      c.invalidate();
+    }
+  });
+  test.equal(n, 1);
+  Tracker.flush();
+  test.equal(n, 2000);
+});
+
+testAsyncMulti('tracker - Tracker.autorun, onError option', [function (test, expect) {
+  var d = new Tracker.Dependency;
+  var c = Tracker.autorun(function (c) {
+    d.depend();
+
+    if (! c.firstRun)
+      throw new Error("foo");
+  }, {
+    onError: expect(function (err) {
+      test.equal(err.message, "foo");
+    })
+  });
+
+  d.changed();
+  Tracker.flush();
+}]);
+

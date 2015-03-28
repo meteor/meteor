@@ -109,8 +109,8 @@ Just make sure to keep your markdown unindented, since whitespace matters.
 ## underscore
 
 [Underscore](http://underscorejs.org/) provides a collection of useful functions
-[to manipulate arrays, objects, and functions. `underscore` is included in every
-[Meteor app because the framework itself uses it extensively.
+to manipulate arrays, objects, and functions. `underscore` is included in every
+Meteor app because the framework itself uses it extensively.
 
 ## spiderable
 

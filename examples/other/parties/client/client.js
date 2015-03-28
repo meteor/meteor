@@ -125,7 +125,7 @@ Template.map.events({
   }
 });
 
-Template.map.rendered = function () {
+Template.map.onRendered(function () {
   var self = this;
   self.node = self.find("svg");
 
@@ -189,9 +189,9 @@ Template.map.rendered = function () {
         callout.attr("display", 'none');
     });
   }
-};
+});
 
-Template.map.destroyed = function () {
+Template.map.onDestroyed = function () {
   this.handle && this.handle.stop();
 };
 

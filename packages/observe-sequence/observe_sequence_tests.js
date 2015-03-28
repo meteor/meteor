@@ -244,6 +244,82 @@ Tinytest.add('observe-sequence - array to other array, movedTo', function (test)
   ]);
 });
 
+Tinytest.add('observe-sequence - array to other array, movedTo the end', function (test) {
+  var dep = new Tracker.Dependency;
+  var seq = [{_id: "0"}, {_id: "1"}, {_id: "2"}, {_id: "3"}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "0"}, {_id: "2"}, {_id: "3"}, {_id: "1"}];
+    dep.changed();
+  }, [
+    {addedAt: ["0", {_id: "0"}, 0, null]},
+    {addedAt: ["1", {_id: "1"}, 1, null]},
+    {addedAt: ["2", {_id: "2"}, 2, null]},
+    {addedAt: ["3", {_id: "3"}, 3, null]},
+
+    {movedTo: ["1", {_id: "1"}, 1, 3, null]},
+    {changedAt: ["0", {_id: "0"}, {_id: "0"}, 0]},
+    {changedAt: ["1", {_id: "1"}, {_id: "1"}, 3]},
+    {changedAt: ["2", {_id: "2"}, {_id: "2"}, 1]},
+    {changedAt: ["3", {_id: "3"}, {_id: "3"}, 2]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - array to other array, movedTo later position but not the latest #2845', function (test) {
+  var dep = new Tracker.Dependency;
+  var seq = [{_id: "0"}, {_id: "1"}, {_id: "2"}, {_id: "3"}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "1"}, {_id: "2"}, {_id: "0"}, {_id: "3"}];
+    dep.changed();
+  }, [
+    {addedAt: ["0", {_id: "0"}, 0, null]},
+    {addedAt: ["1", {_id: "1"}, 1, null]},
+    {addedAt: ["2", {_id: "2"}, 2, null]},
+    {addedAt: ["3", {_id: "3"}, 3, null]},
+
+    {movedTo: ["0", {_id: "0"}, 0, 2, "3"]},
+
+    {changedAt: ["0", {_id: "0"}, {_id: "0"}, 2]},
+    {changedAt: ["1", {_id: "1"}, {_id: "1"}, 0]},
+    {changedAt: ["2", {_id: "2"}, {_id: "2"}, 1]},
+    {changedAt: ["3", {_id: "3"}, {_id: "3"}, 3]}
+  ]);
+});
+
+Tinytest.add('observe-sequence - array to other array, movedTo earlier position but not the first', function (test) {
+  var dep = new Tracker.Dependency;
+  var seq = [{_id: "0"}, {_id: "1"}, {_id: "2"}, {_id: "3"}, {_id: "4"}];
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    seq = [{_id: "0"}, {_id: "4"}, {_id: "1"}, {_id: "2"}, {_id: "3"}];
+    dep.changed();
+  }, [
+    {addedAt: ["0", {_id: "0"}, 0, null]},
+    {addedAt: ["1", {_id: "1"}, 1, null]},
+    {addedAt: ["2", {_id: "2"}, 2, null]},
+    {addedAt: ["3", {_id: "3"}, 3, null]},
+    {addedAt: ["4", {_id: "4"}, 4, null]},
+
+    {movedTo: ["4", {_id: "4"}, 4, 1, "1"]},
+
+    {changedAt: ["0", {_id: "0"}, {_id: "0"}, 0]},
+    {changedAt: ["1", {_id: "1"}, {_id: "1"}, 2]},
+    {changedAt: ["2", {_id: "2"}, {_id: "2"}, 3]},
+    {changedAt: ["3", {_id: "3"}, {_id: "3"}, 4]},
+    {changedAt: ["4", {_id: "4"}, {_id: "4"}, 1]}
+  ]);
+});
+
 Tinytest.add('observe-sequence - array to null', function (test) {
   var dep = new Tracker.Dependency;
   var seq = [{_id: "13", foo: 1}, {_id: "37", bar: 2}];

@@ -3,7 +3,7 @@ Package.describe({
   version: "1.1.0"
 });
 
-Package.on_use(function(api) {
+Package.onUse(function(api) {
   Cordova.depends({
     'org.apache.cordova.camera': '0.3.2'
   });

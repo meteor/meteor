@@ -1,7 +1,5 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
-var path = require("path");
-var fs = require("fs");
 
 selftest.define("build errors - colon in filename", function () {
   var s = new Sandbox();

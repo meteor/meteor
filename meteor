@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.3.61
+BUNDLE_VERSION=0.4.18
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -60,7 +60,7 @@ function install_dev_bundle {
     rm -rf "$BUNDLE_TMPDIR"
     mkdir "$BUNDLE_TMPDIR"
 
-    # fyi: URL duplicated in packages/dev-bundle-fetcher/dev-bundle
+    # duplicated in scripts/windows/download-dev-bundle.ps1:
     DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
     # If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
     # dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.

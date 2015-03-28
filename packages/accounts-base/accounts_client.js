@@ -86,8 +86,19 @@ Accounts.callLoginMethod = function (options) {
     if (!options[f])
       options[f] = function () {};
   });
-  // make sure we only call the user's callback once.
-  var onceUserCallback = _.once(options.userCallback);
+  // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
+  var loginCallbacks = _.once(function (error) {
+    if (!error) {
+      onLoginHook.each(function (callback) {
+        callback();
+      });
+    } else {
+      onLoginFailureHook.each(function (callback) {
+        callback();
+      });
+    }
+    options.userCallback.apply(this, arguments);
+  });
 
   var reconnected = false;
 
@@ -157,7 +168,7 @@ Accounts.callLoginMethod = function (options) {
               // Possibly a weird callback to call, but better than nothing if
               // there is a reconnect between "login result received" and "data
               // ready".
-              onceUserCallback(error);
+              loginCallbacks(error);
             }});
         }
       };
@@ -183,19 +194,19 @@ Accounts.callLoginMethod = function (options) {
     if (error || !result) {
       error = error || new Error(
         "No result from call to " + options.methodName);
-      onceUserCallback(error);
+      loginCallbacks(error);
       return;
     }
     try {
       options.validateResult(result);
     } catch (e) {
-      onceUserCallback(e);
+      loginCallbacks(e);
       return;
     }
 
     // Make the client logged in. (The user data should already be loaded!)
     makeClientLoggedIn(result.id, result.token, result.tokenExpires);
-    onceUserCallback();
+    loginCallbacks();
   };
 
   if (!options._suppressLoggingIn)

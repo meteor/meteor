@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Deprecated",
-  version: '1.0.1'
+  version: '1.0.3'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
 // XXX we unfortunately we can't do this since `meteor test-packages`
 // tries to load all packages.
 //

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Include>
+    <?define METEOR_ProductName  = "Meteor" ?>
+    <?define METEOR_UpgradeCode  = "{D6831580-7DD8-4088-9792-64E4D37FEDDC}" ?>
+    <?define BUNDLE_UpgradeCode  = "{D6F8653E-2F27-4FDD-9C92-66D7B4B21D79}" ?>
+
+
+    <?define METEOR_Version      = "__METEOR_RELEASE_SEMVER__" ?>
+    <?define METEOR_Manufacturer = "Meteor Development Group " ?>
+    <?define METEOR_ProductUrl   = "https://www.meteor.com/" ?>
+    <?define METEOR_UpgradeUrl   = "https://www.meteor.com/" ?>
+    <?define METEOR_TermsUrl     = "https://www.meteor.com/terms" ?>
+    <?define METEOR_PrivacyUrl   = "https://www.meteor.com/privacy" ?>
+
+
+    <?define METEOR_Theme          = "Resources\Theme_Meteor.xml" ?>
+    <?define METEOR_Localization   = "Resources\Theme_Meteor.wxl" ?>
+
+    <?define METEOR_Background     = "Resources\Background.png" ?>
+    <?define METEOR_TopHeader      = "Resources\TopHeader.png" ?>
+    <?define METEOR_Logo           = "Resources\meteor-logo-sm.jpg" ?>
+    <?define METEOR_License        = "Resources\License.htm" ?>
+    
+    
+    <?define METEOR_PkgFileName    = "meteor-bootstrap-os.windows.x86_32.tar.gz"?>
+    <?define METEOR_PkgDwnUrl      = "http://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/__METEOR_RELEASE__/meteor-bootstrap-os.windows.x86_32.tar.gz"?>
+                                       
+</Include>

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Requires s3cmd to be installed and an appropriate ~/.s3cfg.
+# Requires awscli to be installed and an appropriate ~/.aws/config.
 # Usage:
 #    scripts/admin/copy-dev-bundle-from-jenkins.sh [--prod] BUILDNUMBER
 # where BUILDNUMBER is the small integer Jenkins build number.
@@ -24,7 +24,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DIRNAME=$(s3cmd ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(dev-bundle-.+--'$1'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(dev-bundle-.+--'$1'--.+)/!')
 
 if [ -z "$DIRNAME" ]; then
     echo "build not found" 1>&2
@@ -33,16 +33,20 @@ fi
 
 echo Found build $DIRNAME
 
+trap "echo Found surprising number of tarballs." EXIT
 # Check to make sure the proper number of each kind of file is there.
-s3cmd ls s3://com.meteor.jenkins/$DIRNAME/ | \
-  perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 3) }'
+aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | \
+  perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 4) }'
 
-for FILE in $(s3cmd ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nlaF/ -e 'print $F[-1]'); do
-   if s3cmd info $TARGET$FILE >/dev/null 2>&1; then
-     echo "$TARGET$FILE already exists (maybe from another branch?)"
-     exit 1
-   fi
+trap - EXIT
+
+for FILE in $(aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nlaF/ -e 'print $F[-1]'); do
+  # aws s3 ls returns 0 when it lists nothing
+  if [[ $(aws s3 ls $TARGET$FILE >/dev/null | wc -l) != 0 ]]; then
+    echo "$TARGET$FILE already exists (maybe from another branch?)"
+    exit 1
+  fi
 done
 
 echo Copying to $TARGET
-s3cmd -P cp -r s3://com.meteor.jenkins/$DIRNAME/ $TARGET
+aws s3 cp --acl public-read --recursive s3://com.meteor.jenkins/$DIRNAME/ $TARGET

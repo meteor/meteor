@@ -1,7 +1,5 @@
 var _ = require('underscore');
-var path = require('path');
 var files = require('./files.js');
-var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
@@ -90,7 +88,6 @@ _.extend(Release.prototype, {
   // meteor-tool package in checkout.
   getCurrentToolsVersion: function () {
     var self = this;
-    buildmessage.assertInCapture();
 
     if (release.current.name) {
       return self._manifest.tool;
@@ -164,20 +161,14 @@ release.explicit = null;
 // True if release.current is the release we'd use if we wanted to run the app
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
-release.usingRightReleaseForApp = function () {
-  buildmessage.assertInCapture();
+release.usingRightReleaseForApp = function (projectContext) {
   if (release.current === null)
     throw new Error("no release?");
 
   if (! files.usesWarehouse() || release.forced)
     return true;
 
-  var appRelease = project.getNormalizedMeteorReleaseVersion();
-  if (appRelease === null) {
-    // Really old app that has no release specified.
-    appRelease = release.latestKnown();
-  }
-  return release.current.name === appRelease;
+  return release.current.name === projectContext.releaseFile.fullReleaseName;
 };
 
 // Return the name of the latest release that is downloaded and ready
@@ -264,16 +255,6 @@ release.setCurrent = function (releaseObject, forced, explicit) {
   release.current = releaseObject;
   release.forced = !! forced;
   release.explicit = !! explicit;
-};
-
-// XXX hack
-release._setCurrentForOldTest = function () {
-  if (process.env.METEOR_SPRINGBOARD_RELEASE) {
-    release.setCurrent(release.load(process.env.METEOR_SPRINGBOARD_RELEASE),
-                       true);
-  } else {
-    release.setCurrent(release.load(null));
-  }
 };
 
 // An exception meaning that you asked for a release that doesn't exist in the

@@ -4,15 +4,16 @@
 
 Blaze is the package that makes reactive templates possible.
 You can use the Blaze API directly in order to render templates programmatically
-and manipulate "Views," the building blocks of reactive templates.
+and manipulate "Views," the building blocks of reactive templates. For more
+information, check out the [Blaze project page](https://www.meteor.com/blaze).
 
 {{> autoApiBox "Blaze.render"}}
 
-When you render a template, the
-template's [`created`](#template_created) callback is invoked
-immediately, before evaluating the content of the template.
-The [`rendered`](#template_rendered) callback is
-invoked after the View is rendered and inserted into the DOM.
+When you render a template, the callbacks added with
+[`onCreated`](#template_onCreated) are invoked immediately, before evaluating
+the content of the template.  The callbacks added with
+[`onRendered`](#template_onRendered) are invoked after the View is rendered and
+inserted into the DOM.
 
 The rendered template
 will update reactively in response to data changes until the View is
@@ -38,7 +39,7 @@ no longer needed.
 Use `Blaze.remove` to remove a template or View previously inserted with
 `Blaze.render`, in such a way that any behaviors attached to the DOM by
 Meteor are cleaned up.  The rendered template or View is now considered
-["destroyed"](#template_destroyed), along with all nested templates and
+["destroyed"](#template_onDestroyed), along with all nested templates and
 Views.  In addition, any data assigned via
 jQuery to the DOM nodes is removed, as if the nodes were passed to
 jQuery's `$(...).remove()`.

@@ -25,7 +25,7 @@ For example, you can monitor one `Session` variable and set another:
 ```
 Tracker.autorun(function () {
   var celsius = Session.get("celsius");
-  Session.set("fahrenheit",  * 9/5 + 32);
+  Session.set("fahrenheit", celsius * 9/5 + 32);
 });
 ```
 

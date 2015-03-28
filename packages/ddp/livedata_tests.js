@@ -19,6 +19,16 @@ var failure = function (test, code, reason) {
   };
 };
 
+var failureOnStopped = function (test, code, reason) {
+  var f = failure(test, code, reason);
+
+  return function (error) {
+    if (error) {
+      f(error);
+    }
+  }
+};
+
 Tinytest.add("livedata - Meteor.Error", function (test) {
   var error = new Meteor.Error(123, "kittens", "puppies");
   test.instanceOf(error, Meteor.Error);
@@ -525,7 +535,7 @@ if (Meteor.isClient) {
     }
   ]);
 
-  testAsyncMulti("livedata - publisher errors", (function () {
+  testAsyncMulti("livedata - publisher errors with onError callback", (function () {
     var conn, collName, coll;
     var errorFromRerun;
     var gotErrorFromStopper = false;
@@ -601,29 +611,109 @@ if (Meteor.isClient) {
       }
     ];})());
 
-    testAsyncMulti("livedata - publish multiple cursors", [
+  testAsyncMulti("livedata - publisher errors with onStop callback", (function () {
+    var conn, collName, coll;
+    var errorFromRerun;
+    var gotErrorFromStopper = false;
+    return [
       function (test, expect) {
-        Meteor.subscribe("multiPublish", {normal: 1}, {
-          onReady: expect(function () {
-            test.equal(One.find().count(), 2);
-            test.equal(Two.find().count(), 3);
-          }),
-          onError: failure()
+        // Use a separate connection so that we can safely check to see if
+        // conn._subscriptions is empty.
+        conn = new LivedataTest.Connection('/',
+                                           {reloadWithOutstanding: true});
+        collName = Random.id();
+        coll = new Mongo.Collection(collName, {connection: conn});
+
+        var testSubError = function (options) {
+          conn.subscribe("publisherErrors", collName, options, {
+            onReady: expect(),
+            onStop: expect(
+              failureOnStopped(test,
+                      options.internalError ? 500 : 412,
+                      options.internalError ? "Internal server error"
+                                            : "Explicit error"))
+          });
+        };
+        testSubError({throwInHandler: true});
+        testSubError({throwInHandler: true, internalError: true});
+        testSubError({errorInHandler: true});
+        testSubError({errorInHandler: true, internalError: true});
+        testSubError({errorLater: true});
+        testSubError({errorLater: true, internalError: true});
+      },
+      function (test, expect) {
+        test.equal(coll.find().count(), 0);
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+
+        conn.subscribe("publisherErrors",
+                       collName, {throwWhenUserIdSet: true}, {
+          onReady: expect(),
+          onStop: function (error) {
+            errorFromRerun = error;
+          }
         });
       },
       function (test, expect) {
-        Meteor.subscribe("multiPublish", {dup: 1}, {
-          onReady: failure(),
-          onError: expect(failure(test, 500, "Internal server error"))
-        });
+        // Because the last subscription is ready, we should have a document.
+        test.equal(coll.find().count(), 1);
+        test.isFalse(errorFromRerun);
+        test.equal(_.size(conn._subscriptions), 1);  // white-box test
+        conn.call('setUserId', 'bla', expect(function(){}));
       },
       function (test, expect) {
-        Meteor.subscribe("multiPublish", {notCursor: 1}, {
-          onReady: failure(),
-          onError: expect(failure(test, 500, "Internal server error"))
+        // Now that we've re-run, we should have stopped the subscription,
+        // gotten a error, and lost the document.
+        test.equal(coll.find().count(), 0);
+        test.isTrue(errorFromRerun);
+        test.instanceOf(errorFromRerun, Meteor.Error);
+        test.equal(errorFromRerun.error, 412);
+        test.equal(errorFromRerun.reason, "Explicit error");
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+
+        conn.subscribe("publisherErrors", collName, {stopInHandler: true}, {
+          onStop: function(error) {
+            if (error) {
+              gotErrorFromStopper = true;
+            }
+          }
         });
+        // Call a method. This method won't be processed until the publisher's
+        // function returns, so blocking on it being done ensures that we've
+        // gotten the removed/nosub/etc.
+        conn.call('nothing', expect(function(){}));
+      },
+      function (test, expect) {
+        test.equal(coll.find().count(), 0);
+        // sub.stop does NOT call onError.
+        test.isFalse(gotErrorFromStopper);
+        test.equal(_.size(conn._subscriptions), 0);  // white-box test
+        conn._stream.disconnect({_permanent: true});
       }
-    ]);
+    ];})());
+
+  testAsyncMulti("livedata - publish multiple cursors", [
+    function (test, expect) {
+      Meteor.subscribe("multiPublish", {normal: 1}, {
+        onReady: expect(function () {
+          test.equal(One.find().count(), 2);
+          test.equal(Two.find().count(), 3);
+        }),
+        onError: failure()
+      });
+    },
+    function (test, expect) {
+      Meteor.subscribe("multiPublish", {dup: 1}, {
+        onReady: failure(),
+        onError: expect(failure(test, 500, "Internal server error"))
+      });
+    },
+    function (test, expect) {
+      Meteor.subscribe("multiPublish", {notCursor: 1}, {
+        onReady: failure(),
+        onError: expect(failure(test, 500, "Internal server error"))
+      });
+    }
+  ]);
 }
 
 var selfUrl = Meteor.isServer
@@ -719,6 +809,28 @@ if (Meteor.isServer) {
   ]);
 }
 
+testAsyncMulti("livedata - result by value", [
+  function (test, expect) {
+    var self = this;
+    self.testId = Random.id();
+    Meteor.call('getArray', self.testId, expect(function (error, firstResult) {
+      test.isFalse(error);
+      test.isTrue(firstResult);
+      self.firstResult = firstResult;
+    }));
+  }, function (test, expect) {
+    var self = this;
+    Meteor.call('pushToArray', self.testId, 'xxx', expect(function (error) {
+      test.isFalse(error);
+    }));
+  }, function (test, expect) {
+    var self = this;
+    Meteor.call('getArray', self.testId, expect(function (error, secondResult) {
+      test.isFalse(error);
+      test.equal(self.firstResult.length + 1, secondResult.length);
+    }));
+  }
+]);
 
 // XXX some things to test in greater detail:
 // staying in simulation mode

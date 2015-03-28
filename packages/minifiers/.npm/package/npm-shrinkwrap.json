@@ -17,26 +17,21 @@
       }
     },
     "uglify-js": {
-      "version": "2.4.13",
+      "version": "2.4.17",
       "dependencies": {
         "async": {
           "version": "0.2.10"
         },
         "source-map": {
-          "version": "0.1.33",
+          "version": "0.1.34",
           "dependencies": {
             "amdefine": {
               "version": "0.1.0"
             }
           }
         },
-        "optimist": {
-          "version": "0.3.7",
-          "dependencies": {
-            "wordwrap": {
-              "version": "0.0.2"
-            }
-          }
+        "yargs": {
+          "version": "1.3.3"
         },
         "uglify-to-browserify": {
           "version": "1.0.2"

@@ -1,22 +1,25 @@
 # Meteor packages used by this project, one per line.
+# Check this file (and the other files in this directory) into your repository.
 #
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-standard-app-packages
+# Packages from the release:
+meteor-platform
 less
 email
+http
 jquery-waypoints
 fastclick
-tmeasday:publish-counts@0.3.1
-iron:router
-percolate:velocityjs
 accounts-twitter
 service-configuration
+oauth1
+launch-screen
+
+# Packages from Atmosphere:
+tmeasday:publish-counts@0.3.1
+iron:router@0.9.4
+percolate:velocityjs
 percolate:wireframing
 mdg:camera
 mdg:geolocation
-oauth1
-request
-launch-screen
-

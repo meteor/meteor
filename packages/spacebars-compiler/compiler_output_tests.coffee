@@ -11,7 +11,7 @@ coffee.runCompilerOutputTests = (run) ->
   """
   function() {
     var view = this;
-    return Blaze.View(function() {
+    return Blaze.View("lookup:foo", function() {
       return Spacebars.mustache(view.lookup("foo"));
     });
   }
@@ -21,7 +21,7 @@ coffee.runCompilerOutputTests = (run) ->
   """
   function() {
     var view = this;
-    return Blaze.View(function() {
+    return Blaze.View("lookup:foo", function() {
       return Spacebars.mustache(view.lookup("foo"),
                                 view.lookup("bar"));
     });
@@ -32,7 +32,7 @@ coffee.runCompilerOutputTests = (run) ->
   """
   function() {
     var view = this;
-    return Blaze.View(function() {
+    return Blaze.View("lookup:foo", function() {
       return Spacebars.mustache(view.lookup("foo"), Spacebars.kw({
         x: view.lookup("bar")
       }));
@@ -44,7 +44,7 @@ coffee.runCompilerOutputTests = (run) ->
   """
   function() {
     var view = this;
-    return Blaze.View(function() {
+    return Blaze.View("lookup:foo.bar", function() {
       return Spacebars.mustache(Spacebars.dot(
                view.lookup("foo"), "bar"),
                view.lookup("baz"));
@@ -56,7 +56,7 @@ coffee.runCompilerOutputTests = (run) ->
   """
   function() {
     var view = this;
-    return Blaze.View(function() {
+    return Blaze.View("lookup:foo", function() {
       return Spacebars.mustache(view.lookup("foo"),
              Spacebars.dot(view.lookup("bar"), "baz"));
     });
@@ -67,7 +67,7 @@ coffee.runCompilerOutputTests = (run) ->
   """
   function() {
     var view = this;
-    return Blaze.View(function() {
+    return Blaze.View("lookup:foo", function() {
       return Spacebars.mustache(view.lookup("foo"), Spacebars.kw({
         x: Spacebars.dot(view.lookup("bar"), "baz")
       }));
@@ -236,7 +236,7 @@ function() {
   """
   function() {
     var view = this;
-    return HTML.getTag("asdf")(Blaze.View(function() {
+    return HTML.getTag("asdf")(Blaze.View("lookup:foo", function() {
       return Spacebars.mustache(view.lookup("foo"));
     }));
   }
@@ -249,5 +249,35 @@ function() {
     return HTML.TEXTAREA({value: (function () {
       return Spacebars.mustache(view.lookup("foo"));
     }) });
+  }
+  """
+
+  run "<textarea>{{{{|{{|foo}}</textarea>",
+  """
+  function() {
+    var view = this;
+    return HTML.TEXTAREA({value: (function () {
+      return [ "{{{{", "{{", "foo}}" ];
+    }) });
+  }
+  """
+
+  run "{{|foo}}",
+  """
+  function() {
+    var view = this;
+    return [ "{{", "foo}}" ];
+  }
+  """
+
+  run "<a b={{{|></a>",
+  """
+  function() {
+    var view = this;
+    return HTML.A({
+      b: (function () {
+        return "{{{";
+      })
+    });
   }
   """

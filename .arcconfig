@@ -1,5 +1,5 @@
 {
   "project_id" : "Meteor framework",
-  "conduit_uri" : "https://phabricator.meteor.com/",
-  "immutable_history" : true
+  "conduit_uri" : "https://phabricator.meteor.io/",
+  "immutable_history" : false
 }

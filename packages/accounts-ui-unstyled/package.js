@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Unstyled version of login widgets",
-  version: "1.1.4"
+  version: "1.1.7"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use(['tracker', 'service-configuration', 'accounts-base',
            'underscore', 'templating', 'session'], 'client');
   // Export Accounts (etc) to packages using this one.
@@ -16,7 +16,7 @@ Package.on_use(function (api) {
   // Accounts.oauth.registerService) exists.
   api.use('accounts-password', {weak: true});
 
-  api.add_files([
+  api.addFiles([
     'accounts_ui.js',
 
     'login_buttons.html',
@@ -32,8 +32,8 @@ Package.on_use(function (api) {
     'login_buttons_dialogs.js'], 'client');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('accounts-ui-unstyled');
   api.use('tinytest');
-  api.add_files('accounts_ui_tests.js', 'client');
+  api.addFiles('accounts_ui_tests.js', 'client');
 });

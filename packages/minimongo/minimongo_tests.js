@@ -2080,15 +2080,16 @@ Tinytest.add("minimongo - modify", function (test) {
   exception({a: null}, {$set: {'a.b': 99}});
   modify({a: {}}, {$set: {'a.3': 12}}, {a: {'3': 12}});
   modify({a: []}, {$set: {'a.3': 12}}, {a: [null, null, null, 12]});
-  modify({}, {$set: {'': 12}}, {'': 12}); // tested on mongo
+  exception({}, {$set: {'': 12}}); // tested on mongo
   exception({}, {$set: {'.': 12}}); // tested on mongo
-  modify({}, {$set: {'. ': 12}}, {'': {' ': 12}}); // tested on mongo
-  modify({}, {$inc: {'... ': 12}}, {'': {'': {'': {' ': 12}}}}); // tested
-  modify({}, {$set: {'a..b': 12}}, {a: {'': {b: 12}}});
+  exception({}, {$set: {'a.': 12}}); // tested on mongo
+  exception({}, {$set: {'. ': 12}}); // tested on mongo
+  exception({}, {$inc: {'... ': 12}}); // tested on mongo
+  exception({}, {$set: {'a..b': 12}}); // tested on mongo
   modify({a: [1,2,3]}, {$set: {'a.01': 99}}, {a: [1, 99, 3]});
   modify({a: [1,{a: 98},3]}, {$set: {'a.01.b': 99}}, {a: [1,{a:98, b: 99},3]});
   modify({}, {$set: {'2.a.b': 12}}, {'2': {'a': {'b': 12}}}); // tested
-  modify({x: []}, {$set: {'x.2..a': 99}}, {x: [null, null, {'': {a: 99}}]});
+  exception({x: []}, {$set: {'x.2..a': 99}});
   modify({x: [null, null]}, {$set: {'x.2.a': 1}}, {x: [null, null, {a: 1}]});
   exception({x: [null, null]}, {$set: {'x.1.a': 1}});
 
@@ -3127,5 +3128,45 @@ Tinytest.add("minimongo - fetch in observe", function (test) {
   });
   test.isTrue(callbackInvoked);
   observe.stop();
+  computation.stop();
+});
+
+// See #2254
+Tinytest.add("minimongo - fine-grained reactivity of observe with fields projection", function (test) {
+  var X = new LocalCollection;
+  var id = "asdf";
+  X.insert({_id: id, foo: {bar: 123}});
+
+  var callbackInvoked = false;
+  var obs = X.find(id, {fields: {'foo.bar': 1}}).observeChanges({
+    changed: function (id, fields) {
+      callbackInvoked = true;
+    }
+  });
+
+  test.isFalse(callbackInvoked);
+  X.update(id, {$set: {'foo.baz': 456}});
+  test.isFalse(callbackInvoked);
+
+  obs.stop();
+});
+Tinytest.add("minimongo - fine-grained reactivity of query with fields projection", function (test) {
+  var X = new LocalCollection;
+  var id = "asdf";
+  X.insert({_id: id, foo: {bar: 123}});
+
+  var callbackInvoked = false;
+  var computation = Tracker.autorun(function () {
+    callbackInvoked = true;
+    return X.findOne(id, { fields: { 'foo.bar': 1 } });
+  });
+  test.isTrue(callbackInvoked);
+  callbackInvoked = false;
+  X.update(id, {$set: {'foo.baz': 456}});
+  test.isFalse(callbackInvoked);
+  X.update(id, {$set: {'foo.bar': 124}});
+  Tracker.flush();
+  test.isTrue(callbackInvoked);
+
   computation.stop();
 });

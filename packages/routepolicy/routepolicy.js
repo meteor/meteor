@@ -97,6 +97,10 @@ _.extend(RoutePolicyConstructor.prototype, {
     self.urlPrefixTypes[urlPrefix] = type;
   },
 
+  isValidUrl: function (url) {
+    return url.charAt(0) === '/';
+  },
+
   classify: function (url) {
     var self = this;
     if (url.charAt(0) !== '/')

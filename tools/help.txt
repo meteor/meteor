@@ -56,8 +56,11 @@ Options:
   --raw-logs       Run without parsing logs from stdout and stderr.
   --settings       Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
-  --program        The program in the app to run (Advanced).
   --verbose        Print all output from builds logs.
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
   --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
 >>> debug
@@ -81,6 +84,7 @@ Options:
   --debug-port   Port on which the server process debugger should listen
                  for incoming connections from debugging clients, such as
                  node-inspector (default 5858).
+
 
 >>> create
 Create a new project.
@@ -141,13 +145,17 @@ options. ('meteor update foo:awesome').
 
 Options:
   --packages-only  Update the package versions only. Do not update the release.
-  --patch  Update the release to a patch release only.
-  --release  Update to a specific release of meteor.
+  --patch          Update the release to a patch release only.
+  --release        Update to a specific release of meteor.
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
 
 
->>> run-upgrader
+>>> admin run-upgrader
 Execute a specific upgrader by name. Intended for testing.
-Usage: meteor run-upgrader <upgrader>
+Usage: meteor admin run-upgrader <upgrader>
 
 Runs a specific upgrader on the current app. This is for testing
 internal functionality of Meteor.
@@ -161,6 +169,12 @@ Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
 the meteor search command.
 
+Options:
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
+
 
 >>> remove
 Remove a package from this project.
@@ -169,6 +183,12 @@ Usage: meteor remove <package> [package..]
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
 'meteor list'.
+
+Options:
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
 
 
 >>> list
@@ -272,6 +292,40 @@ Options:
   --server            Location where mobile builds connect to the Meteor server.
                       Defaults to localhost:3000. Can include a URL scheme
                       (for example, --server=https://example.com:443).
+  --architecture      Builds the server for a different architecture than your
+                      developer machine's architecture. Valid architectures
+                      include os.osx.x86_64, os.linux.x86_64, and
+                      os.linux.x86_32.
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                      downgraded to versions that are potentially incompatible
+                      with the current versions, if required to satisfy all
+                      package version constraints.
+
+
+>>> shell
+Launch a Node REPL for interactively evaluating server-side code.
+
+Usage: meteor shell
+
+When `meteor shell` is executed in an application directory where a server
+is already running, it connects to the server and starts an interactive
+shell for evaluating server-side code.
+
+Multiple shells can be attached to the same server. If no server is
+currently available, `meteor shell` will keep trying to connect until it
+succeeds.
+
+Exiting the shell does not terminate the server. If the server restarts
+because a change was made in server code, or a fatal exception was
+encountered, the shell will restart along with the server. This behavior
+can be simulated by typing `.reload` in the shell.
+
+The shell supports tab completion for global variables like `Meteor`,
+`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+
+The shell maintains a persistent history across sessions. Previously-run
+commands can be accessed by pressing the up arrow.
+
 
 >>> mongo
 Connect to the Mongo database for the specified site.
@@ -329,7 +383,10 @@ Options:
   --delete, -D  permanently delete this deployment
   --debug       deploy in debug mode (don't minify, etc)
   --settings    set optional data for Meteor.settings
-  --star        a star (tarball) to deploy instead of the current Meteor app
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                downgraded to versions that are potentially incompatible with
+                the current versions, if required to satisfy all package version
+                constraints.
 
 
 >>> logs
@@ -445,6 +502,7 @@ Options:
   --test-app-path   Set the directory in which to create a temporary app used
                     for tests. Defaults to the system's temporary directory,
                     usually /tmp.
+  --velocity        [Experimental] Execute tests using phantomjs and exit.
   --verbose         Print all output from builds logs.
 
 
@@ -517,7 +575,7 @@ Usage: meteor dummy [options]
 Dummy command used for automated testing.
 
 Options:
-  --email, -e  A required string option.
+  --ething, -e  A required string option.
   --port, -p   A numeric option with a short alias.
   --changed    A boolean option.
 
@@ -569,25 +627,37 @@ Options:
 Publish a new version of a package to the package server.
 
 Usage: meteor publish [--create]
+       meteor publish --update
 
 Publishes a new version of a local package to the package server. Must be run
 from the directory containing the package. Reads the package.js file for version
 information, builds the package and sends both the package source and the built
 version of the package to the package server.
 
-This will only create one build of the package. If your package has multiple
-builds for different OS architectures, it will create a build for this machine's
-architecture. To publish a different build for the same version, run
-publish-for-arch.
+This will create at most one build of the package. If the package has an
+OS-dependent binary component, publishing will only register metadata about the
+package. To actually publish the package builds, use `meteor admin get-machine`
+and `meteor publish-for-arch`. Packages with no published builds cannot be added
+to applications.
 
-This will mark you as the only maintainer of the package. If you need to change
-maintainers and other metadata about this package & package version, take a look
-at the admin commands.
+This will mark you as the only maintainer of the package. You can use
+'meteor admin maintainers' to change package maintainers. For more information
+about admin commands, run 'meteor help admin'.
+
+Change the metadata for a given version of a package by running with the
+--update flag. That will set the git url, version summary, longform description
+and documentation in the database to their new values. You can use 'meteor show'
+to preview the results.
 
 Pass --create to create a new package.
 
 Options:
   --create   publish a new package
+  --update   changed metadata of a previously published version
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+             downgraded to versions that are potentially incompatible with the
+             current versions, if required to satisfy all package version
+             constraints.
 
 
 >>> publish-for-arch
@@ -613,10 +683,10 @@ server.
 
 >>> rebuild
 Rebuild local packages.
-Usage: meteor rebuild [<package name>]
+Usage: meteor rebuild [<package name>...]
 
-Rebuild a specified local packages. Deletes the package's build directory
-and rebuilds the package from scratch. Please specify the package by name.
+Rebuild specified local packages. Deletes the package's build directory
+and rebuilds the package from scratch. Packages are specified by name.
 
 If you pass no arguments, this will rebuild all local packages.
 That includes packages found through the
@@ -631,43 +701,48 @@ debugging the Meteor packaging tools themselves.
 
 >>> search
 Search through the package server database.
-Usage: meteor search <regex> [--maintainer <username>] [--show-old]
+Usage: meteor search <regex> [--maintainer <username>] [--show-all]
 
-Search through the meteor package&release database for names containing the
-specified substring.
+Searches through the Meteor package and release database for items whose names
+match the regular expression. You can use the --maintainer option to filter for
+items maintained by a particular developer.
 
-Use --maintainer to filter by authorized maintainers.
-
-By default, meteor search will not show packages that, due to migration issues,
-are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those packages anyway, use the --show-old option.
-
-By default, meteor search will not show packages that have no official versions
-(ie: non-pre-release versions) If you want to see those packages anyway, use
-the --show-rcs option.
+By default, this will not show packages that have no official versions
+(for example, those that have only prereleases). It will also hide packages
+that, due to migration issues, are known to be incompatible with Meteor 0.9.0
+and later. You can use the --show-all option to see hidden packages.
 
 Options:
   --maintainer    filter by authorized maintainer
-  --show-old      show packages incompatible with Meteor 0.9.0 and later.
-  --show-rcs      show packages with no non-prerelease versions
+  --show-all      show all matches, even prereleases
+  --ejson         show more detailed output in EJSON format
 
 
 >>> show
 Show detailed information about a release or package.
-Usage: meteor show <name>
-       meteor show <name@version>
+Usage: meteor show <name> [--show-all] [--ejson]
+       meteor show <name@version> [--ejson]
+       meteor show [--ejson]
 
-Show detailed information on a specific package or release, including available
-versions. Use <name>@<version> to get more information about a specific
-version of a package or release.
+Show detailed information on a specific package or release, including
+a list of available versions. This works on packages built locally from source,
+as well as remote packages stored on the server.  For version-specific information,
+such as the list of exports, Meteor will use the local version, if one is available,
+or the latest official version.
 
-By default, meteor show will not show versions that, due to migration issues,
-are known to not be compatible with Meteor 0.9.0 and later. If you
-want to see those versions anyway, use the --show-old option.
+Use <name>@<version> to get more information about a specific version of a
+package or release. Use '<name>@local' to see information from a
+local version. Running from a package source directory with no arguments will
+show information for that package version.
+
+By default, Meteor will not show more than five versions, and will not
+show experimental release versions. Meteor will also hide packages that
+are known to not be compatible with  Meteor 0.9.0 and later. Running with the
+--show-all option will show everything.
 
 Options:
-  --show-old      show versions incompatible with Meteor 0.9.0 and later.
-
+  --ejson         show more detailed output in EJSON format
+  --show-all      show hidden versions of packages and releases
 
 
 >>> admin maintainers
@@ -779,6 +854,7 @@ Valid machine architectures are:
   os.osx.x86_64
   os.linux.x86_64
   os.linux.x86_32
+  os.windows.x86_32
 
 Options:
   --json       return information in JSON form instead of opening a shell

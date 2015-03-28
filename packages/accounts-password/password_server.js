@@ -307,7 +307,8 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
       $set: { 'services.password.bcrypt': hashed },
       $pull: {
         'services.resume.loginTokens': { hashedToken: { $ne: currentToken } }
-      }
+      },
+      $unset: { 'services.password.reset': 1 }
     }
   );
 
@@ -322,17 +323,29 @@ Meteor.methods({changePassword: function (oldPassword, newPassword) {
  * @locus Server
  * @param {String} userId The id of the user to update.
  * @param {String} newPassword A new password for the user.
+ * @param {Object} [options]
+ * @param {Object} options.logout Logout all current connections with this userId (default: true)
  */
-Accounts.setPassword = function (userId, newPlaintextPassword) {
+Accounts.setPassword = function (userId, newPlaintextPassword, options) {
+  options = _.extend({logout: true}, options);
+
   var user = Meteor.users.findOne(userId);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  Meteor.users.update(
-    {_id: user._id},
-    { $unset: {'services.password.srp': 1}, // XXX COMPAT WITH 0.8.1.3
-      $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)} }
-  );
+  var update = {
+    $unset: {
+      'services.password.srp': 1, // XXX COMPAT WITH 0.8.1.3
+      'services.password.reset': 1
+    },
+    $set: {'services.password.bcrypt': hashPassword(newPlaintextPassword)}
+  };
+
+  if (options.logout) {
+    update.$unset['services.resume.loginTokens'] = 1;
+  }
+
+  Meteor.users.update({_id: user._id}, update);
 };
 
 
@@ -390,7 +403,9 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
 
   var options = {
     to: email,
-    from: Accounts.emailTemplates.from,
+    from: Accounts.emailTemplates.resetPassword.from
+      ? Accounts.emailTemplates.resetPassword.from(user)
+      : Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.resetPassword.subject(user),
     text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)
   };
@@ -398,6 +413,10 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
     options.html =
       Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
+
+  if (typeof Accounts.emailTemplates.headers === 'object') {
+    options.headers = Accounts.emailTemplates.headers;
+  }
 
   Email.send(options);
 };
@@ -448,7 +467,9 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
 
   var options = {
     to: email,
-    from: Accounts.emailTemplates.from,
+    from: Accounts.emailTemplates.enrollAccount.from
+      ? Accounts.emailTemplates.enrollAccount.from(user)
+      : Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.enrollAccount.subject(user),
     text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
   };
@@ -456,6 +477,10 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
       Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
+
+  if (typeof Accounts.emailTemplates.headers === 'object') {
+    options.headers = Accounts.emailTemplates.headers;
+  }
 
   Email.send(options);
 };
@@ -584,7 +609,9 @@ Accounts.sendVerificationEmail = function (userId, address) {
 
   var options = {
     to: address,
-    from: Accounts.emailTemplates.from,
+    from: Accounts.emailTemplates.verifyEmail.from
+      ? Accounts.emailTemplates.verifyEmail.from(user)
+      : Accounts.emailTemplates.from,
     subject: Accounts.emailTemplates.verifyEmail.subject(user),
     text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
   };
@@ -592,6 +619,10 @@ Accounts.sendVerificationEmail = function (userId, address) {
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
       Accounts.emailTemplates.verifyEmail.html(user, verifyEmailUrl);
+
+  if (typeof Accounts.emailTemplates.headers === 'object') {
+    options.headers = Accounts.emailTemplates.headers;
+  }
 
   Email.send(options);
 };

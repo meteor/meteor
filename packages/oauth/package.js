@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.1.2"
+  version: "1.1.4"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
   api.use('mongo', 'server');
@@ -20,31 +20,32 @@ Package.on_use(function (api) {
   api.export('OAuth');
   api.export('OAuthTest', 'server', {testOnly: true});
 
-  api.add_files('oauth_client.js', 'web');
-  api.add_files('oauth_browser.js', 'web.browser');
-  api.add_files('oauth_cordova.js', 'web.cordova');
-  api.add_files('oauth_server.js', 'server');
-  api.add_files('pending_credentials.js', 'server');
+  api.addFiles('oauth_client.js', 'web');
+  api.addFiles('oauth_browser.js', 'web.browser');
+  api.addFiles('oauth_cordova.js', 'web.cordova');
+  api.addFiles('oauth_server.js', 'server');
+  api.addFiles('pending_credentials.js', 'server');
 
-  api.add_files('end_of_popup_response.html', 'server', { isAsset: true });
-  api.add_files('end_of_redirect_response.html', 'server', {isAsset: true});
+  api.addFiles('end_of_popup_response.html', 'server', { isAsset: true });
+  api.addFiles('end_of_redirect_response.html', 'server', {isAsset: true});
 
-  api.add_files('oauth_common.js');
+  api.addFiles('oauth_common.js');
 
   // XXX COMPAT WITH 0.8.0
   api.export('Oauth');
-  api.add_files('deprecated.js', ['client', 'server']);
+  api.addFiles('deprecated.js', ['client', 'server']);
 });
 
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('random');
   api.use('service-configuration', 'server');
   api.use('oauth', 'server');
-  api.add_files("oauth_tests.js", 'server');
+  api.addFiles("oauth_tests.js", 'server');
 });
 
 Cordova.depends({
-  'org.apache.cordova.inappbrowser': '0.5.1'
+  'org.apache.cordova.inappbrowser': '0.6.0'
 });
+

@@ -101,6 +101,10 @@ Tinytest.add("check - check", function (test) {
   // Match.Optional means "or undefined" at the top level but "or absent" in
   // objects.
   fails({a: undefined}, {a: Match.Optional(Number)});
+  var F = function () {
+    this.x = 123;
+  };
+  fails(new F, { x: 123 });
 
   matches({}, Match.ObjectWithValues(Number));
   matches({x: 1}, Match.ObjectWithValues(Number));
@@ -189,6 +193,10 @@ Tinytest.add("check - argument checker", function (test) {
     check(x, Number);
     check(_.toArray(arguments).slice(1), [String]);
   }, 1, "foo", "bar", "baz");
+  // NaN values
+  checksAllArguments(function (x) {
+    check(x, Number);
+  }, NaN);
 
   var doesntCheckAllArguments = function (f /*arguments*/) {
     try {

@@ -5,7 +5,7 @@ Template.registerHelper("layoutHidden", function (type) {
 Template.basicOrFullSelect.events({
   "change .basic-or-full": function (event) {
     // XXX might not work in IE9?
-    navigate("#/" + event.target.value + "/");
+    window.location.hash = "#/" + event.target.value + "/";
   }
 });
 
@@ -24,4 +24,3 @@ Template.sidebar.helpers({
     return "#/" + docsType + "/";
   }
 });
-

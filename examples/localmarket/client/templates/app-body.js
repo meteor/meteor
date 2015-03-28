@@ -1,10 +1,10 @@
 var ANIMATION_DURATION = 300;
 var NOTIFICATION_TIMEOUT = 3000;
 var MENU_KEY = 'menuOpen';
-var SHOW_CONNECTION_ISSUE_KEY = 'showConnectionIssue';
+var IGNORE_CONNECTION_ISSUE_KEY = 'ignoreConnectionIssue';
 var CONNECTION_ISSUE_TIMEOUT = 5000;
 
-Session.setDefault(SHOW_CONNECTION_ISSUE_KEY, false);
+Session.setDefault(IGNORE_CONNECTION_ISSUE_KEY, true);
 Session.setDefault(MENU_KEY, false);
 
 // XXX: this work around until IR properly supports this
@@ -19,7 +19,7 @@ Deps.autorun(function() {
   nextInitiator = null;
 });
 
-var notifications = new Meteor.Collection(null);
+var notifications = new Mongo.Collection(null);
 
 Template.appBody.addNotification = function(notification) {
   var id = notifications.insert(notification);
@@ -47,67 +47,67 @@ Meteor.startup(function () {
     // Launch screen handle created in lib/router.js
     dataReadyHold.release();
 
-    // Show the connection error box
-    Session.set(SHOW_CONNECTION_ISSUE_KEY, true);
+    // Allow the connection error box to be shown if there is an issue
+    Session.set(IGNORE_CONNECTION_ISSUE_KEY, false);
   }, CONNECTION_ISSUE_TIMEOUT);
 });
 
-Template.appBody.rendered = function() {
+Template.appBody.onRendered(function() {
   this.find("#content-container")._uihooks = {
     insertElement: function(node, next) {
       // short-circuit and just do it right away
       if (initiator === 'menu')
         return $(node).insertBefore(next);
-      
+
       var start = (initiator === 'back') ? '-100%' : '100%';
-      
+
       $.Velocity.hook(node, 'translateX', start);
       $(node)
-        .insertBefore(next)
-        .velocity({translateX: [0, start]}, {
-          duration: ANIMATION_DURATION,
-          easing: 'ease-in-out',
-          queue: false
-        });
+      .insertBefore(next)
+      .velocity({translateX: [0, start]}, {
+        duration: ANIMATION_DURATION,
+        easing: 'ease-in-out',
+        queue: false
+      });
     },
     removeElement: function(node) {
       if (initiator === 'menu')
         return $(node).remove();
-      
+
       var end = (initiator === 'back') ? '100%' : '-100%';
-      
+
       $(node)
-        .velocity({translateX: end}, {
-          duration: ANIMATION_DURATION,
-          easing: 'ease-in-out',
-          queue: false,
-          complete: function() {
-            $(node).remove();
-          }
-        });
+      .velocity({translateX: end}, {
+        duration: ANIMATION_DURATION,
+        easing: 'ease-in-out',
+        queue: false,
+        complete: function() {
+          $(node).remove();
+        }
+      });
     }
   };
 
   this.find(".notifications")._uihooks = {
     insertElement: function(node, next) {
       $(node)
-        .insertBefore(next)
-        .velocity("slideDown", { 
-          duration: ANIMATION_DURATION, 
-          easing: [0.175, 0.885, 0.335, 1.05]
-        });
+      .insertBefore(next)
+      .velocity("slideDown", { 
+        duration: ANIMATION_DURATION, 
+        easing: [0.175, 0.885, 0.335, 1.05]
+      });
     },
     removeElement: function(node) {
       $(node)
-        .velocity("fadeOut", {
-          duration: ANIMATION_DURATION,
-          complete: function() {
-            $(node).remove();
-          }
-        });
+      .velocity("fadeOut", {
+        duration: ANIMATION_DURATION,
+        complete: function() {
+          $(node).remove();
+        }
+      });
     }
   };
-}
+});
 
 
 Template.appBody.helpers({
@@ -120,11 +120,8 @@ Template.appBody.helpers({
   },
   
   connected: function() {
-    if (Session.get(SHOW_CONNECTION_ISSUE_KEY)) {
-      return Meteor.status().connected;
-    } else {
-      return true;
-    }
+    return Session.get(IGNORE_CONNECTION_ISSUE_KEY) ||
+      Meteor.status().connected;
   },
   
   notifications: function() {

@@ -2,17 +2,17 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.2"
+  version: "1.0.4"
 });
 
-Package.on_use(function (api) {
-  api.add_files("showdown.js");
+Package.onUse(function (api) {
+  api.addFiles("showdown.js");
   api.export('Showdown');
 
   api.use("templating", "client", {weak: true});
-  api.add_files('template-integration.js', 'client');
+  api.addFiles('template-integration.js', 'client');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use("blaze", "client");
 });

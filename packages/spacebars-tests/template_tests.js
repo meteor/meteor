@@ -10,7 +10,19 @@ var nodesToArray = function (array) {
   return _.map(array, _.identity);
 };
 
+var inDocument = function (elem) {
+  while ((elem = elem.parentNode)) {
+    if (elem == document) {
+      return true;
+    }
+  }
+  return false;
+};
+
 var clickIt = function (elem) {
+  if (!inDocument(elem))
+    throw new Error("Can't click on elements without first adding them to the document");
+
   // jQuery's bubbling change event polyfill for IE 8 seems
   // to require that the element in question have focus when
   // it receives a simulated click.
@@ -1252,9 +1264,12 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   }});
 
   var div = renderToDiv(tmpl);
-    subtmplCopy.rendered = function () {
+  subtmplCopy.rendered = function () {
     test.fail("shouldn't re-render when same value returned from helper");
   };
+  subtmplCopy.onRendered(function () {
+    test.fail("shouldn't re-render when same value returned from helper");
+  });
 
   dep.changed();
   Tracker.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
@@ -2386,6 +2401,12 @@ Tinytest.add(
     height.set(3);
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
+
+    // Test that calling Template.parentData() without any arguments is the same as Template.parentData(1)
+
+    height.set(null);
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "baz");
   }
 );
 
@@ -3031,3 +3052,139 @@ Tinytest.add("spacebars-tests - template_tests - old-style helpers", function (t
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), '');
 });
+
+Tinytest.add("spacebars-tests - template_tests - with data remove (#3130)", function (test) {
+  var tmpl = Template.spacebars_template_test_with_data_remove;
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.renderWithData(tmpl, { foo: 3130 }, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<b>some data - 3130</b>');
+  var view = Blaze.getView(div.querySelector('b'));
+  test.isFalse(theWith.isDestroyed);
+  Blaze.remove(view);
+  test.isTrue(theWith.isDestroyed);
+  test.equal(div.innerHTML, "");
+});
+
+Tinytest.add("spacebars-tests - template_tests - inclusion with data remove (#3130)", function (test) {
+  var tmpl = Template.spacebars_template_test_inclusion_with_data_remove;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), '<span><b>stuff</b></span>');
+  var view = Blaze.getView(div.querySelector('b'));
+  var parentView = view.parentView;
+  test.isTrue(parentView.__isTemplateWith);
+  test.isFalse(parentView.isDestroyed);
+  Blaze.remove(view);
+  test.isTrue(parentView.isDestroyed);
+  test.equal(canonicalizeHtml(div.innerHTML), "<span></span>");
+});
+
+Tinytest.add("spacebars-tests - template_tests - custom block helper doesn't break Template.instance() (#3540)", function (test) {
+  var tmpl = Template.spacebars_template_test_template_instance_wrapper_outer;
+
+  tmpl.helpers({
+    thisShouldOutputHello: function () {
+      return Template.instance().customProp;
+    }
+  });
+
+  tmpl.created = function () {
+    this.customProp = "hello";
+  };
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "hello hello");
+});
+
+testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions", [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_template_level_subscriptions;
+    var tmplInstance;
+    var div;
+
+    // Make sure the subscriptions stop when the template is destroyed
+    var stopCallback = expect();
+    var stopCallback2 = expect();
+
+    var futureId = Random.id();
+
+    // Make sure the HTML is what we expect when one subscription is ready
+    var checkOneReady = expect(function () {
+      test.equal(canonicalizeHtml(div.innerHTML), "");
+      Meteor.call('makeTemplateSubReady', futureId);
+    });
+
+    // Make sure the HTML is what we expect when both subscriptions are ready
+    var checkBothReady = expect(function () {
+      test.equal(canonicalizeHtml(div.innerHTML), "ready! true");
+
+      // This will call the template's destroyed callback
+      Blaze.remove(tmplInstance.view);
+    });
+
+    var subscriptionsFinished = 0;
+
+    // Manually use the subscribe ready callback to make sure the template is
+    // doing the right thing
+    var subscribeCallback = expect(function () {
+      subscriptionsFinished++;
+
+      if (subscriptionsFinished === 1) {
+        // We need to use Tracker.afterFlush here and Tracker.flush doesn't work
+        // because we need to wait for the other callback to fire (the one that
+        // makes ready return true) _and_ we need the UI to rerender
+        Tracker.afterFlush(checkOneReady);
+      }
+
+      if (subscriptionsFinished === 2) {
+        Tracker.afterFlush(checkBothReady);
+      }
+    });
+
+    tmpl.onCreated(function () {
+      var subHandle = this.subscribe("templateSub", subscribeCallback);
+      var subHandle2 = this.subscribe(
+        "templateSub", futureId, subscribeCallback);
+
+      subHandle.stop = stopCallback;
+      subHandle2.stop = stopCallback2;
+
+      tmplInstance = this;
+    });
+
+    // Insertion point
+    div = renderToDiv(tmpl);
+
+    // To start, there is no content because the template isn't ready
+    test.equal(canonicalizeHtml(div.innerHTML), "");
+  }
+]);
+
+testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions don't resubscribe unnecessarily", [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_template_level_subs_resubscribe;
+    var subHandle;
+    var trueThenFalse = new ReactiveVar(true);
+
+    tmpl.helpers({
+      ifArg: function () {
+        return trueThenFalse.get();
+      },
+      subscribingHelper1: expect(function () {
+        subHandle = Template.instance().subscribe("templateSub");
+      }),
+      subscribingHelper2: expect(function () {
+        var subHandle2 = Template.instance().subscribe("templateSub");
+        test.isTrue(subHandle.subscriptionId === subHandle2.subscriptionId);
+
+        // Make sure we didn't add two subscription handles to our internal list
+        test.equal(_.keys(Template.instance()._subscriptionHandles).length, 1);
+      })
+    });
+
+    renderToDiv(tmpl);
+    Tracker.flush();
+    trueThenFalse.set(false);
+  }
+]);

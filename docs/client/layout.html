@@ -3,12 +3,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="Description"
   content="Meteor is an open-source JavaScript platform for building top-quality web apps in a fraction of the time, whether you're an expert developer or just getting started."/>
-  <link rel="icon" href="favicon.ico" type="image/x-icon" />
-  <link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+  <link rel="icon" href="/favicon.png" type="image/png" />
 </head>
 
 <body>
   <div class="body {{openSidebar}}">
+    {{> search}}
     <div id="nav">
       {{> sidebar}}
     </div>
@@ -33,7 +33,7 @@
     <h1>
       <a href="{{topLink}}">
         <img src="/logo.png" class="logo" alt="Meteor" />
-        <div>1.0 Documentation</div>
+        <div>{{release}} Documentation</div>
       </a>
     </h1>
 
@@ -46,9 +46,11 @@
 
 <template name="topBar">
   <div class="top-bar">
-    <div class="open-sidebar">&#9776;</div>
+    <div class="hamburger-menu-target open-sidebar">
+      <div class="hamburger-menu"></div>
+    </div>
     <h1>
-      <img src="/logo.png" class="logo" alt="Meteor" /> 1.0 Docs
+      <img src="/logo.png" class="logo" alt="Meteor" /> {{release}} Docs
     </h1>
   </div>
 </template>
