@@ -171,8 +171,14 @@ var BooleanHandler = AttributeHandler.extend({
   }
 });
 
+var origUpdate = AttributeHandler.prototype.update;
 var ValueHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
+    var self = this;
+    var args = arguments;
+
+    origUpdate.apply(self, args);
+
     if (value !== element.value)
       element.value = value;
   }
