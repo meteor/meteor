@@ -24,7 +24,7 @@ Accounts.oauth.registerService = function (name) {
 // contain it.
 // It's worth noting that already logged in users will remain logged in unless
 // you manually expire their sessions.
-Accounts.oauth.deregisterService = function (name) {
+Accounts.oauth.unregisterService = function (name) {
   if (!_.has(services, name))
     throw new Error("Service not found: " + name);
   delete services[name];

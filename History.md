@@ -29,7 +29,7 @@
 
 ## Meteor Accounts
 
-* Add `Accounts.oauth.deregisterService` method, and ensure that users can only
+* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
   log in with currently registered services.  #4014
 
 ## v1.1, 2015-??

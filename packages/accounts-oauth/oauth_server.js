@@ -45,7 +45,7 @@ Accounts.registerLoginHandler(function (options) {
     if (!_.contains(Accounts.oauth.serviceNames(), result.serviceName)) {
       // serviceName was not found in the registered services list.
       // This could happen because the service never registered itself or
-      // deregisterService was called on it.
+      // unregisterService was called on it.
       return { type: "oauth",
                error: new Meteor.Error(
                  Accounts.LoginCancelledError.numericError,
