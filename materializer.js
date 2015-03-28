@@ -7,23 +7,24 @@
 // - `intoArray`: the array of DOM nodes and DOMRanges to push the output
 //   into (required)
 // - `parentView`: the View we are materializing content for (optional)
-// - `_workStack`: optional argument, only used for recursive
+// - `_existingWorkStack`: optional argument, only used for recursive
 //   calls when there is some other _materializeDOM on the call stack.
 //   If _materializeDOM called your function and passed in a workStack,
 //   pass it back when you call _materializeDOM (such as from a workStack
 //   task).
 //
 // Returns `intoArray`, which is especially useful if you pass in `[]`.
-Blaze._materializeDOM = function (htmljs, intoArray, parentView, _workStack) {
+Blaze._materializeDOM = function (htmljs, intoArray, parentView,
+                                  _existingWorkStack) {
   // In order to use fewer stack frames, materializeDOMInner can push
   // tasks onto `workStack`, and they will be popped off
   // and run, last first, after materializeDOMInner returns.  The
   // reason we use a stack instead of a queue is so that we recurse
   // depth-first, doing newer tasks first.
-  var workStack = (_workStack || []);
+  var workStack = (_existingWorkStack || []);
   materializeDOMInner(htmljs, intoArray, parentView, workStack);
 
-  if (! _workStack) {
+  if (! _existingWorkStack) {
     // We created the work stack, so we are responsible for finishing
     // the work.  Call each "task" function, starting with the top
     // of the stack.
