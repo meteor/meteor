@@ -4,6 +4,10 @@
 
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
+* Fix a bug in `observe-sequence`. The bug was causing unnecessary rerenderings
+  in an instance of `#each` block helper followed by false "duplicat ids"
+  warnings. #4049
+
 
 ## Isobuild
 
@@ -27,7 +31,6 @@
 
 * Add `Accounts.oauth.deregisterService` method, and ensure that users can only
   log in with currently registered services.  #4014
-
 
 ## v1.1, 2015-??
 
