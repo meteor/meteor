@@ -10,12 +10,10 @@ var isReady = function () {
     }
     if (typeof Package === 'undefined'
         || Package.spiderable === undefined
-        || Package.spiderable.Spiderable === undefined
-        || !Package.spiderable.Spiderable._initialSubscriptionsStarted) {
+        || Package.spiderable.Spiderable === undefined) {
       return false;
     }
-    Tracker.flush();
-    return DDP._allSubscriptionsReady();
+    return Package.spiderable.Spiderable.isReady();
   });
 };
 
