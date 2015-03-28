@@ -75,6 +75,13 @@ var wrapHelper = function (f, templateFunc) {
   };
 };
 
+Blaze._getTemplate = function (name) {
+  if (name in Blaze.Template) {
+    return Blaze.Template[name];
+  }
+  return null;
+};
+
 // Looks up a name, like "foo" or "..", as a helper of the
 // current template; a global helper; the name of a template;
 // or a property of the data context.  Called on the View of
@@ -94,6 +101,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
   var lookupTemplate = _options && _options.template;
   var helper;
   var boundTmplInstance;
+  var foundTemplate;
 
   if (this.templateInstance) {
     boundTmplInstance = _.bind(this.templateInstance, this);
@@ -110,9 +118,9 @@ Blaze.View.prototype.lookup = function (name, _options) {
   } else if (template &&
              ((helper = Blaze._getTemplateHelper(template, name, templateInstance)) != null)) {
     return wrapHelper(bindDataContext(helper), boundTmplInstance);
-  } else if (lookupTemplate && (name in Blaze.Template) &&
-             (Blaze.Template[name] instanceof Blaze.Template)) {
-    return Blaze.Template[name];
+  } else if (lookupTemplate && (foundTemplate = Blaze._getTemplate(name)) &&
+             (foundTemplate instanceof Blaze.Template)) {
+    return foundTemplate;
   } else if (Blaze._globalHelpers[name] != null) {
     return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
       boundTmplInstance);
