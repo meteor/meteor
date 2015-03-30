@@ -206,6 +206,10 @@ var runCommandOptions = {
     settings: { type: String },
     test: {type: Boolean, default: false},
     'include-tests': {type: String},
+    // Test the app. Similar to test-packages.
+    'test-app': {type: Boolean, default: false},
+    // Sets the path of where the temp app should be created
+    'test-app-path': { type: String },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -271,11 +275,31 @@ function doRunCommand (options) {
   }
 
   options.httpProxyPort = options['http-proxy-port'];
-
-  var projectContext = new projectContextModule.ProjectContext({
+  
+  var projectContextOptions = {
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
-  });
+  }
+  if (options['test-app']) {
+    // Make a temporary app dir (based on the test runner app). This will be
+    // cleaned up on process exit. Using a temporary app dir means that we can
+    // run multiple "test-packages" commands in parallel without them stomping
+    // on each other.
+    var testRunnerAppDir =
+      options['test-app-path'] || files.mkdtemp('meteor-test-run');
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor'),
+      files.pathJoin(testRunnerAppDir, '.meteor'),
+      {ignore: [/^local$/, /^\.id$/]}
+    );
+    projectContextOptions.projectMeteorDir = files.pathJoin(
+      testRunnerAppDir,
+      '.meteor'
+    );
+  }
+  var projectContext = new projectContextModule.ProjectContext(
+    projectContextOptions
+  );
 
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we'll wait to do the full build
@@ -1282,6 +1306,16 @@ main.registerCommand({
 
   return deploy.claim(site);
 });
+
+
+///////////////////////////////////////////////////////////////////////////////
+// test-app
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand(_.extend(
+  { name: 'test-app' },
+  runCommandOptions
+), doRunCommand);
 
 
 ///////////////////////////////////////////////////////////////////////////////
