@@ -344,8 +344,10 @@ CS.Solver.prototype.minimize = function (step, options) {
     var costWeights = step.weights;
     var costTerms = step.terms;
 
+    var optimized = groupMutuallyExclusiveTerms(costTerms, costWeights);
+
     self.setSolution(logic.minimize(
-      self.solution, costTerms, costWeights, {
+      self.solution, optimized.costTerms, optimized.costWeights, {
         progress: function (status, cost) {
           if (self.options.nudge) {
             self.options.nudge();
@@ -353,6 +355,8 @@ CS.Solver.prototype.minimize = function (step, options) {
           if (DEBUG) {
             if (status === 'improving') {
               console.log(cost + " ... trying to improve ...");
+            } else if (status === 'trying') {
+              console.log("... trying " + cost + " ... ");
             }
           }
         },
@@ -374,6 +378,60 @@ CS.Solver.prototype.minimize = function (step, options) {
       }
     }
   });
+};
+
+// This is a correctness-preserving performance optimization.
+//
+// Cost functions often have many terms where both the package name
+// and the weight are the same.  For example, when optimizing major
+// version, we might have `(foo 3.0.0)*2 + (foo 3.0.1)*2 ...`.  It's
+// more efficient to give the solver `((foo 3.0.0) OR (foo 3.0.1) OR
+// ...)*2 + ...`, because it separates the question of whether to use
+// ANY `foo 3.x.x` variable from the question of which one.  Other
+// constraints already enforce the fact that `foo 3.0.0` and `foo 3.0.1`
+// are mutually exclusive variables.  We can use that fact to "relax"
+// that relationship for the purposes of the weighted sum.
+//
+// Note that shuffling up the order of terms unnecessarily seems to
+// impact performance, so it's significant that we group by package
+// first, then weight, rather than vice versa.
+var groupMutuallyExclusiveTerms = function (costTerms, costWeights) {
+  // Return a key for a term, such that terms with the same key are
+  // guaranteed to be mutually exclusive.  We assume each term is
+  // a variable representing either a package or a package version.
+  // We take a prefix of the variable name up to and including the
+  // first space.  So "foo 1.0.0" becomes "foo " and "foo" stays "foo".
+  var getTermKey = function (t) {
+    var firstSpace = t.indexOf(' ');
+    return firstSpace < 0 ? t : t.slice(0, firstSpace+1);
+  };
+
+  // costWeights, as usual, may be a number or an array
+  if (typeof costWeights === 'number') {
+    return {
+      costTerms: _.map(_.groupBy(costTerms, getTermKey), function (group) {
+        return Logic.or(group);
+      }),
+      costWeights: costWeights
+    };
+  } else if (! costTerms.length) {
+    return { costTerms: costTerms, costWeights: costWeights };
+  } else {
+    var weightedTerms = _.zip(costWeights, costTerms);
+    var newWeightedTerms = _.map(_.groupBy(weightedTerms, function (wt) {
+      // construct a string from the weight and term key, for grouping
+      // purposes.  since the weight comes first, there's no ambiguity
+      // and the separator char could be pretty much anything.
+      return wt[0] + ' ' + getTermKey(wt[1]);
+    }), function (wts) {
+      return [wts[0][0], Logic.or(_.pluck(wts, 1))];
+    });
+    return {
+      costTerms: _.pluck(newWeightedTerms, 1),
+      costWeights: _.pluck(newWeightedTerms, 0)
+    };
+  }
+
 };
 
 // Determine the non-zero contributions to the cost function in `step`
