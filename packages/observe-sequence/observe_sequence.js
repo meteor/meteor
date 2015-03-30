@@ -22,7 +22,7 @@ ObserveSequence = {
   //
   // @param sequenceFunc {Function} a reactive function returning a
   //     sequence type. The currently supported sequence types are:
-  //     'null', arrays and cursors.
+  //     Array, Cursor, and null.
   //
   // @param callbacks {Object} similar to a specific subset of
   //     callbacks passed to `cursor.observe`
