@@ -168,6 +168,16 @@ _.extend(ProjectContext.prototype, {
     // Initialized by initializeCatalog.
     self.projectCatalog = null;
     self.localCatalog = null;
+    // Once the catalog is read and the names of the "explicitly
+    // added" packages are determined, they will be listed here.
+    // (See explicitlyAddedLocalPackageDirs.)
+    // "Explicitly added" packages are typically present in non-app
+    // projects, like the one created by `meteor publish`.  This list
+    // is used to avoid pinning such packages to their previous
+    // versions when we run the version solver, which prevents an
+    // error telling you to pass `--allow-incompatible-update` when
+    // you publish your package after bumping the major version.
+    self.explicitlyAddedPackageNames = null;
 
     // Initialized by _resolveConstraints.
     self.packageMap = null;
@@ -408,6 +418,13 @@ _.extend(ProjectContext.prototype, {
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
+    if (self.explicitlyAddedPackageNames.length) {
+      cachedVersions = _.clone(cachedVersions);
+      _.each(self.explicitlyAddedPackageNames, function (p) {
+        delete cachedVersions[p];
+      });
+    }
+
     var resolverRunCount = 0;
 
     // Nothing before this point looked in the official or project catalog!
@@ -530,6 +547,15 @@ _.extend(ProjectContext.prototype, {
             // so that it gets counted included in the projectWatchSet.
             return;
           }
+
+          self.explicitlyAddedPackageNames = [];
+          _.each(self._explicitlyAddedLocalPackageDirs, function (dir) {
+            var localVersionRecord =
+                  self.localCatalog.getVersionBySourceRoot(dir);
+            if (localVersionRecord) {
+              self.explicitlyAddedPackageNames.push(localVersionRecord.packageName);
+            }
+          });
 
           self._completedStage = STAGE.INITIALIZE_CATALOG;
         }
@@ -688,6 +714,7 @@ _.extend(ProjectContext.prototype, {
          (release.current.isCheckout() && self.releaseFile.isCheckout()) ||
          (! release.current.isCheckout() &&
           release.current.name === self.releaseFile.fullReleaseName))) {
+
       self.packageMapFile.write(self.packageMap);
     }
 
