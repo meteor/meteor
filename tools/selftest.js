@@ -1221,6 +1221,12 @@ _.extend(Run.prototype, {
   // partially read line. We could lift these restrictions easily, but
   // there may not be any benefit since the usual way to use this is
   // to call it after expectExit or expectEnd.
+  //
+  // Example:
+  // run = s.run("--help");
+  // run.expectExit(1);  // <<-- improtant to actually run the command
+  // run.forbidErr("unwanted string"); // <<-- important to run **after** the
+  //                                   // command ran the process.
   forbid: markStack(function (pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');

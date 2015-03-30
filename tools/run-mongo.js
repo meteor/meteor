@@ -867,3 +867,4 @@ _.extend(MRp, {
 exports.runMongoShell = runMongoShell;
 exports.findMongoPort = findMongoPort;
 exports.MongoRunner = MongoRunner;
+exports.findMongoAndKillItDead = findMongoAndKillItDead;
