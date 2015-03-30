@@ -1216,12 +1216,14 @@ var binaryWeightedSum = function (varsByWeight) {
       pushToNth(buckets, lowestWeight+1, carry);
     } else {
       // Whether we take variables from the start or end of the
-      // bucket determines the shape of the tree.  Taking them from
-      // the beginning seems faster (one particular case took 10
-      // seconds instead of 22 seconds).
-      var a = bucket.shift();
-      var b = bucket.shift();
-      var c = bucket.shift();
+      // bucket (i.e. `pop` or `shift`) determines the shape of the tree.
+      // Empirically, some logic problems are faster with `shift` (2x or so),
+      // but `pop` gives an order-of-magnitude speed-up on the Meteor Version
+      // Solver "benchmark-tests" suite (Slava's benchmarks based on data from
+      // Rails).  So, `pop` it is.
+      var c = bucket.pop();
+      var b = bucket.pop();
+      var a = bucket.pop();
       var sum = new Logic.FullAdderSum(a, b, c);
       var carry = new Logic.FullAdderCarry(a, b, c);
       bucket.push(sum);
