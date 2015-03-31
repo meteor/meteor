@@ -1245,6 +1245,31 @@ _.extend(PackageSource.prototype, {
         });
         checkForInfiniteRecursion('');
 
+        // Inputs that should return true:
+        // tests/...
+        // .../tests/...
+        var isTestsSubdirectory = function (dir) {
+          return /^tests\//.test(dir) || /\/tests\//.test(dir)
+        }
+
+        // Inputs that should return true:
+        // tests/jasmine
+        // tests/jasmine/...
+        // .../tests/jasmine
+        // .../tests/jasmine/...
+        var isIncludedTestsDirectory = function (dir) {
+          return new RegExp('^tests/' + options.includeTests + '$').test(dir) ||
+            new RegExp('^tests/' + options.includeTests + '/').test(dir) ||
+            new RegExp('/tests/' + options.includeTests + '$').test(dir) ||
+            new RegExp('/tests/' + options.includeTests + '/').test(dir);
+        }
+
+        var shouldWatchSubdirectories = function (dir) {
+          return !options.includeTests ||
+            !isTestsSubdirectory(dir) ||
+            isIncludedTestsDirectory(dir);
+        }
+
         while (!_.isEmpty(sourceDirectories)) {
           var dir = sourceDirectories.shift();
 
@@ -1259,31 +1284,6 @@ _.extend(PackageSource.prototype, {
             include: sourceInclude,
             exclude: sourceExclude
           }));
-
-          // Inputs that should return true:
-          // tests/...
-          // .../tests/...
-          var isTestsSubdirectory = function (dir) {
-            return /^tests\//.test(dir) || /\/tests\//.test(dir)
-          }
-
-          // Inputs that should return true:
-          // tests/jasmine
-          // tests/jasmine/...
-          // .../tests/jasmine
-          // .../tests/jasmine/...
-          var isIncludedTestsDirectory = function (dir) {
-            return new RegExp('^tests/' + options.includeTests + '$').test(dir) ||
-                   new RegExp('^tests/' + options.includeTests + '/').test(dir) ||
-                   new RegExp('/tests/' + options.includeTests + '$').test(dir) ||
-                   new RegExp('/tests/' + options.includeTests + '/').test(dir);
-          }
-
-          var shouldWatchSubdirectories = function (dir) {
-            return !options.includeTests ||
-                   !isTestsSubdirectory(dir) ||
-                   isIncludedTestsDirectory(dir);
-          }
 
           if (shouldWatchSubdirectories(dir)) {
             // Find sub-sourceDirectories. Note that we DON'T need to ignore the
@@ -1319,6 +1319,13 @@ _.extend(PackageSource.prototype, {
 
             if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1)
               sourceObj.fileOptions = {bare: true};
+
+            if (isTestsSubdirectory(relPath)) {
+              if (!sourceObj.fileOptions) {
+                sourceObj.fileOptions = {};
+              }
+              sourceObj.fileOptions.test = true;
+            }
           }
           return sourceObj;
         });
