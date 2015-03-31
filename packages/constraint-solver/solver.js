@@ -193,6 +193,9 @@ CS.Solver.prototype.analyze = function () {
 
   // Array of CS.Solver.Constraint
   analysis.constraints = [];
+  // packages `foo` such that there's a simple top-level equality
+  // constraint about `foo`.  package name -> true.
+  analysis.topLevelEqualityConstrainedPackages = {};
 
   Profile.time("analyze constraints", function () {
     // top-level constraints
@@ -201,6 +204,11 @@ CS.Solver.prototype.analyze = function () {
         analysis.constraints.push(new CS.Solver.Constraint(
           null, c.package, c.versionConstraint,
           "constraint#" + analysis.constraints.length));
+
+        if (c.versionConstraint.alternatives.length === 1 &&
+            c.versionConstraint.alternatives[0].type === 'exactly') {
+          analysis.topLevelEqualityConstrainedPackages[c.package] = true;
+        }
       }
     });
 
@@ -841,20 +849,35 @@ CS.Solver.prototype._getAnswer = function (options) {
 
   if ((! input.allowIncompatibleUpdate) &&
       self.stepsByName['previous_root_incompat'].optimum > 0) {
-    Profile.time("generate error for incompatible root change", function () {
-      _.each(_.keys(
-        self.getStepContributions(self.stepsByName['previous_root_incompat'])),
-             function (pvStr) {
-               var pv = CS.PackageAndVersion.fromString(pvStr);
-               var prevVersion = input.previousSolution[pv.package];
-               self.errors.push(
-                 'Potentially incompatible change required to top-level dependency: ' +
-                   pvStr + ', was ' + prevVersion + '.\n' +
-                   self.listConstraintsOnPackage(pv.package));
-             });
-      self.errors.push('To allow potentially incompatible changes to top-level ' +
-                       'dependencies, you must pass --allow-incompatible-update ' +
-                       'on the command line.');
+    // we have some "incompatible root changes", where we needed to change a
+    // version of a root dependency to a new version incompatible with the
+    // original, but --allow-incompatible-update hasn't been passed in.
+    // these are in the form of PackageAndVersion strings that we need.
+    var incompatRootChanges = _.keys(self.getStepContributions(
+      self.stepsByName['previous_root_incompat']));
+
+    Profile.time("generate errors for incompatible root change", function () {
+      var numActualErrors = 0;
+      _.each(incompatRootChanges, function (pvStr) {
+        var pv = CS.PackageAndVersion.fromString(pvStr);
+        // exclude packages with top-level equality constraints (added by user
+        // or by the tool pinning a version)
+        if (! _.has(analysis.topLevelEqualityConstrainedPackages, pv.package)) {
+          var prevVersion = input.previousSolution[pv.package];
+          self.errors.push(
+            'Potentially incompatible change required to ' +
+              'top-level dependency: ' +
+              pvStr + ', was ' + prevVersion + '.\n' +
+              self.listConstraintsOnPackage(pv.package));
+          numActualErrors++;
+        }
+      });
+      if (numActualErrors) {
+        self.errors.push(
+          'To allow potentially incompatible changes to top-level ' +
+            'dependencies, you must pass --allow-incompatible-update ' +
+            'on the command line.');
+      }
     });
     self.throwAnyErrors();
   }

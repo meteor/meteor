@@ -97,14 +97,8 @@ notified about critical security updates when they happen.
 		<Button Name="ModifyCancelButton" X="-24" Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.ModifyCloseButton)</Button>
 	</Page>
 	<Page Name="Success">
-		<Text Name="SuccessHeader" X="24" Y="30" Width="420" Height="50" FontId="3" DisablePrefix="yes">Meteor is now installed on your computer.</Text>
-		<Hypertext Name="SuccessInfo" X="24" Y="80" Width="-24" Height="160" FontId="1" TabStop="no" HideWhenDisabled="yes">
-To get started, open a new command prompt and type "meteor".
-
-To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
-
-Check out the &lt;a href="https://github.com/meteor/meteor/wiki/Preview-of-Meteor-on-Windows"&gt;Wiki page on GitHub&lt;/a&gt; to learn more about the Meteor Windows preview.
-		</Hypertext>
+		<Text Name="SuccessHeader" X="24" Y="30" Width="420" Height="50" FontId="3" DisablePrefix="yes">[varSuccessHeader]</Text>
+		<Hypertext Name="SuccessInfo" X="24" Y="80" Width="-24" Height="160" FontId="1" TabStop="no" HideWhenDisabled="yes">[varSuccessInfo]</Hypertext>
 
 		<Image X="25" Y="-20" Width="127" Height="30" ImageFile="meteor-logo-sm.jpg"/>
 		<Button Name="SuccessCancelButton" X="-24" Y="-18" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.SuccessCloseButton)</Button>

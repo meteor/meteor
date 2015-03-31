@@ -181,17 +181,25 @@ _.extend(exports.Tropohouse.prototype, {
     if (!files.inCheckout()) {
       // toolsDir is something like:
       // /home/user/.meteor/packages/meteor-tool/.1.0.17.ut200e++os.osx.x86_64+web.browser+web.cordova/meteor-tool-os.osx.x86_64
+      // or /C/Users/user/AppData/Local/Temp/mt-17618kk/tropohouse/packages/meteor-tool/33.0.1/mt-os.windows.x86_32 on Windows
       var toolsDir = files.getCurrentToolsDir();
       // eg, 'meteor-tool'
       currentToolPackageEscaped =
         files.pathBasename(files.pathDirname(files.pathDirname(toolsDir)));
-      // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova'
+      // eg, '.1.0.17-xyz1.2.ut200e++os.osx.x86_64+web.browser+web.cordova' on Unix
+      // or '33.0.1' on Windows
       var toolVersionDir = files.pathBasename(files.pathDirname(toolsDir));
-      var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
-      var pieces = toolVersionWithDotAndRandomBit.split('.');
-      pieces.shift();
-      pieces.pop();
-      currentToolVersion = pieces.join('.');
+
+      if (process.platform !== 'win32') {
+        var toolVersionWithDotAndRandomBit = toolVersionDir.split('++')[0];
+        var pieces = toolVersionWithDotAndRandomBit.split('.');
+        pieces.shift();
+        pieces.pop();
+        currentToolVersion = pieces.join('.');
+      } else {
+        currentToolVersion = toolVersionDir;
+      }
+
       var latestMeteorSymlink = self.latestMeteorSymlink();
       if (utils.startsWith(latestMeteorSymlink,
                            packagesDirectoryName + files.pathSep)) {
@@ -325,7 +333,6 @@ _.extend(exports.Tropohouse.prototype, {
     var self = this;
 
     if (self.platform === "win32") {
-      // XXX wipeAllPackages won't work on Windows until we fix that function
       isopack.saveToPath(self.packagePath(packageName, isopack.version));
     } else {
       // Note: wipeAllPackages depends on this filename structure
@@ -396,7 +403,9 @@ _.extend(exports.Tropohouse.prototype, {
       packageName, version, archesToDownload);
     if (! buildsToDownload) {
       buildmessage.error(
-        "No compatible build found", {tags: { refreshCouldHelp: true }});
+        "No compatible binary build found for this package. " +
+        "Contact the package author and ask them to publish it " +
+        "for your platform.", {tags: { refreshCouldHelp: true }});
       return null;
     }
 

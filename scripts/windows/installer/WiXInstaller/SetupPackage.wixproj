@@ -17,7 +17,7 @@
     <SuppressPdbOutput>True</SuppressPdbOutput>
     <SuppressAllWarnings>True</SuppressAllWarnings>
     <Pedantic>False</Pedantic>
-    <OutputName>Setup_Meteor</OutputName>
+    <OutputName>InstallMeteor</OutputName>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x64' ">
     <OutputPath>bin\$(Configuration)\$(Platform)\</OutputPath>
@@ -25,7 +25,7 @@
     <SuppressPdbOutput>True</SuppressPdbOutput>
     <SuppressAllWarnings>True</SuppressAllWarnings>
     <Pedantic>False</Pedantic>
-    <OutputName>Setup_Meteor</OutputName>
+    <OutputName>InstallMeteor</OutputName>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Meteor_Bundle.wxs" />

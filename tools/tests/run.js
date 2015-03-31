@@ -305,6 +305,11 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000/\n');
+
+  if (process.platform === "win32") {
+    run.match('Type Control-C twice to stop.\n\n');
+  }
+
   run.tellMongo({exit: 23});
   run.read('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});

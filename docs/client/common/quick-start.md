@@ -1,16 +1,21 @@
 {{#template name="quickStart"}}
 ## Quick start!
 
-The following works on all [supported
-platforms](https://github.com/meteor/meteor/wiki/Supported-Platforms).
+Meteor supports [OS X, Windows, and Linux](https://github.com/meteor/meteor/wiki/Supported-Platforms).
 
-Install Meteor:
+On Windows?  [Download the official Meteor installer here](https://install.meteor.com/windows).
+
+On OS X or Linux?  Install the latest official Meteor release from your terminal:
 
 ```bash
-$ curl https://install.meteor.com | /bin/sh
+curl https://install.meteor.com/ | sh
 ```
 
-Create a project:
+The Windows installer supports Windows 7, Windows 8.1, Windows Server
+2008, and Windows Server 2012.  The command line installer supports Mac OS X
+10.7 (Lion) and above, and Linux on x86 and x86_64 architectures.
+
+Once you've installed Meteor, create a project:
 
 ```bash
 $ meteor create myapp

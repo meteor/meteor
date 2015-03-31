@@ -8,6 +8,7 @@ SET DEV_BUNDLE="%TOOLS_DIR%\dev_bundle"
 
 REM Have at it!
 SET NODE_PATH="%DEV_BUNDLE%\lib\node_modules"
-"%DEV_BUNDLE%\bin\node" "%~dp0\fake-mongod.js" %*
-ENDLOCAL
 
+"%DEV_BUNDLE%\bin\node" "%~dp0\fake-mongod.js" %*
+exit /b %errorlevel%
+ENDLOCAL

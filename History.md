@@ -1,15 +1,15 @@
 ## v.NEXT
 
-## Blaze
+### Blaze
 
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
 * Fix a bug in `observe-sequence`. The bug was causing unnecessary rerenderings
-  in an instance of `#each` block helper followed by false "duplicat ids"
+  in an instance of `#each` block helper followed by false "duplicate ids"
   warnings. #4049
 
 
-## Isobuild
+### Isobuild
 
 * Plugins should not process files whose names match the extension exactly (with
   no extra dot).  #3985
@@ -19,7 +19,7 @@
   build time crash.
 
 
-## `meteor` command-line tool
+### `meteor` command-line tool
 
 * Avoid a race condition in `meteor --test` and work with newer versions of the
   Velocity package.  #3957
@@ -35,23 +35,29 @@
   OS X 10.8 and newer).  #3999
 
 
-## Meteor Accounts
+### Meteor Accounts
 
 * Add `Accounts.oauth.unregisterService` method, and ensure that users can only
   log in with currently registered services.  #4014
 
-## v1.1, 2015-??
+
+## v1.1, 2015-Mar-31
 
 ### Windows Support
 
 * The Meteor command line tool now officially supports Windows 7, Windows 8.1,
-  Windows Server 2008, and Windows Server 2012.
+  Windows Server 2008, and Windows Server 2012. It can run from PowerShell or
+  Command Prompt.
 
 * There is a native Windows installer that will be available for download from
   <https://www.meteor.com/install> starting with this release.
 
 * In this release, Meteor on Windows supports all features available on Linux
-  and Mac except building mobile apps with PhoneGap.
+  and Mac except building mobile apps with PhoneGap/Cordova.
+
+* The `meteor admin get-machine` command now supports an additional
+  architecture, `os.windows.x86_32`, which can be used to build binary packages
+  for Windows.
 
 ### Version Solver
 
@@ -107,6 +113,9 @@
 
   - uglify-js: 2.4.17 (from 2.4.13)
 
+Patches contributed by GitHub users hwillson, mitar, murillo128, Primigenus,
+rjakobsson, and tmeasday.
+
 
 ## v1.0.5, 2015-Mar-25
 
@@ -132,7 +141,6 @@
 
 * Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
   packages without colons in their name.  #3951
-
 
 ## v1.0.4, 2015-Mar-17
 

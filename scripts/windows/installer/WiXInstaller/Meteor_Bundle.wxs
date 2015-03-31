@@ -30,6 +30,7 @@
 		<Variable Name="TermsUrl" 			Type="string" Value="$(var.METEOR_TermsUrl)" />
 		<Variable Name="PrivacyUrl" 		Type="string" Value="$(var.METEOR_PrivacyUrl)" />
 
+        <Variable Name="MeteorVersion"  Type="string" Persisted="yes" Value="$(var.METEOR_Version)" Hidden="yes" />
         <Variable Name="PerMachineInstall"  Type="numeric" Persisted="yes" Value="0" />
         <Variable Name="PerUserInstall"     Type="numeric" Persisted="yes" Value="1" />
         <Variable Name="CreateRButton" 		Type="numeric" Persisted="yes" Value="1" />

@@ -203,6 +203,47 @@ var findMongoPort = function (appDir) {
   return pids[0].port;
 };
 
+// XXX actually -- the code below is probably more correct than the code we
+// have above for non-Windows platforms (since that code relies on
+// `findMongoPids`). But changing this a few days before the 1.1 release
+// seemed too bold. But if you're changing code around here, consider using
+// the implementation below on non-Windows platforms as well.
+if (process.platform === 'win32') {
+  // On Windows, finding the Mongo pid, checking it and extracting the port
+  // is often unreliable (XXX reliable in what specific way?). There is an
+  // easier way to find the port of running Mongo: look it up in a METEOR-
+  // PORT file that we generate when running. This may result into problems
+  // where we try to connect to a mongod that is not running, or a wrong
+  // mongod if our current app is not running but there is a left-over file
+  // lying around. This still can be better than always failing to connect.
+  findMongoPort = function (appDir) {
+    var mongoPort = null;
+
+    var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
+    if (files.exists(portFile)) {
+      mongoPort = files.readFile(portFile, 'utf8').replace(/\s/g, '');
+    }
+
+    // Now, check if there really is a Mongo server running on this port.
+    // (The METEOR-PORT file may point to an old Mongo server that's now
+    // stopped)
+    var net = require('net');
+    var mongoTestConnectFuture = new Future;
+    var client = net.connect({port: mongoPort}, function() {
+      // The server is running.
+      client.end();
+      mongoTestConnectFuture.return();
+    });
+    client.on('error', function () {
+      mongoPort = null;
+      mongoTestConnectFuture.return();
+    });
+    mongoTestConnectFuture.wait();
+
+    return mongoPort;
+  }
+}
+
 
 // Kill any mongos running on 'port'. Yields, and returns once they
 // are all dead. Throws an exception on failure.
@@ -844,3 +885,4 @@ _.extend(MRp, {
 exports.runMongoShell = runMongoShell;
 exports.findMongoPort = findMongoPort;
 exports.MongoRunner = MongoRunner;
+exports.findMongoAndKillItDead = findMongoAndKillItDead;

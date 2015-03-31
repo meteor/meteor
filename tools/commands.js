@@ -676,7 +676,10 @@ main.registerCommand({
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: appPath,
     // Write .meteor/versions even if --release is specified.
-    alwaysWritePackageMap: true
+    alwaysWritePackageMap: true,
+    // examples come with a .meteor/versions file, but we shouldn't take it
+    // too seriously
+    allowIncompatibleUpdate: true
   });
 
   main.captureAndExit("=> Errors while creating your project", function () {
@@ -1063,7 +1066,6 @@ main.registerCommand({
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
-
   var findMongoPort = require('./run-mongo.js').findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
@@ -1329,7 +1331,11 @@ main.registerCommand({
     ios: { type: Boolean },
     'ios-device': { type: Boolean },
     android: { type: Boolean },
-    'android-device': { type: Boolean }
+    'android-device': { type: Boolean },
+
+    // This could theoretically be useful/necessary in conjunction with
+    // --test-app-path.
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1389,7 +1395,8 @@ main.registerCommand({
     // packages subdirectory, not the test runner app's empty one.
     projectDirForLocalPackages: options.appDir,
     explicitlyAddedLocalPackageDirs: packagesByPath,
-    serverArchitectures: serverArchitectures
+    serverArchitectures: serverArchitectures,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1603,12 +1610,14 @@ main.registerCommand({
   maxArgs: Infinity,
   hidden: true,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   var projectContextModule = require('./project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    forceRebuildPackages: options.args.length ? options.args : true
+    forceRebuildPackages: options.args.length ? options.args : true,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
 
   main.captureAndExit("=> Errors while rebuilding packages:", function () {
@@ -2039,6 +2048,20 @@ main.registerCommand({
     "ssh", connOptions,
     { stdio: 'inherit' }); // Redirect spawn stdio to process
 
+  sshCommand.on('error', function (err) {
+    if (err.code === "ENOENT") {
+      if (process.platform === "win32") {
+        Console.error("Could not find the `ssh` command in your PATH.",
+          "Please read this page about using the get-machine command on Windows:",
+          Console.url("https://github.com/meteor/meteor/wiki/Accessing-Meteor-provided-build-machines-from-Windows"));
+      } else {
+        Console.error("Could not find the `ssh` command in your PATH.");
+      }
+
+      future.return(1);
+    }
+  });
+
   sshCommand.on('exit', function (code, signal) {
     if (signal) {
       // XXX: We should process the signal in some way, but I am not sure we
@@ -2049,10 +2072,7 @@ main.registerCommand({
     }
   });
   var sshEnd = future.wait();
-  maybeLog("Removing hostkey at " + hostpath);
-  files.unlink(hostpath);
-  maybeLog("Removing sshkey at " + idpath);
-  files.unlink(idpath);
+
   return sshEnd;
 });
 

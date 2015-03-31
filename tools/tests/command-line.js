@@ -2,6 +2,10 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var archinfo = require('../archinfo.js');
 var release = require('../release.js');
+var _ = require('underscore');
+var files = require('../files.js');
+var utils = require('../utils.js');
+var runMongo = require('../run-mongo.js');
 
 selftest.define("argument parsing", function () {
   var s = new Sandbox;
@@ -335,3 +339,166 @@ selftest.define("command-like options", function () {
   run.expectEnd();
   run.expectExit(0);
 });
+
+selftest.define("old cli tests (converted)", function () {
+  var s = new Sandbox;
+  var run;
+
+  run = s.run("--help");
+  run.match("List the packages explicitly used");
+  run = s.run("run", "--help");
+  run.match("Port to listen");
+  run = s.run("test-packages", "--help");
+  run.match("Port to listen");
+  run = s.run("create", "--help");
+  run.match("Make a subdirectory");
+  run = s.run("update", "--help");
+  run.match("Updates the meteor release");
+  run = s.run("add", "--help");
+  run.match("Adds packages");
+  run = s.run("remove", "--help");
+  run.match("Removes a package");
+  run = s.run("list", "--help");
+  run.match("This will not list transitive dependencies");
+  run = s.run("bundle", "--help");
+  run.match("command has been deprecated");
+  run = s.run("build", "--help");
+  run.match("Package this project");
+  run = s.run("mongo", "--help");
+  run.match("Opens a Mongo");
+  run = s.run("deploy", "--help");
+  run.match("Deploys the project");
+  run = s.run("logs", "--help");
+  run.match("Retrieves the");
+  run = s.run("reset", "--help");
+  run.match("Reset the current");
+  run = s.run("test-packages", "--help");
+  run.match("Runs unit tests");
+
+  run = s.run();
+  run.matchErr("run: You're not in");
+  run.expectExit(1);
+  run = s.run("run");
+  run.matchErr("run: You're not in");
+  run.expectExit(1);
+  run = s.run("add", "foo");
+  run.matchErr("add: You're not in");
+  run.expectExit(1);
+  run = s.run("remove", "foo");
+  run.matchErr("remove: You're not in");
+  run.expectExit(1);
+  run = s.run("list");
+  run.matchErr("list: You're not in");
+  run.expectExit(1);
+  run = s.run("bundle", "foo.tar.gz");
+  run.matchErr("bundle: You're not in");
+  run.expectExit(1);
+  run = s.run("build", "foo.tar.gz");
+  run.matchErr("build: You're not in");
+  run.expectExit(1);
+  run = s.run("mongo");
+  run.matchErr("mongo: You're not in");
+  run.expectExit(1);
+  run = s.run("deploy", "automated-test");
+  run.matchErr("deploy: You're not in");
+  run.expectExit(1);
+  run = s.run("reset");
+  run.matchErr("reset: You're not in");
+  run.expectExit(1);
+
+  var dir = "skel with spaces";
+  run = s.run("create", dir);
+  run.expectExit(0);
+
+  selftest.expectTrue(files.stat(files.pathJoin(s.home, dir)).isDirectory());
+  selftest.expectTrue(files.stat(files.pathJoin(s.home, dir, dir + ".js")).isFile());
+
+  s.cd(dir);
+
+  // add/remove/list
+  run = s.run('search', 'backbone');
+  run.match('backbone');
+
+  run = s.run('list');
+  run.expectExit(0);
+  run.forbid('backbone');
+
+  run = s.run('add', 'backbone');
+  run.match('backbone:');
+  run.expectExit(0);
+  run.forbidErr('no such package');
+
+  run = s.run('list');
+  run.match('backbone');
+
+  selftest.expectTrue(files.readFile(files.pathJoin(s.cwd, '.meteor', 'packages'), 'utf8').match(/backbone/));
+
+  // bundle
+  run = s.run('bundle', 'foo.tar.gz');
+  run.expectExit(0);
+
+  // untar the tarball, make sure the tar command succeeds, do it only on linux,
+  // since on windows it requires messing with 7z failures, different behavior
+  // of commands and options, etc
+  if (process.platform !== 'win32') {
+    var tar_tvzf = utils.execFileSync('tar', ['tvzf', files.pathJoin(s.cwd, 'foo.tar.gz')]);
+    selftest.expectTrue(tar_tvzf.success);
+  }
+  files.unlink(files.pathJoin(s.cwd, 'foo.tar.gz'));
+
+  run = s.run('build', '.');
+  run.expectExit(0);
+
+  if (process.platform !== 'win32') {
+    tar_tvzf = utils.execFileSync('tar', ['tvzf', files.pathJoin(s.cwd, dir + '.tar.gz')]);
+    selftest.expectTrue(tar_tvzf.success);
+  }
+  files.unlink(files.pathJoin(s.cwd, dir + '.tar.gz'));
+
+  // test-packages
+  var dieNow = files.pathJoin(s.home, 'local-packages', 'die-now');
+  files.mkdir_p(dieNow);
+  files.writeFile(files.pathJoin(dieNow, 'package.js'), [
+'Package.describe({',
+'  summary: "die-now",',
+'  version: "1.0.0"',
+'});',
+'Package.onTest(function (api) {',
+'  api.use("deps"); // try to use a core package',
+'  api.addFiles(["die-now.js"], "server");',
+'});'
+  ].join('\n'));
+  files.writeFile(files.pathJoin(dieNow, 'die-now.js'), [
+'if (Meteor.isServer) {',
+'  console.log("Dying");',
+'  process.exit(0);',
+'}'
+  ].join('\n'));
+
+  var port = 9100;
+  run = s.run('test-packages', '--once', '-p', port, dieNow);
+  run.match('Dying');
+  // since the server process was killed via 'process.exit', mongo is still running.
+  // the second argument is a dummy since it is hard to know the dbpath of mongo
+  // running for a test-runner
+  runMongo.findMongoAndKillItDead(port + 1, s.cwd);
+  utils.sleepMs(2000);
+
+
+  // settings
+  files.writeFile(files.pathJoin(s.cwd, 'settings.json'), JSON.stringify({ foo: "bar", baz: "quux" }));
+  files.writeFile(files.pathJoin(s.cwd, 'settings.js'), [
+'if (Meteor.isServer) {',
+'  Meteor.startup(function () {',
+'    if (!Meteor.settings) process.exit(1);',
+'    if (Meteor.settings.foo !== "bar") process.exit(1);',
+'    process.exit(0);',
+'  });',
+'}'
+  ].join('\n'));
+
+  run = s.run('-p', port, '--settings', 'settings.json', '--once');
+  run.expectExit(0);
+  files.unlink(files.pathJoin(s.cwd, 'settings.js'));
+});
+

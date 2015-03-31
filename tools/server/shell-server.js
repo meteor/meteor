@@ -6,7 +6,6 @@ var net = require("net");
 var tty = require("tty");
 var vm = require("vm");
 var Fiber = require("fibers");
-var EOL = require("os").EOL;
 var _ = require("underscore");
 var INFO_FILE_MODE = 0600; // Only the owner can read or write.
 var EXITING_MESSAGE =
@@ -267,7 +266,7 @@ Sp.initializeHistory = function initializeHistory() {
   var rli = self.repl.rli;
   var historyFile = getHistoryFile(self.shellDir);
   var historyFd = fs.openSync(historyFile, "a+");
-  var historyLines = fs.readFileSync(historyFile, "utf8").split(EOL);
+  var historyLines = fs.readFileSync(historyFile, "utf8").split("\n");
   var seenLines = Object.create(null);
 
   if (! rli.history) {

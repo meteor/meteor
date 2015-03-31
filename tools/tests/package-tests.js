@@ -738,7 +738,7 @@ selftest.define("add package with no builds", ["net"], function () {
   var run = s.run("add", "glasser:binary-package-with-no-builds");
   run.waitSecs(10);
   run.matchErr("glasser:binary-package-with-no-builds@1.0.0");
-  run.matchErr("No compatible build found");
+  run.matchErr("No compatible binary build found");
   run.expectExit(1);
 });
 
@@ -937,7 +937,7 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
   var run = s.run("show", name + "@" + version);
   run.match("Package: " + name + "@" + version + "\n");
   if (options.directory) {
-    run.match("Directory:\n" + options.directory + "\n");
+    run.match("Directory: " + options.directory + "\n");
   }
   if (options.exports) {
     run.read("Exports: " + options.exports + "\n");
@@ -1012,7 +1012,7 @@ selftest.define("show local package w/o version",  function () {
     // Test that running without any arguments also shows this package.
     var run = s.run("show");
     run.match("Package: " + name + "@local\n");
-    run.match("Directory:\n" + packageDir + "\n");
+    run.match("Directory: " + packageDir + "\n");
     run.expectExit(0);
   });
 
@@ -1088,9 +1088,7 @@ selftest.define("show and search local package",  function () {
   });
 
   var exportStr =
-    "A, B (server), C (web.browser, web.cordova)," +
-    " D (web.browser),\n"  + "         " +
-    "E (web.cordova), G (server, web.cordova)";
+    "A, B (server), C (web.browser, web.cordova), D (web.browser), E (web.cordova), G (server, web.cordova)";
   var description = "Test package.";
 
   testShowPackage(s, name, {
@@ -1141,8 +1139,8 @@ selftest.define("show and search local package",  function () {
     return d.label ? d.name + " (" + d.label + ")" : d.name;
   });
   var impStr =
-    impArr[0] + ", " + impArr[1] + ",\n" + "         " +
-    impArr[2] + ", " + impArr[3] + ",\n" + "         " +
+    impArr[0] + ", " + impArr[1] + ", " +
+    impArr[2] + ", " + impArr[3] + ", " +
     impArr[4] + ", " + impArr[5];
 
   testShowPackage(s, name, {
@@ -1217,8 +1215,8 @@ selftest.define("show and search local overrides server",
     // When we ask for version 1.0.0, we get the local version.
     var addendum =
       "This package version is built locally from source. " +
-      "The same version of this\npackage also exists on the package server. " +
-      "To view its metadata, run\n'meteor show " + fullPackageName +
+      "The same version of this package also exists on the package server. " +
+      "To view its metadata, run 'meteor show " + fullPackageName +
       "@1.0.0' from outside the project.";
     testShowPackageVersion(s, {
       packageName: fullPackageName,
@@ -1238,7 +1236,7 @@ selftest.define("show and search local overrides server",
     // Test that running without any arguments still gives us the local version.
     run = s.run("show");
     run.match("Package: " + fullPackageName + "@1.0.0\n");
-    run.match("Directory:\n" + packageDir + "\n");
+    run.match("Directory: " + packageDir + "\n");
     run.match("Git: " + git + "\n");
     run.read("\n" + summary + "\n");
     run.read("\n" + addendum + "\n");
@@ -1345,7 +1343,7 @@ selftest.define("show server package",
   versions.push({ version: "1.0.1", date: today });
   var exportStr =
     "A, B (server), C (web.browser, web.cordova)," +
-    " D (web.browser),\n"  + "         " +
+    " D (web.browser), " +
     "E (web.cordova), G (server, web.cordova)";
 
   testShowPackage(s, fullPackageName, {
@@ -1450,8 +1448,8 @@ selftest.define("show server package",
     return d.label ? d.name + " (" + d.label + ")" : d.name;
   });
   var impStr =
-    impArr[0] + ", " + impArr[1] + ",\n" + "         " +
-    impArr[2] + ", " + impArr[3] + ",\n" + "         " +
+    impArr[0] + ", " + impArr[1] + ", " +
+    impArr[2] + ", " + impArr[3] + ", " +
     impArr[4] + ", " + impArr[5];
 
   // Implies are also dependencies.
@@ -1540,7 +1538,7 @@ selftest.define("show server package",
   // Neither of these versions should show up.
   var moreAvailable =
     "Pre-release and unmigrated versions of " + fullPackageName +
-    " have been hidden. To see all\n" + "6" +
+    " have been hidden. To see all " + "6" +
     " versions, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     summary: newSummary,
@@ -1612,7 +1610,7 @@ selftest.define("show rc-only package",
   // versions are available.
   var moreAvailable =
     "One pre-release version of " + fullPackageName + " has been hidden. To see " +
-    "the hidden\nversion, run 'meteor show --show-all " + fullPackageName + "'.";
+    "the hidden version, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     maintainers: username,
     addendum: moreAvailable
@@ -1822,7 +1820,7 @@ selftest.define("show release",
   publishRelease(s, releaseConfig);
   var moreVersions =
     "One non-recommended version of " + releaseConfig.track + " has been hidden. " +
-    "To see all 2\n" +
+    "To see all 2 " +
     "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
   testShowRelease(s, {
     name: releaseTrack,
@@ -1890,7 +1888,7 @@ selftest.define("show release",
   });
 
   moreVersions =
-    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 4\n" +
+    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 4 " +
     "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
   testShowRelease(s, {
     name: releaseTrack,
@@ -1960,7 +1958,7 @@ selftest.define("show release w/o recommended versions",
   });
   publishRelease(s, releaseConfig);
   var moreVersions =
-    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 2\n" +
+    "Non-recommended versions of " + releaseConfig.track + " have been hidden. To see all 2 " +
     "versions, run 'meteor show --show-all " + releaseConfig.track + "'.";
 
   testShowRelease(s, {
@@ -2032,7 +2030,7 @@ selftest.define("show package w/many versions",
     // Make sure that the right versions show up when the local package is visible.
     var moreAvailable =
           "Older versions of " + fullPackageName + " have been hidden. To see " +
-          "all 9 versions, run\n'meteor show --show-all " + fullPackageName + "'.";
+          "all 9 versions, run 'meteor show --show-all " + fullPackageName + "'.";
     testShowPackage(s, fullPackageName, {
       maintainers: username,
       summary: "Test package.",
@@ -2054,7 +2052,7 @@ selftest.define("show package w/many versions",
     setVersionAndPublish("2.0.2");
     moreAvailable =
           "Older and pre-release versions of " + fullPackageName +
-          " have been hidden. To see all 11\n" +
+          " have been hidden. To see all 11 " +
           "versions, run 'meteor show --show-all " + fullPackageName + "'.";
     testShowPackage(s, fullPackageName, {
       maintainers: username,
@@ -2076,7 +2074,7 @@ selftest.define("show package w/many versions",
   // Make sure that the right versions show up when the local package is NOT visible.
   var moreAvailable =
      "Older and pre-release versions of " + fullPackageName + " have been hidden. " +
-     "To see all 10\nversions, run 'meteor show --show-all " + fullPackageName + "'.";
+     "To see all 10 versions, run 'meteor show --show-all " + fullPackageName + "'.";
   testShowPackage(s, fullPackageName, {
     maintainers: username,
     summary: "Test package.",
