@@ -714,21 +714,21 @@ CS.Solver.prototype._getAnswer = function (options) {
     return analysis.reachablePackages[p] === true;
   });
 
-  if (! input.allowIncompatibleUpdate) {
-    // make sure packages that are being updated can still count as
-    // a previous_root for the purposes of previous_root_incompat
-    Profile.time("add terms to previous_root_incompat", function () {
-      _.each(toUpdate, function (p) {
-        if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
-          var parts = self.pricer.partitionVersions(
-            self.getVersions(p), input.previousSolution[p]);
-          _.each(parts.older.concat(parts.higherMajor), function (v) {
-            previousRootIncompat.addTerm(pvVar(p, v), 1);
-          });
-        }
-      });
+  // make sure packages that are being updated can still count as
+  // a previous_root for the purposes of previous_root_incompat
+  Profile.time("add terms to previous_root_incompat", function () {
+    _.each(toUpdate, function (p) {
+      if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
+        var parts = self.pricer.partitionVersions(
+          self.getVersions(p), input.previousSolution[p]);
+        _.each(parts.older.concat(parts.higherMajor), function (v) {
+          previousRootIncompat.addTerm(pvVar(p, v), 1);
+        });
+      }
     });
+  });
 
+  if (! input.allowIncompatibleUpdate) {
     // Enforce that we don't make breaking changes to your root dependencies,
     // unless you pass --allow-incompatible-update.  It will actually be enforced
     // farther down, but for now, we want to apply this constraint before handling
