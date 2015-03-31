@@ -1257,14 +1257,32 @@ _.extend(PackageSource.prototype, {
         // tests/jasmine/...
         // .../tests/jasmine
         // .../tests/jasmine/...
+        var includedTestsDirectoryMatchers = (function () {
+          var matchers = [
+            new RegExp('^tests/' + options.includeTests + '/'),
+            new RegExp('/tests/' + options.includeTests + '/')
+          ];
+
+          var partialDir;
+          var dirParts = options.includeTests.split('/');
+          for (var i = 0; i <= dirParts.length; i++) {
+            partialDir = dirParts.slice(0, i).join('/');
+            matchers.push(
+              new RegExp('^tests/' + partialDir + '/$'),
+              new RegExp('/tests/' + partialDir + '/$')
+            );
+          }
+
+          return matchers;
+        })();
+
         var isIncludedTestsDirectory = function (dir) {
-          return new RegExp('^tests/' + options.includeTests + '$').test(dir) ||
-            new RegExp('^tests/' + options.includeTests + '/').test(dir) ||
-            new RegExp('/tests/' + options.includeTests + '$').test(dir) ||
-            new RegExp('/tests/' + options.includeTests + '/').test(dir);
+          return _.any(includedTestsDirectoryMatchers, function (matcher) {
+            return matcher.test(dir);
+          });
         }
 
-        var shouldWatchSubdirectories = function (dir) {
+        var shouldWatchDirectories = function (dir) {
           return !options.includeTests ||
             !isTestsSubdirectory(dir) ||
             isIncludedTestsDirectory(dir);
@@ -1285,18 +1303,21 @@ _.extend(PackageSource.prototype, {
             exclude: sourceExclude
           }));
 
-          if (shouldWatchSubdirectories(dir)) {
-            // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-            // directory names that are only special at the top level.
-            var excludedSubSourceDirectories = [otherUnibuildRegExp].concat(sourceExclude);
-            if (!options.includeTests) {
-              excludedSubSourceDirectories.push(/^tests\/$/);
-            }
-            Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
-              include: [/\/$/],
-              exclude: excludedSubSourceDirectories
-            }));
+          // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+          // directory names that are only special at the top level.
+          var excludedSubSourceDirectories = [otherUnibuildRegExp].concat(sourceExclude);
+          if (!options.includeTests) {
+            excludedSubSourceDirectories.push(/^tests\/$/);
           }
+
+          var subdirectories = readAndWatchDirectory(dir, {
+            include: [/\/$/],
+            exclude: excludedSubSourceDirectories
+          });
+
+          subdirectories = _.filter(subdirectories, shouldWatchDirectories)
+
+          Array.prototype.push.apply(sourceDirectories, subdirectories);
         }
 
         // We've found all the source files. Sort them!
