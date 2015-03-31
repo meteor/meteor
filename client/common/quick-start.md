@@ -5,14 +5,14 @@ Meteor supports [OS X, Windows, and Linux](https://github.com/meteor/meteor/wiki
 
 On Windows?  [Download the official Meteor installer here](https://install.meteor.com/windows).
 
-On OS X or Linux?  Install the latest official Meteor release from your terminal.:
+On OS X or Linux?  Install the latest official Meteor release from your terminal:
 
 ```bash
 curl https://install.meteor.com/ | sh
 ```
 
 The Windows installer supports Windows 7, Windows 8.1, Windows Server
-2008, and Windows Server 2012.  The terminal installer supports Mac OS X
+2008, and Windows Server 2012.  The command line installer supports Mac OS X
 10.7 (Lion) and above, and Linux on x86 and x86_64 architectures.
 
 Once you've installed Meteor, create a project:
