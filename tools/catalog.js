@@ -69,6 +69,10 @@ catalog.refreshOrWarn = function (options) {
     // XXX is throwing correct for SQLite errors too? probably.
 
     Console.warn("Unable to update package catalog (are you offline?)");
+    Console.warn();
+    Console.warn(
+      "If you are using Meteor behind a proxy, set HTTP_PROXY and HTTPS_PROXY environment variables or see this page for more details: ",
+      Console.url("https://github.com/meteor/meteor/wiki/Using-Meteor-behind-a-proxy"));
 
     // XXX: Make this Console.debug(err)
     if (Console.isDebugEnabled()) {
@@ -88,8 +92,13 @@ catalog.refreshOrWarn = function (options) {
 catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
   buildmessage.assertInJob();
 
+  var canRetry = ! (catalog.triedToRefreshRecently ||
+                    catalog.official.offline);
+
   // Run `attempt` in a nested buildmessage context.
-  var messages = buildmessage.capture(attempt);
+  var messages = buildmessage.capture(function () {
+    attempt(canRetry);
+  });
 
   // Did it work? Great.
   if (! messages.hasMessages()) {
@@ -100,9 +109,7 @@ catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
   // related to that, or because we tried to refresh recently, or because we're
   // not allowed to refresh? Fail, merging the result of these errors into the
   // current job.
-  if (! messages.hasMessageWithTag('refreshCouldHelp') ||
-      catalog.triedToRefreshRecently ||
-      catalog.official.offline) {
+  if (! (messages.hasMessageWithTag('refreshCouldHelp') && canRetry)) {
     buildmessage.mergeMessagesIntoCurrentJob(messages);
     return;
   }
@@ -131,7 +138,7 @@ catalog.runAndRetryWithRefreshIfHelpful = function (attempt) {
   }
 
   // Try again, this time directly in the current buildmessage job.
-  attempt();
+  attempt(false); // canRetry = false
 };
 
 // As a work-around for [] !== [], we use a function to check whether values are acceptable

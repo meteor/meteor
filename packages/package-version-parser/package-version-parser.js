@@ -185,6 +185,7 @@ var prereleaseIdentifierToFraction = function (prerelease) {
 };
 
 // Takes in two meteor versions. Returns true if the first one is less than the second.
+// Versions are strings or PackageVersion objects.
 PV.lessThan = function (versionOne, versionTwo) {
   return PV.compare(versionOne, versionTwo) < 0;
 };
@@ -200,9 +201,16 @@ PV.majorVersion = function (versionString) {
 
 // Takes in two meteor versions. Returns 0 if equal, a positive number if v1
 // is greater, a negative number if v2 is greater.
+// Versions are strings or PackageVersion objects.
 PV.compare = function (versionOne, versionTwo) {
-  var v1 = PV.parse(versionOne);
-  var v2 = PV.parse(versionTwo);
+  var v1 = versionOne;
+  if (typeof v1 === 'string') {
+    v1 = PV.parse(v1);
+  }
+  var v2 = versionTwo;
+  if (typeof v2 === 'string') {
+    v2 = PV.parse(v2);
+  }
 
   // If the semver parts are different, use the semver library to compare,
   // ignoring wrap numbers.  (The semver library will ignore the build ID
@@ -377,25 +385,36 @@ PV.validatePackageName = function (packageName, options) {
         "dot, or colon, not " + JSON.stringify(badChar[0]) + ".");
   }
   if (!/[a-z]/.test(packageName)) {
-    throwVersionParserError("Package names must contain a lowercase ASCII letter.");
+    throwVersionParserError("Package name must contain a lowercase ASCII letter: "
+                            + JSON.stringify(packageName));
   }
   if (packageName[0] === '.') {
-    throwVersionParserError("Package names may not begin with a dot.");
+    throwVersionParserError("Package name may not begin with a dot: "
+                            + JSON.stringify(packageName));
   }
   if (packageName.slice(-1) === '.') {
-    throwVersionParserError("Package names may not end with a dot.");
+    throwVersionParserError("Package name may not end with a dot: "
+                            + JSON.stringify(packageName));
+  }
+
+  if (packageName.slice(-1) === '.') {
+    throwVersionParserError("Package names may not end with a dot: " +
+                            JSON.stringify(packageName));
   }
   if (packageName.indexOf('..') >= 0) {
-    throwVersionParserError("Package names may not contain two consecutive dots.");
+    throwVersionParserError("Package names may not contain two consecutive dots: " +
+                            JSON.stringify(packageName));
   }
   if (packageName[0] === '-') {
-    throwVersionParserError("Package names may not begin with a hyphen.");
+    throwVersionParserError("Package names may not begin with a hyphen: " +
+                            JSON.stringify(packageName));
   }
   // (There is already a package ending with a `-` and one with two consecutive `-`
   // in troposphere, though they both look like typos.)
 
   if (packageName[0] === ":" || __.last(packageName) === ":") {
-    throwVersionParserError("Package names may not start or end with a colon.");
+    throwVersionParserError("Package names may not start or end with a colon: " +
+                            JSON.stringify(packageName));
   }
 };
 

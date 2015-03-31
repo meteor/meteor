@@ -829,6 +829,15 @@ _.extend(Console.prototype, {
     self._print(LEVEL_ERROR, message);
   },
 
+  // Prints a special ANSI sequence that "clears" the screen (on most terminal
+  // emulators just scrolls the contents down and resets the position).
+  // References: http://en.wikipedia.org/wiki/ANSI_escape_code#CSI_codes
+  clear: function () {
+    var self = this;
+
+    self.rawInfo('\u001b[2J\u001b[0;0H');
+  },
+
   _prettifyMessage: function (msgArguments) {
     var self = this;
     var parsedArgs = self._parseVariadicInput(msgArguments);
@@ -1131,18 +1140,35 @@ _.extend(Console.prototype, {
     // for example), default to 80 columns.
     var max = self.width();
 
-    // Wrap the text using the npm wordwrap library.
-    var wrappedText = wordwrap(maxIndent, max)(text);
+    var wrappedText;
+    if (process.env.METEOR_NO_WORDWRAP) {
+      var indent =
+        options.indent ? Array(options.indent + 1).join(' ') : "";
+      if (options.bulletPoint) {
+        wrappedText = options.bulletPoint + text;
+      } else {
+        wrappedText = text;
+      }
+      wrappedText = _.map(wrappedText.split('\n'), function (s) {
+        if (s === "")
+          return "";
+        return indent + s;
+      }).join('\n');
 
-    // Insert the start string, if applicable.
-    if (options.bulletPoint) {
-      // Save the initial indent level.
-      var initIndent = options.indent ?
-          wrappedText.substring(0, options.indent) : "";
-      // Add together the initial indent (if any), the bullet point and the
-      // remainder of the message.
-      wrappedText = initIndent + options.bulletPoint +
+    } else {
+      // Wrap the text using the npm wordwrap library.
+      wrappedText = wordwrap(maxIndent, max)(text);
+
+      // Insert the start string, if applicable.
+      if (options.bulletPoint) {
+        // Save the initial indent level.
+        var initIndent = options.indent ?
+              wrappedText.substring(0, options.indent) : "";
+        // Add together the initial indent (if any), the bullet point and the
+        // remainder of the message.
+        wrappedText = initIndent + options.bulletPoint +
           wrappedText.substring(maxIndent);
+      }
     }
 
     // If we have previously replaces any spaces, now is the time to bring them

@@ -2784,6 +2784,34 @@ DocsData = {
     "scope": "static",
     "summary": "Send an HTTP `PUT` request. Equivalent to calling [`HTTP.call`](#http_call) with \"PUT\" as the first argument."
   },
+  "IterationCallback": {
+    "kind": "typedef",
+    "longname": "IterationCallback",
+    "name": "IterationCallback",
+    "params": [
+      {
+        "name": "doc",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "name": "index",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      }
+    ],
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
+  },
   "Match": {
     "kind": "namespace",
     "longname": "Match",
@@ -3205,7 +3233,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure. The callback cannot be called if you are using the &quot;redirect&quot; <code>loginStyle</code>, because the app will have reloaded in the meantime; try using <a href=\"#accounts_onlogin\">client-side login hooks</a> instead.</p>",
         "name": "callback",
         "optional": true,
         "type": {
@@ -4250,6 +4278,15 @@ DocsData = {
     "name": "count",
     "options": [],
     "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      }
+    ],
     "scope": "instance",
     "summary": "Returns the number of documents that match a query."
   },
@@ -4286,7 +4323,7 @@ DocsData = {
         "name": "callback",
         "type": {
           "names": [
-            "function"
+            "IterationCallback"
           ]
         }
       },
@@ -4317,7 +4354,7 @@ DocsData = {
         "name": "callback",
         "type": {
           "names": [
-            "function"
+            "IterationCallback"
           ]
         }
       },
@@ -5418,7 +5455,11 @@ DocsData = {
     "params": [],
     "returns": [
       {
-        "description": "<p>Blaze.TemplateInstance</p>"
+        "type": {
+          "names": [
+            "Blaze.TemplateInstance"
+          ]
+        }
       }
     ],
     "scope": "static",
@@ -5573,6 +5614,27 @@ DocsData = {
     "scope": "instance",
     "summary": "True if this computation has been stopped."
   },
+  "Tracker.ComputationFunction": {
+    "kind": "typedef",
+    "longname": "Tracker.ComputationFunction",
+    "memberof": "Tracker",
+    "name": "ComputationFunction",
+    "params": [
+      {
+        "type": {
+          "names": [
+            "Tracker.Computation"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "type": {
+      "names": [
+        "function"
+      ]
+    }
+  },
   "Tracker.Dependency": {
     "instancename": "dependency",
     "kind": "class",
@@ -5687,14 +5749,33 @@ DocsData = {
     "longname": "Tracker.autorun",
     "memberof": "Tracker",
     "name": "autorun",
-    "options": [],
-    "params": [
+    "options": [
       {
-        "description": "<p>The function to run. It receives one argument: the Computation object that will be returned.</p>",
-        "name": "runFunc",
+        "description": "<p>Optional. The function to run when an error\nhappens in the Computation. The only argument it recieves is the Error\nthrown. Defaults to the error being logged to the console.</p>",
+        "name": "onError",
         "type": {
           "names": [
             "function"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>The function to run. It receives\none argument: the Computation object that will be returned.</p>",
+        "name": "runFunc",
+        "type": {
+          "names": [
+            "Tracker.ComputationFunction"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       }
@@ -5709,7 +5790,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."
+    "summary": "Run a function now and rerun it later whenever its dependencies\nchange. Returns a Computation object that can be used to stop or observe the\nrerunning."
   },
   "Tracker.currentComputation": {
     "kind": "member",

@@ -1,5 +1,81 @@
 ## v.NEXT
 
+## v1.1, 2015-Mar-31
+
+### Windows Support
+
+* The Meteor command line tool now officially supports Windows 7, Windows 8.1,
+  Windows Server 2008, and Windows Server 2012. It can run from PowerShell or
+  Command Prompt.
+
+* There is a native Windows installer that will be available for download from
+  <https://www.meteor.com/install> starting with this release.
+
+* In this release, Meteor on Windows supports all features available on Linux
+  and Mac except building mobile apps with PhoneGap/Cordova.
+
+* The `meteor admin get-machine` command now supports an additional
+  architecture, `os.windows.x86_32`, which can be used to build binary packages
+  for Windows.
+
+### Version Solver
+
+* The code that selects compatible package versions for `meteor update`
+  and resolves conflicts on `meteor add` has been rewritten from the ground up.
+  The core solver algorithm is now based on MiniSat, an open-source SAT solver,
+  improving performance and maintainability.
+
+* Refresh the catalog instead of downgrading packages when the versions in
+  `.meteor/versions` aren't in the cache.  #3653
+
+* Don't downgrade packages listed in `.meteor/packages`, or upgrade to a new
+  major version, unless the new flag `--allow-incompatible-update` is passed
+  as an override.
+
+* Error messages are more detailed when constraints are unsatisfiable.
+
+* Prefer "patched" versions of new indirect dependencies, and take patches
+  to them on `meteor update` (for example, `1.0.1` or `1.0.0_1` over `1.0.0`).
+
+* Version Solver is instrumented for profiling (`METEOR_PROFILE=1` in the
+  environment).
+
+* Setting the `METEOR_PRINT_CONSTRAINT_SOLVER_INPUT` environment variable
+  prints information useful for diagnosing constraint solver bugs.
+
+### Tracker
+
+* Schedule the flush cycle using a better technique than `setTimeout` when
+  available.  #3889
+
+* Yield to the event loop during the flush cycle, unless we're executing a
+  synchronous `Tracker.flush()`.  #3901
+
+* Fix error reporting not being source-mapped properly. #3655
+
+* Introduce a new option for `Tracker.autorun` - `onError`. This callback can be
+  used to handle errors caught in the reactive computations. #3822
+
+### Blaze
+
+* Fix stack overflow from nested templates and helpers by avoiding recursion
+  during rendering.  #3028
+
+### `meteor` command-line tool
+
+* Don't fail if `npm` prints more than 200K.  #3887
+
+
+### Other bug fixes and improvements
+
+* Upgraded dependencies:
+
+  - uglify-js: 2.4.17 (from 2.4.13)
+
+Patches contributed by GitHub users hwillson, mitar, murillo128, Primigenus,
+rjakobsson, and tmeasday.
+
+
 ## v1.0.5, 2015-Mar-25
 
 * This version of Meteor now uses version 2.2 of the Facebook API for
@@ -24,7 +100,6 @@
 
 * Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
   packages without colons in their name.  #3951
-
 
 ## v1.0.4, 2015-Mar-17
 

@@ -181,7 +181,6 @@ var running = false;
 
 var start = function () {
   bucketTimes = {};
-  currentEntry = [];
   running = true;
 };
 

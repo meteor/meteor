@@ -37,41 +37,6 @@ trap 'echo "[...]"; tail -25 $OUTPUT; echo FAILED ; rm -rf "$TEST_TMPDIR" >/dev/
 
 cd "$TEST_TMPDIR"
 
-
-## Begin actual tests
-
-echo "... --help"
-$METEOR --help | grep "List the packages explicitly used" >> $OUTPUT
-$METEOR run --help | grep "Port to listen" >> $OUTPUT
-$METEOR test-packages --help | grep "Port to listen" >> $OUTPUT
-$METEOR create --help | grep "Make a subdirectory" >> $OUTPUT
-$METEOR update --help | grep "Updates the meteor release" >> $OUTPUT
-$METEOR add --help | grep "Adds packages" >> $OUTPUT
-$METEOR remove --help | grep "Removes a package" >> $OUTPUT
-$METEOR list --help | grep "This will not list transitive dependencies" >> $OUTPUT
-$METEOR bundle --help | grep "command has been deprecated" >> $OUTPUT
-$METEOR build --help | grep "Package this project" >> $OUTPUT
-$METEOR mongo --help | grep "Opens a Mongo" >> $OUTPUT
-$METEOR deploy --help | grep "Deploys the project" >> $OUTPUT
-$METEOR logs --help | grep "Retrieves the" >> $OUTPUT
-$METEOR reset --help | grep "Reset the current" >> $OUTPUT
-$METEOR test-packages --help | grep "Runs unit tests" >> $OUTPUT
-
-echo "... not in dir"
-
-$METEOR 2>&1 | grep "run: You're not in" >> $OUTPUT
-$METEOR run 2>&1 | grep "run: You're not in" >> $OUTPUT
-$METEOR add foo 2>&1 | grep "add: You're not in" >> $OUTPUT
-$METEOR remove foo 2>&1 | grep "remove: You're not in" >> $OUTPUT
-$METEOR list 2>&1 | grep "list: You're not in" >> $OUTPUT
-$METEOR bundle foo.tar.gz 2>&1 | grep "bundle: You're not in" >> $OUTPUT
-$METEOR build foo.tar.gz 2>&1 | grep "build: You're not in" >> $OUTPUT
-$METEOR mongo 2>&1 | grep "mongo: You're not in" >> $OUTPUT
-$METEOR deploy automated-test 2>&1 | grep "deploy: You're not in" >> $OUTPUT
-$METEOR reset 2>&1 | grep "reset: You're not in" >> $OUTPUT
-
-echo "... create"
-
 DIR="skel with spaces"
 $METEOR create "$DIR"
 test -d "$DIR"
@@ -79,36 +44,14 @@ test -f "$DIR/$DIR.js"
 
 ## Tests in a meteor project
 cd "$DIR"
-# run in a subdirectory, just to make sure this also works
-cd .meteor
-
-echo "... add/remove/list"
-
-$METEOR search backbone | grep "backbone" >> $OUTPUT
-! $METEOR list 2>&1 | grep "backbone" >> $OUTPUT
-$METEOR add backbone 2>&1 | grep "backbone:" | grep -v "no such package" | >> $OUTPUT
-$METEOR list | grep "backbone" >> $OUTPUT
-grep backbone packages >> $OUTPUT # remember, we are already in .meteor
-$METEOR remove backbone 2>&1 | grep "backbone: removed dependency" >> $OUTPUT
-! $METEOR list 2>&1 | grep "backbone" >> $OUTPUT
-
-echo "... bundle"
-
-$METEOR bundle foo.tar.gz
-tar tvzf foo.tar.gz >>$OUTPUT
-
-rm foo.tar.gz
-
-$METEOR build .
-tar tvzf "$DIR.tar.gz" >>$OUTPUT
-
-cd .. # we're now back to $DIR
-echo "... run"
 
 MONGOMARK='--bind_ip 127.0.0.1 --smallfiles --port 9101'
 # kill any old test meteor
 # there is probably a better way to do this, but it is at least portable across macos and linux
 # (the || true is needed on linux, whose xargs will invoke kill even with no args)
+
+## Begin actual tests
+
 ps ax | grep -e 'meteor.js -p 9100' | grep -v grep | awk '{print $1}' | xargs kill || true
 
 ! $METEOR mongo >> $OUTPUT 2>&1
@@ -154,30 +97,6 @@ sleep 10 # XXX XXX lame. have to wait for inner app to die via keepalive!
 ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
 sleep 2 # need to make sure these kills take effect
 
-echo "... test-packages"
-
-mkdir -p "$TEST_TMPDIR/local-packages/die-now/"
-cat > "$TEST_TMPDIR/local-packages/die-now/package.js" <<EOF
-Package.describe({
-  summary: "die-now",
-  version: "1.0.0"
-});
-Package.onTest(function (api) {
-  api.use('deps'); // try to use a core package
-  api.addFiles(['die-now.js'], 'server');
-});
-EOF
-cat > "$TEST_TMPDIR/local-packages/die-now/die-now.js" <<EOF
-if (Meteor.isServer) {
-  console.log("Dying");
-  process.exit(0);
-}
-EOF
-
-$METEOR test-packages --once -p $PORT $TEST_TMPDIR/local-packages/die-now | grep Dying >> $OUTPUT 2>&1
-# since the server process was killed via 'process.exit', mongo is still running.
-ps ax | grep -e "$MONGOMARK" | grep -v grep | awk '{print $1}' | xargs kill || true
-sleep 2 # make sure mongo is dead
 
 
 $METEOR test-packages -p $PORT >> $OUTPUT 2>&1 &
@@ -210,28 +129,6 @@ grep 'port was closed' error.txt >> $OUTPUT
 # Kill the server by connecting to it.
 $NODE -e 'require("net").connect({host:"127.0.0.1",port:'$PORT'+1},function(){process.exit(0);})'
 
-echo "... settings"
-
-cat > settings.json <<EOF
-{ "foo" : "bar",
-  "baz" : "quux"
-}
-EOF
-
-cat > settings.js <<EOF
-if (Meteor.isServer) {
-  Meteor.startup(function () {
-    if (!Meteor.settings) process.exit(1);
-    if (Meteor.settings.foo !== "bar") process.exit(1);
-    process.exit(0);
-  });
-}
-EOF
-
-$METEOR -p $PORT --settings 'settings.json' --once >> $OUTPUT
-rm settings.js
-
-
 # prepare die.js so that we have a server that loads packages and dies
 cat > die.js <<EOF
 if (Meteor.isServer)
@@ -263,7 +160,7 @@ EOF
 
 ! $METEOR add a-package-named-bar >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
-$METEOR -p $PORT --once 2>&1 | grep "unknown package: a-package-named-bar" >> $OUTPUT
+$METEOR -p $PORT --once 2>&1 | grep "unknown package .* a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
 tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT

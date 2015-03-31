@@ -1,5 +1,6 @@
 @echo off
 
+SETLOCAL
 rem only if we are running from a checkout
 IF EXIST "%~dp0\.git" (
   rem verify that we have 7zip in the path
@@ -37,4 +38,7 @@ IF EXIST "%~dp0\.git" (
 SET NODE_PATH=%~dp0\dev_bundle\lib\node_modules
 
 "%~dp0\dev_bundle\bin\node.exe" "%~dp0\tools\main.js" %*
+ENDLOCAL
+
+EXIT /b %ERRORLEVEL%
 

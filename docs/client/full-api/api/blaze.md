@@ -4,7 +4,8 @@
 
 Blaze is the package that makes reactive templates possible.
 You can use the Blaze API directly in order to render templates programmatically
-and manipulate "Views," the building blocks of reactive templates.
+and manipulate "Views," the building blocks of reactive templates. For more
+information, check out the [Blaze project page](https://www.meteor.com/blaze).
 
 {{> autoApiBox "Blaze.render"}}
 

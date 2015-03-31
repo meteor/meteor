@@ -36,5 +36,5 @@ REM we expect that the meteor-session file is transferred before-hand by
 REM publish-meteor-tool-on-arch.sh
 set METEOR_SESSION_FILE=C:\meteor-session
 REM in case of failure, print the log of the operation
-..\..\meteor.bat publish --existing-version ^> C:\log.txt 2^>^&^1 ^|^| type C:\log.txt
+..\..\meteor.bat publish --existing-version
 

@@ -11,6 +11,9 @@
 #include "precomp.h"
 #include "regutil.h"
 #include "JSON.h"
+#include <windows.h>
+#include <string>
+#include <sstream>
 
 
 static const HRESULT E_WIXSTDBA_CONDITION_FAILED = MAKE_HRESULT(SEVERITY_ERROR, 500, 1);
@@ -26,6 +29,7 @@ static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCH_HIDDEN      = L"LaunchHidden";
 static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCHAFTERINSTALL_TARGET_PATH = L"LaunchAfterInstallTarget";
 static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCHAFTERINSTALL_ARGUMENTS   = L"LaunchAfterInstallArguments";
 
+static const LPCWSTR WIXSTDBA_VARIABLE_VERSION = L"MeteorVersion";
 static const LPCWSTR WIXSTDBA_VARIABLE_PROGRESS_HEADER = L"varProgressHeader";
 static const LPCWSTR WIXSTDBA_VARIABLE_PROGRESS_INFO   = L"varProgressInfo";
 static const LPCWSTR WIXSTDBA_VARIABLE_SUCCESS_HEADER  = L"varSuccessHeader";
@@ -44,6 +48,8 @@ static const LPCWSTR WIXSTDBA_VARIABLE_REG_MAIL     = L"RegisterEmail";
 static const LPCWSTR WIXSTDBA_VARIABLE_REG_USER     = L"RegisterUser";
 static const LPCWSTR WIXSTDBA_VARIABLE_REG_PASS     = L"RegisterPass";
 
+static const LPCWSTR WIXSTDBA_VARIABLE_LOG_USERNAME_OR_MAIL = L"LoginUsernameOrEmail";
+static const LPCWSTR WIXSTDBA_VARIABLE_LOG_PASS             = L"LoginPass";
 
 
 static const LPCWSTR WIXSTDBA_VARIABLE_LOGSPATH        = L"QCInstallLogsPath";
@@ -146,6 +152,12 @@ enum WIXSTDBA_CONTROL
 	WIXSTDBA_CONTROL_REGMAIL_EDIT,
 	WIXSTDBA_CONTROL_REGUSER_EDIT,
 	WIXSTDBA_CONTROL_REGPASS_EDIT,
+
+	WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL,
+	WIXSTDBA_CONTROL_LOGPASS_LABEL,
+	WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT,
+	WIXSTDBA_CONTROL_LOGPASS_EDIT,
+
 	WIXSTDBA_CONTROL_SKIPREG_CHECKBOX,
 
 
@@ -221,6 +233,12 @@ static THEME_ASSIGN_CONTROL_ID vrgInitControls[] = {
 	{WIXSTDBA_CONTROL_REGMAIL_EDIT, L"RegisterEmail"},
 	{WIXSTDBA_CONTROL_REGUSER_EDIT, L"RegisterUser"},
 	{WIXSTDBA_CONTROL_REGPASS_EDIT, L"RegisterPass"},
+
+	{WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, L"LoginUsernameOrEmailLabel"},
+	{WIXSTDBA_CONTROL_LOGPASS_LABEL, L"LoginPassLabel"},
+	{WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, L"LoginUsernameOrEmail"},
+	{WIXSTDBA_CONTROL_LOGPASS_EDIT, L"LoginPass"},
+
 	{WIXSTDBA_CONTROL_SKIPREG_CHECKBOX, L"SkipRegistration"},
 
 	{ WIXSTDBA_CONTROL_REPAIR_BUTTON, L"RepairButton" },
@@ -425,7 +443,10 @@ LExit:
 			hrStatus = EvaluateConditions();
 		}
 
-		SetState(WIXSTDBA_STATE_DETECTED, hrStatus);
+		if (m_command.action == BOOTSTRAPPER_ACTION_UNINSTALL)
+			this->OnPlan(BOOTSTRAPPER_ACTION_UNINSTALL);
+		else
+			this->OnPlan(BOOTSTRAPPER_ACTION_INSTALL);
 
 		// Doing some custom vars handling
 		//if (BalStringVariableExists(WIXSTDBA_VARIABLE_DETECT_POSTGRES))
@@ -913,80 +934,6 @@ LExit:
 		SetProgressState(hrStatus);
 	}
 
-	/*
-	virtual STDMETHODIMP_(int) OnResolveSource(
-		__in_z LPCWSTR wzPackageOrContainerId,
-		__in_z_opt LPCWSTR wzPayloadId,
-		__in_z LPCWSTR wzLocalSource,
-		__in_z_opt LPCWSTR wzDownloadSource
-		)
-	{
-		int nResult = IDERROR; // assume we won't resolve source and that is unexpected.
-
-		LPWSTR sczHTTPDwnUserName = NULL;
-		LPWSTR sczHTTPDwnPassword = NULL;
-		LPWSTR sczHTTPDwnHost = NULL;
-		BOOL bUseHTTPAuth = FALSE;
-		BOOL bUpdateDwnSrc = FALSE;
-
-
-
-		if (BOOTSTRAPPER_DISPLAY_FULL == m_command.display)
-		{
-			if (wzDownloadSource)
-			{
-				if (bUseHTTPAuth || bUpdateDwnSrc)
-				{
-					HRESULT hr = m_pEngine->SetDownloadSource(wzPackageOrContainerId, wzPayloadId, wzDownloadSource, sczHTTPDwnUserName, sczHTTPDwnPassword);
-					nResult = SUCCEEDED(hr) ? IDDOWNLOAD : IDERROR;
-				}
-				else
-					nResult = IDDOWNLOAD;
-			}
-			else // prompt to change the source location.
-			{
-				OPENFILENAMEW ofn = { };
-				WCHAR wzFile[MAX_PATH] = { };
-
-				::StringCchCopyW(wzFile, countof(wzFile), wzLocalSource);
-
-				ofn.lStructSize = sizeof(ofn);
-				ofn.hwndOwner = m_hWnd;
-				ofn.lpstrFile = wzFile;
-				ofn.nMaxFile = countof(wzFile);
-				ofn.lpstrFilter = L"All Files\0*.*\0";
-				ofn.nFilterIndex = 1;
-				ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-				ofn.lpstrTitle = m_pTheme->sczCaption;
-
-				if (::GetOpenFileNameW(&ofn))
-				{
-					HRESULT hr = m_pEngine->SetLocalSource(wzPackageOrContainerId, wzPayloadId, ofn.lpstrFile);
-					nResult = SUCCEEDED(hr) ? IDRETRY : IDERROR;
-				}
-				else
-				{
-					nResult = IDCANCEL;
-				}
-			}
-		}
-		else if (wzDownloadSource)
-		{
-			// If doing a non-interactive install and download source is available, let's try downloading the package silently
-			if (bUseHTTPAuth || bUpdateDwnSrc)
-			{
-				HRESULT hr = m_pEngine->SetDownloadSource(wzPackageOrContainerId, wzPayloadId, wzDownloadSource, sczHTTPDwnUserName, sczHTTPDwnPassword);
-				nResult = SUCCEEDED(hr) ? IDRETRY : IDERROR;
-			}
-			else
-				nResult = IDDOWNLOAD;
-		}
-		// else there's nothing more we can do in non-interactive mode
-
-		return CheckCanceled() ? IDCANCEL : nResult;
-	}
-	*/
-
 	virtual STDMETHODIMP_(int) OnResolveSource(
 		__in_z LPCWSTR wzPackageOrContainerId,
 		__in_z_opt LPCWSTR wzPayloadId,
@@ -1058,8 +1005,10 @@ LExit:
 			::Sleep(250);
 		}
 
-		SetState(WIXSTDBA_STATE_APPLIED, hrStatus);
-		SetTaskbarButtonProgress(100); // show full progress bar, green, yellow, or red
+		if (m_command.action == BOOTSTRAPPER_ACTION_UNINSTALL || BOOTSTRAPPER_DISPLAY_FULL > m_command.display)
+			SetState(WIXSTDBA_STATE_APPLIED, S_OK);
+		else
+			SetState(WIXSTDBA_STATE_SVC_OPTIONS, hrStatus);
 
 		// If we successfully applied an update close the window since the new Bundle should be running now.
 		if (SUCCEEDED(hrStatus) && m_fUpdating)
@@ -1888,11 +1837,11 @@ LExit:
 				return 0;
 
 			case WIXSTDBA_CONTROL_SKIP_BUTTON:
-				pBA->OnClickInstallButton(TRUE);
+ 				pBA->SetState(WIXSTDBA_STATE_APPLIED, S_OK);
 				return 0;
 
 			case WIXSTDBA_CONTROL_INSTALL_BUTTON:
-				pBA->OnClickInstallButton(TRUE);
+				pBA->OnSignIn();
 				return 0;
 
 			case WIXSTDBA_CONTROL_REPAIR_BUTTON:
@@ -2495,8 +2444,21 @@ LExit:
 								ThemeSetTextControl(m_pTheme, pControl->wId, sczText);
 							}
 						}
+
 					}
 				}
+
+				// See #Hidden
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, false);
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_LABEL, false);
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, false);
+				ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_EDIT, false);
+
+				// XXX why do we need this??
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, true);
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_LABEL, true);
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, true);
+				ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_EDIT, true);
 
 				ThemeShowPage(m_pTheme, dwOldPageId, SW_HIDE);
 				ThemeShowPage(m_pTheme, dwNewPageId, SW_SHOW);
@@ -2537,7 +2499,8 @@ LExit:
 		BOOL fClose = FALSE;
 
 		// If we've already succeeded or failed or showing the help page, just close (prompts are annoying if the bootstrapper is done).
-		if (WIXSTDBA_STATE_APPLIED <= m_state || WIXSTDBA_STATE_HELP == m_state)
+		// Also, allow people to simply close out at the signin stage
+		if (WIXSTDBA_STATE_APPLIED <= m_state || WIXSTDBA_STATE_HELP == m_state || WIXSTDBA_STATE_SVC_OPTIONS == m_state)
 		{
 			fClose = TRUE;
 		}
@@ -2848,6 +2811,9 @@ LExit:
 
 		switch (m_state)
 		{
+		// this clause is dead code, since we cancelled the "choose an
+		// install directory" screen. but let's leave it in, in case we
+		// bring it back.
 		case WIXSTDBA_STATE_INSTALLDIR:
 			ThemeGetTextControl(m_pTheme, WIXSTDBA_CONTROL_INSTALLFOLDER_EDITBOX, &sczPath);
 			bOkToContinue = CheckInstallPathIsValid(sczPath);
@@ -2867,7 +2833,7 @@ LExit:
 		default:
 			SavePageSettings(WIXSTDBA_PAGE_INSTALL);
 			m_stateInstallPage = m_state;
-			SetState(WIXSTDBA_STATE_INSTALLDIR, S_OK);
+			SetState(WIXSTDBA_STATE_SVC_OPTIONS, S_OK);
 			break;
 		}
 	}
@@ -2902,7 +2868,6 @@ LExit:
 	//
 	void OnClickSkipRegistrationCheckbox()
 	{
-		BOOL fSkipReg = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_SKIPREG_CHECKBOX);
 		BOOL fSignIn = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_REGSIGNIN_RADIO);
 
 		//if (fSkipReg)
@@ -2912,54 +2877,53 @@ LExit:
 		//	ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_DBPASS_EDIT, L"postgres");
 		//}
 
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_LABEL, !fSkipReg && !fSignIn);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGUSER_LABEL, !fSkipReg);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGPASS_LABEL, !fSkipReg);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_EDIT, !fSkipReg && !fSignIn);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGUSER_EDIT, !fSkipReg);
-		ThemeControlEnable(m_pTheme, WIXSTDBA_CONTROL_REGPASS_EDIT, !fSkipReg);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_LABEL, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGUSER_LABEL, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGPASS_LABEL, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGMAIL_EDIT, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGUSER_EDIT, !fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_REGPASS_EDIT, !fSignIn);
+
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_LABEL, fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_LABEL, fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGUSER_OR_MAIL_EDIT, fSignIn);
+		ThemeShowControl(m_pTheme, WIXSTDBA_CONTROL_LOGPASS_EDIT, fSignIn);
 	}
 
 
 
-	//
-	// OnClickInstallButton - start the install by planning the packages.
-	//
-	void OnClickInstallButton(BOOL bSkipRegistration)
+	void OnSignIn()
 	{
-		m_fOverallInstallationStarted = TRUE;
-		BOOL bOkToContinue = TRUE;
 		BOOL fSignIn = ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_REGSIGNIN_RADIO);
-		BOOL fSkipReg = bSkipRegistration || ThemeIsControlChecked(m_pTheme, WIXSTDBA_CONTROL_SKIPREG_CHECKBOX);
+		BOOL bOkToContinue = false;
 
 		SavePageSettings(WIXSTDBA_PAGE_SVC_OPTIONS);
 
-		if (!fSkipReg)
+		if (fSignIn)
 		{
-			bOkToContinue = CheckNonEmptyField(WIXSTDBA_VARIABLE_REG_USER) && CheckNonEmptyField(WIXSTDBA_VARIABLE_REG_PASS);
-			if (bOkToContinue)
+			LPWSTR wzUserNameOrEmail = NULL;
+			LPWSTR wzUserPass = NULL;
+			if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_LOG_USERNAME_OR_MAIL, &wzUserNameOrEmail)) &&
+				SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_LOG_PASS, &wzUserPass)))
 			{
-				if (fSignIn)
-				{
-					LPWSTR wzUserName = NULL;
-					LPWSTR wzUserPass = NULL;
-					if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_USER, &wzUserName)) &&
-						SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_PASS, &wzUserPass)))
-					{
-						bOkToContinue = REST_ValidateUserLogin(wzUserName, wzUserPass);
-					}
-				}
-				else
-				{
-					bOkToContinue = CheckNonEmptyField(WIXSTDBA_VARIABLE_REG_MAIL) && CheckEmailAddressIsValid(WIXSTDBA_VARIABLE_REG_MAIL);
-					MessageBoxW(m_hWnd, L"Creating a meteor developer account from here it wasn't implemnted yet.", m_pTheme->sczCaption, MB_ICONEXCLAMATION | MB_OK);
-				}
+				bOkToContinue = REST_SignInOrRegister(true, wzUserNameOrEmail, NULL, NULL, wzUserPass);
+			}
+		}
+		else
+		{
+			LPWSTR wzUserName = NULL;
+			LPWSTR wzEmail = NULL;
+			LPWSTR wzUserPass = NULL;
+			if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_MAIL, &wzEmail)) &&
+				SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_USER, &wzUserName)) &&
+				SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_REG_PASS, &wzUserPass)))
+			{
+				bOkToContinue = REST_SignInOrRegister(false, NULL, wzUserName, wzEmail, wzUserPass);
 			}
 		}
 
-		SavePageSettings(WIXSTDBA_PAGE_INSTALL);
-
-		if (bOkToContinue) this->OnPlan(BOOTSTRAPPER_ACTION_INSTALL);
+		if (bOkToContinue)
+			this->SetState(WIXSTDBA_STATE_APPLIED, S_OK);
 	}
 
 
@@ -2984,7 +2948,7 @@ LExit:
 
 		case WIXSTDBA_STATE_SVC_OPTIONS:
 			SavePageSettings(WIXSTDBA_PAGE_SVC_OPTIONS);
-			SetState(WIXSTDBA_STATE_INSTALLDIR, S_OK);
+			SetState(WIXSTDBA_STATE_DETECTED, S_OK);
 			break;
 		}
 
@@ -3514,7 +3478,7 @@ LExit:
 
 		if (m_fTaskbarButtonOK)
 		{
-			hr = m_pTaskbarList->SetProgressValue(m_hWnd, dwOverallPercentage, 100UL);
+//			hr = m_pTaskbarList->SetProgressValue(m_hWnd, dwOverallPercentage, 100UL);
 			BalExitOnFailure1(hr, "Failed to set taskbar button progress to: %d%%.", dwOverallPercentage);
 		}
 
@@ -3633,6 +3597,28 @@ LExit:
 		return hr;
 	}
 
+typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
+
+bool getWindowsUserAgent(std::string &str){
+ OSVERSIONINFOEX osvi;
+ SYSTEM_INFO si;
+ BOOL bOsVersionInfoEx;
+ ZeroMemory(&si, sizeof(SYSTEM_INFO));
+ ZeroMemory(&osvi, sizeof(OSVERSIONINFOEX)); osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
+ bOsVersionInfoEx = GetVersionEx((OSVERSIONINFO*) &osvi); if(bOsVersionInfoEx == 0)
+  return false;
+ PGNSI pGNSI = (PGNSI) GetProcAddress(GetModuleHandle(TEXT("kernel32.dll")), "GetNativeSystemInfo");
+ if(NULL != pGNSI)
+  pGNSI(&si);
+ else GetSystemInfo(&si);
+ std::stringstream os;
+ os << "Installer/wix os/win32 (Windows_NT; ";
+ os << osvi.dwMajorVersion << "." << osvi.dwMinorVersion << "." << osvi.dwBuildNumber;
+ os << "; ia32;)";
+ str = os.str();
+ return true; 
+}
+
 
 	#pragma comment( lib,"Wininet.lib")
 
@@ -3648,35 +3634,42 @@ BOOL POSTRequest(
 	BOOL bRes = false;
 	StrAnsiAlloc(ppszResponseMessage, BUF_LEN);
 
-	LPCSTR header = "Content-Type: application/x-www-form-urlencoded";
+	std::string header = "Content-Type: application/x-www-form-urlencoded";
+
+	std::string userAgent;
+	if (getWindowsUserAgent(userAgent)) {
+		header += std::string("\nUser-Agent: ");
+		header += userAgent;
+	}
+
 	LPCSTR method = "POST";
 	LPCSTR agent  = "Mozilla/4.0 (compatible; MSIE 1.0)";
 
 	HINTERNET internet = InternetOpenA(agent, INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);
 	if(internet != NULL)
 	{
-		HINTERNET connect = InternetConnectA(internet, szHost, INTERNET_DEFAULT_HTTP_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
+		HINTERNET connect = InternetConnectA(internet, szHost, INTERNET_DEFAULT_HTTPS_PORT, NULL, NULL, INTERNET_SERVICE_HTTP, 0, 0);
 		if(connect != NULL)
 		{
 			HINTERNET request = HttpOpenRequestA(connect, method, szApiPath, "HTTP/1.1", NULL, NULL,
-				INTERNET_FLAG_HYPERLINK | INTERNET_FLAG_IGNORE_CERT_CN_INVALID |
-				INTERNET_FLAG_IGNORE_CERT_DATE_INVALID |
+				INTERNET_FLAG_HYPERLINK |
 				INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTP  |
 				INTERNET_FLAG_IGNORE_REDIRECT_TO_HTTPS |
 				INTERNET_FLAG_NO_AUTH |
 				INTERNET_FLAG_NO_CACHE_WRITE |
 				INTERNET_FLAG_NO_UI |
 				INTERNET_FLAG_PRAGMA_NOCACHE |
-				INTERNET_FLAG_RELOAD, NULL);
+				INTERNET_FLAG_RELOAD |
+				INTERNET_FLAG_SECURE, NULL);
 
 			if(request != NULL)
 			{
 				int datalen = 0;
 				if(szFormData != NULL) datalen = strlen(szFormData);
 				int headerlen = 0;
-				if(header != NULL) headerlen = strlen(header);
+				headerlen = (int)header.length();
 
-				if(HttpSendRequestA(request, header, headerlen, szFormData, datalen))
+				if(HttpSendRequestA(request, header.c_str(), headerlen, szFormData, datalen))
 				{
 					// We have succesfully sent the POST request
 					bRes = true;
@@ -3694,7 +3687,7 @@ BOOL POSTRequest(
 					StringCchPrintfA(*ppszResponseMessage, BUF_LEN, holdBuff);
 				}
 				else
-					StringCchPrintfA(*ppszResponseMessage, BUF_LEN, "Failed to send http request.");
+					StringCchPrintfA(*ppszResponseMessage, BUF_LEN, "Failed to send http request. Error code: %d", ::GetLastError());
 
 				InternetCloseHandle(request);
 			}
@@ -3714,24 +3707,76 @@ BOOL POSTRequest(
 }
 
 
-BOOL REST_ValidateUserLogin(
-    __in LPCWSTR wzUserName,
+BOOL REST_SignInOrRegister(
+	__in BOOL    fSignIn,
+    __in LPCWSTR wzSignInUserNameOrEmail,
+    __in LPCWSTR wzRegisterUsername,
+    __in LPCWSTR wzRegisterEmail,
     __in LPCWSTR wzPassword/*,
     __out LPWSTR *ppwzErrorMessage*/
     )
 {
 	BOOL bRes = false;
 	wchar_t wzFormData[BUF_LEN] = L"";
-	StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&password=%s", wzUserName, wzPassword);
 
-	size_t   i;
-    char *pMBFormData = (char *)malloc( BUF_LEN );
-    wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
+	DWORD escapedLength;
 
-    char *pMBDataResponse = NULL;
+	escapedLength = BUF_LEN;
+	wchar_t wzPasswordEscaped[BUF_LEN];
+	UrlEscapeW(wzPassword, wzPasswordEscaped, &escapedLength, NULL);
+
+	if (fSignIn) {
+		// sign in
+		wchar_t *wzUsernameOrEmailKey;
+		if (wcschr(wzSignInUserNameOrEmail, L'@')) {
+			wzUsernameOrEmailKey = L"meteorAccountsLoginInfo[email]";
+		} else {
+			wzUsernameOrEmailKey = L"meteorAccountsLoginInfo[username]";		
+		}
+
+		escapedLength = BUF_LEN;
+		wchar_t wzSignInUserNameOrEmailEscaped[BUF_LEN];
+		UrlEscapeW(wzSignInUserNameOrEmail, wzSignInUserNameOrEmailEscaped, &escapedLength, NULL);
+
+		StringCchPrintfW(wzFormData, BUF_LEN, L"%s=%s&meteorAccountsLoginInfo[password]=%s", wzUsernameOrEmailKey, wzSignInUserNameOrEmailEscaped, wzPasswordEscaped);
+	} else {
+		escapedLength = BUF_LEN;
+		wchar_t wzRegisterUsernameEscaped[BUF_LEN];
+		UrlEscapeW(wzRegisterUsername, wzRegisterUsernameEscaped, &escapedLength, NULL);
+
+		escapedLength = BUF_LEN;
+		wchar_t wzRegisterEmailEscaped[BUF_LEN];
+		UrlEscapeW(wzRegisterEmail, wzRegisterEmailEscaped, &escapedLength, NULL);
+
+		// register
+		StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&email=%s&password=%s", wzRegisterUsernameEscaped, wzRegisterEmailEscaped, wzPasswordEscaped);
+	}
+
+  // agentInfo part of the query
+  wchar_t aiHostW[BUF_LEN] = L"";
+  DWORD aiHostSize = BUF_LEN;
+  GetComputerNameW(aiHostW, &aiHostSize);
+
+  LPWSTR aiAgentVersion = NULL;
+  BalGetStringVariable(WIXSTDBA_VARIABLE_VERSION, &aiAgentVersion);
+
+  wchar_t wzAgentInfo[BUF_LEN] = L"";
+  StringCchPrintfW(wzAgentInfo, BUF_LEN, L"agentInfo[host]=%s&agentInfo[agent]=%s&agentInfo[agentVersion]=%s&agentInfo[arch]=%s",
+      aiHostW, L"Windows Installer", aiAgentVersion, L"os.windows.x64_32");
+  StringCchCatW(wzFormData, BUF_LEN, L"&");
+  StringCchCatW(wzFormData, BUF_LEN, wzAgentInfo);
+
+  size_t i;
+  char *pMBFormData = (char *)malloc( BUF_LEN );
+  wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
+
+  char *pMBDataResponse = NULL;
 	wchar_t wzErrorMessage[BUF_LEN] = L"";
 
-	if (POSTRequest("accounts-stub.meteor.com", "/api/v1/login", pMBFormData, &pMBDataResponse))
+	char *path = fSignIn ? "/api/v1/private/login"
+	                     : "/api/v1/private/register";
+
+	if (POSTRequest("www.meteor.com", path, pMBFormData, &pMBDataResponse))
 	{
 		JSONValue *JSONResponse = JSON::Parse(pMBDataResponse);
 		if (JSONResponse != NULL)
@@ -3747,9 +3792,9 @@ BOOL REST_ValidateUserLogin(
 			else
 			{
 				JSONRoot = JSONResponse->AsObject();
-				if (JSONRoot.find(L"error") != JSONRoot.end() && JSONRoot[L"error"]->IsString())
+				if (JSONRoot.find(L"reason") != JSONRoot.end() && JSONRoot[L"reason"]->IsString())
 				{
-					StringCchPrintfW(wzErrorMessage, BUF_LEN, JSONRoot[L"error"]->AsString().c_str());
+					StringCchPrintfW(wzErrorMessage, BUF_LEN, JSONRoot[L"reason"]->AsString().c_str());
 				}
 				else
 				{
@@ -3759,33 +3804,50 @@ BOOL REST_ValidateUserLogin(
 					LPWSTR wzUMSFileExpPath = NULL;
 					if (SUCCEEDED(BalGetStringVariable(WIXSTDBA_VARIABLE_USERMETEORSESSIONFILE, &wzUMSFilePath)))
 					{
-						if (SUCCEEDED(PathExpand(&wzUMSFileExpPath, wzUMSFilePath, PATH_EXPAND_ENVIRONMENT | PATH_EXPAND_FULLPATH)))
+						if (SUCCEEDED(BalFormatString(wzUMSFilePath, &wzUMSFileExpPath)))
 						{
 							FileEnsureDelete(wzUMSFileExpPath);
 							HANDLE hFile = CreateFileW(wzUMSFileExpPath, GENERIC_ALL, 0, 0L, 1, 0x80L, 0);
 							if (hFile != INVALID_HANDLE_VALUE)
 							{
+								std::string innerSession = pMBDataResponse;
+								// In JS this would be: innerSession.userId = innerSession.id; delete innerSession.id;
+								innerSession.replace(innerSession.find("\"id\":"), strlen("\"id\":"), "\"userId\":");
+								// In JS this would be: innerSession.type = "meteor-account"
+								innerSession.replace(innerSession.find("{"), 1, "{\"type\": \"meteor-account\", ");
+
+								// In JS this would be: sessionData = {sessions: {"www.meteor.com": innerSession}}
+								std::string sessionData = "{\"sessions\": {\"www.meteor.com\": ";
+								sessionData += innerSession;
+								sessionData += "}}";
+
+								char sessionDataStr[BUF_LEN];
+								strcpy_s(sessionDataStr, BUF_LEN, sessionData.c_str());
+
 								DWORD bytesWritten;
-								WriteFile(hFile, pMBDataResponse, strlen(pMBDataResponse), &bytesWritten, NULL);
-								CloseHandle( hFile);
+								WriteFile(hFile, sessionDataStr, strlen(sessionDataStr), &bytesWritten, NULL);
+								CloseHandle(hFile);
 							}
 						}
 					}
 				}
 			}
 		}
-		else
+		else {
 			wcsncat_s(wzErrorMessage, L"Unknown error.", BUF_LEN-1);
+		}
 
 		// Clean up JSON object
 		delete JSONResponse;
+	} else {
+		wcsncat_s(wzErrorMessage, L"Network error contacting the Meteor accounts server. Please retry, or skip this step and complete your registration later.", BUF_LEN-1);
 	}
 
 
 	if (bRes == false)
 	{
 		wchar_t wzMessage[BUF_LEN] = L"";
-		StringCchPrintfW(wzMessage, BUF_LEN, L"Setup was unable to check your account. %s", wzErrorMessage);
+		StringCchPrintfW(wzMessage, BUF_LEN, L"%s", wzErrorMessage);
 		MessageBoxW(m_hWnd, wzMessage, m_pTheme->sczCaption, MB_ICONEXCLAMATION | MB_OK);
 	}
 

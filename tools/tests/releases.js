@@ -197,7 +197,7 @@ selftest.define("checkout", ['checkout'], function () {
 });
 
 
-selftest.define("download release", ['net', 'slow'], function () {
+selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow'], function () {
   var s, run;
 
   if (files.inCheckout())
@@ -211,12 +211,18 @@ selftest.define("download release", ['net', 'slow'], function () {
   // it does is print this string and exit.
   run = s.run("--release", "release-used-to-test-springboarding");
   run.waitSecs(1000);
-  run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
+
+  if (process.platform === "win32") {
+    run.matchErr("Meteor on Windows does not support");
+  } else {
+    run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
+  }
+
   run.expectExit();
 });
 
 
-selftest.define("unknown release", ["yet-unsolved-windows-failure"], function () {
+selftest.define("unknown release", [], function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true }
@@ -231,21 +237,21 @@ selftest.define("unknown release", ["yet-unsolved-windows-failure"], function ()
   run.matchErr("Meteor bad: unknown release");
 
   // METEOR in the release file.
-  s.write('.meteor/release', "METEOR@0.9-bad");
+  s.write('.meteor/release', DEFAULT_RELEASE_TRACK + "@0.9-bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor 0.9-bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9-bad,\s+but/);
 
   // No METEOR in the release file.
   s.write('.meteor/release', "0.9.x-bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor 0.9.x-bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9.x-bad,\s+but/);
 
   // Non-standard track
   s.write('.meteor/release', "FOO@bad");
   run = s.run();
   run.matchErr(
-    "This project says that it uses Meteor release FOO@bad, but");
+    /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+release\s+FOO@bad,\s+but/);
 
 });

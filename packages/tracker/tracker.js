@@ -45,28 +45,42 @@ var _debugFunc = function () {
   //
   // Lazy evaluation because `Meteor` does not exist right away.(??)
   return (typeof Meteor !== "undefined" ? Meteor._debug :
-          ((typeof console !== "undefined") && console.log ?
-           function () { console.log.apply(console, arguments); } :
+          ((typeof console !== "undefined") && console.error ?
+           function () { console.error.apply(console, arguments); } :
            function () {}));
+};
+
+var _maybeSupressMoreLogs = function (messagesLength) {
+  // Sometimes when running tests, we intentionally supress logs on expected
+  // printed errors. Since the current implementation of _throwOrLog can log
+  // multiple separate log messages, supress all of them if at least one supress
+  // is expected as we still want them to count as one.
+  if (typeof Meteor !== "undefined") {
+    if (Meteor._supressed_log_expected()) {
+      Meteor._suppress_log(messagesLength - 1);
+    }
+  }
 };
 
 var _throwOrLog = function (from, e) {
   if (throwFirstError) {
     throw e;
   } else {
-    var messageAndStack;
-    if (e.stack && e.message) {
+    var printArgs = ["Exception from Tracker " + from + " function:"];
+    if (e.stack && e.message && e.name) {
       var idx = e.stack.indexOf(e.message);
-      if (idx >= 0 && idx <= 10) // allow for "Error: " (at least 7)
-        messageAndStack = e.stack; // message is part of e.stack, as in Chrome
-      else
-        messageAndStack = e.message +
-        (e.stack.charAt(0) === '\n' ? '' : '\n') + e.stack; // e.g. Safari
-    } else {
-      messageAndStack = e.stack || e.message;
+      if (idx < 0 || idx > e.name.length + 2) { // check for "Error: "
+        // message is not part of the stack
+        var message = e.name + ": " + e.message;
+        printArgs.push(message);
+      }
     }
-    _debugFunc()("Exception from Tracker " + from + " function:",
-                 messageAndStack);
+    printArgs.push(e.stack);
+    _maybeSupressMoreLogs(printArgs.length);
+
+    for (var i = 0; i < printArgs.length; i++) {
+      _debugFunc()(printArgs[i]);
+    }
   }
 };
 
@@ -111,7 +125,11 @@ var afterFlushCallbacks = [];
 
 var requireFlush = function () {
   if (! willFlush) {
-    setTimeout(Tracker.flush, 0);
+    // We want this code to work without Meteor, see debugFunc above
+    if (typeof Meteor !== "undefined")
+      Meteor._setImmediate(Tracker._runFlush);
+    else
+      setTimeout(Tracker._runFlush, 0);
     willFlush = true;
   }
 };
@@ -132,7 +150,7 @@ var constructingComputation = false;
  * computation.
  * @instancename computation
  */
-Tracker.Computation = function (f, parent) {
+Tracker.Computation = function (f, parent, onError) {
   if (! constructingComputation)
     throw new Error(
       "Tracker.Computation constructor is private; use Tracker.autorun");
@@ -181,6 +199,7 @@ Tracker.Computation = function (f, parent) {
   // to constrain the order that computations are processed
   self._parent = parent;
   self._func = f;
+  self._onError = onError;
   self._recomputing = false;
 
   // Register the computation within the global Tracker.
@@ -279,23 +298,26 @@ Tracker.Computation.prototype._compute = function () {
   }
 };
 
+Tracker.Computation.prototype._needsRecompute = function () {
+  var self = this;
+  return self.invalidated && ! self.stopped;
+};
+
 Tracker.Computation.prototype._recompute = function () {
   var self = this;
 
   self._recomputing = true;
   try {
-    while (self.invalidated && ! self.stopped) {
+    if (self._needsRecompute()) {
       try {
         self._compute();
       } catch (e) {
-        _throwOrLog("recompute", e);
+        if (self._onError) {
+          self._onError(e);
+        } else {
+          _throwOrLog("recompute", e);
+        }
       }
-      // If _compute() invalidated us, we run again immediately.
-      // A computation that invalidates itself indefinitely is an
-      // infinite loop, of course.
-      //
-      // We could put an iteration counter here and catch run-away
-      // loops.
     }
   } finally {
     self._recomputing = false;
@@ -386,7 +408,15 @@ Tracker.Dependency.prototype.hasDependents = function () {
  * @summary Process all reactive updates immediately and ensure that all invalidated computations are rerun.
  * @locus Client
  */
-Tracker.flush = function (_opts) {
+Tracker.flush = function (options) {
+  Tracker._runFlush({ finishSynchronously: true,
+                      throwFirstError: options && options._throwFirstError });
+};
+
+// Run all pending computations and afterFlush callbacks.  If we were not called
+// directly via Tracker.flush, this may return before they're all done to allow
+// the event loop to run a little before continuing.
+Tracker._runFlush = function (options) {
   // XXX What part of the comment below is still true? (We no longer
   // have Spark)
   //
@@ -404,10 +434,13 @@ Tracker.flush = function (_opts) {
   if (inCompute)
     throw new Error("Can't flush inside Tracker.autorun");
 
+  options = options || {};
+
   inFlush = true;
   willFlush = true;
-  throwFirstError = !! (_opts && _opts._throwFirstError);
+  throwFirstError = !! options.throwFirstError;
 
+  var recomputedCount = 0;
   var finishedTry = false;
   try {
     while (pendingComputations.length ||
@@ -417,6 +450,14 @@ Tracker.flush = function (_opts) {
       while (pendingComputations.length) {
         var comp = pendingComputations.shift();
         comp._recompute();
+        if (comp._needsRecompute()) {
+          pendingComputations.unshift(comp);
+        }
+
+        if (! options.finishSynchronously && ++recomputedCount > 1000) {
+          finishedTry = true;
+          return;
+        }
       }
 
       if (afterFlushCallbacks.length) {
@@ -433,12 +474,25 @@ Tracker.flush = function (_opts) {
     finishedTry = true;
   } finally {
     if (! finishedTry) {
-      // we're erroring
+      // we're erroring due to throwFirstError being true.
       inFlush = false; // needed before calling `Tracker.flush()` again
-      Tracker.flush({_throwFirstError: false}); // finish flushing
+      // finish flushing
+      Tracker._runFlush({
+        finishSynchronously: options.finishSynchronously,
+        throwFirstError: false
+      });
     }
     willFlush = false;
     inFlush = false;
+    if (pendingComputations.length || afterFlushCallbacks.length) {
+      // We're yielding because we ran a bunch of computations and we aren't
+      // required to finish synchronously, so we'd like to give the event loop a
+      // chance. We should flush again soon.
+      if (options.finishSynchronously) {
+        throw new Error("still have more to do?");  // shouldn't happen
+      }
+      setTimeout(requireFlush, 10);
+    }
   }
 };
 
@@ -453,17 +507,31 @@ Tracker.flush = function (_opts) {
 // so that it is stopped if the current computation is invalidated.
 
 /**
- * @summary Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning.
+ * @callback Tracker.ComputationFunction
+ * @param {Tracker.Computation}
+ */
+/**
+ * @summary Run a function now and rerun it later whenever its dependencies
+ * change. Returns a Computation object that can be used to stop or observe the
+ * rerunning.
  * @locus Client
- * @param {Function} runFunc The function to run. It receives one argument: the Computation object that will be returned.
+ * @param {Tracker.ComputationFunction} runFunc The function to run. It receives
+ * one argument: the Computation object that will be returned.
+ * @param {Object} [options]
+ * @param {Function} options.onError Optional. The function to run when an error
+ * happens in the Computation. The only argument it recieves is the Error
+ * thrown. Defaults to the error being logged to the console.
  * @returns {Tracker.Computation}
  */
-Tracker.autorun = function (f) {
+Tracker.autorun = function (f, options) {
   if (typeof f !== 'function')
     throw new Error('Tracker.autorun requires a function argument');
 
+  options = options || {};
+
   constructingComputation = true;
-  var c = new Tracker.Computation(f, Tracker.currentComputation);
+  var c = new Tracker.Computation(
+    f, Tracker.currentComputation, options.onError);
 
   if (Tracker.active)
     Tracker.onInvalidate(function () {

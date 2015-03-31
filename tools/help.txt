@@ -57,6 +57,10 @@ Options:
   --settings       Set optional data for Meteor.settings on the server.
   --release        Specify the release of Meteor to use.
   --verbose        Print all output from builds logs.
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
   --test           [Experimental] Run Velocity tests using phantomjs and exit.
 
 >>> debug
@@ -141,8 +145,12 @@ options. ('meteor update foo:awesome').
 
 Options:
   --packages-only  Update the package versions only. Do not update the release.
-  --patch  Update the release to a patch release only.
-  --release  Update to a specific release of meteor.
+  --patch          Update the release to a patch release only.
+  --release        Update to a specific release of meteor.
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
 
 
 >>> admin run-upgrader
@@ -161,6 +169,12 @@ Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
 the meteor search command.
 
+Options:
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
+
 
 >>> remove
 Remove a package from this project.
@@ -169,6 +183,12 @@ Usage: meteor remove <package> [package..]
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
 'meteor list'.
+
+Options:
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                   downgraded to versions that are potentially incompatible with
+                   the current versions, if required to satisfy all package
+                   version constraints.
 
 
 >>> list
@@ -276,6 +296,10 @@ Options:
                       developer machine's architecture. Valid architectures
                       include os.osx.x86_64, os.linux.x86_64, and
                       os.linux.x86_32.
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                      downgraded to versions that are potentially incompatible
+                      with the current versions, if required to satisfy all
+                      package version constraints.
 
 
 >>> shell
@@ -359,6 +383,10 @@ Options:
   --delete, -D  permanently delete this deployment
   --debug       deploy in debug mode (don't minify, etc)
   --settings    set optional data for Meteor.settings
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                downgraded to versions that are potentially incompatible with
+                the current versions, if required to satisfy all package version
+                constraints.
 
 
 >>> logs
@@ -626,6 +654,10 @@ Pass --create to create a new package.
 Options:
   --create   publish a new package
   --update   changed metadata of a previously published version
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+             downgraded to versions that are potentially incompatible with the
+             current versions, if required to satisfy all package version
+             constraints.
 
 
 >>> publish-for-arch
@@ -822,6 +854,7 @@ Valid machine architectures are:
   os.osx.x86_64
   os.linux.x86_64
   os.linux.x86_32
+  os.windows.x86_32
 
 Options:
   --json       return information in JSON form instead of opening a shell

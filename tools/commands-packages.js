@@ -113,14 +113,18 @@ var formatArchitecture = function (s) {
 // whenever necessary!
 main.registerCommand({
   name: '--get-ready',
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
+  options: {
+    'allow-incompatible-update': { type: Boolean }
+  }
 }, function (options) {
   // If we're in an app, make sure that we can build the current app. Otherwise
   // just make sure that we can build some fake app.
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir || files.mkdtemp('meteor-get-ready'),
     neverWriteProjectConstraintsFile: true,
-    neverWritePackageMap: true
+    neverWritePackageMap: true,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.initializeCatalog();
@@ -158,10 +162,14 @@ main.registerCommand({
 main.registerCommand({
   name: '--prepare-app',
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  options: {
+    'allow-incompatible-update': { type: Boolean }
+  }
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
@@ -253,7 +261,8 @@ main.registerCommand({
   requiresPackage: true,
   // We optimize the workflow by using up-to-date package data to weed out
   // obviously incorrect submissions before they ever hit the wire.
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   if (options.create && options['existing-version']) {
     // Make up your mind!
@@ -290,7 +299,8 @@ main.registerCommand({
       alwaysWritePackageMap: true,
       // When we publish, we should always include web.cordova unibuilds, even
       // though this temporary directory does not have any cordova platforms
-      forceIncludeCordovaUnibuild: true
+      forceIncludeCordovaUnibuild: true,
+      allowIncompatibleUpdate: options['allow-incompatible-update']
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
@@ -303,7 +313,8 @@ main.registerCommand({
       neverWritePackageMap: true,
       // When we publish, we should always include web.cordova unibuilds, even
       // if this project does not have any cordova platforms
-      forceIncludeCordovaUnibuild: true
+      forceIncludeCordovaUnibuild: true,
+      allowIncompatibleUpdate: options['allow-incompatible-update']
     });
   }
 
@@ -449,13 +460,15 @@ main.registerCommand({
     // Normal publish flow. Tell the user nicely.
     Console.warn();
     Console.warn(
-      "This package contains binary code and must be built on",
-      "multiple architectures.");
+      "You're not done publishing yet! This package contains binary code and",
+      "must be built on all of Meteor's architectures, including this",
+      "machine's architecture.");
     Console.warn();
     Console.info(
       "You can access Meteor provided build machines, pre-configured to",
       "support older versions of MacOS and Linux, by running:");
-    _.each(["os.osx.x86_64", "os.linux.x86_64", "os.linux.x86_32"],
+    _.each(["os.osx.x86_64", "os.linux.x86_64",
+            "os.linux.x86_32", "os.windows.x86_32"],
       function (a) {
         Console.info(
           Console.command("meteor admin get-machine " + a),
@@ -491,7 +504,11 @@ main.registerCommand({
   name: 'publish-for-arch',
   minArgs: 1,
   maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
+  catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false }),
+  // in theory, this option shouldn't be necessary, because when you run
+  // publish-for-arch you want to reproduce the exact same setup as when
+  // you ran 'publish', but support the option in case it comes up.
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   // argument processing
   var all = options.args[0].split('@');
@@ -588,7 +605,7 @@ main.registerCommand({
     });
   });
 
-  var sourcePath = files.mkdtemp(name + '-' + versionString + '-source-');
+  var sourcePath = files.mkdtemp('package-source');
   // XXX check tarballHash!
   files.extractTarGz(sourceTarball, sourcePath);
 
@@ -620,7 +637,8 @@ main.registerCommand({
     explicitlyAddedLocalPackageDirs: [packageDir],
     // When we publish, we should always include web.cordova unibuilds, even
     // though this temporary directory does not have any cordova platforms
-    forceIncludeCordovaUnibuild: true
+    forceIncludeCordovaUnibuild: true,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   // Just get up to initializing the catalog. We're going to mutate the
   // constraints file a bit before we prepare the build.
@@ -667,8 +685,8 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   options: {
-    'create-track': { type: Boolean, required: false },
-    'from-checkout': { type: Boolean, required: false }
+    'create-track': { type: Boolean },
+    'from-checkout': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })
 }, function (options) {
@@ -1077,11 +1095,13 @@ main.registerCommand({
   name: 'list',
   requiresApp: true,
   options: {
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
@@ -1292,7 +1312,8 @@ var maybeUpdateRelease = function (options) {
   // do, that's great!)
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    alwaysWritePackageMap: true
+    alwaysWritePackageMap: true,
+    allowIncompatibleUpdate: true // disregard `.meteor/versions` if necessary
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
@@ -1471,8 +1492,9 @@ var maybeUpdateRelease = function (options) {
 main.registerCommand({
   name: 'update',
   options: {
-    patch: { type: Boolean, required: false },
-    "packages-only": { type: Boolean, required: false }
+    patch: { type: Boolean },
+    "packages-only": { type: Boolean },
+    "allow-incompatible-update": { type: Boolean }
   },
   // We have to be able to work without a release, since 'meteor
   // update' is how you fix apps that don't have a release.
@@ -1516,7 +1538,8 @@ main.registerCommand({
   // we're done even if we're not on the matching release!)
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    alwaysWritePackageMap: true
+    alwaysWritePackageMap: true,
+    allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.readProjectMetadata();
@@ -1526,10 +1549,14 @@ main.registerCommand({
   // update all direct dependencies. If a specific list of packages has been
   // specified, then only upgrade those.
   var upgradePackageNames = [];
+  // If no packages have been specified (`meteor update` with no positional
+  // args), take patches to indirect dependencies.
+  var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
       upgradePackageNames.push(constraint.package);
     });
+    upgradeIndirectDepPatchVersions = true;
   } else {
     upgradePackageNames = options.args;
   }
@@ -1551,7 +1578,8 @@ main.registerCommand({
   // Try to resolve constraints, allowing the given packages to be upgraded.
   projectContext.reset({
     releaseForConstraints: releaseRecordForConstraints,
-    upgradePackageNames: upgradePackageNames
+    upgradePackageNames: upgradePackageNames,
+    upgradeIndirectDepPatchVersions: upgradeIndirectDepPatchVersions
   });
   main.captureAndExit(
     "=> Errors while upgrading packages:", "upgrading packages", function () {
@@ -1595,10 +1623,12 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  'allow-incompatible-update': { type: Boolean }
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
@@ -1627,6 +1657,19 @@ main.registerCommand({
     showBanner: true,
     printErrors: true
   });
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// admin wipe-all-packages
+///////////////////////////////////////////////////////////////////////////////
+
+// For testing wipeAllPackages during development
+main.registerCommand({
+  name: 'admin wipe-all-packages',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  tropohouse.default.wipeAllPackages();
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1682,13 +1725,17 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'add',
+  options: {
+    "allow-incompatible-update": { type: Boolean }
+  },
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -1862,13 +1909,17 @@ main.registerCommand({
 ///////////////////////////////////////////////////////////////////////////////
 main.registerCommand({
   name: 'remove',
+  options: {
+    "allow-incompatible-update": { type: Boolean }
+  },
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options["allow-incompatible-update"]
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we're not going to resolve
@@ -2075,9 +2126,9 @@ main.registerCommand({
   options: {
     // Copy the tarball contents to the output directory instead of making a
     // tarball (useful for testing the release process)
-    "unpacked": { type: Boolean, required: false },
+    "unpacked": { type: Boolean },
     // Build a tarball only for a specific arch
-    "target-arch": { type: String, required: false }
+    "target-arch": { type: String }
   },
 
   // In this function, we want to use the official catalog everywhere, because
@@ -2415,7 +2466,7 @@ main.registerCommand({
   name: 'admin set-unmigrated',
   minArgs: 1,
   options: {
-    "success" : {type: Boolean, required: false}
+    "success" : {type: Boolean}
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: false })

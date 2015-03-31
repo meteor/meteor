@@ -9,13 +9,9 @@
     <String Id="ConfirmCancelMessage">Are you sure you want to cancel?</String>
     <String Id="HelpHeader">Setup Help</String>
     <String Id="HelpText">
-        /install | /repair | /uninstall | /layout [directory] - installs, repairs, uninstalls or creates a complete local copy of the bundle in directory. Install is the default.
-
         /passive | /quiet -  displays minimal UI with no prompts or displays no UI and no prompts. By default UI and all prompts are displayed.
 
         /toconsole   - similar to /quiet except that progress is redirected to console.
-
-        /norestart   - suppress any attempts to restart. By default UI will prompt before restart.
 
         /log log.txt - logs to a specific file. By default a log file is created in %TEMP%.
     </String>
@@ -26,8 +22,9 @@
     <String Id="InstallCloseButton">&amp;Cancel</String>
     <String Id="BackButton">&lt; Back</String>
     <String Id="NextButton">Next &gt;</String>
-    <String Id="SkipButton">Skip</String>
-    <String Id="InstallMeteor">Install [WixBundleName]</String>
+    <String Id="SkipButton">Skip this step</String>
+    <String Id="Install">Install</String>
+    <String Id="InstallMeteor">Install Meteor</String>
 
     <String Id="InstallUpgradeLinkText">Version [WixBundleVersion] &lt;a href="#"&gt;upgrade available&lt;/a&gt;</String>
     <String Id="CurrentUserPass">Current user password:</String>
@@ -40,11 +37,12 @@
     <String Id="PerUserInstallRButton">Only for me ([LogonUser])</String>
 
     <String Id="RegistrationHeader">[WixBundleName] registration</String>
-    <String Id="RegistrationInfo">In order to continue it is  recommended to configure your meteor developer account. </String>
-    <String Id="CreateRButton">Create a new developer account</String>
-    <String Id="SignInRButton">Sign In using an existing developer account</String>
-    <String Id="RegisterEmail">E-mail Address</String>
-    <String Id="RegisterUser">User Name</String>
+    <String Id="RegistrationInfo">Sign in with your Meteor developer account or create a new one now.</String>
+    <String Id="CreateRButton">Sign up for a new account</String>
+    <String Id="SignInRButton">Sign in with an existing account</String>
+    <String Id="RegisterEmail">Email Address</String>
+    <String Id="RegisterUser">Username</String>
+    <String Id="RegisterUsernameOrEmail">Username or Email</String>
     <String Id="RegisterPass">Password</String>
     <String Id="SkipRegistration">Skip [WixBundleName] registration and continue with setup</String>
 
@@ -79,13 +77,19 @@
     <String Id="ModifyRepairButton">&amp;Repair</String>
     <String Id="ModifyUninstallButton">&amp;Uninstall</String>
     <String Id="ModifyCloseButton">&amp;Close</String>
-    <String Id="SuccessHeader">Meteor Installed</String>
+    <String Id="SuccessHeader">Meteor is now installed on your computer.</String>
     <String Id="SuccessHeaderRepair">Repair Successful</String>
-    <String Id="SuccessHeaderUninstall">Uninstall Successful</String>
-    <String Id="SuccessInfo">Meteor is now installed on your computer.&#13;&#10;&#13;&#10;Open a new command prompt and run "meteor".</String>
+    <String Id="SuccessHeaderUninstall">Meteor has been uninstalled.</String>
+    <String Id="SuccessInfo">
+To get started, open a new command prompt and type "meteor". If you're running Windows 8.1, you may need to restart your machine.
+
+To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
+
+Check out the &lt;a href="https://github.com/meteor/meteor/wiki/Preview-of-Meteor-on-Windows"&gt;Wiki page on GitHub&lt;/a&gt; to learn more about the Meteor Windows preview.
+    </String>
     <String Id="SuccessErrorInfoText">Following non critical errors occured:</String>
     <String Id="SuccessInfoRepair">Setup has finished repairing [WixBundleName] installed on your computer. The application may be launched by selecting the installed icons.</String>
-    <String Id="SuccessInfoUninstall">[WixBundleName] was successfully removed from your computer.</String>
+    <String Id="SuccessInfoUninstall">We hope to see you again soon!</String>
     <String Id="SuccessLaunchButton">&amp;Launch</String>
     <String Id="SuccessRestartText">You must restart your computer before you can use the software.</String>
     <String Id="SuccessRestartButton">&amp;Restart</String>

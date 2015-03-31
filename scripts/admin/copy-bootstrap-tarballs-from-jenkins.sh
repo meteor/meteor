@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Requires s3cmd to be installed and an appropriate ~/.s3cfg.
+# Requires awscli to be installed and an appropriate ~/.aws/config.
 # Usage:
 #    scripts/admin/copy-bootstrap-tarballs-from-jenkins.sh BUILDNUMBER
 # where BUILDNUMBER is the small integer Jenkins build number.
@@ -18,7 +18,7 @@ if [ $# -ne 1 ]; then
 fi
 
 # bootstrap-tarballs--${METEOR_RELEASE}--${BUILD_ID}--${BUILD_NUMBER}--${GIT_COMMIT}
-DIRNAME=$(s3cmd ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(bootstrap-tarballs--.+--.+--'$1'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(bootstrap-tarballs--.+--.+--'$1'--.+)/!')
 RELEASE=$(echo $DIRNAME | perl -pe 's/^bootstrap-tarballs--(.+)--.+--.+--.+$/$1/')
 
 if [ -z "$DIRNAME" ]; then
@@ -31,10 +31,10 @@ echo "Found build $DIRNAME"
 
 trap "echo Found surprising number of tarballs." EXIT
 # Check to make sure the proper number of each kind of file is there.
-s3cmd ls "s3://com.meteor.jenkins/$DIRNAME/" | \
+aws s3 ls "s3://com.meteor.jenkins/$DIRNAME/" | \
   perl -nle 'if (/\.tar\.gz/) { ++$TAR } else { die "something weird" }  END { exit !($TAR == 4) }'
 
 trap - EXIT
 
 echo Copying to "$TARGET"
-s3cmd -P cp -r "s3://com.meteor.jenkins/$DIRNAME/" "$TARGET$RELEASE"
+aws s3 cp --acl public-read --recursive "s3://com.meteor.jenkins/$DIRNAME/" "$TARGET$RELEASE"
