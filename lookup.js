@@ -119,7 +119,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
              ((helper = Blaze._getTemplateHelper(template, name, templateInstance)) != null)) {
     return wrapHelper(bindDataContext(helper), boundTmplInstance);
   } else if (lookupTemplate && (foundTemplate = Blaze._getTemplate(name)) &&
-             (foundTemplate instanceof Blaze.Template)) {
+             (foundTemplate instanceof Blaze.Template || typeof foundTemplate === 'function')) {
     return foundTemplate;
   } else if (Blaze._globalHelpers[name] != null) {
     return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
