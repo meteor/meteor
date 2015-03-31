@@ -3233,7 +3233,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure. The callback cannot be called if you are using the &quot;redirect&quot; <code>loginStyle</code>, because the app will have reloaded in the meantime; try using <a href=\"#accounts_onlogin\">client-side login hooks</a> instead.</p>",
         "name": "callback",
         "optional": true,
         "type": {
@@ -5749,14 +5749,33 @@ DocsData = {
     "longname": "Tracker.autorun",
     "memberof": "Tracker",
     "name": "autorun",
-    "options": [],
+    "options": [
+      {
+        "description": "<p>Optional. The function to run when an error\nhappens in the Computation. The only argument it recieves is the Error\nthrown. Defaults to the error being logged to the console.</p>",
+        "name": "onError",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
     "params": [
       {
-        "description": "<p>The function to run. It receives one argument: the Computation object that will be returned.</p>",
+        "description": "<p>The function to run. It receives\none argument: the Computation object that will be returned.</p>",
         "name": "runFunc",
         "type": {
           "names": [
             "Tracker.ComputationFunction"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       }
@@ -5771,7 +5790,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Run a function now and rerun it later whenever its dependencies change. Returns a Computation object that can be used to stop or observe the rerunning."
+    "summary": "Run a function now and rerun it later whenever its dependencies\nchange. Returns a Computation object that can be used to stop or observe the\nrerunning."
   },
   "Tracker.currentComputation": {
     "kind": "member",
