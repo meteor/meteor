@@ -1012,7 +1012,7 @@ selftest.define("show local package w/o version",  function () {
     // Test that running without any arguments also shows this package.
     var run = s.run("show");
     run.match("Package: " + name + "@local\n");
-    run.match("Directory:\n" + packageDir + "\n");
+    run.match("Directory: " + packageDir + "\n");
     run.expectExit(0);
   });
 
@@ -1236,7 +1236,7 @@ selftest.define("show and search local overrides server",
     // Test that running without any arguments still gives us the local version.
     run = s.run("show");
     run.match("Package: " + fullPackageName + "@1.0.0\n");
-    run.match("Directory:\n" + packageDir + "\n");
+    run.match("Directory: " + packageDir + "\n");
     run.match("Git: " + git + "\n");
     run.read("\n" + summary + "\n");
     run.read("\n" + addendum + "\n");
