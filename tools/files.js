@@ -633,6 +633,7 @@ files.freeTempDir = function (tempDir) {
     // ignores all ENOENT calls. And we don't remove tempDir from tempDirs until
     // it's done, so that if mid-way through this rm_recursive the onExit one
     // fires, it still gets removed.
+
     try {
       files.rm_recursive(tempDir);
     } catch (err) {
@@ -641,13 +642,24 @@ files.freeTempDir = function (tempDir) {
       // unavoidable.
       Console.debug(err);
     }
+
     tempDirs = _.without(tempDirs, tempDir);
   });
 };
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function (sig) {
-    _.each(tempDirs, files.rm_recursive);
+    _.each(tempDirs, function (tempDir) {
+      try {
+        files.rm_recursive(tempDir);
+      } catch (err) {
+        // Don't crash and print a stack trace because we failed to delete a temp
+        // directory. This happens sometimes on Windows and seems to be
+        // unavoidable.
+        Console.debug(err);
+      }
+    });
+
     tempDirs = [];
   });
 }
