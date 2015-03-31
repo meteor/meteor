@@ -20,44 +20,6 @@ babelHelpers = {
     }
   },
 
-  // Builds the class constructor object given its constructor and methods.
-  createClassasdf: (function() {
-    function defineProperties(target, props) {
-      for (var key in props) {
-        var prop = props[key];
-        prop.configurable = true;
-        if (prop.value) prop.writable = true;
-      }
-      // XXX TODO: don't use Object.defineProperties, and disallow cases that
-      // require it, like getters and setters
-      Object.defineProperties(target, props);
-    }
-
-    return function (Constructor, protoProps, staticProps) {
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  })(),
-
-  // Builds a class which has computed method names
-  createComputedClassasdf: (function() {
-    function defineProperties(target, props) {
-      for (var i = 0; i < props.length; i ++) {
-        var prop = props[i];
-        prop.configurable = true;
-        if (prop.value) prop.writable = true;
-        Object.defineProperty(target, prop.key, prop);
-      }
-    }
-
-    return function (Constructor, protoProps, staticProps) {
-      if (protoProps) defineProperties(Constructor.prototype, protoProps);
-      if (staticProps) defineProperties(Constructor, staticProps);
-      return Constructor;
-    };
-  })(),
-
   inherits: function (subClass, superClass) {
     if (typeof superClass !== "function" && superClass !== null) {
       throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
@@ -78,29 +40,5 @@ babelHelpers = {
     // extends Bar`, we copy the static methods from Bar onto Foo, but future
     // ones are not copied.
     if (superClass) subClass.__proto__ = superClass;
-  },
-
-  get: function get(object, property, receiver) {
-    var desc = Object.getOwnPropertyDescriptor(object, property);
-
-    if (desc === undefined) {
-      var parent = Object.getPrototypeOf(object);
-
-      if (parent === null) {
-        return undefined;
-      } else {
-        return get(parent, property, receiver);
-      }
-    } else if ("value" in desc && desc.writable) {
-      return desc.value;
-    } else {
-      var getter = desc.get;
-
-      if (getter === undefined) {
-        return undefined;
-      }
-
-      return getter.call(receiver);
-    }
   }
 };
