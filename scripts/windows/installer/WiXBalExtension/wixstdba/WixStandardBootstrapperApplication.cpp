@@ -2183,12 +2183,6 @@ LExit:
 		LOC_STRING* pLocString = NULL;
 		m_state = state;
 
-		// If we just finished the installation, we need to broadcast an
-		// WM_SETTINGCHANGE message so that CMD picks up the new path
-		if (WIXSTDBA_STATE_APPLIED == m_state) {
-			SendMessageTimeout(HWND_BROADCAST, WM_SETTINGCHANGE, 0, (LPARAM)L"Environment", SMTO_ABORTIFHUNG, 5000, NULL);
-		}
-
 		// If our install is at the end (success or failure) and we're not showing full UI or
 		// we successfully installed the prerequisite then exit (prompt for restart if required).
 		if ((WIXSTDBA_STATE_APPLIED <= m_state && BOOTSTRAPPER_DISPLAY_FULL > m_command.display) ||
