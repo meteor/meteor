@@ -14,8 +14,9 @@
 * In this release, Meteor on Windows supports all features available on Linux
   and Mac except building mobile apps with PhoneGap/Cordova.
 
-* The `meteor admin get-machine` command now supports an additonal architecture,
-  `os.windows.x86_32`, which can be used to build binary packages for Windows.
+* The `meteor admin get-machine` command now supports an additional
+  architecture, `os.windows.x86_32`, which can be used to build binary packages
+  for Windows.
 
 ### Version Solver
 
