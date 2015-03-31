@@ -1142,6 +1142,12 @@ _.extend(Console.prototype, {
 
     // Wrap the text using the npm wordwrap library.
     var wrappedText = wordwrap(maxIndent, max)(text);
+    // Don't word-wrap in self-tests. Testing becomes increasingly harder when
+    // the output is dependant on the width of your terminal emulator
+    // (especially true on Windows).
+    if (process.env.SELFTEST) {
+      wrappedText = text;
+    }
 
     // Insert the start string, if applicable.
     if (options.bulletPoint) {
