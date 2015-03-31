@@ -77,7 +77,7 @@ function PackageAPI (options) {
 
   self.buildingIsopackets = !!options.buildingIsopackets;
 
-  // source files used
+  // source files used.  Map arch -> relPath -> {relPath, fileOptions}
   self.sources = {};
 
   // symbols exported
@@ -90,7 +90,7 @@ function PackageAPI (options) {
   self.implies = {};
 
   _.each(compiler.ALL_ARCHES, function (arch) {
-    self.sources[arch] = [];
+    self.sources[arch] = {};
     self.exports[arch] = [];
     self.uses[arch] = [];
     self.implies[arch] = [];
@@ -301,14 +301,26 @@ _.extend(PackageAPI.prototype, {
       return files.convertToPosixPath(p, true);
     });
 
+    var errors = [];
     _.each(paths, function (path) {
       forAllMatchingArchs(arch, function (a) {
+        if (_.has(self.sources[a], path)) {
+          errors.push("Duplicate source file: " + path);
+          return;
+        }
         var source = {relPath: path};
         if (fileOptions)
           source.fileOptions = fileOptions;
-        self.sources[a].push(source);
+        self.sources[a][path] = source;
       });
     });
+
+    // Spit out all the errors at the end, where the number of stack frames to
+    // skip is just 1 instead of something like 7 from forAllMatchingArchs and
+    // _.each.  Avoid using _.each here to keep stack predictable.
+    for (var i = 0; i < errors.length; ++i) {
+      buildmessage.error(errors[i], { useMyCaller: true });
+    }
   },
 
   // Use this release to resolve unclear dependencies for this package. If

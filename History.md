@@ -14,6 +14,10 @@
 * Plugins should not process files whose names match the extension exactly (with
   no extra dot).  #3985
 
+* Adding the same file twice in the same package is now an error. Previously,
+  this could either lead to the file being included multiple times, or to a
+  build time crash.
+
 
 ## `meteor` command-line tool
 
