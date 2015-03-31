@@ -901,6 +901,12 @@ Fiber(function () {
         // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
         // "red pill" release which has the same name as a modern release!)
         if (warehouse.realReleaseExistsInWarehouse(releaseName)) {
+          if (process.platform === "win32") {
+            Console.error("Releases of Meteor before 1.1 are not supported on",
+              "Windows. Please use a newer release.");
+            process.exit(1);
+          }
+
           var manifest = warehouse.ensureReleaseExistsAndReturnManifest(
             releaseName);
           oldSpringboard(manifest.tools);  // doesn't return
