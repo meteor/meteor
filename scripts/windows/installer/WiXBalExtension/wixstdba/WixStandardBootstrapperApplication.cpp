@@ -2502,6 +2502,12 @@ LExit:
 	//
 	BOOL OnClose()
 	{
+		// If we are not showing the full UI, there is no point of showing an exit
+		// confirmation dialog either.
+		if (BOOTSTRAPPER_DISPLAY_FULL > m_command.display) {
+				return TRUE;
+		}
+
 		BOOL fClose = FALSE;
 
 		// If we've already succeeded or failed or showing the help page, just close (prompts are annoying if the bootstrapper is done).
