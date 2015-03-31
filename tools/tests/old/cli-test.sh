@@ -160,7 +160,7 @@ EOF
 
 ! $METEOR add a-package-named-bar >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR add a-package-named-bar >> $OUTPUT
-$METEOR -p $PORT --once 2>&1 | grep "unknown package: a-package-named-bar" >> $OUTPUT
+$METEOR -p $PORT --once 2>&1 | grep "unknown package .* a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR -p $PORT --once | grep "loaded a-package-named-bar" >> $OUTPUT
 PACKAGE_DIRS="$TEST_TMPDIR/local-packages" $METEOR bundle $TEST_TMPDIR/bundle.tar.gz >> $OUTPUT
 tar tvzf $TEST_TMPDIR/bundle.tar.gz >>$OUTPUT
