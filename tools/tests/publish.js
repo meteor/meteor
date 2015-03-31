@@ -141,8 +141,7 @@ selftest.define("publish-one-arch",
   run = s.run("publish", "--create");
   run.waitSecs(15);
   run.expectExit(0);
-  run.matchErr(
-"This package contains binary code and must be built on multiple architectures.");
+  run.matchErr("This package contains binary code and must be");
 
 });
 
@@ -322,7 +321,7 @@ selftest.define("do-not-update-to-rcs",
 
     setPackageVersion(s, "1.0.1");
     run = s.run("publish");
-    run.waitSecs(15);
+    run.waitSecs(120);
     run.expectExit(0);
     run.match("Published");
   });
