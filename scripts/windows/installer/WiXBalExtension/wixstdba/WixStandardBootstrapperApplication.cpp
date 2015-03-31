@@ -3716,7 +3716,7 @@ BOOL POSTRequest(
 BOOL REST_SignInOrRegister(
 	__in BOOL    fSignIn,
     __in LPCWSTR wzSignInUserNameOrEmail,
-    __in LPCWSTR wzRegisterUserName,
+    __in LPCWSTR wzRegisterUsername,
     __in LPCWSTR wzRegisterEmail,
     __in LPCWSTR wzPassword/*,
     __out LPWSTR *ppwzErrorMessage*/
@@ -3724,6 +3724,12 @@ BOOL REST_SignInOrRegister(
 {
 	BOOL bRes = false;
 	wchar_t wzFormData[BUF_LEN] = L"";
+
+	DWORD escapedLength;
+
+	escapedLength = BUF_LEN;
+	wchar_t wzPasswordEscaped[BUF_LEN];
+	UrlEscapeW(wzPassword, wzPasswordEscaped, &escapedLength, NULL);
 
 	if (fSignIn) {
 		// sign in
@@ -3733,10 +3739,23 @@ BOOL REST_SignInOrRegister(
 		} else {
 			wzUsernameOrEmailKey = L"meteorAccountsLoginInfo[username]";		
 		}
-		StringCchPrintfW(wzFormData, BUF_LEN, L"%s=%s&meteorAccountsLoginInfo[password]=%s", wzUsernameOrEmailKey, wzSignInUserNameOrEmail, wzPassword);
+
+		escapedLength = BUF_LEN;
+		wchar_t wzSignInUserNameOrEmailEscaped[BUF_LEN];
+		UrlEscapeW(wzSignInUserNameOrEmail, wzSignInUserNameOrEmailEscaped, &escapedLength, NULL);
+
+		StringCchPrintfW(wzFormData, BUF_LEN, L"%s=%s&meteorAccountsLoginInfo[password]=%s", wzUsernameOrEmailKey, wzSignInUserNameOrEmailEscaped, wzPasswordEscaped);
 	} else {
+		escapedLength = BUF_LEN;
+		wchar_t wzRegisterUsernameEscaped[BUF_LEN];
+		UrlEscapeW(wzRegisterUsername, wzRegisterUsernameEscaped, &escapedLength, NULL);
+
+		escapedLength = BUF_LEN;
+		wchar_t wzRegisterEmailEscaped[BUF_LEN];
+		UrlEscapeW(wzRegisterEmail, wzRegisterEmailEscaped, &escapedLength, NULL);
+
 		// register
-		StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&email=%s&password=%s", wzRegisterUserName, wzRegisterEmail, wzPassword);
+		StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&email=%s&password=%s", wzRegisterUsernameEscaped, wzRegisterEmailEscaped, wzPasswordEscaped);
 	}
 
   // agentInfo part of the query
