@@ -937,7 +937,7 @@ var testShowPackageVersion =  selftest.markStack(function (s, options) {
   var run = s.run("show", name + "@" + version);
   run.match("Package: " + name + "@" + version + "\n");
   if (options.directory) {
-    run.match("Directory:\n" + options.directory + "\n");
+    run.match("Directory: " + options.directory + "\n");
   }
   if (options.exports) {
     run.read("Exports: " + options.exports + "\n");
