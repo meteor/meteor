@@ -3826,6 +3826,8 @@ BOOL REST_SignInOrRegister(
 
 		// Clean up JSON object
 		delete JSONResponse;
+	} else {
+		wcsncat_s(wzErrorMessage, L"Network error contacting the Meteor accounts server. Please retry, or skip this step and complete your registration later.", BUF_LEN-1);
 	}
 
 
