@@ -1778,7 +1778,7 @@ var runTests = function (options) {
         Console.rawError("  => " + failure.reason + " at " +
                          relpath + ":" + frames[0].line + "\n");
         if (failure.reason === 'no-match' || failure.reason === 'junk-before') {
-          Console.arrowError("Pattern: " + failure.details.pattern, 2);
+          Console.arrowError("Pattern: " + Console.rawInfo(failure.details.pattern), 2);
         }
         if (failure.reason === "wrong-exit-code") {
           var s = function (status) {
