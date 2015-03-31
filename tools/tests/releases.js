@@ -197,7 +197,7 @@ selftest.define("checkout", ['checkout'], function () {
 });
 
 
-selftest.define("download release", ['net', 'slow'], function () {
+selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow'], function () {
   var s, run;
 
   if (files.inCheckout())
