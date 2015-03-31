@@ -11,7 +11,7 @@ md C:\tmp
 cd C:\tmp
 
 REM get the meteor/meteor repo
-C:\git\bin\git.exe clone https://github.com/meteor/meteor.git
+C:\git\bin\git.exe clone https://github.com/meteor-velocity/meteor.git
 cd meteor
 REM force git to use original end-line characters (unixy '\n')
 C:\git\bin\git.exe config --replace-all core.autocrlf input

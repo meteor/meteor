@@ -29,7 +29,7 @@ main () {
 
   trap 'echo "${red}Login failed.${NC}"; clean_up' EXIT
 
-  echo "${green}Login with a meteor account belonging to MDG."
+  echo "${green}Login with a meteor account belonging to Velocity."
   echo "A session file will be generated in your checkout and it will be used to"
   echo "publish the release from the remote machines.${NC}"
 

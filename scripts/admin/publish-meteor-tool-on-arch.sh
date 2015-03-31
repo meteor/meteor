@@ -46,13 +46,13 @@ main () {
     # copy the meteor session file to the remote host
     scp -oUserKnownHostsFile="$TEMP_KEY" -P "$PORT" -i "$TEMP_PRIV_KEY" -q "$SESSION_FILE" $USERNAME@$HOST:~/session
 
-    METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine --minutes 30 $PLATFORM <<'END'
+    METEOR_SESSION_FILE="$SESSION_FILE" "$METEOR" admin get-machine --minutes 15 $PLATFORM <<'END'
 set -e
 set -u
 if [ -d meteor ]; then
   rm -rf meteor
 fi
-git clone https://github.com/meteor/meteor.git
+git clone https://github.com/meteor-velocity/meteor.git
 cd meteor
 git fetch --tags
 END
