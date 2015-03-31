@@ -1,6 +1,7 @@
 Package.describe({
-  summary: "The Meteor command-line tool",
-  version: '1.1.1-win.8'
+  name: 'velocity:meteor-tool',
+  summary: 'The Meteor command-line tool with extensions for Velocity',
+  version: '1.1.0_1'
 });
 
 Package.includeTool();
