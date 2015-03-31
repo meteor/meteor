@@ -1095,11 +1095,13 @@ main.registerCommand({
   name: 'list',
   requiresApp: true,
   options: {
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
   var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir
+    projectDir: options.appDir,
+    allowIncompatibleUpdate: options['allow-incompatible-update']
   });
   main.captureAndExit("=> Errors while initializing project:", function () {
     projectContext.prepareProjectForBuild();
