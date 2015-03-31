@@ -49,19 +49,14 @@ var Foo = (function () {
     babelHelpers.classCallCheck(this, Foo);
   }
 
-  babelHelpers.createClass(Foo, {
-    prototypeMethod: {
-      value: function prototypeMethod() {
-        return "prototypical";
-      }
-    }
-  }, {
-    staticMethod: {
-      value: function staticMethod() {
-        return "classy";
-      }
-    }
-  });
+  Foo.staticMethod = function staticMethod() {
+    return "classy";
+  };
+
+  Foo.prototype.prototypeMethod = function prototypeMethod() {
+    return "prototypical";
+  };
+
   return Foo;
 })();`
    },
@@ -115,13 +110,10 @@ var C = (function () {
     babelHelpers.classCallCheck(this, D);
   }
 
-  babelHelpers.createClass(D, {
-    foo: {
-      value: function foo() {
-        return 123;
-      }
-    }
-  });
+  D.prototype.foo = function foo() {
+    return 123;
+  };
+
   return D;
 })();`
       },
@@ -144,16 +136,60 @@ var Foo = (function () {
     babelHelpers.classCallCheck(this, Foo);
   }
 
-  babelHelpers.createComputedClass(Foo, null, [{
-    key: frob,
-    value: function (n) {
-      return n + 1;
-    }
-  }]);
+  Foo[frob] = function (n) {
+    return n + 1;
+  };
+
   return Foo;
 })();
 
 Foo.inc(3); // 4`
+      },
+      {
+        name: 'super',
+        commentary: 'There are two kinds of uses of `super`.  Call it as a function to call the super constructor.  Call members of it to call super implementations of instance methods.',
+        input: `
+class Foo {
+  constructor(value) { this.value = value; }
+  x() { return this.value; }
+}
+
+class Bar extends Foo {
+  constructor() { super(123); }
+  x() { return super.x(); }
+}
+
+print((new Bar).x()); // 123`,
+        expected: `
+var Foo = (function () {
+  function Foo(value) {
+    babelHelpers.classCallCheck(this, Foo);
+    this.value = value;
+  }
+
+  Foo.prototype.x = function x() {
+    return this.value;
+  };
+
+  return Foo;
+})();
+
+var Bar = (function (_Foo) {
+  function Bar() {
+    babelHelpers.classCallCheck(this, Bar);
+    _Foo.call(this, 123);
+  }
+
+  babelHelpers.inherits(Bar, _Foo);
+
+  Bar.prototype.x = function x() {
+    return _Foo.prototype.x.call(this);
+  };
+
+  return Bar;
+})(Foo);
+
+print(new Bar().x()); // 123`
       }
     ]
   },
@@ -193,13 +229,13 @@ Foo.inc(3); // 4`
         name: 'basic tag',
         commentary: `You can "tag" a template string with a function that receives the parts of the string.`,
         input: 'print(fn`Yo, ${name}!`)',
-        expected: 'print(fn(babelHelpers.taggedTemplateLiteral(["Yo, ", "!"], ["Yo, ", "!"]), name));'
+        expected: 'print(fn(babelHelpers.taggedTemplateLiteralLoose(["Yo, ", "!"], ["Yo, ", "!"]), name));'
       },
       {
         name: 'tag raw',
         commentary: `The tag function receives both the parsed and the "raw" forms of the string parts (but only the value of the interpolated expressions like \`name\`).`,
         input: 'print(fn`Yo,\\u0020${name}!`)',
-        expected: 'print(fn(babelHelpers.taggedTemplateLiteral(["Yo, ", "!"], ["Yo,\\\\u0020", "!"]), name));'
+        expected: 'print(fn(babelHelpers.taggedTemplateLiteralLoose(["Yo, ", "!"], ["Yo,\\\\u0020", "!"]), name));'
       }
     ]
   },

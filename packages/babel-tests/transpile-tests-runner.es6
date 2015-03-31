@@ -10,7 +10,8 @@ _.each(BabelTests.Transpile.groups, function (group) {
                    test.equal(
                      Babel.transform(c.input, {
                        whitelist: group.features,
-                       externalHelpers: true
+                       externalHelpers: true,
+                       loose: "all"
                      }).code,
                      c.expected);
                  });

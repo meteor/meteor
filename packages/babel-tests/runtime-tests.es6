@@ -6,7 +6,7 @@ Tinytest.add("babel - runtime - template literals", function (test) {
   var foo = 'B';
   test.equal(`\u0041${foo}C`, 'ABC');
   test.equal(dump`\u0041${foo}C`,
-             [{0:'A', 1: 'C', raw: {value: ['\\u0041', 'C']}},
+             [{0:'A', 1: 'C', raw: ['\\u0041', 'C']},
               ['B']]);
 });
 
@@ -117,5 +117,36 @@ Tinytest.add("babel - runtime - block scope", function (test) {
 
     _.each(thunks, f => f());
     test.equal(buf, [0, 1, 2]);
+  })();
+});
+
+Tinytest.add("babel - runtime - classes - super", function (test) {
+  (function () {
+    class Class1 {
+      foo() { return 123; }
+      static bar() { return 1; }
+    }
+    class Class2 extends Class1 {}
+    class Class3 extends Class2 {
+      foo() {
+        return super.foo() + Class3.bar();
+      }
+    }
+
+    test.equal((new Class3).foo(), 124);
+  })();
+
+  (function () {
+    class Foo {
+      constructor(value) { this.value = value; }
+      x() { return this.value; }
+    }
+
+    class Bar extends Foo {
+      constructor() { super(123); }
+      x() { return super.x(); }
+    }
+
+    test.equal((new Bar).x(), 123);
   })();
 });

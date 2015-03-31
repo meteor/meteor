@@ -3,14 +3,15 @@
 babelHelpers = {
   // Constructs the object passed to the tag function in a tagged
   // template literal.
-  taggedTemplateLiteral: function (strings, raw) {
+  taggedTemplateLiteralLoose: function (strings, raw) {
     // Babel's own version of this calls Object.freeze on `strings` and
     // `strings.raw`, but it doesn't seem worth the compatibility and
     // performance concerns.  If you're writing code against this helper,
     // don't add properties to these objects.
-    strings.raw = { value: raw };
+    strings.raw = raw;
     return strings;
   },
+
   // Checks that a class constructor is being called with `new`, and throws
   // an error if it is not.
   classCallCheck: function (instance, Constructor) {
@@ -18,8 +19,9 @@ babelHelpers = {
       throw new TypeError("Cannot call a class as a function");
     }
   },
+
   // Builds the class constructor object given its constructor and methods.
-  createClass: (function() {
+  createClassasdf: (function() {
     function defineProperties(target, props) {
       for (var key in props) {
         var prop = props[key];
@@ -37,6 +39,25 @@ babelHelpers = {
       return Constructor;
     };
   })(),
+
+  // Builds a class which has computed method names
+  createComputedClassasdf: (function() {
+    function defineProperties(target, props) {
+      for (var i = 0; i < props.length; i ++) {
+        var prop = props[i];
+        prop.configurable = true;
+        if (prop.value) prop.writable = true;
+        Object.defineProperty(target, prop.key, prop);
+      }
+    }
+
+    return function (Constructor, protoProps, staticProps) {
+      if (protoProps) defineProperties(Constructor.prototype, protoProps);
+      if (staticProps) defineProperties(Constructor, staticProps);
+      return Constructor;
+    };
+  })(),
+
   inherits: function (subClass, superClass) {
     if (typeof superClass !== "function" && superClass !== null) {
       throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
@@ -57,5 +78,29 @@ babelHelpers = {
     // extends Bar`, we copy the static methods from Bar onto Foo, but future
     // ones are not copied.
     if (superClass) subClass.__proto__ = superClass;
+  },
+
+  get: function get(object, property, receiver) {
+    var desc = Object.getOwnPropertyDescriptor(object, property);
+
+    if (desc === undefined) {
+      var parent = Object.getPrototypeOf(object);
+
+      if (parent === null) {
+        return undefined;
+      } else {
+        return get(parent, property, receiver);
+      }
+    } else if ("value" in desc && desc.writable) {
+      return desc.value;
+    } else {
+      var getter = desc.get;
+
+      if (getter === undefined) {
+        return undefined;
+      }
+
+      return getter.call(receiver);
+    }
   }
 };

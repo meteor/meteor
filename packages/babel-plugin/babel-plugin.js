@@ -14,7 +14,12 @@ var handler = function (compileStep) {
     ],
     externalHelpers: true,
     sourceMap: true,
-    filename: compileStep.pathForSourceMap
+    filename: compileStep.pathForSourceMap,
+    // "Loose" mode gets us faster and more IE-compatible transpilations of:
+    // classes, computed properties, modules, for-of, and template literals.
+    // Basically all the transformers that support "loose".
+    // http://babeljs.io/docs/usage/loose/
+    loose: "all"
   });
 
   compileStep.addJavaScript({
