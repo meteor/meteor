@@ -1142,11 +1142,14 @@ _.extend(Console.prototype, {
 
     var wrappedText;
     if (process.env.METEOR_NO_WORDWRAP) {
+      var indent =
+        options.indent ? Array(options.indent + 1).join(' ') : "";
       if (options.bulletPoint) {
         wrappedText = options.bulletPoint + text;
       } else {
         wrappedText = text;
       }
+      wrappedText = indent + wrappedText;
     } else {
       // Wrap the text using the npm wordwrap library.
       wrappedText = wordwrap(maxIndent, max)(text);
