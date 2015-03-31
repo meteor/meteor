@@ -738,7 +738,7 @@ selftest.define("add package with no builds", ["net"], function () {
   var run = s.run("add", "glasser:binary-package-with-no-builds");
   run.waitSecs(10);
   run.matchErr("glasser:binary-package-with-no-builds@1.0.0");
-  run.matchErr("No compatible build found");
+  run.matchErr("No compatible binary build found");
   run.expectExit(1);
 });
 
