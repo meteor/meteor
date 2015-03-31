@@ -1,6 +1,6 @@
 Package.describe({
   summary: "The dynamic stylesheet language",
-  version: "1.0.14-rc.3"
+  version: "1.0.14"
 });
 
 Package.registerBuildPlugin({

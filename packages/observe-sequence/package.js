@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Observe changes to various sequence types such as arrays, cursors and objects",
-  version: "1.0.6-pre.win.1"
+  version: "1.0.6"
 });
 
 Package.onUse(function (api) {
