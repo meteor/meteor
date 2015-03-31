@@ -1140,24 +1140,27 @@ _.extend(Console.prototype, {
     // for example), default to 80 columns.
     var max = self.width();
 
-    // Wrap the text using the npm wordwrap library.
-    var wrappedText = wordwrap(maxIndent, max)(text);
-    // Don't word-wrap in self-tests. Testing becomes increasingly harder when
-    // the output is dependant on the width of your terminal emulator
-    // (especially true on Windows).
-    if (process.env.SELFTEST) {
-      wrappedText = text;
-    }
+    var wrappedText;
+    if (process.env.METEOR_NO_WORDWRAP) {
+      if (options.bulletPoint) {
+        wrappedText = options.bulletPoint + text;
+      } else {
+        wrappedText = text;
+      }
+    } else {
+      // Wrap the text using the npm wordwrap library.
+      wrappedText = wordwrap(maxIndent, max)(text);
 
-    // Insert the start string, if applicable.
-    if (options.bulletPoint) {
-      // Save the initial indent level.
-      var initIndent = options.indent ?
-          wrappedText.substring(0, options.indent) : "";
-      // Add together the initial indent (if any), the bullet point and the
-      // remainder of the message.
-      wrappedText = initIndent + options.bulletPoint +
+      // Insert the start string, if applicable.
+      if (options.bulletPoint) {
+        // Save the initial indent level.
+        var initIndent = options.indent ?
+              wrappedText.substring(0, options.indent) : "";
+        // Add together the initial indent (if any), the bullet point and the
+        // remainder of the message.
+        wrappedText = initIndent + options.bulletPoint +
           wrappedText.substring(maxIndent);
+      }
     }
 
     // If we have previously replaces any spaces, now is the time to bring them

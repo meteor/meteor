@@ -1052,7 +1052,7 @@ var Run = function (execPath, options) {
   self.execPath = execPath;
   self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
   // default env variables
-  self.env = _.extend({ SELFTEST: "t" }, options.env);
+  self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
   self._args = [];
   self.proc = null;
   self.baseTimeout = 20;
