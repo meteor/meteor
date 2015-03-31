@@ -19,7 +19,10 @@ function toArchArray (arch) {
   }
   arch = _.uniq(arch);
   arch = _.map(arch, mapWhereToArch);
-  _.each(arch, function (inputArch) {
+
+  // avoid using _.each so as to not add more frames to skip
+  for (var i = 0; i < arch.length; ++i) {
+    var inputArch = arch[i];
     var isMatch = _.any(_.map(compiler.ALL_ARCHES, function (actualArch) {
       return archinfo.matches(actualArch, inputArch);
     }));
@@ -27,9 +30,9 @@ function toArchArray (arch) {
       buildmessage.error(
         "Invalid 'where' argument: '" + inputArch + "'",
         // skip toArchArray in addition to the actual API function
-        {useMyCaller: 2});
+        {useMyCaller: 1});
     }
-  });
+  }
   return arch;
 }
 
