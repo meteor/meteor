@@ -26,6 +26,10 @@
 
 * Preserve the value of `_` in `meteor shell`.  #4010
 
+* `meteor mongo` now works on OS X when certain non-ASCII characters are in the
+  pathname, as long as the `pgrep` utility is installed (it ships standard with
+  OS X 10.8 and newer).  #3999
+
 
 ## Meteor Accounts
 
