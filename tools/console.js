@@ -1149,7 +1149,8 @@ _.extend(Console.prototype, {
       } else {
         wrappedText = text;
       }
-      wrappedText = indent + wrappedText;
+      wrappedText =
+        _.map(wrappedText.split('\n'), function (s) { return indent + s; }).join('\n');
     } else {
       // Wrap the text using the npm wordwrap library.
       wrappedText = wordwrap(maxIndent, max)(text);
