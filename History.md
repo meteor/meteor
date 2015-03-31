@@ -67,6 +67,9 @@
 
   - uglify-js: 2.4.17 (from 2.4.13)
 
+Patches contributed by GitHub users hwillson, mitar, murillo128, Primigenus,
+rjakobsson, and tmeasday.
+
 
 ## v1.0.5, 2015-Mar-25
 
