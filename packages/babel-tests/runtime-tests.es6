@@ -42,6 +42,11 @@ Tinytest.add("babel - runtime - classes", function (test) {
     test.isTrue((new Foo(3)) instanceof Bar);
   })();
 
+  var x = function asdf() {};
+  if (typeof 'asdf' === 'function') {
+    // IE 8 scope leak
+    test.expect_fail();
+  }
   test.throws(function () {
     new Foo(); // use before definition
     class Foo {}

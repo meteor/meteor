@@ -24,21 +24,53 @@ babelHelpers = {
     if (typeof superClass !== "function" && superClass !== null) {
       throw new TypeError("Super expression must either be null or a function, not " + typeof superClass);
     }
-    // XXX TODO: Don't depend on Object.create, which doesn't exist in IE 8.
-    subClass.prototype = Object.create(superClass && superClass.prototype, {
-      constructor: {
-        value: subClass,
-        enumerable: false,
-        writable: true,
-        configurable: true
+
+    if (superClass) {
+      if (Object.create) {
+        // All but IE 8
+        subClass.prototype = Object.create(superClass.prototype, {
+          constructor: {
+            value: subClass,
+            enumerable: false,
+            writable: true,
+            configurable: true
+          }
+        });
+      } else {
+        // IE 8 path.  Slightly worse for modern browsers, because `constructor`
+        // is enumerable and shows up in the inspector unnecessarily.
+        // It's not an "own" property of any instance though.
+        //
+        // For correctness when writing code,
+        // don't enumerate all the own-and-inherited properties of an instance
+        // of a class and expect not to find `constructor` (but who does that?).
+        var F = function () {
+          this.constructor = subClass;
+        };
+        F.prototype = superClass.prototype;
+        subClass.prototype = new F();
       }
-    });
-    // XXX TODO: Don't depend on __proto__, which doesn't work in IE 8-10.
-    // There's no perfect way to make static methods inherited if they are
-    // assigned after declaration of the classes.  The best we can do is
-    // probably to copy them.  In other words, when you write `class Foo
-    // extends Bar`, we copy the static methods from Bar onto Foo, but future
-    // ones are not copied.
-    if (superClass) subClass.__proto__ = superClass;
+
+      // For modern browsers, this would be `subClass.__proto__ = superClass`,
+      // but IE <=10 don't support `__proto__`, and in this case the difference
+      // would be detectable; code that works in modern browsers could easily
+      // fail on IE 8 if we ever used the `__proto__` trick.
+      //
+      // There's no perfect way to make static methods inherited if they are
+      // assigned after declaration of the classes.  The best we can do is
+      // to copy them.  In other words, when you write `class Foo
+      // extends Bar`, we copy the static methods from Bar onto Foo, but future
+      // ones are not copied.
+      //
+      // For correctness when writing code, don't add static methods to a class
+      // after you subclass it.
+      for (var k in superClass) {
+        if (_hasOwnProperty.call(superClass, k)) {
+          subClass[k] = superClass[k];
+        }
+      }
+    }
   }
 };
+
+var _hasOwnProperty = Object.prototype.hasOwnProperty;
