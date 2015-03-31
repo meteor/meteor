@@ -17,19 +17,54 @@ BabelTests.Transpile.groups = [
       {
         name: 'basic class',
         commentary: `This is a basic class definition with a constructor.  The \`classCallCheck\` helper makes sure the constructor is being called with \`new\`, because calling it as a function is disallowed.`,
-        input:
-        ` | class Foo {
-          |   constructor(x) {
-          |     this.x = x;
-          |   }
-          | }`,
-        expected:
-        ` | var Foo = function Foo(x) {
-          |   babelHelpers.classCallCheck(this, Foo);
-          |
-          |   this.x = x;
-          | };`
+        input: `
+class Foo {
+  constructor(x) {
+    this.x = x;
+  }
+}`,
+        expected: `
+var Foo = function Foo(x) {
+  babelHelpers.classCallCheck(this, Foo);
+
+  this.x = x;
+};`
       },
+      {
+        name: 'methods',
+        commentary: `Classes can have instance and static methods.`,
+        input: `
+class Foo {
+  static staticMethod() {
+    return 'classy';
+  }
+
+  prototypeMethod() {
+    return 'prototypical';
+  }
+}`,
+        expected: `
+var Foo = (function () {
+  function Foo() {
+    babelHelpers.classCallCheck(this, Foo);
+  }
+
+  babelHelpers.createClass(Foo, {
+    prototypeMethod: {
+      value: function prototypeMethod() {
+        return "prototypical";
+      }
+    }
+  }, {
+    staticMethod: {
+      value: function staticMethod() {
+        return "classy";
+      }
+    }
+  });
+  return Foo;
+})();`
+   },
       {
         name: 'empty subclass',
         commentary: `A subclass (also called a derived class) gets a default constructor that calls the super constructor.`,
@@ -48,6 +83,77 @@ BabelTests.Transpile.groups = [
           |   babelHelpers.inherits(Foo, _Bar);
           |   return Foo;
           | })(Bar);`
+      },
+      {
+        name: 'use before define',
+        commentary: `Unlike functions, classes can't be used before they are defined.  In real ES6, an error will actually be thrown, piggybacking
+on the new \`let\` semantics where using a name in the local scope before it is defined is an error.  In Babel, the class will generally be null before it is defined.`,
+        input: `
+new Foo();
+class Foo {}`,
+        expected: `
+new Foo();
+
+var Foo = function Foo() {
+  babelHelpers.classCallCheck(this, Foo);
+};`
+      },
+      {
+        name: 'class expression',
+        commentary: `Like functions, classes come in an expression form, with a name that is scoped to the body of the class definition.`,
+        input: `
+var A = class B {};
+var C = class D {
+  foo() { return 123; }
+}`,
+        expected: `
+var A = function B() {
+  babelHelpers.classCallCheck(this, B);
+};
+var C = (function () {
+  function D() {
+    babelHelpers.classCallCheck(this, D);
+  }
+
+  babelHelpers.createClass(D, {
+    foo: {
+      value: function foo() {
+        return 123;
+      }
+    }
+  });
+  return D;
+})();`
+      },
+      {
+        name: 'computed method names',
+        commentary: 'Methods may have computed names.  This will be especially useful in conjunction with non-string "Symbol" keys.',
+        input: `
+var frob = "inc"
+
+class Foo {
+  static [frob](n) { return n+1; }
+}
+
+Foo.inc(3); // 4`,
+        expected: `
+var frob = "inc";
+
+var Foo = (function () {
+  function Foo() {
+    babelHelpers.classCallCheck(this, Foo);
+  }
+
+  babelHelpers.createComputedClass(Foo, null, [{
+    key: frob,
+    value: function (n) {
+      return n + 1;
+    }
+  }]);
+  return Foo;
+})();
+
+Foo.inc(3); // 4`
       }
     ]
   },
@@ -167,8 +273,77 @@ The body can be an expression (with no return statement), or a block (which must
     cases: [
       {
         name: 'basic let',
-        input: 'let x = 3; print(x)',
-        expected: 'var x = 3;print(x);'
+        commentary: 'In many cases, `let` is just transpiled into a `var` of the same name.',
+        input: `
+if (condition) {
+  let x = 1;
+  print(x);
+} else {
+  let x = 2;
+  print(x);
+}`,
+        expected: `
+if (condition) {
+  var x = 1;
+  print(x);
+} else {
+  var x = 2;
+  print(x);
+}`
+      },
+      {
+        name: 'shadow rename',
+        commentary: "One case where renaming is required is when one `let` shadows another.",
+        input: `
+let x = 1;
+{
+  let x = 2;
+}`,
+        expected: `
+var x = 1;
+{
+  var _x = 2;
+}`
+      },
+      {
+        name: 'scope clash rename',
+        commentary: "Another is when the name is already referenced in the same function scope.",
+        input: `
+{
+  let x = 1;
+}
+print(x);`,
+        expected: `
+{
+  var _x = 1;
+}
+print(x);`
+      },
+      {
+        name: 'block scoping and closures',
+        commentary: 'Babel is smart and knows to insert an immediately-invoked function when you close over a loop variable.',
+        input: `
+for (let i = 0; i < 10; i++) {
+  print(i);
+}
+
+for (let i = 0; i < 10; i++) {
+  doLater(function () {
+    print(i);
+  });
+}`,
+        expected: `
+for (var i = 0; i < 10; i++) {
+  print(i);
+}
+
+for (var i = 0; i < 10; i++) {
+  (function (i) {
+    doLater(function () {
+      print(i);
+    });
+  })(i);
+}`
       }
     ]
   },
@@ -210,6 +385,7 @@ var stripPipes = function (str) {
       return line.slice(prefix.length + spacesAfterPipe);
     }).join('\n');
   } else {
+    str = str.replace(/^\s*/, '');
     return str;
   }
 };
