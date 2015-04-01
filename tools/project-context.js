@@ -146,8 +146,11 @@ _.extend(ProjectContext.prototype, {
 
     if (resetOptions.preservePackageMap && self.packageMap) {
       self._cachedVersionsBeforeReset = self.packageMap.toVersionMap();
+      // packageMapFile should always exist if packageMap does
+      self._oldPackageMapFileHash = self.packageMapFile.fileHash;
     } else {
       self._cachedVersionsBeforeReset = null;
+      self._oldPackageMapFileHash = null;
     }
 
     // The --allow-incompatible-update command-line switch, which allows
@@ -411,10 +414,19 @@ _.extend(ProjectContext.prototype, {
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
     // may not have been written to disk if our release doesn't match the
-    // project's release on disk). Otherwise use the versions from
-    // .meteor/versions.
-    var cachedVersions = self._cachedVersionsBeforeReset ||
-          self.packageMapFile.getCachedVersions();
+    // project's release on disk)... unless the actual file on disk has changed
+    // out from under us. Otherwise use the versions from .meteor/versions.
+    var cachedVersions;
+    if (self._cachedVersionsBeforeReset &&
+        self._oldPackageMapFileHash === self.packageMapFile.fileHash) {
+      // The file on disk hasn't change; reuse last time's results.
+      cachedVersions = self._cachedVersionsBeforeReset;
+    } else {
+      // We don't have a last time, or the file has changed; use
+      // .meteor/versions.
+      cachedVersions = self.packageMapFile.getCachedVersions();
+    }
+
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
@@ -925,6 +937,7 @@ exports.PackageMapFile = function (options) {
 
   self.filename = options.filename;
   self.watchSet = new watch.WatchSet;
+  self.fileHash = null;
   self._versions = {};
 
   self._readFile();
@@ -934,7 +947,9 @@ _.extend(exports.PackageMapFile.prototype, {
   _readFile: function () {
     var self = this;
 
-    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
+    var fileInfo = watch.readAndWatchFileWithHash(self.watchSet, self.filename);
+    var contents = fileInfo.contents;
+    self.fileHash = fileInfo.hash;
     // No .meteor/versions? That's OK, you just get to start your calculation
     // from scratch.
     if (contents === null)

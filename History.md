@@ -37,6 +37,9 @@
   pathname, as long as the `pgrep` utility is installed (it ships standard with
   OS X 10.8 and newer).  #3999
 
+* `meteor run` no longer ignores (and often reverts) external changes to
+  `.meteor/versions` which occur while the process is running.  #3582
+
 
 ### Meteor Accounts
 
