@@ -1257,24 +1257,25 @@ _.extend(PackageSource.prototype, {
         // tests/jasmine/...
         // .../tests/jasmine
         // .../tests/jasmine/...
-        var includedTestsDirectoryMatchers = (function () {
-          var matchers = [
-            new RegExp('^tests/' + options.includeTests + '/'),
-            new RegExp('/tests/' + options.includeTests + '/')
-          ];
+        var includedTestsDirectoryMatchers = options.includeTests ?
+          (function () {
+            var matchers = [
+              new RegExp('^tests/' + options.includeTests + '/'),
+              new RegExp('/tests/' + options.includeTests + '/')
+            ];
 
-          var partialDir;
-          var dirParts = options.includeTests.split('/');
-          for (var i = 0; i <= dirParts.length; i++) {
-            partialDir = dirParts.slice(0, i).join('/');
-            matchers.push(
-              new RegExp('^tests/' + partialDir + '/$'),
-              new RegExp('/tests/' + partialDir + '/$')
-            );
-          }
+            var partialDir;
+            var dirParts = options.includeTests.split('/');
+            for (var i = 0; i <= dirParts.length; i++) {
+              partialDir = dirParts.slice(0, i).join('/');
+              matchers.push(
+                new RegExp('^tests/' + partialDir + '/$'),
+                new RegExp('/tests/' + partialDir + '/$')
+              );
+            }
 
-          return matchers;
-        })();
+            return matchers;
+          })() : [];
 
         var isIncludedTestsDirectory = function (dir) {
           return _.any(includedTestsDirectoryMatchers, function (matcher) {
