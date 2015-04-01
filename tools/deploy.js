@@ -385,7 +385,7 @@ var bundleAndDeploy = function (options) {
     return 1;
   }
 
-  var buildDir = options.projectContext.getProjectLocalDirectory('build_tar');
+  var buildDir = files.mkdtemp('build_tar');
   var bundlePath = files.pathJoin(buildDir, 'bundle');
 
   Console.info('Deploying to ' + site + '.');
@@ -448,7 +448,6 @@ var bundleAndDeploy = function (options) {
   var hostname = deployedAt.hostname;
 
   Console.info('Now serving at http://' + hostname);
-  files.rm_recursive(buildDir);
 
   if (! hostname.match(/meteor\.com$/)) {
     var dns = require('dns');

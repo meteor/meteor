@@ -14,6 +14,8 @@ var release = require('./release.js');
 var projectContextModule = require('./project-context.js');
 var catalog = require('./catalog.js');
 var buildmessage = require('./buildmessage.js');
+var httpHelpers = require('./http-helpers.js');
+
 var main = exports;
 
 // On Node 0.10 on Windows, stdout and stderr don't get flushed when calling
@@ -924,7 +926,7 @@ Fiber(function () {
         }
       }
 
-      if (!rel) {
+      if (!rel && process.platform !== "win32") {
         // ATTEMPT 4: legacy release, loading from warehouse server.
         manifest = null;
         try {
@@ -970,6 +972,18 @@ Fiber(function () {
         trackAndVersion[0], trackAndVersion[1]);
       // Now, let's process this.
       if (releaseOverride) {
+        if (process.platform === "win32") {
+          // Give a good warning if this release exists, but only in the super old
+          // warehouse.
+          var result = httpHelpers.request(
+            "http://warehouse.meteor.com/releases/" + releaseName + ".release.json");
+          if(result.response.statusCode === 200) {
+            Console.error("Meteor on Windows does not support running any releases",
+              "before Meteor 1.1. Please use a newer release.");
+            process.exit(1);
+          }
+        }
+
         Console.error(displayRelease + ": unknown release.");
       } else if (appDir) {
         if (trackAndVersion[0] !== catalog.DEFAULT_TRACK) {

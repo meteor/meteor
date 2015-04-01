@@ -1,17 +1,22 @@
 ## v.NEXT
 
-## v1.1, 2015-??
+## v1.1, 2015-Mar-31
 
 ### Windows Support
 
 * The Meteor command line tool now officially supports Windows 7, Windows 8.1,
-  Windows Server 2008, and Windows Server 2012.
+  Windows Server 2008, and Windows Server 2012. It can run from PowerShell or
+  Command Prompt.
 
 * There is a native Windows installer that will be available for download from
   <https://www.meteor.com/install> starting with this release.
 
 * In this release, Meteor on Windows supports all features available on Linux
-  and Mac except building mobile apps with PhoneGap.
+  and Mac except building mobile apps with PhoneGap/Cordova.
+
+* The `meteor admin get-machine` command now supports an additional
+  architecture, `os.windows.x86_32`, which can be used to build binary packages
+  for Windows.
 
 ### Version Solver
 
@@ -66,6 +71,9 @@
 * Upgraded dependencies:
 
   - uglify-js: 2.4.17 (from 2.4.13)
+
+Patches contributed by GitHub users hwillson, mitar, murillo128, Primigenus,
+rjakobsson, and tmeasday.
 
 
 ## v1.0.5, 2015-Mar-25

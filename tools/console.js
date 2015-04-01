@@ -1140,18 +1140,35 @@ _.extend(Console.prototype, {
     // for example), default to 80 columns.
     var max = self.width();
 
-    // Wrap the text using the npm wordwrap library.
-    var wrappedText = wordwrap(maxIndent, max)(text);
+    var wrappedText;
+    if (process.env.METEOR_NO_WORDWRAP) {
+      var indent =
+        options.indent ? Array(options.indent + 1).join(' ') : "";
+      if (options.bulletPoint) {
+        wrappedText = options.bulletPoint + text;
+      } else {
+        wrappedText = text;
+      }
+      wrappedText = _.map(wrappedText.split('\n'), function (s) {
+        if (s === "")
+          return "";
+        return indent + s;
+      }).join('\n');
 
-    // Insert the start string, if applicable.
-    if (options.bulletPoint) {
-      // Save the initial indent level.
-      var initIndent = options.indent ?
-          wrappedText.substring(0, options.indent) : "";
-      // Add together the initial indent (if any), the bullet point and the
-      // remainder of the message.
-      wrappedText = initIndent + options.bulletPoint +
+    } else {
+      // Wrap the text using the npm wordwrap library.
+      wrappedText = wordwrap(maxIndent, max)(text);
+
+      // Insert the start string, if applicable.
+      if (options.bulletPoint) {
+        // Save the initial indent level.
+        var initIndent = options.indent ?
+              wrappedText.substring(0, options.indent) : "";
+        // Add together the initial indent (if any), the bullet point and the
+        // remainder of the message.
+        wrappedText = initIndent + options.bulletPoint +
           wrappedText.substring(maxIndent);
+      }
     }
 
     // If we have previously replaces any spaces, now is the time to bring them
