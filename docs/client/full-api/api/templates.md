@@ -88,7 +88,7 @@ Because your template has been rendered, you can use functions like
 This can be a good place to apply any DOM manipulations you want, after the
 template is rendered for the first time.
 
-```handlebars
+```html
 <template name="myPictures">
   <div class="container">
     {{#each pictures}}
