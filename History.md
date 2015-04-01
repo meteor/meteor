@@ -18,6 +18,9 @@
   this could either lead to the file being included multiple times, or to a
   build time crash.
 
+* You may now specify the `bare` option for JavaScript files on the server.
+  Previous versions only allowed this on the client. #3681
+
 
 ### `meteor` command-line tool
 

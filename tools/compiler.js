@@ -704,8 +704,6 @@ var compileUnibuild = function (options) {
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "web"))
-          throw new Error("'bare' option may only be used for web targets");
 
         // By default, use fileOptions for the `bare` option but also allow
         // overriding it with the options
