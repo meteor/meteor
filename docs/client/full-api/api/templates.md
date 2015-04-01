@@ -123,7 +123,7 @@ instance that are read from template helpers using `Template.instance()`.
 ```javascript
 Template.myPictures.onCreated(function () {
   // set up local reactive variables
-  this.dataVar = new ReactiveVar("some value");
+  this.highlightedPicture = new ReactiveVar(null);
 
   // register this template within some central store
   GalleryTemplates.push(this);
@@ -144,9 +144,7 @@ callback to fire.
 ```javascript
 Template.myPictures.onDestroyed(function () {
   // deregister from some central store
-  var positionInStore = GalleryTemplates.indexOf(this);
-  if (positionInStore !== -1)
-    GalleryTemplates.splice(positionInStore, 1);
+  GalleryTemplates = _.without(GalleryTemplates, this);
 });
 ```
 
