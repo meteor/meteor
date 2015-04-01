@@ -1259,6 +1259,135 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
   }
 };
 
+/**
+ * This function takes an array of paths that might contain a wildecard for
+ * adding all files in a folder.
+ *
+ * This is used by the api.addFiles in packages.js
+ * Ex.:
+ * sources = files.updateWildcardSelectors(sourceRoot, sources);
+ * 
+ * Will replace `/client/*` with the actual file paths found in `/client`
+ * second it will take `/server/*.js` and replace it with all `.js` files found
+ * in `/server`
+ * 
+ * @method updateWildcardSelectors
+ * @param {String} sourceRoot Path of the source root
+ * @param {Object} sources Object in form of { 'file': { relPath: 'file' }, .. }
+ * @return {Object} In same form as sources
+ */
+files.updateWildcardSelectors = function(sourceRoot, sources) {
+  var result = {};
+
+  // We iterate over each source and checks if it's a wildcard path
+  // If so we resolve and add the matching sources if not the source reference
+  // is simply moved to the result.
+  // 
+  // We don't allow wildcards on top level of the sourceRoot, this would
+  // typically at root package level making it problematic to resolve.
+  // 
+  // Dot files are ignored, eg. `.foo.js` would be ignored
+  // 
+  // We also currently don't support recursive path crawling, theres some
+  // general concerns:
+  // 
+  // 1. Performance
+  // 2. Circular references via symlinks
+  // 3. We still want the package writer to be aware of what's included, it
+  //    might be harder to reason about in deeper levels.
+  // 
+  //   
+  // The resolver expects the source to be in the format like:
+  //    'client/*' or 'client/*.js'
+  // 
+  // If a source name contains `/*` we consider it a wildecard selection and try
+  // to resolve.
+  // 
+  // We also compile a regular expression for filter options. So for example
+  // 'client/*.js' would only include the javascript files in the client folder.
+  // 
+  // Note:
+  // In theory users can do semi filtering like 'client/*file[a|b].js' resulting
+  // in only adding `filea.js` and `fileb.js`
+  // 
+  // 
+  // Resolving path's
+  // 
+  // Each path item in the source name selection is checked if it's:
+  // 1. A file
+  // 2. A .dot file then ignore
+  // 3. If the filename passes the compiled regular expression test
+  // 
+  // If all passes we add the file item to the resulting source object.
+  // 
+  // Reference:
+  // https://github.com/MeteorCommunity/discussions/issues/7
+  // 
+  // Note:
+  // File watching is currently at package.js update level so adding or removing
+  // files to a wildcard path in a package doesn't trigger a rebuild.
+  // 
+  _.each(sources, function(ref, name) {
+    if (/\/\*/.test(name)) {
+      // Expect 'client/*' or maybe 'client/*.js'
+      // 
+      var parts = name.split('/*');
+      // Set the relative path from the wildcard path
+      var relativePath = parts[0];
+
+      // Set a filter for extension (if any)
+      var filterExt = parts[1] || '';
+
+      // Compile a filter regular expression
+      var filterRegExp = new RegExp(filterExt+'$');
+
+      // Get the absolute pathname for this folder
+      var pathName = path.join(sourceRoot, relativePath || '');
+
+      // Check existence and prevent this from working on top package level
+      // XXX: We should warn about this if using `/*` or `/*.js`
+      if (relativePath && fs.existsSync(pathName)) {
+
+        // XXX: for now this doesn't support recursive filtering so we only add
+        // files at first level
+        // XXX: Make sure errors throw are handled
+        fs.readdirSync(pathName).forEach(function(filename) {
+
+          // Skip if it's a dot file
+          if (filename[0] === '.') return;
+
+          // Get the absolute file path
+          var filePath = path.join(pathName, filename);
+
+          // Read the stat properties
+          var stat = fs.statSync(filePath);
+
+          // If a file and filter test is successful
+          if (stat.isFile() && filterRegExp.test(filename)) {
+
+            // Add the relative path to the files array
+            var relativeFilename = path.join(relativePath, filename);
+
+            // Add the file to the source list
+            // XXX: Do we need to handle assets differently?
+            result[relativeFilename] = { relPath: relativeFilename };
+
+          }
+        });
+
+      } else {
+        // Return the filter value for now - it will error in the build process
+        result[name] = ref;
+      }
+    } else {
+      // Just passthrough the reference as normal
+      result[name] = ref;
+    }
+  });
+
+  return result;
+};
+
 // Summary of cross platform file system handling strategy
 
 // There are three main pain points for handling files on Windows: slashes in

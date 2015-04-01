@@ -982,6 +982,11 @@ _.extend(PackageSource.prototype, {
         npmDependencies = null;
         cordovaDependencies = null;
       }
+      
+      // Fill in files for wildcard source selectors
+      _.each(compiler.ALL_ARCHES, function (arch) {
+        api.sources[arch] = files.updateWildcardSelectors(self.sourceRoot, api.sources[arch]);
+      });
     }
 
     // By the way, you can't depend on yourself.
