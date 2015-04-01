@@ -21,6 +21,11 @@
 * You may now specify the `bare` option for JavaScript files on the server.
   Previous versions only allowed this on the client. #3681
 
+### Livequery
+
+* The oplog observe driver now properly updates queries when you drop a
+  database.  #3847
+
 
 ### `meteor` command-line tool
 

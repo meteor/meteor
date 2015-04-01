@@ -8,13 +8,28 @@ DDPServer._Crossbar = function (options) {
 
   self.nextId = 1;
   // map from collection name (string) -> listener id -> object. each object has
-  // keys 'trigger', 'callback'.
+  // keys 'trigger', 'callback'.  As a hack, the empty string means "no
+  // collection".
   self.listenersByCollection = {};
   self.factPackage = options.factPackage || "livedata";
   self.factName = options.factName || null;
 };
 
 _.extend(DDPServer._Crossbar.prototype, {
+  // msg is a trigger or a notification
+  _collectionForMessage: function (msg) {
+    var self = this;
+    if (! _.has(msg, 'collection')) {
+      return '';
+    } else if (typeof(msg.collection) === 'string') {
+      if (msg.collection === '')
+        throw Error("Message has empty collection!");
+      return msg.collection;
+    } else {
+      throw Error("Message has non-string collection!");
+    }
+  },
+
   // Listen for notification that match 'trigger'. A notification
   // matches if it has the key-value pairs in trigger as a
   // subset. When a notification matches, call 'callback', passing
@@ -29,11 +44,7 @@ _.extend(DDPServer._Crossbar.prototype, {
     var self = this;
     var id = self.nextId++;
 
-    if (typeof(trigger.collection) !== 'string') {
-      throw Error("Trigger lacks collection!");
-    }
-
-    var collection = trigger.collection;  // save in case trigger is mutated
+    var collection = self._collectionForMessage(trigger);
     var record = {trigger: EJSON.clone(trigger), callback: callback};
     if (! _.has(self.listenersByCollection, collection)) {
       self.listenersByCollection[collection] = {};
@@ -70,15 +81,13 @@ _.extend(DDPServer._Crossbar.prototype, {
   fire: function (notification) {
     var self = this;
 
-    if (typeof(notification.collection) !== 'string') {
-      throw Error("Notification lacks collection!");
+    var collection = self._collectionForMessage(notification);
+
+    if (! _.has(self.listenersByCollection, collection)) {
+      return;
     }
 
-    if (! _.has(self.listenersByCollection, notification.collection))
-      return;
-
-    var listenersForCollection =
-          self.listenersByCollection[notification.collection];
+    var listenersForCollection = self.listenersByCollection[collection];
     var callbackIds = [];
     _.each(listenersForCollection, function (l, id) {
       if (self._matches(notification, l.trigger)) {
@@ -91,10 +100,10 @@ _.extend(DDPServer._Crossbar.prototype, {
     // be mutated during this iteration), and then invoke the matching
     // callbacks, checking before each call to ensure they haven't stopped.
     // Note that we don't have to check that
-    // self.listenersByCollection[notification.collection] still ===
-    // listenersForCollection, because the only way that stops being true is if
-    // listenersForCollection first gets reduced down to the empty object (and
-    // then never gets increased again).
+    // self.listenersByCollection[collection] still === listenersForCollection,
+    // because the only way that stops being true is if listenersForCollection
+    // first gets reduced down to the empty object (and then never gets
+    // increased again).
     _.each(callbackIds, function (id) {
       if (_.has(listenersForCollection, id)) {
         listenersForCollection[id].callback(notification);
