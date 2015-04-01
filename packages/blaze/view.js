@@ -354,7 +354,9 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       // helpers in the DOM tree to be replaced might be scheduled
       // to re-run before we have a chance to stop them.
       Tracker.onInvalidate(function () {
-        domrange.destroyMembers();
+        if (domrange) {
+          domrange.destroyMembers();
+        }
       });
     }, undefined, 'materialize');
 
