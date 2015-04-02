@@ -14,6 +14,19 @@
   `Meteor.subscribe`.
 
 
+## DDP
+
+* Websockets now support the
+  [`permessage-deflate`](https://tools.ietf.org/id/draft-ietf-hybi-permessage-compression-19.txt)
+  extension, which compresses data on the wire. It is enabled by default on the
+  server. To disable it, set `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure
+  compression options, set `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that
+  will be used as an argument to
+  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
+  Compression is supported on the client side by Meteor's Node DDP client and by
+  browsers including Chrome, Safari, and Firefox 37.
+
+
 ### Isobuild
 
 * Plugins should not process files whose names match the extension exactly (with

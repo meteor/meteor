@@ -1,18 +1,26 @@
 {
   "dependencies": {
     "faye-websocket": {
-      "version": "0.8.1",
+      "version": "0.9.4",
       "dependencies": {
         "websocket-driver": {
-          "version": "0.4.0"
+          "version": "0.5.4",
+          "dependencies": {
+            "websocket-extensions": {
+              "version": "0.1.1"
+            }
+          }
         }
       }
     },
+    "permessage-deflate": {
+      "version": "0.1.3"
+    },
     "sockjs": {
-      "version": "0.3.11",
+      "version": "0.3.14",
       "dependencies": {
         "node-uuid": {
-          "version": "1.4.1"
+          "version": "1.4.3"
         }
       }
     }
