@@ -167,7 +167,7 @@ var checkSubtree = function (value, pattern) {
   }
 
   // Strings and numbers match literally.  Goes well with Match.OneOf.
-  if (typeof pattern === "string" || typeof pattern === "number") {
+  if (typeof pattern === "string" || typeof pattern === "number" || typeof pattern === "boolean") {
     if (value === pattern)
       return;
     throw new Match.Error("Expected " + pattern + ", got " +
