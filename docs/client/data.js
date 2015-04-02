@@ -1273,7 +1273,7 @@ DocsData = {
   "Blaze.TemplateInstance#subscribe": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 341,
+    "lineno": 344,
     "locus": "Client",
     "longname": "Blaze.TemplateInstance#subscribe",
     "memberof": "Blaze.TemplateInstance",
@@ -1358,7 +1358,7 @@ DocsData = {
   "Blaze.TemplateInstance#subscriptionsReady": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 404,
+    "lineno": 424,
     "longname": "Blaze.TemplateInstance#subscriptionsReady",
     "memberof": "Blaze.TemplateInstance",
     "name": "subscriptionsReady",
@@ -2585,7 +2585,7 @@ DocsData = {
   "Email.send": {
     "filepath": "email/email.js",
     "kind": "function",
-    "lineno": 126,
+    "lineno": 128,
     "locus": "Server",
     "longname": "Email.send",
     "memberof": "Email",
@@ -5625,7 +5625,7 @@ DocsData = {
   "Template#events": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 448,
+    "lineno": 468,
     "locus": "Client",
     "longname": "Template#events",
     "memberof": "Template",
@@ -5648,7 +5648,7 @@ DocsData = {
   "Template#helpers": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 419,
+    "lineno": 439,
     "locus": "Client",
     "longname": "Template#helpers",
     "memberof": "Template",
@@ -5760,7 +5760,7 @@ DocsData = {
   "Template.currentData": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 502,
+    "lineno": 522,
     "locus": "Client",
     "longname": "Template.currentData",
     "memberof": "Template",
@@ -5807,7 +5807,7 @@ DocsData = {
   "Template.instance": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 472,
+    "lineno": 492,
     "locus": "Client",
     "longname": "Template.instance",
     "memberof": "Template",
@@ -5829,7 +5829,7 @@ DocsData = {
   "Template.parentData": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 510,
+    "lineno": 530,
     "locus": "Client",
     "longname": "Template.parentData",
     "memberof": "Template",
@@ -5853,7 +5853,7 @@ DocsData = {
   "Template.registerHelper": {
     "filepath": "blaze/template.js",
     "kind": "function",
-    "lineno": 519,
+    "lineno": 539,
     "locus": "Client",
     "longname": "Template.registerHelper",
     "memberof": "Template",

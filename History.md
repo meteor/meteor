@@ -76,6 +76,13 @@
   just like it does with Numbers and Strings. This applies to the `check`
   function as well.
 
+## v1.1.0.1, 2015-Apr-02
+
+### Blaze
+
+* Fix a regression in 1.1 in Blaze Templates: an error happening when View is
+  invalidated immediately, causing a client-side crash (accessing
+  `destroyMembers` of `undefined`). #4097
 
 ## v1.1, 2015-Mar-31
 

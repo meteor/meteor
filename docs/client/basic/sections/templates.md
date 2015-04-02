@@ -223,8 +223,8 @@ You can perform initialization or clean-up on any objects in
 callbacks.
 
 For example, to use the HighlightJS library to apply code highlighting to
-all `<pre>` elements inside the `codeSample` template, you might assign
-the following function to `Template.codeSample.rendered`:
+all `<pre>` elements inside the `codeSample` template, you might pass
+the following function to `Template.codeSample.onRendered`:
 
 ```
 Template.codeSample.onRendered(function () {
