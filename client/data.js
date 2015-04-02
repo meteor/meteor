@@ -1208,7 +1208,38 @@ DocsData = {
     "longname": "Blaze.TemplateInstance#subscribe",
     "memberof": "Blaze.TemplateInstance",
     "name": "subscribe",
-    "options": [],
+    "options": [
+      {
+        "description": "<p>Passed to <a href=\"#meteor_subscribe\"><code>Meteor.subscribe</code></a>.</p>",
+        "name": "onReady",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      },
+      {
+        "description": "<p>Passed to <a href=\"#meteor_subscribe\"><code>Meteor.subscribe</code></a>.</p>",
+        "name": "onStop",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      },
+      {
+        "description": "<p>The connection on which to make the\nsubscription.</p>",
+        "name": "connection",
+        "optional": true,
+        "type": {
+          "names": [
+            "DDP.Connection"
+          ]
+        }
+      }
+    ],
     "params": [
       {
         "description": "<p>Name of the subscription.  Matches the name of the\nserver's <code>publish()</code> call.</p>",
@@ -1230,8 +1261,8 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional. May include <code>onStop</code> and\n<code>onReady</code> callbacks. If a function is passed instead of an object, it is\ninterpreted as an <code>onReady</code> callback.</p>",
-        "name": "callbacks",
+        "description": "<p>If a function is passed instead of an\nobject, it is interpreted as an <code>onReady</code> callback.</p>",
+        "name": "options",
         "optional": true,
         "type": {
           "names": [
@@ -3233,7 +3264,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure. The callback cannot be called if you are using the &quot;redirect&quot; <code>loginStyle</code>, because the app will have reloaded in the meantime; try using <a href=\"#accounts_onlogin\">client-side login hooks</a> instead.</p>",
         "name": "callback",
         "optional": true,
         "type": {
