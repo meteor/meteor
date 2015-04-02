@@ -124,6 +124,8 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
                      args: []});
   run('{{> a.b.c}}', {type: 'INCLUSION', path: ['a', 'b', 'c'],
                       args: []});
+  run('{{@> templ a=b c = d}}', {type: 'INCLUSION_ARGS', path: ['templ'],
+                      args: [['PATH', ['b'], 'a'], ['PATH', ['d'], 'c']]});
 
   run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''],
                         args: []});
