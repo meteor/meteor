@@ -3212,3 +3212,17 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions 
     trueThenFalse.set(false);
   }
 ]);
+
+Tinytest.add("spacebars-tests - template_tests - nested expressions", function (test) {
+  var tmpl = Template.spacebars_template_test_nested_exprs;
+
+  tmpl.helpers({
+    add: function (a, b) {
+      return a + b;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "6");
+});
+
