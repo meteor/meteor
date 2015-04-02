@@ -3168,8 +3168,10 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
 
     tmpl.onCreated(function () {
       var subHandle = this.subscribe("templateSub", subscribeCallback);
-      var subHandle2 = this.subscribe(
-        "templateSub", futureId, subscribeCallback);
+      var subHandle2 = this.subscribe("templateSub", futureId, {
+        onReady: subscribeCallback,
+        connection: Meteor.connection
+      });
 
       subHandle.stop = stopCallback;
       subHandle2.stop = stopCallback2;
