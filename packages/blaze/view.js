@@ -227,7 +227,7 @@ Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
  */
 Blaze.View.prototype.subscribe = function (args, options) {
   var self = this;
-  options = options == undefined ? {} : options;
+  options = options || {};
 
   self._errorIfShouldntCallSubscribe();
 
