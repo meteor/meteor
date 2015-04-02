@@ -73,6 +73,7 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
               ['PATH', ['qux'], 'baz'],
               ['PATH', ['.'], 'x3']]});
 
+  // nested expressions
   run('{{helper (subhelper ./arg) arg.sub (args.passedHelper)}}', {
     type: 'DOUBLE', path: ['helper'],
     args: [
@@ -92,6 +93,10 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
       ]
     ]
   });
+  run('{{helper (h arg}}', "Expected `)`");
+  run('{{helper (h arg))}}', "Expected");
+  run('{{helper ) h arg}}', "Expected");
+  run('{{(dyn) arg}}', "Expected ID");
 
   run('{{{x 0.3 [0].[3] .4 ./[4]}}}',
       {type: 'TRIPLE', path: ['x'],
