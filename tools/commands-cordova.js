@@ -388,7 +388,7 @@ var ensureCordovaProject = function (projectContext, appName) {
       if (err instanceof main.ExitWithCode) {
         process.exit(err.code);
       }
-      Console.error("Error creating Cordova prject: " + err.message);
+      Console.error("Error creating Cordova project: " + err.message);
       Console.rawError(err.stack + "\n");
     }
   }
