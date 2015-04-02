@@ -41,6 +41,7 @@ Autoupdate.newClientAvailable = function () {
                _id: "version-refreshable",
                version: {$ne: autoupdateVersionRefreshable} });
 };
+Autoupdate._ClientVersions = ClientVersions;  // Used by a self-test
 
 var knownToSupportCssOnLoad = false;
 
