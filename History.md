@@ -8,6 +8,11 @@
   in an instance of `#each` block helper followed by false "duplicate ids"
   warnings. #4049
 
+* `TemplateInstance#subscribe` now has a new `connection` option, which
+  specifies which connection should be used when making the subscription. The
+  default is `Meteor.connection`, which is the connection used when calling
+  `Meteor.subscribe`.
+
 
 ### Isobuild
 
@@ -50,6 +55,26 @@
 
 * Add `Accounts.oauth.unregisterService` method, and ensure that users can only
   log in with currently registered services.  #4014
+
+### Email
+
+* `Email.send` now has a new option, `attachments`, in the same style as
+  `mailcomposer`.
+  [Details here.](https://github.com/andris9/mailcomposer#add-attachments)
+
+### Tracker
+
+* `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
+  the dictionary as if no items had been added, meaning all calls to `get` will
+  return `underfined`. `all` converts the dictionary into a regular JavaScript
+  object with a snapshot of the keys and values. Inside an autorun, `all`
+  registers a dependency on any changes to the dictionary.
+
+### Utilities
+
+* `Match.test` from the `check` package now properly compares boolean literals,
+  just like it does with Numbers and Strings. This applies to the `check`
+  function as well.
 
 
 ## v1.1, 2015-Mar-31
