@@ -458,16 +458,20 @@ _.extend(exports.Tropohouse.prototype, {
         // try to rename over the other thing?  but that's the same as in
         // warehouse?
         _.each(buildsToDownload, function (build) {
-          try {
-            var buildTempDir = self._downloadBuildToTempDir(
-              { packageName: packageName, version: version }, build);
-          } catch (e) {
-            if (!(e instanceof files.OfflineError))
-              throw e;
-            buildmessage.error(e.error.message);
-          }
-          buildInputDirs.push(buildTempDir);
-          buildTempDirs.push(buildTempDir);
+          buildmessage.enterJob({
+            title: "downloading " + packageName + "@" + version + " for " + build.buildArchitectures + "..."
+          }, function() {
+            try {
+              var buildTempDir = self._downloadBuildToTempDir(
+                { packageName: packageName, version: version }, build);
+            } catch (e) {
+              if (!(e instanceof files.OfflineError))
+                throw e;
+              buildmessage.error(e.error.message);
+            }
+            buildInputDirs.push(buildTempDir);
+            buildTempDirs.push(buildTempDir);
+          });
         });
         if (buildmessage.jobHasMessages())
           return;
