@@ -388,14 +388,15 @@ Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
     }
   };
 
-  var connection;
-  if(_.has(options, 'connection')) {
-    connection = options.connection;
-    delete options.connection;
-  }
+  var connection = options.connection;
+  var callbacks = _.pick(options, ["onReady", "onError", "onStop"]);
 
-  args.push(options);
+  // The callbacks are passed as the last item in the arguments array passed to
+  // View#subscribe
+  args.push(callbacks);
 
+  // View#subscribe takes the connection as one of the options in the last
+  // argument
   subHandle = self.view.subscribe.call(self.view, args, {
     connection: connection
   });
