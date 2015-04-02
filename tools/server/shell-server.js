@@ -15,7 +15,23 @@ var EXITING_MESSAGE =
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
 exports.listen = function listen(shellDir) {
-  new Server(shellDir).listen();
+  function callback() {
+    new Server(shellDir).listen();
+  }
+
+  // If the server is still in the very early stages of starting up,
+  // Meteor.startup may not available yet.
+  if (typeof Meteor === "object") {
+    Meteor.startup(callback);
+  } else if (typeof __meteor_bootstrap__ === "object") {
+    var hooks = __meteor_bootstrap__.startupHooks;
+    if (hooks) {
+      hooks.push(callback);
+    } else {
+      // As a fallback, just call the callback asynchronously.
+      process.nextTick(callback);
+    }
+  }
 };
 
 // Disabling the shell causes all attached clients to disconnect and exit.
