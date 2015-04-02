@@ -166,8 +166,8 @@ var checkSubtree = function (value, pattern) {
     throw new Match.Error("Expected null, got " + EJSON.stringify(value));
   }
 
-  // Strings and numbers match literally.  Goes well with Match.OneOf.
-  if (typeof pattern === "string" || typeof pattern === "number") {
+  // Strings, numbers, and booleans match literally. Goes well with Match.OneOf.
+  if (typeof pattern === "string" || typeof pattern === "number" || typeof pattern === "boolean") {
     if (value === pattern)
       return;
     throw new Match.Error("Expected " + pattern + ", got " +
