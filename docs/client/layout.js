@@ -1,3 +1,11 @@
+Template.topBar.helpers({
+  release: release
+});
+
+Template.sidebar.helpers({
+  release: release
+});
+
 Template.registerHelper("layoutHidden", function (type) {
   return (!!Session.get('fullApi')) ^ (type === 'full') ? 'hidden' : '';
 });

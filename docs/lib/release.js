@@ -1,0 +1,1 @@
+release = Meteor.release ? "1.1" : "(checkout)";

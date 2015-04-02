@@ -20,6 +20,7 @@
 {{#with apiData this}}
 <div class="api {{bare}} new-api-box">
   {{> apiBoxTitle name=signature locus=locus id=id filepath=filepath lineno=lineno}}
+  {{> discuss id=longname name=longname}}
 
   <div class="desc">
     {{#markdown}}{{summary}}{{/markdown}}

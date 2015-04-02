@@ -13,3 +13,8 @@ reload-safetybelt
 simple:markdown-templating
 simple:highlight.js
 less
+accounts-ui
+accounts-meteor-developer
+check
+reactive-var
+copleykj:jquery-autosize

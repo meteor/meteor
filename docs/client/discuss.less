@@ -1,0 +1,124 @@
+.discuss-overlay {
+  z-index: 200;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: white;
+
+  padding: 30px;
+  
+  .container {
+    max-width: 900px;
+  }
+
+  .login-buttons {
+    float: right;
+  }
+
+  .thread-title {
+    margin-top: 0;
+  }
+
+  .close {
+    text-decoration: none;
+    font-size: 15px;
+    line-height: 1em;
+    margin-right: 20px;
+  }
+
+  .comment {
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+
+    .comment-header {
+      background: #eee;
+      padding: 10px;
+
+      color: #777;
+
+      .delete-comment {
+        float: right;
+        text-decoration: none;
+
+        &:hover {
+          background: none;
+        }
+      }
+
+      .username {
+        font-weight: bold;
+        color: black;
+      }
+    }
+  }
+
+  .comment-content {
+    padding: 10px;
+    font-size: 14px;
+
+    h1 {
+      font-size: 1.3em;
+    }
+
+    h2 {
+      font-size: 1.2em;
+    }
+
+    h3 {
+      font-size: 1.1em;
+    }
+
+    h1, h2, h3, h4, h5, h6 {
+      &:first-child {
+        margin-top: 0;
+      }
+    }
+  }
+
+  .new-comment {
+    border: 1px solid #ccc;
+    padding: 10px;
+
+    .form-title {
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 45%;
+      display: inline-block;
+      vertical-align:top;
+      padding: 10px;
+    }
+
+    .preview {
+      width: 45%;
+      display: inline-block;
+      border: 1px dashed #ccc;
+      vertical-align:top;
+    }
+
+    .save {
+      cursor: pointer;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      -o-user-select: none;
+      user-select: none;
+      padding: 4px 8px;
+      font-size: 80%;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      text-align: center;
+      color: #fff;
+      background: #596595;
+      border: 1px solid #464f75;
+      border-radius: 4px;
+
+      margin-top: 10px;
+    }
+  }
+
+}
+

@@ -22,6 +22,11 @@ $(document).on("keydown", function (event) {
 // Open search with any non-special key
 var keysToOpenSearch = /[A-Za-z0-9]/;
 $(document).on("keydown", function (event) {
+  if (Session.get("openDiscussion")) {
+    // Can't search while we have the comment window open
+    return;
+  }
+
   // Don't activate search for special keys or keys with modifiers
   if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
       (! event.ctrlKey) && (! event.metaKey) && (! Session.get("searchOpen"))) {

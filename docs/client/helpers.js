@@ -1,7 +1,3 @@
-release = Meteor.release ? "1.1" : "(checkout)";
-
-Template.registerHelper("release", release);
-
 Template.registerHelper("fullApi", function () {
   return Session.get("fullApi");
 });
