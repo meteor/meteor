@@ -9,8 +9,7 @@
 }
 
 .drawer {
-  width: 60%;
-  max-width: 900px;
+  width: 100%;
   background: white;
   position: absolute;
   z-index: 20;
@@ -20,5 +19,12 @@
 
   .container {
     padding: 20px;
+  }
+}
+
+@media (min-width: 768px) {
+  .drawer {
+    width: 80%;
+    max-width: 900px;
   }
 }
