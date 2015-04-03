@@ -12,8 +12,14 @@
  * @locus Client
  * @param {String} [viewName] Optional.  A name for Views constructed by this Template.  See [`view.name`](#view_name).
  * @param {Function} renderFunction A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template.
+ * @param {Object} [options]
+ * @param {String[]} [options.formalArgs] An array of names, the template
+ * accecpts as arguments. Passed arguments found in this list will have special
+ * treatment and will get bound to the template instance's scope. These and
+ * other arguments will still be available to the template instance via the
+ * special `@args` symbol.
  */
-Blaze.Template = function (viewName, renderFunction) {
+Blaze.Template = function (viewName, renderFunction, options) {
   if (! (this instanceof Blaze.Template))
     // called without `new`
     return new Blaze.Template(viewName, renderFunction);
@@ -39,6 +45,9 @@ Blaze.Template = function (viewName, renderFunction) {
     rendered: [],
     destroyed: []
   };
+
+  options = options || {};
+  this._formalArgs = options.formalArgs || [];
 };
 var Template = Blaze.Template;
 
@@ -131,11 +140,13 @@ Template.prototype.constructView = function (contentFunc, elseFunc, argsFunc) {
     // Save a reference to the view to have the context where the arguments are
     // evaluated, so we can later re-evaluate them reactively in an autorun.
     var argsView = Blaze.currentView;
-    Blaze._attachBindingsToView(argsFunc(), view);
+    Blaze._attachBindingsToView(_.pick(argsFunc(), self._formalArgs), view);
     view.onViewCreated(function () {
       view.autorun(function () {
         Blaze._withCurrentView(argsView, function () {
-          _.each(argsFunc(), function (val, key) {
+          // Only bind args declared in template's formals
+          var argsDict = _.pick(argsFunc(), self._formalArgs);
+          _.each(argsDict, function (val, key) {
             view._scopeBindings[key].set(val);
           });
         });
