@@ -23,7 +23,9 @@ var reservedIds = [
   // special #each-loop variables
   '@index', '@index_1', '@first', '@last', '@odd', '@even', '@key',
   // a new template inclusion operator
-  '@>'
+  '@>',
+  // special keywords for new templates features
+  '@args', '@state'
 ];
 
 // See ECMA-262 spec, 3rd edition, Section 7.6
