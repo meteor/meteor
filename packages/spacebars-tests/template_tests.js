@@ -3343,8 +3343,18 @@ Tinytest.add("spacebars-tests - template_tests - nested expressions", function (
 
 Tinytest.add("spacebars-tests - template_tests - template arguments", function (test) {
   var tmpl = Template.spacebars_template_test_template_pass_arguments;
+  var myVar = new ReactiveVar('init');
+  tmpl.helpers({
+    helper: function () {
+      return myVar.get();
+    }
+  });
 
   var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference");
+  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference - init");
+
+  myVar.set('new');
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference - new");
 });
 

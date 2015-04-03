@@ -2,7 +2,8 @@ Spacebars = {};
 
 var tripleEquals = function (a, b) { return a === b; };
 
-Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
+Spacebars.include = function (
+  templateOrFunction, contentFunc, elseFunc, argsFunc) {
   if (! templateOrFunction)
     return null;
 
@@ -10,7 +11,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     var template = templateOrFunction;
     if (! Blaze.isTemplate(template))
       throw new Error("Expected template or null, found: " + template);
-    return templateOrFunction.constructView(contentFunc, elseFunc);
+    return templateOrFunction.constructView(contentFunc, elseFunc, argsFunc);
   }
 
   var templateVar = Blaze.ReactiveVar(null, tripleEquals);
@@ -22,7 +23,7 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
     if (! Blaze.isTemplate(template))
       throw new Error("Expected template or null, found: " + template);
 
-    return template.constructView(contentFunc, elseFunc);
+    return template.constructView(contentFunc, elseFunc, argsFunc);
   });
   view.__templateVar = templateVar;
   view.onViewCreated(function () {
