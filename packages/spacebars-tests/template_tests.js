@@ -3412,3 +3412,27 @@ Tinytest.add("spacebars-tests - template_tests - template arguments - undeclared
   test.equal(canonicalizeHtml(div.innerHTML), "1 - 2 -");
 });
 
+Tinytest.add("spacebars-tests - template_tests - template arguments - @args symbol", function (test) {
+  var tmpl = Template.spacebars_template_test_at_args_symbol_caller;
+  var myVar = new ReactiveVar('init');
+  tmpl.helpers({
+    helper: function () {
+      return myVar.get();
+    }
+  });
+  Template.spacebars_template_test_at_args_symbol.helpers({
+    keyValues: function (obj) {
+      return _.map(obj, function (v, k) {
+        return k + ':' + v;
+      }).join(' ');
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "f - one:1 two:two three:3 four:init five:f");
+
+  myVar.set('new');
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "f - one:1 two:two three:3 four:new five:f");
+});
+
