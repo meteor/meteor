@@ -1,5 +1,7 @@
 APICollection = new Mongo.Collection(null);
 
+var searchOpen = false;
+
 Meteor.startup(function () {
   _.each(DocsData, function (val) {
     // XXX only insert things that are actually in the docs
@@ -7,43 +9,22 @@ Meteor.startup(function () {
       APICollection.insert(val);
     }
   });
-});
 
-Session.setDefault("searchOpen", false);
-Session.setDefault("searchQuery", "");
-Session.setDefault("searchResults", []);
-Session.setDefault("selectedResultId", null);
+  // Open search with any non-special key
+  var keysToOpenSearch = /[A-Za-z0-9]/;
+  $(document).on("keydown", function (event) {
+    if (Session.get("openDiscussion")) {
+      // Can't search while we have the comment window open
+      return;
+    }
 
-var closeSearch = function () {
-  closeDrawer();
-  Session.set("searchOpen", false);
-}
-
-// Close search with ESC
-$(document).on("keydown", function (event) {
-  if (event.which === 27) {
-    closeSearch();
-  }
-});
-
-// Open search with any non-special key
-var keysToOpenSearch = /[A-Za-z0-9]/;
-$(document).on("keydown", function (event) {
-  if (Session.get("openDiscussion")) {
-    // Can't search while we have the comment window open
-    return;
-  }
-
-  // Don't activate search for special keys or keys with modifiers
-  if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
-      (! event.ctrlKey) && (! event.metaKey) && (! Session.get("searchOpen"))) {
-    openDrawerWithTemplate("search");
-    Session.set("searchOpen", true);
-
-    Tracker.flush();
-    $(".search-query").val("");
-    $(".search-query").focus();
-  }
+    // Don't activate search for special keys or keys with modifiers
+    if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
+        (! event.ctrlKey) && (! event.metaKey) && (! searchOpen)) {
+      openDrawerWithTemplate("search");
+      Tracker.flush();
+    }
+  });
 });
 
 // scroll $parent to make sure $child is visible
@@ -72,87 +53,6 @@ var ensureVisible = function ($child, $parent) {
   }
 };
 
-// Whenever selectedResultId changes, make sure the selected element is visible
-Tracker.autorun(function () {
-  if (Session.get("selectedResultId")) {
-    Tracker.afterFlush(function () {
-      ensureVisible($(".search-results .selected"), $(".search-results"));
-    });
-  }
-});
-
-var indexOfByFunction = function (array, truthFunction) {
-  for (var i = 0; i < array.length; i++) {
-    if(truthFunction(array[i], i, array)) {
-      return i;
-    }
-  }
-  return -1;
-};
-
-var selectPrevItem = function () {
-  // find currently selected item
-  var curIndex = indexOfByFunction(Session.get("searchResults"), function (res) {
-    return res._id === Session.get("selectedResultId");
-  });
-
-  // select the previous item
-  if (curIndex > 0) {
-    Session.set("selectedResultId",
-      Session.get("searchResults")[curIndex - 1]._id);
-  }
-};
-
-var selectNextItem = function () {
-  // find currently selected item
-  var curIndex = indexOfByFunction(Session.get("searchResults"), function (res) {
-    return res._id === Session.get("selectedResultId");
-  });
-
-  // select the previous item
-  if (curIndex < Session.get("searchResults").length - 1) {
-    Session.set("selectedResultId",
-      Session.get("searchResults")[curIndex + 1]._id);
-  }
-};
-
-Template.search.events({
-  "keyup input": function (event) {
-    Session.set("searchQuery", event.target.value);
-  },
-  "click .close-search": function () {
-    closeSearch()
-    return false;
-  },
-  "keydown": function (event) {
-    if (event.which === 13) {
-      Tracker.afterFlush(function () {
-        if (Session.get("selectedResultId")) {
-          // XXX make sure this is completely up to date
-          var selectedName = APICollection.findOne(Session.get("selectedResultId")).longname;
-          var id = nameToId[selectedName] || selectedName.replace(/[.#]/g, "-");
-          var url = "#/full/" + id;
-          window.location.replace(url);
-          closeSearch();
-        }
-      });
-
-      // exit function
-      return;
-    }
-
-    if (event.which === 38) {
-      // up
-      selectPrevItem();
-      return false;
-    } else if (event.which === 40) {
-      // down
-      selectNextItem();
-      return false;
-    }
-  }
-});
-
 // When you have two arrays of search results, use this function to deduplicate
 // them
 var dedup = function (arrayOfSearchResultsArrays) {
@@ -171,40 +71,134 @@ var dedup = function (arrayOfSearchResultsArrays) {
   return dedupedResults;
 };
 
-// Only update the search results every 200 ms
-var updateSearchResults = _.throttle(function (query) {
-  var regex = new RegExp(query, "i");
-
-  // We do two separate queries so that we can be sure that the name matches
-  // are above the summary matches, since they are probably more relevant
-  var nameMatches = APICollection.find({ longname: {$regex: regex}}).fetch();
-  var summaryMatches = APICollection.find({ summary: {$regex: regex}}).fetch();
-
-  var deduplicatedResults = dedup([nameMatches, summaryMatches]);
-
-  Session.set("searchResults", deduplicatedResults);
-  if (deduplicatedResults.length) {
-    Session.set("selectedResultId", deduplicatedResults[0]._id);
+var indexOfByFunction = function (array, truthFunction) {
+  for (var i = 0; i < array.length; i++) {
+    if(truthFunction(array[i], i, array)) {
+      return i;
+    }
   }
-}, 200);
+  return -1;
+};
 
-// Call updateSearchResults when the query changes
-Tracker.autorun(function () {
-  if (Session.get("searchQuery")) {
-    updateSearchResults(Session.get("searchQuery"));
-  } else {
-    Session.set("searchResults", []);
+Template.search.onCreated(function () {
+  var self = this;
+
+  searchOpen = true;
+
+  self.searchQuery = new ReactiveVar("");
+  self.searchResults = new ReactiveVar([]);
+  self.selectedResultId = new ReactiveVar("");
+
+  self.autorun(function () {
+    if (self.searchQuery.get()) {
+      self.updateSearchResults(self.searchQuery.get());
+    } else {
+      self.searchResults.set([]);
+    }
+  });
+
+  // Whenever selectedResultId changes, make sure the selected element is visible
+  self.autorun(function () {
+    if (self.selectedResultId.get()) {
+      Tracker.afterFlush(function () {
+        ensureVisible(self.$(".search-results .selected"),
+          self.$(".search-results"));
+      });
+    }
+  });
+
+  self.updateSearchResults = _.throttle(function (query) {
+    var regex = new RegExp(query, "i");
+
+    // We do two separate queries so that we can be sure that the name matches
+    // are above the summary matches, since they are probably more relevant
+    var nameMatches = APICollection.find({ longname: {$regex: regex}}).fetch();
+    var summaryMatches = APICollection.find({ summary: {$regex: regex}}).fetch();
+
+    var deduplicatedResults = dedup([nameMatches, summaryMatches]);
+
+    self.searchResults.set(deduplicatedResults);
+
+    if (deduplicatedResults.length) {
+      self.selectedResultId.set(deduplicatedResults[0]._id);
+    }
+  }, 100, {
+    leading: false
+  });
+
+  self.selectPrevItem = function () {
+    // find currently selected item
+    var curIndex = indexOfByFunction(self.searchResults.get(), function (res) {
+      return res._id === self.selectedResultId.get();
+    });
+
+    // select the previous item
+    if (curIndex > 0) {
+      self.selectedResultId.set(self.searchResults.get()[curIndex - 1]._id);
+    }
+  };
+
+  self.selectNextItem = function () {
+    // find currently selected item
+    var curIndex = indexOfByFunction(self.searchResults.get(), function (res) {
+      return res._id === self.selectedResultId.get();
+    });
+
+    // select the previous item
+    if (curIndex < self.searchResults.get().length - 1) {
+      self.selectedResultId.set(self.searchResults.get()[curIndex + 1]._id);
+    }
+  };
+});
+
+Template.search.onDestroyed(function () {
+  searchOpen = false;
+});
+
+Template.search.onRendered(function () {
+  $(".search-query").focus();
+});
+
+Template.search.events({
+  "keyup input": function (event) {
+    Template.instance().searchQuery.set(event.target.value);
+  },
+  "keydown": function (event) {
+    var self = Template.instance();
+
+    if (event.which === 13) {
+      Tracker.afterFlush(function () {
+        if (self.selectedResultId.get()) {
+          // XXX make sure this is completely up to date
+          var selectedName = APICollection.findOne(self.selectedResultId.get()).longname;
+          var id = nameToId[selectedName] || selectedName.replace(/[.#]/g, "-");
+          var url = "#/full/" + id;
+          window.location.replace(url);
+          closeDrawer();
+        }
+      });
+
+      // exit function
+      return;
+    }
+
+    if (event.which === 38) {
+      // up
+      self.selectPrevItem();
+      return false;
+    } else if (event.which === 40) {
+      // down
+      self.selectNextItem();
+      return false;
+    }
   }
 });
 
 Template.search.helpers({
   searchResults: function () {
-    return Session.get("searchResults");
-  },
-  searchOpen: function () {
-    return Session.get("searchOpen");
+    return Template.instance().searchResults.get();
   },
   selected: function (_id) {
-    return _id === Session.get("selectedResultId");
+    return _id === Template.instance().selectedResultId.get();
   }
 });
