@@ -21,7 +21,9 @@ var unicodeClass = function (abbrev) {
 // Special handlebars-reserved identifiers, usually starting with '@'
 var reservedIds = [
   // special #each-loop variables
-  '@index', '@index_1', '@first', '@last', '@odd', '@even', '@key'
+  '@index', '@index_1', '@first', '@last', '@odd', '@even', '@key',
+  // a new template inclusion operator
+  '@>'
 ];
 
 // See ECMA-262 spec, 3rd edition, Section 7.6

@@ -1111,3 +1111,13 @@ Hi there!
   {{> spacebars_template_test_exprs_keyword_callable stuff=(capitalize name) another=(capitalize "mello")}}
 </template>
 
+<template name="spacebars_template_test_template_arguments" args="one two three">
+  {{one}} - {{two}} - {{three}}
+</template>
+
+<template name="spacebars_template_test_template_pass_arguments">
+  {{#let v="variable reference"}}
+    {{@> spacebars_template_test_template_arguments one="my string" two=2 three=v}}
+  {{/let}}
+</template>
+

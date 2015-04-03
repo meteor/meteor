@@ -3388,3 +3388,10 @@ Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", f
   test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
 });
 
+Tinytest.add("spacebars-tests - template_tests - template arguments", function (test) {
+  var tmpl = Template.spacebars_template_test_template_pass_arguments;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference");
+});
+
