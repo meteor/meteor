@@ -49,7 +49,7 @@ TemplateTag.prototype = new HTMLTools.TemplateTag;
 TemplateTag.prototype.constructorName = 'SpacebarsCompiler.TemplateTag';
 
 var makeStacheTagStartRegex = function (r) {
-  return new RegExp(r.source + /(?![{>!#/])/.source,
+  return new RegExp(r.source + /(?!([{>!#/]|@>))/.source,
                     r.ignoreCase ? 'i' : '');
 };
 
@@ -64,6 +64,7 @@ var starts = {
   BLOCKCOMMENT: makeStacheTagStartRegex(/^\{\{\s*!--/),
   COMMENT: makeStacheTagStartRegex(/^\{\{\s*!/),
   INCLUSION: makeStacheTagStartRegex(/^\{\{\s*>\s*(?!\s)/),
+  INCLUSION_ARGS: makeStacheTagStartRegex(/^\{\{\s*@>\s*(?!\s)/),
   BLOCKOPEN: makeStacheTagStartRegex(/^\{\{\s*#\s*(?!\s)/),
   BLOCKCLOSE: makeStacheTagStartRegex(/^\{\{\s*\/\s*(?!\s)/)
 };
@@ -244,6 +245,7 @@ TemplateTag.parse = function (scannerOrString) {
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
   else if (run(starts.COMMENT)) type = 'COMMENT';
   else if (run(starts.INCLUSION)) type = 'INCLUSION';
+  else if (run(starts.INCLUSION_ARGS)) type = 'INCLUSION_ARGS';
   else if (run(starts.BLOCKOPEN)) type = 'BLOCKOPEN';
   else if (run(starts.BLOCKCLOSE)) type = 'BLOCKCLOSE';
   else
@@ -273,7 +275,7 @@ TemplateTag.parse = function (scannerOrString) {
     var result = run(/^\{*\|/);
     tag.value = '{{' + result.slice(0, -1);
   } else {
-    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
+    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION, INCLUSION_ARGS
     tag.path = scanPath();
     tag.args = [];
     var foundKwArg = false;

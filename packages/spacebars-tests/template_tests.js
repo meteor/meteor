@@ -3328,3 +3328,10 @@ Tinytest.add("spacebars-tests - template_tests - #each @index", function (test) 
   Blaze.remove(view);
 });
 
+Tinytest.add("spacebars-tests - template_tests - template arguments", function (test) {
+  var tmpl = Template.spacebars_template_test_template_pass_arguments;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference");
+});
+
