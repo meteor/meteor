@@ -124,26 +124,8 @@ if (process.platform === 'win32') {
     var fut = new Future;
 
     // 'ps ax' should be standard across all MacOS and Linux.
-    // However, ps on OS X corrupts some non-ASCII characters in arguments,
-    // such as т (CYRILLIC SMALL LETTER TE), leading to this function
-    // failing to properly match pathnames with those characters.  #3999
-    //
-    // pgrep appears to do a better job (and has output that is roughly
-    // similar; it lacks a few fields that we don't care about).  Plus,
-    // it can do some of the grepping for us.
-    //
-    // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
-    // common on Linux too), so we check to see if it exists and fall back to
-    // 'ps' if we can't find it.
     child_process.exec(
-      'if type pgrep >/dev/null 2>&1; then ' +
-        // -lf means to display and match against full argument lists.
-        // pgrep exits 1 if no processes match the argument; we're OK
-        // considering this as a success, but we don't want other errors
-        // to be ignored.  Note that this is sh not bash, so we can't use
-        // [[.
-        'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
-        'else ps ax; fi',
+      'ps ax',
       // we don't want this to randomly fail just because you're running lots of
       // processes. 10MB should be more than ps ax will ever spit out; the default
       // is 200K, which at least one person hit (#2158).
