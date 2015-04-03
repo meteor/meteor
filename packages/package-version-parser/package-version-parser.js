@@ -396,6 +396,7 @@ PV.validatePackageName = function (packageName, options) {
     throwVersionParserError("Package name may not end with a dot: "
                             + JSON.stringify(packageName));
   }
+
   if (packageName.slice(-1) === '.') {
     throwVersionParserError("Package names may not end with a dot: " +
                             JSON.stringify(packageName));

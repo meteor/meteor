@@ -197,7 +197,7 @@ selftest.define("checkout", ['checkout'], function () {
 });
 
 
-selftest.define("download release", ['net', 'slow'], function () {
+selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow'], function () {
   var s, run;
 
   if (files.inCheckout())
@@ -211,7 +211,13 @@ selftest.define("download release", ['net', 'slow'], function () {
   // it does is print this string and exit.
   run = s.run("--release", "release-used-to-test-springboarding");
   run.waitSecs(1000);
-  run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
+
+  if (process.platform === "win32") {
+    run.matchErr("Meteor on Windows does not support");
+  } else {
+    run.match("THIS IS A FAKE RELEASE ONLY USED TO TEST ENGINE SPRINGBOARDING");
+  }
+
   run.expectExit();
 });
 

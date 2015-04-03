@@ -54,7 +54,8 @@ var typeNameTranslation = {
   "Blaze.View": typeLink("Blaze.View", "#blaze_view"),
   Template: typeLink("Blaze.Template", "#blaze_template"),
   DOMElement: typeLink("DOM Element", "https://developer.mozilla.org/en-US/docs/Web/API/element"),
-  MatchPattern: typeLink("Match Pattern", "#matchpatterns")
+  MatchPattern: typeLink("Match Pattern", "#matchpatterns"),
+  "DDP.Connection": typeLink("DDP Connection", "#ddp_connect")
 };
 
 Template.autoApiBox.helpers({
@@ -166,6 +167,9 @@ Template.autoApiBox.helpers({
     return _.reject(this.params, function (param) {
       return param.name === "options";
     });
+  },
+  fullApi: function () {
+    return Session.get("fullApi");
   }
 });
 

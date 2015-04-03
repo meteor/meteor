@@ -13,10 +13,20 @@ echo "Will get you a dev_bundle for $PLATFORM version $BUNDLE_VERSION"
 
 $TARBALL="dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz"
 
-
 echo "Going to download the dependency kit from the Internet"
 $ErrorActionPreference = "Stop"
-$devbundle_link = "https://d3sqy0vbqsdhku.cloudfront.net/" + $TARBALL
+
+# duplicated in top-level meteor script:
+$DEV_BUNDLE_URL_ROOT="https://d3sqy0vbqsdhku.cloudfront.net/"
+# If you set $USE_TEST_DEV_BUNDLE_SERVER then we will download
+# dev bundles copied by copy-dev-bundle-from-jenkins.sh without --prod.
+# It still only does this if the version number has changed
+# (setting it won't cause it to automatically delete a prod dev bundle).
+if ("$env:USE_TEST_DEV_BUNDLE_SERVER" -ne "") {
+    $DEV_BUNDLE_URL_ROOT="https://s3.amazonaws.com/com.meteor.static/test/"
+}
+
+$devbundle_link = $DEV_BUNDLE_URL_ROOT + $TARBALL
 $devbundle_zip = $CHECKOUT_DIR + "\" + $TARBALL
 
 $webclient = New-Object System.Net.WebClient

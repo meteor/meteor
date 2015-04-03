@@ -2749,6 +2749,30 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
 });
 
 
+Tinytest.add('spacebars-tests - template_tests - helper invalidates self', function (test) {
+  var tmpl = Template.spacebars_template_test_bracketed_foo;
+
+  var count = new ReactiveVar(0);
+
+  tmpl.helpers({
+    // It's unusual for a helper to have side effects, but it's possible
+    // and people do it.  Regression test for #4097.
+    foo: function () {
+      // Make count odd and return it.
+      var c = count.get();
+      if ((c % 2) === 0) {
+        count.set(c+1);
+      }
+      return c;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, '[1]');
+  count.set(2);
+  divRendersTo(test, div, '[3]');
+});
+
 Tinytest.add(
   "spacebars-tests - template_tests - textarea attrs", function (test) {
     var tmplNoContents = {
@@ -3144,8 +3168,10 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
 
     tmpl.onCreated(function () {
       var subHandle = this.subscribe("templateSub", subscribeCallback);
-      var subHandle2 = this.subscribe(
-        "templateSub", futureId, subscribeCallback);
+      var subHandle2 = this.subscribe("templateSub", futureId, {
+        onReady: subscribeCallback,
+        connection: Meteor.connection
+      });
 
       subHandle.stop = stopCallback;
       subHandle2.stop = stopCallback2;

@@ -244,61 +244,53 @@ HRESULT UnzipToFolder(
 	StringCchPrintf(szTarGzFilePath, BUF_LEN, L"%s%s", szSourceDir, wzTarGzFileName);
 	StringCchPrintf(szTarFilePath, BUF_LEN, L"%s*.tar", szSourceDir);
 
+	//Extacting quality_cloud_production.sql to %TEMP% folder
+	wchar_t szTmpDir[BUF_LEN] = L"";		DWORD nTmpDirLen = BUF_LEN;
+	wchar_t sz7Zip[BUF_LEN] = L"";
+	wchar_t packedTarball[BUF_LEN] = L"";
+
+	wchar_t szCommandLine1[BUF_LEN] = L"";
+	wchar_t szCommandLine2[BUF_LEN] = L"";
+
+	MsiGetProperty(hInstall, L"TempFolder", szTmpDir, &nTmpDirLen);
+	StringCchPrintf(sz7Zip, BUF_LEN, L"%s%s", szTmpDir, L"7za.exe");
+	StringCchPrintf(packedTarball, BUF_LEN, L"%s%s", szTmpDir, L"meteor-bootstrap-os.windows.x86_32.tar.gz");
+
 	DWORD pdwAttr;
-	if (FileExistsEx(szTarGzFilePath, &pdwAttr) == TRUE)
-	{
-		//Extacting quality_cloud_production.sql to %TEMP% folder
-		wchar_t szTmpDir[BUF_LEN] = L"";		DWORD nTmpDirLen = BUF_LEN;
-		wchar_t sz7Zip[BUF_LEN] = L"";
 
-		wchar_t szCommandLine1[BUF_LEN] = L"";
-		wchar_t szCommandLine2[BUF_LEN] = L"";
+	hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
+	hr = ExtractBinaryToFile(L"BootstrapTarball", packedTarball);
 
-		MsiGetProperty(hInstall, L"TempFolder", szTmpDir, &nTmpDirLen);
-		StringCchPrintf(sz7Zip, BUF_LEN, L"%s%s", szTmpDir, L"7za.exe");
+	DWORD nRes=0;
 
-		DWORD pdwAttr;
-		if (FileExistsEx(sz7Zip, &pdwAttr) == FALSE)
-		{
-			hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
-		}
+	// Remove old Meteor installs
+	wchar_t szCmdRemoveOld[BUF_LEN] = L"";
+	wchar_t szSysDir[BUF_LEN] = L"";
+	DWORD nSysDirLen = BUF_LEN;
+	MsiGetProperty(hInstall, L"SystemFolder", szSysDir, &nSysDirLen);
 
-		DWORD nRes=0;
+	LPTSTR ErrorMessage = NULL;
 
-		// Remove old Meteor installs
-		wchar_t szCmdRemoveOld[BUF_LEN] = L"";
-		wchar_t szSysDir[BUF_LEN] = L"";
-		DWORD nSysDirLen = BUF_LEN;
-		MsiGetProperty(hInstall, L"SystemFolder", szSysDir, &nSysDirLen);
+	StringCchPrintf(szCmdRemoveOld, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\\.meteor\">NUL\"", szSysDir, wzDestPath);
+	StringCchPrintf(szCommandLine1, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, szSourceDir, packedTarball);
+	StringCchPrintf(szCommandLine2, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, wzDestPath, szTarFilePath);
 
-		LPTSTR ErrorMessage = NULL;
-
-		StringCchPrintf(szCmdRemoveOld, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\\.meteor\">NUL\"", szSysDir, wzDestPath);
-		StringCchPrintf(szCommandLine1, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, szSourceDir, szTarGzFilePath);
-		StringCchPrintf(szCommandLine2, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, wzDestPath, szTarFilePath);
-
-		if (! ExecuteCommandLine(szCmdRemoveOld, nRes)) {
-			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Deleting old install completed with (%d): %S", nRes, ErrorMessage);
-			return HRESULT_FROM_WIN32(nRes);
-		}
-
-		if (! ExecuteCommandLine(szCommandLine1, nRes)) {
-			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive expanding completed with (%d): %S", nRes, ErrorMessage);
-			return HRESULT_FROM_WIN32(nRes);
-		}
-
-		if (! ExecuteCommandLine(szCommandLine2, nRes)) {
-			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive deployment completed with (%d): %S", nRes, ErrorMessage);
-			return HRESULT_FROM_WIN32(nRes);
-		}
+	if (! ExecuteCommandLine(szCmdRemoveOld, nRes)) {
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Deleting old install completed with (%d): %S", nRes, ErrorMessage);
+		return HRESULT_FROM_WIN32(nRes);
 	}
-	else
-	{
-		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-		WcaLog(LOGMSG_STANDARD, "Failed to extract %S files. File not found: %S", wzFriendlyName, szTarGzFilePath); 
+
+	if (! ExecuteCommandLine(szCommandLine1, nRes)) {
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive expanding completed with (%d): %S", nRes, ErrorMessage);
+		return HRESULT_FROM_WIN32(nRes);
+	}
+
+	if (! ExecuteCommandLine(szCommandLine2, nRes)) {
+		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive deployment completed with (%d): %S", nRes, ErrorMessage);
+		return HRESULT_FROM_WIN32(nRes);
 	}
 
 	WcaLog(LOGMSG_STANDARD, "Extracting \"%S\" package completed.", wzFriendlyName);

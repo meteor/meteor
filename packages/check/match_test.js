@@ -117,6 +117,11 @@ Tinytest.add("check - check", function (test) {
   fails(123, 456);
   fails("123", 123);
   fails(123, "123");
+  matches(true, true);
+  matches(false, false);
+  fails(true, false);
+  fails(true, "true");
+  fails("false", false);
 
   matches(/foo/, RegExp);
   fails(/foo/, String);

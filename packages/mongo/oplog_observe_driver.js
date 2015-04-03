@@ -113,7 +113,7 @@ OplogObserveDriver = function (options) {
       trigger, function (notification) {
         Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
           var op = notification.op;
-          if (notification.dropCollection) {
+          if (notification.dropCollection || notification.dropDatabase) {
             // Note: this call is not allowed to block on anything (especially
             // on waiting for oplog entries to catch up) because that will block
             // onOplogEntry!

@@ -349,7 +349,17 @@ var compileUnibuild = function (options) {
     Console.nudge(true);
 
     if (contents === null) {
-      buildmessage.error("File not found: " + source.relPath);
+      // It really sucks to put this check here, since this isn't publish
+      // code...
+      if (source.relPath.match(/:/)) {
+        buildmessage.error(
+          "Couldn't build this package on Windows due to the following file " +
+          "with a colon -- " + source.relPath + ". Please rename and " +
+          "and re-publish the package.");
+      } else {
+        buildmessage.error("File not found: " + source.relPath);
+      }
+
       // recover by ignoring
       return;
     }
@@ -694,8 +704,6 @@ var compileUnibuild = function (options) {
           throw new Error("'data' option to addJavaScript must be a string");
         if (typeof options.sourcePath !== "string")
           throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-        if (options.bare && ! archinfo.matches(inputSourceArch.arch, "web"))
-          throw new Error("'bare' option may only be used for web targets");
 
         // By default, use fileOptions for the `bare` option but also allow
         // overriding it with the options

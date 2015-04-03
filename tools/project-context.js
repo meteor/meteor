@@ -146,8 +146,11 @@ _.extend(ProjectContext.prototype, {
 
     if (resetOptions.preservePackageMap && self.packageMap) {
       self._cachedVersionsBeforeReset = self.packageMap.toVersionMap();
+      // packageMapFile should always exist if packageMap does
+      self._oldPackageMapFileHash = self.packageMapFile.fileHash;
     } else {
       self._cachedVersionsBeforeReset = null;
+      self._oldPackageMapFileHash = null;
     }
 
     // The --allow-incompatible-update command-line switch, which allows
@@ -168,6 +171,16 @@ _.extend(ProjectContext.prototype, {
     // Initialized by initializeCatalog.
     self.projectCatalog = null;
     self.localCatalog = null;
+    // Once the catalog is read and the names of the "explicitly
+    // added" packages are determined, they will be listed here.
+    // (See explicitlyAddedLocalPackageDirs.)
+    // "Explicitly added" packages are typically present in non-app
+    // projects, like the one created by `meteor publish`.  This list
+    // is used to avoid pinning such packages to their previous
+    // versions when we run the version solver, which prevents an
+    // error telling you to pass `--allow-incompatible-update` when
+    // you publish your package after bumping the major version.
+    self.explicitlyAddedPackageNames = null;
 
     // Initialized by _resolveConstraints.
     self.packageMap = null;
@@ -401,12 +414,28 @@ _.extend(ProjectContext.prototype, {
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
     // may not have been written to disk if our release doesn't match the
-    // project's release on disk). Otherwise use the versions from
-    // .meteor/versions.
-    var cachedVersions = self._cachedVersionsBeforeReset ||
-          self.packageMapFile.getCachedVersions();
+    // project's release on disk)... unless the actual file on disk has changed
+    // out from under us. Otherwise use the versions from .meteor/versions.
+    var cachedVersions;
+    if (self._cachedVersionsBeforeReset &&
+        self._oldPackageMapFileHash === self.packageMapFile.fileHash) {
+      // The file on disk hasn't change; reuse last time's results.
+      cachedVersions = self._cachedVersionsBeforeReset;
+    } else {
+      // We don't have a last time, or the file has changed; use
+      // .meteor/versions.
+      cachedVersions = self.packageMapFile.getCachedVersions();
+    }
+
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
+
+    if (self.explicitlyAddedPackageNames.length) {
+      cachedVersions = _.clone(cachedVersions);
+      _.each(self.explicitlyAddedPackageNames, function (p) {
+        delete cachedVersions[p];
+      });
+    }
 
     var resolverRunCount = 0;
 
@@ -530,6 +559,15 @@ _.extend(ProjectContext.prototype, {
             // so that it gets counted included in the projectWatchSet.
             return;
           }
+
+          self.explicitlyAddedPackageNames = [];
+          _.each(self._explicitlyAddedLocalPackageDirs, function (dir) {
+            var localVersionRecord =
+                  self.localCatalog.getVersionBySourceRoot(dir);
+            if (localVersionRecord) {
+              self.explicitlyAddedPackageNames.push(localVersionRecord.packageName);
+            }
+          });
 
           self._completedStage = STAGE.INITIALIZE_CATALOG;
         }
@@ -688,6 +726,7 @@ _.extend(ProjectContext.prototype, {
          (release.current.isCheckout() && self.releaseFile.isCheckout()) ||
          (! release.current.isCheckout() &&
           release.current.name === self.releaseFile.fullReleaseName))) {
+
       self.packageMapFile.write(self.packageMap);
     }
 
@@ -898,6 +937,7 @@ exports.PackageMapFile = function (options) {
 
   self.filename = options.filename;
   self.watchSet = new watch.WatchSet;
+  self.fileHash = null;
   self._versions = {};
 
   self._readFile();
@@ -907,7 +947,9 @@ _.extend(exports.PackageMapFile.prototype, {
   _readFile: function () {
     var self = this;
 
-    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
+    var fileInfo = watch.readAndWatchFileWithHash(self.watchSet, self.filename);
+    var contents = fileInfo.contents;
+    self.fileHash = fileInfo.hash;
     // No .meteor/versions? That's OK, you just get to start your calculation
     // from scratch.
     if (contents === null)

@@ -8,7 +8,7 @@
     <?include Configuration.wxi?>
 
     <Product Id="*" Name="$(var.METEOR_ProductName)" Language="1033" Version="$(var.METEOR_Version)" Manufacturer="$(var.METEOR_Manufacturer)" UpgradeCode="$(var.METEOR_UpgradeCode)">
-        <Package Description="This opackage will install Meteor on your computer." InstallerVersion="300" Compressed="yes" InstallScope="perUser" InstallPrivileges="limited"/>
+        <Package Description="This package will install Meteor on your computer." InstallerVersion="300" Compressed="yes" InstallScope="perUser" InstallPrivileges="limited"/>
 
         <!-- This will allow a new msi package to upgrade an existing older version (in case patch is not used) -->
         <MajorUpgrade DowngradeErrorMessage="A later version of [ProductName] is already installed. Setup will now exit." AllowSameVersionUpgrades="yes"/>
@@ -29,8 +29,7 @@
         <?endif?>
 
         <Binary Id="SevenZip"  SourceFile="Resources\7za.exe" />
-
-
+        <Binary Id="BootstrapTarball"  SourceFile="Resources\meteor-bootstrap-os.windows.x86_32.tar.gz" />
 
         <Feature Id="ProductFiles" Title="Meteor Product Files" Level="1">
             <ComponentGroupRef Id="CG_MeteorConfiguration"/>
@@ -45,21 +44,19 @@
         </Directory>
 
 
-        <CustomAction Id="Download_MeteorPackage" BinaryKey="WiXHelper" Return="check" DllEntry="Download_MeteorPackage" />
         <CustomAction Id="Extract_MeteorFiles"    BinaryKey="WiXHelper" Return="check" DllEntry="Extract_MeteorFiles" />
         <CustomAction Id="BulkRemoveMeteorFiles"  BinaryKey="WiXHelper" Return="check" DllEntry="BulkRemoveMeteorFiles" />
         <CustomAction Id="SetFolderPackages"  Property="METEORDIR_PACKAGES" Value="[METEOR_DIR].meteor\packages" />
         <CustomAction Id="SetFolderPkg_Meta"  Property="METEORDIR_PKG_META" Value="[METEOR_DIR].meteor\package-metadata" />
         <InstallExecuteSequence>
-            <Custom Action="Download_MeteorPackage"  After="InstallFiles">NOT Installed</Custom>
-            <Custom Action="Extract_MeteorFiles"     After="Download_MeteorPackage">NOT Installed</Custom>
+            <Custom Action="Extract_MeteorFiles"     After="InstallFiles">NOT Installed</Custom>
             <Custom Action="SetFolderPackages"       After="InstallInitialize">REMOVE~="ALL"</Custom>
             <Custom Action="SetFolderPkg_Meta"       After="InstallInitialize">REMOVE~="ALL"</Custom>
             <Custom Action="BulkRemoveMeteorFiles"   Before="RemoveFiles">REMOVE~="ALL"</Custom>
         </InstallExecuteSequence>
 
         <UI>
-            <ProgressText Action="Extract_MeteorFiles">Installing Meteor...</ProgressText>
+            <ProgressText Action="Extract_MeteorFiles">Installing Meteor... please wait.  (This may take a minute or two.)</ProgressText>
             <ProgressText Action="BulkRemoveMeteorFiles">Removing Meteor...</ProgressText>
         </UI>
     </Product>

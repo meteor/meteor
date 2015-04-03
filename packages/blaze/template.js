@@ -334,9 +334,12 @@ Blaze.TemplateInstance.prototype.autorun = function (f) {
  * server's `publish()` call.
  * @param {Any} [arg1,arg2...] Optional arguments passed to publisher function
  * on server.
- * @param {Function|Object} [callbacks] Optional. May include `onStop` and
- * `onReady` callbacks. If a function is passed instead of an object, it is
- * interpreted as an `onReady` callback.
+ * @param {Function|Object} [options] If a function is passed instead of an
+ * object, it is interpreted as an `onReady` callback.
+ * @param {Function} [options.onReady] Passed to [`Meteor.subscribe`](#meteor_subscribe).
+ * @param {Function} [options.onStop] Passed to [`Meteor.subscribe`](#meteor_subscribe).
+ * @param {DDP.Connection} [options.connection] The connection on which to make the
+ * subscription.
  */
 Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
   var self = this;
@@ -345,23 +348,30 @@ Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
   var args = _.toArray(arguments);
 
   // Duplicate logic from Meteor.subscribe
-  var callbacks = {};
+  var options = {};
   if (args.length) {
     var lastParam = _.last(args);
-    if (_.isFunction(lastParam)) {
-      callbacks.onReady = args.pop();
-    } else if (lastParam &&
+
+    // Match pattern to check if the last arg is an options argument
+    var lastParamOptionsPattern = {
+      onReady: Match.Optional(Function),
       // XXX COMPAT WITH 1.0.3.1 onError used to exist, but now we use
       // onStop with an error callback instead.
-      _.any([lastParam.onReady, lastParam.onError, lastParam.onStop],
-        _.isFunction)) {
-      callbacks = args.pop();
+      onError: Match.Optional(Function),
+      onStop: Match.Optional(Function),
+      connection: Match.Optional(Match.Any)
+    };
+
+    if (_.isFunction(lastParam)) {
+      options.onReady = args.pop();
+    } else if (lastParam && Match.test(lastParam, lastParamOptionsPattern)) {
+      options = args.pop();
     }
   }
 
   var subHandle;
-  var oldStopped = callbacks.onStop;
-  callbacks.onStop = function (error) {
+  var oldStopped = options.onStop;
+  options.onStop = function (error) {
     // When the subscription is stopped, remove it from the set of tracked
     // subscriptions to avoid this list growing without bound
     delete subHandles[subHandle.subscriptionId];
@@ -377,9 +387,19 @@ Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
       oldStopped(error);
     }
   };
+
+  var connection = options.connection;
+  var callbacks = _.pick(options, ["onReady", "onError", "onStop"]);
+
+  // The callbacks are passed as the last item in the arguments array passed to
+  // View#subscribe
   args.push(callbacks);
 
-  subHandle = self.view.subscribe.call(self.view, args);
+  // View#subscribe takes the connection as one of the options in the last
+  // argument
+  subHandle = self.view.subscribe.call(self.view, args, {
+    connection: connection
+  });
 
   if (! _.has(subHandles, subHandle.subscriptionId)) {
     subHandles[subHandle.subscriptionId] = subHandle;

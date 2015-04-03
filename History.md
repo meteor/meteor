@@ -1,21 +1,38 @@
 ## v.NEXT
 
-## Blaze
+### Blaze
 
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
 * Fix a bug in `observe-sequence`. The bug was causing unnecessary rerenderings
-  in an instance of `#each` block helper followed by false "duplicat ids"
+  in an instance of `#each` block helper followed by false "duplicate ids"
   warnings. #4049
 
+* `TemplateInstance#subscribe` now has a new `connection` option, which
+  specifies which connection should be used when making the subscription. The
+  default is `Meteor.connection`, which is the connection used when calling
+  `Meteor.subscribe`.
 
-## Isobuild
+
+### Isobuild
 
 * Plugins should not process files whose names match the extension exactly (with
   no extra dot).  #3985
 
+* Adding the same file twice in the same package is now an error. Previously,
+  this could either lead to the file being included multiple times, or to a
+  build time crash.
 
-## `meteor` command-line tool
+* You may now specify the `bare` option for JavaScript files on the server.
+  Previous versions only allowed this on the client. #3681
+
+### Livequery
+
+* The oplog observe driver now properly updates queries when you drop a
+  database.  #3847
+
+
+### `meteor` command-line tool
 
 * Avoid a race condition in `meteor --test` and work with newer versions of the
   Velocity package.  #3957
@@ -26,24 +43,64 @@
 
 * Preserve the value of `_` in `meteor shell`.  #4010
 
+* `meteor mongo` now works on OS X when certain non-ASCII characters are in the
+  pathname, as long as the `pgrep` utility is installed (it ships standard with
+  OS X 10.8 and newer).  #3999
 
-## Meteor Accounts
+* `meteor run` no longer ignores (and often reverts) external changes to
+  `.meteor/versions` which occur while the process is running.  #3582
+
+
+### Meteor Accounts
 
 * Add `Accounts.oauth.unregisterService` method, and ensure that users can only
   log in with currently registered services.  #4014
 
-## v1.1, 2015-??
+### Email
+
+* `Email.send` now has a new option, `attachments`, in the same style as
+  `mailcomposer`.
+  [Details here.](https://github.com/andris9/mailcomposer#add-attachments)
+
+### Tracker
+
+* `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
+  the dictionary as if no items had been added, meaning all calls to `get` will
+  return `underfined`. `all` converts the dictionary into a regular JavaScript
+  object with a snapshot of the keys and values. Inside an autorun, `all`
+  registers a dependency on any changes to the dictionary.
+
+### Utilities
+
+* `Match.test` from the `check` package now properly compares boolean literals,
+  just like it does with Numbers and Strings. This applies to the `check`
+  function as well.
+
+## v1.1.0.1, 2015-Apr-02
+
+### Blaze
+
+* Fix a regression in 1.1 in Blaze Templates: an error happening when View is
+  invalidated immediately, causing a client-side crash (accessing
+  `destroyMembers` of `undefined`). #4097
+
+## v1.1, 2015-Mar-31
 
 ### Windows Support
 
 * The Meteor command line tool now officially supports Windows 7, Windows 8.1,
-  Windows Server 2008, and Windows Server 2012.
+  Windows Server 2008, and Windows Server 2012. It can run from PowerShell or
+  Command Prompt.
 
 * There is a native Windows installer that will be available for download from
   <https://www.meteor.com/install> starting with this release.
 
 * In this release, Meteor on Windows supports all features available on Linux
-  and Mac except building mobile apps with PhoneGap.
+  and Mac except building mobile apps with PhoneGap/Cordova.
+
+* The `meteor admin get-machine` command now supports an additional
+  architecture, `os.windows.x86_32`, which can be used to build binary packages
+  for Windows.
 
 ### Version Solver
 
@@ -99,6 +156,9 @@
 
   - uglify-js: 2.4.17 (from 2.4.13)
 
+Patches contributed by GitHub users hwillson, mitar, murillo128, Primigenus,
+rjakobsson, and tmeasday.
+
 
 ## v1.0.5, 2015-Mar-25
 
@@ -124,7 +184,6 @@
 
 * Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
   packages without colons in their name.  #3951
-
 
 ## v1.0.4, 2015-Mar-17
 

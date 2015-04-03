@@ -305,6 +305,11 @@ selftest.define("run with mongo crash", ["checkout"], function () {
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000/\n');
+
+  if (process.platform === "win32") {
+    run.match('Type Control-C twice to stop.\n\n');
+  }
+
   run.tellMongo({exit: 23});
   run.read('Unexpected mongo exit code 23. Restarting.\n');
   run.tellMongo({exit: 46});
@@ -402,4 +407,41 @@ selftest.define("'meteor run --port' requires a port", function () {
   run.waitSecs(30);
   run.matchErr("--port must include a port");
   run.expectExit(1);
+});
+
+// Regression test for #3582.  Previously, meteor run would ignore changes to
+// .meteor/versions that originate outside of the process.
+selftest.define("update package during run", function () {
+  var s = new Sandbox();
+
+  s.createApp("myapp", "app-with-atmosphere-package");
+  s.cd("myapp", function () {
+    // The app starts with this package at 0.0.1 (based on its
+    // .meteor/versions).  0.0.2 exists too.  (These are on the real atmosphere
+    // server.)
+    var listRun = s.run("list");
+    listRun.waitSecs(3);
+    listRun.match(/glasser:package-for-selftest.*0.0.1\*/);
+    listRun.match(/\* New versions/);
+    listRun.expectExit(0);
+
+    var runRun = s.run();
+    runRun.waitSecs(3);
+    runRun.match("App running at:");
+
+    var updateRun = s.run("update", "glasser:package-for-selftest");
+    updateRun.match(
+        /glasser:package-for-selftest.*upgraded from 0.0.1 to 0.0.2/);
+    updateRun.expectExit(0);
+
+    runRun.match("restarted");
+
+    listRun = s.run("list");
+    // When #3582 existed, the `meteor run` would revert this back to 0.0.1
+    // before it restarted.
+    listRun.match(/glasser:package-for-selftest.*0.0.2 /);
+    listRun.expectExit(0);
+
+    runRun.stop();
+  });
 });

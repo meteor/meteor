@@ -473,6 +473,20 @@ var Sandbox = function (options) {
   // Note that this only affects subprocess meteor runs, not direct invocation
   // of packageClient!
   if (_.contains(runningTest.tags, 'test-package-server')) {
+    if (_.has(options, 'warehouse')) {
+      // test-package-server and warehouse are basically two different ways of
+      // sort of faking out the package system for tests.  test-package-server
+      // means "use a specific production test server"; warehouse means "use
+      // some fake files we put on disk and never sync" (see _makeEnv where the
+      // offline flag is set).  Combining them doesn't make sense: either you
+      // don't sync, in which case you don't see the stuff you published, or you
+      // do sync, and suddenly the mock catalog we built is overridden by
+      // test-package-server.
+      // XXX we should just run servers locally instead of either of these
+      //     strategies
+      throw Error("test-package-server and warehouse cannot be combined");
+    }
+
     self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
   }
 
@@ -749,11 +763,8 @@ _.extend(Sandbox.prototype, {
       // Tell it where the warehouse lives.
       env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
 
-      if (! _.contains(runningTest.tags, 'test-package-server')) {
-        // Don't ever try to refresh the stub catalog we made.
-        // (It's OK to refresh a catalog for the test package server though.)
-        env.METEOR_OFFLINE_CATALOG = "t";
-      }
+      // Don't ever try to refresh the stub catalog we made.
+      env.METEOR_OFFLINE_CATALOG = "t";
     }
 
     // By default (ie, with no mock warehouse and no --release arg) we should be
@@ -841,8 +852,7 @@ _.extend(Sandbox.prototype, {
         orderKey: releaseName,
         description: "test release " + releaseName,
         recommended: !!configuration.recommended,
-        // XXX support multiple tools packages for springboard tests
-        tool: "meteor-tool@" + toolPackageVersion,
+        tool: configuration.tool || "meteor-tool@" + toolPackageVersion,
         packages: packageVersions
       });
     });
@@ -1052,7 +1062,8 @@ var Run = function (execPath, options) {
 
   self.execPath = execPath;
   self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
-  self.env = options.env || {};
+  // default env variables
+  self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
   self._args = [];
   self.proc = null;
   self.baseTimeout = 20;
@@ -1222,6 +1233,12 @@ _.extend(Run.prototype, {
   // partially read line. We could lift these restrictions easily, but
   // there may not be any benefit since the usual way to use this is
   // to call it after expectExit or expectEnd.
+  //
+  // Example:
+  // run = s.run("--help");
+  // run.expectExit(1);  // <<-- improtant to actually run the command
+  // run.forbidErr("unwanted string"); // <<-- important to run **after** the
+  //                                   // command ran the process.
   forbid: markStack(function (pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');

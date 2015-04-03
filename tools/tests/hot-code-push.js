@@ -182,7 +182,7 @@ selftest.define("javascript hot code push", function (options) {
     // important part of this test.)
     s.write("hot-code-push-test.html", ">");
     run.match("Errors prevented startup");
-    run.match("bad formatting in HTML template");
+    run.match("Expected <template>, <head>, or <body> tag in template file");
     // Fix it. It should notice, and restart. The client will restart too.
     s.write("hot-code-push-test.html", "");
     run.match("server restarted");
@@ -193,7 +193,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("client connected: 1");
     run.match("jsVar: undefined");
 
-    s.write(".meteor/packages", "standard-app-packages \n my-package");
+    s.write(".meteor/packages", "meteor-platform \n my-package");
     run.match(/my-package.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
@@ -206,7 +206,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("packageVar: bar");
 
     // Add appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages \n appcache");
+    s.write(".meteor/packages", "meteor-platform \n appcache");
     run.match(/appcache.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
@@ -222,7 +222,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("jsVar: bar");
 
     // Remove appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "standard-app-packages");
+    s.write(".meteor/packages", "meteor-platform");
     run.match(/appcache.*removed from your project/);
     run.match("server restarted");
     run.match("client connected: 0");

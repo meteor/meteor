@@ -430,9 +430,10 @@ var error = function (message, options) {
   if ('useMyCaller' in info) {
     if (info.useMyCaller) {
       info.stack = parseStack.parse(new Error()).slice(2);
-      var howManyToSkip = (
-        typeof info.useMyCaller === "number" ? info.useMyCaller : 0);
-      var caller = info.stack[howManyToSkip];
+      if (typeof info.useMyCaller === 'number') {
+        info.stack = info.stack.slice(info.useMyCaller);
+      }
+      var caller = info.stack[0];
       info.func = caller.func;
       info.file = caller.file;
       info.line = caller.line;

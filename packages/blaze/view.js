@@ -227,7 +227,7 @@ Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
  */
 Blaze.View.prototype.subscribe = function (args, options) {
   var self = this;
-  options = {} || options;
+  options = options || {};
 
   self._errorIfShouldntCallSubscribe();
 
@@ -356,7 +356,9 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       // helpers in the DOM tree to be replaced might be scheduled
       // to re-run before we have a chance to stop them.
       Tracker.onInvalidate(function () {
-        domrange.destroyMembers();
+        if (domrange) {
+          domrange.destroyMembers();
+        }
       });
     }, undefined, 'materialize');
 
