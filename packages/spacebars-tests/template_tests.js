@@ -3388,7 +3388,7 @@ Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", f
   test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
 });
 
-Tinytest.add("spacebars-tests - template_tests - template arguments", function (test) {
+Tinytest.add("spacebars-tests - template_tests - template arguments - basic", function (test) {
   var tmpl = Template.spacebars_template_test_template_pass_arguments;
   var myVar = new ReactiveVar('init');
   tmpl.helpers({
@@ -3403,5 +3403,12 @@ Tinytest.add("spacebars-tests - template_tests - template arguments", function (
   myVar.set('new');
   Tracker.flush();
   test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference - new");
+});
+
+Tinytest.add("spacebars-tests - template_tests - template arguments - undeclared args", function (test) {
+  var tmpl = Template.spacebars_template_test_undeclared_args_caller;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "1 - 2 - ");
 });
 
