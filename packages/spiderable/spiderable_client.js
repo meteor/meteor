@@ -18,20 +18,19 @@
 Spiderable._initialSubscriptionsStarted = false;
 
 Spiderable._onReadyHook = new Hook({
-  debugPrintExceptions: "onReadyHook callback"
+  debugPrintExceptions: "Spiderable.addReadyCondition callback"
 });
 
 // register a new onReady hook for validation
-Spiderable.onReady = function (fn) {
-  var self = this;
-  return self._onReadyHook.register(fn);
+Spiderable.addReadyCondition = function (fn) {
+  return Spiderable._onReadyHook.register(fn);
 };
 
 //
 // register default hooks
 
 // top level code ready
-Spiderable.onReady(function(){
+Spiderable.addReadyCondition(function () {
   // subs & top level code (startup) completed
   return Spiderable._initialSubscriptionsStarted;
 })
@@ -46,17 +45,16 @@ var topLevelCodeDone = function () {
 Meteor.startup(function () { topLevelCodeDone(); });
 
 // all ddp subs ready
-Spiderable.onReady(function(){
+Spiderable.addReadyCondition(function () {
   Tracker.flush();
   return DDP._allSubscriptionsReady();
 })
 
 // run all hooks and return true if they all pass
-Spiderable.isReady = function(){
-  var self = this;
+Spiderable.isReady = function () {
   var isReady = true;
-  self._onReadyHook.each(function (callback) {
-    if (callback()){
+  Spiderable._onReadyHook.each(function (callback) {
+    if (callback()) {
       return true; // next callback
     } else {
       isReady = false;
