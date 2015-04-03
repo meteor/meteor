@@ -130,8 +130,10 @@ var fireCallbacks = function (callbacks, template) {
 // A separate reference to the argsView to have the context where the arguments
 // are evaluated, so we can later re-evaluate them reactively in an autorun.
 var setupArgsForTemplateView = function (view, argsFunc, argsView, formalArgs) {
-  var initArgs = argsFunc();
-  Blaze._attachBindingsToView(_.pick(initArgs, formalArgs), view);
+  Tracker.nonreactive(function () {
+    var initArgs = argsFunc();
+    Blaze._attachBindingsToView(_.pick(initArgs, formalArgs), view);
+  });
   Blaze._attachBindingsToView({
     '@args': argsFunc
   }, view);
