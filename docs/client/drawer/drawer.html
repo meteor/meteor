@@ -1,0 +1,13 @@
+<template name="drawer">
+  <div class="container-for-ui-hooks">
+    {{#with drawerTemplate}}
+      <div class="drawer-overlay"></div>
+
+      <div class="drawer">
+        <div class="container">
+          {{> Template.dynamic template=drawerTemplate}}
+        </div>
+      </div>
+    {{/with}}
+  </div>
+</template>

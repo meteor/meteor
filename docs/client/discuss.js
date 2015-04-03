@@ -3,10 +3,13 @@ var openDiscussion = function (id, name) {
     id: id,
     name: name
   });
+
+  openDrawerWithTemplate("discussContent");
 };
 
 var closeDiscussion = function () {
   Session.set("openDiscussion", null);
+  closeDrawer();
 };
 
 var numCommentsForId = function (id) {
@@ -35,7 +38,7 @@ $(document).on("keydown", function (event) {
   }
 });
 
-Template.discussOverlay.onCreated(function () {
+Template.discussContent.onCreated(function () {
   var self = this;
 
   self.preview = new ReactiveVar("");
@@ -48,11 +51,11 @@ Template.discussOverlay.onCreated(function () {
   })
 });
 
-Template.discussOverlay.onRendered(function () {
+Template.discussContent.onRendered(function () {
   this.$("textarea").autosize();
 });
 
-Template.discussOverlay.helpers({
+Template.discussContent.helpers({
   openDiscussion: function () {
     return Session.get("openDiscussion");
   },
@@ -65,7 +68,7 @@ Template.discussOverlay.helpers({
   numComments: numCommentsForId
 });
 
-Template.discussOverlay.events({
+Template.discussContent.events({
   "click .close": function () {
     closeDiscussion();
 

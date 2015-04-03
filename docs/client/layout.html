@@ -8,7 +8,8 @@
 
 <body>
   <div class="body {{openSidebar}}">
-    {{> discussOverlay}}
+    {{> drawer}}
+
     {{> search}}
     <div id="nav">
       {{> sidebar}}
@@ -61,4 +62,8 @@
     <option value="basic" selected="{{isBasic}}">Basic Docs</option>
     <option value="full" selected="{{isFull}}">Full API</option>
   </select>
+</template>
+
+<template name="greyOverlay">
+  <div class="gray-overlay"></div>
 </template>

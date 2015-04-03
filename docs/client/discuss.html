@@ -7,41 +7,39 @@
   <button class="discuss-button">Discuss {{name}} ({{numComments id}})</button>
 </template>
 
-<template name="discussOverlay">
-  {{#with openDiscussion}}
-    <div class="discuss-overlay">
-      <div class="container">
-        <h2 class="thread-title">
-          <a class="close" href="#">&times; [esc]</a>
-          {{name}} Discussion ({{numComments id}} comments)
-        </h2>
+<template name="discussContent">
+  <div class="discuss-content">
+    {{#with openDiscussion}}
+      <h2 class="thread-title">
+        <a class="close" href="#">&times; [esc]</a>
+        {{name}} Discussion ({{numComments id}} comments)
+      </h2>
 
-        {{#each comments}}
-          {{> comment this}}
-        {{/each}}
+      {{#each comments}}
+        {{> comment this}}
+      {{/each}}
 
-        <form class="new-comment">
-          <h4 class="form-title">Post a new comment</h4>
-          <div class="side-by-side">
-            <div>
-              <textarea placeholder="Type here in Markdown..." name="markdownContent"></textarea>
-              <div class="preview comment-content">
-                {{#if preview}}
-                  {{#markdown}}{{preview}}{{/markdown}}
-                {{else}}
-                  Preview will appear here...
-                {{/if}}
-              </div>
+      <form class="new-comment">
+        <h4 class="form-title">Post a new comment</h4>
+        <div class="side-by-side">
+          <div>
+            <textarea placeholder="Type here in Markdown..." name="markdownContent"></textarea>
+            <div class="preview comment-content">
+              {{#if preview}}
+                {{#markdown}}{{preview}}{{/markdown}}
+              {{else}}
+                Preview will appear here...
+              {{/if}}
             </div>
           </div>
+        </div>
 
-          <button class="save">Save comment</button>
-          &nbsp;&nbsp;&nbsp;
-          {{> loginButtons align="right"}}
-        </form>
-      </div>
-    </div>
-  {{/with}}
+        <button class="save">Save comment</button>
+        &nbsp;&nbsp;&nbsp;
+        {{> loginButtons align="right"}}
+      </form>
+    {{/with}}
+  </div>
 </template>
 
 <template name="comment">
