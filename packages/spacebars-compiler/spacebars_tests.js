@@ -73,6 +73,31 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
               ['PATH', ['qux'], 'baz'],
               ['PATH', ['.'], 'x3']]});
 
+  // nested expressions
+  run('{{helper (subhelper ./arg) arg.sub (args.passedHelper)}}', {
+    type: 'DOUBLE', path: ['helper'],
+    args: [
+      [
+        'EXPR', {
+          type: "EXPR", path: ["subhelper"],
+          args: [["PATH", [".", "arg"]]]
+        }
+      ], [
+        "PATH", ["arg", "sub"]
+      ], [
+        "EXPR", {
+          type: "EXPR",
+          path: ["args", "passedHelper"],
+          args: []
+        }
+      ]
+    ]
+  });
+  run('{{helper (h arg}}', "Expected `)`");
+  run('{{helper (h arg))}}', "Expected");
+  run('{{helper ) h arg}}', "Expected");
+  run('{{(dyn) arg}}', "Expected ID");
+
   run('{{{x 0.3 [0].[3] .4 ./[4]}}}',
       {type: 'TRIPLE', path: ['x'],
        args: [['NUMBER', 0.3],
@@ -99,6 +124,8 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
                      args: []});
   run('{{> a.b.c}}', {type: 'INCLUSION', path: ['a', 'b', 'c'],
                       args: []});
+  run('{{@> templ a=b c = d}}', {type: 'INCLUSION_ARGS', path: ['templ'],
+                      args: [['PATH', ['b'], 'a'], ['PATH', ['d'], 'c']]});
 
   run('{{foo.[]/[]}}', {type: 'DOUBLE', path: ['foo', '', ''],
                         args: []});

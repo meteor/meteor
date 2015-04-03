@@ -12,8 +12,14 @@
  * @locus Client
  * @param {String} [viewName] Optional.  A name for Views constructed by this Template.  See [`view.name`](#view_name).
  * @param {Function} renderFunction A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template.
+ * @param {Object} [options]
+ * @param {String[]} [options.formalArgs] An array of names, the template
+ * accecpts as arguments. Passed arguments found in this list will have special
+ * treatment and will get bound to the template instance's scope. These and
+ * other arguments will still be available to the template instance via the
+ * special `@args` symbol.
  */
-Blaze.Template = function (viewName, renderFunction) {
+Blaze.Template = function (viewName, renderFunction, options) {
   if (! (this instanceof Blaze.Template))
     // called without `new`
     return new Blaze.Template(viewName, renderFunction);
@@ -39,6 +45,9 @@ Blaze.Template = function (viewName, renderFunction) {
     rendered: [],
     destroyed: []
   };
+
+  options = options || {};
+  this._formalArgs = options.formalArgs || [];
 };
 var Template = Blaze.Template;
 
@@ -118,7 +127,32 @@ var fireCallbacks = function (callbacks, template) {
     });
 };
 
-Template.prototype.constructView = function (contentFunc, elseFunc) {
+// A separate reference to the argsView to have the context where the arguments
+// are evaluated, so we can later re-evaluate them reactively in an autorun.
+var setupArgsForTemplateView = function (view, argsFunc, argsView, formalArgs) {
+  Tracker.nonreactive(function () {
+    var initArgs = argsFunc();
+    Blaze._attachBindingsToView(_.pick(initArgs, formalArgs), view);
+  });
+  Blaze._attachBindingsToView({
+    '@args': argsFunc
+  }, view);
+
+  // When the view is properly created, keep updating the arguments in scope
+  view.onViewCreated(function () {
+    view.autorun(function () {
+      Blaze._withCurrentView(argsView, function () {
+        // Only bind args declared in template's formals
+        var argsDict = _.pick(argsFunc(), formalArgs);
+        _.each(argsDict, function (val, key) {
+          view._scopeBindings[key].set(val);
+        });
+      });
+    }, 'args');
+  });
+};
+
+Template.prototype.constructView = function (contentFunc, elseFunc, argsFunc) {
   var self = this;
   var view = Blaze.View(self.viewName, self.renderFunction);
   view.template = self;
@@ -127,6 +161,9 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     contentFunc ? new Template('(contentBlock)', contentFunc) : null);
   view.templateElseBlock = (
     elseFunc ? new Template('(elseBlock)', elseFunc) : null);
+  if (argsFunc) {
+    setupArgsForTemplateView(view, argsFunc, Blaze.currentView, self._formalArgs);
+  }
 
   if (self.__eventMaps || typeof self.events === 'object') {
     view._onViewRendered(function () {

@@ -347,12 +347,26 @@ each item in the sequence, setting the data context to the value of that item:
 </ul>
 ```
 
+The newer variant of `#each` doesn't change the data context but introduces a
+new variable that can be used in the body to refer to the current item:
+
+```handlebars
+<ul>
+{{#each person in people}}
+  <li>{{person.name}}</li>
+{{/each}}
+</ul>
+```
+
 The argument is typically a Meteor cursor (the result of `collection.find()`,
 for example), but it may also be a plain JavaScript array, `null`, or
 `undefined`.
 
 An "else" section may be provided, which is used (with no new data
 context) if there are zero items in the sequence at any time.
+
+You can use a special variable `@index` in the body of `#each` to get the
+0-based index of the currently rendered value in the sequence.
 
 ### Reactivity Model for Each
 
@@ -381,6 +395,22 @@ strategy:
 In case of duplicate identification keys, all duplicates after the first are
 replaced with random ones. Using objects with unique `_id` fields is the way to
 get full control over the identity of rendered elements.
+
+## Let
+
+The `#let` tag creates a new alias variable for a given expression. While it
+doesn't change the data context, it allows to refer to an expression (helper,
+data context, another variable) with a short-hand within the template:
+
+```handlebars
+{{#let name=person.bio.firstName color=generateColor}}
+  <div>{{name}} get a {{color}} card!</div>
+{{/each}}
+```
+
+Variables introduced this way take precedence over names of templates, global
+helpers, fields of the current data context and previously introduced
+variables with the same name.
 
 ## Custom Block Helpers
 

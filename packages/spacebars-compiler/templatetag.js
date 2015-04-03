@@ -6,6 +6,7 @@ SpacebarsCompiler = {};
 //
 // - `"DOUBLE"` - `{{foo}}`
 // - `"TRIPLE"` - `{{{foo}}}`
+// - `"EXPR"` - `(foo)`
 // - `"COMMENT"` - `{{! foo}}`
 // - `"BLOCKCOMMENT" - `{{!-- foo--}}`
 // - `"INCLUSION"` - `{{> foo}}`
@@ -49,7 +50,7 @@ TemplateTag.prototype = new HTMLTools.TemplateTag;
 TemplateTag.prototype.constructorName = 'SpacebarsCompiler.TemplateTag';
 
 var makeStacheTagStartRegex = function (r) {
-  return new RegExp(r.source + /(?![{>!#/])/.source,
+  return new RegExp(r.source + /(?!([{>!#/]|@>))/.source,
                     r.ignoreCase ? 'i' : '');
 };
 
@@ -64,13 +65,21 @@ var starts = {
   BLOCKCOMMENT: makeStacheTagStartRegex(/^\{\{\s*!--/),
   COMMENT: makeStacheTagStartRegex(/^\{\{\s*!/),
   INCLUSION: makeStacheTagStartRegex(/^\{\{\s*>\s*(?!\s)/),
+  INCLUSION_ARGS: makeStacheTagStartRegex(/^\{\{\s*@>\s*(?!\s)/),
   BLOCKOPEN: makeStacheTagStartRegex(/^\{\{\s*#\s*(?!\s)/),
   BLOCKCLOSE: makeStacheTagStartRegex(/^\{\{\s*\/\s*(?!\s)/)
 };
 
 var ends = {
   DOUBLE: /^\s*\}\}/,
-  TRIPLE: /^\s*\}\}\}/
+  TRIPLE: /^\s*\}\}\}/,
+  EXPR: /^\s*\)/
+};
+
+var endsString = {
+  DOUBLE: '}}',
+  TRIPLE: '}}}',
+  EXPR: ')'
 };
 
 // Parse a tag from the provided scanner or string.  If the input
@@ -210,6 +219,9 @@ TemplateTag.parse = function (scannerOrString) {
       return ['STRING', result.value];
     } else if (/^[\.\[]/.test(scanner.peek())) {
       return ['PATH', scanPath()];
+    } else if (/^\(/.test(scanner.peek())) {
+      scanner.pos += 1;
+      return ['EXPR', scanExpr('EXPR')];
     } else if ((result = BlazeTools.parseIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
@@ -221,8 +233,44 @@ TemplateTag.parse = function (scannerOrString) {
         return ['PATH', scanPath()];
       }
     } else {
-      expected('identifier, number, string, boolean, or null');
+      expected('identifier, number, string, boolean, null, or a sub expression enclosed in "(", ")"');
     }
+  };
+
+  var scanExpr = function (type) {
+    var endType = type;
+    if (type === 'INCLUSION' || type === 'INCLUSION_ARGS' ||
+        type === 'BLOCKOPEN') {
+      endType = 'DOUBLE';
+    }
+
+    var tag = new TemplateTag;
+    tag.type = type;
+    tag.path = scanPath();
+    tag.args = [];
+    var foundKwArg = false;
+    while (true) {
+      run(/^\s*/);
+      if (run(ends[endType]))
+        break;
+      else if (/^[})]/.test(scanner.peek())) {
+        expected('`' + endsString[endType] + '`');
+      }
+      var newArg = scanArg();
+      if (newArg.length === 3) {
+        foundKwArg = true;
+      } else {
+        if (foundKwArg)
+          error("Can't have a non-keyword argument after a keyword argument");
+      }
+      tag.args.push(newArg);
+
+      // expect a whitespace or a closing ')' or '}'
+      if (run(/^(?=[\s})])/) !== '')
+        expected('space');
+    }
+
+    return tag;
   };
 
   var type;
@@ -244,6 +292,7 @@ TemplateTag.parse = function (scannerOrString) {
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
   else if (run(starts.COMMENT)) type = 'COMMENT';
   else if (run(starts.INCLUSION)) type = 'INCLUSION';
+  else if (run(starts.INCLUSION_ARGS)) type = 'INCLUSION_ARGS';
   else if (run(starts.BLOCKOPEN)) type = 'BLOCKOPEN';
   else if (run(starts.BLOCKCLOSE)) type = 'BLOCKCLOSE';
   else
@@ -273,35 +322,8 @@ TemplateTag.parse = function (scannerOrString) {
     var result = run(/^\{*\|/);
     tag.value = '{{' + result.slice(0, -1);
   } else {
-    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
-    tag.path = scanPath();
-    tag.args = [];
-    var foundKwArg = false;
-    while (true) {
-      run(/^\s*/);
-      if (type === 'TRIPLE') {
-        if (run(ends.TRIPLE))
-          break;
-        else if (scanner.peek() === '}')
-          expected('`}}}`');
-      } else {
-        if (run(ends.DOUBLE))
-          break;
-        else if (scanner.peek() === '}')
-          expected('`}}`');
-      }
-      var newArg = scanArg();
-      if (newArg.length === 3) {
-        foundKwArg = true;
-      } else {
-        if (foundKwArg)
-          error("Can't have a non-keyword argument after a keyword argument");
-      }
-      tag.args.push(newArg);
-
-      if (run(/^(?=[\s}])/) !== '')
-        expected('space');
-    }
+    // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION, INCLUSION_ARGS
+    tag = scanExpr(type);
   }
 
   return tag;
