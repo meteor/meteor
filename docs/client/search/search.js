@@ -1,10 +1,12 @@
 APICollection = new Mongo.Collection(null);
 
-_.each(DocsData, function (val) {
-  // XXX only insert things that are actually in the docs
-  if (val.kind !== "namespace") {
-    APICollection.insert(val);
-  }
+Meteor.startup(function () {
+  _.each(DocsData, function (val) {
+    // XXX only insert things that are actually in the docs
+    if (val.kind !== "namespace") {
+      APICollection.insert(val);
+    }
+  });
 });
 
 Session.setDefault("searchOpen", false);
