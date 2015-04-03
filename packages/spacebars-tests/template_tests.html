@@ -1115,9 +1115,13 @@ Hi there!
   {{one}} - {{two}} - {{three}}
 </template>
 
+<template name="spacebars_template_test_template_arguments" args="one two three four">
+  {{one}} - {{two}} - {{three}} - {{four}}
+</template>
+
 <template name="spacebars_template_test_template_pass_arguments">
   {{#let v="variable reference"}}
-    {{@> spacebars_template_test_template_arguments one="my string" two=2 three=v}}
+    {{@> spacebars_template_test_template_arguments one="my string" two=2 three=v four=helper}}
   {{/let}}
 </template>
 

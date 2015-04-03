@@ -118,7 +118,7 @@ var fireCallbacks = function (callbacks, template) {
     });
 };
 
-Template.prototype.constructView = function (contentFunc, elseFunc) {
+Template.prototype.constructView = function (contentFunc, elseFunc, argsFunc) {
   var self = this;
   var view = Blaze.View(self.viewName, self.renderFunction);
   view.template = self;
@@ -127,6 +127,21 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     contentFunc ? new Template('(contentBlock)', contentFunc) : null);
   view.templateElseBlock = (
     elseFunc ? new Template('(elseBlock)', elseFunc) : null);
+  if (argsFunc) {
+    // Save a reference to the view to have the context where the arguments are
+    // evaluated, so we can later re-evaluate them reactively in an autorun.
+    var argsView = Blaze.currentView;
+    Blaze._attachBindingsToView(argsFunc(), view);
+    view.onViewCreated(function () {
+      view.autorun(function () {
+        Blaze._withCurrentView(argsView, function () {
+          _.each(argsFunc(), function (val, key) {
+            view._scopeBindings[key].set(val);
+          });
+        });
+      }, 'args');
+    });
+  }
 
   if (self.__eventMaps || typeof self.events === 'object') {
     view._onViewRendered(function () {
