@@ -10,6 +10,8 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
+  api.use('underscore');
+
   api.addFiles('babel.js', 'server');
 
   api.export('Babel', 'server');

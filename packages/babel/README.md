@@ -38,12 +38,16 @@ Babel.transform('var square = (x) => x*x;',
 // }
 ```
 
+Use `Babel.transformMeteor(code, [extraOptions])` to transpile code using the
+default Meteor options.
+
 Resources:
 
 * [API docs](https://babeljs.io/docs/usage/api/)
 * [List of transformers](https://babeljs.io/docs/usage/transformers/)
 
-## Meteor-Approved Features
+## Syntax Feature Notes
+
 
 ### Template Literals
 

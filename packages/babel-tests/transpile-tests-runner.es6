@@ -8,10 +8,8 @@ _.each(BabelTests.Transpile.groups, function (group) {
     Tinytest.add("babel - transpilation - " + group.groupName + " - " + c.name,
                  function (test) {
                    test.equal(
-                     Babel.transform(c.input, {
-                       whitelist: group.features,
-                       externalHelpers: true,
-                       loose: "all"
+                     Babel.transformMeteor(c.input, {
+                       whitelist: group.features
                      }).code,
                      c.expected);
                  });
