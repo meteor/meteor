@@ -127,6 +127,29 @@ var fireCallbacks = function (callbacks, template) {
     });
 };
 
+// A separate reference to the argsView to have the context where the arguments
+// are evaluated, so we can later re-evaluate them reactively in an autorun.
+var setupArgsForTemplateView = function (view, argsFunc, argsView, formalArgs) {
+  var initArgs = argsFunc();
+  Blaze._attachBindingsToView(_.pick(initArgs, formalArgs), view);
+  Blaze._attachBindingsToView({
+    '@args': argsFunc
+  }, view);
+
+  // When the view is properly created, keep updating the arguments in scope
+  view.onViewCreated(function () {
+    view.autorun(function () {
+      Blaze._withCurrentView(argsView, function () {
+        // Only bind args declared in template's formals
+        var argsDict = _.pick(argsFunc(), formalArgs);
+        _.each(argsDict, function (val, key) {
+          view._scopeBindings[key].set(val);
+        });
+      });
+    }, 'args');
+  });
+};
+
 Template.prototype.constructView = function (contentFunc, elseFunc, argsFunc) {
   var self = this;
   var view = Blaze.View(self.viewName, self.renderFunction);
@@ -137,21 +160,7 @@ Template.prototype.constructView = function (contentFunc, elseFunc, argsFunc) {
   view.templateElseBlock = (
     elseFunc ? new Template('(elseBlock)', elseFunc) : null);
   if (argsFunc) {
-    // Save a reference to the view to have the context where the arguments are
-    // evaluated, so we can later re-evaluate them reactively in an autorun.
-    var argsView = Blaze.currentView;
-    Blaze._attachBindingsToView(_.pick(argsFunc(), self._formalArgs), view);
-    view.onViewCreated(function () {
-      view.autorun(function () {
-        Blaze._withCurrentView(argsView, function () {
-          // Only bind args declared in template's formals
-          var argsDict = _.pick(argsFunc(), self._formalArgs);
-          _.each(argsDict, function (val, key) {
-            view._scopeBindings[key].set(val);
-          });
-        });
-      }, 'args');
-    });
+    setupArgsForTemplateView(view, argsFunc, Blaze.currentView, self._formalArgs);
   }
 
   if (self.__eventMaps || typeof self.events === 'object') {

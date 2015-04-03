@@ -1114,3 +1114,13 @@ Hi there!
   {{@> spacebars_template_test_undeclared_args one=1 two=2 three=3}}
 </template>
 
+<template name="spacebars_template_test_at_args_symbol" args="five">
+  {{five}} - {{keyValues @args}}
+</template>
+
+<template name="spacebars_template_test_at_args_symbol_caller">
+  {{#let th=3}}
+    {{@> spacebars_template_test_at_args_symbol one=1 two="two" three=th four=helper five="f"}}
+  {{/let}}
+</template>
+
