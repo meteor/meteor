@@ -7,19 +7,19 @@ closeDrawer = function () {
 };
 
 Template.drawer.onRendered(function () {
-  this.find(".container-for-ui-hooks")._uihooks = {
-    insertElement: function (node, next) {
-      $node = $(node).hide();
-      $node.insertBefore(next);
-      $node.fadeIn();
-    },
-    removeElement: function (node) {
-      $node = $(node);
-      $node.fadeOut(function () {
-        $node.remove();
-      });
-    }
-  }
+  // this.find(".container-for-ui-hooks")._uihooks = {
+  //   insertElement: function (node, next) {
+  //     $node = $(node).hide();
+  //     $node.insertBefore(next);
+  //     $node.fadeIn();
+  //   },
+  //   removeElement: function (node) {
+  //     $node = $(node);
+  //     $node.fadeOut(function () {
+  //       $node.remove();
+  //     });
+  //   }
+  // }
 });
 
 Template.drawer.helpers({

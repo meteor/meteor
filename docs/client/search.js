@@ -12,10 +12,15 @@ Session.setDefault("searchQuery", "");
 Session.setDefault("searchResults", []);
 Session.setDefault("selectedResultId", null);
 
+var closeSearch = function () {
+  closeDrawer();
+  Session.set("searchOpen", false);
+}
+
 // Close search with ESC
 $(document).on("keydown", function (event) {
   if (event.which === 27) {
-    Session.set("searchOpen", false);
+    closeSearch();
   }
 });
 
@@ -30,6 +35,7 @@ $(document).on("keydown", function (event) {
   // Don't activate search for special keys or keys with modifiers
   if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
       (! event.ctrlKey) && (! event.metaKey) && (! Session.get("searchOpen"))) {
+    openDrawerWithTemplate("search");
     Session.set("searchOpen", true);
 
     Tracker.flush();
@@ -113,7 +119,7 @@ Template.search.events({
     Session.set("searchQuery", event.target.value);
   },
   "click .close-search": function () {
-    Session.set("searchOpen", false);
+    closeSearch()
     return false;
   },
   "keydown": function (event) {
@@ -125,7 +131,7 @@ Template.search.events({
           var id = nameToId[selectedName] || selectedName.replace(/[.#]/g, "-");
           var url = "#/full/" + id;
           window.location.replace(url);
-          Session.set("searchOpen", false);
+          closeSearch();
         }
       });
 
