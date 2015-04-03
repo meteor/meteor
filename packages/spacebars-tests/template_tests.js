@@ -3409,6 +3409,6 @@ Tinytest.add("spacebars-tests - template_tests - template arguments - undeclared
   var tmpl = Template.spacebars_template_test_undeclared_args_caller;
 
   var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML), "1 - 2 - ");
+  test.equal(canonicalizeHtml(div.innerHTML), "1 - 2 -");
 });
 
