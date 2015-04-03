@@ -56,6 +56,7 @@ routepolicy@1.0.5
 service-configuration@1.0.4
 session@1.1.0
 showdown@1.0.4
+simple:comments@0.0.1
 simple:highlight.js@1.0.9
 simple:markdown-templating@1.2.6
 spacebars@1.0.6

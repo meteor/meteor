@@ -16,7 +16,7 @@ Comments.matchPattern = {
   createdAt: Date,
   updatedAt: Date,
 
-  release: release
+  release: "FAKERELEASE"
 };
 
 if (Meteor.isServer) {
