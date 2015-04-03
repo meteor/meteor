@@ -4,40 +4,63 @@
     name: The name of this discussion topic, in human readable terms
   }}
 
-  <button class="discuss-button">Discuss {{name}} ({{numComments id}})</button>
+  <button class="discuss-button">
+    Open user documentation for {{name}} ({{numComments id}} posts)
+  </button>
 </template>
 
 <template name="discussContent">
   <div class="discuss-content">
     {{#with openDiscussion}}
       <h2 class="thread-title">
-        <a class="close" href="#">&times; [esc]</a>
-        {{name}} Discussion ({{numComments id}} comments)
+        {{name}} discussion ({{numComments id}} comments)
       </h2>
 
       {{#each comments}}
         {{> comment this}}
+      {{else}}
+        <p>No comments here yet.</p>
       {{/each}}
 
-      <form class="new-comment">
-        <h4 class="form-title">Post a new comment</h4>
-        <div class="side-by-side">
-          <div>
-            <textarea placeholder="Type here in Markdown..." name="markdownContent"></textarea>
-            <div class="preview comment-content">
-              {{#if preview}}
-                {{#markdown}}{{preview}}{{/markdown}}
-              {{else}}
-                Preview will appear here...
-              {{/if}}
+      {{#if newComment}}
+        <form class="new-comment">
+          <h4 class="form-title">Post a new comment</h4>
+
+          {{#markdown}}
+  Please read the posting rules below. Your post must be accepted by a moderator
+  before it will become visible to everyone else, and it will not be accepted if
+  you do not follow the rules.
+
+  1. Please do not post questions here, they belong on Stack Overflow or the
+  Meteor forums.
+  2. Please only post information that you believe is important for everyone to
+  know.
+  3. It is okay to post links to external resources that are relevant to this
+  topic. For example, you should not ask a question here directly, but you
+  should link to a Stack Overflow or forum post about this topic.
+          {{/markdown}}
+
+          <div class="side-by-side">
+            <div>
+              <textarea placeholder="Type here in Markdown..."
+                name="markdownContent"></textarea>
+              <div class="preview comment-content">
+                {{#if preview}}
+                  {{#markdown}}{{preview}}{{/markdown}}
+                {{else}}
+                  Preview will appear here...
+                {{/if}}
+              </div>
             </div>
           </div>
-        </div>
 
-        <button class="save">Save comment</button>
-        &nbsp;&nbsp;&nbsp;
-        {{> loginButtons align="right"}}
-      </form>
+          <button class="save">Save comment</button>
+          &nbsp;&nbsp;&nbsp;
+          {{> loginButtons align="right"}}
+        </form>
+      {{else}}
+        <button class="new-comment-button">Post a new comment here</button>
+      {{/if}}
     {{/with}}
   </div>
 </template>

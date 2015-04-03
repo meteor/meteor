@@ -31,5 +31,10 @@ Template.drawer.helpers({
 Template.drawer.events({
   "click .drawer-overlay": function () {
     closeDrawer();
+  },
+  "click .close-drawer": function () {
+    closeDrawer();
+
+    return false;
   }
 });

@@ -20,10 +20,11 @@
 {{#with apiData this}}
 <div class="api {{bare}} new-api-box">
   {{> apiBoxTitle name=signature locus=locus id=id filepath=filepath lineno=lineno}}
-  {{> discuss id=longname name=longname}}
 
   <div class="desc">
     {{#markdown}}{{summary}}{{/markdown}}
+
+    {{> discuss id=longname name=longname}}
   </div>
 
   {{#if paramsNoOptions}}
@@ -57,7 +58,7 @@
   {{/if}}
 
   {{#if UI.contentBlock}}
-  {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
+    {{#markdown}}{{> UI.contentBlock}}{{/markdown}}
   {{/if}}
 </div>
 {{/with}}

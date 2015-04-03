@@ -67,6 +67,14 @@ Meteor.methods({
     }
 
     Comments.remove(commentId);
+
+    CommentCounts.update({
+      topicId: comment.topicId
+    }, {
+      $inc: {
+        count: -1
+      }
+    });
   }
 });
 

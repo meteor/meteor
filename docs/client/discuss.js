@@ -42,6 +42,7 @@ Template.discussContent.onCreated(function () {
   var self = this;
 
   self.preview = new ReactiveVar("");
+  self.newComment = new ReactiveVar(false);
 
   self.autorun(function () {
     var openDiscussion = Session.get("openDiscussion");
@@ -65,12 +66,15 @@ Template.discussContent.helpers({
   preview: function () {
     return Template.instance().preview.get();
   },
+  newComment: function () {
+    return Template.instance().newComment.get();
+  },
   numComments: numCommentsForId
 });
 
 Template.discussContent.events({
-  "click .close": function () {
-    closeDiscussion();
+  "click .new-comment-button": function () {
+    Template.instance().newComment.set(true);
 
     return false;
   },
@@ -98,7 +102,6 @@ Template.discussContent.events({
   },
   "click .delete-comment": function (event) {
     event.preventDefault();
-    console.log(this);
 
     if (confirm("Delete this comment?")) {
       Comments.deleteComment(this._id);
