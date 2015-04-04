@@ -75,8 +75,10 @@ var wrapHelper = function (f, templateFunc) {
   };
 };
 
-Blaze._getTemplate = function (name) {
-  if (name in Blaze.Template) {
+// templateInstance argument is provided to be available for possible
+// alternative implementations of this function by 3rd party packages.
+Blaze._getTemplate = function (name, templateInstance) {
+  if ((name in Blaze.Template) && (Blaze.Template[name] instanceof Blaze.Template)) {
     return Blaze.Template[name];
   }
   return null;
@@ -116,10 +118,10 @@ Blaze.View.prototype.lookup = function (name, _options) {
     return Blaze._parentData(name.length - 1, true /*_functionWrapped*/);
 
   } else if (template &&
-             ((helper = Blaze._getTemplateHelper(template, name, templateInstance)) != null)) {
+             ((helper = Blaze._getTemplateHelper(template, name, boundTmplInstance)) != null)) {
     return wrapHelper(bindDataContext(helper), boundTmplInstance);
-  } else if (lookupTemplate && (foundTemplate = Blaze._getTemplate(name)) &&
-             (foundTemplate instanceof Blaze.Template || typeof foundTemplate === 'function')) {
+  } else if (lookupTemplate &&
+             ((foundTemplate = Blaze._getTemplate(name, boundTmplInstance)) != null)) {
     return foundTemplate;
   } else if (Blaze._globalHelpers[name] != null) {
     return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
