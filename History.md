@@ -1,5 +1,12 @@
 ## v.NEXT
 
+## v1.1.0.2, 2015-Apr-06
+
+### `meteor` command-line tool
+
+* Revert a change in 1.1.0.1 that caused `meteor mongo` to fail on some Linux
+  systems. #4115, #4124, #4134
+
 ## v1.1.0.1, 2015-Apr-02
 
 ### Blaze
