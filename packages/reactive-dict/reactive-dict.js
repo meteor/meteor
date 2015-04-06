@@ -7,6 +7,7 @@ changed = function (v) {
 
 ReactiveDict = function (dictName) {
   // this.keys: key -> value
+  // XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
   if (dictName) {
     return new SerializingReactiveDict(dictName);
   }
