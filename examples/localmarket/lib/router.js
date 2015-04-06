@@ -22,60 +22,73 @@ if (Meteor.isClient) {
 }
 
 HomeController = RouteController.extend({
-  onBeforeAction: function() {
-    Meteor.subscribe('latestActivity', function() {
+  onBeforeAction: function () {
+    Meteor.subscribe('latestActivity', function () {
       dataReadyHold.release();
     });
   }
 });
 
 FeedController = RouteController.extend({
-  onBeforeAction: function() {
+  onBeforeAction: function () {
     this.feedSubscription = feedSubscription;
   }
 });
 
 RecipesController = RouteController.extend({
-  data: function() {
+  data: function () {
     return _.values(RecipesData);
   }
 });
 
 BookmarksController = RouteController.extend({
-  onBeforeAction: function() {
+  onBeforeAction: function () {
     if (Meteor.user())
       Meteor.subscribe('bookmarks');
     else
       Overlay.open('authOverlay');
   },
-  data: function() {
+  data: function () {
     if (Meteor.user())
       return _.values(_.pick(RecipesData, Meteor.user().bookmarkedRecipeNames));
   }
 });
 
 RecipeController = RouteController.extend({
-  onBeforeAction: function() {
+  onBeforeAction: function () {
     Meteor.subscribe('recipe', this.params.name);
   },
-  data: function() {
+  data: function () {
     return RecipesData[this.params.name];
   }
 });
 
 AdminController = RouteController.extend({
-  onBeforeAction: function() {
+  onBeforeAction: function () {
     Meteor.subscribe('news');
   }
 });
 
+Router.route('home', {
+  path: '/'
+});
 
-Router.route('home', {path: '/'});
 Router.route('feed');
-Router.route('recipes');
-Router.route('bookmarks');
-Router.route('about');
-Router.route('recipe', {path: '/recipes/:name'});
-Router.route('admin', {layoutTemplate: null});
 
-Router.onBeforeAction('dataNotFound', {only: 'recipe'});
+Router.route('recipes');
+
+Router.route('bookmarks');
+
+Router.route('about');
+
+Router.route('recipe', {
+  path: '/recipes/:name'
+});
+
+Router.route('admin', {
+  layoutTemplate: null
+});
+
+Router.onBeforeAction('dataNotFound', {
+  only: 'recipe'
+});
