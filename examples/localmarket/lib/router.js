@@ -69,14 +69,13 @@ AdminController = RouteController.extend({
   }
 });
 
-Router.map(function() {
-  this.route('home', {path: '/'});
-  this.route('feed');
-  this.route('recipes');
-  this.route('bookmarks');
-  this.route('about');
-  this.route('recipe', {path: '/recipes/:name'});
-  this.route('admin', { layoutTemplate: null });
-});
+
+Router.route('home', {path: '/'});
+Router.route('feed');
+Router.route('recipes');
+Router.route('bookmarks');
+Router.route('about');
+Router.route('recipe', {path: '/recipes/:name'});
+Router.route('admin', {layoutTemplate: null});
 
 Router.onBeforeAction('dataNotFound', {only: 'recipe'});
