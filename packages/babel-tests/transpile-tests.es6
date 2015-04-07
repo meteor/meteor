@@ -16,7 +16,10 @@ BabelTests.Transpile.groups = [
     cases: [
       {
         name: 'basic class',
-        commentary: `This is a basic class definition with a constructor.  The \`classCallCheck\` helper makes sure the constructor is being called with \`new\`, because calling it as a function is disallowed.`,
+        commentary: `
+This is a basic class definition with a constructor.  The
+\`classCallCheck\` helper makes sure the constructor is being called
+with \`new\`, because calling it as a function is disallowed.`,
         input: `
 class Foo {
   constructor(x) {
@@ -32,7 +35,8 @@ var Foo = function Foo(x) {
       },
       {
         name: 'methods',
-        commentary: `Classes can have instance and static methods.`,
+        commentary: `
+Classes can have instance and static methods.`,
         input: `
 class Foo {
   static staticMethod() {
@@ -62,27 +66,32 @@ var Foo = (function () {
    },
       {
         name: 'empty subclass',
-        commentary: `A subclass (also called a derived class) gets a default constructor that calls the super constructor.`,
+        commentary: `
+A subclass (also called a derived class) gets a default constructor that calls the super constructor.`,
         input:
-        ` | class Foo extends Bar {}`,
-        expected:
-        ` | var Foo = (function (_Bar) {
-          |   function Foo() {
-          |     babelHelpers.classCallCheck(this, Foo);
-          |
-          |     if (_Bar != null) {
-          |       _Bar.apply(this, arguments);
-          |     }
-          |   }
-          |
-          |   babelHelpers.inherits(Foo, _Bar);
-          |   return Foo;
-          | })(Bar);`
+        `class Foo extends Bar {}`,
+        expected: `
+var Foo = (function (_Bar) {
+  function Foo() {
+    babelHelpers.classCallCheck(this, Foo);
+
+    if (_Bar != null) {
+      _Bar.apply(this, arguments);
+    }
+  }
+
+  babelHelpers.inherits(Foo, _Bar);
+  return Foo;
+})(Bar);`
       },
       {
         name: 'use before define',
-        commentary: `Unlike functions, classes can't be used before they are defined.  In real ES6, an error will actually be thrown, piggybacking
-on the new \`let\` semantics where using a name in the local scope before it is defined is an error.  In Babel, the class will generally be null before it is defined.`,
+        commentary: `
+Unlike functions, classes can't be used before they are defined.  In
+real ES6, an error will actually be thrown, piggybacking on the new
+\`let\` semantics where using a name in the local scope before it is
+defined is an error.  In Babel, the class will generally be null
+before it is defined.`,
         input: `
 new Foo();
 class Foo {}`,
@@ -95,7 +104,9 @@ var Foo = function Foo() {
       },
       {
         name: 'class expression',
-        commentary: `Like functions, classes come in an expression form, with a name that is scoped to the body of the class definition.`,
+        commentary: `
+Like functions, classes come in an expression form, with a name that
+is scoped to the body of the class definition.`,
         input: `
 var A = class B {};
 var C = class D {
@@ -119,7 +130,9 @@ var C = (function () {
       },
       {
         name: 'computed method names',
-        commentary: 'Methods may have computed names.  This will be especially useful in conjunction with non-string "Symbol" keys.',
+        commentary: `
+Methods may have computed names.  This will be especially useful in
+conjunction with non-string "Symbol" keys.`,
         input: `
 var frob = "inc"
 
@@ -147,7 +160,10 @@ Foo.inc(3); // 4`
       },
       {
         name: 'super',
-        commentary: 'There are two kinds of uses of `super`.  Call it as a function to call the super constructor.  Call members of it to call super implementations of instance methods.',
+        commentary: `
+There are two kinds of uses of \`super\`.  Call it as a function to
+call the super constructor.  Call members of it to call super
+implementations of instance methods.`,
         input: `
 class Foo {
   constructor(value) { this.value = value; }
@@ -206,12 +222,12 @@ print(new Bar().x()); // 123`
       {
         name: 'fancier interpolation',
         commentary: `You can put any expression inside the curly braces (which are required).`,
-        input:
-        ` | print(\`\${x} times \${y} is \${x*y}.\`);
-          | print(\`\${x} plus \${y} is \${x+y}.\`);`,
-        expected:
-        ` | print("" + x + " times " + y + " is " + x * y + ".");
-          | print("" + x + " plus " + y + " is " + (x + y) + ".");`
+        input: `
+print(\`\${x} times \${y} is \${x*y}.\`);
+print(\`\${x} plus \${y} is \${x+y}.\`);`,
+        expected: `
+print("" + x + " times " + y + " is " + x * y + ".");
+print("" + x + " plus " + y + " is " + (x + y) + ".");`
       },
       {
         name: 'basic multiline',
@@ -248,58 +264,58 @@ print(new Bar().x()); // 123`
         commentary: `Arrow functions are, for one thing, a shorter way to write function literals.
 
 The body can be an expression (with no return statement), or a block (which must have an explicit return statement to return a value).  The parentheses around the argument list can be omitted if there is exactly one argument.`,
-        input:
-        ` | var sum = (x,y) => x + y;
-          | var square = x => x*x;
-          | var printAndReturn = x => { print(x); return x; };
-          | var returnZero = () => 0;`,
-        expected:
-        ` | var sum = function (x, y) {
-          |   return x + y;
-          | };
-          | var square = function (x) {
-          |   return x * x;
-          | };
-          | var printAndReturn = function (x) {
-          |   print(x);return x;
-          | };
-          | var returnZero = function () {
-          |   return 0;
-          | };`
+        input: `
+var sum = (x,y) => x + y;
+var square = x => x*x;
+var printAndReturn = x => { print(x); return x; };
+var returnZero = () => 0;`,
+        expected: `
+var sum = function (x, y) {
+  return x + y;
+};
+var square = function (x) {
+  return x * x;
+};
+var printAndReturn = function (x) {
+  print(x);return x;
+};
+var returnZero = function () {
+  return 0;
+};`
       },
       {
         name: 'binding this',
         commentary: `Unlike normal function literals, arrow functions do not have their own \`this\` that depends on how they are called.  They always use the enclosing value of \`this\`.  This behavior is implemented efficiently by the transpiler using a closure.`,
-        input:
-        ` | var f = function () {
-          |   return () => { this.frob(); }
-          | };`,
-        expected:
-        ` | var f = function () {
-          |   var _this = this;
-          |
-          |   return function () {
-          |     _this.frob();
-          |   };
-          | };`
+        input: `
+var f = function () {
+  return () => { this.frob(); }
+};`,
+        expected: `
+var f = function () {
+  var _this = this;
+
+  return function () {
+    _this.frob();
+  };
+};`
       },
       {
         name: 'binding this doesn\'t clobber variables',
         commentary: `If you name a variable \`_this\`, the transpiler is smart and won't clobber it.`,
-        input:
-        ` | var f = function () {
-          |   return () => this;
-          | };
-          | var _this = null;`,
-        expected:
-        ` | var f = function () {
-          |   var _this2 = this;
-          |
-          |   return function () {
-          |     return _this2;
-          |   };
-          | };
-          | var _this = null;`
+        input: `
+var f = function () {
+  return () => this;
+};
+var _this = null;`,
+        expected: `
+var f = function () {
+  var _this2 = this;
+
+  return function () {
+    return _this2;
+  };
+};
+var _this = null;`
       }
     ]
   },
@@ -397,38 +413,14 @@ for (var i = 0; i < 10; i++) {
   }
 ];
 
-// Parse the "pipe form" that we use so that multiline strings with leading
-// whitespace can be indented nicely in source code (by Emacs js2-mode, at
-// lesat):
-//
-// ```
-//  expected:
-//  ` | var square = function (x) {
-//    |   return x * x;
-//    | };`
-// ```
-
-var stripPipes = function (str) {
-  var lines = str.split('\n');
-  if (lines.length && /^\s*\|/.test(lines[0])) {
-    var match = /^\s*\|(\s*)/.exec(lines[0]);
-    var spacesAfterPipe = match[1].length;
-    return _.map(lines, function (line) {
-      var prefix = line.match(/(^\s*\|)|/)[0];
-      if (! prefix) {
-        return line;
-      }
-      return line.slice(prefix.length + spacesAfterPipe);
-    }).join('\n');
-  } else {
-    str = str.replace(/^\s*/, '');
-    return str;
-  }
+var stripLeadingWhitespace = function (str) {
+  return str.replace(/^\s*/, '');
 };
 
 _.each(BabelTests.Transpile.groups, function (group) {
   _.each(group.cases, function (c) {
-    c.input = stripPipes(c.input);
-    c.expected = stripPipes(c.expected);
+    c.input = stripLeadingWhitespace(c.input);
+    c.expected = stripLeadingWhitespace(c.expected);
+    c.commentary = c.commentary && stripLeadingWhitespace(c.commentary);
   });
 });
