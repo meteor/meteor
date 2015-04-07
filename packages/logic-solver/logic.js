@@ -32,24 +32,33 @@ Logic._MiniSat = MiniSat; // Expose for testing and poking around
 // "-" will be parsed in the string form, but we try to
 // keep it to either one or zero of them.
 
-Logic.NumTerm = Match.Where(function (x) {
-  return Match.test(x, Match.Integer) && x !== 0;
-});
+Logic.isNumTerm = function (x) {
+  // 32-bit integer, but not 0
+  return (x === (x | 0)) && x !== 0;
+};
 
-Logic.NameTerm = Match.Where(function (x) {
+Logic.isNameTerm = function (x) {
   // NameTerm must not be empty, or just `-` characters, or
   // look like a number.  Specifically, it can't be zero or
   // more `-` followed by zero or more digits.
   return (typeof x === 'string') &&
     ! /^-*[0-9]*$/.test(x);
-});
+};
 
-Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
+Logic.isTerm = function (x) {
+  return Logic.isNumTerm(x) || Logic.isNameTerm(x);
+};
+
+Logic.NumTerm = Match.Where(Logic.isNumTerm);
+Logic.NameTerm = Match.Where(Logic.isNameTerm);
+Logic.Term = Match.Where(Logic.isTerm);
 
 // WholeNumber: a non-negative integer (0 is allowed)
-Logic.WholeNumber = Match.Where(function (x) {
-  return Match.test(x, Match.Integer) && x >= 0;
-});
+Logic.isWholeNumber = function (x) {
+  return (x === (x | 0)) && x >= 0;
+};
+
+Logic.WholeNumber = Match.Where(Logic.isWholeNumber);
 
 // Abstract base class.  Subclasses are created using _defineFormula.
 Logic.Formula = function () {};
