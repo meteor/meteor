@@ -3226,3 +3226,48 @@ Tinytest.add("spacebars-tests - template_tests - nested expressions", function (
   test.equal(canonicalizeHtml(div.innerHTML), "6");
 });
 
+Tinytest.add("spacebars-tests - template_tests - nested sub-expressions", function (test) {
+  var tmpl = Template.spacebars_template_test_nested_subexprs;
+
+  var sentence = new ReactiveVar("can't even imagine a world without Light");
+  tmpl.helpers({
+    capitalize: function (str) {
+      return str.charAt(0).toUpperCase() + str.substring(1);
+    },
+    firstWord: function (sentence) {
+      return sentence.split(' ')[0];
+    },
+    generateSentence: function () {
+      return sentence.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "Can't");
+
+  sentence.set("that would be quite dark");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "That");
+});
+
+Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", function (test) {
+  var tmpl = Template.spacebars_template_test_exprs_keyword;
+
+  var name = new ReactiveVar("light");
+  tmpl.helpers({
+    capitalize: function (str) {
+      return str.charAt(0).toUpperCase() + str.substring(1);
+    },
+    name: function () {
+      return name.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "Light Mello");
+
+  name.set("misa");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
+});
+
