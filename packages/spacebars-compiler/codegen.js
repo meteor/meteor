@@ -230,8 +230,7 @@ _.extend(CodeGen.prototype, {
       break;
     case 'EXPR':
       // The format of EXPR is ['EXPR', { type: 'EXPR', path: [...], args: { ... } }]
-      var expr = arg[1];
-      argCode = self.codeGenMustache(expr.path, expr.args, 'dataMustache');
+      argCode = self.codeGenMustache(argValue.path, argValue.args, 'dataMustache');
       break;
     default:
       // can't get here
