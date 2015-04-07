@@ -5,10 +5,10 @@ Package.describe({
 
 Package.on_use(function (api) {
   api.export('Logic');
-  api.use('check');
   api.use('underscore');
   api.add_files(['minisat.js',
                  'minisat_wrapper.js',
+                 'types.js',
                  'logic.js',
                  'optimize.js']);
 });

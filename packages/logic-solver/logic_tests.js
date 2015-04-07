@@ -1278,7 +1278,7 @@ Tinytest.add("logic-solver - assumptions", function (test) {
 
 Tinytest.add("logic-solver - eight queens", function (test) {
   var boardSquare = function (r, c) {
-    return String(r) + String(c);
+    return String(r) + ',' + String(c);
   };
 
   Logic._disablingTypeChecks(function () {
@@ -1319,19 +1319,19 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     // solution might be, for example,
     // ["16", "24", "31", "45", "58", "62", "77", "83"]
     test.equal(solution.length, 8);
-    test.isTrue(/^([1-8][1-8],){7}[1-8][1-8]$/.test(solution.join(',')));
+    test.isTrue(/^([1-8],[1-8] ){7}[1-8],[1-8]$/.test(solution.join(' ')));
     var assertEightDifferent = function (transformFunc) {
       test.equal(_.uniq(_.map(solution, transformFunc)).length, 8);
     };
     // queens occur in eight different rows, eight different columns
     assertEightDifferent(function (queen) { return queen.charAt(0); });
-    assertEightDifferent(function (queen) { return queen.charAt(1); });
+    assertEightDifferent(function (queen) { return queen.charAt(2); });
     // queens' row/col have eight different sums, eight different differences
     assertEightDifferent(function (queen) {
-      return Number(queen.charAt(0)) - Number(queen.charAt(1));
+      return Number(queen.charAt(0)) - Number(queen.charAt(2));
     });
     assertEightDifferent(function (queen) {
-      return Number(queen.charAt(0)) + Number(queen.charAt(1));
+      return Number(queen.charAt(0)) + Number(queen.charAt(2));
     });
   });
 });
@@ -1713,9 +1713,7 @@ Tinytest.add("logic-solver - type-checking", function (test) {
   // on by default
   test.throws(function () {
     Logic.or({});
-  }, function (e) {
-    return e instanceof Match.Error;
-  });
+  }, /is not a Formula or Term/);
 
   // ... but can turn it off (this shouldn't throw)
   Logic._disablingTypeChecks(function () {
