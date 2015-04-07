@@ -81,6 +81,7 @@ Building an application with Meteor?
 * Announcement list: sign up at http://www.meteor.com/
 * Ask a question: http://stackoverflow.com/questions/tagged/meteor
 * Discussion forums: https://forums.meteor.com/
+* Examples: there are several app examples within this repository https://github.com/meteor/meteor/tree/devel/examples
 
 Interested in contributing to Meteor?
 
