@@ -247,6 +247,8 @@ CS.Solver.prototype.analyze = function () {
   });
 };
 
+var WholeNumber = Match.Where(Logic.isWholeNumber);
+
 // A Step consists of a name, an array of terms, and an array of weights.
 // Steps are optimized one by one.  Optimizing a Step means to find
 // the minimum whole number value for the weighted sum of the terms,
@@ -269,7 +271,7 @@ CS.Solver.Step = function (name, terms, weights) {
   terms = terms || [];
   check(terms, [String]);
   weights = (weights == null ? [] : weights);
-  check(weights, Match.OneOf([Logic.WholeNumber], Logic.WholeNumber));
+  check(weights, Match.OneOf([WholeNumber], WholeNumber));
 
   this.name = name;
 
@@ -288,7 +290,7 @@ CS.Solver.Step.prototype.addTerm = function (term, weight) {
     }
     weight = this.weights;
   }
-  check(weight, Logic.WholeNumber);
+  check(weight, WholeNumber);
   if (weight !== 0) {
     this.terms.push(term);
     if (typeof this.weights === 'number') {

@@ -99,8 +99,8 @@ CS.PackagesResolver._resolveWithInput = function (input, options) {
     });
   });
 
-  // Disable runtime type checks (they slow things down by a factor of 3)
-  return Logic._disablingTypeChecks(function () {
+  // Disable runtime type checks (they slow things down a bunch)
+  return Logic.disablingAssertions(function () {
     var result = solver.getAnswer({
       allAnswers: options.allAnswers
     });
