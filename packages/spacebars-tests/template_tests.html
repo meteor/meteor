@@ -1050,3 +1050,16 @@ Hi there!
 <template name="spacebars_template_test_nested_exprs">
   {{add (add 1 2) 3}}
 </template>
+
+<template name="spacebars_template_test_nested_subexprs">
+  {{capitalize (firstWord generateSentence)}}
+</template>
+
+<template name="spacebars_template_test_exprs_keyword_callable">
+  {{stuff}} {{another}}
+</template>
+
+<template name="spacebars_template_test_exprs_keyword">
+  {{> spacebars_template_test_exprs_keyword_callable stuff=(capitalize name) another=(capitalize "mello")}}
+</template>
+
