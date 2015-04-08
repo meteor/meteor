@@ -166,6 +166,9 @@ Template.autoApiBox.helpers({
     return _.reject(this.params, function (param) {
       return param.name === "options";
     });
+  },
+  fullApi: function () {
+    return Session.get("fullApi");
   }
 });
 

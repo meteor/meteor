@@ -1,5 +1,13 @@
 ## v.NEXT
 
+## v1.1.0.1, 2015-Apr-02
+
+### Blaze
+
+* Fix a regression in 1.1 in Blaze Templates: an error happening when View is
+  invalidated immediately, causing a client-side crash (accessing
+  `destroyMembers` of `undefined`). #4097
+
 ## v1.1, 2015-Mar-31
 
 ### Windows Support
