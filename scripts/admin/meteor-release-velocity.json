@@ -1,9 +1,9 @@
 {
     "track": "velocity:METEOR",
-    "version": "1.1-rc.1",
+    "version": "1.1.0.2",
     "recommended": false,
     "official": false,
     "description": "Extends Meteor with testing functionality",
-    "tool": "velocity:meteor-tool@1.1.1_1",
+    "tool": "velocity:meteor-tool@1.1.3_1",
     "packages": {}
 }
