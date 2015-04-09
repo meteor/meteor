@@ -167,9 +167,9 @@ Each row, column, and three-digit diagonal adds up to 15, as you can verify.
 (There are many 3x3 magic squares, but the magic sum is always 15, because
 all the digits together add up to 45!)
 
-Let's use Logic Solver to find magic squares.  We could be general about it
-and write code that would extend to NxN squares, but let's keep it simple and
-name the digit locations as follows:
+Let's use Logic Solver to find magic squares.  We could be fancy about
+it and write code that would generalize to NxN magic squares, but
+let's keep it simple and name the digit locations as follows:
 
 ```
 A B C
@@ -227,8 +227,8 @@ sol1.evaluate(A) // => 3
 sol1.evaluate(B) // => 10 (uh oh)
 _.map(locations, function (loc) { return sol1.evaluate(loc); })
 // => [3, 10, 2,
-       4,  5, 6,
-       8,  0, 7]
+//     4,  5, 6,
+//     8,  0, 7]
 ```
 
 It looks like we forgot to specify that each "digit" is between 1 and 9!
@@ -247,8 +247,8 @@ _.each(locations, function (loc) {
 var sol2 = solver.solve();
 _.map(locations, function (loc) { return sol2.evaluate(loc); })
 // => [8, 1, 6,
-       3, 5, 7,
-       4, 9, 2]
+//     3, 5, 7,
+//     4, 9, 2]
 ```
 
 Now we have a proper magic square!  We also forgot to specify that the
@@ -260,8 +260,8 @@ where A and B are equal:
 var sol3 = solver.solveAssuming(Logic.equalBits(A, B));
 _.map(locations, function (loc) { return sol3.evaluate(loc); })
 // => [4, 4, 7,
-       8, 5, 2,
-       3, 6, 6]
+//     8, 5, 2,
+//     3, 6, 6]
 ```
 
 Or where A, B, and C are equal:
@@ -271,8 +271,8 @@ var sol4 = solver.solveAssuming(Logic.and(Logic.equalBits(A, B),
                                           Logic.equalBits(B, C)));
 _.map(locations, function (loc) { return sol4.evaluate(loc); })
 // => [5, 5, 5,
-       5, 5, 5,
-       5, 5, 5]
+//     5, 5, 5,
+//     5, 5, 5]
 ```
 
 A good way to enforce that all locations hold different digits is to
@@ -298,8 +298,8 @@ _.each(locations, function (loc1, i) {
 var sol5 = solver.solve();
 _.map(locations, function (loc) { return sol5.evaluate(loc); })
 // => [6, 7, 2,
-       1, 5, 9,
-       8, 3, 4]
+//     1, 5, 9,
+//     8, 3, 4]
 ```
 
 If we wished to continue interrogating the solver, we could try asking
@@ -312,7 +312,7 @@ boolean variables:
 ```js
 sol5.getTrueVars()
 // => ["A$1", "A$2", "B$0", "B$1", "B$2", "C$1", "D$0", "E$0", "E$2",
-       "F$0", "F$3", "G$3", "H$0", "H$1", "I$2"]
+//     "F$0", "F$3", "G$3", "H$0", "H$1", "I$2"]
 
 _.map(A.bits, function (v) { return sol5.evaluate(v); })
 // => [false, true, true, false]
