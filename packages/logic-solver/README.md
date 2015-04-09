@@ -340,7 +340,7 @@ characters `0` through `9`, or start with `-`.  Variable names that
 start with `$` are reserved for internal use.
 
 When you pass a variable name to a Solver for the first time, a
-*variable number* is allocated, and that name and number become
+variable number is allocated, and that name and number become
 synonymous for that Solver instance.  You don't need to know about
 variable numbers to use Logic Solver, but you can always use a
 variable number in place of a variable name in terms and formulas, in
