@@ -333,11 +333,20 @@ number does not appear at any other location.
 
 ## Variables
 
-A variable name can be almost any String.  You do not need to declare
-your variables before using them in formulas passed to `require` and
-`forbid`.  A variable name must not be empty, consist of only the
+Variable names are Strings which can contain spaces and punctuation:
+
+```js
+Logic.implies('it is raining', 'take an umbrella');
+
+Logic.exactlyOne("1,1", "1,2", "1,3")
+```
+
+Restrictions: A variable name must not be empty, consist of only the
 characters `0` through `9`, or start with `-`.  Variable names that
 start with `$` are reserved for internal use.
+
+You do not need to declare or create your variables before using them
+in formulas passed to `require` and `forbid`.
 
 When you pass a variable name to a Solver for the first time, a
 variable number is allocated, and that name and number become
@@ -381,6 +390,38 @@ if `variableNum` is not an allocated variable number.
 ###### Returns
 
 String - A variable name.
+
+## Terms
+
+A Term is a variable name or number, optionally negated.  To negate a
+string Term, prefix it with `"-"`.  Examples of valid Terms are
+`"foo"`, `"-foo"`, `5`, and `-5`.  In other solvers and papers, you may
+see Terms referred to as "literals."
+
+The following are equivalent:
+
+```js
+solver.require("-A");
+solver.require(Logic.not("A"));
+solver.forbid("A");
+```
+
+In fact, `Logic.not("A")` returns `"-A"`.  It is valid to have more
+than one `-` in a Term (`"---A"`), and the meaning will be what you'd
+expect, but `Logic.not` will never return you such a Term, so in
+practice this case does not come up.  `Logic.not("-A")` returns `"A"`.
+
+String Terms are called NameTerms, and numeric Terms are called
+NumTerms.  You will not normally need to use numeric Terms, but if you
+do, note that it doesn't make sense to share them across Solver
+instances, because each Solver has its own variable numbers.  See the
+Variables section for more information.
+
+#### Logic.isTerm
+#### Logic.isNameTerm
+#### Logic.isNumTerm
+#### Logic.Solver#toNameTerm
+#### Logic.Solver#toNumTerm
 
 ## API
 
