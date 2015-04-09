@@ -199,13 +199,15 @@ A.bits // => ["A$0", "A$1", "A$2", "A$3"]
 ```
 
 Let's also assign the number 15, in bit form, to a variable for convenience.
-The binary representation of 15 is "1111", so its bit form consists of four
-copies of `Logic.TRUE` or `"$T"`.
 
 ```js
 var fifteen = Logic.constantBits(15);
 fifteen.bits // => ["$T", "$T", "$T", "$T"]
 ```
+
+The binary representation of 15 is "1111", so its bit form consists of
+four copies of `Logic.TRUE` or `"$T"`.  We didn't have to know that,
+though, because `Logic.constantBits` generated it for us.
 
 Now, we create a Solver and express our sum constraints:
 
@@ -231,11 +233,11 @@ _.map(locations, function (loc) { return sol1.evaluate(loc); })
 //     8,  0, 7]
 ```
 
-It looks like we forgot to specify that each "digit" is between 1 and 9!
-There is no harm done, because we have only underspecified the problem.
-We can continue to use the same `solver` instance.
+Oops, it looks like we forgot to specify that each "digit" is between
+1 and 9!  There is no harm done, because we have only underspecified
+the problem.  We can continue to use the same `solver` instance.
 
-Here we add inequalities to make each location A through I hold a number
+Now we add inequalities to make each location A through I hold a number
 between 1 and 9 inclusive, and solve again:
 
 ```js
@@ -251,10 +253,12 @@ _.map(locations, function (loc) { return sol2.evaluate(loc); })
 //     4, 9, 2]
 ```
 
-Now we have a proper magic square!  We also forgot to specify that the
-numbers be distinct, however, and we can explore the possibility where
-they are not using `solveAssuming` to generate a new set of numbers
-where A and B are equal:
+Now we have a proper magic square!
+
+However, it just so happens that we also forgot to specify that the
+numbers be distinct.  To demonstrate that this is an important missing
+constraint, we can use `solveAssuming` to ask for a solution where A
+and B are equal:
 
 ```js
 var sol3 = solver.solveAssuming(Logic.equalBits(A, B));
@@ -276,15 +280,7 @@ _.map(locations, function (loc) { return sol4.evaluate(loc); })
 ```
 
 A good way to enforce that all locations hold different digits is to
-generate a requirement about each pair of different locations.
-
-(That may seem like a lot of constraints, but in large problems, it is
-actually better to have more constraints, because it means more
-deductions can be made at each step, meaning fewer possibilities need
-to be tried that ultimately won't work out.  In this example, if the
-solver tries putting a particular digit in a particular location, it
-can work out immediately that no other location can hold the same
-digit.)
+generate a requirement about each pair of different locations:
 
 ```js
 _.each(locations, function (loc1, i) {
@@ -294,7 +290,11 @@ _.each(locations, function (loc1, i) {
     }
   });
 });
+```
 
+Solving now gives us a proper magic square again:
+
+```js
 var sol5 = solver.solve();
 _.map(locations, function (loc) { return sol5.evaluate(loc); })
 // => [6, 7, 2,
@@ -317,6 +317,19 @@ sol5.getTrueVars()
 _.map(A.bits, function (v) { return sol5.evaluate(v); })
 // => [false, true, true, false]
 ```
+
+You may be wondering whether it's bad that we generated 72 constraints
+as part of finding a 3x3 magic square.  While there are certainly much
+faster ways to calculate magic squares, it is perfectly reasonable
+when setting up a logic problem to generate a complete set of pairwise
+constraints over N variables.  In fact, having more constraints often
+improves performance in real-world problems, so it is worth generating
+extra constraints even when they are technically redundant.  More
+constraints means more deductions can be made at each step, meaning
+fewer possibilities need to be tried that ultimately won't work out.
+In this case, it's important that when the solver assigns a digit to a
+particular location, it immediately be able to deduce that the same
+number does not appear at any other location.
 
 ## Variables and Terms
 
