@@ -1412,11 +1412,18 @@ Logic.Solution = function (_solver, _assignment) {
     return self.evaluate(formula) ? Logic.NUM_TRUE : Logic.NUM_FALSE;
   };
 
-  // Read/write.  When true, evaluation doesn't throw errors when
+  // When true, evaluation doesn't throw errors when
   // `evaluate` or `getWeightedSum` encounter named variables that are
   // unknown or variables that weren't present when this Solution was
   // generated.  Instead, the unknown variables are assumed to be false.
-  self.ignoreUnknownVariables = false;
+  self._ignoreUnknownVariables = false;
+};
+
+Logic.Solution.prototype.ignoreUnknownVariables = function () {
+  // We only make this settable one way (false to true).
+  // Setting it back and forth would be questionable, since we keep
+  // a cache of Formula evaluations.
+  this._ignoreUnknownVariables = true;
 };
 
 // Get a map of variables to their assignments,
@@ -1489,7 +1496,7 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
   }
 
   var solver = self._solver;
-  var ignoreUnknownVariables = self.ignoreUnknownVariables;
+  var ignoreUnknownVariables = self._ignoreUnknownVariables;
   var assignment = self._assignment;
   var formula = formulaOrBits;
   if (formula instanceof Logic.NotFormula) {

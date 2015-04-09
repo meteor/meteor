@@ -570,7 +570,7 @@ CS.Solver.prototype.setSolution = function (solution) {
   if (! self.solution) {
     throw new Error("Unexpected unsatisfiability");
   }
-  self.solution.ignoreUnknownVariables = true;
+  self.solution.ignoreUnknownVariables();
 };
 
 CS.Solver.prototype.getAnswer = function (options) {
