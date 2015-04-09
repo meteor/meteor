@@ -333,29 +333,29 @@ number does not appear at any other location.
 
 ## Variables
 
-A *variable name* may be any string except that it may not be empty,
-consist only of the characters `0` through `9`, or start with `-`.  In
-addition, variable names that start with `$` are reserved for internal
-use.
+A variable name can be almost any String.  You do not need to declare
+your variables before using them in formulas passed to `require` and
+`forbid`.  A variable name must not be empty, consist of only the
+characters `0` through `9`, or start with `-`.  Variable names that
+start with `$` are reserved for internal use.
 
-When you use a variable name with a particular Solver instance for the
-first time, a *variable number* is allocated, and the name and the
-number become synonymous for that Solver.  You don't need to ever work
-with variable numbers to use Logic Solver, but there is always the
-option to replace variable names with variable numbers in formulas.
-This feature is partly for internal use by Logic Solver, but it could
-also be used by code that uses Logic Solver as a backend and wants to
-store variables as numbers while letting Logic Solver do the
-translation.  Examples of Solver methods that may allocate new
-variables are `require`, `forbid`, `solveAssuming`, and `getVarNum`.
+When you pass a variable name to a Solver for the first time, a
+*variable number* is allocated, and that name and number become
+synonymous for that Solver instance.  You don't need to know about
+variable numbers to use Logic Solver, but you can always use a
+variable number in place of a variable name in terms and formulas, in
+case that is useful.  (It is useful internally, and would probably be
+useful if you were to wrap Logic Solver in another library.)  Examples
+of Solver methods that may allocate new variables are `require`,
+`forbid`, `solveAssuming`, and `getVarNum`.
 
-If you want to add a free variable to a Solver, you can use
-`getVarNum` for this purpose.  The variable will be allocated and will
-appear in solutions.
+If you want to add a free variable to a Solver but not require
+anything about it, you can use `getVarNum` to cause the variable to be
+allocated.  It will then appear in solutions.
 
 #### Logic.Solver#getVarNum(variableName, [noCreate])
 
-Returns the variable number for a variable name, allocating one if
+Returns the variable number for a variable name, allocating a number if
 this is the first time this Solver has seen `variableName`.
 
 ###### Parameters
