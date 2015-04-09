@@ -1184,6 +1184,21 @@ Tinytest.add("logic-solver - simple solve", function (test) {
   test.equal(s._minisat._clauses.length, 9);
 });
 
+Tinytest.add("logic-solver - getVarNum", function (test) {
+  var s = new Logic.Solver();
+  s.require("A");
+  var a = s.getVarNum("A");
+  test.isTrue(a > 0); // this also confirms it's a number
+  test.equal(s.getVarNum("B", true), 0); // noCreate = true
+  var b = s.getVarNum("B");
+  test.notEqual(a, b);
+  var a2 = s.getVarNum("A");
+  var b2 = s.getVarNum("B");
+  test.equal(a, a2);
+  test.equal(b, b2);
+});
+
+
 Tinytest.add("logic-solver - assumptions", function (test) {
   var s = new Logic.Solver;
   s.getVarNum("A");

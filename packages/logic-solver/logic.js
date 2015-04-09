@@ -250,8 +250,8 @@ Logic.Solver = function () {
   self._name2num = {}; // (' '+vname) -> vnum
 
   // true and false
-  var F = self.getVarNum(Logic.NAME_FALSE, true); // 1
-  var T = self.getVarNum(Logic.NAME_TRUE, true); // 2
+  var F = self.getVarNum(Logic.NAME_FALSE, false, true); // 1
+  var T = self.getVarNum(Logic.NAME_TRUE, false, true); // 2
   if (F !== Logic.NUM_FALSE || T !== Logic.NUM_TRUE) {
     throw new Error("Assertion failure: $T and $F have wrong numeric value");
   }
@@ -278,14 +278,14 @@ Logic.Solver = function () {
 };
 
 // Get a var number for vname, assigning it a number if it is new.
-// Setting "_createInternals" to true grants the ability to create $ variables.
-// Setting "_noCreate" to true causes the function to return 0 instead of
+// Setting "noCreate" to true causes the function to return 0 instead of
 // creating a new variable.
-Logic.Solver.prototype.getVarNum = function (vname, _createInternals, _noCreate) {
+// Setting "_createInternals" to true grants the ability to create $ variables.
+Logic.Solver.prototype.getVarNum = function (vname, noCreate, _createInternals) {
   var key = ' '+vname;
   if (_.has(this._name2num, key)) {
     return this._name2num[key];
-  } else if (_noCreate) {
+  } else if (noCreate) {
     return 0;
   } else {
     if (vname.charAt(0) === "$" && ! _createInternals) {
@@ -328,7 +328,7 @@ Logic.Solver.prototype.toNumTerm = function (t, noCreate) {
       t = t.slice(1);
       not = ! not;
     }
-    var n = self.getVarNum(t, false, noCreate);
+    var n = self.getVarNum(t, noCreate);
     if (! n) {
       return 0; // must be the noCreate case
     } else {
@@ -653,7 +653,7 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
       }
       var numForVarName = this._nextFormulaNumByType[type]++;
       info.varName = "$" + formula.type + numForVarName;
-      info.varNum = this.getVarNum(info.varName, true);
+      info.varNum = this.getVarNum(info.varName, false, true);
       this._ungeneratedFormulas[info.varNum] = formula;
     }
     return info.varNum;
