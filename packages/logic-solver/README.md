@@ -16,7 +16,14 @@
   - [Logic.Solver#toNumTerm(term, [noCreate])](#logicsolvertonumtermterm-nocreate)
 - [Formulas](#formulas)
   - [Logic.isFormula(value)](#logicisformulavalue)
-  - ...
+  - [Logic.not(operand)](#logicnotoperand)
+  - [Logic.or(operands...)](#logicoroperands)
+  - [Logic.and(operands...)](#logicandoperands)
+  - [Logic.xor(operands...)](#logicxoroperands)
+  - [Logic.implies(operand1, operand2)](#logicimpliesoperand1-operand2)
+  - [Logic.equiv(operand1, operand2)](#logicequivoperand1-operand2)
+  - [Logic.exactlyOne(operands...)](#logicexactlyoneoperands)
+  - [Logic.atMostOne(operands...)](#logicatmostoneoperands)"
 - [Logic.Solver](#logicsolver)
 - [Bits (integers)](#bits-integers)
 
@@ -593,8 +600,8 @@ the variable to the operands of the Formula.  When you pass the same
 Formula object again, it is replaced by the same variable, and the
 Formula only needs to be compiled once.
 
-For Formulas relating to integers, such as `Logic.sum` and
-`Logic.greaterThan`, see the section on [Bits](#bits-integers).
+Formulas that operate on integers are documented in the
+[Bits](#bits-integers) section.
 
 ### Methods
 
