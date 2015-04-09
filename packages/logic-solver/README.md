@@ -331,9 +331,56 @@ In this case, it's important that when the solver assigns a digit to a
 particular location, it immediately be able to deduce that the same
 number does not appear at any other location.
 
-## Variables and Terms
+## Variables
 
+A *variable name* may be any string except that it may not be empty,
+consist only of the characters `0` through `9`, or start with `-`.  In
+addition, variable names that start with `$` are reserved for internal
+use.
 
+When you use a variable name with a particular Solver instance for the
+first time, a *variable number* is allocated, and the name and the
+number become synonymous for that Solver.  You don't need to ever work
+with variable numbers to use Logic Solver, but there is always the
+option to replace variable names with variable numbers in formulas.
+This feature is partly for internal use by Logic Solver, but it could
+also be used by code that uses Logic Solver as a backend and wants to
+store variables as numbers while letting Logic Solver do the
+translation.  Examples of Solver methods that may allocate new
+variables are `require`, `forbid`, `solveAssuming`, and `getVarNum`.
+
+If you want to add a free variable to a Solver, you can use
+`getVarNum` for this purpose.  The variable will be allocated and will
+appear in solutions.
+
+#### Logic.Solver#getVarNum(variableName, [noCreate])
+
+Returns the variable number for a variable name, allocating one if
+this is the first time this Solver has seen `variableName`.
+
+###### Parameters
+
+* `variableName` - String - A valid variable name.
+* `noCreate` - Boolean - Optional.  If true, this method will return
+  0 instead of allocating a new variable number if `variableName` is new.
+
+###### Returns
+
+Integer - A positive integer variable number, or 0 if `noCreate` is true
+and there is no variable number allocated for `variableName`.
+
+#### Logic.Solver#getVarName(variableNum)
+
+Returns the variable name for a given variable number.  An error is thrown
+if `variableNum` is not an allocated variable number.
+
+###### Parameters
+
+* `variableNum` - Integer - An allocated variable number.
+
+###### Returns
+
+String - A variable name.
 
 ## API
 
