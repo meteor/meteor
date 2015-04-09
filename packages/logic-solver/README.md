@@ -5,15 +5,15 @@
 - [Example: Dinner Guests](#example-dinner-guests)
 - [Example: Magic Squares](#example-magic-squares)
 - [Variables](#variables)
-  - Logic.Solver#getVarNum(variableName, [noCreate])
-  - Logic.Solver#getVarName(variableNum)
+  - [Logic.Solver#getVarNum(variableName, [noCreate])](#logicsolvergetvarnumvariablename-nocreate)
+  - [Logic.Solver#getVarName(variableNum)](#logicsolvergetvarnamevariablenum)
 - [Terms](#terms)
-  - Logic.FALSE, Logic.TRUE
-  - Logic.isTerm(value)
-  - Logic.isNameTerm(value)
-  - Logic.isNumTerm(value)
-  - Logic.Solver#toNameTerm(term)
-  - Logic.Solver#toNumTerm(term, [noCreate])
+  - [Logic.FALSE, Logic.TRUE](#logicfalse-logictrue)
+  - [Logic.isTerm(value)](#logicistermvalue)
+  - [Logic.isNameTerm(value)](#logicisnametermvalue)
+  - [Logic.isNumTerm(value)](#logicisnumtermvalue)
+  - [Logic.Solver#toNameTerm(term)](#logicsolvertonametermterm)
+  - [Logic.Solver#toNumTerm(term, [noCreate])](#logicsolvertonumtermterm-nocreate)
 
 
 ## Introduction
@@ -433,24 +433,23 @@ String Terms are called NameTerms, and numeric Terms are called
 NumTerms.  You will not normally need to use numeric Terms, but if you
 do, note that it doesn't make sense to share them across Solver
 instances, because each Solver has its own variable numbers.  See the
-Variables section for more information.
+[Variables](#variables) section for more information.
 
 ### Constants
 
 #### Logic.FALSE, Logic.TRUE
 
-These Terms are the only non-variable Terms, representing the
-constants true and false.  You may seem them appear as the internal
-variables `$F` and `$T` or `1` and `2`, which are automatically pinned
-to false and true.
+These Terms represent the constant boolean values false and true.  You
+may seem them appear as the internal variables `$F` and `$T` or `1`
+and `2`, which are automatically pinned to false and true.
 
 ### Methods
 
 #### Logic.isTerm(value)
 
-Returns whether `value` is a valid Term.  A valid Term is a String
-consisting of a valid variable name preceded by zero or more `-`
-characters, or a non-zero integer.
+Returns whether `value` is a valid Term.  A valid Term is either a
+String consisting of a valid variable name preceded by zero or more
+`-` characters, or a non-zero integer.
 
 ###### Parameters
 
