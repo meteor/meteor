@@ -173,6 +173,7 @@ var compileUnibuild = function (options) {
 
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
+  var batchSources = [];
   var js = [];
   var pluginProviderPackageNames = {};
   // The current package always is a plugin provider. (This also means we no
@@ -228,7 +229,9 @@ var compileUnibuild = function (options) {
   activePluginPackages = _.uniq(activePluginPackages);
 
   // *** Assemble the list of source file handlers from the plugins
+  // XXX BBP redoc
   var allHandlersWithPkgs = {};
+  var batchSourceExtensions = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   sourceExtensions['js'] = false;
@@ -258,6 +261,9 @@ var compileUnibuild = function (options) {
   };
 
   _.each(activePluginPackages, function (otherPkg) {
+    otherPkg.ensurePluginsInitialized();
+
+    // Iterate over the legacy source handlers.
     _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
       // XXX comparing function text here seems wrong.
       if (_.has(allHandlersWithPkgs, ext) &&
@@ -282,6 +288,27 @@ var compileUnibuild = function (options) {
         handler: sourceHandler.handler
       };
       sourceExtensions[ext] = !!sourceHandler.isTemplate;
+    });
+
+    // Iterate over the batch build handlers.
+    // XXX BBP do we also need to check that there's at most one batch
+    //         handler for an extension per phase?
+    _.each(otherPkg.batchHandlersByPhase, function (handlers, phase) {
+      _.each(handlers, function (handler) {
+        _.each(handler.extensions, function (ext) {
+          if (_.has(allHandlersWithPkgs, ext)) {
+            buildmessage.error(
+              "conflict: two packages included in " +
+                (inputSourceArch.pkg.name || "the app") + ", " +
+                (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
+                (otherPkg.name || "the app") + ", " +
+                "are both trying to handle ." + ext);
+            // Recover by just going with the legacy source handler.
+            return;
+          }
+          batchSourceExtensions[ext] = true;
+        });
+      });
     });
   });
 
@@ -369,15 +396,31 @@ var compileUnibuild = function (options) {
 
     // Find the handler for source files with this extension.
     var handler = null;
+    var isBatchSource = false;
     if (! fileOptions.isAsset) {
       var parts = filename.split('.');
       for (var i = 1; i < parts.length; i++) {
         var extension = parts.slice(i).join('.');
+        if (_.has(batchSourceExtensions, extension)) {
+          isBatchSource = true;
+          break;
+        }
         if (_.has(allHandlersWithPkgs, extension)) {
           handler = allHandlersWithPkgs[extension].handler;
           break;
         }
       }
+    }
+
+    if (isBatchSource) {
+      // This is the source to a batch plugin; it will be fully processed later
+      // in the bundler.
+      batchSources.push({
+        data: contents,
+        path: relPath,
+        hash: file.hash
+      });
+      return;
     }
 
     if (! handler) {
@@ -852,7 +895,8 @@ var compileUnibuild = function (options) {
     nodeModulesPath: nodeModulesPath,
     prelinkFiles: results.files,
     packageVariables: packageVariables,
-    resources: resources
+    resources: resources,
+    sources: batchSources
   });
 
   return {

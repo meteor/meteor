@@ -1464,3 +1464,23 @@ files.pathwatcherWatch = function () {
   var pathwatcher = require('pathwatcher');
   return pathwatcher.watch.apply(pathwatcher, args);
 };
+
+files.readBufferWithLengthAndOffset = function (filename, length, offset) {
+  var data = new Buffer(length);
+  // Read the data from disk, if it is non-empty. Avoid doing IO for empty
+  // files, because (a) unnecessary and (b) fs.readSync with length 0
+  // throws instead of acting like POSIX read:
+  // https://github.com/joyent/node/issues/5685
+  if (length > 0) {
+    var fd = files.open(filename, "r");
+    try {
+      var count = files.read(
+        fd, data, 0, length, offset);
+    } finally {
+      files.close(fd);
+    }
+    if (count !== length)
+      throw new Error("couldn't read entire resource");
+  }
+  return data;
+};

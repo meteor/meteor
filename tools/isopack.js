@@ -11,6 +11,7 @@ var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
+var batchBuildPlugin = require('./batch-build-plugin.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
@@ -33,7 +34,8 @@ var rejectBadPath = function (p) {
 // - nodeModulesPath
 // - prelinkFiles
 // - packageVariables
-// - resources
+// - resources (output of legacy source handlers)
+// - sources (input to batch build handlers)
 
 var nextBuildId = 1;
 var Unibuild = function (isopack, options) {
@@ -98,6 +100,9 @@ var Unibuild = function (isopack, options) {
   //
   // sourceMap: Allowed only for "js". If present, a string.
   self.resources = options.resources;
+
+  // XXX BBP doc
+  self.sources = options.sources;
 
   // Absolute path to the node_modules directory to use at runtime to
   // resolve Npm.require() calls in this unibuild. null if this unibuild
@@ -242,7 +247,14 @@ var Isopack = function () {
   // Source file handlers registered by plugins. Map from extension
   // (without a dot) to a handler function that takes a
   // CompileStep. Valid only when _pluginsInitialized is true.
+  // XXX BBP redoc
   self.sourceHandlers = null;
+
+  // XXX BBP doc (map phase (numeric string, sadly) -> [BatchBuildHandler])
+  self.batchHandlersByPhase = null;
+  // XXX BBP doc (set of extension)
+  // XXX BBP does this need to be on the object?
+  self.batchExtensions = null;
 
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
@@ -499,14 +511,21 @@ _.extend(Isopack.prototype, {
   // to a handler function that takes a CompileStep.
   getSourceHandlers: function () {
     var self = this;
-    self._ensurePluginsInitialized();
+    self._checkPluginsInitialized();
     return self.sourceHandlers;
+  },
+
+  _checkPluginsInitialized: function () {
+    var self = this;
+    if (self._pluginsInitialized)
+      return;
+    throw Error("plugins not yet initialized?");
   },
 
   // If this package has plugins, initialize them (run the startup
   // code in them so that they register their extensions). Idempotent.
-  _ensurePluginsInitialized: Profile(
-    "Isopack#_ensurePluginsInitialized", function () {
+  ensurePluginsInitialized: Profile(
+    "Isopack#ensurePluginsInitialized", function () {
     var self = this;
 
     if (self._pluginsInitialized)
@@ -549,9 +568,21 @@ _.extend(Isopack.prototype, {
         }
 
         if (_.has(self.sourceHandlers, extension)) {
-          buildmessage.error("duplicate handler for '*." +
-                             extension + "'; may only have one per Plugin",
-                             { useMyCaller: true });
+          buildmessage.error(
+            "duplicate handler for '*." +
+              extension + "'; may only have one per plugin-providing package",
+            { useMyCaller: true });
+          // recover by ignoring all but the first
+          return;
+        }
+
+        if (_.has(self.batchExtensions, extension)) {
+          buildmessage.error(
+            "duplicate handler for '*." +
+              extension + "'; may not use the same extension with " +
+              "registerSourceHandler and registerBatchHandler in the " +
+              "same per plugin-providing package",
+            { useMyCaller: true });
           // recover by ignoring all but the first
           return;
         }
@@ -561,10 +592,92 @@ _.extend(Isopack.prototype, {
           isTemplate: !!options.isTemplate,
           archMatching: options.archMatching
         };
+      },
+
+      // XXX BBP doc
+      registerBatchHandler: function (options, factory) {
+        if (! (options && options.extensions &&
+               options.extensions instanceof Array &&
+               options.extensions.length > 0)) {
+          buildmessage.error("registerBatchHandler call must specify a "
+                             + "non-empty array of extensions",
+                             { useMyCaller: true });
+          // recover by ignoring
+          return;
+        }
+        if (typeof factory !== 'function') {
+          buildmessage.error("registerBatchHandler call must specify a " +
+                             "factory function",
+                             { useMyCaller: true });
+          // recover by ignoring
+          return;
+        }
+
+        // XXX BBP is phase the right name?
+        var phase = batchBuildPlugin.DEFAULT_PHASE;
+        if (_.has(options, 'phase')) {
+          if (typeof options.phase !== 'number') {
+            buildmessage.error("phase must be a number",
+                               { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
+          phase = options.phase;
+        }
+        if (! _.has(self.batchHandlersByPhase, phase)) {
+          self.batchHandlersByPhase[phase] = [];
+        }
+        var phaseHandlers = self.batchHandlersByPhase[phase];
+
+        // avoid nested functions like _.each so that useMyCaller works
+        for (var i = 0; i < options.extensions.length; ++i) {
+          var ext = options.extensions[i];
+
+          // Check to see if a legacy handler uses this extension.
+          if (_.has(self.sourceHandlers, ext)) {
+            buildmessage.error(
+              "duplicate handler for '*." +
+                ext + "'; may not use the same extension with " +
+                "registerSourceHandler and registerBatchHandler in the " +
+                "same per plugin-providing package",
+              { useMyCaller: true });
+            // recover by ignoring
+            return;
+          }
+
+          // Check to see if a batch handler IN THIS PHASE uses this extension
+          // (it's OK if another batch handler at a different phase uses it).
+          if (_.any(phaseHandlers, function (otherHandler) {
+            return _.contains(otherHandler.extensions, ext);
+          })) {
+            buildmessage.error(
+              "duplicate handler for '*." +
+                ext + "' at phase " + phase +
+                (phase === batchBuildPlugin.DEFAULT_PHASE
+                 ? " (the default phase) " : " ") +
+                "in same plugin-providing package",
+              { useMyCaller: true });
+            // recover by ignoring;
+            return;
+          }
+        }
+
+        // We're finally done validating!  Save the handler in its phase, and
+        // mark all its extensions as used.
+        phaseHandlers.push(
+          new batchBuildPlugin.BatchBuildHandler(
+            _.pick(options, ['archMatching', 'isTemplate', 'extensions']),
+            factory));
+        _.each(options.extensions, function (ext) {
+          self.batchExtensions[ext] = true;
+        });
       }
     };
 
     self.sourceHandlers = {};
+    self.batchHandlersByPhase = {};
+    self.batchExtensions = {};
+
     _.each(self.plugins, function (pluginsByArch, name) {
       var arch = archinfo.mostSpecificMatch(
         archinfo.host(), _.keys(pluginsByArch));
@@ -708,26 +821,13 @@ _.extend(Isopack.prototype, {
 
       var prelinkFiles = [];
       var resources = [];
+      var sources = [];
 
       _.each(unibuildJson.resources, function (resource) {
         rejectBadPath(resource.file);
-        var data = new Buffer(resource.length);
-        // Read the data from disk, if it is non-empty. Avoid doing IO for empty
-        // files, because (a) unnecessary and (b) fs.readSync with length 0
-        // throws instead of acting like POSIX read:
-        // https://github.com/joyent/node/issues/5685
-        if (resource.length > 0) {
-          var fd =
-            files.open(files.pathJoin(unibuildBasePath, resource.file), "r");
-          try {
-            var count = files.read(
-              fd, data, 0, resource.length, resource.offset);
-          } finally {
-            files.close(fd);
-          }
-          if (count !== resource.length)
-            throw new Error("couldn't read entire resource");
-        }
+        var data = files.readBufferWithLengthAndOffset(
+          files.pathJoin(unibuildBasePath, resource.file),
+          resource.length, resource.offset);
 
         if (resource.type === "prelink") {
           var prelinkFile = {
@@ -753,6 +853,20 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
+      _.each(unibuildJson.sources, function (source) {
+        rejectBadPath(source.file);
+        // XXX BBP don't read sources into memory; use a different
+        // representation.
+        var data = files.readBufferWithLengthAndOffset(
+          files.pathJoin(unibuildBasePath, source.file),
+          source.length, source.offset);
+        sources.push({
+          data: data,
+          path: source.file,
+          hash: source.hash
+        });
+      });
+
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -764,7 +878,8 @@ _.extend(Isopack.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources
+        resources: resources,
+        sources: sources
       }));
     });
 
@@ -915,7 +1030,8 @@ _.extend(Isopack.prototype, {
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
           node_modules: nodeModulesPath,
-          resources: []
+          resources: [],
+          sources: []
         };
 
         // Output 'head', 'body' resources nicely
@@ -987,6 +1103,22 @@ _.extend(Isopack.prototype, {
 
           unibuildJson.resources.push(resource);
         });
+
+        // Output batch sources
+        _.each(unibuild.sources, function (source) {
+          unibuildJson.sources.push({
+            file: builder.writeToGeneratedFilename(
+              files.pathJoin(unibuildDir, 'sources', source.path),
+              { data: source.data }),
+            length: source.data.length,
+            offset: 0,
+            path: source.path,
+            hash: source.hash
+          });
+        });
+        if (! unibuildJson.sources.length) {
+          delete unibuildJson.sources;
+        }
 
         // If unibuild has included node_modules, copy them in
         if (needToCopyNodeModules) {
