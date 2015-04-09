@@ -14,6 +14,11 @@
   - [Logic.isNumTerm(value)](#logicisnumtermvalue)
   - [Logic.Solver#toNameTerm(term)](#logicsolvertonametermterm)
   - [Logic.Solver#toNumTerm(term, [noCreate])](#logicsolvertonumtermterm-nocreate)
+- [Formulas](#formulas)
+  - [Logic.isFormula(value)](#logicisformulavalue)
+  - ...
+- [Logic.Solver](#logicsolver)
+- [Bits (integers)](#bits-integers)
 
 
 ## Introduction
@@ -46,7 +51,7 @@ that have come out of years of research.
 MiniSat accepts input in "conjunctive normal form," which is a fairly
 low-level representation of a logic problem.  Logic Solver's main job
 is to take arbitrary boolean formulas that you specify, such as
-"exactly one of A, B, and C is true," and convert them into a list of
+"exactly one of A, B, and C is true," and compile them into a list of
 statements that must all be satisfied -- a conjunction of clauses --
 each of which is a simple disjunction such as: "A or B or C."  "Not A,
 or not B."
@@ -504,21 +509,237 @@ NameTerm
 Converts a Term to a NumTerm if it isn't already.  If `term` is a
 NameTerm, the variable name is translated into a variable number.  A
 new variable number is allocated if the variable name has not been
-seen before by this Solver, unless you pass `true` for `noCreate`.
+seen before by this Solver, unless you pass true for `noCreate`.
 
 ###### Parameters
 
 * `term` - Term - The Term to convert, which may be a NameTerm or
   NumTerm.
-* `noCreate` - Boolean - Optional.  If `true`, this method will not
+* `noCreate` - Boolean - Optional.  If true, this method will not
   allocate a new variable number if it encounters a new variable name,
   but will return 0 instead.
 
 ###### Returns
 
-NumTerm, or 0 (if `noCreate` is `true` and a new variable name is encountered)
+NumTerm, or 0 (if `noCreate` is true and a new variable name is encountered)
+
+## Formulas
+
+A Formula is an object representing a boolean expression.
+Conceptually, a Formula is built out of Terms and operations that
+combine Terms.
+
+Here are some examples of Formulas:
+
+```js
+// A and B
+Logic.and("A", "B")
+
+// If exactly one of (A, B, C) is true, then A does not equal D.
+Logic.implies(Logic.exactlyOne("A", "B", "C"),
+              Logic.not(Logic.equiv("A", "D")))
+
+// More of (x1, x2, x3) are true than (y1, y2, y3)
+var xs = ["x1", "x2", "x3"];
+var ys = ["y1", "y2", "y3"];
+Logic.greaterThan(Logic.sum(xs), Logic.sum(ys))
+```
+
+Formulas are immutable.  To be on the safe side, do not mutate any arrays
+you use to create a Formula.
+
+Formulas are Solver-independent.  They can be created without a Solver,
+and although Solvers keep track of Formula objects and recognize them
+(to avoid compiling the same Formula twice), a Formula object never
+becomes tied to one Solver object and can always be reused, as long as
+it doesn't contain any explicit variable numbers (NumTerms).
+
+A Term is not a Formula, but you can always pass a Term anywhere a Formula
+is required.
+
+Functions such as `Logic.and` and `Logic.greaterThan` are called
+Formula constructor functions.  One thing to note about them is that
+they do not always return Formulas, but may return Terms as well.
+`Logic.and("A")`, for example, returns `"A"`.  Some constructor functions
+take any number of arguments, which may be nested in arrays, so that
+the following are equivalent:
+
+```js
+Logic.and("A", "B", "C")
+Logic.and(["A", "B", "C"])
+Logic.and("A", [["B", "C"]], [])
+```
+
+To use a Formula, you must tell a Solver to `require` or `forbid` it.
+Otherwise, the Formula does not take effect.
+
+```js
+var solver = new Logic.Solver();
+solver.require("A");
+
+Logic.exactlyOne("A", "B"); // no effect, just creates a Formula
+
+solver.require(Logic.exactlyOne("A", "B")); // this works
+
+var myFormula = Logic.exactlyOne("A", "B");
+solver.require(myFormula); // this also works
+```
+
+You should save and reuse Formula objects whenever possible, because
+the Solver will recognize the Formula object and not recompile it.
+Internally, each Formula is replaced by a variable in the Solver, such
+as `$and1` for a `Logic.and`, and clauses are generated that relate
+the variable to the operands of the Formula.  When you pass the same
+Formula object again, it is replaced by the same variable, and the
+Formula only needs to be compiled once.
+
+For Formulas relating to integers, such as `Logic.sum` and
+`Logic.greaterThan`, see the section on [Bits](#bits-integers).
+
+### Methods
+
+#### Logic.isFormula(value)
+
+Returns true if `value` is a Formula object.  (A Term is not a Formula.)
+
+###### Parameters
+
+* `value` - Any
+
+###### Returns
+
+Boolean
+
+#### Logic.not(operand)
+
+Represents a boolean expression that is true when its operand is false,
+and vice versa.
+
+When called on an operand that is a NameTerm, NumTerm, or Formula, returns
+a value of the same kind.
+
+###### Parameters
+
+* `operand` - Formula or Term
+
+###### Returns
+
+Formula or Term (same kind as `operand`)
+
+###### Examples
+
+```js
+Logic.not("A") // => "-A"
+Logic.not("-A") // => "A"
+Logic.not(Logic.and("A", "B")) // => a Formula object
+```
+
+#### Logic.or(operands...)
+
+Represents a boolean expression that is true when at least one of its
+operands is true.
+
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, or Arrays
+
+###### Returns
+
+Formula or Term
+
+#### Logic.and(operands...)
+
+Represents a boolean expression that is true when all of its operands
+are true.
+
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, or Arrays
+
+###### Returns
+
+Formula or Term
+
+#### Logic.xor(operands...)
+
+Represents a boolean expression that is true when an odd number of its
+operands are true.
+
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, or Arrays
+
+###### Returns
+
+Formula or Term
+
+#### Logic.implies(operand1, operand2)
+
+Represents a boolean expression that is true unless `operand1` is true and
+`operand2` is false.  In other words, if this Formula is required to be true,
+and `operand1` is true, then `operand2` must be true.
+
+###### Parameters
+
+* `operand1` - Formula or Term
+* `operand2` - Formula or Term
+
+###### Returns
+
+Formula or Term
+
+#### Logic.equiv(operand1, operand2)
+
+Represents a boolean expression that is true when `operand1` and `operand2`
+are either both true or both false.
+
+###### Parameters
+
+* `operand1` - Formula or Term
+* `operand2` - Formula or Term
+
+###### Returns
+
+Formula or Term
 
 
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, or Arrays
+
+###### Returns
+
+Formula or Term
+
+#### Logic.exactlyOne(operands...)
+
+Represents a boolean expression that is true when exactly one of its
+operands is true.
+
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, or Arrays
+
+###### Returns
+
+Formula or Term
+
+#### Logic.atMostOne(operands...)
+
+Represents a boolean expression that is true when zero or one of its
+operands are true.
+
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, or Arrays
+
+###### Returns
+
+Formula or Term
+
+## Logic.Solver
+
+## Bits (integers)
 
 # XXX WIP
 
