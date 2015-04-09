@@ -1424,7 +1424,7 @@ Tinytest.add("logic-solver - goes to eleven", function (test) {
   var x = Logic.variableBits("x", 5);
   solver.require(Logic.lessThanOrEqual(x, eleven));
   solver.require(Logic.lessThanOrEqual(eleven, x));
-  test.equal(solver.solve().getTrueVars().join(','), "x0,x1,x3");
+  test.equal(solver.solve().getTrueVars().join(','), "x$0,x$1,x$3");
 });
 
 Tinytest.add("logic-solver - evaluate", function (test) {

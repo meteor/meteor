@@ -960,9 +960,10 @@ Logic.constantBits = function (wholeNumber) {
 };
 
 Logic.variableBits = function (baseName, nbits) {
+  if (assert) assert(nbits, Logic.isWholeNumber);
   var result = [];
   for (var i = 0; i < nbits; i++) {
-    result.push(baseName + i);
+    result.push(baseName + '$' + i);
   }
   return new Logic.Bits(result);
 };
