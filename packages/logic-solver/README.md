@@ -1,5 +1,21 @@
 # Logic Solver
 
+- [Introduction](#introduction)
+- [MiniSat](#minisat)
+- [Example: Dinner Guests](#example-dinner-guests)
+- [Example: Magic Squares](#example-magic-squares)
+- [Variables](#variables)
+  - Logic.Solver#getVarNum(variableName, [noCreate])
+  - Logic.Solver#getVarName(variableNum)
+- [Terms](#terms)
+  - Logic.FALSE, Logic.TRUE
+  - Logic.isTerm(value)
+  - Logic.isNameTerm(value)
+  - Logic.isNumTerm(value)
+  - Logic.Solver#toNameTerm(term)
+  - Logic.Solver#toNumTerm(term, [noCreate])
+
+
 ## Introduction
 
 Logic Solver is a boolean satisfiability solver written in JavaScript.
@@ -151,7 +167,7 @@ making the entire problem quite compact:
  [-3,4,-5], [3,4,-5], [3,-4,-5], [3,-4,5]]
 ```
 
-## Example: Magic Square
+## Example: Magic Squares
 
 A 3x3 "magic square" is an arrangement of the digits 1 through 9 into a square
 such that the digits in each row, column, and diagonal add up to the same number.
@@ -362,6 +378,8 @@ If you want to add a free variable to a Solver but not require
 anything about it, you can use `getVarNum` to cause the variable to be
 allocated.  It will then appear in solutions.
 
+### Methods
+
 #### Logic.Solver#getVarNum(variableName, [noCreate])
 
 Returns the variable number for a variable name, allocating a number if
@@ -417,11 +435,93 @@ do, note that it doesn't make sense to share them across Solver
 instances, because each Solver has its own variable numbers.  See the
 Variables section for more information.
 
-#### Logic.isTerm
-#### Logic.isNameTerm
-#### Logic.isNumTerm
-#### Logic.Solver#toNameTerm
-#### Logic.Solver#toNumTerm
+### Constants
+
+#### Logic.FALSE, Logic.TRUE
+
+These Terms are the only non-variable Terms, representing the
+constants true and false.  You may seem them appear as the internal
+variables `$F` and `$T` or `1` and `2`, which are automatically pinned
+to false and true.
+
+### Methods
+
+#### Logic.isTerm(value)
+
+Returns whether `value` is a valid Term.  A valid Term is a String
+consisting of a valid variable name preceded by zero or more `-`
+characters, or a non-zero integer.
+
+###### Parameters
+
+* `value` - Any
+
+###### Returns
+
+Boolean
+
+#### Logic.isNameTerm(value)
+
+Returns whether `value` is a valid NameTerm (a Term that is a String).
+
+###### Parameters
+
+* `value` - Any
+
+###### Returns
+
+Boolean
+
+#### Logic.isNumTerm(value)
+
+Returns whether `value` is a valid NumTerm (a Term that is a Number).
+
+###### Parameters
+
+* `value` - Any
+
+###### Returns
+
+Boolean
+
+#### Logic.Solver#toNameTerm(term)
+
+Converts a Term to a NameTerm if it isn't already.  If `term` is a
+NumTerm, the variable number is translated into a variable name.  An
+error is thrown if the variable number is not an allocated variable
+number of this Solver.
+
+###### Parameters
+
+* `term` - Term - The Term to convert, which may be a NameTerm or
+  NumTerm.
+
+###### Returns
+
+NameTerm
+
+#### Logic.Solver#toNumTerm(term, [noCreate])
+
+Converts a Term to a NumTerm if it isn't already.  If `term` is a
+NameTerm, the variable name is translated into a variable number.  A
+new variable number is allocated if the variable name has not been
+seen before by this Solver, unless you pass `true` for `noCreate`.
+
+###### Parameters
+
+* `term` - Term - The Term to convert, which may be a NameTerm or
+  NumTerm.
+* `noCreate` - Boolean - Optional.  If `true`, this method will not
+  allocate a new variable number if it encounters a new variable name,
+  but will return 0 instead.
+
+###### Returns
+
+NumTerm, or 0 (if `noCreate` is `true` and a new variable name is encountered)
+
+
+
+# XXX WIP
 
 ## API
 
