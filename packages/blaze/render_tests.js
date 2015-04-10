@@ -13,7 +13,7 @@ var HR = HTML.HR;
 var TEXTAREA = HTML.TEXTAREA;
 var INPUT = HTML.INPUT;
 
-var materialize = function (content, parent) {
+var deprecated_materialize = function (content, parent) {
   var func = content;
   if (typeof content !== 'function') {
     func = function () {
@@ -21,6 +21,19 @@ var materialize = function (content, parent) {
     };
   }
   Blaze.render(func, parent);
+};
+
+var materialize = function (content, parent) {
+  var func = content;
+  if (typeof content !== 'function') {
+    func = function () {
+      return content;
+    };
+  }
+  Blaze.render({
+    'content': func,
+    'parentElement': parent
+  });
 };
 
 var toHTML = Blaze.toHTML;
@@ -106,6 +119,19 @@ Tinytest.add("blaze - render - input - value", function (test) {
   var R = ReactiveVar("hello");
   var div = document.createElement("DIV");
   materialize(INPUT({value: function () { return R.get(); }}), div);
+  var inputEl = div.querySelector('input');
+  test.equal(inputEl.value, "hello");
+  inputEl.value = "goodbye";
+  R.set("hola");
+  Tracker.flush();
+  test.equal(inputEl.value, "hola");
+});
+
+// test that the deprecated functionality still works as expected
+Tinytest.add("blaze - render - input - value (deprecated)", function (test) {
+  var R = ReactiveVar("hello");
+  var div = document.createElement("DIV");
+  deprecated_materialize(INPUT({value: function () { return R.get(); }}), div);
   var inputEl = div.querySelector('input');
   test.equal(inputEl.value, "hello");
   inputEl.value = "goodbye";
@@ -304,7 +330,7 @@ Tinytest.add("blaze - render - reactive attributes", function (test) {
     test.equal(R._numListeners(), 0);
 
     var div = document.createElement("DIV");
-    Blaze.render(spanFunc, div);
+    Blaze.render({ 'content': spanFunc, 'parentElement': div });
     test.equal(canonicalizeHtml(div.innerHTML), '<span class="david gre\u00ebnspan" id="foo"></span>');
 
     test.equal(R._numListeners(), 1);
@@ -343,7 +369,7 @@ Tinytest.add("blaze - render - reactive attributes", function (test) {
     test.equal(R._numListeners(), 0);
 
     var div = document.createElement("DIV");
-    Blaze.render(spanFunc, div);
+    Blaze.render({ 'content': spanFunc, 'parentElement': div });
     test.equal(canonicalizeHtml(div.innerHTML), '<span id="foo" style="foo: &quot;a;aa&quot;; bar: b"></span>');
 
     test.equal(R._numListeners(), 1);
@@ -378,7 +404,7 @@ Tinytest.add("blaze - render - reactive attributes", function (test) {
 
     var div = document.createElement("DIV");
     document.body.appendChild(div);
-    Blaze.render(spanFunc, div);
+    Blaze.render({ 'content': spanFunc, 'parentElement': div });
     test.equal(canonicalizeHtml(div.innerHTML), '<span style="foo: a"></span>');
 
     var span = div.firstChild;
@@ -434,7 +460,7 @@ Tinytest.add("blaze - render - reactive attributes", function (test) {
                'HTML.SPAN({id: "foo", ggg: ["x", ["y", ["z"]]]})');
 
     var div = document.createElement("DIV");
-    Blaze.render(spanFunc, div);
+    Blaze.render({ 'content': spanFunc, 'parentElement': div });
     var span = div.firstChild;
     test.equal(span.nodeName, 'SPAN');
 
@@ -526,7 +552,7 @@ Tinytest.add("blaze - render - templates and views", function (test) {
 
     var div = document.createElement("DIV");
 
-    Blaze.render(makeView, div);
+    Blaze.render({ 'content': makeView, 'parentElement': div });
     buf.push('---flush---');
     Tracker.flush();
     test.equal(buf, ['created 1',
@@ -583,7 +609,7 @@ Tinytest.add("blaze - render - findAll", function (test) {
 
   var div = document.createElement("DIV");
 
-  Blaze.render(myTemplate, div);
+  Blaze.render({ 'content': myTemplate, 'parentElement': div });
   Tracker.flush();
 
   test.equal(_.isArray(found), true);
@@ -603,7 +629,7 @@ Tinytest.add("blaze - render - reactive attributes 2", function (test) {
   };
 
   var div = document.createElement("DIV");
-  Blaze.render(spanFunc, div);
+  Blaze.render({ 'content': spanFunc, 'parentElement': div });
   var check = function (expected) {
     test.equal(Blaze.toHTML(spanFunc()), expected);
     test.equal(canonicalizeHtml(div.innerHTML), expected);
@@ -685,4 +711,36 @@ Tinytest.add("ui - attributes", function (test) {
 
   test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
              '<span title="M&amp;Ms">M&amp;M candies</span>');
+});
+
+Tinytest.add("ui - parentDocument", function (test) {
+  var R = ReactiveVar({'class': 'test1', id: 'foo'});
+
+  var spanFunc = function () {
+    return SPAN(HTML.Attrs(function () { return R.get(); }));
+  };
+
+  var win = window.open(''); // Open a new tab to test the parentDocument feature
+  if (win === undefined) {
+    throw new Meteor.Error('You must not block popups for the parentDocument test to work');
+  }
+  win.onbeforeunload = function() {
+    win = undefined;
+  };
+
+  Blaze.render({ 'content': spanFunc, 'parentElement': win.document.body, 'parentDocument': win.document }); 
+
+  test.equal(canonicalizeHtml(win.document.body.innerHTML), '<span class="test1" id="foo"></span>');
+  test.equal(R._numListeners(), 1);
+
+  var span = win.document.body.firstChild;
+  test.equal(span.nodeName, 'SPAN');
+  span.className += ' blah'; // change the element's class outside of Blaze. this simulates what a jQuery could do
+
+  R.set({'class': 'test2', id: 'bar'});
+  Tracker.flush();
+  test.equal(canonicalizeHtml(win.document.body.innerHTML), '<span class="blah test2" id="bar"></span>');
+  test.equal(R._numListeners(), 1);
+
+  win.close();
 });

@@ -2482,7 +2482,7 @@ Tinytest.add(
 
     test.equal([created, rendered, destroyed], [false, false, false]);
 
-    var renderedTmpl = Blaze.render(tmpl, div);
+    var renderedTmpl = Blaze.render({ 'content': tmpl, 'parentElement': div });
     test.equal([created, rendered, destroyed], [true, false, false]);
 
     // Flush now. We fire the rendered callback in an afterFlush block,
@@ -2492,11 +2492,10 @@ Tinytest.add(
 
     var otherDiv = document.createElement("DIV");
     // can run a second time without throwing
-    var x = Blaze.render(tmpl, otherDiv);
+    var x = Blaze.render({ 'content': tmpl, 'parentElement': otherDiv });
     // note: we'll have clean up `x` below
 
-    var renderedTmpl2 = Blaze.renderWithData(
-      tmpl, {greeting: 'Bye'}, div);
+    var renderedTmpl2 = Blaze.renderWithData({ 'content': tmpl, 'parentElement': div }, {greeting: 'Bye'});
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello aaa</span><span>Bye aaa</span>");
     R.set('bbb');
@@ -2519,10 +2518,14 @@ Tinytest.add(
   function (test) {
     var tmpl = Template.spacebars_test_ui_render;
     test.throws(function () {
-      Blaze.render(tmpl, $('body'));
+      Blaze.render({ 'content': tmpl, 'parentElement': $('body') });
     }, /'parentElement' must be a DOM node/);
     test.throws(function () {
-      Blaze.render(tmpl, document.body, $('body'));
+      Blaze.render({
+        'content': tmpl,
+        'parentElement': document.body,
+        'nextNode': $('body')
+      });
     }, /'nextNode' must be a DOM node/);
   });
 
@@ -2531,7 +2534,7 @@ Tinytest.add(
   function (test) {
     var div = document.createElement("DIV");
     var tmpl = Template.spacebars_test_ui_getElementData;
-    Blaze.renderWithData(tmpl, {foo: "bar"}, div);
+    Blaze.renderWithData({ 'content': tmpl, 'parentElement': div }, {foo: "bar"});
 
     var span = div.querySelector('SPAN');
     test.isTrue(span);
@@ -3081,7 +3084,7 @@ Tinytest.add("spacebars-tests - template_tests - with data remove (#3130)", func
   var tmpl = Template.spacebars_template_test_with_data_remove;
 
   var div = document.createElement("DIV");
-  var theWith = Blaze.renderWithData(tmpl, { foo: 3130 }, div);
+  var theWith = Blaze.renderWithData({ 'content': tmpl, 'parentElement': div }, { foo: 3130 });
   test.equal(canonicalizeHtml(div.innerHTML), '<b>some data - 3130</b>');
   var view = Blaze.getView(div.querySelector('b'));
   test.isFalse(theWith.isDestroyed);

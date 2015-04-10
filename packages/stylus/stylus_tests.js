@@ -2,7 +2,7 @@
 Tinytest.add("stylus - presence", function(test) {
 
   var div = document.createElement('div');
-  Blaze.render(Template.stylus_test_presence, div);
+  Blaze.render({ 'content': Template.stylus_test_presence, 'parentElement': div });
   div.style.display = 'block';
   document.body.appendChild(div);
 
@@ -15,7 +15,7 @@ Tinytest.add("stylus - presence", function(test) {
 
 Tinytest.add("stylus - @import", function(test) {
   var div = document.createElement('div');
-  Blaze.render(Template.stylus_test_import, div);
+  Blaze.render({ 'content': Template.stylus_test_import, 'parentElement': div });
   div.style.display = 'block';
   document.body.appendChild(div);
 

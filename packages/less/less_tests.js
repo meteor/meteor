@@ -2,7 +2,7 @@
 Tinytest.add("less - presence", function(test) {
 
   var div = document.createElement('div');
-  Blaze.render(Template.less_test_presence, div);
+  Blaze.render({ 'content': Template.less_test_presence, 'parentElement': div });
   div.style.display = 'block';
   document.body.appendChild(div);
 

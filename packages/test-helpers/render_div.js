@@ -1,9 +1,9 @@
 renderToDiv = function (template, optData) {
   var div = document.createElement("DIV");
   if (optData == null) {
-    Blaze.render(template, div);
+    Blaze.render({ 'content': template, 'parentElement': div });
   } else {
-    Blaze.renderWithData(template, optData, div);
+    Blaze.renderWithData({ 'content': template, 'parentElement': div }, optData);
   }
   return div;
 };

@@ -64,7 +64,7 @@ Template.body.renderToDocument = function () {
   if (Template.body.view)
     return;
 
-  var view = Blaze.render(Template.body, document.body);
+  var view = Blaze.render({ 'content': Template.body, 'parentElement': document.body });
   Template.body.view = view;
 };
 

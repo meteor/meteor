@@ -322,7 +322,7 @@ var doFirstRender = function (view, initialContent) {
 // we return.  When there is a _workStack, we do not return the new
 // DOMRange, but instead push it into _intoArray from a _workStack
 // task.
-Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
+Blaze._materializeView = function (view, parentView, parentDocument, _workStack, _intoArray) {
   Blaze._createView(view, parentView);
 
   var domrange;
@@ -342,7 +342,7 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       if (! c.firstRun) {
         Tracker.nonreactive(function doMaterialize() {
           // re-render
-          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
+          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view, parentDocument);
           if (! Blaze._isContentEqual(lastHtmljs, htmljs)) {
             domrange.setMembers(rangesAndNodes);
             Blaze._fireCallbacks(view, 'rendered');
@@ -365,7 +365,7 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
     // first render.  lastHtmljs is the first htmljs.
     var initialContents;
     if (! _workStack) {
-      initialContents = Blaze._materializeDOM(lastHtmljs, [], view);
+      initialContents = Blaze._materializeDOM(lastHtmljs, [], view, parentDocument);
       domrange = doFirstRender(view, initialContents);
       initialContents = null; // help GC because we close over this scope a lot
     } else {
@@ -385,7 +385,7 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       });
       // now push the task that calculates initialContents
       _workStack.push(_.bind(Blaze._materializeDOM, null,
-                             lastHtmljs, initialContents, view, _workStack));
+                             lastHtmljs, initialContents, view, parentDocument, _workStack));
     }
   });
 
@@ -600,6 +600,21 @@ var contentAsFunc = function (content) {
  * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
  */
 Blaze.render = function (content, parentElement, nextNode, parentView) {
+  if (typeof content !== 'object' || parentElement !== undefined) {
+    Blaze._warn("Blaze.render with multiple arguments is now deprecated. " +
+                 "Use a single argument that is an object with kwargs.");
+  } else {
+    // In the future, rename content to options as multiple arguments is deprecated
+    if (typeof content === 'object') {
+      var options = content;
+      content = options.content;
+      parentElement = options.parentElement;
+      nextNode = options.nextNode;
+      parentView = options.parentView;
+      parentDocument = options.parentDocument;
+    }
+  }
+
   if (! parentElement) {
     Blaze._warn("Blaze.render without a parent element is deprecated. " +
                 "You must specify where to insert the rendered content.");
@@ -622,7 +637,7 @@ Blaze.render = function (content, parentElement, nextNode, parentView) {
   parentView = parentView || currentViewIfRendering();
 
   var view = contentAsView(content);
-  Blaze._materializeView(view, parentView);
+  Blaze._materializeView(view, parentView, parentDocument);
 
   if (parentElement) {
     view._domrange.attach(parentElement, nextNode);
@@ -653,8 +668,20 @@ Blaze.insert = function (view, parentElement, nextNode) {
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
   // We defer the handling of optional arguments to Blaze.render.  At this point,
   // `nextNode` may actually be `parentView`.
-  return Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
-                          parentElement, nextNode, parentView);
+  if (typeof content !== 'object' || parentElement !== undefined) {
+    Blaze._warn("Blaze.renderWithData should now be called like Blaze.renderWithData(options, data)" +
+                ", where options is an object with kwargs. The previous way of calling this function"+
+                " is now deprecated.");
+    var options = {};
+    options.content = content;
+    options.parentElement = parentElement;
+    options.nextNode = nextNode;
+    options.parentView = parentView;
+  } else {
+    var options = content;
+  }
+  options.content = Blaze._TemplateWith(data, contentAsFunc(options.content));
+  return Blaze.render(options);
 };
 
 /**

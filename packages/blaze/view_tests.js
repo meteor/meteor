@@ -18,8 +18,8 @@ if (Meteor.isClient) {
     v.onViewReady(function () {
       buf += 'y' + v.renderCount;
     });
-    v.onViewDestroyed(function () {
-      buf += 'd' + v.renderCount;
+    v.onViewDestroyed(function() {
+        buf += 'd' + v.renderCount;
     });
 
     test.equal(buf, '');
@@ -30,7 +30,7 @@ if (Meteor.isClient) {
     test.equal(canonicalizeHtml(div.innerHTML), "");
     test.throws(function () { v.firstNode(); }, /View must be attached/);
     test.throws(function () { v.lastNode(); }, /View must be attached/);
-    Blaze.render(v, div);
+    Blaze.render({ 'content': v, 'parentElement': div });
     test.equal(buf, 'c0r1');
     test.equal(typeof (v.firstNode().nodeType), "number");
     test.equal(typeof (v.lastNode().nodeType), "number");

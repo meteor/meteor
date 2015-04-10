@@ -9,13 +9,13 @@ if (! $jq)
 
 DOMBackend._$jq = $jq;
 
-DOMBackend.parseHTML = function (html) {
+DOMBackend.parseHTML = function (html, doc) {
   // Return an array of nodes.
   //
   // jQuery does fancy stuff like creating an appropriate
   // container element and setting innerHTML on it, as well
   // as working around various IE quirks.
-  return $jq.parseHTML(html) || [];
+  return $jq.parseHTML(html, doc) || [];
 };
 
 DOMBackend.Events = {
