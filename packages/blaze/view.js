@@ -594,12 +594,15 @@ var contentAsFunc = function (content) {
 /**
  * @summary Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#blaze_view) which can be passed to [`Blaze.remove`](#blaze_remove).
  * @locus Client
- * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned.
- * @param {DOMNode} parentNode The node that will be the parent of the rendered template.  It must be an Element node.
- * @param {DOMNode} [nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
- * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
+ * @param {Object} options
+ * @param {Template|Blaze.View} options.content The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned.
+ * @param {DOMNode} options.parentElement The node that will be the parent of the rendered template.  It must be an Element node.
+ * @param {DOMDocument} [options.parentDocument] The document that will be used to create the elements in this call to Blaze.render.
+ * @param {DOMNode} [options.nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
+ * @param {Blaze.View} [options.parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
  */
 Blaze.render = function (content, parentElement, nextNode, parentView) {
+  // Check to see if we are using the old syntax and appropriately handle that until we want to break backwards compatability
   if (typeof content !== 'object' || parentElement !== undefined) {
     Blaze._warn("Blaze.render with multiple arguments is now deprecated. " +
                  "Use a single argument that is an object with kwargs.");
@@ -659,15 +662,19 @@ Blaze.insert = function (view, parentElement, nextNode) {
 /**
  * @summary Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`.
  * @locus Client
- * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object to render.
+ * @param {Object} options
+ * @param {Template|Blaze.View} options.content The template (e.g. `Template.myTemplate`) or View object to render.
+ * @param {DOMNode} options.parentElement The node that will be the parent of the rendered template.  It must be an Element node.
+ * @param {DOMDocument} [options.parentDocument] The document that will be used to create the elements in this call to Blaze.render.
+ * @param {DOMNode} [options.nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
+ * @param {Blaze.View} [options.parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
  * @param {Object|Function} data The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run.
- * @param {DOMNode} parentNode The node that will be the parent of the rendered template.  It must be an Element node.
- * @param {DOMNode} [nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
- * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
  */
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
   // We defer the handling of optional arguments to Blaze.render.  At this point,
   // `nextNode` may actually be `parentView`.
+  
+  // Check to see if we are using the old syntax and appropriately handle that until we want to break backwards compatability
   if (typeof content !== 'object' || parentElement !== undefined) {
     Blaze._warn("Blaze.renderWithData should now be called like Blaze.renderWithData(options, data)" +
                 ", where options is an object with kwargs. The previous way of calling this function"+

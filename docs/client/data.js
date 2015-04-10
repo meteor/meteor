@@ -1615,16 +1615,15 @@ DocsData = {
   "Blaze.render": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 602,
+    "lineno": 604,
     "locus": "Client",
     "longname": "Blaze.render",
     "memberof": "Blaze",
     "name": "render",
-    "options": [],
-    "params": [
+    "options": [
       {
         "description": "<p>The template (e.g. <code>Template.myTemplate</code>) or View object to render.  If a template, a View object is <a href=\"#template_constructview\">constructed</a>.  If a View, it must be an unrendered View, which becomes a rendered View and is returned.</p>",
-        "name": "templateOrView",
+        "name": "content",
         "type": {
           "names": [
             "Template",
@@ -1634,10 +1633,20 @@ DocsData = {
       },
       {
         "description": "<p>The node that will be the parent of the rendered template.  It must be an Element node.</p>",
-        "name": "parentNode",
+        "name": "parentElement",
         "type": {
           "names": [
             "DOMNode"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional. The node that will be the parent of the rendered template.  It must be an Element node.</p>",
+        "name": "parentDocument",
+        "optional": true,
+        "type": {
+          "names": [
+            "DOMDocument"
           ]
         }
       },
@@ -1662,26 +1671,84 @@ DocsData = {
         }
       }
     ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
     "scope": "static",
     "summary": "Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#blaze_view) which can be passed to [`Blaze.remove`](#blaze_remove)."
   },
   "Blaze.renderWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 653,
+    "lineno": 673,
     "locus": "Client",
     "longname": "Blaze.renderWithData",
     "memberof": "Blaze",
     "name": "renderWithData",
-    "options": [],
-    "params": [
+    "options": [
       {
         "description": "<p>The template (e.g. <code>Template.myTemplate</code>) or View object to render.</p>",
-        "name": "templateOrView",
+        "name": "content",
         "type": {
           "names": [
             "Template",
             "Blaze.View"
+          ]
+        }
+      },
+      {
+        "description": "<p>The node that will be the parent of the rendered template.  It must be an Element node.</p>",
+        "name": "parentElement",
+        "type": {
+          "names": [
+            "DOMNode"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional. The node that will be the parent of the rendered template.  It must be an Element node.</p>",
+        "name": "parentDocument",
+        "optional": true,
+        "type": {
+          "names": [
+            "DOMDocument"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.</p>",
+        "name": "nextNode",
+        "optional": true,
+        "type": {
+          "names": [
+            "DOMNode"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional. If provided, it will be set as the rendered View's <a href=\"#view_parentview\"><code>parentView</code></a>.</p>",
+        "name": "parentView",
+        "optional": true,
+        "type": {
+          "names": [
+            "Blaze.View"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
           ]
         }
       },
@@ -1695,38 +1762,9 @@ DocsData = {
           ]
         }
       },
-      {
-        "description": "<p>The node that will be the parent of the rendered template.  It must be an Element node.</p>",
-        "name": "parentNode",
-        "type": {
-          "names": [
-            "DOMNode"
-          ]
-        }
-      },
-      {
-        "description": "<p>Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.</p>",
-        "name": "nextNode",
-        "optional": true,
-        "type": {
-          "names": [
-            "DOMNode"
-          ]
-        }
-      },
-      {
-        "description": "<p>Optional. If provided, it will be set as the rendered View's <a href=\"#view_parentview\"><code>parentView</code></a>.</p>",
-        "name": "parentView",
-        "optional": true,
-        "type": {
-          "names": [
-            "Blaze.View"
-          ]
-        }
-      }
     ],
     "scope": "static",
-    "summary": "Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`."
+    "summary": "Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`. Take note of the order of the arguments."
   },
   "Blaze.toHTML": {
     "filepath": "blaze/view.js",
