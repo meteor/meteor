@@ -746,6 +746,93 @@ Formula or Term
 
 ## Logic.Solver
 
+A Solver maintains a list of Formulas that must be true (or false),
+which you can think of as a list of constraints.  Each Solver instance
+embeds a self-contained MiniSat instance, which learns and remembers
+facts that are derived from the constraints.  At any time, you can ask
+the Solver for a solution that satisfies the current constraints, and
+it will either provide one (chosen arbitrarily) or report that none
+exists.  You can then continue to add more constraints and solve again.
+
+See [Example: Dinner Guests](#example-dinner-guests) for a good
+introduction to Solver.
+
+Constraints are only ever added, never removed.  If the current
+constraints are not satisfiable, then `solve()` will return null, and
+adding additional constraints cannot make the problem solvable again.
+However, using `solveAssuming`, you can look for a solution with a
+particular Formula temporarily in force.  If `solveAssuming` returns
+null, there is no harm done, and you can continue to solve under other
+assumptions or add more constraints.
+
+Sometimes `solve()` will take a long time!  That is to be expected.
+The best thing to do is to try expressing the problem in a different
+way, with fewer variables, more sharing of common subexpressions, or
+more constraints between variables so that the solver can make
+important deductions in fewer steps.  Also try wrapping your code in
+`Logic.disablingAssertions(function () { ... })` in case runtime type
+checks are slowing down Formula compilation.
+
+If you need an extra speed boost in Node, you could help me create a
+binary npm package containing a native-compiled MiniSat.
+
+#### Logic.Solver#require(args...)
+
+Requires that the Formulas and Terms listed in `args` be true in order
+for a solution to be valid.
+
+###### Parameters
+
+* `args...` - Zero or more Formulas, Terms, or Arrays
+
+#### Logic.Solver#forbid(args...)
+
+Requires that the Formulas and Terms listed in `args` be *false* in
+order for a solution to be valid.
+
+###### Parameters
+
+* `args...` - Zero or more Formulas, Terms, or Arrays
+
+#### Logic.Solver#solve()
+
+XXX
+
+###### Returns
+
+Logic.Solution or null
+
+#### Logic.Solver#solveAssuming(assumption)
+
+XXX
+
+Note that solveAssuming may change the solution returned by a
+subsequent `solve()`.
+
+###### Parameters
+
+* `assumption` - Formula or Term
+
+###### Returns
+
+Logic.Solution or null
+
+#### Logic.disablingAssertions(func)
+
+Calls `func()`, disabling runtime type checks and assertions for the
+duration.  This speeds up the processing of complex Formulas,
+especially when integers or large numbers of variables are involved,
+at the price of not validating the arguments to most function calls.
+It doesn't affect the time spent in MiniSat.
+
+###### Parameters
+
+* `func` - Function
+
+###### Returns
+
+Any - The return value of `func()`.
+
 ## Bits (integers)
 
 # XXX WIP
