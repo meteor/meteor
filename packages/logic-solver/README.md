@@ -18,10 +18,14 @@ and has some powerful features such as incremental solving and solving
 under temporary assumptions.  It also supports small-integer sums and
 inequalities, and can minimize or maximize an integer expression.
 
+Logic Solver contains a copy of [MiniSat](http://minisat.se/), an
+industrial-strength SAT solver, compiled from C++ to JavaScript using
+[Emscripten](http://emscripten.org).  See [About
+MiniSat](#about-minisat) for more information.
+
 ## Table of Contents
 
 - [Introduction](#introduction)
-- [MiniSat](#minisat)
 - [Example: Dinner Guests](#example-dinner-guests)
 - [Example: Magic Squares](#example-magic-squares)
 - [Variables](#variables)
@@ -53,41 +57,7 @@ inequalities, and can minimize or maximize an integer expression.
 - [Bits (integers)](#bits-integers)
   - XXX
 - XXX
-
-## MiniSat
-
-Logic Solver contains a copy of [MiniSat](http://minisat.se/), an
-industrial-strength SAT solver, compiled from C++ to JavaScript using
-[Emscripten](http://emscripten.org).  Solving satisfiability problems
-("SAT-solving") is notoriously difficult from an algorithmic
-perspective, but solvers such as MiniSat implement advanced techniques
-that have come out of years of research.
-
-MiniSat accepts input in "conjunctive normal form," which is a fairly
-low-level representation of a logic problem.  Logic Solver's main job
-is to take arbitrary boolean formulas that you specify, such as
-"exactly one of A, B, and C is true," and compile them into a list of
-statements that must all be satisfied -- a conjunction of clauses --
-each of which is a simple disjunction such as: "A or B or C."  "Not A,
-or not B."
-
-Although MiniSat operates on a low-level representation of the problem
-and has no explicit knowledge of its overall structure, it is able to
-use sophisticated techniques to derive new clauses that are implied by
-the existing clauses.  A naive solver would try assigning values to
-some of the variables until a conflict occurs, and then backtrack, but
-not really learn anything from the conflict.  Even custom solvers
-written for a particular problem often work this way.  Solvers such as
-MiniSat, on the other hand, employ [Conflict-Driven Clause
-Learning](http://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning),
-which means that when they backtrack, they learn new clauses.  These
-new clauses narrow the search space and cause subsequent trials to
-reach a conflict sooner, until the entire problem is found to be
-unsatisfiable or a valid assignment is found.
-
-In principle, Logic Solver could be used as a clause generator for
-other SAT-solver backends besides MiniSat, or for a backend consisting
-of MiniSat compiled to native machine code instead of JavaScript.
+- [About MiniSat](#about-minisat)
 
 ## Example: Dinner Guests
 
@@ -842,6 +812,41 @@ It doesn't affect the time spent in MiniSat.
 Any - The return value of `func()`.
 
 ## Bits (integers)
+
+XXX
+
+## About MiniSat
+
+Solving satisfiability problems ("SAT-solving") is notoriously
+difficult from an algorithmic perspective, but solvers such as MiniSat
+implement advanced techniques that have come out of years of research.
+You can read more about MiniSat on its web page at http://minisat.se/.
+
+MiniSat accepts input in "conjunctive normal form," which is a fairly
+low-level representation of a logic problem.  Logic Solver's main job
+is to take arbitrary boolean formulas that you specify, such as
+"exactly one of A, B, and C is true," and compile them into a list of
+statements that must all be satisfied -- a conjunction of clauses --
+each of which is a simple disjunction such as: "A or B or C."  "Not A,
+or not B."
+
+Although MiniSat operates on a low-level representation of the problem
+and has no explicit knowledge of its overall structure, it is able to
+use sophisticated techniques to derive new clauses that are implied by
+the existing clauses.  A naive solver would try assigning values to
+some of the variables until a conflict occurs, and then backtrack, but
+not really learn anything from the conflict.  Even custom solvers
+written for a particular problem often work this way.  Solvers such as
+MiniSat, on the other hand, employ [Conflict-Driven Clause
+Learning](http://en.wikipedia.org/wiki/Conflict-Driven_Clause_Learning),
+which means that when they backtrack, they learn new clauses.  These
+new clauses narrow the search space and cause subsequent trials to
+reach a conflict sooner, until the entire problem is found to be
+unsatisfiable or a valid assignment is found.
+
+In principle, Logic Solver could be used as a clause generator for
+other SAT-solver backends besides MiniSat, or for a backend consisting
+of MiniSat compiled to native machine code instead of JavaScript.
 
 # XXX WIP
 
