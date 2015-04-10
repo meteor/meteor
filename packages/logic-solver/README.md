@@ -47,7 +47,7 @@ MiniSat](#about-minisat) for more information.
   - [Logic.implies(operand1, operand2)](#logicimpliesoperand1-operand2)
   - [Logic.equiv(operand1, operand2)](#logicequivoperand1-operand2)
   - [Logic.exactlyOne(operands...)](#logicexactlyoneoperands)
-  - [Logic.atMostOne(operands...)](#logicatmostoneoperands)"
+  - [Logic.atMostOne(operands...)](#logicatmostoneoperands)
 - [Logic.Solver](#logicsolver)
   - [Logic.Solver#require(args...)](#logicsolverrequireargs)
   - [Logic.Solver#forbid(args...)](#logicsolverforbidargs)
