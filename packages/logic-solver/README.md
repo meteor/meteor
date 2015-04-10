@@ -1,5 +1,25 @@
 # Logic Solver
 
+## Introduction
+
+Logic Solver is a boolean satisfiability solver written in JavaScript.
+Given a problem expressed as logical constraints on boolean
+(true/false) variables, it either provides a possible solution, or
+tells you definitively that there is no possible assignment of the
+variables that satisfies the constraints.
+
+Many kinds of logic problems can be expressed in terms of constraints
+on boolean variables, including Sudoku puzzles, scheduling problems,
+and the package dependency problem faced by package managers that
+automatically resolve version conflicts.
+
+Logic Solver can handle complex problems with thousands of variables,
+and has some powerful features such as incremental solving and solving
+under temporary assumptions.  It also supports small-integer sums and
+inequalities, and can minimize or maximize an integer expression.
+
+## Table of Contents
+
 - [Introduction](#introduction)
 - [MiniSat](#minisat)
 - [Example: Dinner Guests](#example-dinner-guests)
@@ -25,26 +45,14 @@
   - [Logic.exactlyOne(operands...)](#logicexactlyoneoperands)
   - [Logic.atMostOne(operands...)](#logicatmostoneoperands)"
 - [Logic.Solver](#logicsolver)
+  - [Logic.Solver#require(args...)](#logicsolverrequireargs)
+  - [Logic.Solver#forbid(args...)](#logicsolverforbidargs)
+  - [Logic.Solver#solve()](#logicsolversolve)
+  - [Logic.Solver#solveAssuming(assumption)](#logicsolversolveassumingassumption)
+  - [Logic.disablingAssertions(func)](#logicdisablingassertionsfunc)
 - [Bits (integers)](#bits-integers)
-
-
-## Introduction
-
-Logic Solver is a boolean satisfiability solver written in JavaScript.
-Given a problem expressed as logical constraints on boolean
-(true/false) variables, it either provides a possible solution, or
-tells you definitively that there is no possible assignment of the
-variables that satisfies the constraints.
-
-Many kinds of logic problems can be expressed in terms of constraints
-on boolean variables, including Sudoku puzzles, scheduling problems,
-and the package dependency problem faced by package managers that
-automatically resolve version conflicts.
-
-Logic Solver can handle complex problems with thousands of variables,
-and has some powerful features such as incremental solving and solving
-under temporary assumptions.  It also supports small-integer sums and
-inequalities, and can minimize or maximize an integer expression.
+  - XXX
+- XXX
 
 ## MiniSat
 
