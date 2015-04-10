@@ -250,8 +250,8 @@ var Isopack = function () {
   // XXX BBP redoc
   self.sourceHandlers = null;
 
-  // XXX BBP doc (map phase (numeric string, sadly) -> [BatchBuildHandler])
-  self.batchHandlersByPhase = null;
+  // XXX BBP doc (map phase (numeric string, sadly) -> [BatchBuildHandlerFactory])
+  self.batchHandlerFactoriesByPhase = null;
   // XXX BBP doc (set of extension)
   // XXX BBP does this need to be on the object?
   self.batchExtensions = null;
@@ -624,10 +624,10 @@ _.extend(Isopack.prototype, {
           }
           phase = options.phase;
         }
-        if (! _.has(self.batchHandlersByPhase, phase)) {
-          self.batchHandlersByPhase[phase] = [];
+        if (! _.has(self.batchHandlerFactoriesByPhase, phase)) {
+          self.batchHandlerFactoriesByPhase[phase] = [];
         }
-        var phaseHandlers = self.batchHandlersByPhase[phase];
+        var phaseHandlers = self.batchHandlerFactoriesByPhase[phase];
 
         // avoid nested functions like _.each so that useMyCaller works
         for (var i = 0; i < options.extensions.length; ++i) {
@@ -662,12 +662,19 @@ _.extend(Isopack.prototype, {
           }
         }
 
+        // Unique ID within a given bundler call.  Used internally in
+        // batch-build-plugin.js, and human-readable for debugging purposes.
+        var handlerId = JSON.stringify([self.name, phase, options.extensions]);
+
         // We're finally done validating!  Save the handler in its phase, and
         // mark all its extensions as used.
         phaseHandlers.push(
-          new batchBuildPlugin.BatchBuildHandler(
-            _.pick(options, ['archMatching', 'isTemplate', 'extensions']),
-            factory));
+          new batchBuildPlugin.BatchBuildHandlerFactory({
+            id: handlerId,
+            extensions: options.extensions,
+            archMatching: options.archMatching,
+            isTemplate: options.isTemplate
+          }, factory));
         _.each(options.extensions, function (ext) {
           self.batchExtensions[ext] = true;
         });
@@ -675,7 +682,7 @@ _.extend(Isopack.prototype, {
     };
 
     self.sourceHandlers = {};
-    self.batchHandlersByPhase = {};
+    self.batchHandlerFactoriesByPhase = {};
     self.batchExtensions = {};
 
     _.each(self.plugins, function (pluginsByArch, name) {

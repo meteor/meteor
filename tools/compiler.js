@@ -293,7 +293,7 @@ var compileUnibuild = function (options) {
     // Iterate over the batch build handlers.
     // XXX BBP do we also need to check that there's at most one batch
     //         handler for an extension per phase?
-    _.each(otherPkg.batchHandlersByPhase, function (handlers, phase) {
+    _.each(otherPkg.batchHandlerFactoriesByPhase, function (handlers, phase) {
       _.each(handlers, function (handler) {
         _.each(handler.extensions, function (ext) {
           if (_.has(allHandlersWithPkgs, ext)) {
