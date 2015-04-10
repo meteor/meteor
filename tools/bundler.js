@@ -425,6 +425,8 @@ var Target = function (options) {
   // All of the Unibuilds that are to go into this target, in the order
   // that they are to be loaded.
   self.unibuilds = [];
+  // XXX BBP ???
+  self.sourceBatches = null;
 
   // JavaScript files. List of File. They will be loaded at startup in
   // the order given.
@@ -664,9 +666,10 @@ _.extend(Target.prototype, {
     var self = this;
     var processor = new batchBuildPlugin.BatchBuildProcessor({
       unibuilds: self.unibuilds,
+      arch: self.arch,
       isopackCache: self.isopackCache
     });
-    processor.runBatchHandlers();
+    self.sourceBatches = processor.runBatchHandlers();
   },
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
@@ -678,7 +681,9 @@ _.extend(Target.prototype, {
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
-    _.each(self.unibuilds, function (unibuild) {
+    _.each(self.sourceBatches, function (sourceBatch) {
+      var unibuild = sourceBatch.unibuild;
+
       if (self.cordovaDependencies) {
         _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
           self._addCordovaDependency(
@@ -693,9 +698,7 @@ _.extend(Target.prototype, {
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
-      var resources = unibuild.getResources(self.arch, {
-        isopackCache: self.isopackCache
-      });
+      var resources = sourceBatch.getResources();
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).

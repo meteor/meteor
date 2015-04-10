@@ -671,6 +671,7 @@ _.extend(Isopack.prototype, {
         phaseHandlers.push(
           new batchBuildPlugin.BatchBuildHandlerFactory({
             id: handlerId,
+            phase: phase,
             extensions: options.extensions,
             archMatching: options.archMatching,
             isTemplate: options.isTemplate
