@@ -463,7 +463,7 @@ Posts.allow({
 });
 
 Posts.deny({
-  update: function (userId, docs, fields, modifier) {
+  update: function (userId, doc, fields, modifier) {
     // can't change owners
     return _.contains(fields, 'owner');
   },
