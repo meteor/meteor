@@ -23,6 +23,10 @@ industrial-strength SAT solver, compiled from C++ to JavaScript using
 [Emscripten](http://emscripten.org).  See [About
 MiniSat](#about-minisat) for more information.
 
+XXX Link to a cool Sudoku demo.  Show that this thing is actually
+pretty darn fast!  Maybe include Sudoku as one of the code examples
+too, since the code is short and cool.
+
 ## Table of Contents
 
 - [Introduction](#introduction)
@@ -54,9 +58,27 @@ MiniSat](#about-minisat) for more information.
   - [Logic.Solver#solve()](#logicsolversolve)
   - [Logic.Solver#solveAssuming(assumption)](#logicsolversolveassumingassumption)
   - [Logic.disablingAssertions(func)](#logicdisablingassertionsfunc)
+- [Logic.Solution)(#logicsolution)
+  - Logic.Solution#getMap
+  - Logic.Solution#getTrueVars
+  - Logic.Solution#evaluate
+  - Logic.Solution#getWeightedSum
+  - Logic.Solution#getFormula
+  - Logic.Solution#ignoreUnknownVariables
+- Optimization
+  - Logic.Solver#minimize
+  - Logic.Solver#maximize
 - [Bits (integers)](#bits-integers)
-  - XXX
-- XXX
+  - Logic.isBits
+  - Logic.constantBits
+  - Logic.variableBits
+  - Logic.equalBits
+  - Logic.lessThan
+  - Logic.lessThanOrEqual
+  - Logic.greaterThan
+  - Logic.greaterThanOrEqual
+  - Logic.sum
+  - Logic.weightedSum
 - [About MiniSat](#about-minisat)
 
 ## Example: Dinner Guests
@@ -724,6 +746,8 @@ Formula or Term
 
 ## Logic.Solver
 
+You create a Logic.Solver with `new Logic.Solver()`.
+
 A Solver maintains a list of Formulas that must be true (or false),
 which you can think of as a list of constraints.  Each Solver instance
 embeds a self-contained MiniSat instance, which learns and remembers
@@ -846,6 +870,14 @@ It doesn't affect the time spent in MiniSat.
 
 Any - The return value of `func()`.
 
+## Logic.Solution
+
+XXX
+
+## Optimization
+
+XXX
+
 ## Bits (integers)
 
 XXX
@@ -882,45 +914,3 @@ unsatisfiable or a valid assignment is found.
 In principle, Logic Solver could be used as a clause generator for
 other SAT-solver backends besides MiniSat, or for a backend consisting
 of MiniSat compiled to native machine code instead of JavaScript.
-
-# XXX WIP
-
-## API
-
-```
-Logic.Solver
-    solver.require
-    solver.forbid
-    solver.solve
-    solver.solveAssuming
-Logic.Term
-    Logic.TRUE
-    Logic.FALSE
-Logic.Formula
-    Logic.not
-    Logic.or
-    Logic.and
-    Logic.xor
-    Logic.implies
-    Logic.equiv
-    Logic.atMostOne
-    Logic.exactlyOne
-Logic.Clause
-Logic.Solution
-    solution.getMap
-    solution.getTrueVars
-    solution.evaluate
-    solution.getWeightedSum
-Logic.Bits
-    Logic.constantBits
-    Logic.variableBits
-    Logic.equalBits
-    Logic.lessThan
-    Logic.lessThanOrEqual
-    Logic.greaterThan
-    Logic.greaterThanOrEqual
-    Logic.sum
-    Logic.weightedSum
-```
-
-(also minimize and maximize, and solution.getFormula)
