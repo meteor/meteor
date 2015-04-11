@@ -774,18 +774,53 @@ order for a solution to be valid.
 
 #### Logic.Solver#solve()
 
-XXX
+Finds a solution that satisfies all the constraints specified with
+`require` and `forbid`, or determines that no such solution is
+possible.  A solution is an assignment of all the variables to boolean
+values.
+
+To find more than one solution, you can forbid the first solution
+(using `solver.forbid(solution.getFormula())`, and solve again.
+
+Solving is fully incremental, and each call to `solve()` has the
+benefit of everything learned by previous calls to `solve()`.
+Re-solving with one or two new constraints is typically very fast,
+because no work is repeated.
+
+There is no guarantee of which solution is found if there are more
+than one.  However, some statements can be made about what to expect:
+
+* MiniSat starts by trying a solution where all variables are false,
+  so underconstrained variables will tend to be set to false.
+
+* Calling `solve()` repeatedly, with no intervening method calls, will
+  in practice return the same solution each time.  On the other hand,
+  if you call `solve`, then `solveAssuming`, then `solve` again, the
+  call to `solveAssuming` will affect the solution returned by the
+  second `solve`.
+
+* Logic Solver and MiniSat are deterministic, so the same series of
+  calls on a new Solver will generally produce the same results.
+  However, the results may not be stable across different versions of
+  Logic Solver.
 
 ###### Returns
 
-Logic.Solution or null
+Logic.Solution, or null if no solution is possible
 
 #### Logic.Solver#solveAssuming(assumption)
 
-XXX
+Like `solve()`, but looks for a solution that additionally satisfies
+`assumption`.  This is especially useful for testing whether a new
+constraint would make the problem unsolvable before requiring it,
+or for "querying" the solver about different types of solutions.
 
-Note that solveAssuming may change the solution returned by a
-subsequent `solve()`.
+Note that any solution returned by `solveAssuming` is also a valid
+solution for `solve` to return.  If you call `solve`, then
+`solveAssuming`, then `solve` again, the second `solve` will typically
+return the same solution as `solveAssuming`, because the internal
+state of the solver has been changed (even though no new permanent
+constraints have been introduced).
 
 ###### Parameters
 
