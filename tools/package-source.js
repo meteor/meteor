@@ -1252,42 +1252,67 @@ _.extend(PackageSource.prototype, {
           return /^tests\//.test(dir) || /\/tests\//.test(dir)
         }
 
+        // Given options.includeTests is "jasmine/server/integration"
+        //
         // Inputs that should return true:
-        // tests/jasmine
-        // tests/jasmine/...
-        // .../tests/jasmine
-        // .../tests/jasmine/...
+        // tests/jasmine/server/integration/
+        // .../jasmine/server/integration/
         var includedTestsDirectoryMatchers = options.includeTests ?
           (function () {
-            var matchers = [
-              new RegExp('^tests/' + options.includeTests + '/'),
-              new RegExp('/tests/' + options.includeTests + '/')
+            return [
+              new RegExp('^tests/' + options.includeTests + '/?'),
+              new RegExp('/tests/' + options.includeTests + '/?')
             ];
+          })() : [];
 
+        // Given options.includeTests is "jasmine/server/integration"
+        //
+        // Inputs that should return true:
+        // tests/
+        // tests/jasmine/
+        // tests/jasmine/server/
+        // .../tests/
+        // .../tests/jasmine/
+        // .../tests/jasmine/server/
+        var includedTestsParentDirectoryMatchers = options.includeTests ?
+          (function () {
+            var matchers = [
+              new RegExp('^tests/?$'),
+              new RegExp('/tests/?$')
+            ];
             var partialDir;
             var dirParts = options.includeTests.split('/');
-            for (var i = 0; i <= dirParts.length; i++) {
+            for (var i = 1; i < dirParts.length; i++) {
               partialDir = dirParts.slice(0, i).join('/');
               matchers.push(
-                new RegExp('^tests/' + partialDir + '/$'),
-                new RegExp('/tests/' + partialDir + '/$')
+                new RegExp('^tests/' + partialDir + '/?$'),
+                new RegExp('/tests/' + partialDir + '/?$')
               );
             }
 
             return matchers;
           })() : [];
 
-        var isIncludedTestsDirectory = function (dir) {
-          return _.any(includedTestsDirectoryMatchers, function (matcher) {
+        var isDirectoryMatching = function (dir, matchers) {
+          return _.any(matchers, function (matcher) {
             return matcher.test(dir);
           });
-        }
+        };
 
-        var shouldWatchDirectories = function (dir) {
+        var isIncludedTestsDirectory = function (dir) {
+          return isDirectoryMatching(dir, includedTestsDirectoryMatchers);
+        };
+
+        var isIncludedTestsDirectoryParent = function (dir) {
+          return isDirectoryMatching(dir, includedTestsParentDirectoryMatchers);
+        };
+
+        var shouldWatchDirectory = function (dir) {
           return !options.includeTests ||
             !isTestsSubdirectory(dir) ||
-            isIncludedTestsDirectory(dir);
-        }
+            isIncludedTestsDirectory(dir) ||
+            isIncludedTestsDirectoryParent(dir);
+        };
 
         while (!_.isEmpty(sourceDirectories)) {
           var dir = sourceDirectories.shift();
@@ -1298,11 +1323,13 @@ _.extend(PackageSource.prototype, {
           if (checkForInfiniteRecursion(dir))
             return [];  // pretend we found no files
 
-          // Find source files in this directory.
-          Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
-            include: sourceInclude,
-            exclude: sourceExclude
-          }));
+          if (!isIncludedTestsDirectoryParent(dir)) {
+            // Find source files in this directory.
+            Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
+              include: sourceInclude,
+              exclude: sourceExclude
+            }));
+          }
 
           // Find sub-sourceDirectories. Note that we DON'T need to ignore the
           // directory names that are only special at the top level.
@@ -1316,7 +1343,7 @@ _.extend(PackageSource.prototype, {
             exclude: excludedSubSourceDirectories
           });
 
-          subdirectories = _.filter(subdirectories, shouldWatchDirectories)
+          subdirectories = _.filter(subdirectories, shouldWatchDirectory)
 
           Array.prototype.push.apply(sourceDirectories, subdirectories);
         }
