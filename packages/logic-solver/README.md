@@ -58,7 +58,7 @@ too, since the code is short and cool.
   - [Logic.Solver#solve()](#logicsolversolve)
   - [Logic.Solver#solveAssuming(assumption)](#logicsolversolveassumingassumption)
   - [Logic.disablingAssertions(func)](#logicdisablingassertionsfunc)
-- [Logic.Solution)(#logicsolution)
+- Logic.Solution
   - Logic.Solution#getMap
   - Logic.Solution#getTrueVars
   - Logic.Solution#evaluate
