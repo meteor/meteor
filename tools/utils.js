@@ -218,33 +218,42 @@ exports.validatePackageName = function (name, options) {
   }
 };
 
-// Parse a string of the form package@version into an object of the form
-// {name, version}.
+// Parse a string of the form `package + " " + version` into an object
+// of the form {package, version}.  For backwards compatibility,
+// an "@" separator instead of a space is also accepted.
+//
+// Lines of `.meteor/versions` and the contents of `.meteor/release`
+// are parsed by this function.
 exports.parsePackageAtVersion = function (packageAtVersionString, options) {
-  // A string that has to look like "package@version" isn't really a
-  // constraint, it's just a string of the form (package + "@" + version).
-  // However, using parsePackageConstraint in the implementation is too
-  // convenient to pass up (especially in terms of error-handling quality).
-  var parsedConstraint = exports.parsePackageConstraint(packageAtVersionString,
-                                                        options);
-  if (! parsedConstraint) {
-    // It must be that options.useBuildmessage and an error has been
-    // registered.  Otherwise, parsePackageConstraint would succeed or throw.
-    return null;
-  }
-  var alternatives = parsedConstraint.versionConstraint.alternatives;
-  if (! (alternatives.length === 1 &&
-         alternatives[0].type === 'compatible-with')) {
-    if (options && options.useBuildmessage) {
-      buildmessage.error("Malformed package@version: " + packageAtVersionString,
-                         { file: options.buildmessageFile });
-      return null;
-    } else {
-      throw new Error("Malformed package@version: " + packageAtVersionString);
+  var error = null;
+  var separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
+                              packageAtVersionString.lastIndexOf('@'));
+  if (separatorPos < 0) {
+    error = new Error("Malformed package version: " +
+                      JSON.stringify(packageAtVersionString));
+  } else {
+    var package = packageAtVersionString.slice(0, separatorPos);
+    var version = packageAtVersionString.slice(separatorPos+1);
+    try {
+      packageVersionParser.validatePackageName(package);
+      // validate the version, ignoring the parsed result:
+      packageVersionParser.parse(version);
+    } catch (e) {
+      if (! e.versionParserError) {
+        throw e;
+      }
+      error = e;
+    }
+    if (! error) {
+      return { package: package, version: version };
     }
   }
-  return { package: parsedConstraint.package,
-           version: alternatives[0].versionString };
+  // `error` holds an Error
+  if (! (options && options.useBuildmessage)) {
+    throw error;
+  }
+  buildmessage.error(error.message, { file: options.buildmessageFile });
+  return null;
 };
 
 // Check for invalid package names. Currently package names can only contain
