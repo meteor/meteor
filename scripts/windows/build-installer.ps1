@@ -21,19 +21,11 @@ $semverVersion = $version.Split("@")[-1].split("-")[0]
   $_ -replace '__METEOR_RELEASE__',$version `
      -replace '__METEOR_RELEASE_SEMVER__',$semverVersion} | Out-File -Encoding ascii ($conf_path)
 
-$client = new-object System.Net.WebClient
-
 # download 7za.exe, build dependency that we don't want to build from scratch
 echo "Downloading binary dependencies: 7za"
 $7za_url = "https://s3.amazonaws.com/meteor-windows/build-deps/7za.exe"
-
+$client = new-object System.Net.WebClient
 $client.DownloadFile($7za_url, $script_path + "installer\WiXInstaller\Resources\7za.exe")
-
-$bootstrap_url = ("http://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/$version/meteor-bootstrap-os.windows.x86_32.tar.gz")
-echo "Downloading bootstrap tarball from: $bootstrap_url"
-
-Import-Module BitsTransfer
-Start-BitsTransfer $bootstrap_url "$script_path\installer\WiXInstaller\Resources\meteor-bootstrap-os.windows.x86_32.tar.gz"
 
 Push-Location installer
 Invoke-Expression ("cmd /c build.bat")

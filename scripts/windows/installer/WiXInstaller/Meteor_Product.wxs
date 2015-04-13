@@ -29,7 +29,8 @@
         <?endif?>
 
         <Binary Id="SevenZip"  SourceFile="Resources\7za.exe" />
-        <Binary Id="BootstrapTarball"  SourceFile="Resources\meteor-bootstrap-os.windows.x86_32.tar.gz" />
+
+
 
         <Feature Id="ProductFiles" Title="Meteor Product Files" Level="1">
             <ComponentGroupRef Id="CG_MeteorConfiguration"/>
@@ -44,12 +45,14 @@
         </Directory>
 
 
+        <CustomAction Id="Download_MeteorPackage" BinaryKey="WiXHelper" Return="check" DllEntry="Download_MeteorPackage" />
         <CustomAction Id="Extract_MeteorFiles"    BinaryKey="WiXHelper" Return="check" DllEntry="Extract_MeteorFiles" />
         <CustomAction Id="BulkRemoveMeteorFiles"  BinaryKey="WiXHelper" Return="check" DllEntry="BulkRemoveMeteorFiles" />
         <CustomAction Id="SetFolderPackages"  Property="METEORDIR_PACKAGES" Value="[METEOR_DIR].meteor\packages" />
         <CustomAction Id="SetFolderPkg_Meta"  Property="METEORDIR_PKG_META" Value="[METEOR_DIR].meteor\package-metadata" />
         <InstallExecuteSequence>
-            <Custom Action="Extract_MeteorFiles"     After="InstallFiles">NOT Installed</Custom>
+            <Custom Action="Download_MeteorPackage"  After="InstallFiles">NOT Installed</Custom>
+            <Custom Action="Extract_MeteorFiles"     After="Download_MeteorPackage">NOT Installed</Custom>
             <Custom Action="SetFolderPackages"       After="InstallInitialize">REMOVE~="ALL"</Custom>
             <Custom Action="SetFolderPkg_Meta"       After="InstallInitialize">REMOVE~="ALL"</Custom>
             <Custom Action="BulkRemoveMeteorFiles"   Before="RemoveFiles">REMOVE~="ALL"</Custom>
