@@ -166,7 +166,7 @@ var Profile = require('./profile.js').Profile;
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
 var colonConverter = require('./colon-converter.js');
-var batchBuildPlugin = require('./batch-build-plugin.js');
+var compilerPluginModule = require('./compiler-plugin.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -494,7 +494,7 @@ _.extend(Target.prototype, {
       packages: options.packages || []
     });
 
-    self._runBatchHandlers();
+    self._runCompilerPlugins();
 
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
@@ -662,14 +662,14 @@ _.extend(Target.prototype, {
     });
   },
 
-  _runBatchHandlers: function () {
+  _runCompilerPlugins: function () {
     var self = this;
-    var processor = new batchBuildPlugin.BatchBuildProcessor({
+    var processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: self.unibuilds,
       arch: self.arch,
       isopackCache: self.isopackCache
     });
-    self.sourceBatches = processor.runBatchHandlers();
+    self.sourceBatches = processor.runCompilerPlugins();
   },
 
   // Process all of the sorted unibuilds (which includes running the JavaScript

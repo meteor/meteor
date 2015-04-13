@@ -173,7 +173,6 @@ var compileUnibuild = function (options) {
 
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
-  var batchSources = [];
   var js = [];
   var pluginProviderPackageNames = {};
   // The current package always is a plugin provider. (This also means we no
@@ -231,7 +230,7 @@ var compileUnibuild = function (options) {
   // *** Assemble the list of source file handlers from the plugins
   // XXX BBP redoc
   var allHandlersWithPkgs = {};
-  var batchSourceExtensions = {};
+  var compilerPluginsByExtension = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   sourceExtensions['js'] = false;
@@ -290,24 +289,21 @@ var compileUnibuild = function (options) {
       sourceExtensions[ext] = !!sourceHandler.isTemplate;
     });
 
-    // Iterate over the batch build handlers.
-    // XXX BBP do we also need to check that there's at most one batch
-    //         handler for an extension per phase?
-    _.each(otherPkg.batchHandlerFactoriesByPhase, function (handlers, phase) {
-      _.each(handlers, function (handler) {
-        _.each(handler.extensions, function (ext) {
-          if (_.has(allHandlersWithPkgs, ext)) {
-            buildmessage.error(
-              "conflict: two packages included in " +
-                (inputSourceArch.pkg.name || "the app") + ", " +
-                (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
-                (otherPkg.name || "the app") + ", " +
-                "are both trying to handle ." + ext);
-            // Recover by just going with the legacy source handler.
-            return;
-          }
-          batchSourceExtensions[ext] = true;
-        });
+    // Iterate over the compiler plugins.
+    _.each(otherPkg.compilerPlugins, function (compilerPlugin, id) {
+      _.each(compilerPlugin.extensions, function (ext) {
+        if (_.has(allHandlersWithPkgs, ext) ||
+            _.has(compilerPluginsByExtension, ext)) {
+          buildmessage.error(
+            "conflict: two packages included in " +
+              (inputSourceArch.pkg.name || "the app") + ", " +
+              (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
+              (otherPkg.name || "the app") + ", " +
+              "are both trying to handle ." + ext);
+          // Recover by just going with the first one we found.
+          return;
+        }
+        compilerPluginsByExtension[ext] = compilerPlugin;
       });
     });
   });
@@ -370,10 +366,14 @@ var compileUnibuild = function (options) {
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = files.pathBasename(relPath);
+    var fileWatchSet = new watch.WatchSet;
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
     // transforms from the tools/files.js part).
-    var file = watch.readAndWatchFileWithHash(watchSet, absPath);
+    // We don't put this into the unibuild's watchSet immediately since we want
+    // to avoid putting it there if it turns out not to be relevant to our
+    // arch.
+    var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
     var contents = file.contents;
 
     Console.nudge(true);
@@ -390,19 +390,28 @@ var compileUnibuild = function (options) {
         buildmessage.error("File not found: " + source.relPath);
       }
 
-      // recover by ignoring
+      // recover by ignoring (but still watching the file)
+      watchSet.merge(fileWatchSet);
       return;
     }
 
     // Find the handler for source files with this extension.
     var handler = null;
-    var isBatchSource = false;
+    var isCompilerPluginSource = false;
     if (! fileOptions.isAsset) {
       var parts = filename.split('.');
+      // don't use iteration functions, so we can return/break
       for (var i = 1; i < parts.length; i++) {
         var extension = parts.slice(i).join('.');
-        if (_.has(batchSourceExtensions, extension)) {
-          isBatchSource = true;
+        if (_.has(compilerPluginsByExtension, extension)) {
+          var compilerPlugin = compilerPluginsByExtension[extension];
+          if (! compilerPlugin.relevantForArch(inputSourceArch.arch)) {
+            // This file is for a compiler plugin but not for this arch. Skip
+            // it, and don't even watch it.  (eg, skip CSS preprocessor files on
+            // the server.)
+            return;
+          }
+          isCompilerPluginSource = true;
           break;
         }
         if (_.has(allHandlersWithPkgs, extension)) {
@@ -412,10 +421,14 @@ var compileUnibuild = function (options) {
       }
     }
 
-    if (isBatchSource) {
-      // This is the source to a batch plugin; it will be fully processed later
-      // in the bundler.
-      batchSources.push({
+    // OK, this is relevant to this arch, so watch it.
+    watchSet.merge(fileWatchSet);
+
+    if (isCompilerPluginSource) {
+      // This is source used by a new-style compiler plugin; it will be fully
+      // processed later in the bundler.
+      resources.push({
+        type: "source",
         data: contents,
         path: relPath,
         hash: file.hash
@@ -895,8 +908,7 @@ var compileUnibuild = function (options) {
     nodeModulesPath: nodeModulesPath,
     prelinkFiles: results.files,
     packageVariables: packageVariables,
-    resources: resources,
-    sources: batchSources
+    resources: resources
   });
 
   return {

@@ -11,7 +11,7 @@ var isopackets = require("./isopackets.js");
 var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
-var batchBuildPlugin = require('./batch-build-plugin.js');
+var compilerPluginModule = require('./compiler-plugin.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
@@ -34,8 +34,7 @@ var rejectBadPath = function (p) {
 // - nodeModulesPath
 // - prelinkFiles
 // - packageVariables
-// - resources (output of legacy source handlers)
-// - sources (input to batch build handlers)
+// - resources
 
 var nextBuildId = 1;
 var Unibuild = function (isopack, options) {
@@ -99,10 +98,9 @@ var Unibuild = function (isopack, options) {
   // honored for CSS but ignored if we are concatenating.
   //
   // sourceMap: Allowed only for "js". If present, a string.
+  //
+  // XXX BBP redoc. now can have type "source"
   self.resources = options.resources;
-
-  // XXX BBP doc
-  self.sources = options.sources;
 
   // Absolute path to the node_modules directory to use at runtime to
   // resolve Npm.require() calls in this unibuild. null if this unibuild
@@ -250,11 +248,8 @@ var Isopack = function () {
   // XXX BBP redoc
   self.sourceHandlers = null;
 
-  // XXX BBP doc (map phase (numeric string, sadly) -> [BatchBuildHandlerFactory])
-  self.batchHandlerFactoriesByPhase = null;
-  // XXX BBP doc (set of extension)
-  // XXX BBP does this need to be on the object?
-  self.batchExtensions = null;
+  // XXX BBP doc (map id -> CompilerPlugin)
+  self.compilerPlugins = null;
 
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
@@ -531,6 +526,8 @@ _.extend(Isopack.prototype, {
     if (self._pluginsInitialized)
       return;
 
+    var compilerPluginSourceExtensions = {};
+
     /**
      * @global
      * @namespace Plugin
@@ -576,11 +573,11 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        if (_.has(self.batchExtensions, extension)) {
+        if (_.has(compilerPluginSourceExtensions, extension)) {
           buildmessage.error(
             "duplicate handler for '*." +
               extension + "'; may not use the same extension with " +
-              "registerSourceHandler and registerBatchHandler in the " +
+              "registerSourceHandler and registerCompiler in the " +
               "same per plugin-providing package",
             { useMyCaller: true });
           // recover by ignoring all but the first
@@ -595,7 +592,7 @@ _.extend(Isopack.prototype, {
       },
 
       // XXX BBP doc
-      registerBatchHandler: function (options, factory) {
+      registerCompiler: function (options, factory) {
         if (! (options && options.extensions &&
                options.extensions instanceof Array &&
                options.extensions.length > 0)) {
@@ -613,22 +610,6 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        // XXX BBP is phase the right name?
-        var phase = batchBuildPlugin.DEFAULT_PHASE;
-        if (_.has(options, 'phase')) {
-          if (typeof options.phase !== 'number') {
-            buildmessage.error("phase must be a number",
-                               { useMyCaller: true });
-            // recover by ignoring
-            return;
-          }
-          phase = options.phase;
-        }
-        if (! _.has(self.batchHandlerFactoriesByPhase, phase)) {
-          self.batchHandlerFactoriesByPhase[phase] = [];
-        }
-        var phaseHandlers = self.batchHandlerFactoriesByPhase[phase];
-
         // avoid nested functions like _.each so that useMyCaller works
         for (var i = 0; i < options.extensions.length; ++i) {
           var ext = options.extensions[i];
@@ -645,17 +626,11 @@ _.extend(Isopack.prototype, {
             return;
           }
 
-          // Check to see if a batch handler IN THIS PHASE uses this extension
-          // (it's OK if another batch handler at a different phase uses it).
-          if (_.any(phaseHandlers, function (otherHandler) {
-            return _.contains(otherHandler.extensions, ext);
-          })) {
+          // Check to see if another compiler uses this extension.
+          if (_.has(compilerPluginSourceExtensions, ext)) {
             buildmessage.error(
               "duplicate handler for '*." +
-                ext + "' at phase " + phase +
-                (phase === batchBuildPlugin.DEFAULT_PHASE
-                 ? " (the default phase) " : " ") +
-                "in same plugin-providing package",
+                ext + "in same plugin-providing package",
               { useMyCaller: true });
             // recover by ignoring;
             return;
@@ -663,28 +638,29 @@ _.extend(Isopack.prototype, {
         }
 
         // Unique ID within a given bundler call.  Used internally in
-        // batch-build-plugin.js, and human-readable for debugging purposes.
-        var handlerId = JSON.stringify([self.name, phase, options.extensions]);
+        // compiler-plugin.js, and human-readable for debugging purposes.
+        var compilerPluginId = JSON.stringify([self.name, options.extensions]);
+        if (_.has(self.compilerPlugins, compilerPluginId)) {
+          throw Error("duplicate plugin ID " + compilerPluginId);
+        }
 
-        // We're finally done validating!  Save the handler in its phase, and
-        // mark all its extensions as used.
-        phaseHandlers.push(
-          new batchBuildPlugin.BatchBuildHandlerFactory({
-            id: handlerId,
-            phase: phase,
+        // We're finally done validating!  Save the compiler plugin, and mark
+        // all its extensions as used.
+        self.compilerPlugins[compilerPluginId] =
+          new compilerPluginModule.CompilerPlugin({
+            id: compilerPluginId,
             extensions: options.extensions,
             archMatching: options.archMatching,
             isTemplate: options.isTemplate
-          }, factory));
+          }, factory);
         _.each(options.extensions, function (ext) {
-          self.batchExtensions[ext] = true;
+          compilerPluginSourceExtensions[ext] = true;
         });
       }
     };
 
     self.sourceHandlers = {};
-    self.batchHandlerFactoriesByPhase = {};
-    self.batchExtensions = {};
+    self.compilerPlugins = {};
 
     _.each(self.plugins, function (pluginsByArch, name) {
       var arch = archinfo.mostSpecificMatch(
@@ -829,7 +805,6 @@ _.extend(Isopack.prototype, {
 
       var prelinkFiles = [];
       var resources = [];
-      var sources = [];
 
       _.each(unibuildJson.resources, function (resource) {
         rejectBadPath(resource.file);
@@ -848,6 +823,13 @@ _.extend(Isopack.prototype, {
               files.pathJoin(unibuildBasePath, resource.sourceMap), 'utf8');
           }
           prelinkFiles.push(prelinkFile);
+        } else if (resource.type === "source") {
+          resources.push({
+            type: "source",
+            data: data,
+            path: resource.path,
+            hash: resource.hash
+          });
         } else if (_.contains(["head", "body", "css", "js", "asset"],
                               resource.type)) {
           resources.push({
@@ -861,20 +843,6 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
-      _.each(unibuildJson.sources, function (source) {
-        rejectBadPath(source.file);
-        // XXX BBP don't read sources into memory; use a different
-        // representation.
-        var data = files.readBufferWithLengthAndOffset(
-          files.pathJoin(unibuildBasePath, source.file),
-          source.length, source.offset);
-        sources.push({
-          data: data,
-          path: source.file,
-          hash: source.hash
-        });
-      });
-
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -886,8 +854,7 @@ _.extend(Isopack.prototype, {
         nodeModulesPath: nodeModulesPath,
         prelinkFiles: prelinkFiles,
         packageVariables: unibuildJson.packageVariables || [],
-        resources: resources,
-        sources: sources
+        resources: resources
       }));
     });
 
@@ -1038,8 +1005,7 @@ _.extend(Isopack.prototype, {
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
           node_modules: nodeModulesPath,
-          resources: [],
-          sources: []
+          resources: []
         };
 
         // Output 'head', 'body' resources nicely
@@ -1079,12 +1045,14 @@ _.extend(Isopack.prototype, {
           unibuildJson.resources.push({
             type: resource.type,
             file: builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, resource.servePath),
+              files.pathJoin(unibuildDir,
+                             resource.servePath || resource.path),
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
             servePath: resource.servePath || undefined,
-            path: resource.path || undefined
+            path: resource.path || undefined,
+            hash: resource.hash || undefined
           });
         });
 
@@ -1111,22 +1079,6 @@ _.extend(Isopack.prototype, {
 
           unibuildJson.resources.push(resource);
         });
-
-        // Output batch sources
-        _.each(unibuild.sources, function (source) {
-          unibuildJson.sources.push({
-            file: builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, 'sources', source.path),
-              { data: source.data }),
-            length: source.data.length,
-            offset: 0,
-            path: source.path,
-            hash: source.hash
-          });
-        });
-        if (! unibuildJson.sources.length) {
-          delete unibuildJson.sources;
-        }
 
         // If unibuild has included node_modules, copy them in
         if (needToCopyNodeModules) {
