@@ -194,3 +194,6 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+
+# .wxi file built by build-installer.sh
+Configuration.wxi

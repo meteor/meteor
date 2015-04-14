@@ -29,6 +29,7 @@
         <?endif?>
 
         <Binary Id="SevenZip"  SourceFile="Resources\7za.exe" />
+        <Binary Id="CABundle"  SourceFile="Resources\ca-bundle.crt" />
 
 
 

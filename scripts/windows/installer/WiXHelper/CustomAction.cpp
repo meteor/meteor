@@ -18,86 +18,83 @@
 #define MAX_LONG_PATH 2048
 #define LOG true
 
+#define CURL_STATICLIB true
+#include "libcurl/curl.h"
+
+void curl_set_ca_bundle(CURL *curl, MSIHANDLE hInstall);
+
+int curl_progress(void *clientp,   double dltotal,   double dlnow,   double ultotal,   double ulnow) {
+	PMSIHANDLE hActionRec = MsiCreateRecord(3);
+    PMSIHANDLE hProgressRec = MsiCreateRecord(3);
+    MSIHANDLE hInstall = (MSIHANDLE) clientp;
+
+	DWORD ulPrc = 0;
+	WCHAR wzInfo[1024] = { };
+
+	if (dlnow > 0) 
+	{
+		ulPrc  = static_cast<DWORD>(100 * dlnow / dltotal);
+		::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
+	}
+	else
+		::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...");
+
+    MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
+    MsiRecordSetString(hActionRec, 2, wzInfo);
+    MsiRecordSetString(hActionRec, 3, NULL);
+    UINT iResult = MsiProcessMessage(hInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);	
+
+    return 0;
+}
 
 
-    
+int curl_download(MSIHANDLE hInstall, wchar_t *wUrl, wchar_t *wFile)
+{
+  CURL *curl;
+  CURLcode res;
+ 
+  char url[BUF_LEN] = "";
+  wcstombs(url, wUrl, BUF_LEN);
+
+  curl_global_init(CURL_GLOBAL_DEFAULT);
+ 
+  curl = curl_easy_init();
+  if(curl) {
+
+    curl_set_ca_bundle(curl, hInstall);
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+	curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, curl_progress);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, hInstall);
+
+    FILE *fp = _wfopen(wFile, L"wb");
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, fp);
+
+    /* Perform the request, res will get the return code */ 
+    res = curl_easy_perform(curl);
+
+    /* Check for errors */ 
+    if(res != CURLE_OK) {
+    	char messageStr[1000];
+      sprintf(messageStr, "curl_easy_perform() failed: %s\n",
+              curl_easy_strerror(res));
+      MessageBoxA(NULL, messageStr, NULL, NULL);
+ 	}
+
+    /* always cleanup */ 
+    curl_easy_cleanup(curl);
+  }
+ 
+  curl_global_cleanup();
+ 
+  return 0;
+}
 
 
 
 
 using namespace std;
-
-class MyCallback : public IBindStatusCallback  
-{
-public:
-	MSIHANDLE iHInstall;
-    MyCallback() {}
-
-    ~MyCallback() { }
-
-    // This one is called by URLDownloadToFile
-    STDMETHOD(OnProgress)(/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG ulStatusCode, /* [in] */ LPCWSTR wszStatusText)
-    {
-		PMSIHANDLE hActionRec = MsiCreateRecord(3);
-        PMSIHANDLE hProgressRec = MsiCreateRecord(3);
-
-		DWORD ulPrc = 0;
-		WCHAR wzInfo[1024] = { };
-
-		if (ulProgressMax > 0) 
-		{
-			ulPrc  = static_cast<DWORD>(100 * static_cast<double>(ulProgress) / static_cast<double>(ulProgressMax));
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
-		}
-		else
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...");
-
-
- 
-        MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
-        MsiRecordSetString(hActionRec, 2, wzInfo);
-        MsiRecordSetString(hActionRec, 3, NULL);
-        UINT iResult = MsiProcessMessage(iHInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
-        if ((iResult == IDCANCEL) || (iResult == IDABORT))
-            return E_ABORT;
-
-        return S_OK;
-    }
-
-    // The rest  don't do anything...
-    STDMETHOD(OnStartBinding)(/* [in] */ DWORD dwReserved, /* [in] */ IBinding __RPC_FAR *pib)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(GetPriority)(/* [out] */ LONG __RPC_FAR *pnPriority)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnLowResource)(/* [in] */ DWORD reserved)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnStopBinding)(/* [in] */ HRESULT hresult, /* [unique][in] */ LPCWSTR szError)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(GetBindInfo)(/* [out] */ DWORD __RPC_FAR *grfBINDF, /* [unique][out][in] */ BINDINFO __RPC_FAR *pbindinfo)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnDataAvailable)(/* [in] */ DWORD grfBSCF, /* [in] */ DWORD dwSize, /* [in] */ FORMATETC __RPC_FAR *pformatetc, /* [in] */ STGMEDIUM __RPC_FAR *pstgmed)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnObjectAvailable)(/* [in] */ REFIID riid, /* [iid_is][in] */ IUnknown __RPC_FAR *punk)
-    { return E_NOTIMPL; }
-
-	// IUnknown stuff
-    STDMETHOD_(ULONG,AddRef)()
-    { return 0; }
-
-    STDMETHOD_(ULONG,Release)()
-    { return 0; }
-
-    STDMETHOD(QueryInterface)(/* [in] */ REFIID riid, /* [iid_is][out] */ void __RPC_FAR *__RPC_FAR *ppvObject)
-    { return E_NOTIMPL; }
-};
-
-
 
 
 
@@ -143,7 +140,6 @@ LExit:
 	return hr;
 }
 
-
 HRESULT ExtractBinaryToFile(
 	__in LPCWSTR wzBinaryId,
 	__in LPCWSTR wzFilePath
@@ -170,6 +166,24 @@ HRESULT ExtractBinaryToFile(
 	}
 
 	return hr;
+}
+
+void curl_set_ca_bundle(CURL *curl, MSIHANDLE hInstall) {
+  wchar_t szTmpDir[BUF_LEN] = L"";
+  DWORD nTmpDirLen = BUF_LEN;
+  HRESULT hr = S_OK;
+
+  wchar_t szCABundle[BUF_LEN] = L"";
+  MsiGetProperty(hInstall, L"TempFolder", szTmpDir, &nTmpDirLen);
+  StringCchPrintf(szCABundle, BUF_LEN, L"%s%s", szTmpDir, L"ca-bundle.crt");
+
+  DWORD pdwAttr;
+  hr = ExtractBinaryToFile(L"CABundle", szCABundle);
+
+  char *caBundle = new char[BUF_LEN];
+  wcstombs(caBundle, szCABundle, BUF_LEN);
+
+  curl_easy_setopt(curl, CURLOPT_CAINFO, caBundle);
 }
 
 
@@ -369,9 +383,7 @@ HRESULT Download_Package(
 	}
 	else
 	{
-		MyCallback pCallback;
-		pCallback.iHInstall = hInstall;
-		hr = URLDownloadToFile(NULL, szDwnUrl, szZipFile, 0, &pCallback);
+		hr = curl_download(hInstall, szDwnUrl, szZipFile);
 
 		if (FAILED(hr))
 			WcaLog(LOGMSG_STANDARD, "Failed to download %S package from url: %S", wzFriendlyName, szDwnUrl);			

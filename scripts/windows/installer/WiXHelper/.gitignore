@@ -194,3 +194,12 @@ FakesAssemblies/
 
 # Visual Studio 6 workspace options file
 *.opt
+
+# libcurl and dependencies, which are downloaded in build-installer.ps1
+libcurl.lib
+libssh2.lib
+libeay32.lib
+ssleay32.lib
+zlib.lib
+libcurl/
+
