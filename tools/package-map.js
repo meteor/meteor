@@ -126,7 +126,7 @@ _.extend(exports.PackageMap.prototype, {
 // you to override release packages with local packages.
 exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
   var toolPackageVersion = releaseVersion.tool &&
-        utils.parsePackageAtVersion(releaseVersion.tool);
+        utils.parsePackageAndVersion(releaseVersion.tool);
   if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseVersion.tool);
   var toolPackage = toolPackageVersion.package;

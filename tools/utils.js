@@ -222,9 +222,9 @@ exports.validatePackageName = function (name, options) {
 // of the form {package, version}.  For backwards compatibility,
 // an "@" separator instead of a space is also accepted.
 //
-// Lines of `.meteor/versions` and the contents of `.meteor/release`
-// are parsed by this function.
-exports.parsePackageAtVersion = function (packageAtVersionString, options) {
+// Lines of `.meteor/versions` are parsed using this function, among
+// other uses.
+exports.parsePackageAndVersion = function (packageAtVersionString, options) {
   var error = null;
   var separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
                               packageAtVersionString.lastIndexOf('@'));

@@ -2154,7 +2154,7 @@ main.registerCommand({
   }
 
   var toolPackageVersion = releaseRecord.tool &&
-        utils.parsePackageAtVersion(releaseRecord.tool);
+        utils.parsePackageAndVersion(releaseRecord.tool);
   if (!toolPackageVersion)
     throw new Error("bad tool in release: " + releaseRecord.tool);
   var toolPackage = toolPackageVersion.package;

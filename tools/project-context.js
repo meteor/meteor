@@ -963,7 +963,7 @@ _.extend(exports.PackageMapFile.prototype, {
       line = files.trimSpace(line);
       if (line === '')
         return;
-      var packageVersion = utils.parsePackageAtVersion(line, {
+      var packageVersion = utils.parsePackageAndVersion(line, {
         useBuildmessage: true,
         buildmessageFile: self.filename
       });
