@@ -84,7 +84,10 @@ if (process.platform === 'win32') {
           });
 
           // Now get the corresponding port numbers
-          child_process.exec('netstat -ano', function (error, stdout, stderr) {
+          child_process.exec(
+            'netstat -ano',
+            {maxBuffer: 1024 * 1024 * 10},
+            function (error, stdout, stderr) {
             if (error) {
               fut['throw'](new Error("Couldn't run netstat -ano: " +
                 JSON.stringify(error)));
