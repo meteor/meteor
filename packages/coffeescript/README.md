@@ -31,7 +31,7 @@ Here's how CoffeeScript works with Meteor's namespacing.
   this fit naturally inside the CoffeeScript language. If you want to
   use package-scope variables with CoffeeScript, one way is to make a
   short `.js` file that declares all of your package-scope
-  variables. They can then be used and assigned to from `.coffee`
+  variables. They can then be read, mutated, and extended in `.coffee`
   files.
 
 * If you want to share variables between `.coffee` files in the same
