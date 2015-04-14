@@ -83,13 +83,7 @@ CssTools = {
   // For performance reasons this function acts by side effect by modifying the
   // given AST without doing a deep copy.
   rewriteCssUrls: function (ast) {
-
-    var isRelative = function(path) {
-      return path && path.charAt(0) !== '/';
-    };
-
     rewriteRules(ast.stylesheet.rules);
-
   }
 };
 
@@ -100,7 +94,7 @@ var rewriteRules = function (rules) {
     //     @media (...) {
     //         .rule { url(...); }
     //     }
-    if (_.has(rule, rules)) {
+    if (_.has(rule, 'rules')) {
       rewriteRules(rule.rules);
     }
 
@@ -145,6 +139,10 @@ var rewriteRules = function (rules) {
       declaration.value = value;
     });
   });
+};
+
+var isRelative = function(path) {
+  return path && path.charAt(0) !== '/';
 };
 
 // These are duplicates of functions in tools/files.js, because we don't have
