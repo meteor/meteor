@@ -221,9 +221,10 @@ is loaded. The function `Accounts.loginServicesConfigured()` is a reactive data
 source that will return true once the login service is configured; you should
 not make login buttons visible or active until it is true.
 
-Ensure that your `ROOT_URL` matches the authorized domain/callback URL that you
-configure with the external service (for instance, if you are running Meteor
-behind a proxy server on port 80 or 443).
+Ensure that your [`$ROOT_URL`](#meteor_absoluteurl) matches the authorized
+domain and callback URL that you configure with the external service (for
+instance, if you are running Meteor behind a proxy server, `$ROOT_URL` should be
+the externally-accessible URL, not the URL inside your proxy).
 
 {{> autoApiBox "currentUser"}}
 
