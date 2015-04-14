@@ -5,7 +5,7 @@
 //   sendPing: function to call to send a ping on the connection.
 //   onTimeout: function to call to close the connection.
 
-Heartbeat = function (options) {
+DDPCommon.Heartbeat = function (options) {
   var self = this;
 
   self.heartbeatInterval = options.heartbeatInterval;
@@ -17,7 +17,7 @@ Heartbeat = function (options) {
   self._heartbeatTimeoutHandle = null;
 };
 
-_.extend(Heartbeat.prototype, {
+_.extend(DDPCommon.Heartbeat.prototype, {
   stop: function () {
     var self = this;
     self._clearHeartbeatIntervalTimer();
