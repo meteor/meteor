@@ -1,9 +1,3 @@
-// All the supported versions (for both the client and server)
-// These must be in order of preference; most favored-first
-SUPPORTED_DDP_VERSIONS = [ '1', 'pre2', 'pre1' ];
-
-LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
-
 // Instance name is this because it is usually referred to as this inside a
 // method definition
 /**
@@ -12,7 +6,7 @@ LivedataTest.SUPPORTED_DDP_VERSIONS = SUPPORTED_DDP_VERSIONS;
  * @param {Object} options
  * @instanceName this
  */
-MethodInvocation = function (options) {
+DDPCommon.MethodInvocation = function (options) {
   var self = this;
 
   // true if we're running not the actual method, but a stub (that is,
@@ -27,7 +21,7 @@ MethodInvocation = function (options) {
    * @summary Access inside a method invocation.  Boolean value, true if this invocation is a stub.
    * @locus Anywhere
    * @name  isSimulation
-   * @memberOf MethodInvocation
+   * @memberOf DDPCommon.MethodInvocation
    * @instance
    * @type {Boolean}
    */
@@ -45,7 +39,7 @@ MethodInvocation = function (options) {
    * @summary The id of the user that made this method call, or `null` if no user was logged in.
    * @locus Anywhere
    * @name  userId
-   * @memberOf MethodInvocation
+   * @memberOf DDPCommon.MethodInvocation
    * @instance
    */
   this.userId = options.userId;
@@ -60,7 +54,7 @@ MethodInvocation = function (options) {
    * @summary Access inside a method invocation. The [connection](#meteor_onconnection) that this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call.
    * @locus Server
    * @name  connection
-   * @memberOf MethodInvocation
+   * @memberOf DDPCommon.MethodInvocation
    * @instance
    */
   this.connection = options.connection;
@@ -72,11 +66,11 @@ MethodInvocation = function (options) {
   this.randomStream = null;
 };
 
-_.extend(MethodInvocation.prototype, {
+_.extend(DDPCommon.MethodInvocation.prototype, {
   /**
    * @summary Call inside a method invocation.  Allow subsequent method from this client to begin running in a new fiber.
    * @locus Server
-   * @memberOf MethodInvocation
+   * @memberOf DDPCommon.MethodInvocation
    * @instance
    */
   unblock: function () {
@@ -88,7 +82,7 @@ _.extend(MethodInvocation.prototype, {
   /**
    * @summary Set the logged in user.
    * @locus Server
-   * @memberOf MethodInvocation
+   * @memberOf DDPCommon.MethodInvocation
    * @instance
    * @param {String | null} userId The value that should be returned by `userId` on this connection.
    */
@@ -101,70 +95,3 @@ _.extend(MethodInvocation.prototype, {
   }
 });
 
-parseDDP = function (stringMessage) {
-  try {
-    var msg = JSON.parse(stringMessage);
-  } catch (e) {
-    Meteor._debug("Discarding message with invalid JSON", stringMessage);
-    return null;
-  }
-  // DDP messages must be objects.
-  if (msg === null || typeof msg !== 'object') {
-    Meteor._debug("Discarding non-object DDP message", stringMessage);
-    return null;
-  }
-
-  // massage msg to get it into "abstract ddp" rather than "wire ddp" format.
-
-  // switch between "cleared" rep of unsetting fields and "undefined"
-  // rep of same
-  if (_.has(msg, 'cleared')) {
-    if (!_.has(msg, 'fields'))
-      msg.fields = {};
-    _.each(msg.cleared, function (clearKey) {
-      msg.fields[clearKey] = undefined;
-    });
-    delete msg.cleared;
-  }
-
-  _.each(['fields', 'params', 'result'], function (field) {
-    if (_.has(msg, field))
-      msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
-  });
-
-  return msg;
-};
-
-stringifyDDP = function (msg) {
-  var copy = EJSON.clone(msg);
-  // swizzle 'changed' messages from 'fields undefined' rep to 'fields
-  // and cleared' rep
-  if (_.has(msg, 'fields')) {
-    var cleared = [];
-    _.each(msg.fields, function (value, key) {
-      if (value === undefined) {
-        cleared.push(key);
-        delete copy.fields[key];
-      }
-    });
-    if (!_.isEmpty(cleared))
-      copy.cleared = cleared;
-    if (_.isEmpty(copy.fields))
-      delete copy.fields;
-  }
-  // adjust types to basic
-  _.each(['fields', 'params', 'result'], function (field) {
-    if (_.has(copy, field))
-      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
-  });
-  if (msg.id && typeof msg.id !== 'string') {
-    throw new Error("Message id is not a string");
-  }
-  return JSON.stringify(copy);
-};
-
-// This is private but it's used in a few places. accounts-base uses
-// it to get the current user. accounts-password uses it to stash SRP
-// state in the DDP session. Meteor.setTimeout and friends clear
-// it. We can probably find a better way to factor this.
-DDP._CurrentInvocation = new Meteor.EnvironmentVariable;
