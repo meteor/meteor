@@ -30,13 +30,24 @@ Tinytest.add("templating - html scanner", function (test) {
   };
 
   // arguments are quoted strings like '"hello"'
-  var simpleTemplate = function (templateName, content) {
+  var simpleTemplate = function (templateName, templateAttributes, content) {
     // '"hello"' into '"Template.hello"'
     var viewName = templateName.slice(0, 1) + 'Template.' + templateName.slice(1);
 
-    return '\nTemplate.__checkName(' + templateName + ');\nTemplate[' + templateName +
+    var templateCode = '\nTemplate.__checkName(' + templateName + ');\nTemplate[' + templateName +
       '] = new Template(' + viewName +
-      ', (function() {\n  var view = this;\n  return ' + content + ';\n}));\n';
+      ', (function() {\n  var view = this;\n  return ' + content + ';\n}));\n\n' + 
+      'Template[' + templateName + ']["attributes"] = {};';
+
+    for(var key in templateAttributes) {
+      if (templateAttributes.hasOwnProperty(key)) {
+        var keyLiteral = JSON.stringify(key);
+        var valueLiteral = JSON.stringify(templateAttributes[key]);
+        templateCode += "\nTemplate[" + templateName + "][\"attributes\"][" + keyLiteral + "] = " + valueLiteral + ";"
+      }
+    }
+
+    return templateCode;
   };
 
   var checkResults = function(results, expectJs, expectHead) {
@@ -81,36 +92,36 @@ Tinytest.add("templating - html scanner", function (test) {
   checkResults(
     html_scanner.scan("<head>\n<title>Hello</title>\n</head>\n\n<body>World</body>\n\n"+
                       '<template name="favoritefood">\n  pizza\n</template>\n'),
-    simpleBody('"World"') + simpleTemplate('"favoritefood"', '"pizza"'),
+    simpleBody('"World"') + simpleTemplate('"favoritefood"', {}, '"pizza"'),
     "<title>Hello</title>");
 
   // one-line template
   checkResults(
     html_scanner.scan('<template name="favoritefood">pizza</template>'),
-    simpleTemplate('"favoritefood"', '"pizza"'));
+    simpleTemplate('"favoritefood"', {}, '"pizza"'));
 
   // template with other attributes
   checkResults(
     html_scanner.scan('<template foo="bar" name="favoritefood" baz="qux">'+
                       'pizza</template>'),
-    simpleTemplate('"favoritefood"', '"pizza"'));
+    simpleTemplate('"favoritefood"', { foo : "bar", baz: "qux" }, '"pizza"'));
 
   // whitespace around '=' in attributes and at end of tag
   checkResults(
     html_scanner.scan('<template foo = "bar" name  ="favoritefood" baz= "qux"  >'+
                       'pizza</template\n\n>'),
-    simpleTemplate('"favoritefood"', '"pizza"'));
+    simpleTemplate('"favoritefood"', { foo : "bar", baz: "qux" }, '"pizza"'));
 
   // whitespace around template name
   checkResults(
     html_scanner.scan('<template name=" favoritefood  ">pizza</template>'),
-    simpleTemplate('"favoritefood"', '"pizza"'));
+    simpleTemplate('"favoritefood"', {}, '"pizza"'));
 
   // single quotes around template name
   checkResults(
     html_scanner.scan('<template name=\'the "cool" template\'>'+
                       'pizza</template>'),
-    simpleTemplate('"the \\"cool\\" template"', '"pizza"'));
+    simpleTemplate('"the \\"cool\\" template"', {}, '"pizza"'));
 
   checkResults(html_scanner.scan('<body foo="bar">\n  Hello\n</body>'),
     "\nMeteor.startup(function() { $('body').attr({\"foo\":\"bar\"}); });\n" + simpleBody('"Hello"'));
