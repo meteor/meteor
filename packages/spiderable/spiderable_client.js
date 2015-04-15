@@ -16,6 +16,9 @@
 // it then polls until all subscriptions are ready.
 
 Spiderable._initialSubscriptionsStarted = false;
+Spiderable.ready = function(){
+  return DDP._allSubscriptionsReady();
+};
 
 var startupCallbacksDone = function () {
   Spiderable._initialSubscriptionsStarted = true;
