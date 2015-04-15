@@ -26,6 +26,10 @@
   Compression is supported on the client side by Meteor's Node DDP client and by
   browsers including Chrome, Safari, and Firefox 37.
 
+* The `ddp` package has been split into `ddp-client` and `ddp-server` packages;
+  using `ddp` is equivalent to using both. This allows you to use the Node DDP
+  client without adding the DDP server to your app.  #4191 #3452
+
 
 ### Isobuild
 
