@@ -823,13 +823,18 @@ _.extend(Connection.prototype, {
 
     // If an exception occurred in a stub, and we're ignoring it
     // because we're doing an RPC and want to use what the server
-    // returns instead, log it so the developer knows.
+    // returns instead, log it so the developer knows
+    // (unless they explicitly ask to see the error).
     //
     // Tests can set the 'expected' flag on an exception so it won't
     // go to log.
-    if (exception && !exception.expected) {
-      Meteor._debug("Exception while simulating the effect of invoking '" +
-                    name + "'", exception, exception.stack);
+    if (exception) {
+      if (options.throwStubExceptions) {
+        throw exception;
+      } else if (!exception.expected) {
+        Meteor._debug("Exception while simulating the effect of invoking '" +
+          name + "'", exception, exception.stack);
+      }
     }
 
 
