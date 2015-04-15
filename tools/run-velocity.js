@@ -18,7 +18,7 @@ var _ = require('underscore');
 // 4. Print the results and exit with the appropriate exit code.
 var runVelocity = function (url) {
   var unipackages = isopackets.load('ddp');
-  var DDP = unipackages.ddp.DDP;
+  var DDP = unipackages['ddp-client'].DDP;
 
   // XXX maybe a startup message so users know the tests are running.
 

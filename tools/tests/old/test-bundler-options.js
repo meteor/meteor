@@ -72,7 +72,7 @@ var runTest = function () {
                                         "programs", "server", "node_modules")));
     // yes package node_modules directory
     assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "ddp"))
+      tmpOutputDir, "programs", "server", "npm", "ddp-server"))
            .isDirectory());
 
     // verify that contents are minified
@@ -140,7 +140,7 @@ var runTest = function () {
       // package node_modules directory also a symlink
       // XXX might be breaking this
       assert(files.lstat(files.pathJoin(
-        tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
+        tmpOutputDir, "programs", "server", "npm", "ddp-server", "node_modules"))
              .isSymbolicLink());
     });
   }

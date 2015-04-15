@@ -8,7 +8,7 @@
  */
 
 var path = Npm.require('path');
-var MongoDB = Npm.require('mongodb');
+var MongoDB = NpmModuleMongodb;
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
@@ -17,7 +17,7 @@ MongoTest = {};
 
 MongoInternals.NpmModules = {
   mongodb: {
-    version: Npm.require('mongodb/package.json').version,
+    version: NpmModuleMongodbVersion,
     module: MongoDB
   }
 };

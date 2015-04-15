@@ -80,7 +80,7 @@ toWebsocketUrl = function (url) {
 
 LivedataTest.toSockjsUrl = toSockjsUrl;
 
-
+ 
 _.extend(LivedataTest.ClientStream.prototype, {
 
   // Register for callbacks.

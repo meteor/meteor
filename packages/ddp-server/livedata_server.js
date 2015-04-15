@@ -113,7 +113,7 @@ var SessionCollectionView = function (collectionName, sessionCallbacks) {
   self.callbacks = sessionCallbacks;
 };
 
-LivedataTest.SessionCollectionView = SessionCollectionView;
+DDPServer._SessionCollectionView = SessionCollectionView;
 
 
 _.extend(SessionCollectionView.prototype, {
@@ -291,7 +291,7 @@ var Session = function (server, version, socket, options) {
     httpHeaders: self.socket.headers
   };
 
-  socket.send(stringifyDDP({msg: 'connected',
+  socket.send(DDPCommon.stringifyDDP({msg: 'connected',
                             session: self.id}));
   // On initial connect, spin up all the universal publishers.
   Fiber(function () {
@@ -299,7 +299,7 @@ var Session = function (server, version, socket, options) {
   }).run();
 
   if (version !== 'pre1' && options.heartbeatInterval !== 0) {
-    self.heartbeat = new Heartbeat({
+    self.heartbeat = new DDPCommon.Heartbeat({
       heartbeatInterval: options.heartbeatInterval,
       heartbeatTimeout: options.heartbeatTimeout,
       onTimeout: function () {
@@ -460,8 +460,8 @@ _.extend(Session.prototype, {
     var self = this;
     if (self.socket) {
       if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", stringifyDDP(msg));
-      self.socket.send(stringifyDDP(msg));
+        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
+      self.socket.send(DDPCommon.stringifyDDP(msg));
     }
   },
 
@@ -634,7 +634,7 @@ _.extend(Session.prototype, {
         self._setUserId(userId);
       };
 
-      var invocation = new MethodInvocation({
+      var invocation = new DDPCommon.MethodInvocation({
         isSimulation: false,
         userId: self.userId,
         setUserId: setUserId,
@@ -1255,7 +1255,7 @@ Server = function (options) {
       var msg = {msg: 'error', reason: reason};
       if (offendingMessage)
         msg.offendingMessage = offendingMessage;
-      socket.send(stringifyDDP(msg));
+      socket.send(DDPCommon.stringifyDDP(msg));
     };
 
     socket.on('data', function (raw_msg) {
@@ -1264,7 +1264,7 @@ Server = function (options) {
       }
       try {
         try {
-          var msg = parseDDP(raw_msg);
+          var msg = DDPCommon.parseDDP(raw_msg);
         } catch (err) {
           sendError('Parse error');
           return;
@@ -1329,21 +1329,21 @@ _.extend(Server.prototype, {
           _.isArray(msg.support) &&
           _.all(msg.support, _.isString) &&
           _.contains(msg.support, msg.version))) {
-      socket.send(stringifyDDP({msg: 'failed',
-                                version: SUPPORTED_DDP_VERSIONS[0]}));
+      socket.send(DDPCommon.stringifyDDP({msg: 'failed',
+                                version: DDPCommon.SUPPORTED_DDP_VERSIONS[0]}));
       socket.close();
       return;
     }
 
     // In the future, handle session resumption: something like:
     //  socket._meteorSession = self.sessions[msg.session]
-    var version = calculateVersion(msg.support, SUPPORTED_DDP_VERSIONS);
+    var version = calculateVersion(msg.support, DDPCommon.SUPPORTED_DDP_VERSIONS);
 
     if (msg.version !== version) {
       // The best version to use (according to the client's stated preferences)
       // is not the one the client is trying to use. Inform them about the best
       // version to use.
-      socket.send(stringifyDDP({msg: 'failed', version: version}));
+      socket.send(DDPCommon.stringifyDDP({msg: 'failed', version: version}));
       socket.close();
       return;
     }
@@ -1518,12 +1518,12 @@ _.extend(Server.prototype, {
         connection = currentInvocation.connection;
       }
 
-      var invocation = new MethodInvocation({
+      var invocation = new DDPCommon.MethodInvocation({
         isSimulation: false,
         userId: userId,
         setUserId: setUserId,
         connection: connection,
-        randomSeed: makeRpcSeed(currentInvocation, name)
+        randomSeed: DDPCommon.makeRpcSeed(currentInvocation, name)
       });
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {
@@ -1572,7 +1572,7 @@ var calculateVersion = function (clientSupportedVersions,
   return correctVersion;
 };
 
-LivedataTest.calculateVersion = calculateVersion;
+DDPServer._calculateVersion = calculateVersion;
 
 
 // "blind" exceptions other than those that were deliberately thrown to signal

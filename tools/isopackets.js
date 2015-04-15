@@ -37,7 +37,7 @@ var fiberHelpers = require('./fiber-helpers.js');
 // process if any of their sources have changed.
 //
 // Example usage:
-//   var DDP = require('./isopackets.js').load('ddp').ddp.DDP;
+//   var DDP = require('./isopackets.js').load('ddp')['ddp-client'].DDP;
 //   var reverse = DDP.connect('reverse.meteor.com');
 //   Console.info(reverse.call('reverse', 'hello world'));
 
@@ -49,8 +49,8 @@ var ISOPACKETS = {
   // the first to be rebuilt, because it might need to be loaded as part
   // of building other isopackets.
   'js-analyze': ['js-analyze'],
-  'ddp': ['ddp'],
-  'mongo': ['mongo'],
+  'ddp': ['ddp-client'],
+  'mongo': ['npm-mongo'],
   'ejson': ['ejson'],
   'minifiers': ['minifiers'],
   'constraint-solver': ['constraint-solver'],
