@@ -533,7 +533,7 @@ _.extend(PackageSource.prototype, {
                 if (!e.versionParserError)
                   throw e;
                 buildmessage.error(
-                  "The package version " + self.version + " (specified with Package.describe) "
+                  "The package version " + value + " (specified with Package.describe) "
                     + "is not a valid Meteor package version.\n"
                     + "Valid package versions are semver (see http://semver.org/), "
                     + "optionally followed by '_' and an integer greater or equal to 1.");
