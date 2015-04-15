@@ -42,7 +42,7 @@ if (Meteor.isServer) {
   Tinytest.add("livedata - version negotiation", function (test) {
     var versionCheck = function (clientVersions, serverVersions, expected) {
       test.equal(
-        LivedataTest.calculateVersion(clientVersions, serverVersions),
+        DDPServer._calculateVersion(clientVersions, serverVersions),
         expected);
     };
 
