@@ -3,16 +3,7 @@ Package.describe({
   version: '1.2.0'
 });
 
-// We use 'faye-websocket' for connections in server-to-server DDP, mostly
-// because it's the same library used as a server in sockjs, and it's easiest to
-// deal with a single websocket implementation.  (Plus, its maintainer is easy
-// to work with on pull requests.)
-//
-// (By listing faye-websocket first, it's more likely that npm deduplication
-// will prevent a second copy of faye-websocket from being installed inside
-// sockjs.)
 Npm.depends({
-  "faye-websocket": "0.9.4",
   "permessage-deflate": "0.1.3",
   sockjs: "0.3.14"
 });
