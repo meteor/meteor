@@ -355,6 +355,26 @@ if (Meteor.isServer) {
   });
 }
 
+/// Helpers for "livedata - publish overlapping cursors in child subscriptions"
+Three = new Mongo.Collection("collectionThree");
+if (Meteor.isServer) {
+  Three.remove({});
+  Three.insert({name: "value1"});
+  Three.insert({name: "value2"});
+
+  Meteor.publish("overlappingPublish", function () {
+    this.publishChild(function() {
+      return Three.find({name: "value1"});
+    });
+    this.publishChild(function() {
+      return Three.find({name: "value2"});
+    });
+    this.publishChild(function() {
+      return Three.find();
+    });
+    this.ready();
+  });
+}
 
 /// Helper for "livedata - result by value"
 var resultByValueArrays = {};

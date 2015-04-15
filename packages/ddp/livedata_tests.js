@@ -714,6 +714,17 @@ if (Meteor.isClient) {
       });
     }
   ]);
+
+  testAsyncMulti("livedata - publish overlapping cursors in child subscriptions", [
+    function (test, expect) {
+      Meteor.subscribe("overlappingPublish", {
+        onReady: expect(function () {
+          test.equal(Three.find().count(), 2);
+        }),
+        onError: failure()
+      });
+    },
+  ]);
 }
 
 var selfUrl = Meteor.isServer
