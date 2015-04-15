@@ -524,7 +524,7 @@ var launchMongo = function (options) {
     try {
       // Load mongo so we'll be able to talk to it.
       var mongoNpmModule =
-            isopackets.load('mongo').mongo.MongoInternals.NpmModule;
+            isopackets.load('mongo')['npm-mongo'].NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(
