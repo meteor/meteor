@@ -35,11 +35,7 @@ StreamServer = function () {
   // Because we are installing directly onto WebApp.httpServer instead of using
   // WebApp.app, we have to process the path prefix ourselves.
   self.prefix = pathPrefix + '/sockjs';
-  // routepolicy is only a weak dependency, because we don't need it if we're
-  // just doing server-to-server DDP as a client.
-  if (Package.routepolicy) {
-    Package.routepolicy.RoutePolicy.declare(self.prefix + '/', 'network');
-  }
+  RoutePolicy.declare(self.prefix + '/', 'network');
 
   // set up sockjs
   var sockjs = Npm.require('sockjs');
@@ -75,16 +71,16 @@ StreamServer = function () {
   }
 
   self.server = sockjs.createServer(serverOptions);
-  if (!Package.webapp) {
-    throw new Error("Cannot create a DDP server without the webapp package");
-  }
+
   // Install the sockjs handlers, but we want to keep around our own particular
   // request handler that adjusts idle timeouts while we have an outstanding
   // request.  This compensates for the fact that sockjs removes all listeners
   // for "request" to add its own.
-  Package.webapp.WebApp.httpServer.removeListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
-  self.server.installHandlers(Package.webapp.WebApp.httpServer);
-  Package.webapp.WebApp.httpServer.addListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
+  WebApp.httpServer.removeListener(
+    'request', WebApp._timeoutAdjustmentRequestCallback);
+  self.server.installHandlers(WebApp.httpServer);
+  WebApp.httpServer.addListener(
+    'request', WebApp._timeoutAdjustmentRequestCallback);
 
   // Support the /websocket endpoint
   self._redirectWebsocketEndpoint();
@@ -141,7 +137,7 @@ _.extend(StreamServer.prototype, {
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
     _.each(['request', 'upgrade'], function(event) {
-      var httpServer = Package.webapp.WebApp.httpServer;
+      var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
 

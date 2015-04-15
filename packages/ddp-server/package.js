@@ -20,11 +20,7 @@ Package.onUse(function (api) {
   api.use('ddp-client', 'server');
   api.imply('ddp-client');
 
-  // It is OK to use this package on a server architecture without making a
-  // server (in order to do server-to-server DDP as a client). So these are only
-  // included as weak dependencies.
-  // XXX split this package into multiple packages or multiple slices instead
-  api.use(['webapp', 'routepolicy'], 'server', {weak: true});
+  api.use(['webapp', 'routepolicy'], 'server');
 
   // Detect whether or not the user wants us to audit argument checks.
   api.use(['audit-argument-checks'], 'server', {weak: true});
