@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Meteor's latency-compensated distributed data framework",
+  summary: "Code shared beween ddp-client and ddp-server",
   version: '1.2.0'
 });
 
