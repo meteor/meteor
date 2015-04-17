@@ -47,6 +47,12 @@ Package.onUse(function (api) {
   api.addFiles('accounts_client.js', 'client');
   api.addFiles('url_client.js', 'client');
   api.addFiles('localstorage_token.js', 'client');
+
+  // These files instantiate the default Accounts instance on the server
+  // and the client, so they must be evaluated last to ensure that the
+  // prototypes have been fully populated.
+  api.addFiles('globals_server.js', 'server');
+  api.addFiles('globals_client.js', 'client');
 });
 
 Package.onTest(function (api) {
