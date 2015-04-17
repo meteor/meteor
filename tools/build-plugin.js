@@ -105,7 +105,7 @@ _.extend(exports.BuildPluginProcessor.prototype, {
       });
     });
 
-      // Now actually run the handlers.
+    // Now actually run the handlers.
     _.each(self.buildPlugins, function (buildPluginInfo, id) {
       var buildPlugin = buildPluginInfo.buildPlugin;
       var resourceSlots = buildPluginInfo.resourceSlots;
