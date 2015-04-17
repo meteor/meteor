@@ -4,7 +4,7 @@ var util = require('util');
 var _ = require('underscore');
 
 var LinterPluginDefinition = function () {
-  CompilerPluginDefinition.call(this);
+  CompilerPluginDefinition.apply(this, arguments);
 };
 
 util.inherits(LinterPluginDefinition, CompilerPluginDefinition);
@@ -25,6 +25,8 @@ var LintingFile = function () {
 util.inherits(LintingFile, buildPluginModule.InputFile);
 
 _.extend(LintingFile.prototype, {
-  // any extra APIs?
+  getPackageImports: function () {
+    // XXX
+  }
 });
 

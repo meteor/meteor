@@ -530,6 +530,7 @@ _.extend(Isopack.prototype, {
   ensurePluginsInitialized: Profile(
     "Isopack#ensurePluginsInitialized", function () {
     var self = this;
+    var isopack = self;
 
     if (self._pluginsInitialized)
       return;
@@ -682,6 +683,7 @@ _.extend(Isopack.prototype, {
       // XXX BBP doc
       registerLinter: function (options, factory) {
         var self = this;
+        isopack.sourceProcessors.linter = isopack.sourceProcessors.linter || {};
         self._registerSourceProcessor(options, factory, {
           type: "linter",
           pluginDefinitionClass: linterPluginModule.LinterPluginDefinition,

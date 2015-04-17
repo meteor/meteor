@@ -348,17 +348,21 @@ _.extend(exports.InputFile.prototype, {
     var self = this;
     return self._resourceSlot.inputResource.data;
   },
+  getContentsAsString: function () {
+    var self = this;
+    return self.getContentsAsBuffer().toString('utf8');
+  },
   getPathInPackage: function () {
     var self = this;
     return self._resourceSlot.inputResource.path;
   },
   getBasename: function () {
     var self = this;
-    return files.pathBasename(self.xxxPathInPackage());
+    return files.pathBasename(self.getPathInPackage());
   },
   getDirname: function () {
     var self = this;
-    return files.pathDirname(self.xxxPathInPackage());
+    return files.pathDirname(self.getPathInPackage());
   },
   // XXX is this null for app?
   getPackageName: function () {
