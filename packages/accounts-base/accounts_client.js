@@ -19,6 +19,9 @@ AccountsClient = function AccountsClient(options) {
 
   // Defined in url_client.js.
   this._initUrlMatching();
+
+  // Defined in localstorage_token.js.
+  this._initLocalStorage();
 };
 
 var Ap = AccountsClient.prototype =
@@ -138,11 +141,11 @@ Ap.callLoginMethod = function (options) {
       self.connection.onReconnect = function () {
         reconnected = true;
         // If our token was updated in storage, use the latest one.
-        var storedToken = storedLoginToken();
+        var storedToken = self._storedLoginToken();
         if (storedToken) {
           result = {
             token: storedToken,
-            tokenExpires: storedLoginTokenExpires()
+            tokenExpires: self._storedLoginTokenExpires()
           };
         }
         if (! result.tokenExpires)
@@ -157,7 +160,7 @@ Ap.callLoginMethod = function (options) {
             // need to show a logging-in animation.
             _suppressLoggingIn: true,
             userCallback: function (error) {
-              var storedTokenNow = storedLoginToken();
+              var storedTokenNow = self._storedLoginToken();
               if (error) {
                 // If we had a login error AND the current stored token is the
                 // one that we tried to log in with, then declare ourselves
@@ -234,13 +237,13 @@ Ap.callLoginMethod = function (options) {
 };
 
 Ap.makeClientLoggedOut = function () {
-  this.unstoreLoginToken();
+  this._unstoreLoginToken();
   this.connection.setUserId(null);
   this.connection.onReconnect = null;
 };
 
 Ap.makeClientLoggedIn = function (userId, token, tokenExpires) {
-  this.storeLoginToken(userId, token, tokenExpires);
+  this._storeLoginToken(userId, token, tokenExpires);
   this.connection.setUserId(userId);
 };
 
@@ -301,7 +304,11 @@ Ap.logoutOtherClients = function (callback) {
     { wait: true },
     function (err, result) {
       if (! err) {
-        self.storeLoginToken(self.userId(), result.token, result.tokenExpires);
+        self._storeLoginToken(
+          self.userId(),
+          result.token,
+          result.tokenExpires
+        );
       }
     }
   );
