@@ -17,18 +17,14 @@ _.extend(exports.CompilerPluginDefinition.prototype, {
   }
 });
 
-// This is the object presented to the user's plugin code.
-// XXX BBP actually design its API
-// XXX BBP decide if the API always presents / to the code (it probably
-// should because you're not supposed to do your own IO anyway)
-var InputFile = function (resourceSlot) {
-  var self = this;
-  // We use underscored attributes here because this is user-visible code and we
-  // don't want users to be accessing anything that we don't document.
-  self._resourceSlot = resourceSlot;
+var InputFile = function () {
+  buildPluginModule.InputFile.apply(this, arguments);
 };
+
+util.inherits(InputFile, buildPluginModule.InputFile);
+
 _.extend(InputFile.prototype, {
-  // XXX BBP we should have a better API
+  // XXX BBP remove these, they are duplicated in build-plugin.js
   xxxContentsAsBuffer: function () {
     var self = this;
     return self._resourceSlot.inputResource.data;

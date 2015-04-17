@@ -12,6 +12,7 @@ var isopackCacheModule = require('./isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
 var compilerPluginModule = require('./compiler-plugin.js');
+var linterPluginModule = require('./linter-plugin.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
@@ -533,7 +534,7 @@ _.extend(Isopack.prototype, {
     if (self._pluginsInitialized)
       return;
 
-    var compilerPluginSourceExtensions = {};
+    var pluginSourceExtensions = {};
 
     /**
      * @global
@@ -580,7 +581,8 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        if (_.has(compilerPluginSourceExtensions, extension)) {
+        pluginSourceExtensions.compiler = pluginSourceExtensions.compiler || {};
+        if (_.has(pluginSourceExtensions.compiler, extension)) {
           buildmessage.error(
             "duplicate handler for '*." +
               extension + "'; may not use the same extension with " +
@@ -598,70 +600,93 @@ _.extend(Isopack.prototype, {
         };
       },
 
-      // XXX BBP doc
-      registerCompiler: function (options, factory) {
+      _registerSourceProcessor: function (options, factory, additionalOptions) {
         if (! (options && options.extensions &&
                options.extensions instanceof Array &&
                options.extensions.length > 0)) {
           buildmessage.error("registerBatchHandler call must specify a "
                              + "non-empty array of extensions",
-                             { useMyCaller: true });
+                             { useMyCaller: 3 });
           // recover by ignoring
           return;
         }
         if (typeof factory !== 'function') {
           buildmessage.error("registerBatchHandler call must specify a " +
                              "factory function",
-                             { useMyCaller: true });
+                             { useMyCaller: 3 });
           // recover by ignoring
           return;
         }
 
-        // avoid nested functions like _.each so that useMyCaller works
-        for (var i = 0; i < options.extensions.length; ++i) {
-          var ext = options.extensions[i];
+        var type = additionalOptions.type;
+        pluginSourceExtensions[type] = pluginSourceExtensions[type] || {};
 
-          // Check to see if a legacy handler uses this extension.
-          if (_.has(self.sourceHandlers, ext)) {
-            buildmessage.error(
-              "duplicate handler for '*." +
-                ext + "'; may not use the same extension with " +
-                "registerSourceHandler and registerBatchHandler in the " +
-                "same per plugin-providing package",
-              { useMyCaller: true });
-            // recover by ignoring
-            return;
-          }
+        if (! additionalOptions.skipUniqExtCheck) {
+          _.each(options.extensions, function (ext) {
+            // Check to see if a legacy handler uses this extension.
+            if (_.has(self.sourceHandlers, ext)) {
+              buildmessage.error(
+                "duplicate handler for '*." +
+                  ext + "'; may not use the same extension with " +
+                  "registerSourceHandler and registerBatchHandler in the " +
+                  "same per plugin-providing package",
+                { useMyCaller: 4 });
+              // recover by ignoring
+              return;
+            }
 
-          // Check to see if another compiler uses this extension.
-          if (_.has(compilerPluginSourceExtensions, ext)) {
-            buildmessage.error(
-              "duplicate handler for '*." +
-                ext + "in same plugin-providing package",
-              { useMyCaller: true });
-            // recover by ignoring;
-            return;
-          }
+            // Check to see if another source processor uses this extension.
+            if (_.has(pluginSourceExtensions[type], ext)) {
+              buildmessage.error(
+                "duplicate handler for '*." +
+                  ext + "in same plugin-providing package",
+                { useMyCaller: 4 });
+              // recover by ignoring;
+              return;
+            }
+          });
         }
 
         // Unique ID within a given bundler call.  Used internally in
-        // compiler-plugin.js, and human-readable for debugging purposes.
-        var compilerPluginId = JSON.stringify([self.name, options.extensions]);
-        if (_.has(self.sourceProcessors.compiler, compilerPluginId)) {
-          throw Error("duplicate plugin ID " + compilerPluginId);
+        // compiler-plugin.js and others, and human-readable for debugging
+        // purposes.
+        var processorPluginId = JSON.stringify([self.name, options.extensions]);
+        if (_.has(self.sourceProcessors[type], processorPluginId)) {
+          throw Error("duplicate plugin ID " + processorPluginId);
         }
 
-        // We're finally done validating!  Save the compiler plugin, and mark
+        // We're finally done validating!  Save the processor plugin, and mark
         // all its extensions as used.
-        self.sourceProcessors.compiler[compilerPluginId] =
-          new compilerPluginModule.CompilerPluginDefinition({
-            id: compilerPluginId,
+        self.sourceProcessors[type][processorPluginId] =
+          new additionalOptions.pluginDefinitionClass({
+            id: processorPluginId,
             extensions: options.extensions,
             archMatching: options.archMatching,
             isTemplate: options.isTemplate
           }, factory);
         _.each(options.extensions, function (ext) {
-          compilerPluginSourceExtensions[ext] = true;
+          pluginSourceExtensions[ext] = true;
+        });
+      },
+
+      // XXX BBP doc
+      registerCompiler: function (options, factory) {
+        var self = this;
+        self._registerSourceProcessor(options, factory, {
+          type: "compiler",
+          pluginDefinitionClass: compilerPluginModule.CompilerPluginDefinition,
+          skipUniqExtCheck: false
+        });
+      },
+
+      // XXX BBP doc
+      registerLinter: function (options, factory) {
+        var self = this;
+        self._registerSourceProcessor(options, factory, {
+          type: "linter",
+          pluginDefinitionClass: linterPluginModule.LinterPluginDefinition,
+          // Several linters can handle the same extension
+          skipUniqExtCheck: true
         });
       }
     };

@@ -1,10 +1,30 @@
+var CompilerPluginDefinition = require('./compiler-plugin.js').CompilerPluginDefinition;
+var buildPluginModule = require('./build-plugin.js');
 var util = require('util');
+var _ = require('underscore');
 
-var LinterPluginProcessor = function () {
-  CompilerPluginProcessor.call(this);
+var LinterPluginDefinition = function () {
+  CompilerPluginDefinition.call(this);
 };
 
-util.inherits(LinterPluginProcessor, CompilerPluginProcessor);
+util.inherits(LinterPluginDefinition, CompilerPluginDefinition);
 
-exports.LinterPluginProcessor = LinterPluginProcessor;
+exports.LinterPluginDefinition = LinterPluginDefinition;
+
+_.extend(exports.LinterPluginDefinition.prototype, {
+  getInputFileClass: function () {
+    return LintingFile;
+  }
+});
+
+
+var LintingFile = function () {
+  buildPluginModule.InputFile.apply(this, arguments);
+};
+
+util.inherits(LintingFile, buildPluginModule.InputFile);
+
+_.extend(LintingFile.prototype, {
+  // any extra APIs?
+});
 

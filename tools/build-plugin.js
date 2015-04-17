@@ -332,4 +332,42 @@ _.extend(PackageSourceBatch.prototype, {
   }
 });
 
+// This is the base class of the object presented to the user's plugin code.
+// XXX BBP actually design its API
+// XXX BBP decide if the API always presents / to the code (it probably
+// should because you're not supposed to do your own IO anyway)
+exports.InputFile = function (resourceSlot) {
+  var self = this;
+  // We use underscored attributes here because this is user-visible code and we
+  // don't want users to be accessing anything that we don't document.
+  self._resourceSlot = resourceSlot;
+};
+_.extend(exports.InputFile.prototype, {
+  // XXX BBP refine this API and document it
+  getContentsAsBuffer: function () {
+    var self = this;
+    return self._resourceSlot.inputResource.data;
+  },
+  getPathInPackage: function () {
+    var self = this;
+    return self._resourceSlot.inputResource.path;
+  },
+  getBasename: function () {
+    var self = this;
+    return files.pathBasename(self.xxxPathInPackage());
+  },
+  getDirname: function () {
+    var self = this;
+    return files.pathDirname(self.xxxPathInPackage());
+  },
+  // XXX is this null for app?
+  getPackageName: function () {
+    var self = this;
+    return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
+  },
+  error: function (options) {
+    var self = this;
+    // XXX BBP handle errors here
+  }
+});
 
