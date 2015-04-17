@@ -146,7 +146,7 @@ _.extend(PackageAPI.prototype, {
    * packages from a Meteor release with `versionsFrom`, you may leave
    * off version names for core packages. You may also specify constraints,
    * such as `my:forms@=1.0.0` (this package demands `my:forms` at `1.0.0` exactly),
-   * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.x.y`, or exactly `2.0.1`).
+   * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.0.x`, or exactly `2.0.1`).
    * @param {String} [architecture] If you only use the package on the
    * server (or the client), you can pass in the second argument (e.g.,
    * `'server'`, `'client'`, `'web.browser'`, `'web.cordova'`) to specify
