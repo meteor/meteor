@@ -1,26 +1,43 @@
+// @summary Constructor for AccountsClient instances. Available only on
+//          the client for now, though server code might also want to
+//          create a client connection to an accounts server.
+// @locus Client
+// @param options {Object} an object with fields:
+// - connection {Object} Optional DDP connection to reuse.
+// - ddpUrl {String} Optional URL for creating a new DDP connection.
+AccountsClient = function AccountsClient(options) {
+  AccountsCommon.call(this, options);
+
+  this._loggingIn = false;
+  this._loggingInDeps = new Tracker.Dependency;
+
+  this._loginServicesHandle =
+    this.connection.subscribe("meteor.loginServiceConfiguration");
+
+  this._pageLoadLoginCallbacks = [];
+  this._pageLoadLoginAttemptInfo = null;
+};
+
+var Ap = AccountsClient.prototype =
+  Object.create(AccountsCommon.prototype);
+Ap.constructor = AccountsClient;
+
 ///
 /// CURRENT USER
 ///
 
-// This is reactive.
-
-/**
- * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
- */
-Meteor.userId = function () {
-  return Accounts.connection.userId();
+// @override
+Ap.userId = function () {
+  return this.connection.userId();
 };
 
-var loggingIn = false;
-var loggingInDeps = new Tracker.Dependency;
 // This is mostly just called within this file, but Meteor.loginWithPassword
 // also uses it to make loggingIn() be true during the beginPasswordExchange
 // method call too.
-Accounts._setLoggingIn = function (x) {
-  if (loggingIn !== x) {
-    loggingIn = x;
-    loggingInDeps.changed();
+Ap._setLoggingIn = function (x) {
+  if (this._loggingIn !== x) {
+    this._loggingIn = x;
+    this._loggingInDeps.changed();
   }
 };
 
@@ -29,21 +46,12 @@ Accounts._setLoggingIn = function (x) {
  * @locus Client
  */
 Meteor.loggingIn = function () {
-  loggingInDeps.depend();
-  return loggingIn;
+  return Accounts.loggingIn();
 };
 
-// This calls userId, which is reactive.
-
-/**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
- * @locus Anywhere but publish functions
- */
-Meteor.user = function () {
-  var userId = Meteor.userId();
-  if (!userId)
-    return null;
-  return Meteor.users.findOne(userId);
+Ap.loggingIn = function () {
+  this._loggingInDeps.depend();
+  return this._loggingIn;
 };
 
 ///
@@ -74,26 +82,30 @@ Meteor.user = function () {
 // - userCallback: Will be called with no arguments once the user is fully
 //                 logged in, or with the error on error.
 //
-Accounts.callLoginMethod = function (options) {
+Ap.callLoginMethod = function (options) {
+  var self = this;
+
   options = _.extend({
     methodName: 'login',
     methodArguments: [{}],
     _suppressLoggingIn: false
   }, options);
+
   // Set defaults for callback arguments to no-op functions; make sure we
   // override falsey values too.
   _.each(['validateResult', 'userCallback'], function (f) {
     if (!options[f])
       options[f] = function () {};
   });
+
   // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
   var loginCallbacks = _.once(function (error) {
     if (!error) {
-      onLoginHook.each(function (callback) {
+      self._onLoginHook.each(function (callback) {
         callback();
       });
     } else {
-      onLoginFailureHook.each(function (callback) {
+      self._onLoginFailureHook.each(function (callback) {
         callback();
       });
     }
@@ -118,9 +130,9 @@ Accounts.callLoginMethod = function (options) {
   // will occur before the callback from the resume login call.)
   var onResultReceived = function (err, result) {
     if (err || !result || !result.token) {
-      Accounts.connection.onReconnect = null;
+      self.connection.onReconnect = null;
     } else {
-      Accounts.connection.onReconnect = function () {
+      self.connection.onReconnect = function () {
         reconnected = true;
         // If our token was updated in storage, use the latest one.
         var storedToken = storedLoginToken();
@@ -131,11 +143,11 @@ Accounts.callLoginMethod = function (options) {
           };
         }
         if (! result.tokenExpires)
-          result.tokenExpires = Accounts._tokenExpiration(new Date());
-        if (Accounts._tokenExpiresSoon(result.tokenExpires)) {
-          makeClientLoggedOut();
+          result.tokenExpires = self._tokenExpiration(new Date());
+        if (self._tokenExpiresSoon(result.tokenExpires)) {
+          self.makeClientLoggedOut();
         } else {
-          Accounts.callLoginMethod({
+          self.callLoginMethod({
             methodArguments: [{resume: result.token}],
             // Reconnect quiescence ensures that the user doesn't see an
             // intermediate state before the login method finishes. So we don't
@@ -162,7 +174,7 @@ Accounts.callLoginMethod = function (options) {
                 // periodic localStorage poll will call `makeClientLoggedOut`
                 // eventually if another tab wiped the token from storage.
                 if (storedTokenNow && storedTokenNow === result.token) {
-                  makeClientLoggedOut();
+                  self.makeClientLoggedOut();
                 }
               }
               // Possibly a weird callback to call, but better than nothing if
@@ -190,7 +202,7 @@ Accounts.callLoginMethod = function (options) {
     // Note that we need to call this even if _suppressLoggingIn is true,
     // because it could be matching a _setLoggingIn(true) from a
     // half-completed pre-reconnect login method.
-    Accounts._setLoggingIn(false);
+    self._setLoggingIn(false);
     if (error || !result) {
       error = error || new Error(
         "No result from call to " + options.methodName);
@@ -205,28 +217,28 @@ Accounts.callLoginMethod = function (options) {
     }
 
     // Make the client logged in. (The user data should already be loaded!)
-    makeClientLoggedIn(result.id, result.token, result.tokenExpires);
+    self.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
     loginCallbacks();
   };
 
   if (!options._suppressLoggingIn)
-    Accounts._setLoggingIn(true);
-  Accounts.connection.apply(
+    self._setLoggingIn(true);
+  self.connection.apply(
     options.methodName,
     options.methodArguments,
     {wait: true, onResultReceived: onResultReceived},
     loggedInAndDataReadyCallback);
 };
 
-makeClientLoggedOut = function() {
-  unstoreLoginToken();
-  Accounts.connection.setUserId(null);
-  Accounts.connection.onReconnect = null;
+Ap.makeClientLoggedOut = function () {
+  this.unstoreLoginToken();
+  this.connection.setUserId(null);
+  this.connection.onReconnect = null;
 };
 
-makeClientLoggedIn = function(userId, token, tokenExpires) {
-  storeLoginToken(userId, token, tokenExpires);
-  Accounts.connection.setUserId(userId);
+Ap.makeClientLoggedIn = function (userId, token, tokenExpires) {
+  this.storeLoginToken(userId, token, tokenExpires);
+  this.connection.setUserId(userId);
 };
 
 /**
@@ -235,11 +247,18 @@ makeClientLoggedIn = function(userId, token, tokenExpires) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Meteor.logout = function (callback) {
-  Accounts.connection.apply('logout', [], {wait: true}, function(error, result) {
+  return Accounts.logout(callback);
+};
+
+Ap.logout = function (callback) {
+  var self = this;
+  self.connection.apply('logout', [], {
+    wait: true
+  }, function (error, result) {
     if (error) {
       callback && callback(error);
     } else {
-      makeClientLoggedOut();
+      self.makeClientLoggedOut();
       callback && callback();
     }
   });
@@ -251,6 +270,12 @@ Meteor.logout = function (callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Meteor.logoutOtherClients = function (callback) {
+  return Accounts.logoutOtherClients(callback);
+};
+
+Ap.logoutOtherClients = function (callback) {
+  var self = this;
+
   // We need to make two method calls: one to replace our current token,
   // and another to remove all tokens except the current one. We want to
   // call these two methods one after the other, without any other
@@ -267,17 +292,18 @@ Meteor.logoutOtherClients = function (callback) {
   // `getNewToken`, we won't actually send the `removeOtherTokens` call
   // until the `getNewToken` callback has finished running, because they
   // are both wait methods.
-  Accounts.connection.apply(
+  self.connection.apply(
     'getNewToken',
     [],
     { wait: true },
     function (err, result) {
       if (! err) {
-        storeLoginToken(Meteor.userId(), result.token, result.tokenExpires);
+        self.storeLoginToken(self.userId(), result.token, result.tokenExpires);
       }
     }
   );
-  Accounts.connection.apply(
+
+  self.connection.apply(
     'removeOtherTokens',
     [],
     { wait: true },
@@ -292,16 +318,14 @@ Meteor.logoutOtherClients = function (callback) {
 /// LOGIN SERVICES
 ///
 
-var loginServicesHandle =
-  Accounts.connection.subscribe("meteor.loginServiceConfiguration");
-
 // A reactive function returning whether the loginServiceConfiguration
 // subscription is ready. Used by accounts-ui to hide the login button
 // until we have all the configuration loaded
 //
-Accounts.loginServicesConfigured = function () {
-  return loginServicesHandle.ready();
+Ap.loginServicesConfigured = function () {
+  return this._loginServicesHandle.ready();
 };
+
 
 // Some login services such as the redirect login flow or the resume
 // login handler can log the user in at page load time.  The
@@ -312,19 +336,17 @@ Accounts.loginServicesConfigured = function () {
 // initiated in a previous VM, and we now have the result of the login
 // attempt in a new VM.
 
-var pageLoadLoginCallbacks = [];
-var pageLoadLoginAttemptInfo = null;
-
 // Register a callback to be called if we have information about a
 // login attempt at page load time.  Call the callback immediately if
 // we already have the page load login attempt info, otherwise stash
 // the callback to be called if and when we do get the attempt info.
 //
-Accounts.onPageLoadLogin = function (f) {
-  if (pageLoadLoginAttemptInfo)
-    f(pageLoadLoginAttemptInfo);
-  else
-    pageLoadLoginCallbacks.push(f);
+Ap.onPageLoadLogin = function (f) {
+  if (this._pageLoadLoginAttemptInfo) {
+    f(this._pageLoadLoginAttemptInfo);
+  } else {
+    this._pageLoadLoginCallbacks.push(f);
+  }
 };
 
 
@@ -332,14 +354,18 @@ Accounts.onPageLoadLogin = function (f) {
 // Call registered callbacks, and also record the info in case
 // someone's callback hasn't been registered yet.
 //
-Accounts._pageLoadLogin = function (attemptInfo) {
-  if (pageLoadLoginAttemptInfo) {
+Ap._pageLoadLogin = function (attemptInfo) {
+  if (this._pageLoadLoginAttemptInfo) {
     Meteor._debug("Ignoring unexpected duplicate page load login attempt info");
     return;
   }
-  _.each(pageLoadLoginCallbacks, function (callback) { callback(attemptInfo); });
-  pageLoadLoginCallbacks = [];
-  pageLoadLoginAttemptInfo = attemptInfo;
+
+  _.each(this._pageLoadLoginCallbacks, function (callback) {
+    callback(attemptInfo);
+  });
+
+  this._pageLoadLoginCallbacks = [];
+  this._pageLoadLoginAttemptInfo = attemptInfo;
 };
 
 
@@ -370,3 +396,16 @@ if (Package.blaze) {
     return Meteor.loggingIn();
   });
 }
+
+/**
+ * @namespace Accounts
+ * @summary The namespace for all client-side accounts-related methods.
+ */
+Accounts = new AccountsClient();
+
+/**
+ * @summary A [Mongo.Collection](#collections) containing user documents.
+ * @locus Anywhere
+ * @type {Mongo.Collection}
+ */
+Meteor.users = Accounts._users;
