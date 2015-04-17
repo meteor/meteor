@@ -466,6 +466,10 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
+exports.isUrlWithFileUri = function (x) {
+  return /^file:\/\/.+/.test(x);
+};
+
 exports.isUrlWithSha = function (x) {
   // For now, just support http/https, which is at least less restrictive than
   // the old "github only" rule.
@@ -491,7 +495,8 @@ exports.ensureOnlyExactVersions = function (dependencies) {
   });
 };
 exports.isExactVersion = function (version) {
-  return semver.valid(version) || exports.isUrlWithSha(version);
+  return semver.valid(version) || exports.isUrlWithSha(version)
+    || exports.isUrlWithFileUri(version);
 };
 
 

@@ -396,12 +396,10 @@ var ensureCordovaProject = function (projectContext, appName) {
 
 // --- Cordova platforms ---
 
-// Ensures that the Cordova platforms are synchronized with the app-level
-// platforms.
-var ensureCordovaPlatforms = function (projectContext) {
-  verboseLog('Ensuring that platforms in cordova build project are in sync');
+// Get the currently installed platforms from cordova build
+var getCordovaInstalledPlatforms = function(projectContext) {
   var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
-  var platforms = projectContext.platformList.getCordovaPlatforms();
+
   var platformsList = execFileSyncOrThrow(
     localCordova, ['platform', 'list'], { cwd: cordovaPath, env: buildCordovaEnv() });
 
@@ -415,9 +413,18 @@ var ensureCordovaPlatforms = function (projectContext) {
     throw new Error('Failed to parse the output of `cordova platform list`: ' +
                      platformsList.stdout);
 
-  var installedPlatforms = _.map(platformsStrings.split(', '), function (s) {
+  return installedPlatforms = _.map(platformsStrings.split(', '), function (s) {
     return s.split(' ')[0];
   });
+}
+
+// Ensures that the Cordova platforms are synchronized with the app-level
+// platforms.
+var ensureCordovaPlatforms = function (projectContext) {
+  verboseLog('Ensuring that platforms in cordova build project are in sync');
+  var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
+  var platforms = projectContext.platformList.getCordovaPlatforms();
+  var installedPlatforms = getCordovaInstalledPlatforms(projectContext);
 
   _.each(platforms, function (platform) {
     if (_.contains(installedPlatforms, platform))
@@ -464,8 +471,16 @@ var targetsToPlatforms = cordova.targetsToPlatforms = function (targets) {
 var installPlugin = function (cordovaPath, name, version, conf) {
   verboseLog('Installing a plugin', name, version);
 
+  var pluginInstallCommand;
+
+  if (utils.isUrlWithFileUri(version)) {
+    // Strip file://
+    pluginInstallCommand = version.substr(7);
+  } else {
+    pluginInstallCommand = version ? name + '@' + version : name;
+  }
+
   // XXX do something different for plugins fetched from a url.
-  var pluginInstallCommand = version ? name + '@' + version : name;
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
 
   if (version && utils.isUrlWithSha(version)) {
@@ -559,7 +574,7 @@ var writeTarballPluginsLock = function (cordovaPath, tarballPluginsLock) {
 
 // Returns the list of installed plugins as a hash from plugin name to version.
 var getInstalledPlugins = function (cordovaPath) {
-  verboseLog('Getting installed plugins for project');
+  verboseLog('Getting installed plugins for project in ' + cordovaPath);
   var installedPlugins = {};
 
   var pluginsOutput = execFileSyncOrThrow(localCordova, ['plugin', 'list'],
@@ -614,17 +629,30 @@ var ensureCordovaPlugins = function (projectContext, options) {
   // Due to the dependency structure of Cordova plugins, it is impossible to
   // upgrade the version on an individual Cordova plugin. Instead, whenever a
   // new Cordova plugin is added or removed, or its version is changed,
-  // we just reinstall all of the plugins.
+  // we just reinstall all of the plugins. Additionally if there are any plugins
+  // added from the local path, we will reinstall them just to be sure they
+  // are up to date since we do not track changes in their sources.
 
-  var shouldReinstallPlugins = false;
+  var shouldReinstallPlugins = false,
+      shouldReinstallPluginsFromLocalPaths = false,
+      pluginsFromLocalPath = {};
 
-  // Iterate through all of the plugin and find if any of them have a new
-  // version.
+  // Iterate through all of the plugins and find if any of them have a new
+  // version. Additionally check if we have plugins installed from local path.
+  var pluginFromLocalPath;
   _.each(plugins, function (version, name) {
+    // Check if plugin is installed from local path
+    pluginFromLocalPath = utils.isUrlWithFileUri(version);
+    if (pluginFromLocalPath) {
+        shouldReinstallPluginsFromLocalPaths = true;
+        pluginsFromLocalPath[name] = version;
+    }
+
     // XXX there is a hack here that never updates a package if you are
     // trying to install it from a URL, because we can't determine if
     // it's the right version or not
-    if (! _.has(installedPlugins, name) || installedPlugins[name] !== version) {
+    if (! _.has(installedPlugins, name) ||
+      (installedPlugins[name] !== version && !pluginFromLocalPath)) {
       // The version of the plugin has changed, or we do not contain a plugin.
       shouldReinstallPlugins = true;
     }
@@ -638,37 +666,63 @@ var ensureCordovaPlugins = function (projectContext, options) {
     }
   });
 
-  if (shouldReinstallPlugins) {
+  if (shouldReinstallPluginsFromLocalPaths)
+    verboseLog('Reinstalling cordova plugins added from the local path');
+
+  if (shouldReinstallPlugins || shouldReinstallPluginsFromLocalPaths) {
     // Loop through all of the current plugins and remove them one by one until
-    // we have no plugins. It's necessary to loop because we might have
-    // dependencies between plugins.
-    var uninstallAllPlugins = function () {
+    // we have deleted proper amount of plugins. It's necessary to loop because
+    // we might have dependencies between plugins.
+    var uninstallPlugins = function (pluginsToUninstall, clearPluginsDirectory) {
       installedPlugins = getInstalledPlugins(cordovaPath);
-      while (_.size(installedPlugins)) {
-        _.each(installedPlugins, function (version, name) {
-          uninstallPlugin(cordovaPath, name, utils.isUrlWithSha(version));
+      var uninstalled = 1;
+      // Detect if we couldn't delete any more plugins just to avoid
+      // hanging forever
+      while (uninstalled.length !== 0 && _.size(pluginsToUninstall)) {
+        _.each(pluginsToUninstall, function (version, name) {
+            uninstallPlugin(cordovaPath, name, utils.isUrlWithSha(version));
         });
         installedPlugins = getInstalledPlugins(cordovaPath);
+
+        uninstalled = _.difference(
+          Object.keys(pluginsToUninstall), Object.keys(installedPlugins)
+        );
+        pluginsToUninstall = _.omit(pluginsToUninstall, uninstalled);
       }
       // XXX HACK, because Cordova doesn't properly clear its plugins on `rm`.
       // This will completely destroy the project state. We should work with
       // Cordova to fix the bug in their system, because it doesn't seem
       // like there's a way around this.
-      files.rm_recursive(files.pathJoin(cordovaPath, 'platforms'));
+      if (clearPluginsDirectory)
+        files.rm_recursive(files.pathJoin(cordovaPath, 'platforms'));
+
       ensureCordovaPlatforms(projectContext);
     };
 
     buildmessage.enterJob({ title: "installing Cordova plugins"}, function () {
-      uninstallAllPlugins();
+      installedPlugins = getInstalledPlugins(cordovaPath);
+      if (shouldReinstallPlugins)
+          uninstallPlugins(installedPlugins, true);
+      else
+          uninstallPlugins(pluginsFromLocalPath, false);
 
-      // Now install all of the plugins.
+      // Now install necessary plugins.
       try {
         // XXX: forkJoin with parallel false?
-        var pluginsInstalled = 0;
+        var pluginsInstalled, pluginsToInstall;
+
+        if (shouldReinstallPlugins) {
+          pluginsInstalled = 0;
+          pluginsToInstall = plugins;
+        } else {
+          pluginsInstalled = _.size(installedPlugins);
+          pluginsToInstall = pluginsFromLocalPath;
+        }
 
         var pluginsCount = _.size(plugins);
+
         buildmessage.reportProgress({ current: 0, end: pluginsCount });
-        _.each(plugins, function (version, name) {
+        _.each(pluginsToInstall, function (version, name) {
           installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
 
           buildmessage.reportProgress({
@@ -680,7 +734,7 @@ var ensureCordovaPlugins = function (projectContext, options) {
         // If a plugin fails to install, then remove all plugins and throw the
         // error. Cordova doesn't remove the plugin by default for some reason.
         // XXX don't throw and improve this error message.
-        uninstallAllPlugins();
+        uninstallPlugins(getInstalledPlugins(cordovaPath), true);
         throw err;
       }
     });
