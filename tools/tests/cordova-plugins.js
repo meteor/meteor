@@ -17,17 +17,15 @@ var copyFile = function(from, to, sand) {
   sand.write(to, contents);
 };
 
-
 var localCordova = files.pathJoin(files.getCurrentToolsDir(), "tools",
   "cordova-scripts", "cordova.sh");
+
+
 // Given a sandbox, that has the app as its currend cwd, read the versions file
-// and check that it contains the plugins that we are looking for. We don't
-// check the order, we just want to make sure that the right dependencies are
-// in.
+// and read the plugins list.
 //
 // sand: a sandbox, that has the main app directory as its cwd.
-// plugins: an array of plugins in order.
-var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
+var getCordovaPluginsList = function(sand) {
   var lines = selftest.execFileSync(localCordova, ['plugins'],
     {
       cwd: files.pathJoin(sand.cwd, '.meteor', 'local', 'cordova-build'),
@@ -38,18 +36,40 @@ var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
   if (lines[0].match(/No plugins/)) {
     lines = [];
   }
-
   lines.sort();
+  return lines;
+}
+
+// Given a sandbox, that has the app as its currend cwd, read the versions file
+// and check that it contains the plugins that we are looking for. We don't
+// check the order, we just want to make sure that the right dependencies are
+// in.
+//
+// sand: a sandbox, that has the main app directory as its cwd.
+// plugins: an array of plugins in order.
+var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
+  var cordovaPlugins = getCordovaPluginsList(sand);
+
   plugins = _.clone(plugins).sort();
 
   var i = 0;
-  _.each(lines, function(line) {
+  _.each(cordovaPlugins, function(line) {
     if (!line || line === '') return;
     // XXX should check for the version as well?
     selftest.expectEqual(line.split(' ')[0], plugins[i]);
     i++;
   });
   selftest.expectEqual(plugins.length, i);
+});
+
+// Like the function above but only looks if a certain plugin is on the list
+var checkCordovaPluginExists = selftest.markStack(function(sand, plugin) {
+  var cordovaPlugins = getCordovaPluginsList(sand);
+  var found = false;
+  cordovaPlugins = cordovaPlugins.map(function (line) {
+    if (line && line !== '') return line.split(' ')[0];
+  });
+  selftest.expectTrue(_.contains(cordovaPlugins, plugin));
 });
 
 // Given a sandbox, that has the app as its cwd, read the cordova plugins
@@ -131,7 +151,6 @@ selftest.define("change cordova plugins", ["cordova"], function () {
   run.match("restarted");
 });
 
-
 // Add plugins through the command line, and make sure that the correct set of
 // changes is reflected in .meteor/packages, .meteor/versions and list
 selftest.define("add cordova plugins", ["slow", "cordova"], function () {
@@ -194,7 +213,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.match("android");
 
   run = s.run("build", "../a", "--server", "localhost:3000");
-  run.waitSecs(30);
+  run.waitSecs(60);
   // This fails because the FB plugin does not compile without additional
   // configuration for android.
   run.expectExit(1);
@@ -232,6 +251,35 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.waitSecs(60);
   run.expectExit(0);
   checkCordovaPlugins(s, ["org.apache.cordova.device"]);
+
+  run = s.run("remove", "cordova:org.apache.cordova.device");
+  run.match("removed");
+  run.expectExit(0);
+
+  run = s.run("add", "cordova:com.example.plugin@file://");
+  run.matchErr("exact version of dependency");
+  run.expectExit(1);
+
+  run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");
+  run.waitSecs(5);
+  run.match("added cordova plugin com.example.plugin");
+  run.expectExit(0);
+
+  checkUserPlugins(s, ["com.example.plugin"]);
+
+  // This should fail beacuse the plugin does not exists at the specified path
+  run = s.run("build", "../a", "--server", "localhost:3000");
+  run.waitSecs(30);
+  run.expectExit(1);
+
+  checkCordovaPlugins(s, []);
+
+  // Add a package with Cordova.depends with local plugin (added from path)
+  run = s.run("add", "empty-cordova-plugin");
+  run.match("added,");
+  run.match("contains a empty cordova plugin");
+  run.expectExit(0);
+
 });
 
 selftest.define("remove cordova plugins", function () {
@@ -260,6 +308,19 @@ selftest.define("remove cordova plugins", function () {
   run.match("removed");
   run.expectExit(1);
   checkUserPlugins(s, []);
+
+  run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");
+  run.waitSecs(5);
+  run.match("added cordova plugin com.example.plugin");
+  run.expectExit(0);
+  checkUserPlugins(s, ["com.example.plugin"]);
+
+  run = s.run("remove", "cordova:com.example.plugin");
+  run.waitSecs(5);
+  run.match("removed");
+  run.expectExit(0);
+  checkUserPlugins(s, []);
+
 });
 
 selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"], function () {
@@ -326,6 +387,115 @@ selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"
   run.matchErr("Your app's platforms have changed");
   run.matchErr("Restart meteor");
   run.expectExit(254);
+});
+
+selftest.define("meteor reinstalls only local cordova plugins on consecutive builds/runs", ["slow", "cordova"], function () {
+  var s = new Sandbox();
+  var run;
+
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+
+  run = s.run("add-platform", "android");
+  run.match("Do you agree");
+  run.write("Y\n");
+  run.waitSecs(90);
+  run.match("added platform");
+
+  var
+    pluginPath          = "../cordova-local-plugin",
+    pluginSource        = "packages/empty-cordova-plugin/plugin",
+    androidPluginSource = ".meteor/local/cordova-build/platforms/android/src";
+
+
+  // Copy fake cordova plugin to ../cordova-local-plugin
+  s.mkdir(pluginPath);
+  s.cp(pluginSource + '/plugin.xml', pluginPath + '/plugin.xml');
+  s.mkdir(pluginPath + '/www');
+  s.mkdir(pluginPath + '/src');
+  s.mkdir(pluginPath + '/src/android');
+  s.cp(pluginSource + '/www/Empty.js', pluginPath +'/www/Empty.js');
+  s.cp(
+    pluginSource + '/src/android/Empty.java',
+    pluginPath + '/src/android/Empty.java'
+  );
+
+  // Add the local cordova plugin
+  run = s.run("add", "cordova:com.cordova.empty@file://../../../../cordova-local-plugin");
+  run.waitSecs(60);
+  run.match("added cordova plugin com.cordova.empty");
+  run.expectExit(0);
+
+  checkUserPlugins(s, ["com.cordova.empty"]);
+
+  // Run meteor and check if the cordova android build have the plugin file.
+  // Using "android-device" because "android" would start the simulator.
+  run = s.run("run", "android-device");
+  run.waitSecs(60);
+  run.match("Started your app");
+  run.stop();
+
+  selftest.expectTrue(
+    s.read(
+      androidPluginSource + "/com/cordova/empty/Empty.java"
+    ).indexOf('change') === -1
+  );
+  selftest.expectTrue(
+    s.read(
+      androidPluginSource + "/com/cordova/empty/Empty.java"
+    ).indexOf('CordovaPlugin') > -1
+  );
+
+  // Copy changed file to the plugin
+  s.cp(
+    pluginSource + '/src/android/Empty_changed.java',
+    pluginPath + '/src/android/Empty.java'
+  );
+
+  // Check if the local plugin will be refreshed
+  run = s.run("run", "android-device");
+  run.waitSecs(60);
+  run.match("Started your app");
+  run.stop();
+
+  selftest.expectTrue(
+    s.read(
+      androidPluginSource + "/com/cordova/empty/Empty.java"
+    ).indexOf('change') > -1
+  );
+
+  // Now test the same scenario but with builds
+  s.cp(
+    pluginSource + '/src/android/Empty.java',
+    pluginPath + '/src/android/Empty.java'
+  );
+
+  run = s.run("build", "../a", "--server", "localhost:3000");
+  run.waitSecs(60);
+  run.expectExit(0);
+
+  selftest.expectTrue(
+    s.read(
+      "../a/android/project/src/com/cordova/empty/Empty.java"
+    ).indexOf('change') === -1
+  );
+
+  checkCordovaPluginExists(s, "com.cordova.empty");
+
+  s.cp(
+    pluginSource + '/src/android/Empty_changed.java',
+    pluginPath + '/src/android/Empty.java'
+  );
+
+  run = s.run("build", "../a", "--server", "localhost:3000");
+  run.waitSecs(60);
+  run.expectExit(0);
+
+  selftest.expectTrue(
+    s.read(
+      "../a/android/project/src/com/cordova/empty/Empty.java"
+    ).indexOf('change') > -1
+  );
 });
 
 selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"], function () {
