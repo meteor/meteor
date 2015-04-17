@@ -217,6 +217,10 @@ var Isopack = function () {
   self.unibuilds = [];
 
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
+  // Plugins are package-supplied classes and functions that can change the
+  // build process: introduce a new file processor (compiler, minifier, linter)
+  // or a new command.
+  // XXX (right now only file processors are supported)
   self.plugins = {};
 
   self.cordovaDependencies = {};
@@ -248,8 +252,11 @@ var Isopack = function () {
   // XXX BBP redoc
   self.sourceHandlers = null;
 
+  // XXX linter, minifier, etc
   // XXX BBP doc (map id -> CompilerPlugin)
-  self.compilerPlugins = null;
+  self.sourceProcessors = {
+    compiler: null
+  };
 
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
@@ -640,14 +647,14 @@ _.extend(Isopack.prototype, {
         // Unique ID within a given bundler call.  Used internally in
         // compiler-plugin.js, and human-readable for debugging purposes.
         var compilerPluginId = JSON.stringify([self.name, options.extensions]);
-        if (_.has(self.compilerPlugins, compilerPluginId)) {
+        if (_.has(self.sourceProcessors.compiler, compilerPluginId)) {
           throw Error("duplicate plugin ID " + compilerPluginId);
         }
 
         // We're finally done validating!  Save the compiler plugin, and mark
         // all its extensions as used.
-        self.compilerPlugins[compilerPluginId] =
-          new compilerPluginModule.CompilerPlugin({
+        self.sourceProcessors.compiler[compilerPluginId] =
+          new compilerPluginModule.CompilerPluginDefinition({
             id: compilerPluginId,
             extensions: options.extensions,
             archMatching: options.archMatching,
@@ -660,7 +667,7 @@ _.extend(Isopack.prototype, {
     };
 
     self.sourceHandlers = {};
-    self.compilerPlugins = {};
+    self.sourceProcessors.compiler = {};
 
     _.each(self.plugins, function (pluginsByArch, name) {
       var arch = archinfo.mostSpecificMatch(
