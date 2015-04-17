@@ -38,7 +38,6 @@ Package.onUse(function (api) {
 
   api.addFiles('accounts_common.js', ['client', 'server']);
   api.addFiles('accounts_server.js', 'server');
-  api.addFiles('url_client.js', 'client');
   api.addFiles('url_server.js', 'server');
 
   // accounts_client must be before localstorage_token, because
@@ -46,6 +45,7 @@ Package.onUse(function (api) {
   // Accounts.callLoginMethod) on startup. And localstorage_token must be after
   // url_client, which sets autoLoginEnabled.
   api.addFiles('accounts_client.js', 'client');
+  api.addFiles('url_client.js', 'client');
   api.addFiles('localstorage_token.js', 'client');
 });
 
