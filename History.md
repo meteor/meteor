@@ -94,6 +94,13 @@
   function as well.
 
 
+### Other bug fixes and improvements
+
+* Upgraded dependencies:
+
+  - uglify-js: 2.4.20 (from 2.4.17)
+
+
 ## v1.1.0.2, 2015-Apr-06
 
 ### `meteor` command-line tool
