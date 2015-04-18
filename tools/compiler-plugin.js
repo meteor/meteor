@@ -1,4 +1,5 @@
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var buildPluginModule = require('./build-plugin.js');
 var colonConverter = require('./colon-converter.js');
 var files = require('./files.js');
@@ -22,9 +23,13 @@ _.extend(exports.CompilerPlugin.prototype, {
       return new InputFile(resourceSlot);
     });
 
-    // XXX BBP proper error handling --- this is running user-supplied plugin
-    // code
-    self.userPlugin.processFilesForTarget(inputFiles);
+    var markedMethod = buildmessage.markBoundary(
+      self.userPlugin.processFilesForTarget.bind(self.userPlugin));
+    try {
+      markedMethod(inputFiles);
+    } catch (e) {
+      buildmessage.exception(e);
+    }
   }
 });
 
@@ -59,6 +64,8 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
 
   runBuildPlugins: function () {
     var self = this;
+    buildmessage.assertInJob();
+
     self._loadPluginsAndInstantiatePlugins();
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
@@ -88,7 +95,12 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
       if (! resourceSlots.length)
         return;
 
-      buildPlugin.run(resourceSlots);
+      buildmessage.enterJob({
+        title: "processing files with " +
+          buildPlugin.pluginDefinition.isopack.name
+      }, function () {
+        buildPlugin.run(resourceSlots);
+      });
     });
 
     return sourceBatches;
@@ -138,6 +150,17 @@ _.extend(InputFile.prototype, {
   xxxPackageName: function () {
     var self = this;
     return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
+  },
+  xxxError: function (options) {
+    var self = this;
+    buildmessage.error(
+      options.message || ("error building " + self.xxxPathInPackage()), {
+        file: options.sourcePath || self.xxxPathInPackage(),
+        line: options.line ? options.line : undefined,
+        column: options.column ? options.column : undefined,
+        func: options.func ? options.func : undefined
+      }
+    );
   },
   addStylesheet: function (options) {
     var self = this;

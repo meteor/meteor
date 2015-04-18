@@ -662,6 +662,7 @@ _.extend(Isopack.prototype, {
         self.sourceProcessors[type][processorPluginId] =
           new BuildPluginDefintion({
             id: processorPluginId,
+            isopack: self,
             extensions: options.extensions,
             archMatching: options.archMatching,
             isTemplate: options.isTemplate,

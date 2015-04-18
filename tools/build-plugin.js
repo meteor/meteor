@@ -1,10 +1,12 @@
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var _ = require('underscore');
 
 exports.BuildPluginDefintion = function (options, factoryFunction) {
   var self = this;
   self.id = options.id;
+  self.isopack = options.isopack;
   self.extensions = options.extensions.slice();
   self.archMatching = options.archMatching;
   self.isTemplate = !! options.isTemplate;
