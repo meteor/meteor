@@ -141,7 +141,10 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
         // if there is a strict equality, there is a good
         // chance we can use one of those as "matching"
         // dummy value
-        if (valueSelector.$in) {
+        if (valueSelector.$eq) {
+          var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
+          return matcher.documentMatches({ placeholder: valueSelector.$eq });
+        } else if (valueSelector.$in) {
           var matcher = new Minimongo.Matcher({ placeholder: valueSelector });
 
           // Return anything from $in that matches the whole selector for this
@@ -168,7 +171,7 @@ Minimongo.Matcher.prototype.matchingDocument = function () {
             fallback = true;
 
           return middle;
-        } else if (onlyContainsKeys(valueSelector, ['$nin',' $ne'])) {
+        } else if (onlyContainsKeys(valueSelector, ['$nin', '$ne'])) {
           // Since self._isSimple makes sure $nin and $ne are not combined with
           // objects or arrays, we can confidently return an empty object as it
           // never matches any scalar.

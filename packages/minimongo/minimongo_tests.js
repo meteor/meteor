@@ -510,6 +510,23 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
     });
   });
 
+  // $eq
+  nomatch({a: {$eq: 1}}, {a: 2});
+  match({a: {$eq: 2}}, {a: 2});
+  nomatch({a: {$eq: [1]}}, {a: [2]});
+
+  match({a: {$eq: [1, 2]}}, {a: [1, 2]});
+  match({a: {$eq: 1}}, {a: [1, 2]});
+  match({a: {$eq: 2}}, {a: [1, 2]});
+  nomatch({a: {$eq: 3}}, {a: [1, 2]});
+  match({'a.b': {$eq: 1}}, {a: [{b: 1}, {b: 2}]});
+  match({'a.b': {$eq: 2}}, {a: [{b: 1}, {b: 2}]});
+  nomatch({'a.b': {$eq: 3}}, {a: [{b: 1}, {b: 2}]});
+
+  match({a: {$eq: {x: 1}}}, {a: {x: 1}});
+  nomatch({a: {$eq: {x: 1}}}, {a: {x: 2}});
+  nomatch({a: {$eq: {x: 1}}}, {a: {x: 1, y: 2}});
+
   // $ne
   match({a: {$ne: 1}}, {a: 2});
   nomatch({a: {$ne: 2}}, {a: 2});
