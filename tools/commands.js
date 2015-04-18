@@ -1422,6 +1422,10 @@ main.registerCommand({
   // .meteor/packages, but that's OK since this isn't a real user project.)
   projectContext.projectConstraintsFile.removeAllPackages();
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
+  // Write these changes to disk now, so that if the first attempt to prepare
+  // the project for build hits errors, we don't lose them on
+  // projectContext.reset.
+  projectContext.projectConstraintsFile.writeIfModified();
 
   // The rest of the projectContext preparation process will happen inside the
   // runner, once the proxy is listening. The changes we made were persisted to
