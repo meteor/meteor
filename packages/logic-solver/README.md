@@ -53,33 +53,34 @@ too, since the code is short and cool.
   - [Logic.exactlyOne(operands...)](#logicexactlyoneoperands)
   - [Logic.atMostOne(operands...)](#logicatmostoneoperands)
 - [Logic.Solver](#logicsolver)
+  - [new Logic.Solver()](#new-logicsolver)
   - [Logic.Solver#require(args...)](#logicsolverrequireargs)
   - [Logic.Solver#forbid(args...)](#logicsolverforbidargs)
   - [Logic.Solver#solve()](#logicsolversolve)
   - [Logic.Solver#solveAssuming(assumption)](#logicsolversolveassumingassumption)
   - [Logic.disablingAssertions(func)](#logicdisablingassertionsfunc)
-- Logic.Solution
-  - Logic.Solution#getMap
-  - Logic.Solution#getTrueVars
-  - Logic.Solution#evaluate
-  - Logic.Solution#getWeightedSum
-  - Logic.Solution#getFormula
-  - Logic.Solution#ignoreUnknownVariables
-- Optimization
-  - Logic.Solver#minimizeWeightedSum
-  - Logic.Solver#maximizeWeightedSum
+- [Logic.Solution](#logicsolution)
+  - [Logic.Solution#getMap()](#logicsolutiongetmap)
+  - [Logic.Solution#getTrueVars()](#logicsolutiongettruevars)
+  - [Logic.Solution#evaluate(expression)](#logicsolutionevaluateexpression)
+  - [Logic.Solution#getFormula()](#logicsolutiongetformula)
+  - [Logic.Solution#getWeightedSum(formulas, weights)](#logicsolutiongetweightedsumformulas-weights)
+  - [Logic.Solution#ignoreUnknownVariables()](#logicsolutionignoreunknownvariables)
+- [Optimization](#optimization)
+  - [Logic.Solver#minimizeWeightedSum(solution, formulas, weights)](#logicsolverminimizeweightedsumsolution-formulas-weights)
+  - [Logic.Solver#maximizeWeightedSum(solution, formulas, weights)](#logicsolvermaximizeweightedsumsolution-formulas-weights)
 - [Bits (integers)](#bits-integers)
-  - new Logic.Bits(formulas)
-  - Logic.isBits
-  - Logic.constantBits
-  - Logic.variableBits
-  - Logic.equalBits
-  - Logic.lessThan
-  - Logic.lessThanOrEqual
-  - Logic.greaterThan
-  - Logic.greaterThanOrEqual
-  - Logic.sum
-  - Logic.weightedSum
+  - [new Logic.Bits(formulas)](#new-logicbitsformulas)
+  - [Logic.isBits(value)](#logicisbitsvalue)
+  - [Logic.constantBits(wholeNumber)](#logicconstantbitswholenumber)
+  - [Logic.variableBits(baseName, N)](#logicvariablebitsbasename-n)
+  - [Logic.equalBits(bits1, bits2)](#logicequalbitsbits1-bits2)
+  - [Logic.lessThan(bits1, bits2)](#logiclessthanbits1-bits2)
+  - [Logic.lessThanOrEqual(bits1, bits2)](#logiclessthanorequalbits1-bits2)
+  - [Logic.greaterThan(bits1, bits2)](#logicgreaterthanbits1-bits2)
+  - [Logic.greaterThanOrEqual(bits1, bits2)](#logicgreaterthanorequalbits1-bits2)
+  - [Logic.sum(operands...)](#logicsumoperands)
+  - [Logic.weightedSum(formulas, weights)](#logicweightedsumformulas-weights)
 - [About MiniSat](#about-minisat)
 
 ## Example: Dinner Guests
