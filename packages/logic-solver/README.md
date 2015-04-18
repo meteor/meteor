@@ -66,9 +66,10 @@ too, since the code is short and cool.
   - Logic.Solution#getFormula
   - Logic.Solution#ignoreUnknownVariables
 - Optimization
-  - Logic.Solver#minimize
-  - Logic.Solver#maximize
+  - Logic.Solver#minimizeWeightedSum
+  - Logic.Solver#maximizeWeightedSum
 - [Bits (integers)](#bits-integers)
+  - new Logic.Bits(formulas)
   - Logic.isBits
   - Logic.constantBits
   - Logic.variableBits
@@ -778,6 +779,12 @@ checks are slowing down Formula compilation.
 If you need an extra speed boost in Node, you could help me create a
 binary npm package containing a native-compiled MiniSat.
 
+### Constructor
+
+#### new Logic.Solver()
+
+### Methods
+
 #### Logic.Solver#require(args...)
 
 Requires that the Formulas and Terms listed in `args` be true in order
@@ -872,15 +879,427 @@ Any - The return value of `func()`.
 
 ## Logic.Solution
 
-XXX
+A Solution represents an assignment (or mapping) of the Solver
+variables to true/false values.  Solution objects are returned by
+`Logic.Solver#solve` and `Logic.Solver#solveAssuming`.
+
+The assignment does not include variables created internal to the
+Solver, which start with `$` (which you would only see by poking
+around in the Solver internals).
+
+### Methods
+
+#### Logic.Solution#getMap()
+
+Returns a complete mapping of variables to their assigned values.
+
+###### Returns
+
+Object - Dictionary whose keys are variable names and whose values are
+booleans
+
+#### Logic.Solution#getTrueVars()
+
+Returns a list of all the variables that are assigned to true by this
+Solution.
+
+###### Returns
+
+Array of String - Names of the variables that are assigned to true
+
+#### Logic.Solution#evaluate(expression)
+
+Evaluates a Formula or Term to a boolean value under this Solution's
+assignment of the variables.  For example:
+
+```js
+solution.evaluate('A')
+solution.evaluate('-A')
+solution.evaluate(Logic.or('A', 'B'))
+solution.evaluate(myFormula) // Formula given to the Solver earlier
+```
+
+If `expression` is a Bits, the result of evaluation is an integer:
+
+```js
+var x = Logic.variableBits('x', 3); // 3-digit binary variable
+var y = Logic.variableBits('y', 3);
+var xySum = Logic.sum(x, y);
+var five = Logic.constantBits(5);
+
+var solver = new Logic.Solver;
+solver.require(Logic.equalBits(xySum, five));
+var solution = solver.solve();
+solution.evaluate(x) // 2 (for example)
+solution.evaluate(y) // 3 (for example)
+solution.evaluate(five) // 5
+```
+
+It is an error to try to evaluate an unknown variable or a variable that
+did not exist at the time the Solution was created, unless you call
+`ignoreUnknownVariables()`.
+
+###### Parameters
+
+* `expression` - Formula, Term, or Bits
+
+###### Returns
+
+Boolean or Integer
+
+#### Logic.Solution#getFormula()
+
+Returns a Formula (or Term) stating that the variables are assigned
+according to this Solution.  The Formula is only suitable for use by
+the Solver instance that produced this Solution instance.
+
+To find all solutions to a logic problem:
+
+```js
+var solver = new Logic.Solver;
+solver.require(Logic.or('A', 'B'));
+
+var allSolutions = [];
+var curSolution = null;
+while ((curSolution = solver.solve())) {
+  allSolutions.push(curSolution.getTrueVars());
+  solver.forbid(curSolution.getFormula());
+}
+
+allSolutions // [["A"], ["A", "B"], ["B"]]
+```
+
+Adding a constraint and solving again in this way is quite efficient.
+
+###### Returns
+
+Formula or Term
+
+#### Logic.Solution#getWeightedSum(formulas, weights)
+
+Equivalent to `evaluate(Logic.weightedSum(formulas, weights))`, but
+much faster because the addition is done using integer arithmetic,
+not boolean logic.  Rather than constructing a Bits and evaluating it,
+`getWeightedSum` simply evaluates each of the Formulas to a boolean
+value and then sums the weights corresponding to the Formulas that
+evaluate to true.
+
+See `Logic.weightedSum`.
+
+###### Parameters
+
+* `formulas` - Array of Formula or Term
+* `weights` - Array of non-negative integers, or a single non-negative integer
+
+###### Returns
+
+Integer
+
+#### Logic.Solution#ignoreUnknownVariables()
+
+Causes all evaluation by this Solution instance, from now on, to treat
+variables that aren't part of this Solution as false instead of
+throwing an error.  This includes unrecognized variable names and
+variables that were created after this Solution was created.
+
+This method cannot be undone.  Good style is to call it once when you
+first get the Solution object, or not at all.
 
 ## Optimization
 
-XXX
+Logic Solver can perform basic integer optimization, using a
+combination of inequalities and incremental solving.  The methods in
+this section are utilities for minimizing or maximizing the value of a
+weighted sum, which is a type of problem sometimes called
+pseudo-boolean optimization.
+
+To understand how these methods work, remember that if you have one
+solution and want another solution to the same problem, a good
+technique is to forbid the current solution and then re-solve.  In a
+similar vein, if you have one solution and want another solution that
+yields a larger or smaller value for an integer expression, you can
+simply express this new constraint as an inequality and re-solve.  The
+final wrinkle is to use `solveAssuming` to test out each inequality
+before requiring it, so that when the minimum or maximum value is
+found, the solver is not put into an unsatisfiable state.  The methods
+in this section implement this technique for you.
+
+This approach to integer optimization works surprisingly well, even when it
+takes many iterations to achieve the optimum value of a large cost function.
+However, depending on the structure of your problem, it may be quite a
+time-consuming operation.
+
+### Methods
+
+#### Logic.Solver#minimizeWeightedSum(solution, formulas, weights)
+
+Finds a Solution that minimizes the value of
+`Logic.weightedSum(formulas, weights)`, and adds a requirement (in the
+sense of calling `Solver#require` on this Solver) that this mininum
+value is obtained.
+
+To determine this minimum value, call
+`solution.getWeightedSum(formulas, weights)` on the returned Solution.
+
+A currently valid Solution must be passed in as a starting point.
+This starting Solution must have been obtained by calling `solve` or
+`solveAssuming` on this Solver, and in addition, being "currently
+valid" means that no calls to `require` or `forbid` have been made
+since the Solution was produced that conflict with its assignments.
+
+Note that while this method may add constraints to the Solver, the Solver
+is always in a satisfiable state both before and after this method is
+called.
+
+###### Parameters
+
+# `solution` - Logic.Solution - A currently valid Solution for this Solver.
+* `formulas` - Array of Formula or Term
+* `weights` - Array of non-negative integers, or a single non-negative integer
+
+###### Returns
+
+Logic.Solution - A valid Solution that achieves the minimum value of
+the weighted sum.  It may be `solution` if no improvement on the original
+value of the weighted sum is possible.
+
+#### Logic.Solver#maximizeWeightedSum(solution, formulas, weights)
+
+Finds a Solution that maximizes the value of
+`Logic.weightedSum(formulas, weights)`, and adds a requirement (in the
+sense of calling `Solver#require` on this Solver) that this maximum
+value is obtained.
+
+To determine this maximum value, call
+`solution.getWeightedSum(formulas, weights)` on the returned Solution.
+
+A currently valid Solution must be passed in as a starting point.
+This starting Solution must have been obtained by calling `solve` or
+`solveAssuming` on this Solver, and in addition, being "currently
+valid" means that no calls to `require` or `forbid` have been made
+since the Solution was produced that conflict with its assignments.
+
+Note that while this method may add constraints to the Solver, the Solver
+is always in a satisfiable state both before and after this method is
+called.
+
+###### Parameters
+
+# `solution` - Logic.Solution - A currently valid Solution for this Solver.
+* `formulas` - Array of Formula or Term
+* `weights` - Array of non-negative integers, or a single non-negative integer
+
+###### Returns
+
+Logic.Solution - A valid Solution that achieves the maximum value of
+the weighted sum.  It may be `solution` if no improvement on the original
+value of the weighted sum is possible.
+
 
 ## Bits (integers)
 
-XXX
+A Bits object represents an N-digit binary number (non-negative
+integer) using an array of N Formulas.  That is, there is a Formula
+for the boolean value of each bit.  The Formulas are stored in an
+array called `bits` with the least significant bit first, so `bits[0]`
+is the ones digit, `bits[1]` is the twos digit, `bits[2]` is the fours
+digit, and so on.  (Note that this is the opposite order from how we
+usually write numbers!  It's much more convenient because the index
+into the array is always the same as the power of two, with numbers
+growing to the right as they gain larger-valued digits.)
+
+You usually don't construct a Bits using the constructor, but instead
+using `Logic.constantBits`, `Logic.variableBits`, or an operation on
+Formulas such as `Logic.sum`.  You specify the number bits when you
+create an integer variable with `Logic.variableBits`, but in other
+cases the number of bits is calculated automatically.  For example,
+`Logic.sum()` with no arguments returns a 0-length Bits.
+`Logic.sum('A', 'B')` returns a 2-length Bits which is the equivalent
+of `new Logic.Bits([Logic.xor('A', 'B'), Logic.and('A', 'B')])`.
+
+To avoid confusion with NumTerms, there is no automatic promotion of
+integers to Bits.  If you want to use a constant like 5, you must
+call `Logic.constantBits(5)` to get a Bits object.
+
+There is currently no explicit subtraction nor any negative numbers in
+Logic Solver.
+
+###### Fields
+
+* `bits` - Array of Formula or Term - Read-only.
+
+### Constructor
+
+#### new Logic.Bits(formulas)
+
+As previously mentioned, it's more common to create a Bits object
+using `Logic.constantBits`, `Logic.variableBits`, `Logic.sum`, or
+`Logic.weightedSum` than using this constructor.
+
+###### Parameters
+
+* `formulas` - Array of Formula or Term - Becomes the value of
+  the `bits` property of this Bits.  The array is not copied, so
+  don't mutate the original array.  Unlike many Logic Solver
+  methods, this constructor does not take a variable number
+  of arguments, but requires exactly one array.
+
+### Methods
+
+#### Logic.isBits(value)
+
+Returns true if `value` is a Bits object.
+
+###### Parameters
+
+* `value` - Any
+
+###### Returns
+
+Boolean
+
+#### Logic.constantBits(wholeNumber)
+
+Creates a constant Bits representing the given number.
+
+For example, `Logic.constantBits(4)` is equivalent to
+`new Logic.Bits([Logic.FALSE, Logic.FALSE, Logic.TRUE])`.
+
+###### Parameters
+
+* `wholeNumber` - non-negative integer
+
+###### Returns
+
+Bits
+
+#### Logic.variableBits(baseName, N)
+
+Creates a Bits representing an N-digit integer variable.
+
+For example, `Logic.variableBits('A', 3)` is equivalent to
+`new Logic.Bits(['A$0', 'A$1', 'A$2'])`.
+
+###### Parameters
+
+* `baseName` - String
+* `N` - non-negative integer
+
+###### Returns
+
+Bits
+
+#### Logic.equalBits(bits1, bits2)
+
+Represents a boolean expression that is true when `bits1` and `bits2`
+are the same integer.
+
+###### Parameters
+
+* `bits1` - Bits
+* `bits2` - Bits
+
+###### Returns
+
+Formula or Term
+
+#### Logic.lessThan(bits1, bits2)
+
+Represents a boolean expression that is true when `bits1` is less than
+`bits2`, interpreting each as a non-negative integer.
+
+###### Parameters
+
+* `bits1` - Bits
+* `bits2` - Bits
+
+###### Returns
+
+Formula or Term
+
+#### Logic.lessThanOrEqual(bits1, bits2)
+
+Represents a boolean expression that is true when `bits1` is less than
+or equal to `bits2`, interpreting each as a non-negative integer.
+
+###### Parameters
+
+* `bits1` - Bits
+* `bits2` - Bits
+
+###### Returns
+
+Formula or Term
+
+#### Logic.greaterThan(bits1, bits2)
+
+Represents a boolean expression that is true when `bits1` is greater than
+`bits2`, interpreting each as a non-negative integer.
+
+###### Parameters
+
+* `bits1` - Bits
+* `bits2` - Bits
+
+###### Returns
+
+Formula or Term
+
+#### Logic.greaterThanOrEqual(bits1, bits2)
+
+Represents a boolean expression that is true when `bits1` is greater than
+or equal to `bits2`, interpreting each as a non-negative integer.
+
+###### Parameters
+
+* `bits1` - Bits
+* `bits2` - Bits
+
+###### Returns
+
+Formula or Term
+
+#### Logic.sum(operands...)
+
+Represents an integer expression that is the sum of the values of all
+the operands.  Bits are interpreted as integers, and booleans are
+interpreted as 1 or 0.
+
+As with Formula constructor functions that take a variable number of
+arguments, the operands may be nested in arrays arbitrarily and
+arbitrarily deeply.
+
+###### Parameters
+
+* `operands...` - Zero or more Formulas, Terms, Bits, or Arrays
+
+###### Returns
+
+Bits
+
+#### Logic.weightedSum(formulas, weights)
+
+Represents an integer expression that is a weighted sum of the given
+Formulas and Terms, after mapping false to 0 and true to 1.
+
+In other words, the sum is:
+`(formulas[0] * weights[0]) + (formulas[1] * weights[1]) + ...`,
+where `formulas[0]` is replaced with 0 or 1 based on the boolean value
+of that Formula.
+
+`weights` may either be an array of non-negative integers, or a single
+non-negative integer, in which case that weight is used for all formulas.
+If `weights` is an array, it must have the same length as `formulas`.
+
+###### Parameters
+
+* `formulas` - Array of Formula or Term
+* `weights` - Array of non-negative integers, or a single non-negative integer
+
+###### Returns
+
+Bits
+
 
 ## About MiniSat
 
