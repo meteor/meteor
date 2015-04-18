@@ -21,3 +21,18 @@ Babel.transformMeteor = function (code, extraOptions) {
 
   return Babel.transform(code, _.extend(options, extraOptions));
 };
+
+// fake Underscore, since we can't depend on the Underscore package
+// and still be loaded by the tool (before building other packages).
+var hasOwnProperty = Object.prototype.hasOwnProperty;
+var _ = {
+  // Doesn't support more than two arguments (more than one "source"
+  // object).
+  extend: function (tgt, src) {
+    for (var k in src) {
+      if (hasOwnProperty.call(src, k))
+        tgt[k] = src[k];
+    }
+    return tgt;
+  }
+};

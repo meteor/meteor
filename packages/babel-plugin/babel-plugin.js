@@ -4,7 +4,8 @@ var handler = function (compileStep) {
 
   var result = Babel.transformMeteor(source, {
     sourceMap: true,
-    filename: compileStep.pathForSourceMap
+    filename: compileStep.pathForSourceMap,
+    sourceMapName: compileStep.pathForSourceMap
   });
 
   compileStep.addJavaScript({
