@@ -231,6 +231,7 @@ var compileUnibuild = function (options) {
   // XXX BBP redoc
   var allHandlersWithPkgs = {};
   var compilerPluginsByExtension = {};
+  var linterPluginsByExtension = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   sourceExtensions['js'] = false;
@@ -307,6 +308,14 @@ var compileUnibuild = function (options) {
         sourceExtensions[ext] = compilerPlugin.isTemplate;
       });
     });
+
+    // Iterate over the linters
+    _.each(otherPkg.sourceProcessors.linter, function (linterPlugin, id) {
+      _.each(linterPlugin.extensions, function (ext) {
+        linterPluginsByExtension[ext] = linterPluginsByExtension[ext] || [];
+        linterPluginsByExtension[ext].push(linterPlugin);
+      });
+    });
   });
 
   // *** Determine source files
@@ -362,11 +371,7 @@ var compileUnibuild = function (options) {
     return JSON.stringify(srcmap);
   };
 
-  _.each(sourceItems, function (source) {
-    var relPath = source.relPath;
-    var fileOptions = _.clone(source.fileOptions) || {};
-    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
-    var filename = files.pathBasename(relPath);
+  var wrappedSourceItems = _.map(sourceItems, function (source) {
     var fileWatchSet = new watch.WatchSet;
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
@@ -374,8 +379,35 @@ var compileUnibuild = function (options) {
     // We don't put this into the unibuild's watchSet immediately since we want
     // to avoid putting it there if it turns out not to be relevant to our
     // arch.
+    var absPath = files.pathResolve(
+      inputSourceArch.pkg.sourceRoot, source.relPath);
     var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
-    var contents = file.contents;
+
+    Console.nudge(true);
+
+    return {
+      relPath: source.relPath,
+      watchset: fileWatchSet,
+      contents: file.contents,
+      hash: file.hash,
+      source: source,
+      'package': isopk.name
+    };
+  });
+
+  _.each(linterPluginsByExtension, function (linters, ext) {
+    // XXX would run linters here
+  });
+
+  _.each(wrappedSourceItems, function (wrappedSource) {
+    var source = wrappedSource.source;
+    var relPath = source.relPath;
+    var fileOptions = _.clone(source.fileOptions) || {};
+    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
+    var filename = files.pathBasename(relPath);
+    var contents = wrappedSource.contents;
+    var hash = wrappedSource.hash;
+    var fileWatchSet = wrappedSource.watchset;
 
     Console.nudge(true);
 
@@ -398,7 +430,7 @@ var compileUnibuild = function (options) {
 
     // Find the handler for source files with this extension.
     var handler = null;
-    var isCompilerPluginSource = false;
+    var isBuildPluginSource = false;
     if (! fileOptions.isAsset) {
       var parts = filename.split('.');
       // don't use iteration functions, so we can return/break
@@ -412,7 +444,7 @@ var compileUnibuild = function (options) {
             // the server.)
             return;
           }
-          isCompilerPluginSource = true;
+          isBuildPluginSource = true;
           break;
         }
         if (_.has(allHandlersWithPkgs, extension)) {
@@ -425,14 +457,14 @@ var compileUnibuild = function (options) {
     // OK, this is relevant to this arch, so watch it.
     watchSet.merge(fileWatchSet);
 
-    if (isCompilerPluginSource) {
+    if (isBuildPluginSource) {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
       resources.push({
         type: "source",
         data: contents,
         path: relPath,
-        hash: file.hash
+        hash: hash
       });
       return;
     }
@@ -443,7 +475,7 @@ var compileUnibuild = function (options) {
       //
       // XXX This is pretty confusing, especially if you've
       // accidentally forgotten a plugin -- revisit?
-      addAsset(contents, relPath, file.hash);
+      addAsset(contents, relPath, hash);
       return;
     }
 
@@ -596,7 +628,7 @@ var compileUnibuild = function (options) {
       _fullInputPath: files.convertToOSPath(absPath), // avoid, see above..
 
       // Used for one optimization. Don't rely on this otherwise.
-      _hash: file.hash,
+      _hash: hash,
 
       // XXX duplicates _pathForSourceMap() in linker
       /**

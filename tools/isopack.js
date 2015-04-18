@@ -13,6 +13,7 @@ var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
 var compilerPluginModule = require('./compiler-plugin.js');
 var linterPluginModule = require('./linter-plugin.js');
+var BuildPluginDefintion = require('./build-plugin.js').BuildPluginDefintion;
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
@@ -659,11 +660,12 @@ _.extend(Isopack.prototype, {
         // We're finally done validating!  Save the processor plugin, and mark
         // all its extensions as used.
         self.sourceProcessors[type][processorPluginId] =
-          new additionalOptions.pluginDefinitionClass({
+          new BuildPluginDefintion({
             id: processorPluginId,
             extensions: options.extensions,
             archMatching: options.archMatching,
-            isTemplate: options.isTemplate
+            isTemplate: options.isTemplate,
+            buildPluginClass: additionalOptions.buildPluginClass
           }, factory);
         _.each(options.extensions, function (ext) {
           pluginSourceExtensions[ext] = true;
@@ -675,7 +677,7 @@ _.extend(Isopack.prototype, {
         var self = this;
         self._registerSourceProcessor(options, factory, {
           type: "compiler",
-          pluginDefinitionClass: compilerPluginModule.CompilerPluginDefinition,
+          buildPluginClass: compilerPluginModule.CompilerPlugin,
           skipUniqExtCheck: false
         });
       },
@@ -686,7 +688,7 @@ _.extend(Isopack.prototype, {
         isopack.sourceProcessors.linter = isopack.sourceProcessors.linter || {};
         self._registerSourceProcessor(options, factory, {
           type: "linter",
-          pluginDefinitionClass: linterPluginModule.LinterPluginDefinition,
+          buildPluginClass: linterPluginModule.LinterPlugin,
           // Several linters can handle the same extension
           skipUniqExtCheck: true
         });

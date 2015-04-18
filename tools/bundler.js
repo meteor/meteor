@@ -166,7 +166,7 @@ var Profile = require('./profile.js').Profile;
 var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
 var colonConverter = require('./colon-converter.js');
-var buildPluginModule = require('./build-plugin.js');
+var compilerPluginModule = require('./compiler-plugin.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -664,8 +664,7 @@ _.extend(Target.prototype, {
 
   _runCompilerPlugins: function () {
     var self = this;
-    var processor = new buildPluginModule.BuildPluginProcessor({
-      type: "compiler",
+    var processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: self.unibuilds,
       arch: self.arch,
       isopackCache: self.isopackCache
