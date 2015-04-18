@@ -51,6 +51,7 @@ var ISOPACKETS = {
   'js-analyze': ['js-analyze'],
   'ddp': ['ddp-client'],
   'mongo': ['npm-mongo'],
+  'babel': ['babel'], // for ES6
   'ejson': ['ejson'],
   'minifiers': ['minifiers'],
   'constraint-solver': ['constraint-solver'],

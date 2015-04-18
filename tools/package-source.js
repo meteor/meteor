@@ -1073,10 +1073,10 @@ _.extend(PackageSource.prototype, {
     _.each(compiler.ALL_ARCHES, function (arch) {
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself, and js-analyze
-      // which needs to be loaded by the linker).
-      // XXX add a better API for js-analyze to declare itself here
+      // and babel, which need to be loaded by the linker).
+      // XXX add a better API for [js-analyze, babel] to declare themselves here
       if (self.name !== "meteor" && self.name !== "js-analyze" &&
-          !process.env.NO_METEOR_PACKAGE) {
+          self.name !== "babel" && !process.env.NO_METEOR_PACKAGE) {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
         // we'd add here. This is necessary to resolve the circular dependency

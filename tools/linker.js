@@ -2,6 +2,7 @@ var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
 var watch = require('./watch.js');
+var isopackets = require('./isopackets.js');
 
 var packageDot = function (name) {
   if (/^[a-zA-Z0-9]*$/.exec(name))
@@ -40,7 +41,35 @@ _.extend(Module.prototype, {
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
     var self = this;
-    self.files.push(new File(inputFile, self));
+
+    var transpiledFile = null;
+    if (self.name !== 'babel' && self.name !== 'js-analyze' &&
+        inputFile.sourcePath !== 'minisat.js') { // XXX
+      var oldCode = inputFile.source;
+      var oldMap = inputFile.sourceMap;
+      var Babel = isopackets.load('babel')['babel'].Babel;
+      var babelOptions = {
+        sourceMaps: true
+      };
+      if (oldMap) {
+        _.extend(babelOptions, {
+          inputSourceMap: JSON.parse(oldMap)
+        });
+      } else {
+        _.extend(babelOptions, {
+          sourceMapName: inputFile.sourcePath,
+          sourceFileName: inputFile.sourcePath
+        });
+      }
+      var babelResult = Babel.transformMeteor(oldCode, babelOptions);
+
+      transpiledFile = _.extend({}, inputFile, {
+        source: babelResult.code,
+        sourceMap: babelResult.map
+      });
+    }
+
+    self.files.push(new File(transpiledFile || inputFile, self));
   },
 
 
