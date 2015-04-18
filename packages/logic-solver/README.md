@@ -880,13 +880,13 @@ Any - The return value of `func()`.
 
 ## Logic.Solution
 
-A Solution represents an assignment (or mapping) of the Solver
+A Solution represents an assignment or mapping of the Solver
 variables to true/false values.  Solution objects are returned by
 `Logic.Solver#solve` and `Logic.Solver#solveAssuming`.
 
-The assignment does not include variables created internal to the
-Solver, which start with `$` (which you would only see by poking
-around in the Solver internals).
+(Variables internal to the Solver, which start with `$` and which
+you'd probably only encounter while poking around in internals, are
+not considered part of the assignment.)
 
 ### Methods
 
@@ -910,8 +910,8 @@ Array of String - Names of the variables that are assigned to true
 
 #### Logic.Solution#evaluate(expression)
 
-Evaluates a Formula or Term to a boolean value under this Solution's
-assignment of the variables.  For example:
+Evaluates a Formula or Term under this Solution's
+assignment of the variables, returning a boolean value.  For example:
 
 ```js
 solution.evaluate('A')
@@ -938,7 +938,7 @@ solution.evaluate(five) // 5
 
 It is an error to try to evaluate an unknown variable or a variable that
 did not exist at the time the Solution was created, unless you call
-`ignoreUnknownVariables()`.
+`ignoreUnknownVariables()` first.
 
 ###### Parameters
 
@@ -950,9 +950,9 @@ Boolean or Integer
 
 #### Logic.Solution#getFormula()
 
-Returns a Formula (or Term) stating that the variables are assigned
-according to this Solution.  The Formula is only suitable for use by
-the Solver instance that produced this Solution instance.
+Creates a Formula (or Term) which can be used to require, or forbid,
+that variables are assigned to the exact values they have in this
+Solution.
 
 To find all solutions to a logic problem:
 
@@ -971,6 +971,9 @@ allSolutions // [["A"], ["A", "B"], ["B"]]
 ```
 
 Adding a constraint and solving again in this way is quite efficient.
+
+The Formula or Term returned may not be used with any other Solver instance
+besides the one that produced this Solution.
 
 ###### Returns
 
@@ -1035,9 +1038,9 @@ time-consuming operation.
 #### Logic.Solver#minimizeWeightedSum(solution, formulas, weights)
 
 Finds a Solution that minimizes the value of
-`Logic.weightedSum(formulas, weights)`, and adds a requirement (in the
-sense of calling `Solver#require` on this Solver) that this mininum
-value is obtained.
+`Logic.weightedSum(formulas, weights)`, and adds a requirement that
+this mininum value is obtained (in the sense of calling
+`Solver#require` on this Solver).
 
 To determine this minimum value, call
 `solution.getWeightedSum(formulas, weights)` on the returned Solution.
@@ -1054,7 +1057,7 @@ called.
 
 ###### Parameters
 
-# `solution` - Logic.Solution - A currently valid Solution for this Solver.
+* `solution` - Logic.Solution - A currently valid Solution for this Solver.
 * `formulas` - Array of Formula or Term
 * `weights` - Array of non-negative integers, or a single non-negative integer
 
@@ -1067,9 +1070,9 @@ value of the weighted sum is possible.
 #### Logic.Solver#maximizeWeightedSum(solution, formulas, weights)
 
 Finds a Solution that maximizes the value of
-`Logic.weightedSum(formulas, weights)`, and adds a requirement (in the
-sense of calling `Solver#require` on this Solver) that this maximum
-value is obtained.
+`Logic.weightedSum(formulas, weights)`, and adds a requirement that
+this maximum value is obtained (in the sense of calling
+`Solver#require` on this Solver).
 
 To determine this maximum value, call
 `solution.getWeightedSum(formulas, weights)` on the returned Solution.
@@ -1086,7 +1089,7 @@ called.
 
 ###### Parameters
 
-# `solution` - Logic.Solution - A currently valid Solution for this Solver.
+* `solution` - Logic.Solution - A currently valid Solution for this Solver.
 * `formulas` - Array of Formula or Term
 * `weights` - Array of non-negative integers, or a single non-negative integer
 
@@ -1100,7 +1103,7 @@ value of the weighted sum is possible.
 ## Bits (integers)
 
 A Bits object represents an N-digit binary number (non-negative
-integer) using an array of N Formulas.  That is, there is a Formula
+integer) as an array of N Formulas.  That is, it has a Formula
 for the boolean value of each bit.  The Formulas are stored in an
 array called `bits` with the least significant bit first, so `bits[0]`
 is the ones digit, `bits[1]` is the twos digit, `bits[2]` is the fours
@@ -1111,12 +1114,15 @@ growing to the right as they gain larger-valued digits.)
 
 You usually don't construct a Bits using the constructor, but instead
 using `Logic.constantBits`, `Logic.variableBits`, or an operation on
-Formulas such as `Logic.sum`.  You specify the number bits when you
-create an integer variable with `Logic.variableBits`, but in other
-cases the number of bits is calculated automatically.  For example,
-`Logic.sum()` with no arguments returns a 0-length Bits.
+Formulas such as `Logic.sum`.  When you create an integer variable
+using `Logic.variableBits`, you specify the number of bits N, but in
+other cases the number of bits is calculated automatically.  For
+example, `Logic.sum()` with no arguments returns a 0-length Bits.
 `Logic.sum('A', 'B')` returns a 2-length Bits which is the equivalent
 of `new Logic.Bits([Logic.xor('A', 'B'), Logic.and('A', 'B')])`.
+
+See [Example: Magic Squares](#example-magic-squares) for a good example
+of using Bits.
 
 To avoid confusion with NumTerms, there is no automatic promotion of
 integers to Bits.  If you want to use a constant like 5, you must
