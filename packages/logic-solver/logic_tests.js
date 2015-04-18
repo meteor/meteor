@@ -1559,7 +1559,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
       for (var i = 0; i < vectorLength; i++) {
         var weights = _.pluck(weightVectors, i);
-        solution = solver.minimize(solution, terms, weights);
+        solution = solver.minimizeWeightedSum(solution, terms, weights);
       }
 
       return solution;
@@ -1692,7 +1692,7 @@ Tinytest.add("logic-solver - minimize", function (test) {
   // to be greater than 0, but MiniSat will always discover
   // a sparser solution than (1,1,1,1) first.
   test.isTrue(solution1.getWeightedSum(costTerms, costWeights) > 0);
-  var solution2 = s.minimize(solution1, costTerms, costWeights);
+  var solution2 = s.minimizeWeightedSum(solution1, costTerms, costWeights);
   test.isFalse(solution1 === solution2);
   test.equal(solution2.getWeightedSum(costTerms, costWeights), 0);
   test.equal(solution2.getTrueVars(), ["A", "B", "C", "D"]);
@@ -1710,7 +1710,7 @@ Tinytest.add("logic-solver - maximize", function (test) {
   var ws = Logic.weightedSum(costTerms, costWeights);
   s.require(Logic.lessThanOrEqual(ws, Logic.constantBits(19)));
   var sol = s.solve();
-  var sol2 = s.maximize(sol, costTerms, costWeights, ws);
+  var sol2 = s.maximizeWeightedSum(sol, costTerms, costWeights, ws);
   test.equal(sol2.getTrueVars(), ["#11", "#2", "#5"]);
 });
 

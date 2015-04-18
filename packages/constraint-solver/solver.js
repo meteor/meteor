@@ -356,7 +356,7 @@ CS.Solver.prototype.minimize = function (step, options) {
 
     var optimized = groupMutuallyExclusiveTerms(costTerms, costWeights);
 
-    self.setSolution(logic.minimize(
+    self.setSolution(logic.minimizeWeightedSum(
       self.solution, optimized.costTerms, optimized.costWeights, {
         progress: function (status, cost) {
           if (self.options.nudge) {
