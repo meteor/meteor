@@ -69,19 +69,22 @@ compiler.compile = function (packageSource, options) {
         npmDir: files.pathResolve(
           files.pathJoin(packageSource.sourceRoot, '.npm', 'plugin', info.name))
       });
+      // Add this plugin's dependencies to our "plugin dependency"
+      // WatchSet. buildResult.watchSet will end up being the merged
+      // watchSets of all of the unibuilds of the plugin -- plugins have
+      // only one unibuild and this should end up essentially being just
+      // the source files of the plugin.
+      //
+      // Note that we do this even on error, so that you can fix the error
+      // and have the runner restart.
+      pluginWatchSet.merge(buildResult.watchSet);
+
       if (buildmessage.jobHasMessages())
         return;
 
       _.each(buildResult.usedPackageNames, function (packageName) {
         pluginProviderPackageNames[packageName] = true;
       });
-
-      // Add this plugin's dependencies to our "plugin dependency"
-      // WatchSet. buildResult.watchSet will end up being the merged
-      // watchSets of all of the unibuilds of the plugin -- plugins have
-      // only one unibuild and this should end up essentially being just
-      // the source files of the plugin.
-      pluginWatchSet.merge(buildResult.watchSet);
 
       // Register the built plugin's code.
       if (!_.has(plugins, info.name))
