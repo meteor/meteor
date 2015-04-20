@@ -54,7 +54,7 @@ MiniSat = function () {
 // C and D, calling ensureVar(4) will make MiniSat give us
 // solution values for them anyway.
 MiniSat.prototype.ensureVar = function (v) {
-  _check(v, Logic.WholeNumber);
+  Logic._assertIfEnabled(v, Logic.isWholeNumber);
   this._C._ensureVar(v);
 };
 
@@ -63,7 +63,7 @@ MiniSat.prototype.ensureVar = function (v) {
 // (as far as we know without doing more work), and false if
 // we can already tell that it is unsatisfiable.
 MiniSat.prototype.addClause = function (terms) {
-  _check(terms, [Logic.NumTerm]);
+  Logic._assertIfEnabled(terms, Logic._isArrayWhere(Logic.isNumTerm));
   this._clauses.push(terms);
   return this._native.savingStack(function (native, C) {
     var termsPtr = C.allocate((terms.length+1)*4, 'i32', C.ALLOC_STACK);

@@ -9,7 +9,7 @@ Package.onUse(function (api) {
     'underscore',
     'check',
     'package-version-parser',
-    'logic-solver'
+    'logic-solver@2.0.0'
   ]);
   api.addFiles([
     'datatypes.js',

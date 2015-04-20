@@ -247,6 +247,8 @@ CS.Solver.prototype.analyze = function () {
   });
 };
 
+var WholeNumber = Match.Where(Logic.isWholeNumber);
+
 // A Step consists of a name, an array of terms, and an array of weights.
 // Steps are optimized one by one.  Optimizing a Step means to find
 // the minimum whole number value for the weighted sum of the terms,
@@ -269,7 +271,7 @@ CS.Solver.Step = function (name, terms, weights) {
   terms = terms || [];
   check(terms, [String]);
   weights = (weights == null ? [] : weights);
-  check(weights, Match.OneOf([Logic.WholeNumber], Logic.WholeNumber));
+  check(weights, Match.OneOf([WholeNumber], WholeNumber));
 
   this.name = name;
 
@@ -288,7 +290,7 @@ CS.Solver.Step.prototype.addTerm = function (term, weight) {
     }
     weight = this.weights;
   }
-  check(weight, Logic.WholeNumber);
+  check(weight, WholeNumber);
   if (weight !== 0) {
     this.terms.push(term);
     if (typeof this.weights === 'number') {
@@ -354,7 +356,7 @@ CS.Solver.prototype.minimize = function (step, options) {
 
     var optimized = groupMutuallyExclusiveTerms(costTerms, costWeights);
 
-    self.setSolution(logic.minimize(
+    self.setSolution(logic.minimizeWeightedSum(
       self.solution, optimized.costTerms, optimized.costWeights, {
         progress: function (status, cost) {
           if (self.options.nudge) {
@@ -568,7 +570,7 @@ CS.Solver.prototype.setSolution = function (solution) {
   if (! self.solution) {
     throw new Error("Unexpected unsatisfiability");
   }
-  self.solution.ignoreUnknownVariables = true;
+  self.solution.ignoreUnknownVariables();
 };
 
 CS.Solver.prototype.getAnswer = function (options) {

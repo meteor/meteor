@@ -12,8 +12,9 @@ var getNonZeroWeightedTerms = function (costTerms, costWeights) {
   }
 };
 
-// See comments on minimize and maximize.
-var minMax = function (solver, solution, costTerms, costWeights, options, isMin) {
+// See comments on minimizeWeightedSum and maximizeWeightedSum.
+var minMaxWS = function (solver, solution, costTerms, costWeights, options,
+                         isMin) {
   var curSolution = solution;
   var curCost = curSolution.getWeightedSum(costTerms, costWeights);
 
@@ -132,12 +133,13 @@ var minMax = function (solver, solution, costTerms, costWeights, options, isMin)
 // available, which starts at 0 and tries ever higher costs until one
 // works.  All strategies first try and see if a cost of 0 is possible.
 
-Logic.Solver.prototype.minimize = function (solution, costTerms, costWeights,
-                                            options) {
-  return minMax(this, solution, costTerms, costWeights, options, true);
+// ("costTerms" is kind of a misnomer since they may be Formulas or Terms.)
+Logic.Solver.prototype.minimizeWeightedSum = function (solution, costTerms,
+                                                       costWeights, options) {
+  return minMaxWS(this, solution, costTerms, costWeights, options, true);
 };
 
-Logic.Solver.prototype.maximize = function (solution, costTerms, costWeights,
-                                            options) {
-  return minMax(this, solution, costTerms, costWeights, options, false);
+Logic.Solver.prototype.maximizeWeightedSum = function (solution, costTerms,
+                                                       costWeights, options) {
+  return minMaxWS(this, solution, costTerms, costWeights, options, false);
 };
