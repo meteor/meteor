@@ -431,12 +431,15 @@ var compileUnibuild = function (options) {
         return;
 
       var linter = linterDef.instantiatePlugin();
-      try {
-        (buildmessage.markBoundary(linter.run.bind(linter)))(sourcesToLint);
-        } catch (e) {
-          e.message = e.message + " (linting with " + linterDef.id + ")";
-        buildmessage.exception(e);
-      }
+      buildmessage.enterJob({
+        title: "linting files with " + linterDef.isopack.name
+      }, function () {
+        try {
+          (buildmessage.markBoundary(linter.run.bind(linter)))(sourcesToLint);
+          } catch (e) {
+          buildmessage.exception(e);
+        }
+      });
     });
   });
 
