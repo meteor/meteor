@@ -12,10 +12,12 @@ Plugin.registerLinter({
 
 function JsHintLinter () {};
 
-JsHintLinter.prototype.processFilesForTarget = function (files) {
+JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
   var conf = {
     undef: true,
-    unused: true
+    unused: true,
+    node: true,
+    browser: true
   };
 
   files.forEach(function (file) {
@@ -39,7 +41,7 @@ JsHintLinter.prototype.processFilesForTarget = function (files) {
   files.forEach(function (file) {
     if (file.getBasename() === '.jshintrc')
       return;
-    if (! jshint(file.getContentsAsString(), conf, file.getPackageImports())) {
+    if (! jshint(file.getContentsAsString(), conf, globals)) {
       jshint.errors.forEach(function (error) {
         file.error({
           message: error.reason,

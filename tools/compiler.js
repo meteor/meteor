@@ -396,52 +396,7 @@ var compileUnibuild = function (options) {
     };
   });
 
-  // For each file choose the longest extension handled by linters.
-  var longestMatchingExt = {};
-  _.each(wrappedSourceItems, function (wrappedSource) {
-    var filename = files.pathBasename(wrappedSource.relPath);
-    var parts = filename.split('.');
-    for (var i = 1; i < parts.length; i++) {
-      var extension = parts.slice(i).join('.');
-      if (_.has(linterPluginsByExtension, extension)) {
-        longestMatchingExt[wrappedSource.relPath] = extension;
-        break;
-      }
-    }
-  });
-  // Run linters on files.
-  _.each(linterPluginsByExtension, function (linters, ext) {
-    var sourcesToLint = [];
-    _.each(wrappedSourceItems, function (wrappedSource) {
-      var relPath = wrappedSource.relPath;
-      var hash = wrappedSource.hash;
-      var fileWatchSet = wrappedSource.watchset;
-      var source = wrappedSource.source;
-
-      // only run linters matching the longest handled extension
-      if (longestMatchingExt[relPath] !== ext)
-        return;
-
-      sourcesToLint.push(new linterPluginModule.LintingFile(wrappedSource));
-    });
-
-    _.each(linters, function (linterDef) {
-      // skip linters not relevant to the arch we are compiling for
-      if (! linterDef.relevantForArch(inputSourceArch.arch))
-        return;
-
-      var linter = linterDef.instantiatePlugin();
-      buildmessage.enterJob({
-        title: "linting files with " + linterDef.isopack.name
-      }, function () {
-        try {
-          (buildmessage.markBoundary(linter.run.bind(linter)))(sourcesToLint);
-          } catch (e) {
-          buildmessage.exception(e);
-        }
-      });
-    });
-  });
+  runLinters(inputSourceArch, isopackCache, wrappedSourceItems, linterPluginsByExtension);
 
   _.each(wrappedSourceItems, function (wrappedSource) {
     var source = wrappedSource.source;
@@ -991,6 +946,79 @@ var compileUnibuild = function (options) {
   return {
     pluginProviderPackageNames: pluginProviderPackageNames
   };
+};
+
+var runLinters = function (
+  inputSourceArch,
+  isopackCache,
+  wrappedSourceItems,
+  linterPluginsByExtension) {
+  // For linters, figure out what are the global imports from other packages
+  // that we use directly, or are implied.
+  var globalImports = ['Package', 'Assets', 'Npm'];
+  compiler.eachUsedUnibuild({
+    dependencies: inputSourceArch.uses,
+    arch: inputSourceArch.arch,
+    isopackCache: isopackCache,
+    skipUnordered: true,
+    skipDebugOnly: true
+  }, function (unibuild) {
+    if (unibuild.pkg.name === inputSourceArch.pkg.name)
+      return;
+    _.each(unibuild.packageVariables, function (symbol) {
+      if (symbol.export === true)
+        globalImports.push(symbol.name);
+    });
+  });
+
+  // For each file choose the longest extension handled by linters.
+  var longestMatchingExt = {};
+  _.each(wrappedSourceItems, function (wrappedSource) {
+    var filename = files.pathBasename(wrappedSource.relPath);
+    var parts = filename.split('.');
+    for (var i = 1; i < parts.length; i++) {
+      var extension = parts.slice(i).join('.');
+      if (_.has(linterPluginsByExtension, extension)) {
+        longestMatchingExt[wrappedSource.relPath] = extension;
+        break;
+      }
+    }
+  });
+
+  // Run linters on files.
+  _.each(linterPluginsByExtension, function (linters, ext) {
+    var sourcesToLint = [];
+    _.each(wrappedSourceItems, function (wrappedSource) {
+      var relPath = wrappedSource.relPath;
+      var hash = wrappedSource.hash;
+      var fileWatchSet = wrappedSource.watchset;
+      var source = wrappedSource.source;
+
+      // only run linters matching the longest handled extension
+      if (longestMatchingExt[relPath] !== ext)
+        return;
+
+      sourcesToLint.push(new linterPluginModule.LintingFile(wrappedSource));
+    });
+
+    _.each(linters, function (linterDef) {
+      // skip linters not relevant to the arch we are compiling for
+      if (! linterDef.relevantForArch(inputSourceArch.arch))
+        return;
+
+      var linter = linterDef.instantiatePlugin();
+      buildmessage.enterJob({
+        title: "linting files with " + linterDef.isopack.name
+      }, function () {
+        try {
+          var markedLinter = buildmessage.markBoundary(linter.run.bind(linter));
+          markedLinter(sourcesToLint, globalImports);
+        } catch (e) {
+          buildmessage.exception(e);
+        }
+      });
+    });
+  });
 };
 
 // Iterates over each in options.dependencies as well as unibuilds implied by

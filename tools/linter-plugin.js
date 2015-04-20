@@ -8,9 +8,9 @@ exports.LinterPlugin = function (pluginDefinition, userPlugin) {
   self.pluginDefinition = pluginDefinition;
 };
 _.extend(exports.LinterPlugin.prototype, {
-  run: function (lintingFiles) {
+  run: function (lintingFiles, globals) {
     var self = this;
-    self.userPlugin.processFilesForTarget(lintingFiles);
+    self.userPlugin.processFilesForTarget(lintingFiles, globals);
   }
 });
 
@@ -32,9 +32,6 @@ _.extend(LintingFile.prototype, {
   },
   getPackageName: function () {
     return this._source['package'];
-  },
-  getPackageImports: function () {
-    // XXX
   }
 });
 
