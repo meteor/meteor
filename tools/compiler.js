@@ -431,7 +431,12 @@ var compileUnibuild = function (options) {
         return;
 
       var linter = linterDef.instantiatePlugin();
-      linter.run(sourcesToLint);
+      try {
+        (buildmessage.markBoundary(linter.run.bind(linter)))(sourcesToLint);
+        } catch (e) {
+          e.message = e.message + " (linting with " + linterDef.id + ")";
+        buildmessage.exception(e);
+      }
     });
   });
 

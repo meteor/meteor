@@ -41,7 +41,8 @@ JsHintLinter.prototype.processFilesForTarget = function (files) {
       return;
     if (! jshint(file.getContentsAsString(), conf, file.getPackageImports())) {
       jshint.errors.forEach(function (error) {
-        file.error(error.reason, {
+        file.error({
+          message: error.reason,
           line: error.line,
           col: error.character
         });
