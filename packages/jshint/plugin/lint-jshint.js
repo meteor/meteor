@@ -25,13 +25,13 @@ JsHintLinter.prototype.processFilesForTarget = function (files) {
       try {
         conf = JSON.parse(confStr);
       } catch (err) {
-        file.error("Failed to parse .jshint file, not a valid JSON: " + err.message);
+        file.error({ message: "Failed to parse .jshint file, not a valid JSON: " + err.message });
       }
       return;
     }
     // require configuration file to be called '.jshintrc'
-    if (path.extname(file.getBasename()) !== 'js') {
-      file.error("Unrecognized configuration file name. Configuration file should be called .jshintrc");
+    if (path.extname(file.getBasename()) !== '.js') {
+      file.error({ message: "Unrecognized configuration file name. Configuration file should be called .jshintrc" });
       return;
     }
   });
@@ -44,7 +44,7 @@ JsHintLinter.prototype.processFilesForTarget = function (files) {
         file.error({
           message: error.reason,
           line: error.line,
-          col: error.character
+          column: error.character
         });
       });
     }
