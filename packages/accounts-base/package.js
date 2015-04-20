@@ -34,6 +34,8 @@ Package.onUse(function (api) {
   api.use('oauth-encryption', 'server', {weak: true});
 
   api.export('Accounts');
+  api.export('AccountsClient', 'client');
+  api.export('AccountsServer', 'server');
   api.export('AccountsTest', {testOnly: true});
 
   api.addFiles('accounts_common.js', ['client', 'server']);
