@@ -30,7 +30,7 @@ JsHintLinter.prototype.processFilesForTarget = function (files) {
       return;
     }
     // require configuration file to be called '.jshintrc'
-    if (path.extname(file.getBaseName()) !== 'js') {
+    if (path.extname(file.getBasename()) !== 'js') {
       file.error("Unrecognized configuration file name. Configuration file should be called .jshintrc");
       return;
     }

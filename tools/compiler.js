@@ -11,6 +11,7 @@ var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var colonConverter = require('./colon-converter.js');
+var linterPluginModule = require('./linter-plugin.js');
 
 var compiler = exports;
 
@@ -395,8 +396,43 @@ var compileUnibuild = function (options) {
     };
   });
 
+  // For each file choose the longest extension handled by linters.
+  var longestMatchingExt = {};
+  _.each(wrappedSourceItems, function (wrappedSource) {
+    var filename = files.pathBasename(wrappedSource.relPath);
+    var parts = filename.split('.');
+    for (var i = 1; i < parts.length; i++) {
+      var extension = parts.slice(i).join('.');
+      if (_.has(linterPluginsByExtension, extension)) {
+        longestMatchingExt[wrappedSource.relPath] = extension;
+        break;
+      }
+    }
+  });
+  // Run linters on files.
   _.each(linterPluginsByExtension, function (linters, ext) {
-    // XXX would run linters here
+    var sourcesToLint = [];
+    _.each(wrappedSourceItems, function (wrappedSource) {
+      var relPath = wrappedSource.relPath;
+      var hash = wrappedSource.hash;
+      var fileWatchSet = wrappedSource.watchset;
+      var source = wrappedSource.source;
+
+      // only run linters matching the longest handled extension
+      if (longestMatchingExt[relPath] !== ext)
+        return;
+
+      sourcesToLint.push(new linterPluginModule.LintingFile(wrappedSource));
+    });
+
+    _.each(linters, function (linterDef) {
+      // skip linters not relevant to the arch we are compiling for
+      if (! linterDef.relevantForArch(inputSourceArch.arch))
+        return;
+
+      var linter = linterDef.instantiatePlugin();
+      linter.run(sourcesToLint);
+    });
   });
 
   _.each(wrappedSourceItems, function (wrappedSource) {

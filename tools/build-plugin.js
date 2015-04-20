@@ -1,6 +1,7 @@
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
+var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 
 exports.BuildPluginDefintion = function (options, factoryFunction) {

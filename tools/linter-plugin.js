@@ -8,10 +8,15 @@ exports.LinterPlugin = function (pluginDefinition, userPlugin) {
   self.pluginDefinition = pluginDefinition;
 };
 _.extend(exports.LinterPlugin.prototype, {
-  run: function () {}
+  run: function (lintingFiles) {
+    var self = this;
+    self.userPlugin.processFilesForTarget(lintingFiles);
+  }
 });
 
-var LintingFile = function (source) {
+var LintingFile = exports.LintingFile = function (source) {
+  buildPluginModule.InputFile.call(this);
+
   var self = this;
   self._source = source;
 };
