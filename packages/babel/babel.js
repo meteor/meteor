@@ -9,7 +9,10 @@ Babel.transformMeteor = function (code, extraOptions) {
       'es6.arrowFunctions',
       'es6.templateLiterals',
       'es6.classes',
-      'es6.blockScoping'
+      'es6.blockScoping',
+      "es6.properties.shorthand",
+      "es6.properties.computed",
+      "flow"
     ],
     externalHelpers: true,
     // "Loose" mode gets us faster and more IE-compatible transpilations of:
