@@ -30,6 +30,7 @@ if (!(Test-Path $7za_path)) {
 	$web_client.DownloadFile($7za_url, $7za_path)
 }
 
+$libcurl_path = $script_path + "installer\WiXHelper"
 if (!(Test-Path $libcurl_path\libcurl)) {
   # Download NuGet
   echo "Downloading NuGet, to be used to download libcurl and dependencies"
@@ -38,7 +39,6 @@ if (!(Test-Path $libcurl_path\libcurl)) {
   $web_client.DownloadFile("https://nuget.org/nuget.exe", $nuget_path + "\nuget.exe")
 
   # Download libcurl and dependencies, then copy them into the WiXHelper project in which they are used
-  $libcurl_path = $script_path + "installer\WiXHelper"
   Push-Location $nuget_path
   .\nuget install curl -Version 7.30.0.2
   copy curl.7.30.0.2\build\native\lib\v100\win32\release\static\libcurl.lib $libcurl_path\
