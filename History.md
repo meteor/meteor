@@ -71,6 +71,9 @@
 * `meteor run` no longer ignores (and often reverts) external changes to
   `.meteor/versions` which occur while the process is running.  #3582
 
+* Fix crash when downloading two builds of the same package version
+  simultaneously.  #4163
+
 
 ### Meteor Accounts
 
