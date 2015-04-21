@@ -92,9 +92,38 @@ The Version Solver's priorities when selecting versions are described in the nex
 
 ### Optimization
 
-The Version Solver performs a global optimization, using a SAT solver, in order to meet goals such as updating a package's version while changing the versions of other packages as little as possible, and also choosing versions for any new packages that must be added as indirect dependencies.  Because different versions of a package can have different dependencies, and conflicts may result from certain choices, the Version Solver occasionally faces tough trade-offs.  For example, it may be possible to either update package A or package B to the latest version, but not both simultaneously.  Adding package A may require downgrading package B, which would occur if package A requires package C version 1.0, while the latest version of package B requires package C version 2.0.
+The Version Solver performs a global optimization, using a SAT solver, in order to meet goals such as updating a package's version while changing the versions of other packages as little as possible, and also choosing versions for any new packages that must be added as indirect dependencies.
 
-XXX Full cost function
+Because different versions of a package can have different dependencies, and conflicts may result from certain choices, the Version Solver occasionally faces tough trade-offs.  For example, it may be possible to either update package A or package B to the latest version, but not both simultaneously.  Adding package A may require downgrading package B, as in the following example.
+
+Example: Adding new package A to the project requires downgrading existing package B.  This might happen if all versions of A require a 1.x version of package C, while some newer versions of B require a 2.x version of package C.  Therefore, if package A is added to the project, some versions of B are not legal to choose, and if such a version is currently selected (i.e. present in `.meteor/versions`), then B will have to be downgraded.
+
+Optimization proceeds in "steps."  Each step specifies a "cost function" that conceptually assigns a cost to each possible solution (where a solution is a mapping of selected packages to their selected versions).  For each step, in order, the minimum possible cost is found that still admits a solution, and the solution space is constrained so that only solutions with this low cost are considered from then on.
+
+For example, when you run `meteor update foo`, one of the steps is concerned with trying to maximize the major version of `foo`.  Expressed in terms of minimizing a cost function, we would say we want to minimize the "out-of-dateness" of the major version of `foo`, where out-of-dateness is defined as the number of greater versions available.  If `foo` exists in versions `1.0.0`, `2.0.0`, `2.1.0`, and `3.0.0`, these versions would be assigned "major out-of-dateness" of 2, 1, 1, and 0.  To perform this particular minimization step, the Version Solver determines the lowest possible cost, and then constrains the solution space to make sure this cost is achieved.  Supposing `foo 3.0.0` can't be chosen because of conflicts but `2.0.0` and `2.1.0` can, the minimum cost would be 1, and further optimization would be performed under the constraint that a 2.x verison be chosen for `foo`.
+
+Similarly, if a step were to say that we should change as few versions as possible from the ones in `.meteor/versions`, the Version Solver would first find the fewest number of versions it is possible to change -- say, 2 -- and then require that exactly 2 versions be changed by whatever solution is ultimately chosen.
+
+Note that earlier optimization steps take precedence, by the very nature of this system, so we have to order the steps carefully.  It is much better to change two patch versions than one major version, so it would be advisable for an early step to require changing as few versions as possible.
+
+The optimization steps performed are, in order:
+
+XXX explain these better
+
+* Minimize number of "unanticipated" prerelease versions chosen
+* Minimize out-of-dateness of `meteor update` packages (major, minor, patch, wrap)
+* Minimize number of "incompatible" changes to direct dependencies (major version changes and downgrades)
+* Minimize change distance to direct dependencies with respect to `.meteor/version` (major, minor, patch, wrap)
+* Minimize change distance to indirect dependencies with respect to `.meteor/versions` (major, minor, patch, wrap)
+* Minimize out-of-dateness of "new" direct dependencies (major, minor, patch, wrap)
+* Minimize major and minor versions of "new" indirect dependencies
+  ("version gravity" - XXX explain this more)
+* Minimize out-of-dateness of patch and wrap versions of "new" indirect dependencies
+* Minimize the total number of packages selected (to remove superfluous packages)
+
+* XXX `upgradeIndirectDepPatchVersions`
+* XXX indirect dependency version gravity
+* XXX `--allow-incompatible-update`
 
 ### See also
 
