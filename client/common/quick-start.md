@@ -29,7 +29,7 @@ $ meteor
 # Meteor server running on: http://localhost:3000/
 ```
 
-Unleash it on the world (on a free server we provide):
+Then, open a new terminal tab and unleash it on the world (on a free server we provide):
 
 ```bash
 $ meteor deploy myapp.meteor.com
