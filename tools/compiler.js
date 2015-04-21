@@ -232,7 +232,7 @@ var compileUnibuild = function (options) {
   // XXX BBP redoc
   var allHandlersWithPkgs = {};
   var compilerPluginsByExtension = {};
-  var linterPluginsByExtension = {};
+  var allLinters = [];
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   sourceExtensions['js'] = false;
@@ -310,12 +310,8 @@ var compileUnibuild = function (options) {
       });
     });
 
-    // Iterate over the linters
     _.each(otherPkg.sourceProcessors.linter, function (linterPlugin, id) {
-      _.each(linterPlugin.extensions, function (ext) {
-        linterPluginsByExtension[ext] = linterPluginsByExtension[ext] || [];
-        linterPluginsByExtension[ext].push(linterPlugin);
-      });
+      allLinters.push(linterPlugin);
     });
   });
 
@@ -396,7 +392,7 @@ var compileUnibuild = function (options) {
     };
   });
 
-  runLinters(inputSourceArch, isopackCache, wrappedSourceItems, linterPluginsByExtension);
+  runLinters(inputSourceArch, isopackCache, wrappedSourceItems, allLinters);
 
   _.each(wrappedSourceItems, function (wrappedSource) {
     var source = wrappedSource.source;
@@ -952,10 +948,15 @@ var runLinters = function (
   inputSourceArch,
   isopackCache,
   wrappedSourceItems,
-  linterPluginsByExtension) {
+  linters) {
   // For linters, figure out what are the global imports from other packages
   // that we use directly, or are implied.
-  var globalImports = ['Package', 'Assets', 'Npm'];
+  var globalImports = ['Package'];
+
+  if (archinfo.matches(inputSourceArch.arch, "os")) {
+    globalImports = globalImports.concat(['Npm', 'Assets']);
+  }
+
   compiler.eachUsedUnibuild({
     dependencies: inputSourceArch.uses,
     arch: inputSourceArch.arch,
@@ -968,6 +969,14 @@ var runLinters = function (
     _.each(unibuild.packageVariables, function (symbol) {
       if (symbol.export === true)
         globalImports.push(symbol.name);
+    });
+  });
+
+  var linterPluginsByExtension = {};
+  _.each(linters, function (linterPlugin) {
+    _.each(linterPlugin.extensions, function (ext) {
+      linterPluginsByExtension[ext] = linterPluginsByExtension[ext] || [];
+      linterPluginsByExtension[ext].push(linterPlugin);
     });
   });
 
@@ -986,7 +995,11 @@ var runLinters = function (
   });
 
   // Run linters on files.
-  _.each(linterPluginsByExtension, function (linters, ext) {
+  _.each(linters, function (linterDef) {
+    // skip linters not relevant to the arch we are compiling for
+    if (! linterDef.relevantForArch(inputSourceArch.arch))
+      return;
+
     var sourcesToLint = [];
     _.each(wrappedSourceItems, function (wrappedSource) {
       var relPath = wrappedSource.relPath;
@@ -995,28 +1008,25 @@ var runLinters = function (
       var source = wrappedSource.source;
 
       // only run linters matching the longest handled extension
-      if (longestMatchingExt[relPath] !== ext)
+      if (! _.contains(linterDef.extensions, longestMatchingExt[relPath]))
         return;
 
       sourcesToLint.push(new linterPluginModule.LintingFile(wrappedSource));
     });
 
-    _.each(linters, function (linterDef) {
-      // skip linters not relevant to the arch we are compiling for
-      if (! linterDef.relevantForArch(inputSourceArch.arch))
-        return;
+    if (! sourcesToLint.length)
+      return;
 
-      var linter = linterDef.instantiatePlugin();
-      buildmessage.enterJob({
-        title: "linting files with " + linterDef.isopack.name
-      }, function () {
-        try {
-          var markedLinter = buildmessage.markBoundary(linter.run.bind(linter));
-          markedLinter(sourcesToLint, globalImports);
-        } catch (e) {
-          buildmessage.exception(e);
-        }
-      });
+    var linter = linterDef.instantiatePlugin();
+    buildmessage.enterJob({
+      title: "linting files with " + linterDef.isopack.name
+    }, function () {
+      try {
+        var markedLinter = buildmessage.markBoundary(linter.run.bind(linter));
+        markedLinter(sourcesToLint, globalImports);
+      } catch (e) {
+        buildmessage.exception(e);
+      }
     });
   });
 };
