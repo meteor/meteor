@@ -949,6 +949,27 @@ var runLinters = function (
   isopackCache,
   wrappedSourceItems,
   linters) {
+  if (_.isEmpty(linters))
+    return;
+
+  // XXX BBP comment explaining at the very least that the imports might be
+  // different when you actually bundle it!
+
+  // We want to look at the arch of the used packages that matches the arch
+  // we're compiling.  Normally when we call compiler.eachUsedUnibuild, we're
+  // either specifically looking at archinfo.host() because we're doing
+  // something related to plugins (which always run in the host environment), or
+  // we're in the process of building a bundler Target (a program), which has a
+  // specific arch which is never 'os'.  In this odd case, though, we're trying
+  // to run eachUsedUnibuild at package-compile time (not bundle time), so the
+  // only 'arch' we've heard of might be 'os', if we're building a portable
+  // unibuild.  In that case, we should look for imports in the host arch if it
+  // exists instead of failing because a dependency does not have an 'os'
+  // unibuild.
+  // XXX BBP make sure that comment is comprehensible
+  var whichArch = inputSourceArch.arch === 'os'
+        ? archinfo.host() : inputSourceArch.arch;
+
   // For linters, figure out what are the global imports from other packages
   // that we use directly, or are implied.
   var globalImports = ['Package'];
@@ -959,7 +980,7 @@ var runLinters = function (
 
   compiler.eachUsedUnibuild({
     dependencies: inputSourceArch.uses,
-    arch: inputSourceArch.arch,
+    arch: whichArch,
     isopackCache: isopackCache,
     skipUnordered: true,
     skipDebugOnly: true
