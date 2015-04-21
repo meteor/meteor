@@ -459,7 +459,7 @@ _.extend(exports.Tropohouse.prototype, {
         // warehouse?
         _.each(buildsToDownload, function (build) {
           buildmessage.enterJob({
-            title: "downloading " + packageName + "@" + version + " for " + build.buildArchitectures + "..."
+            title: "downloading " + packageName + "@" + version + "..."
           }, function() {
             try {
               var buildTempDir = self._downloadBuildToTempDir(
