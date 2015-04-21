@@ -220,7 +220,9 @@ _.extend(ResourceSlot.prototype, {
         files.pathJoin(
           serveRoot,
           // XXX BBP should we decide in our API that everything is / ?
-          files.convertToStandardPath(options.path, true)))
+          files.convertToStandardPath(options.path, true))),
+      // XXX BBP convertSourceMapPaths ???
+      sourceMap: options.sourceMap
     });
   }
 });
