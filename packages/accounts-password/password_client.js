@@ -109,7 +109,7 @@ Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
   if (typeof options.password !== 'string')
-    throw new Error("Must set options.password");
+    throw new Error("options.password must be a string");
   if (!options.password) {
     callback(new Meteor.Error(400, "Password may not be empty"));
     return;
