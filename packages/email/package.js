@@ -12,7 +12,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('underscore', 'server');
-  api.export('Email', 'server');
+  api.export(['Email', 'EmailInternals'], 'server');
   api.export('EmailTest', 'server', {testOnly: true});
   api.addFiles('email.js', 'server');
 });

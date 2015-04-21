@@ -97,6 +97,10 @@
   just like it does with Numbers and Strings. This applies to the `check`
   function as well.
 
+* Provide direct access to the `mailcomposer` npm module used by the `email`
+  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
+  object to `Email.send` instead of individual options.  #4209
+
 
 ### Other bug fixes and improvements
 
