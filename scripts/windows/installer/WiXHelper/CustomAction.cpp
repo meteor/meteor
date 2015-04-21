@@ -52,6 +52,7 @@ int curl_download(MSIHANDLE hInstall, wchar_t *wUrl, wchar_t *wFile)
 {
   CURL *curl;
   CURLcode res;
+  int ret = 0;
  
   char url[BUF_LEN] = "";
   wcstombs(url, wUrl, BUF_LEN);
@@ -80,6 +81,7 @@ int curl_download(MSIHANDLE hInstall, wchar_t *wUrl, wchar_t *wFile)
       sprintf(messageStr, "curl_easy_perform() failed: %s\n",
               curl_easy_strerror(res));
       MessageBoxA(NULL, messageStr, NULL, NULL);
+      ret = -1;
  	}
 
     /* always cleanup */ 
@@ -88,7 +90,7 @@ int curl_download(MSIHANDLE hInstall, wchar_t *wUrl, wchar_t *wFile)
  
   curl_global_cleanup();
  
-  return 0;
+  return ret;
 }
 
 
