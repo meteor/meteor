@@ -255,7 +255,7 @@ build artifacts:
 
 <ul><li>a tarball that includes everything necessary to run the application server
   (see `README` in the tarball for details)</li>
-<li>an unassigned `apk` bundle and a project source if Android is targetted as a
+<li>an unsigned `apk` bundle and a project source if Android is targetted as a
   mobile platform</li>
 <li>a directory with an Xcode project source if iOS is targetted as a mobile
   platform</li></ul>
@@ -265,7 +265,7 @@ own server, instead of deploying to Meteor's servers.  You will have to deal
 with logging, monitoring, backups, load-balancing, etc, all of which we handle
 for you if you use `meteor deploy`.
 
-Unassigned `apk` bundle and the outputted Xcode project can be used to deploy
+Unsigned `apk` bundle and the outputted Xcode project can be used to deploy
 your mobile apps to Android Play Store and Apple App Store.
 
 By default, your application is bundled for your current architecture.
