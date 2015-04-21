@@ -30,6 +30,10 @@
   using `ddp` is equivalent to using both. This allows you to use the Node DDP
   client without adding the DDP server to your app.  #4191 #3452
 
+* On the client, `Meteor.call` now takes a `throwStubExceptions` option; if set,
+  exceptions thrown by method stubs will be thrown instead of logged, and the
+  method will not be invoked on the server.  #4202
+
 
 ### Isobuild
 
