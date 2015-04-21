@@ -5,6 +5,11 @@ Package.describe({
   documentation: null  // XXX BBP readme!
 });
 
+// XXX BBP remove from core?
+// XXX BBP update docs, examples
+
+// XXX BBP needs dependency on batch-plugins magic package
+
 Package.registerBuildPlugin({
   name: "compileLessBatch",
   use: ['underscore'],
