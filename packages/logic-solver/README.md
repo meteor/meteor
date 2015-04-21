@@ -23,9 +23,9 @@ industrial-strength SAT solver, compiled from C++ to JavaScript using
 [Emscripten](http://emscripten.org).  See [About
 MiniSat](#about-minisat) for more information.
 
-XXX Link to a cool Sudoku demo.  Show that this thing is actually
-pretty darn fast!  Maybe include Sudoku as one of the code examples
-too, since the code is short and cool.
+Logic Solver can solve a hard Sudoku in under a second in a web browser,
+with very clean-looking code compared to many constraint solvers.
+[**Try this demo**](http://sudoku-demo.meteor.com/)
 
 ## Table of Contents
 
