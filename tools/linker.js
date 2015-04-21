@@ -36,41 +36,44 @@ var Module = function (options) {
   self.noLineNumbers = options.noLineNumbers;
 };
 
+var transpileFile = function (inputFile) {
+  var oldCode = inputFile.source;
+  var oldMap = inputFile.sourceMap;
+  var Babel = isopackets.load('babel')['babel'].Babel;
+  var babelOptions = {
+    sourceMaps: true
+  };
+  if (oldMap) {
+    _.extend(babelOptions, {
+      inputSourceMap: JSON.parse(oldMap)
+    });
+  } else {
+    _.extend(babelOptions, {
+      sourceMapName: inputFile.sourcePath,
+      sourceFileName: inputFile.sourcePath
+    });
+  }
+  var babelResult = Babel.transformMeteor(oldCode, babelOptions);
+
+  return _.extend({}, inputFile, {
+    source: babelResult.code,
+    sourceMap: babelResult.map
+  });
+};
+
 _.extend(Module.prototype, {
   // source: the source code
   // servePath: the path where it would prefer to be served if possible
   addFile: function (inputFile) {
     var self = this;
 
-    var transpiledFile = null;
+    var f = inputFile;
     if (self.name !== 'babel' && self.name !== 'js-analyze') {
-      var oldCode = inputFile.source;
-      var oldMap = inputFile.sourceMap;
-      var Babel = isopackets.load('babel')['babel'].Babel;
-      var babelOptions = {
-        sourceMaps: true
-      };
-      if (oldMap) {
-        _.extend(babelOptions, {
-          inputSourceMap: JSON.parse(oldMap)
-        });
-      } else {
-        _.extend(babelOptions, {
-          sourceMapName: inputFile.sourcePath,
-          sourceFileName: inputFile.sourcePath
-        });
-      }
-      var babelResult = Babel.transformMeteor(oldCode, babelOptions);
-
-      transpiledFile = _.extend({}, inputFile, {
-        source: babelResult.code,
-        sourceMap: babelResult.map
-      });
+      f = transpileFile(inputFile);
     }
 
-    self.files.push(new File(transpiledFile || inputFile, self));
+    self.files.push(new File(f, self));
   },
-
 
   maxLineLength: function (ignoreOver) {
     var self = this;
