@@ -11,7 +11,7 @@
 #include <dirutil.h>
 
 #include <urlmon.h>
-#include <winhttp.h>
+#include <wininet.h>
 #include <sys/stat.h>
 
 #define BUF_LEN 1024
@@ -21,81 +21,6 @@
 
 
     
-
-
-
-
-using namespace std;
-
-class MyCallback : public IBindStatusCallback  
-{
-public:
-	MSIHANDLE iHInstall;
-    MyCallback() {}
-
-    ~MyCallback() { }
-
-    // This one is called by URLDownloadToFile
-    STDMETHOD(OnProgress)(/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG ulStatusCode, /* [in] */ LPCWSTR wszStatusText)
-    {
-		PMSIHANDLE hActionRec = MsiCreateRecord(3);
-        PMSIHANDLE hProgressRec = MsiCreateRecord(3);
-
-		DWORD ulPrc = 0;
-		WCHAR wzInfo[1024] = { };
-
-		if (ulProgressMax > 0) 
-		{
-			ulPrc  = static_cast<DWORD>(100 * static_cast<double>(ulProgress) / static_cast<double>(ulProgressMax));
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
-		}
-		else
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...");
-
-
- 
-        MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
-        MsiRecordSetString(hActionRec, 2, wzInfo);
-        MsiRecordSetString(hActionRec, 3, NULL);
-        UINT iResult = MsiProcessMessage(iHInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
-        if ((iResult == IDCANCEL) || (iResult == IDABORT))
-            return E_ABORT;
-
-        return S_OK;
-    }
-
-    // The rest  don't do anything...
-    STDMETHOD(OnStartBinding)(/* [in] */ DWORD dwReserved, /* [in] */ IBinding __RPC_FAR *pib)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(GetPriority)(/* [out] */ LONG __RPC_FAR *pnPriority)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnLowResource)(/* [in] */ DWORD reserved)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnStopBinding)(/* [in] */ HRESULT hresult, /* [unique][in] */ LPCWSTR szError)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(GetBindInfo)(/* [out] */ DWORD __RPC_FAR *grfBINDF, /* [unique][out][in] */ BINDINFO __RPC_FAR *pbindinfo)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnDataAvailable)(/* [in] */ DWORD grfBSCF, /* [in] */ DWORD dwSize, /* [in] */ FORMATETC __RPC_FAR *pformatetc, /* [in] */ STGMEDIUM __RPC_FAR *pstgmed)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnObjectAvailable)(/* [in] */ REFIID riid, /* [iid_is][in] */ IUnknown __RPC_FAR *punk)
-    { return E_NOTIMPL; }
-
-	// IUnknown stuff
-    STDMETHOD_(ULONG,AddRef)()
-    { return 0; }
-
-    STDMETHOD_(ULONG,Release)()
-    { return 0; }
-
-    STDMETHOD(QueryInterface)(/* [in] */ REFIID riid, /* [iid_is][out] */ void __RPC_FAR *__RPC_FAR *ppvObject)
-    { return E_NOTIMPL; }
-};
 
 
 
@@ -360,24 +285,91 @@ HRESULT Download_Package(
 	PathGetDirectory(szBundleSrc, &szBundlePath);
 	StringCchPrintf(szLocalFile, BUF_LEN, L"%s%s\\%s", szBundlePath, szPrereqDir, wzZipFile);
 
-	// If local file exists use it instaead of download.
-	DWORD pdwAttr;
-	if (FileExistsEx(szLocalFile, &pdwAttr) == TRUE)
-	{
-		FileEnsureCopy(szLocalFile, szZipFile, TRUE);
-		WcaLog(LOGMSG_STANDARD, "Nginx local package found \"%S\", will use that.", szLocalFile);		
-	}
-	else
-	{
-		MyCallback pCallback;
-		pCallback.iHInstall = hInstall;
-		hr = URLDownloadToFile(NULL, szDwnUrl, szZipFile, 0, &pCallback);
+	HINTERNET internet = InternetOpen(
+		L"MeteorWindowsInstaller/1.0",
+		INTERNET_OPEN_TYPE_PRECONFIG,
+		NULL,
+		NULL,
+		0);
 
-		if (FAILED(hr))
-			WcaLog(LOGMSG_STANDARD, "Failed to download %S package from url: %S", wzFriendlyName, szDwnUrl);			
-		else
-			WcaLog(LOGMSG_STANDARD, "%S package should be here: %S", wzFriendlyName, szZipFile);
+	if (internet == NULL) {
+		return HRESULT_FROM_WIN32(::GetLastError());
 	}
+
+	HINTERNET request = InternetOpenUrl(
+		internet,
+		szDwnUrl,
+		NULL,
+		0,
+		INTERNET_FLAG_SECURE,
+		NULL);
+
+	if (request == NULL) {
+		return HRESULT_FROM_WIN32(::GetLastError());
+	}
+
+    DWORD dwContentLen;
+    DWORD dwBufLen = sizeof(dwContentLen);
+
+	BOOL result = HttpQueryInfo(
+		request,
+		HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER,
+    	(LPVOID)&dwContentLen,
+	    &dwBufLen,
+	    0);
+
+	if (!request) {
+		return HRESULT_FROM_WIN32(::GetLastError());
+	}
+
+    const int capacity = 1024*64;
+    char* buffer = new char[capacity];
+  	DWORD bytes_downloaded = 0;
+
+    FILE* output = _wfopen(szZipFile, L"wb");
+    for (;;) {
+    	DWORD bytes_read;
+
+    	BOOL result = InternetReadFile(
+    		request,
+    		buffer,
+    		capacity,
+    		&bytes_read);
+
+		if (!request) {
+			return HRESULT_FROM_WIN32(::GetLastError());
+		}
+
+	    if (bytes_read == 0) {
+	    	break;
+	    }
+
+	    bytes_downloaded += bytes_read;
+
+    	fwrite(buffer, 1, bytes_read, output);
+
+    	// update progress bar
+   		PMSIHANDLE hActionRec = MsiCreateRecord(3);
+        PMSIHANDLE hProgressRec = MsiCreateRecord(3);
+
+		DWORD ulPrc = 0;
+		WCHAR wzInfo[1024] = { };
+
+		ulPrc  = static_cast<DWORD>(100 * static_cast<double>(bytes_downloaded) / static_cast<double>(dwContentLen));
+		::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
+ 
+        MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
+        MsiRecordSetString(hActionRec, 2, wzInfo);
+        MsiRecordSetString(hActionRec, 3, NULL);
+
+        UINT iResult = MsiProcessMessage(hInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
+        if ((iResult == IDCANCEL) || (iResult == IDABORT)) {
+        	fclose(output);
+            return E_ABORT;
+        }
+	}
+
+    fclose(output);
 
 	WcaLog(LOGMSG_STANDARD, "Download package \"%S\" completed.", wzFriendlyName);
 
