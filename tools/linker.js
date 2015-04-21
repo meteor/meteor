@@ -43,8 +43,7 @@ _.extend(Module.prototype, {
     var self = this;
 
     var transpiledFile = null;
-    if (self.name !== 'babel' && self.name !== 'js-analyze' &&
-        inputFile.sourcePath !== 'minisat.js') { // XXX
+    if (self.name !== 'babel' && self.name !== 'js-analyze') {
       var oldCode = inputFile.source;
       var oldMap = inputFile.sourceMap;
       var Babel = isopackets.load('babel')['babel'].Babel;
