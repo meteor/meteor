@@ -193,19 +193,18 @@ testAsyncMulti("livedata - basic method invocation", [
       test.equal(Meteor.call("exception", "both"), undefined);
       test.equal(Meteor.call("exception", "server"), undefined);
       test.equal(Meteor.call("exception", "client"), undefined);
-      
+
       // If we pass throwStubExceptions then we *should* see thrown exceptions
       // on the client
       test.throws(function () {
         Meteor.apply("exception", ["both"], {throwStubExceptions: true});
       });
       test.equal(
-        Meteor.apply("exception", ["server"], {throwStubExceptions: true}), 
+        Meteor.apply("exception", ["server"], {throwStubExceptions: true}),
         undefined);
       test.throws(function () {
         Meteor.apply("exception", ["client"], {throwStubExceptions: true});
       });
-      
     }
 
     // With callback
