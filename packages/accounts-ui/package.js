@@ -9,5 +9,5 @@ Package.onUse(function (api) {
   api.use('accounts-ui-unstyled', 'client');
   api.use('less', 'client');
 
-  api.addFiles(['login_buttons.less'], 'client');
+  api.addFiles(['login_buttons.main.less'], 'client');
 });

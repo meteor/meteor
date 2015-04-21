@@ -30,6 +30,13 @@ Package.onUse(function (api) {
     'login_buttons_single.js',
     'login_buttons_dropdown.js',
     'login_buttons_dialogs.js'], 'client');
+
+  // The less source defining the default style for accounts-ui. Just adding
+  // this package doesn't actually apply these styles; they need to be
+  // `@import`ed from some *.main.less file.  The accounts-ui package does that
+  // for you, or you can do it in your app.
+  api.use('less');
+  api.addFiles('login_buttons.less');
 });
 
 Package.onTest(function (api) {
