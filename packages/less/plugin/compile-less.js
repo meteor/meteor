@@ -1,65 +1,122 @@
-var fs = Npm.require('fs');
-var path = Npm.require('path');
 var less = Npm.require('less');
+var util = Npm.require('util');
+var path = Npm.require('path');
 var Future = Npm.require('fibers/future');
 
-Plugin.registerSourceHandler("less", {archMatching: 'web'}, function (compileStep) {
-  var source = compileStep.read().toString('utf8');
-  var options = {
-    filename: compileStep.inputPath,
-    // Use fs.readFileSync to process @imports. This is the bundler, so
-    // that's not going to cause concurrency issues, and it means that (a)
-    // we don't have to use Futures and (b) errors thrown by bugs in less
-    // actually get caught.
-    syncImport: true,
-    paths: [path.dirname(compileStep._fullInputPath)] // for @import
-  };
+Plugin.registerCompiler({
+  extensions: ['less'],
+  archMatching: 'web'
+}, function () {
+    return new LessCompiler;
+});
 
-  var parser = new less.Parser(options);
-  var astFuture = new Future;
-  var sourceMap = null;
-  try {
-    parser.parse(source, astFuture.resolver());
-    var ast = astFuture.wait();
+var LessCompiler = function () {
+};
+LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
+  var filesByAbsoluteImportPath = {};
+  var mains = [];
 
-    var css = ast.toCSS({
-      sourceMap: true,
-      writeSourceMap: function (sm) {
-        sourceMap = JSON.parse(sm);
-      }
+  inputFiles.forEach(function (inputFile) {
+    var packageName = inputFile.xxxPackageName();
+    var pathInPackage = inputFile.xxxPathInPackage();
+    // XXX BBP think about windows slashes
+    var absoluteImportPath = packageName === null
+          ? ('{}/' + pathInPackage)
+          : ('{' + packageName + '}/' + pathInPackage);
+    filesByAbsoluteImportPath[absoluteImportPath] = inputFile;
+    if (pathInPackage.match(/\.main\.less$/)) {
+      mains.push({inputFile: inputFile,
+                  absoluteImportPath: absoluteImportPath});
+    }
+  });
+
+  var importPlugin = new MeteorImportLessPlugin(filesByAbsoluteImportPath);
+
+  _.each(mains, function (main) {
+    var inputFile = main.inputFile;
+    var absoluteImportPath = main.absoluteImportPath;
+    var f = new Future;
+    less.render(inputFile.xxxContentsAsBuffer().toString('utf8'), {
+      filename: absoluteImportPath,
+      plugins: [importPlugin],
+      // Generate a source map, and include the source files in the
+      // sourcesContent field.  (Note that source files which don't themselves
+      // produce text (eg, are entirely variable definitions) won't end up in
+      // the source map!)
+      sourceMap: { outputSourceFiles: true }
+    }, f.resolver());
+    try {
+      var output = f.wait();
+    } catch (e) {
+      inputFile.xxxError({
+        message: e.message,
+        sourcePath: e.filename,  // XXX BBP this has {} and stuff, is that OK?
+        line: e.line,
+        column: e.column
+      });
+      return;  // go on to next file
+    }
+
+    // XXX BBP note that output.imports has a list of imports, which can
+    //     be used for caching
+    inputFile.addStylesheet({
+      data: output.css,
+      path: inputFile.xxxPathInPackage() + '.css',
+      sourceMap: output.map
     });
-  } catch (e) {
-    // less.Parser.parse is supposed to report any errors via its
-    // callback. But sometimes, it throws them instead. This is
-    // probably a bug in less. Be prepared for either behavior.
-    compileStep.error({
-      message: "Less compiler error: " + e.message,
-      sourcePath: e.filename || compileStep.inputPath,
-      line: e.line,
-      column: e.column + 1
+  });
+};
+
+var MeteorImportLessPlugin = function (filesByAbsoluteImportPath) {
+  var self = this;
+  self.filesByAbsoluteImportPath = filesByAbsoluteImportPath;
+};
+_.extend(MeteorImportLessPlugin.prototype, {
+  install: function (less, pluginManager) {
+    var self = this;
+    pluginManager.addFileManager(
+      new MeteorImportLessFileManager(self.filesByAbsoluteImportPath));
+  },
+  minVersion: [2, 5, 0]
+});
+
+var MeteorImportLessFileManager = function (filesByAbsoluteImportPath) {
+  var self = this;
+  self.filesByAbsoluteImportPath = filesByAbsoluteImportPath;
+};
+util.inherits(MeteorImportLessFileManager, less.AbstractFileManager);
+_.extend(MeteorImportLessFileManager.prototype, {
+  // We want to be the only active FileManager, so claim to support everything.
+  supports: function () {
+    return true;
+  },
+
+  loadFile: function (filename, currentDirectory, options, environment, cb) {
+    var self = this;
+    var packageMatch = currentDirectory.match(/^(\{[^}]*\})/);
+    if (! packageMatch) {
+      // shouldn't happen.  all filenames less ever sees should involve this {}
+      // thing!
+      throw new Error("file without Meteor context? " + currentDirectory);
+    }
+    var currentPackagePrefix = packageMatch[1];
+
+    if (filename[0] === '/') {
+      // Map `/foo/bar.less` onto `{thispackage}/foo/bar.less`
+      filename = currentPackagePrefix + filename;
+    } else if (filename[0] !== '{') {
+      filename = path.join(currentDirectory, filename);
+    }
+    if (! _.has(self.filesByAbsoluteImportPath, filename)) {
+      // XXX BBP better error handling?
+      cb({type: "File", message: "Unknown import: " + filename});
+      return;
+    }
+    cb(null, {
+      contents: self.filesByAbsoluteImportPath[filename]
+        .xxxContentsAsBuffer().toString('utf8'),
+      filename: filename
     });
     return;
   }
-
-
-  if (sourceMap) {
-    sourceMap.sources = [compileStep.inputPath];
-    sourceMap.sourcesContent = [source];
-    sourceMap = JSON.stringify(sourceMap);
-  }
-
-  compileStep.addStylesheet({
-    path: compileStep.inputPath + ".css",
-    data: css,
-    sourceMap: sourceMap
-  });
-});;
-
-// Register import.less files with the dependency watcher, without actually
-// processing them. There is a similar rule in the stylus package.
-Plugin.registerSourceHandler("import.less", function () {
-  // Do nothing
 });
-
-// Backward compatibility with Meteor 0.7
-Plugin.registerSourceHandler("lessimport", function () {});

@@ -1,23 +1,32 @@
 Package.describe({
-  summary: "The dynamic stylesheet language",
-  version: "1.0.14"
+  name: 'less',
+  version: '2.5.0_1',  // XXX BBP is this the right version number?
+  summary: 'less???',  // XXX BBP do this
+  documentation: null  // XXX BBP readme!
 });
 
 Package.registerBuildPlugin({
-  name: "compileLess",
-  use: [],
+  name: "compileLessBatch",
+  use: ['underscore'],
   sources: [
     'plugin/compile-less.js'
   ],
   npmDependencies: {
-    // Fork of 1.7.4 deleted large unused files in dist directory.
-    "less": "https://github.com/meteor/less.js/tarball/4ccb7fc94321a6a85d592cdf46579425add1570f"
+    // XXX BBP should we fork and delete some files?
+    "less": "2.5.0"
   }
 });
 
-Package.onTest(function (api) {
-  api.use(['test-helpers', 'tinytest', 'less', 'templating']);
-  api.addFiles(['less_tests.less', 'less_tests.js', 'less_tests.html',
-                 'less_tests_empty.less'],
-                'client');
+Package.onTest(function(api) {
+  api.use('less');
+  api.use(['tinytest', 'test-helpers']);
+  api.addFiles(['tests/top.less',
+                'tests/top2.less',
+                'tests/top3.less',
+                'tests/not-included.less',
+                'tests/dir/in-dir.less',
+                'tests/dir/in-dir2.less',
+                'tests/dir/root.main.less',
+                'tests/dir/subdir/in-subdir.less']);
+  api.addFiles('less_tests.js', 'client');
 });
