@@ -121,6 +121,8 @@ XXX explain these better
 * Minimize out-of-dateness of patch and wrap versions of "new" indirect dependencies
 * Minimize the total number of packages selected (to remove superfluous packages)
 
+TODO:
+
 * XXX `upgradeIndirectDepPatchVersions`
 * XXX indirect dependency version gravity
 * XXX `--allow-incompatible-update`
