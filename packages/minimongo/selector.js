@@ -257,12 +257,11 @@ var operatorBranchedMatcher = function (valueSelector, matcher, isRoot) {
   _.each(valueSelector, function (operand, operator) {
     var simpleRange = _.contains(['$lt', '$lte', '$gt', '$gte'], operator) &&
       _.isNumber(operand);
-    var simpleInequality = operator === '$ne' && !_.isObject(operand);
+    var simpleEquality = _.contains(['$ne', '$eq'], operator) && !_.isObject(operand);
     var simpleInclusion = _.contains(['$in', '$nin'], operator) &&
       _.isArray(operand) && !_.any(operand, _.isObject);
 
-    if (! (operator === '$eq' || simpleRange ||
-           simpleInclusion || simpleInequality)) {
+    if (! (simpleRange || simpleInclusion || simpleEquality)) {
       matcher._isSimple = false;
     }
 

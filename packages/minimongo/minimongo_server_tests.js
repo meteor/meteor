@@ -552,10 +552,11 @@ Tinytest.add("minimongo - sorter and projection combination", function (test) {
 
   Tinytest.add("minimongo - can selector become true by modifier - $-nonscalar selectors and simple tests", function (t) {
     test = t;
-    // XXX this test should be T, but it is not implemented yet
-    F({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 5 } }, "set of $eq");
-    F({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 4 } }, "set of $eq");
-    F({ a: { $eq: { x: 5 } } }, { $set: { 'a.y': 4 } }, "set of $eq");
+    T({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 5 } }, "set of $eq");
+    // XXX this test should be F, but it is not implemented yet
+    T({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 4 } }, "set of $eq");
+    // XXX this test should be F, but it is not implemented yet
+    T({ a: { $eq: { x: 5 } } }, { $set: { 'a.y': 4 } }, "set of $eq");
     T({ a: { $ne: { x: 5 } } }, { $set: { 'a.x': 3 } }, "set of $ne");
     // XXX this test should be F, but it is not implemented yet
     T({ a: { $ne: { x: 5 } } }, { $set: { 'a.x': 5 } }, "set of $ne");
