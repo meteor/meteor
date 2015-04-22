@@ -466,7 +466,7 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
-exports.isUrlWithFileUri = function (x) {
+exports.isUrlWithFileScheme = function (x) {
   return /^file:\/\/.+/.test(x);
 };
 
@@ -496,7 +496,7 @@ exports.ensureOnlyExactVersions = function (dependencies) {
 };
 exports.isExactVersion = function (version) {
   return semver.valid(version) || exports.isUrlWithSha(version)
-    || exports.isUrlWithFileUri(version);
+    || exports.isUrlWithFileScheme(version);
 };
 
 

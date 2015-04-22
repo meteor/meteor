@@ -473,7 +473,7 @@ var installPlugin = function (cordovaPath, name, version, conf) {
 
   var pluginInstallCommand;
 
-  if (utils.isUrlWithFileUri(version)) {
+  if (utils.isUrlWithFileScheme(version)) {
     // Strip file://
     pluginInstallCommand = version.substr(7);
   } else {
@@ -634,19 +634,16 @@ var ensureCordovaPlugins = function (projectContext, options) {
   // are up to date since we do not track changes in their sources.
 
   var shouldReinstallPlugins = false,
-      shouldReinstallPluginsFromLocalPaths = false,
-      pluginsFromLocalPath = {};
+    pluginsFromLocalPath = {},
+    pluginFromLocalPath;
 
   // Iterate through all of the plugins and find if any of them have a new
   // version. Additionally check if we have plugins installed from local path.
-  var pluginFromLocalPath;
   _.each(plugins, function (version, name) {
     // Check if plugin is installed from local path
-    pluginFromLocalPath = utils.isUrlWithFileUri(version);
-    if (pluginFromLocalPath) {
-        shouldReinstallPluginsFromLocalPaths = true;
-        pluginsFromLocalPath[name] = version;
-    }
+    pluginFromLocalPath = utils.isUrlWithFileScheme(version);
+    if (pluginFromLocalPath)
+      pluginsFromLocalPath[name] = version;
 
     // XXX there is a hack here that never updates a package if you are
     // trying to install it from a URL, because we can't determine if
@@ -666,10 +663,10 @@ var ensureCordovaPlugins = function (projectContext, options) {
     }
   });
 
-  if (shouldReinstallPluginsFromLocalPaths)
+  if (pluginsFromLocalPath.length > 0)
     verboseLog('Reinstalling cordova plugins added from the local path');
 
-  if (shouldReinstallPlugins || shouldReinstallPluginsFromLocalPaths) {
+  if (shouldReinstallPlugins || pluginsFromLocalPath.length > 0) {
     // Loop through all of the current plugins and remove them one by one until
     // we have deleted proper amount of plugins. It's necessary to loop because
     // we might have dependencies between plugins.
@@ -702,9 +699,9 @@ var ensureCordovaPlugins = function (projectContext, options) {
     buildmessage.enterJob({ title: "installing Cordova plugins"}, function () {
       installedPlugins = getInstalledPlugins(cordovaPath);
       if (shouldReinstallPlugins)
-          uninstallPlugins(installedPlugins, true);
+        uninstallPlugins(installedPlugins, true);
       else
-          uninstallPlugins(pluginsFromLocalPath, false);
+        uninstallPlugins(pluginsFromLocalPath, false);
 
       // Now install necessary plugins.
       try {
