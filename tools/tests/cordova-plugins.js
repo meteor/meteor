@@ -277,7 +277,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   // Add a package with Cordova.depends with local plugin (added from path)
   run = s.run("add", "empty-cordova-plugin");
   run.match("added,");
-  run.match("contains a empty cordova plugin");
+  run.match("contains an empty cordova plugin");
   run.expectExit(0);
 
 });
