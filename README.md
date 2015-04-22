@@ -128,6 +128,6 @@ $ meteor test-packages percolatestudio:percolatestudio-migrations
 
 ## License 
 
-MIT. (c) Percolate Studio
+MIT. (c) Percolate Studio, maintained by Zoltan Olah (@zol).
 
 Meteor Migrations was developed as part of the [Verso](http://versoapp.com) project.
