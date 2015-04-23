@@ -94,8 +94,8 @@ _.extend(ReactiveDict.prototype, {
 
     // Mongo.ObjectID is in the 'mongo' package
     var ObjectID = null;
-    if (typeof Mongo !== 'undefined') {
-      ObjectID = Mongo.ObjectID;
+    if (typeof Package.mongo !== 'undefined') {
+      ObjectID = Package.mongo.Mongo.ObjectID;
     }
 
     // We don't allow objects (or arrays that might include objects) for

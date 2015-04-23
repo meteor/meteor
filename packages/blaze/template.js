@@ -37,7 +37,8 @@ Blaze.Template = function (viewName, renderFunction) {
   this._callbacks = {
     created: [],
     rendered: [],
-    destroyed: []
+    destroyed: [],
+    migrate: []
   };
 };
 var Template = Blaze.Template;
@@ -96,6 +97,14 @@ Template.prototype.onRendered = function (cb) {
  */
 Template.prototype.onDestroyed = function (cb) {
   this._callbacks.destroyed.push(cb);
+};
+
+Template.prototype._onMigrate = function (cb) {
+  this._callbacks.migrate.push(cb);
+
+  this.onDestroyed(function () {
+    Template._unRegisterTemplateInstanceForMigration(this);
+  });
 };
 
 Template.prototype._getCallbacks = function (which) {
@@ -218,6 +227,12 @@ Template.prototype.constructView = function (contentFunc, elseFunc) {
     fireCallbacks(destroyedCallbacks, view.templateInstance());
   });
 
+  var migrateCallbacks = self._getCallbacks('migrate');
+  if (migrateCallbacks.length > 0) {
+    Template._registerTemplateInstanceForMigration(view.templateInstance());
+  }
+  view.templateInstance()._migrateCallbacks = migrateCallbacks;
+
   return view;
 };
 
@@ -277,6 +292,12 @@ Blaze.TemplateInstance = function (view) {
   this._allSubsReady = false;
 
   this._subscriptionHandles = {};
+
+  /**
+   * A Reactive Dict for storing local template state.
+   * @type {ReactiveDict}
+   */
+  this.state = new ReactiveDict();
 };
 
 /**
@@ -537,3 +558,40 @@ Template.parentData = Blaze._parentData;
  * @param {Function} function The helper function itself.
  */
 Template.registerHelper = Blaze.registerHelper;
+
+// Migrating local template state
+
+var migrationData = {};
+Template._saveMigrationData = function (uniqueId, data) {
+  migrationData[uniqueId] = data;
+};
+
+Template._loadMigrationData = function (uniqueId) {
+  var allMigrationData = Package.reload.Reload._migrationData('blaze');
+
+  if (allMigrationData) {
+    return allMigrationData[uniqueId];
+  }
+};
+
+Template._templateInstancesToMigrate = [];
+Template._registerTemplateInstanceForMigration = function (templateInstance) {
+  Template._templateInstancesToMigrate.push(templateInstance);
+};
+
+Template._unRegisterTemplateInstanceForMigration = function (templateInstance) {
+  Template._templateInstancesToMigrate =
+   _.without(Template._templateInstancesToMigrate, templateInstance);
+};
+
+if (Package.reload) {
+  Package.reload.Reload._onMigrate("blaze", function () {
+    var templateInstancesToMigrate = Template._templateInstancesToMigrate;
+
+    _.each(templateInstancesToMigrate, function (tmplInst) {
+      fireCallbacks(tmplInst._migrateCallbacks, tmplInst);
+    });
+
+    return [true, migrationData];
+  });
+}
