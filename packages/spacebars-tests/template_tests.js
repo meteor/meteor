@@ -2482,7 +2482,7 @@ Tinytest.add(
 
     test.equal([created, rendered, destroyed], [false, false, false]);
 
-    var renderedTmpl = Blaze.render({ 'content': tmpl, 'parentElement': div });
+    var renderedTmpl = Blaze.render(tmpl, div);
     test.equal([created, rendered, destroyed], [true, false, false]);
 
     // Flush now. We fire the rendered callback in an afterFlush block,
@@ -2492,10 +2492,10 @@ Tinytest.add(
 
     var otherDiv = document.createElement("DIV");
     // can run a second time without throwing
-    var x = Blaze.render({ 'content': tmpl, 'parentElement': otherDiv });
+    var x = Blaze.render(tmpl, otherDiv);
     // note: we'll have clean up `x` below
 
-    var renderedTmpl2 = Blaze.renderWithData({ 'content': tmpl, 'parentElement': div }, {greeting: 'Bye'});
+    var renderedTmpl2 = Blaze.render(tmpl, div, { data: { greeting: 'Bye' } });
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello aaa</span><span>Bye aaa</span>");
     R.set('bbb');
@@ -2503,10 +2503,21 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML),
                "<span>Hello bbb</span><span>Bye bbb</span>");
     test.equal([created, rendered, destroyed], [true, true, false]);
-    test.equal(R._numListeners(), 3);
+
+    // Test to see if the deprecated Blaze.renderWithData works
+    var renderedTmpl3 = Blaze.renderWithData(tmpl, { data: { greeting: 'Bye' } }, div);
+    test.equal(canonicalizeHtml(div.innerHTML),
+               "<span>Hello bbb</span><span>Bye bbb</span><span>Hello bbb</span>");
+    R.set('ccc');
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML),
+               "<span>Hello ccc</span><span>Bye ccc</span><span>Hello ccc</span>");
+    test.equal([created, rendered, destroyed], [true, true, false]);
+    test.equal(R._numListeners(), 4);
     Blaze.remove(renderedTmpl);
     Blaze.remove(renderedTmpl); // test that double-remove doesn't throw
     Blaze.remove(renderedTmpl2);
+    Blaze.remove(renderedTmpl3);
     Blaze.remove(x);
     test.equal([created, rendered, destroyed], [true, true, true]);
     test.equal(R._numListeners(), 0);
@@ -2518,14 +2529,10 @@ Tinytest.add(
   function (test) {
     var tmpl = Template.spacebars_test_ui_render;
     test.throws(function () {
-      Blaze.render({ 'content': tmpl, 'parentElement': $('body') });
+      Blaze.render(tmpl, $('body'));
     }, /'parentElement' must be a DOM node/);
     test.throws(function () {
-      Blaze.render({
-        'content': tmpl,
-        'parentElement': document.body,
-        'nextNode': $('body')
-      });
+      Blaze.render(tmpl, document.body, { 'nextNode': $('body') });
     }, /'nextNode' must be a DOM node/);
   });
 
@@ -2534,7 +2541,7 @@ Tinytest.add(
   function (test) {
     var div = document.createElement("DIV");
     var tmpl = Template.spacebars_test_ui_getElementData;
-    Blaze.renderWithData({ 'content': tmpl, 'parentElement': div }, {foo: "bar"});
+    Blaze.render(tmpl, div, { data: { foo: "bar"} });
 
     var span = div.querySelector('SPAN');
     test.isTrue(span);
@@ -3084,7 +3091,7 @@ Tinytest.add("spacebars-tests - template_tests - with data remove (#3130)", func
   var tmpl = Template.spacebars_template_test_with_data_remove;
 
   var div = document.createElement("DIV");
-  var theWith = Blaze.renderWithData({ 'content': tmpl, 'parentElement': div }, { foo: 3130 });
+  var theWith = Blaze.render(tmpl, div, { data: { foo: 3130 } });
   test.equal(canonicalizeHtml(div.innerHTML), '<b>some data - 3130</b>');
   var view = Blaze.getView(div.querySelector('b'));
   test.isFalse(theWith.isDestroyed);

@@ -30,7 +30,7 @@ if (Meteor.isClient) {
     test.equal(canonicalizeHtml(div.innerHTML), "");
     test.throws(function () { v.firstNode(); }, /View must be attached/);
     test.throws(function () { v.lastNode(); }, /View must be attached/);
-    Blaze.render({ 'content': v, 'parentElement': div });
+    Blaze.render(v, div);
     test.equal(buf, 'c0r1');
     test.equal(typeof (v.firstNode().nodeType), "number");
     test.equal(typeof (v.lastNode().nodeType), "number");
