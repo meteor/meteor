@@ -255,6 +255,10 @@ _.extend(CodeGen.prototype, {
     case 'PATH':
       argCode = self.codeGenPath(argValue);
       break;
+    case 'EXPR':
+      // The format of EXPR is ['EXPR', { type: 'EXPR', path: [...], args: { ... } }]
+      argCode = self.codeGenMustache(argValue.path, argValue.args, 'dataMustache');
+      break;
     default:
       // can't get here
       throw new Error("Unexpected arg type: " + argType);
