@@ -73,10 +73,9 @@ Tinytest.add("spacebars-compiler - stache tags", function (test) {
               ['PATH', ['qux'], 'baz'],
               ['PATH', ['.'], 'x3']]});
 
-  run('{{{x 0.3 [0].[3] .4 ./[4]}}}',
+  run('{{{x 0.3 .4 ./[4]}}}',
       {type: 'TRIPLE', path: ['x'],
        args: [['NUMBER', 0.3],
-              ['PATH', ['0', '3']],
               ['NUMBER', .4],
               ['PATH', ['.', '4']]]});
 

@@ -40,6 +40,36 @@ coffee.runCompilerOutputTests = (run) ->
   }
   """
 
+  run "{{foo.[0].bar}}",
+  """
+  function() {
+    var view = this;
+    return Blaze.View(function() {
+      return Spacebars.mustache(Spacebars.dot(view.lookup("foo"), "0", "bar"));
+    });
+  }
+  """
+
+  run "{{foo.[0].[1]}}",
+  """
+  function() {
+    var view = this;
+    return Blaze.View(function() {
+      return Spacebars.mustache(Spacebars.dot(view.lookup("foo"), "0", "1"));
+    });
+  }
+  """
+
+  run "{{foo.0.1}}",
+  """
+  function() {
+    var view = this;
+    return Blaze.View(function() {
+      return Spacebars.mustache(Spacebars.dot(view.lookup("foo"), "0", "1"));
+    });
+  }
+  """
+
   run "{{foo.bar baz}}",
   """
   function() {

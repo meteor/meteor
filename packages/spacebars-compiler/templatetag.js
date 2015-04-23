@@ -106,7 +106,7 @@ TemplateTag.parse = function (scannerOrString) {
       expected('IDENTIFIER');
     if (isFirstInPath &&
         (id === 'null' || id === 'true' || id === 'false'))
-      scanner.fatal("Can't use null, true, or false, as an identifier at start of path");
+      scanner.fatal("Can't use null, true, or false as an identifier at start of path");
 
     return id;
   };
@@ -152,18 +152,27 @@ TemplateTag.parse = function (scannerOrString) {
         seg = seg.slice(0, -1);
         if (! seg && ! segments.length)
           error("Path can't start with empty string");
-        segments.push(seg);
+        else if (! isNaN(parseInt(seg)) && ! segments.length)
+          error("Path can't start with a number");
+        segments.push(seg);        
       } else {
-        var id = scanIdentifier(! segments.length);
-        if (id === 'this') {
-          if (! segments.length) {
-            // initial `this`
-            segments.push('.');
-          } else {
-            error("Can only use `this` at the beginning of a path.\nInstead of `foo.this` or `../this`, just write `foo` or `..`.");
-          }
+        var seg = run(/^\d+(?!\w)/);
+        if (seg) {
+          if (! segments.length)
+            error("Path can't start with a number");
+          segments.push(seg);
         } else {
-          segments.push(id);
+          var id = scanIdentifier(! segments.length);
+          if (id === 'this') {
+            if (! segments.length) {
+              // initial `this`
+              segments.push('.');
+            } else {
+              error("Can only use `this` at the beginning of a path.\nInstead of `foo.this` or `../this`, just write `foo` or `..`.");
+            }
+          } else {
+            segments.push(id);
+          }
         }
       }
 

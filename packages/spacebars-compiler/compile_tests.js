@@ -47,7 +47,6 @@ coffee = {
   runCompilerOutputTests: null // implemented in compiler_output_tests.coffee
 };
 
-
 Tinytest.add("spacebars-compiler - compiler errors", function (test) {
 
   var getError = function (input) {
@@ -77,7 +76,8 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
   isError("{{#each}}{{/each}}", "#each requires an argument");
   isError("{{#unless}}{{/unless}}", "#unless requires an argument");
 
-  isError("{{0 0}}", "Expected IDENTIFIER");
+  isError("{{0 0}}", "Path can't start with a number");
+  isError("{{[0].foo.bar}}", "Path can't start with a number");
 
   isError("{{> foo 0 0}}",
           "First argument must be a function");
