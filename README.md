@@ -301,17 +301,20 @@ NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted 
   {{#if isInRole 'admin'}}
     {{> admin_nav}}  
   {{/if}}
+  {{#if isInRole 'admin,editor'}}
+    {{> editor_stuff}}
+  {{/if}}
 </template>
 ```
 
-The same with group:
+You can also limit the check to a specific group:
 ```handlebars
 <!-- client/myApp.html -->
 
 <template name="header">
   ... regular header stuff
-  {{#if isInRole 'admin' 'researchAndDevelopment'}}
-    {{> admin_rad_nav}}  
+  {{#if isInRole 'admin,editor' 'group1'}}
+    {{> editor_stuff}}  
   {{/if}}
 </template>
 ```
