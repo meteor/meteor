@@ -13,6 +13,10 @@
   default is `Meteor.connection`, which is the connection used when calling
   `Meteor.subscribe`.
 
+* XXX Handlebars sub-expressions. https://github.com/meteor/meteor/pull/4101
+
+* XXX `#each .. in ..` and `#let x=y` forms. https://github.com/meteor/meteor/pull/3560
+
 
 ## DDP
 
