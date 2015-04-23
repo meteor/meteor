@@ -1046,3 +1046,52 @@ Hi there!
     {{subscribingHelper2}}
   {{/if}}
 </template>
+
+<template name="spacebars_template_test_old_each_data_context">
+  {{#each items}}
+    <div>{{text}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_new_each_data_context">
+  {{#with dataContext}}
+    {{#each item in items}}
+      <div>{{item.text}} -- {{toplevel}}</div>
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_new_each_lookup_top_level">
+  {{#with dataContext}}
+    {{#each item in letter_a}}
+      {{#spacebars_template_test_new_each_lookup_block_helper}}
+        <div>
+          {{item}}
+        </div>
+      {{/spacebars_template_test_new_each_lookup_block_helper}}
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_new_each_lookup_block_helper">
+  {{#with subcontext}}
+    {{#each item in letter_b}}
+      {{> Template.contentBlock}}
+    {{/each}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_let_bindings">
+  {{#with dataContext}}
+    {{#let alias=helper anotherVarFromContext="override"}}
+      <div>{{alias}} -- {{helper}} -- {{varFromContext}} -- {{anotherVarFromContext}}</div>
+    {{/let}}
+  {{/with}}
+</template>
+
+<template name="spacebars_template_test_each_index">
+  {{#each things}}
+    <span>{{@index}} - {{num}}</span>
+  {{/each}}
+</template>
+
