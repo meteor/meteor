@@ -1139,6 +1139,16 @@ _.extend(PackageSource.prototype, {
 
     var projectWatchSet = projectContext.getProjectWatchSet();
 
+    // XXX: This is also a HAX. #EKATEHAX We don't need this to be a hax -- we
+    // can propagate out to be way less dumb, here and in boot.js, but that's
+    // pretty clearly easy and possible to do, so why bother doing it for
+    // HAXWEEEEK?
+    // #EKATEHAX EKATEHAX EKATEHAX
+    var npmDependencies = { lodash: '3.7.0' };
+    self.npmCacheDirectory =
+      files.pathResolve(files.pathJoin(self.sourceRoot, '.meteor/my-npm'));
+    self.npmDependencies = npmDependencies;
+
     _.each(compiler.ALL_ARCHES, function (arch) {
       // We don't need to build a Cordova SourceArch if there are no Cordova
       // platforms.

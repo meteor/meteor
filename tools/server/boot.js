@@ -126,9 +126,20 @@ Fiber(function () {
        * @memberOf Npm
        */
       require: function (name) {
-        if (! fileInfo.node_modules) {
-          return require(name);
+
+
+        // XXX: What is going on here? This is a hax. The only way this will
+        // come up (at least during hax week) is when we have added an NPM
+        // package to an app using #EKATEHAX. Otherwise, we will either already
+        // have node_modules pre-filled... or just have require work regardless
+        // of the path.
+        if ( ! fileInfo.node_modules) {
+          fileInfo.node_modules = "../../../../my-npm/node_modules/";
         }
+
+/*        if (! fileInfo.node_modules) {
+          return require(name);
+        } */
 
         var nodeModuleBase = path.resolve(serverDir,
           files.convertToOSPath(fileInfo.node_modules));
