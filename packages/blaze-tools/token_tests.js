@@ -49,6 +49,8 @@ Tinytest.add("blaze-tools - token parsers", function (test) {
   run(parseIdentifierName, "a1", "a1");
   run(parseIdentifierName, "a1a", "a1a");
   run(parseIdentifierName, "_a8f_f8d88_", "_a8f_f8d88_");
+  run(parseIdentifierName, "@index", "@index");
+  run(parseIdentifierName, "@something", null);
 
   runValue(parseStringLiteral, '"a"', 'a');
   runValue(parseStringLiteral, '"\'"', "'");

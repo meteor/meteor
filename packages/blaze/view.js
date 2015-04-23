@@ -79,6 +79,9 @@ Blaze.View = function (name, render) {
   // this information to be available on views to make smarter decisions. For
   // example: removing the generated parent view with the view on Blaze.remove.
   this._hasGeneratedParent = false;
+  // Bindings accessible to children views (via view.lookup('name')) within the
+  // closest template view.
+  this._scopeBindings = {};
 
   this.renderCount = 0;
 };
