@@ -60,10 +60,10 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
     Profile.time("check for previous versions in catalog", function () {
-      _.each(options.previousSolution, function (version, package) {
-        if (! input.catalogCache.hasPackageVersion(package, version)) {
+      _.each(options.previousSolution, function (version, pkg) {
+        if (! input.catalogCache.hasPackageVersion(pkg, version)) {
           CS.throwConstraintSolverError(
-            "Package version not in catalog: " + package + " " + version);
+            "Package version not in catalog: " + pkg + " " + version);
         }
       });
     });
@@ -115,7 +115,7 @@ CS.PackagesResolver._resolveWithInput = function (input, options) {
 // - vConstraint: a PackageVersion.VersionConstraint, or an object
 //   with an `alternatives` property lifted from one.
 // - version: version String
-CS.isConstraintSatisfied = function (package, vConstraint, version) {
+CS.isConstraintSatisfied = function (pkg, vConstraint, version) {
   return _.some(vConstraint.alternatives, function (simpleConstraint) {
     var type = simpleConstraint.type;
 

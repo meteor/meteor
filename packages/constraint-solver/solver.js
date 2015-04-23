@@ -46,12 +46,12 @@ CS.Solver.prototype.throwAnyErrors = function () {
   }
 };
 
-CS.Solver.prototype.getVersions = function (package) {
+CS.Solver.prototype.getVersions = function (pkg) {
   var self = this;
-  if (_.has(self.analysis.allowedVersions, package)) {
-    return self.analysis.allowedVersions[package];
+  if (_.has(self.analysis.allowedVersions, pkg)) {
+    return self.analysis.allowedVersions[pkg];
   } else {
-    return self.input.catalogCache.getPackageVersions(package);
+    return self.input.catalogCache.getPackageVersions(pkg);
   }
 };
 
@@ -461,9 +461,9 @@ CS.Solver.prototype.getStepContributions = function (step) {
   return contributions;
 };
 
-var addCostsToSteps = function (package, versions, costs, steps) {
+var addCostsToSteps = function (pkg, versions, costs, steps) {
   var pvs = _.map(versions, function (v) {
-    return pvVar(package, v);
+    return pvVar(pkg, v);
   });
   for (var j = 0; j < steps.length; j++) {
     var step = steps[j];
@@ -525,12 +525,12 @@ CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
     "calculate " + stepBaseName + " distance costs",
     function () {
       _.each(packageAndVersions, function (pvArg) {
-        var package = pvArg.package;
+        var pkg = pvArg.package;
         var previousVersion = pvArg.version;
-        var versions = self.getVersions(package);
+        var versions = self.getVersions(pkg);
         var costs = self.pricer.priceVersionsWithPrevious(
           versions, previousVersion, takePatches);
-        addCostsToSteps(package, versions, costs,
+        addCostsToSteps(pkg, versions, costs,
                         [incompat, major, minor, patch, rest]);
       });
     });
@@ -798,11 +798,11 @@ CS.Solver.prototype._getAnswer = function (options) {
   // signal.  In other words, the user might be better off with some tie-breaker
   // that looks only at the important packages anyway.
   Profile.time("lock down important versions", function () {
-    _.each(self.currentVersionMap(), function (v, package) {
-      if (input.isRootDependency(package) ||
-          input.isInPreviousSolution(package) ||
-          input.isUpgrading(package)) {
-        logic.require(Logic.implies(package, pvVar(package, v)));
+    _.each(self.currentVersionMap(), function (v, pkg) {
+      if (input.isRootDependency(pkg) ||
+          input.isInPreviousSolution(pkg) ||
+          input.isUpgrading(pkg)) {
+        logic.require(Logic.implies(pkg, pvVar(pkg, v)));
       }
     });
   });
@@ -940,14 +940,14 @@ var _getConstraintFormula = function (toPackage, vConstraint) {
   }
 };
 
-CS.Solver.prototype.listConstraintsOnPackage = function (package) {
+CS.Solver.prototype.listConstraintsOnPackage = function (pkg) {
   var self = this;
   var constraints = self.analysis.constraints;
 
-  var result = 'Constraints on package "' + package + '":';
+  var result = 'Constraints on package "' + pkg + '":';
 
   _.each(constraints, function (c) {
-    if (c.toPackage === package) {
+    if (c.toPackage === pkg) {
       var paths;
       if (c.fromVar) {
         paths = self.getPathsToPackageVersion(
@@ -957,7 +957,7 @@ CS.Solver.prototype.listConstraintsOnPackage = function (package) {
       }
       _.each(paths, function (path) {
         result += '\n* ' + (new PV.PackageConstraint(
-          package, c.vConstraint.raw)) + ' <- ' + path.join(' <- ');
+          pkg, c.vConstraint.raw)) + ' <- ' + path.join(' <- ');
       });
     }
   });
@@ -1031,14 +1031,14 @@ CS.Solver.prototype.getPathsToPackageVersion = function (packageAndVersion) {
     if (! solution.evaluate(pv.toString())) {
       return [];
     }
-    var package = pv.package;
+    var pkg = pv.package;
 
-    if (input.isRootDependency(package)) {
+    if (input.isRootDependency(pkg)) {
       return [[pv]];
     }
 
     var newIgnorePackageSet = _.clone(_ignorePackageSet);
-    newIgnorePackageSet[package] = true;
+    newIgnorePackageSet[pkg] = true;
 
     var paths = [];
     var shortestLength = null;
@@ -1046,7 +1046,7 @@ CS.Solver.prototype.getPathsToPackageVersion = function (packageAndVersion) {
     _.each(allPackages, function (p) {
       if ((! _.has(newIgnorePackageSet, p)) &&
           solution.evaluate(p) &&
-          hasDep(p, package)) {
+          hasDep(p, pkg)) {
         var newPV = new CS.PackageAndVersion(p, versionMap[p]);
         _.each(getPaths(newPV, newIgnorePackageSet), function (path) {
           var newPath = [pv].concat(path);
