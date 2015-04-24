@@ -11,6 +11,9 @@ Babel.transformMeteor = function (code, extraOptions) {
       'es6.blockScoping',
       "es6.properties.shorthand",
       "es6.properties.computed",
+      "es6.parameters.rest",
+      "es6.parameters.default",
+      "es6.spread",
       "es6.destructuring",
       "flow"
     ],
