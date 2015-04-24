@@ -38,8 +38,10 @@ Blaze._getTemplateHelper = function (template, name, templateInstance) {
     var helper = template.__helpers.get(name);
     if (helper === Blaze._OLDSTYLE_HELPER) {
       isKnownOldStyleHelper = true;
+    } else if (helper != null) {
+      return wrapHelper(bindDataContext(helper), templateInstance);
     } else {
-      return helper;
+      return null;
     }
   }
 
@@ -54,7 +56,9 @@ Blaze._getTemplateHelper = function (template, name, templateInstance) {
                     '.helpers(...)` instead.');
       }
     }
-    return template[name];
+    if (template[name] != null) {
+      return wrapHelper(bindDataContext(template[name]), templateInstance);
+    }
   }
 
   return null;
@@ -119,7 +123,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
 
   } else if (template &&
              ((helper = Blaze._getTemplateHelper(template, name, boundTmplInstance)) != null)) {
-    return wrapHelper(bindDataContext(helper), boundTmplInstance);
+    return helper;
   } else if (lookupTemplate &&
              ((foundTemplate = Blaze._getTemplate(name, boundTmplInstance)) != null)) {
     return foundTemplate;
