@@ -7,30 +7,31 @@
 // - `intoArray`: the array of DOM nodes and DOMRanges to push the output
 //   into (required)
 // - `parentView`: the View we are materializing content for (optional)
+// - `_existingWorkStack`: optional argument, only used for recursive
+//   calls when there is some other _materializeDOM on the call stack.
+//   If _materializeDOM called your function and passed in a workStack,
+//   pass it back when you call _materializeDOM (such as from a workStack
+//   task).
 //
 // Returns `intoArray`, which is especially useful if you pass in `[]`.
-Blaze._materializeDOM = function (htmljs, intoArray, parentView) {
+Blaze._materializeDOM = function (htmljs, intoArray, parentView,
+                                  _existingWorkStack) {
   // In order to use fewer stack frames, materializeDOMInner can push
   // tasks onto `workStack`, and they will be popped off
   // and run, last first, after materializeDOMInner returns.  The
   // reason we use a stack instead of a queue is so that we recurse
   // depth-first, doing newer tasks first.
-  var workStack = [];
+  var workStack = (_existingWorkStack || []);
   materializeDOMInner(htmljs, intoArray, parentView, workStack);
 
-  // A "task" is either an array of arguments to materializeDOM or
-  // a function to execute.  If we only allowed functions as tasks,
-  // we would have to generate the functions using _.bind or close
-  // over a loop variable, either of which is a little less efficient.
-  while (workStack.length) {
-    // Note that running the workStack task may push new items onto
-    // the workStack.
-    var task = workStack.pop();
-    if (typeof task === 'function') {
+  if (! _existingWorkStack) {
+    // We created the work stack, so we are responsible for finishing
+    // the work.  Call each "task" function, starting with the top
+    // of the stack.
+    while (workStack.length) {
+      // Note that running task() may push new items onto workStack.
+      var task = workStack.pop();
       task();
-    } else {
-      // assume array
-      materializeDOMInner(task[0], task[1], task[2], workStack);
     }
   }
 
@@ -69,7 +70,8 @@ var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
       }
     } else if (HTML.isArray(htmljs)) {
       for (var i = htmljs.length-1; i >= 0; i--) {
-        workStack.push([htmljs[i], intoArray, parentView]);
+        workStack.push(_.bind(Blaze._materializeDOM, null,
+                              htmljs[i], intoArray, parentView, workStack));
       }
       return;
     } else {
@@ -161,7 +163,9 @@ var materializeTag = function (tag, parentView, workStack) {
       }
     });
     // now push the task that calculates childNodesAndRanges
-    workStack.push([children, childNodesAndRanges, parentView]);
+    workStack.push(_.bind(Blaze._materializeDOM, null,
+                          children, childNodesAndRanges, parentView,
+                          workStack));
   }
 
   return elem;
