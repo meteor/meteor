@@ -285,28 +285,38 @@ var compileUnibuild = function (options) {
 
   _.each(activePluginPackages, function (otherPkg) {
     _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
-      // XXX comparing function text here seems wrong.
-      if (_.has(allHandlersWithPkgs, ext) &&
-          allHandlersWithPkgs[ext].handler.toString() !== sourceHandler.handler.toString()) {
-        buildmessage.error(
-          "conflict: two packages included in " +
-            (inputSourceArch.pkg.name || "the app") + ", " +
-            (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
-            (otherPkg.name || "the app") + ", " +
-            "are both trying to handle ." + ext);
-        // Recover by just going with the first handler we saw
-        return;
+      if (_.has(allHandlersWithPkgs, ext)) {
+        var existingHandlerInfo = allHandlersWithPkgs[ext];
+
+        // If the package name is the same, then the package is replacing
+        // its own source handler, which is odd but certainly permissable.
+        if (existingHandlerInfo.pkgName !== sourceHandler.pkgName &&
+            // If the existing handler is our default esSourceHandler,
+            // allow other packages (e.g. grigio:babel) to replace it.
+            existingHandlerInfo.handler !== esSourceHandler) {
+          buildmessage.error(
+            "conflict: two packages included in " +
+              (inputSourceArch.pkg.name || "the app") + ", " +
+              (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
+              (otherPkg.name || "the app") + ", " +
+              "are both trying to handle ." + ext);
+          // Recover by just going with the first handler we saw
+          return;
+        }
       }
-      // Is this handler only registered for, say, "web", and we're building,
-      // say, "os"?
+
+      // Is this handler only registered for, say, "web", and we're
+      // building, say, "os"?
       if (sourceHandler.archMatching &&
           !archinfo.matches(inputSourceArch.arch, sourceHandler.archMatching)) {
         return;
       }
+
       allHandlersWithPkgs[ext] = {
         pkgName: otherPkg.name,
         handler: sourceHandler.handler
       };
+
       sourceExtensions[ext] = !!sourceHandler.isTemplate;
     });
   });
