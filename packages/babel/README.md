@@ -7,9 +7,6 @@ Meteor's Babel support consists of the following core packages:
 * `babel` - Exposes the [Babel API](https://babeljs.io/docs/usage/api/) on the
   symbol `Babel`.  For example, `Babel.transform(code, options)`.
 
-* `babel-plugin` - Causes `.es6` files in the package or app that uses it
-  to be transpiled.  Only "Meteor approved" features are enabled.
-
 * `babel-runtime` - Meteor versions of the external helpers used by
   Babel-generated code.  Meteor's core packages must run on IE 8 without
   polyfills, so these helpers cannot assume the existence of
@@ -96,10 +93,10 @@ No problems here!
 
 ## Checklist for Feature Approval
 
-* Write some tests in `babel-tests/transpile-tests.es6` that explore
-  how Babel transpiles the feature in question.  You can check in these
-  tests even before enabling them in the plugin (you just can't use them
-  in writing the tests).
+* Write some tests in `babel-tests/transpile-tests.es6` that explore how
+  Babel transpiles the feature in question.  You can check in these tests
+  even before enabling the features they test (you just can't use them in
+  writing the tests).
 
 * Is this feature fully transpilable?  Think of cases that would seem
   hard or impossible to transpile.  Verify that Babel's approach either
@@ -114,7 +111,7 @@ No problems here!
   the quality of our code?  We intentionally don't use every last feature
   of JavaScript.
 
-* Whitelist the feature in `babel-plugin`.
+* Whitelist the feature in `packages/babel/babel.js`.
 
 * Write basic tests that cover the different variants of the syntax in
   `babel-tests/transpile-tests.es6` and `babel-tests/run-tests.es6`.

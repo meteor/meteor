@@ -156,6 +156,47 @@ compiler.compile = function (packageSource, options) {
   return isopk;
 };
 
+function jsSourceHandler (compileStep) {
+  // This is a hardcoded handler for *.js files. Since plugins are written
+  // in JavaScript we have to start somewhere.
+
+  var options = {
+    data: compileStep.read().toString('utf8'),
+    path: compileStep.inputPath,
+    sourcePath: compileStep.inputPath,
+    _hash: compileStep._hash
+  };
+
+  if (compileStep.fileOptions.hasOwnProperty("bare")) {
+    options.bare = compileStep.fileOptions.bare;
+  } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
+    // XXX eventually get rid of backward-compatibility "raw" name
+    // XXX COMPAT WITH 0.6.4
+    options.bare = compileStep.fileOptions.raw;
+  }
+
+  compileStep.addJavaScript(options);
+}
+
+function esSourceHandler (compileStep) {
+  var Babel = isopackets.load("babel").babel.Babel;
+  var source = compileStep.read().toString("utf8");
+  var outputFile = compileStep.inputPath + ".js";
+
+  var result = Babel.transformMeteor(source, {
+    sourceMaps: true,
+    sourceFileName: compileStep.pathForSourceMap,
+    sourceMapName: compileStep.pathForSourceMap
+  });
+
+  compileStep.addJavaScript({
+    data: result.code,
+    path: outputFile,
+    sourcePath: compileStep.inputPath,
+    sourceMap: JSON.stringify(result.map)
+  });
+}
+
 // options.sourceArch is a SourceArch to compile.  Process all source files
 // through the appropriate handlers and run the prelink phase on any resulting
 // JavaScript. Create a new Unibuild and add it to options.isopack.
@@ -231,31 +272,16 @@ var compileUnibuild = function (options) {
   var allHandlersWithPkgs = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
-  sourceExtensions['js'] = false;
-  allHandlersWithPkgs['js'] = {
-    pkgName: null /* native handler */,
-    handler: function (compileStep) {
-      // This is a hardcoded handler for *.js files. Since plugins
-      // are written in JavaScript we have to start somewhere.
-
-      var options = {
-        data: compileStep.read().toString('utf8'),
-        path: compileStep.inputPath,
-        sourcePath: compileStep.inputPath,
-        _hash: compileStep._hash
-      };
-
-      if (compileStep.fileOptions.hasOwnProperty("bare")) {
-        options.bare = compileStep.fileOptions.bare;
-      } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
-        // XXX eventually get rid of backward-compatibility "raw" name
-        // XXX COMPAT WITH 0.6.4
-        options.bare = compileStep.fileOptions.raw;
-      }
-
-      compileStep.addJavaScript(options);
-    }
-  };
+  function addNativeHandler (ext, handler) {
+    sourceExtensions[ext] = false;
+    allHandlersWithPkgs[ext] = {
+      pkgName: null,
+      handler: handler
+    };
+  }
+  addNativeHandler("js", jsSourceHandler);
+  addNativeHandler("es", esSourceHandler);
+  addNativeHandler("es6", esSourceHandler);
 
   _.each(activePluginPackages, function (otherPkg) {
     _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
