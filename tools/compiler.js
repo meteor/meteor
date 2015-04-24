@@ -787,9 +787,11 @@ var compileUnibuild = function (options) {
 
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
-  // default unibuild is not allowed to depend on anything!)
+  // default unibuild is not allowed to depend on anything except Babel!)
   var jsAnalyze = null;
-  if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
+  if (! _.isEmpty(js) &&
+      inputSourceArch.pkg.name !== "js-analyze" &&
+      inputSourceArch.pkg.name !== "babel") {
     jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
   }
 

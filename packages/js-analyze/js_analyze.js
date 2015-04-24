@@ -1,12 +1,11 @@
-var esprima = Npm.require('esprima');
 var escope = Npm.require('escope');
 
 JSAnalyze = {};
 
 // Like esprima.parse, but annotates any thrown error with $ParseError = true.
-var esprimaParse = function (source) {
+function parse (source) {
   try {
-    return esprima.parse(source);
+    return Babel.parse(source);
   } catch (e) {
     if ('index' in e && 'lineNumber' in e &&
         'column' in e && 'description' in e) {
@@ -14,7 +13,7 @@ var esprimaParse = function (source) {
     }
     throw e;
   }
-};
+}
 
 // Analyze the JavaScript source code `source` and return a dictionary of all
 // globals which are assigned to in the package. The values in the dictionary
@@ -31,7 +30,7 @@ JSAnalyze.findAssignedGlobals = function (source) {
   // The newline is necessary in case source ends with a comment.
   source = '(function () {' + source + '\n})';
 
-  var parseTree = esprimaParse(source);
+  var parseTree = parse(source);
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
   // This is because an eval can pull references inward:

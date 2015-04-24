@@ -11,12 +11,7 @@ Package.describe({
 // the client too, can copy them in (or implement a way to serve files out of
 // Npm modules).
 Npm.depends({
-  esprima: "1.2.2",
-  escope: "1.0.1"
-});
-
-Npm.strip({
-  esprima: ["test/"]
+  escope: "1.0.3"
 });
 
 // This package may not depend on ANY other Meteor packages, even in the test
@@ -27,6 +22,7 @@ Npm.strip({
 // packages would need to function without the analysis provided by this
 // package).
 Package.onUse(function (api) {
+  api.use('babel');
   api.export('JSAnalyze', 'server');
   api.addFiles('js_analyze.js', 'server');
 });

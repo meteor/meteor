@@ -48,7 +48,7 @@ var ISOPACKETS = {
   // Note: when running from a checkout, js-analyze must always be the
   // the first to be rebuilt, because it might need to be loaded as part
   // of building other isopackets.
-  'js-analyze': ['js-analyze'],
+  'js-analyze': ['js-analyze', 'babel'],
   'babel': ['babel'], // for ES6
   'ddp': ['ddp-client'],
   'mongo': ['npm-mongo'],
