@@ -5,7 +5,6 @@ Babel = Npm.require('babel-core');
 Babel.transformMeteor = function (code, extraOptions) {
   var options = {
     whitelist: [
-      'flow',
       'es6.arrowFunctions',
       'es6.templateLiterals',
       'es6.classes',
