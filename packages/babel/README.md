@@ -7,10 +7,10 @@ Meteor's Babel support consists of the following core packages:
 * `babel` - Exposes the [Babel API](https://babeljs.io/docs/usage/api/) on the
   symbol `Babel`.  For example, `Babel.transform(code, options)`.
 
-* `babel-runtime` - Meteor versions of the external helpers used by
-  Babel-generated code.  Meteor's core packages must run on IE 8 without
-  polyfills, so these helpers cannot assume the existence of
-  `Object.defineProperty`, `Object.freeze`, and so on.
+* `packages/meteor/babel-runtime.js` - Meteor versions of the external
+  helpers used by Babel-generated code.  Meteor's core packages must run
+  on IE 8 without polyfills, so these helpers cannot assume the existence
+  of `Object.defineProperty`, `Object.freeze`, and so on.
 
 * `babel-tests` - Tests of the Babel API, transpilation, and functioning
   of transpiled code.  These tests document and check our assumptions

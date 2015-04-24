@@ -71,7 +71,4 @@ Package.onUse(function(api) {
     // no-op browser version anyway.
     'launch-screen'
   ], 'web');
-
-  // Runtime support for the tool's Babel transpilation
-  api.imply('babel-runtime', ['client', 'server']);
 });
