@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.18"
+  version: "1.0.19"
 });
 
 Package.onUse(function (api) {
@@ -9,7 +9,7 @@ Package.onUse(function (api) {
     'underscore',
     'check',
     'package-version-parser',
-    'logic-solver'
+    'logic-solver@2.0.0'
   ]);
   api.addFiles([
     'datatypes.js',

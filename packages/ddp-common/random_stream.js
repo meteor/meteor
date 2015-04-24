@@ -21,7 +21,7 @@
 //                          If an array, will be used as-is
 //                          If a value, will be converted to a single-value array
 //                          If omitted, a random array will be used as the seed.
-RandomStream = function (options) {
+DDPCommon.RandomStream = function (options) {
   var self = this;
 
   this.seed = [].concat(options.seed || randomToken());
@@ -44,7 +44,7 @@ function randomToken() {
 // However, scope will normally be the current DDP method invocation, so
 // we'll use the stream with the specified name, and we should get consistent
 // values on the client and server sides of a method call.
-RandomStream.get = function (scope, name) {
+DDPCommon.RandomStream.get = function (scope, name) {
   if (!name) {
     name = "default";
   }
@@ -55,20 +55,13 @@ RandomStream.get = function (scope, name) {
   }
   var randomStream = scope.randomStream;
   if (!randomStream) {
-    scope.randomStream = randomStream = new RandomStream({
+    scope.randomStream = randomStream = new DDPCommon.RandomStream({
       seed: scope.randomSeed
     });
   }
   return randomStream._sequence(name);
 };
 
-// Returns the named sequence of pseudo-random values.
-// The scope will be DDP._CurrentInvocation.get(), so the stream will produce
-// consistent values for method calls on the client and server.
-DDP.randomStream = function (name) {
-  var scope = DDP._CurrentInvocation.get();
-  return RandomStream.get(scope, name);
-};
 
 // Creates a randomSeed for passing to a method call.
 // Note that we take enclosing as an argument,
@@ -76,12 +69,12 @@ DDP.randomStream = function (name) {
 // However, we often evaluate makeRpcSeed lazily, and thus the relevant
 // invocation may not be the one currently in scope.
 // If enclosing is null, we'll use Random and values won't be repeatable.
-makeRpcSeed = function (enclosing, methodName) {
-  var stream = RandomStream.get(enclosing, '/rpc/' + methodName);
+DDPCommon.makeRpcSeed = function (enclosing, methodName) {
+  var stream = DDPCommon.RandomStream.get(enclosing, '/rpc/' + methodName);
   return stream.hexString(20);
 };
 
-_.extend(RandomStream.prototype, {
+_.extend(DDPCommon.RandomStream.prototype, {
   // Get a random sequence with the specified name, creating it if does not exist.
   // New sequences are seeded with the seed concatenated with the name.
   // By passing a seed into Random.create, we use the Alea generator.

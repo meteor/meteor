@@ -633,14 +633,33 @@ files.freeTempDir = function (tempDir) {
     // ignores all ENOENT calls. And we don't remove tempDir from tempDirs until
     // it's done, so that if mid-way through this rm_recursive the onExit one
     // fires, it still gets removed.
-    files.rm_recursive(tempDir);
+
+    try {
+      files.rm_recursive(tempDir);
+    } catch (err) {
+      // Don't crash and print a stack trace because we failed to delete a temp
+      // directory. This happens sometimes on Windows and seems to be
+      // unavoidable.
+      Console.debug(err);
+    }
+
     tempDirs = _.without(tempDirs, tempDir);
   });
 };
 
 if (! process.env.METEOR_SAVE_TMPDIRS) {
   cleanup.onExit(function (sig) {
-    _.each(tempDirs, files.rm_recursive);
+    _.each(tempDirs, function (tempDir) {
+      try {
+        files.rm_recursive(tempDir);
+      } catch (err) {
+        // Don't crash and print a stack trace because we failed to delete a temp
+        // directory. This happens sometimes on Windows and seems to be
+        // unavoidable.
+        Console.debug(err);
+      }
+    });
+
     tempDirs = [];
   });
 }
@@ -736,17 +755,6 @@ files.createTarGzStream = function (dirPath, options) {
     filter: function (entry) {
       if (process.platform !== "win32") {
         return true;
-      }
-
-      // Error about long paths on Windows.
-      // As far as we know the tarball creation seems to fail silently when path
-      // is too long (the files don't get copied to tarball). To avoid it, we
-      // shout at the core developer early so she/he takes an action.
-      // When the tarball is created on Mac or Linux it doesn't seem to matter.
-      var maxPath = 260; // Longest allowed path length on Windows
-      if (entry.path.length > maxPath) {
-        throw new Error("Path too long: " + entry.path + " is " +
-          entry.path.length + " characters.");
       }
 
       // Refuse to create a directory that isn't listable. Tarballs
@@ -1192,6 +1200,10 @@ files._generateScriptLinkToMeteorScript = function (scriptLocation) {
     // called on Linux or Mac when we are building bootstrap tarballs
     "\"" + scriptLocationConverted + "\" %*",
     "ENDLOCAL",
+
+    // always exit with the same exit code as the child script
+    "EXIT /b %ERRORLEVEL%",
+
     // add a comment with the destination of the link, so it can be read later
     // by files.readLinkToMeteorScript
     "rem " + scriptLocationConverted,
@@ -1205,12 +1217,18 @@ files._getLocationFromScriptLinkToMeteorScript = function (script) {
 
   var scriptLocation = _.last(lines)
     .replace(/^rem /g, '');
+  var isAbsolute = true;
+
+  if (scriptLocation.match(/^%~dp0/)) {
+    isAbsolute = false;
+    scriptLocation = scriptLocation.replace(/^%~dp0\\?/g, '');
+  }
 
   if (! scriptLocation) {
     throw new Error('Failed to parse script location from meteor.bat');
   }
 
-  return files.convertToPosixPath(scriptLocation);
+  return files.convertToPosixPath(scriptLocation, ! isAbsolute);
 };
 
 files.linkToMeteorScript = function (scriptLocation, linkLocation, platform) {

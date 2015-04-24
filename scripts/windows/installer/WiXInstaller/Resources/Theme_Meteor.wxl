@@ -77,13 +77,19 @@
     <String Id="ModifyRepairButton">&amp;Repair</String>
     <String Id="ModifyUninstallButton">&amp;Uninstall</String>
     <String Id="ModifyCloseButton">&amp;Close</String>
-    <String Id="SuccessHeader">Meteor Installed</String>
+    <String Id="SuccessHeader">Meteor is now installed on your computer.</String>
     <String Id="SuccessHeaderRepair">Repair Successful</String>
-    <String Id="SuccessHeaderUninstall">Uninstall Successful</String>
-    <String Id="SuccessInfo">Meteor is now installed on your computer.&#13;&#10;&#13;&#10;Open a new command prompt and run "meteor".</String>
+    <String Id="SuccessHeaderUninstall">Meteor has been uninstalled.</String>
+    <String Id="SuccessInfo">
+To get started, open a new command prompt and type "meteor". If you're running Windows 8.1, you may need to restart your machine.
+
+To learn more about Meteor, check out the &lt;a href="https://www.meteor.com/try"&gt;Meteor tutorial&lt;/a&gt; and read the &lt;a href="https://docs.meteor.com"&gt;official documentation&lt;/a&gt;. If you need help, ask a question on the official forums at &lt;a href="https://forums.meteor.com"&gt;forums.meteor.com&lt;/a&gt; or &lt;a href="https://stackoverflow.com/questions/tagged/meteor"&gt;Stack Overflow&lt;/a&gt;.
+
+Check out the &lt;a href="https://github.com/meteor/meteor/wiki/Preview-of-Meteor-on-Windows"&gt;Wiki page on GitHub&lt;/a&gt; to learn more about the Meteor Windows preview.
+    </String>
     <String Id="SuccessErrorInfoText">Following non critical errors occured:</String>
     <String Id="SuccessInfoRepair">Setup has finished repairing [WixBundleName] installed on your computer. The application may be launched by selecting the installed icons.</String>
-    <String Id="SuccessInfoUninstall">[WixBundleName] was successfully removed from your computer.</String>
+    <String Id="SuccessInfoUninstall">We hope to see you again soon!</String>
     <String Id="SuccessLaunchButton">&amp;Launch</String>
     <String Id="SuccessRestartText">You must restart your computer before you can use the software.</String>
     <String Id="SuccessRestartButton">&amp;Restart</String>

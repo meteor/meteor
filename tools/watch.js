@@ -522,6 +522,14 @@ _.extend(Watcher.prototype, {
     });
   },
 
+  // XXX Erk! This is wrong!  A null entry in a WatchSet means "is not a file",
+  // not "does not exist"; if you look at readAndWatchFileWithHash, "a directory
+  // where a file was expected" leads to the entry being null.  Right now this
+  // leads to infinite watcher refresh loops if something that needs to be a
+  // directory ends up as a file.  This all needs to be changed so that null
+  // means "not a file" again. A simple way to reproduce is to run
+  //    $ meteor --settings /tmp
+  // See #3854.
   _mustNotExist: function(absPath) {
     var wsFiles = this.watchSet.files;
     if (_.has(wsFiles, absPath))

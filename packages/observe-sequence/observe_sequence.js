@@ -22,7 +22,7 @@ ObserveSequence = {
   //
   // @param sequenceFunc {Function} a reactive function returning a
   //     sequence type. The currently supported sequence types are:
-  //     'null', arrays and cursors.
+  //     Array, Cursor, and null.
   //
   // @param callbacks {Object} similar to a specific subset of
   //     callbacks passed to `cursor.observe`
@@ -292,7 +292,7 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
                item === undefined) {
       id = item;
     } else if (typeof item === 'object') {
-      id = (item && item._id) || index;
+      id = (item && _.has(item, '_id')) ? item._id : index;
     } else {
       throw new Error("{{#each}} doesn't support arrays with " +
                       "elements of type " + typeof item);

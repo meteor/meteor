@@ -19,8 +19,6 @@ Package.onUse(function (api) {
 
   api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
-  api.addFiles('diff_match_patch_uncompressed.js', 'client');
-
   api.addFiles([
     'driver.css',
     'driver.html',

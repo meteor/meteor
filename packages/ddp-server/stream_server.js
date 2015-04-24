@@ -1,5 +1,30 @@
 var url = Npm.require('url');
 
+// By default, we use the permessage-deflate extension with default
+// configuration. If $SERVER_WEBSOCKET_COMPRESSION is set, then it must be valid
+// JSON. If it represents a falsey value, then we do not use permessage-deflate
+// at all; otherwise, the JSON value is used as an argument to deflate's
+// configure method; see
+// https://github.com/faye/permessage-deflate-node/blob/master/README.md
+//
+// (We do this in an _.once instead of at startup, because we don't want to
+// crash the tool during isopacket load if your JSON doesn't parse. This is only
+// a problem because the tool has to load the DDP server code just in order to
+// be a DDP client; see https://github.com/meteor/meteor/issues/3452 .)
+var websocketExtensions = _.once(function () {
+  var extensions = [];
+
+  var websocketCompressionConfig = process.env.SERVER_WEBSOCKET_COMPRESSION
+        ? JSON.parse(process.env.SERVER_WEBSOCKET_COMPRESSION) : {};
+  if (websocketCompressionConfig) {
+    extensions.push(Npm.require('permessage-deflate').configure(
+      websocketCompressionConfig
+    ));
+  }
+
+  return extensions;
+});
+
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX ||  "";
 
 StreamServer = function () {
@@ -10,11 +35,7 @@ StreamServer = function () {
   // Because we are installing directly onto WebApp.httpServer instead of using
   // WebApp.app, we have to process the path prefix ourselves.
   self.prefix = pathPrefix + '/sockjs';
-  // routepolicy is only a weak dependency, because we don't need it if we're
-  // just doing server-to-server DDP as a client.
-  if (Package.routepolicy) {
-    Package.routepolicy.RoutePolicy.declare(self.prefix + '/', 'network');
-  }
+  RoutePolicy.declare(self.prefix + '/', 'network');
 
   // set up sockjs
   var sockjs = Npm.require('sockjs');
@@ -41,20 +62,25 @@ StreamServer = function () {
   // from ever working, set $DISABLE_WEBSOCKETS and SockJS clients (ie,
   // browsers) will not waste time attempting to use them.
   // (Your server will still have a /websocket endpoint.)
-  if (process.env.DISABLE_WEBSOCKETS)
+  if (process.env.DISABLE_WEBSOCKETS) {
     serverOptions.websocket = false;
+  } else {
+    serverOptions.faye_server_options = {
+      extensions: websocketExtensions()
+    };
+  }
 
   self.server = sockjs.createServer(serverOptions);
-  if (!Package.webapp) {
-    throw new Error("Cannot create a DDP server without the webapp package");
-  }
+
   // Install the sockjs handlers, but we want to keep around our own particular
   // request handler that adjusts idle timeouts while we have an outstanding
   // request.  This compensates for the fact that sockjs removes all listeners
   // for "request" to add its own.
-  Package.webapp.WebApp.httpServer.removeListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
-  self.server.installHandlers(Package.webapp.WebApp.httpServer);
-  Package.webapp.WebApp.httpServer.addListener('request', Package.webapp.WebApp._timeoutAdjustmentRequestCallback);
+  WebApp.httpServer.removeListener(
+    'request', WebApp._timeoutAdjustmentRequestCallback);
+  self.server.installHandlers(WebApp.httpServer);
+  WebApp.httpServer.addListener(
+    'request', WebApp._timeoutAdjustmentRequestCallback);
 
   // Support the /websocket endpoint
   self._redirectWebsocketEndpoint();
@@ -111,7 +137,7 @@ _.extend(StreamServer.prototype, {
     // an approach similar to overshadowListeners in
     // https://github.com/sockjs/sockjs-node/blob/cf820c55af6a9953e16558555a31decea554f70e/src/utils.coffee
     _.each(['request', 'upgrade'], function(event) {
-      var httpServer = Package.webapp.WebApp.httpServer;
+      var httpServer = WebApp.httpServer;
       var oldHttpServerListeners = httpServer.listeners(event).slice(0);
       httpServer.removeAllListeners(event);
 

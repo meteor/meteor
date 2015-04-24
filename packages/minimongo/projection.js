@@ -161,6 +161,8 @@ LocalCollection._checkSupportedProjection = function (fields) {
   _.each(fields, function (val, keyPath) {
     if (_.contains(keyPath.split('.'), '$'))
       throw MinimongoError("Minimongo doesn't support $ operator in projections yet.");
+    if (typeof val === 'object' && _.intersection(['$elemMatch', '$meta', '$slice'], _.keys(val)).length > 0)
+      throw MinimongoError("Minimongo doesn't support operators in projections yet.");
     if (_.indexOf([1, 0, true, false], val) === -1)
       throw MinimongoError("Projection values should be one of 1, 0, true, or false");
   });

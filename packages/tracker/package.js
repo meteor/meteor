@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.0.6'
+  version: '1.0.7'
 });
 
 Package.onUse(function (api) {
@@ -12,6 +12,7 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('tinytest');
+  api.use('test-helpers');
   api.use('tracker');
   api.addFiles('tracker_tests.js', 'client');
 });

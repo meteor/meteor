@@ -232,11 +232,6 @@ dl.callbacks {
     color: black;
 }
 
-.locus {
-    font-style: italic;
-}
-
-
 .api {
     border: 1px solid #ddd;
     margin-bottom: 1em;
@@ -258,6 +253,7 @@ h3.api-title {
 
 .api h3.api-title {
     margin: 0;
+    overflow : auto;
 }
 
 .api h4 {
@@ -318,6 +314,17 @@ ol {
     float: right;
     font-weight: normal;
     padding-right: 5px;
+    font-style: italic;
+}
+
+.api-title .src-code {
+    font-size: 11px;
+    color: #20338A !important;
+    text-align: left;
+    clear: both;
+    border-bottom: none !important;
+    display: block;
+    font-weight: normal;
 }
 
 .or {
@@ -381,6 +388,7 @@ ol {
     height: 100%;
     top: 0;
     overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
 }
 
 .main-content {
@@ -391,6 +399,7 @@ ol {
     z-index: 1;
     background: white;
     overflow-y: scroll;
+    -webkit-overflow-scrolling: touch;
     overflow-x: hidden;
     margin-left: 0;
     transition: margin-left 300ms ease-out;

@@ -123,15 +123,15 @@ CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
 
   var packagesToLoad = {}; // package -> true
 
-  _.each(self.dependencies, function (package) {
-    packagesToLoad[package] = true;
+  _.each(self.dependencies, function (pkg) {
+    packagesToLoad[pkg] = true;
   });
   _.each(self.constraints, function (constraint) {
     packagesToLoad[constraint.package] = true;
   });
   if (self.previousSolution) {
-    _.each(self.previousSolution, function (version, package) {
-      packagesToLoad[package] = true;
+    _.each(self.previousSolution, function (version, pkg) {
+      packagesToLoad[pkg] = true;
     });
   }
 

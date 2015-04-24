@@ -84,7 +84,10 @@ if (process.platform === 'win32') {
           });
 
           // Now get the corresponding port numbers
-          child_process.exec('netstat -ano', function (error, stdout, stderr) {
+          child_process.exec(
+            'netstat -ano',
+            {maxBuffer: 1024 * 1024 * 10},
+            function (error, stdout, stderr) {
             if (error) {
               fut['throw'](new Error("Couldn't run netstat -ano: " +
                 JSON.stringify(error)));
@@ -124,8 +127,37 @@ if (process.platform === 'win32') {
     var fut = new Future;
 
     // 'ps ax' should be standard across all MacOS and Linux.
+    // However, ps on OS X corrupts some non-ASCII characters in arguments,
+    // such as т (CYRILLIC SMALL LETTER TE), leading to this function
+    // failing to properly match pathnames with those characters.  #3999
+    //
+    // pgrep appears to do a better job (and has output that is roughly
+    // similar; it lacks a few fields that we don't care about).  Plus,
+    // it can do some of the grepping for us.
+    //
+    // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
+    // common on Linux too), so we check to see if it exists and fall back to
+    // 'ps' if we can't find it.
+    //
+    // We avoid using pgrep on Linux, because some versions of Linux pgrep
+    // require you to pass -a/--list-full to include the arguments in the
+    // output, and other versions fail if you pass that option. We have not
+    // observed the Unicode corruption on Linux, so using ps ax there is fine.
+    var psScript = 'ps ax';
+    if (process.platform === 'darwin') {
+      psScript =
+        'if type pgrep >/dev/null 2>&1; then ' +
+        // -lf means to display and match against full argument lists.
+        // pgrep exits 1 if no processes match the argument; we're OK
+        // considering this as a success, but we don't want other errors
+        // to be ignored.  Note that this is sh not bash, so we can't use
+        // [[.
+        'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
+        'else ps ax; fi';
+    }
+
     child_process.exec(
-      'ps ax',
+      psScript,
       // we don't want this to randomly fail just because you're running lots of
       // processes. 10MB should be more than ps ax will ever spit out; the default
       // is 200K, which at least one person hit (#2158).
@@ -184,6 +216,47 @@ var findMongoPort = function (appDir) {
 
   return pids[0].port;
 };
+
+// XXX actually -- the code below is probably more correct than the code we
+// have above for non-Windows platforms (since that code relies on
+// `findMongoPids`). But changing this a few days before the 1.1 release
+// seemed too bold. But if you're changing code around here, consider using
+// the implementation below on non-Windows platforms as well.
+if (process.platform === 'win32') {
+  // On Windows, finding the Mongo pid, checking it and extracting the port
+  // is often unreliable (XXX reliable in what specific way?). There is an
+  // easier way to find the port of running Mongo: look it up in a METEOR-
+  // PORT file that we generate when running. This may result into problems
+  // where we try to connect to a mongod that is not running, or a wrong
+  // mongod if our current app is not running but there is a left-over file
+  // lying around. This still can be better than always failing to connect.
+  findMongoPort = function (appDir) {
+    var mongoPort = null;
+
+    var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
+    if (files.exists(portFile)) {
+      mongoPort = files.readFile(portFile, 'utf8').replace(/\s/g, '');
+    }
+
+    // Now, check if there really is a Mongo server running on this port.
+    // (The METEOR-PORT file may point to an old Mongo server that's now
+    // stopped)
+    var net = require('net');
+    var mongoTestConnectFuture = new Future;
+    var client = net.connect({port: mongoPort}, function() {
+      // The server is running.
+      client.end();
+      mongoTestConnectFuture.return();
+    });
+    client.on('error', function () {
+      mongoPort = null;
+      mongoTestConnectFuture.return();
+    });
+    mongoTestConnectFuture.wait();
+
+    return mongoPort;
+  }
+}
 
 
 // Kill any mongos running on 'port'. Yields, and returns once they
@@ -451,7 +524,7 @@ var launchMongo = function (options) {
     try {
       // Load mongo so we'll be able to talk to it.
       var mongoNpmModule =
-            isopackets.load('mongo').mongo.MongoInternals.NpmModule;
+            isopackets.load('mongo')['npm-mongo'].NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(
@@ -826,3 +899,4 @@ _.extend(MRp, {
 exports.runMongoShell = runMongoShell;
 exports.findMongoPort = findMongoPort;
 exports.MongoRunner = MongoRunner;
+exports.findMongoAndKillItDead = findMongoAndKillItDead;

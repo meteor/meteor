@@ -2749,6 +2749,30 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
 });
 
 
+Tinytest.add('spacebars-tests - template_tests - helper invalidates self', function (test) {
+  var tmpl = Template.spacebars_template_test_bracketed_foo;
+
+  var count = new ReactiveVar(0);
+
+  tmpl.helpers({
+    // It's unusual for a helper to have side effects, but it's possible
+    // and people do it.  Regression test for #4097.
+    foo: function () {
+      // Make count odd and return it.
+      var c = count.get();
+      if ((c % 2) === 0) {
+        count.set(c+1);
+      }
+      return c;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, '[1]');
+  count.set(2);
+  divRendersTo(test, div, '[3]');
+});
+
 Tinytest.add(
   "spacebars-tests - template_tests - textarea attrs", function (test) {
     var tmplNoContents = {
@@ -3144,8 +3168,10 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions"
 
     tmpl.onCreated(function () {
       var subHandle = this.subscribe("templateSub", subscribeCallback);
-      var subHandle2 = this.subscribe(
-        "templateSub", futureId, subscribeCallback);
+      var subHandle2 = this.subscribe("templateSub", futureId, {
+        onReady: subscribeCallback,
+        connection: Meteor.connection
+      });
 
       subHandle.stop = stopCallback;
       subHandle2.stop = stopCallback2;
@@ -3188,3 +3214,177 @@ testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions 
     trueThenFalse.set(false);
   }
 ]);
+
+Tinytest.add("spacebars-tests - template_tests - old #each sets data context", function (test) {
+  var tmpl = Template.spacebars_template_test_old_each_data_context;
+  tmpl.helpers({
+    items: [{text:"a"}, {text:"b"}]
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a</div><div>b</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - new #each extends data context", function (test) {
+  var tmpl = Template.spacebars_template_test_new_each_data_context;
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        items: [{text:"a"}, {text:"b"}],
+        toplevel: "XYZ"
+      };
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a -- XYZ</div><div>b -- XYZ</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - new #each binding lookup is scoped to the template", function (test) {
+  var tmpl = Template.spacebars_template_test_new_each_lookup_top_level;
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        letter_a: ["a"],
+        subcontext: {
+          letter_b: ["b"]
+        }
+      };
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - let bindings", function (test) {
+  var tmpl = Template.spacebars_template_test_let_bindings;
+
+  v = new ReactiveVar("var");
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        varFromContext: "from context",
+        anotherVarFromContext: "another var from context"
+      };
+    },
+    helper: function () {
+      return v.get();
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>var -- var -- from context -- override</div>');
+
+  v.set("new var");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>new var -- new var -- from context -- override</div>');
+
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - #each @index", function (test) {
+  var tmpl = Template.spacebars_template_test_each_index;
+
+  var c = new Mongo.Collection();
+  c.insert({ num: 2 });
+  c.insert({ num: 4 });
+  tmpl.helpers({
+    things: function () {
+      return c.find({}, {sort:{num: 1}});
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theEach = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 2</span><span>1 - 4</span>');
+
+  c.insert({ num: 1 });
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 1</span><span>1 - 2</span><span>2 - 4</span>');
+
+  var three = c.insert({ num: 3 });
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 1</span><span>1 - 2</span><span>2 - 3</span><span>3 - 4</span>');
+
+  c.update(three, { num: 0 });
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 0</span><span>1 - 1</span><span>2 - 2</span><span>3 - 4</span>');
+
+  c.remove(three);
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 1</span><span>1 - 2</span><span>2 - 4</span>');
+
+  var view = Blaze.getView(div.querySelector('span'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - nested expressions", function (test) {
+  var tmpl = Template.spacebars_template_test_nested_exprs;
+
+  tmpl.helpers({
+    add: function (a, b) {
+      return a + b;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "6");
+});
+
+Tinytest.add("spacebars-tests - template_tests - nested sub-expressions", function (test) {
+  var tmpl = Template.spacebars_template_test_nested_subexprs;
+
+  var sentence = new ReactiveVar("can't even imagine a world without Light");
+  tmpl.helpers({
+    capitalize: function (str) {
+      return str.charAt(0).toUpperCase() + str.substring(1);
+    },
+    firstWord: function (sentence) {
+      return sentence.split(' ')[0];
+    },
+    generateSentence: function () {
+      return sentence.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "Can't");
+
+  sentence.set("that would be quite dark");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "That");
+});
+
+Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", function (test) {
+  var tmpl = Template.spacebars_template_test_exprs_keyword;
+
+  var name = new ReactiveVar("light");
+  tmpl.helpers({
+    capitalize: function (str) {
+      return str.charAt(0).toUpperCase() + str.substring(1);
+    },
+    name: function () {
+      return name.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "Light Mello");
+
+  name.set("misa");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
+});
+

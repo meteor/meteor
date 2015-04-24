@@ -47,7 +47,7 @@ Tinytest.add("templating - html scanner", function (test) {
 
   checkError(function() {
     return html_scanner.scan("asdf");
-  }, "formatting in HTML template", 1);
+  }, "Expected <template>, <head>, or <body> tag in template file", 1);
 
   // body all on one line
   checkResults(
@@ -126,7 +126,7 @@ Tinytest.add("templating - html scanner", function (test) {
   // bad open tag
   checkError(function() {
     return html_scanner.scan("\n\n\n<bodyd>\n  Hello\n</body>");
-  }, "formatting in HTML template", 4);
+  }, "Expected <template>, <head>, or <body> tag in template file", 4);
   checkError(function() {
     return html_scanner.scan("\n\n\n\n<body foo=>\n  Hello\n</body>");
   }, "error in tag", 5);
@@ -166,5 +166,10 @@ Tinytest.add("templating - html scanner", function (test) {
     return html_scanner.scan('<template name="foo\'>'+
                              'pizza</template>');
   }, "error in tag", 1);
+
+  // unexpected <html> at top level
+  checkError(function() {
+    return html_scanner.scan('\n<html>\n</html>');
+  }, "Expected <template>, <head>, or <body> tag in template file", 2);
 
 });

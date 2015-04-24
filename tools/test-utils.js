@@ -130,7 +130,7 @@ var getLoadedPackages = function () {
 };
 
 var ddpConnect = function (url) {
-  var DDP = getLoadedPackages().ddp.DDP;
+  var DDP = getLoadedPackages()['ddp-client'].DDP;
   return DDP.connect(url);
 };
 

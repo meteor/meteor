@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.1.0'
+  version: '1.1.1'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
@@ -48,6 +48,7 @@ Package.onTest(function (api) {
   api.use(['test-helpers', 'session', 'tracker',
            'minimongo'], 'client');
   api.use('spacebars-compiler');
+  api.use('minifiers'); // ensure compiler output is beautified
 
   api.addFiles([
     'plugin/html_scanner.js',

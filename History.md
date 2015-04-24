@@ -1,5 +1,155 @@
 ## v.NEXT
 
+### Blaze
+
+* Improve parsing of `<script>` and `<style>` tags.  #3797
+
+* Fix a bug in `observe-sequence`. The bug was causing unnecessary rerenderings
+  in an instance of `#each` block helper followed by false "duplicate ids"
+  warnings. #4049
+
+* `TemplateInstance#subscribe` now has a new `connection` option, which
+  specifies which connection should be used when making the subscription. The
+  default is `Meteor.connection`, which is the connection used when calling
+  `Meteor.subscribe`.
+
+* XXX Handlebars sub-expressions. https://github.com/meteor/meteor/pull/4101
+
+* XXX `#each .. in ..` and `#let x=y` forms. https://github.com/meteor/meteor/pull/3560
+
+
+## DDP
+
+* Websockets now support the
+  [`permessage-deflate`](https://tools.ietf.org/id/draft-ietf-hybi-permessage-compression-19.txt)
+  extension, which compresses data on the wire. It is enabled by default on the
+  server. To disable it, set `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure
+  compression options, set `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that
+  will be used as an argument to
+  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
+  Compression is supported on the client side by Meteor's Node DDP client and by
+  browsers including Chrome, Safari, and Firefox 37.
+
+* The `ddp` package has been split into `ddp-client` and `ddp-server` packages;
+  using `ddp` is equivalent to using both. This allows you to use the Node DDP
+  client without adding the DDP server to your app.  #4191 #3452
+
+* On the client, `Meteor.call` now takes a `throwStubExceptions` option; if set,
+  exceptions thrown by method stubs will be thrown instead of logged, and the
+  method will not be invoked on the server.  #4202
+
+
+### Isobuild
+
+* Plugins should not process files whose names match the extension exactly (with
+  no extra dot).  #3985
+
+* Adding the same file twice in the same package is now an error. Previously,
+  this could either lead to the file being included multiple times, or to a
+  build time crash.
+
+* You may now specify the `bare` option for JavaScript files on the server.
+  Previous versions only allowed this on the client. #3681
+
+### Livequery
+
+* The oplog observe driver now properly updates queries when you drop a
+  database.  #3847
+
+
+### `meteor` command-line tool
+
+* Avoid a race condition in `meteor --test` and work with newer versions of the
+  Velocity package.  #3957
+
+* Improve error handling when publishing packages.  #3977
+
+* Improve messaging around publishing binary packages.  #3961
+
+* Preserve the value of `_` in `meteor shell`.  #4010
+
+* `meteor mongo` now works on OS X when certain non-ASCII characters are in the
+  pathname, as long as the `pgrep` utility is installed (it ships standard with
+  OS X 10.8 and newer).  #3999
+
+* `meteor run` no longer ignores (and often reverts) external changes to
+  `.meteor/versions` which occur while the process is running.  #3582
+
+* Fix crash when downloading two builds of the same package version
+  simultaneously.  #4163
+
+
+### Meteor Accounts
+
+* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
+  log in with currently registered services.  #4014
+
+### Email
+
+* `Email.send` now has a new option, `attachments`, in the same style as
+  `mailcomposer`.
+  [Details here.](https://github.com/andris9/mailcomposer#add-attachments)
+
+### Tracker
+
+* `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
+  the dictionary as if no items had been added, meaning all calls to `get` will
+  return `underfined`. `all` converts the dictionary into a regular JavaScript
+  object with a snapshot of the keys and values. Inside an autorun, `all`
+  registers a dependency on any changes to the dictionary.
+
+### Utilities
+
+* `Match.test` from the `check` package now properly compares boolean literals,
+  just like it does with Numbers and Strings. This applies to the `check`
+  function as well.
+
+* Provide direct access to the `mailcomposer` npm module used by the `email`
+  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
+  object to `Email.send` instead of individual options.  #4209
+
+
+### Other bug fixes and improvements
+
+* Upgraded dependencies:
+
+  - uglify-js: 2.4.20 (from 2.4.17)
+
+
+## v1.1.0.2, 2015-Apr-06
+
+### `meteor` command-line tool
+
+* Revert a change in 1.1.0.1 that caused `meteor mongo` to fail on some Linux
+  systems. #4115, #4124, #4134
+
+
+## v1.1.0.1, 2015-Apr-02
+
+### Blaze
+
+* Fix a regression in 1.1 in Blaze Templates: an error happening when View is
+  invalidated immediately, causing a client-side crash (accessing
+  `destroyMembers` of `undefined`). #4097
+
+## v1.1, 2015-Mar-31
+
+### Windows Support
+
+* The Meteor command line tool now officially supports Windows 7, Windows 8.1,
+  Windows Server 2008, and Windows Server 2012. It can run from PowerShell or
+  Command Prompt.
+
+* There is a native Windows installer that will be available for download from
+  <https://www.meteor.com/install> starting with this release.
+
+* In this release, Meteor on Windows supports all features available on Linux
+  and Mac except building mobile apps with PhoneGap/Cordova.
+
+* The `meteor admin get-machine` command now supports an additional
+  architecture, `os.windows.x86_32`, which can be used to build binary packages
+  for Windows.
+
 ### Version Solver
 
 * The code that selects compatible package versions for `meteor update`
@@ -33,13 +183,19 @@
 * Yield to the event loop during the flush cycle, unless we're executing a
   synchronous `Tracker.flush()`.  #3901
 
+* Fix error reporting not being source-mapped properly. #3655
+
+* Introduce a new option for `Tracker.autorun` - `onError`. This callback can be
+  used to handle errors caught in the reactive computations. #3822
+
+### Blaze
+
+* Fix stack overflow from nested templates and helpers by avoiding recursion
+  during rendering.  #3028
 
 ### `meteor` command-line tool
 
 * Don't fail if `npm` prints more than 200K.  #3887
-
-* Avoid a race condition in `meteor --test` and work with newer versions of the
-  Velocity package.  #3957
 
 
 ### Other bug fixes and improvements
@@ -47,6 +203,9 @@
 * Upgraded dependencies:
 
   - uglify-js: 2.4.17 (from 2.4.13)
+
+Patches contributed by GitHub users hwillson, mitar, murillo128, Primigenus,
+rjakobsson, and tmeasday.
 
 
 ## v1.0.5, 2015-Mar-25
@@ -73,7 +232,6 @@
 
 * Fix regression in 1.0.4 where `meteor publish-for-arch` only worked for
   packages without colons in their name.  #3951
-
 
 ## v1.0.4, 2015-Mar-17
 

@@ -51,7 +51,7 @@ var ServiceConnection = function (endpointUrl, options) {
     }
   });
 
-  self.connection = Package.ddp.DDP.connect(endpointUrl, options);
+  self.connection = Package['ddp-client'].DDP.connect(endpointUrl, options);
 
   // Wait until we have some sort of initial connection or error (including the
   // 10-second timeout built into our DDP client).
@@ -74,7 +74,7 @@ var ServiceConnection = function (endpointUrl, options) {
       var fut = self.currentFuture;
       self.currentFuture = null;
       fut.throw(error ||
-                new Package.ddp.DDP.ConnectionError(
+                new Package['ddp-client'].DDP.ConnectionError(
                   "DDP disconnected while connection in progress"));
     } else if (error) {
       // We got some sort of error with nobody listening for it; handle it.

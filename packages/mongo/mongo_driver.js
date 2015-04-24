@@ -8,7 +8,7 @@
  */
 
 var path = Npm.require('path');
-var MongoDB = Npm.require('mongodb');
+var MongoDB = NpmModuleMongodb;
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
@@ -17,7 +17,7 @@ MongoTest = {};
 
 MongoInternals.NpmModules = {
   mongodb: {
-    version: Npm.require('mongodb/package.json').version,
+    version: NpmModuleMongodbVersion,
     module: MongoDB
   }
 };
@@ -426,6 +426,25 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   }
 };
 
+// For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
+// because it lets the test's fence wait for it to be complete.
+MongoConnection.prototype._dropDatabase = function (cb) {
+  var self = this;
+
+  var write = self._maybeBeginWrite();
+  var refresh = function () {
+    Meteor.refresh({ dropDatabase: true });
+  };
+  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
+
+  try {
+    self.db.dropDatabase(cb);
+  } catch (e) {
+    write.committed();
+    throw e;
+  }
+};
+
 MongoConnection.prototype._update = function (collection_name, selector, mod,
                                               options, callback) {
   var self = this;
@@ -672,7 +691,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection"], function (method) {
+_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
@@ -1215,6 +1234,8 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
   } else {
     triggerCallback(key);
   }
+  // Everyone cares about the database being dropped.
+  triggerCallback({ dropDatabase: true });
 };
 
 // observeChanges for tailable cursors on capped collections.

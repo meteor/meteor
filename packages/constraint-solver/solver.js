@@ -46,12 +46,12 @@ CS.Solver.prototype.throwAnyErrors = function () {
   }
 };
 
-CS.Solver.prototype.getVersions = function (package) {
+CS.Solver.prototype.getVersions = function (pkg) {
   var self = this;
-  if (_.has(self.analysis.allowedVersions, package)) {
-    return self.analysis.allowedVersions[package];
+  if (_.has(self.analysis.allowedVersions, pkg)) {
+    return self.analysis.allowedVersions[pkg];
   } else {
-    return self.input.catalogCache.getPackageVersions(package);
+    return self.input.catalogCache.getPackageVersions(pkg);
   }
 };
 
@@ -193,6 +193,9 @@ CS.Solver.prototype.analyze = function () {
 
   // Array of CS.Solver.Constraint
   analysis.constraints = [];
+  // packages `foo` such that there's a simple top-level equality
+  // constraint about `foo`.  package name -> true.
+  analysis.topLevelEqualityConstrainedPackages = {};
 
   Profile.time("analyze constraints", function () {
     // top-level constraints
@@ -201,6 +204,11 @@ CS.Solver.prototype.analyze = function () {
         analysis.constraints.push(new CS.Solver.Constraint(
           null, c.package, c.versionConstraint,
           "constraint#" + analysis.constraints.length));
+
+        if (c.versionConstraint.alternatives.length === 1 &&
+            c.versionConstraint.alternatives[0].type === 'exactly') {
+          analysis.topLevelEqualityConstrainedPackages[c.package] = true;
+        }
       }
     });
 
@@ -239,6 +247,8 @@ CS.Solver.prototype.analyze = function () {
   });
 };
 
+var WholeNumber = Match.Where(Logic.isWholeNumber);
+
 // A Step consists of a name, an array of terms, and an array of weights.
 // Steps are optimized one by one.  Optimizing a Step means to find
 // the minimum whole number value for the weighted sum of the terms,
@@ -261,7 +271,7 @@ CS.Solver.Step = function (name, terms, weights) {
   terms = terms || [];
   check(terms, [String]);
   weights = (weights == null ? [] : weights);
-  check(weights, Match.OneOf([Logic.WholeNumber], Logic.WholeNumber));
+  check(weights, Match.OneOf([WholeNumber], WholeNumber));
 
   this.name = name;
 
@@ -280,7 +290,7 @@ CS.Solver.Step.prototype.addTerm = function (term, weight) {
     }
     weight = this.weights;
   }
-  check(weight, Logic.WholeNumber);
+  check(weight, WholeNumber);
   if (weight !== 0) {
     this.terms.push(term);
     if (typeof this.weights === 'number') {
@@ -344,8 +354,10 @@ CS.Solver.prototype.minimize = function (step, options) {
     var costWeights = step.weights;
     var costTerms = step.terms;
 
-    self.setSolution(logic.minimize(
-      self.solution, costTerms, costWeights, {
+    var optimized = groupMutuallyExclusiveTerms(costTerms, costWeights);
+
+    self.setSolution(logic.minimizeWeightedSum(
+      self.solution, optimized.costTerms, optimized.costWeights, {
         progress: function (status, cost) {
           if (self.options.nudge) {
             self.options.nudge();
@@ -353,6 +365,8 @@ CS.Solver.prototype.minimize = function (step, options) {
           if (DEBUG) {
             if (status === 'improving') {
               console.log(cost + " ... trying to improve ...");
+            } else if (status === 'trying') {
+              console.log("... trying " + cost + " ... ");
             }
           }
         },
@@ -376,6 +390,60 @@ CS.Solver.prototype.minimize = function (step, options) {
   });
 };
 
+// This is a correctness-preserving performance optimization.
+//
+// Cost functions often have many terms where both the package name
+// and the weight are the same.  For example, when optimizing major
+// version, we might have `(foo 3.0.0)*2 + (foo 3.0.1)*2 ...`.  It's
+// more efficient to give the solver `((foo 3.0.0) OR (foo 3.0.1) OR
+// ...)*2 + ...`, because it separates the question of whether to use
+// ANY `foo 3.x.x` variable from the question of which one.  Other
+// constraints already enforce the fact that `foo 3.0.0` and `foo 3.0.1`
+// are mutually exclusive variables.  We can use that fact to "relax"
+// that relationship for the purposes of the weighted sum.
+//
+// Note that shuffling up the order of terms unnecessarily seems to
+// impact performance, so it's significant that we group by package
+// first, then weight, rather than vice versa.
+var groupMutuallyExclusiveTerms = function (costTerms, costWeights) {
+  // Return a key for a term, such that terms with the same key are
+  // guaranteed to be mutually exclusive.  We assume each term is
+  // a variable representing either a package or a package version.
+  // We take a prefix of the variable name up to and including the
+  // first space.  So "foo 1.0.0" becomes "foo " and "foo" stays "foo".
+  var getTermKey = function (t) {
+    var firstSpace = t.indexOf(' ');
+    return firstSpace < 0 ? t : t.slice(0, firstSpace+1);
+  };
+
+  // costWeights, as usual, may be a number or an array
+  if (typeof costWeights === 'number') {
+    return {
+      costTerms: _.map(_.groupBy(costTerms, getTermKey), function (group) {
+        return Logic.or(group);
+      }),
+      costWeights: costWeights
+    };
+  } else if (! costTerms.length) {
+    return { costTerms: costTerms, costWeights: costWeights };
+  } else {
+    var weightedTerms = _.zip(costWeights, costTerms);
+    var newWeightedTerms = _.map(_.groupBy(weightedTerms, function (wt) {
+      // construct a string from the weight and term key, for grouping
+      // purposes.  since the weight comes first, there's no ambiguity
+      // and the separator char could be pretty much anything.
+      return wt[0] + ' ' + getTermKey(wt[1]);
+    }), function (wts) {
+      return [wts[0][0], Logic.or(_.pluck(wts, 1))];
+    });
+    return {
+      costTerms: _.pluck(newWeightedTerms, 1),
+      costWeights: _.pluck(newWeightedTerms, 0)
+    };
+  }
+
+};
+
 // Determine the non-zero contributions to the cost function in `step`
 // based on the current solution, returning a map from term (usually
 // the name of a package or package version) to positive integer cost.
@@ -393,9 +461,9 @@ CS.Solver.prototype.getStepContributions = function (step) {
   return contributions;
 };
 
-var addCostsToSteps = function (package, versions, costs, steps) {
+var addCostsToSteps = function (pkg, versions, costs, steps) {
   var pvs = _.map(versions, function (v) {
-    return pvVar(package, v);
+    return pvVar(pkg, v);
   });
   for (var j = 0; j < steps.length; j++) {
     var step = steps[j];
@@ -457,12 +525,12 @@ CS.Solver.prototype.getVersionDistanceSteps = function (stepBaseName,
     "calculate " + stepBaseName + " distance costs",
     function () {
       _.each(packageAndVersions, function (pvArg) {
-        var package = pvArg.package;
+        var pkg = pvArg.package;
         var previousVersion = pvArg.version;
-        var versions = self.getVersions(package);
+        var versions = self.getVersions(pkg);
         var costs = self.pricer.priceVersionsWithPrevious(
           versions, previousVersion, takePatches);
-        addCostsToSteps(package, versions, costs,
+        addCostsToSteps(pkg, versions, costs,
                         [incompat, major, minor, patch, rest]);
       });
     });
@@ -502,7 +570,7 @@ CS.Solver.prototype.setSolution = function (solution) {
   if (! self.solution) {
     throw new Error("Unexpected unsatisfiability");
   }
-  self.solution.ignoreUnknownVariables = true;
+  self.solution.ignoreUnknownVariables();
 };
 
 CS.Solver.prototype.getAnswer = function (options) {
@@ -656,21 +724,21 @@ CS.Solver.prototype._getAnswer = function (options) {
     return analysis.reachablePackages[p] === true;
   });
 
-  if (! input.allowIncompatibleUpdate) {
-    // make sure packages that are being updated can still count as
-    // a previous_root for the purposes of previous_root_incompat
-    Profile.time("add terms to previous_root_incompat", function () {
-      _.each(toUpdate, function (p) {
-        if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
-          var parts = self.pricer.partitionVersions(
-            self.getVersions(p), input.previousSolution[p]);
-          _.each(parts.older.concat(parts.higherMajor), function (v) {
-            previousRootIncompat.addTerm(pvVar(p, v), 1);
-          });
-        }
-      });
+  // make sure packages that are being updated can still count as
+  // a previous_root for the purposes of previous_root_incompat
+  Profile.time("add terms to previous_root_incompat", function () {
+    _.each(toUpdate, function (p) {
+      if (input.isRootDependency(p) && input.isInPreviousSolution(p)) {
+        var parts = self.pricer.partitionVersions(
+          self.getVersions(p), input.previousSolution[p]);
+        _.each(parts.older.concat(parts.higherMajor), function (v) {
+          previousRootIncompat.addTerm(pvVar(p, v), 1);
+        });
+      }
     });
+  });
 
+  if (! input.allowIncompatibleUpdate) {
     // Enforce that we don't make breaking changes to your root dependencies,
     // unless you pass --allow-incompatible-update.  It will actually be enforced
     // farther down, but for now, we want to apply this constraint before handling
@@ -730,11 +798,11 @@ CS.Solver.prototype._getAnswer = function (options) {
   // signal.  In other words, the user might be better off with some tie-breaker
   // that looks only at the important packages anyway.
   Profile.time("lock down important versions", function () {
-    _.each(self.currentVersionMap(), function (v, package) {
-      if (input.isRootDependency(package) ||
-          input.isInPreviousSolution(package) ||
-          input.isUpgrading(package)) {
-        logic.require(Logic.implies(package, pvVar(package, v)));
+    _.each(self.currentVersionMap(), function (v, pkg) {
+      if (input.isRootDependency(pkg) ||
+          input.isInPreviousSolution(pkg) ||
+          input.isUpgrading(pkg)) {
+        logic.require(Logic.implies(pkg, pvVar(pkg, v)));
       }
     });
   });
@@ -783,20 +851,35 @@ CS.Solver.prototype._getAnswer = function (options) {
 
   if ((! input.allowIncompatibleUpdate) &&
       self.stepsByName['previous_root_incompat'].optimum > 0) {
-    Profile.time("generate error for incompatible root change", function () {
-      _.each(_.keys(
-        self.getStepContributions(self.stepsByName['previous_root_incompat'])),
-             function (pvStr) {
-               var pv = CS.PackageAndVersion.fromString(pvStr);
-               var prevVersion = input.previousSolution[pv.package];
-               self.errors.push(
-                 'Potentially incompatible change required to top-level dependency: ' +
-                   pvStr + ', was ' + prevVersion + '.\n' +
-                   self.listConstraintsOnPackage(pv.package));
-             });
-      self.errors.push('To allow potentially incompatible changes to top-level ' +
-                       'dependencies, you must pass --allow-incompatible-update ' +
-                       'on the command line.');
+    // we have some "incompatible root changes", where we needed to change a
+    // version of a root dependency to a new version incompatible with the
+    // original, but --allow-incompatible-update hasn't been passed in.
+    // these are in the form of PackageAndVersion strings that we need.
+    var incompatRootChanges = _.keys(self.getStepContributions(
+      self.stepsByName['previous_root_incompat']));
+
+    Profile.time("generate errors for incompatible root change", function () {
+      var numActualErrors = 0;
+      _.each(incompatRootChanges, function (pvStr) {
+        var pv = CS.PackageAndVersion.fromString(pvStr);
+        // exclude packages with top-level equality constraints (added by user
+        // or by the tool pinning a version)
+        if (! _.has(analysis.topLevelEqualityConstrainedPackages, pv.package)) {
+          var prevVersion = input.previousSolution[pv.package];
+          self.errors.push(
+            'Potentially incompatible change required to ' +
+              'top-level dependency: ' +
+              pvStr + ', was ' + prevVersion + '.\n' +
+              self.listConstraintsOnPackage(pv.package));
+          numActualErrors++;
+        }
+      });
+      if (numActualErrors) {
+        self.errors.push(
+          'To allow potentially incompatible changes to top-level ' +
+            'dependencies, you must pass --allow-incompatible-update ' +
+            'on the command line.');
+      }
     });
     self.throwAnyErrors();
   }
@@ -857,14 +940,14 @@ var _getConstraintFormula = function (toPackage, vConstraint) {
   }
 };
 
-CS.Solver.prototype.listConstraintsOnPackage = function (package) {
+CS.Solver.prototype.listConstraintsOnPackage = function (pkg) {
   var self = this;
   var constraints = self.analysis.constraints;
 
-  var result = 'Constraints on package "' + package + '":';
+  var result = 'Constraints on package "' + pkg + '":';
 
   _.each(constraints, function (c) {
-    if (c.toPackage === package) {
+    if (c.toPackage === pkg) {
       var paths;
       if (c.fromVar) {
         paths = self.getPathsToPackageVersion(
@@ -874,7 +957,7 @@ CS.Solver.prototype.listConstraintsOnPackage = function (package) {
       }
       _.each(paths, function (path) {
         result += '\n* ' + (new PV.PackageConstraint(
-          package, c.vConstraint.raw)) + ' <- ' + path.join(' <- ');
+          pkg, c.vConstraint.raw)) + ' <- ' + path.join(' <- ');
       });
     }
   });
@@ -948,14 +1031,14 @@ CS.Solver.prototype.getPathsToPackageVersion = function (packageAndVersion) {
     if (! solution.evaluate(pv.toString())) {
       return [];
     }
-    var package = pv.package;
+    var pkg = pv.package;
 
-    if (input.isRootDependency(package)) {
+    if (input.isRootDependency(pkg)) {
       return [[pv]];
     }
 
     var newIgnorePackageSet = _.clone(_ignorePackageSet);
-    newIgnorePackageSet[package] = true;
+    newIgnorePackageSet[pkg] = true;
 
     var paths = [];
     var shortestLength = null;
@@ -963,7 +1046,7 @@ CS.Solver.prototype.getPathsToPackageVersion = function (packageAndVersion) {
     _.each(allPackages, function (p) {
       if ((! _.has(newIgnorePackageSet, p)) &&
           solution.evaluate(p) &&
-          hasDep(p, package)) {
+          hasDep(p, pkg)) {
         var newPV = new CS.PackageAndVersion(p, versionMap[p]);
         _.each(getPaths(newPV, newIgnorePackageSet), function (path) {
           var newPath = [pv].concat(path);

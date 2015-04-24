@@ -11,6 +11,10 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
+var changed = function (v) {
+  v && v.changed();
+};
+
 // XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
 ReactiveDict = function (dictName) {
   // this.keys: key -> value
@@ -31,6 +35,7 @@ ReactiveDict = function (dictName) {
     this.keys = {};
   }
 
+  this.allDeps = new Tracker.Dependency;
   this.keyDeps = {}; // key -> Dependency
   this.keyValueDeps = {}; // key -> Dependency
 };
@@ -59,10 +64,7 @@ _.extend(ReactiveDict.prototype, {
       return;
     self.keys[key] = value;
 
-    var changed = function (v) {
-      v && v.changed();
-    };
-
+    self.allDeps.changed();
     changed(self.keyDeps[key]);
     if (self.keyValueDeps[key]) {
       changed(self.keyValueDeps[key][oldSerializedValue]);
@@ -135,6 +137,31 @@ _.extend(ReactiveDict.prototype, {
     var oldValue = undefined;
     if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
     return EJSON.equals(oldValue, value);
+  },
+  
+  all: function() {
+    this.allDeps.depend();
+    var ret = {};
+    _.each(this.keys, function(value, key) {
+      ret[key] = parse(value);
+    });
+    return ret;
+  },
+  
+  clear: function() {
+    var self = this;
+    
+    var oldKeys = self.keys;
+    self.keys = {};
+    
+    self.allDeps.changed();
+    
+    _.each(oldKeys, function(value, key) {
+      changed(self.keyDeps[key]);
+      changed(self.keyValueDeps[key][value]);
+      changed(self.keyValueDeps[key]['undefined']);
+    });
+    
   },
 
   _setObject: function (object) {

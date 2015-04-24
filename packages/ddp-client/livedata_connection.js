@@ -35,7 +35,7 @@ var Connection = function (url, options) {
     heartbeatTimeout: 15000,
     // These options are only for testing.
     reloadWithOutstanding: false,
-    supportedDDPVersions: SUPPORTED_DDP_VERSIONS,
+    supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
     retry: true,
     respondToPings: true
   }, options);
@@ -205,7 +205,7 @@ var Connection = function (url, options) {
 
   var onMessage = function (raw_msg) {
     try {
-      var msg = parseDDP(raw_msg);
+      var msg = DDPCommon.parseDDP(raw_msg);
     } catch (e) {
       Meteor._debug("Exception while parsing DDP", e);
       return;
@@ -751,7 +751,7 @@ _.extend(Connection.prototype, {
     var randomSeed = null;
     var randomSeedGenerator = function () {
       if (randomSeed === null) {
-        randomSeed = makeRpcSeed(enclosing, name);
+        randomSeed = DDPCommon.makeRpcSeed(enclosing, name);
       }
       return randomSeed;
     };
@@ -774,7 +774,7 @@ _.extend(Connection.prototype, {
         self.setUserId(userId);
       };
 
-      var invocation = new MethodInvocation({
+      var invocation = new DDPCommon.MethodInvocation({
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
@@ -823,13 +823,18 @@ _.extend(Connection.prototype, {
 
     // If an exception occurred in a stub, and we're ignoring it
     // because we're doing an RPC and want to use what the server
-    // returns instead, log it so the developer knows.
+    // returns instead, log it so the developer knows
+    // (unless they explicitly ask to see the error).
     //
     // Tests can set the 'expected' flag on an exception so it won't
     // go to log.
-    if (exception && !exception.expected) {
-      Meteor._debug("Exception while simulating the effect of invoking '" +
-                    name + "'", exception, exception.stack);
+    if (exception) {
+      if (options.throwStubExceptions) {
+        throw exception;
+      } else if (!exception.expected) {
+        Meteor._debug("Exception while simulating the effect of invoking '" +
+          name + "'", exception, exception.stack);
+      }
     }
 
 
@@ -969,7 +974,7 @@ _.extend(Connection.prototype, {
   // Sends the DDP stringification of the given message object
   _send: function (obj) {
     var self = this;
-    self._stream.send(stringifyDDP(obj));
+    self._stream.send(DDPCommon.stringifyDDP(obj));
   },
 
   // We detected via DDP-level heartbeats that we've lost the
@@ -1057,7 +1062,7 @@ _.extend(Connection.prototype, {
     var self = this;
 
     if (self._version !== 'pre1' && self._heartbeatInterval !== 0) {
-      self._heartbeat = new Heartbeat({
+      self._heartbeat = new DDPCommon.Heartbeat({
         heartbeatInterval: self._heartbeatInterval,
         heartbeatTimeout: self._heartbeatTimeout,
         onTimeout: function () {

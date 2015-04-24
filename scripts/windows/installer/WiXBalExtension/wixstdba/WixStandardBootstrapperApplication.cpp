@@ -29,6 +29,7 @@ static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCH_HIDDEN      = L"LaunchHidden";
 static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCHAFTERINSTALL_TARGET_PATH = L"LaunchAfterInstallTarget";
 static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCHAFTERINSTALL_ARGUMENTS   = L"LaunchAfterInstallArguments";
 
+static const LPCWSTR WIXSTDBA_VARIABLE_VERSION = L"MeteorVersion";
 static const LPCWSTR WIXSTDBA_VARIABLE_PROGRESS_HEADER = L"varProgressHeader";
 static const LPCWSTR WIXSTDBA_VARIABLE_PROGRESS_INFO   = L"varProgressInfo";
 static const LPCWSTR WIXSTDBA_VARIABLE_SUCCESS_HEADER  = L"varSuccessHeader";
@@ -1004,7 +1005,7 @@ LExit:
 			::Sleep(250);
 		}
 
-		if (m_command.action == BOOTSTRAPPER_ACTION_UNINSTALL)
+		if (m_command.action == BOOTSTRAPPER_ACTION_UNINSTALL || BOOTSTRAPPER_DISPLAY_FULL > m_command.display)
 			SetState(WIXSTDBA_STATE_APPLIED, S_OK);
 		else
 			SetState(WIXSTDBA_STATE_SVC_OPTIONS, hrStatus);
@@ -3709,7 +3710,7 @@ BOOL POSTRequest(
 BOOL REST_SignInOrRegister(
 	__in BOOL    fSignIn,
     __in LPCWSTR wzSignInUserNameOrEmail,
-    __in LPCWSTR wzRegisterUserName,
+    __in LPCWSTR wzRegisterUsername,
     __in LPCWSTR wzRegisterEmail,
     __in LPCWSTR wzPassword/*,
     __out LPWSTR *ppwzErrorMessage*/
@@ -3717,6 +3718,12 @@ BOOL REST_SignInOrRegister(
 {
 	BOOL bRes = false;
 	wchar_t wzFormData[BUF_LEN] = L"";
+
+	DWORD escapedLength;
+
+	escapedLength = BUF_LEN;
+	wchar_t wzPasswordEscaped[BUF_LEN];
+	UrlEscapeW(wzPassword, wzPasswordEscaped, &escapedLength, NULL);
 
 	if (fSignIn) {
 		// sign in
@@ -3726,17 +3733,44 @@ BOOL REST_SignInOrRegister(
 		} else {
 			wzUsernameOrEmailKey = L"meteorAccountsLoginInfo[username]";		
 		}
-		StringCchPrintfW(wzFormData, BUF_LEN, L"%s=%s&meteorAccountsLoginInfo[password]=%s", wzUsernameOrEmailKey, wzSignInUserNameOrEmail, wzPassword);
+
+		escapedLength = BUF_LEN;
+		wchar_t wzSignInUserNameOrEmailEscaped[BUF_LEN];
+		UrlEscapeW(wzSignInUserNameOrEmail, wzSignInUserNameOrEmailEscaped, &escapedLength, NULL);
+
+		StringCchPrintfW(wzFormData, BUF_LEN, L"%s=%s&meteorAccountsLoginInfo[password]=%s", wzUsernameOrEmailKey, wzSignInUserNameOrEmailEscaped, wzPasswordEscaped);
 	} else {
+		escapedLength = BUF_LEN;
+		wchar_t wzRegisterUsernameEscaped[BUF_LEN];
+		UrlEscapeW(wzRegisterUsername, wzRegisterUsernameEscaped, &escapedLength, NULL);
+
+		escapedLength = BUF_LEN;
+		wchar_t wzRegisterEmailEscaped[BUF_LEN];
+		UrlEscapeW(wzRegisterEmail, wzRegisterEmailEscaped, &escapedLength, NULL);
+
 		// register
-		StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&email=%s&password=%s", wzRegisterUserName, wzRegisterEmail, wzPassword);
+		StringCchPrintfW(wzFormData, BUF_LEN, L"username=%s&email=%s&password=%s", wzRegisterUsernameEscaped, wzRegisterEmailEscaped, wzPasswordEscaped);
 	}
 
-	size_t   i;
-    char *pMBFormData = (char *)malloc( BUF_LEN );
-    wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
+  // agentInfo part of the query
+  wchar_t aiHostW[BUF_LEN] = L"";
+  DWORD aiHostSize = BUF_LEN;
+  GetComputerNameW(aiHostW, &aiHostSize);
 
-    char *pMBDataResponse = NULL;
+  LPWSTR aiAgentVersion = NULL;
+  BalGetStringVariable(WIXSTDBA_VARIABLE_VERSION, &aiAgentVersion);
+
+  wchar_t wzAgentInfo[BUF_LEN] = L"";
+  StringCchPrintfW(wzAgentInfo, BUF_LEN, L"agentInfo[host]=%s&agentInfo[agent]=%s&agentInfo[agentVersion]=%s&agentInfo[arch]=%s",
+      aiHostW, L"Windows Installer", aiAgentVersion, L"os.windows.x64_32");
+  StringCchCatW(wzFormData, BUF_LEN, L"&");
+  StringCchCatW(wzFormData, BUF_LEN, wzAgentInfo);
+
+  size_t i;
+  char *pMBFormData = (char *)malloc( BUF_LEN );
+  wcstombs_s(&i, pMBFormData, (size_t)BUF_LEN, wzFormData, (size_t)BUF_LEN );
+
+  char *pMBDataResponse = NULL;
 	wchar_t wzErrorMessage[BUF_LEN] = L"";
 
 	char *path = fSignIn ? "/api/v1/private/login"
@@ -3805,6 +3839,8 @@ BOOL REST_SignInOrRegister(
 
 		// Clean up JSON object
 		delete JSONResponse;
+	} else {
+		wcsncat_s(wzErrorMessage, L"Network error contacting the Meteor accounts server. Please retry, or skip this step and complete your registration later.", BUF_LEN-1);
 	}
 
 

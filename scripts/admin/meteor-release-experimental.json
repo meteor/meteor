@@ -1,7 +1,7 @@
 {
  "track": "METEOR",
- "version": "1.0.5-rc.0",
+ "version": "1.1.0.2-rc.0",
  "recommended": false,
  "official": false,
- "description": "The Official Meteor Distribution"
+ "description": "Release candidate of patch release for 1.1"
 }

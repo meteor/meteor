@@ -6,7 +6,6 @@ var net = require("net");
 var tty = require("tty");
 var vm = require("vm");
 var Fiber = require("fibers");
-var EOL = require("os").EOL;
 var _ = require("underscore");
 var INFO_FILE_MODE = 0600; // Only the owner can read or write.
 var EXITING_MESSAGE =
@@ -16,7 +15,23 @@ var EXITING_MESSAGE =
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
 exports.listen = function listen(shellDir) {
-  new Server(shellDir).listen();
+  function callback() {
+    new Server(shellDir).listen();
+  }
+
+  // If the server is still in the very early stages of starting up,
+  // Meteor.startup may not available yet.
+  if (typeof Meteor === "object") {
+    Meteor.startup(callback);
+  } else if (typeof __meteor_bootstrap__ === "object") {
+    var hooks = __meteor_bootstrap__.startupHooks;
+    if (hooks) {
+      hooks.push(callback);
+    } else {
+      // As a fallback, just call the callback asynchronously.
+      process.nextTick(callback);
+    }
+  }
 };
 
 // Disabling the shell causes all attached clients to disconnect and exit.
@@ -159,9 +174,14 @@ Sp.startREPL = function startREPL(options) {
   // History persists across shell sessions!
   self.initializeHistory();
 
+  // Save the global `_` object in the server.  This is probably defined by the
+  // underscore package.  It is unlikely to be the same object as the `var _ =
+  // require('underscore')` in this file!
+  var originalUnderscore = repl.context._;
+
   Object.defineProperty(repl.context, "_", {
     // Force the global _ variable to remain bound to underscore.
-    get: function () { return _; },
+    get: function () { return originalUnderscore; },
 
     // Expose the last REPL result as __ instead of _.
     set: function(lastResult) {
@@ -262,7 +282,7 @@ Sp.initializeHistory = function initializeHistory() {
   var rli = self.repl.rli;
   var historyFile = getHistoryFile(self.shellDir);
   var historyFd = fs.openSync(historyFile, "a+");
-  var historyLines = fs.readFileSync(historyFile, "utf8").split(EOL);
+  var historyLines = fs.readFileSync(historyFile, "utf8").split("\n");
   var seenLines = Object.create(null);
 
   if (! rli.history) {

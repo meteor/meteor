@@ -533,7 +533,7 @@ _.extend(PackageSource.prototype, {
                 if (!e.versionParserError)
                   throw e;
                 buildmessage.error(
-                  "The package version " + self.version + " (specified with Package.describe) "
+                  "The package version " + value + " (specified with Package.describe) "
                     + "is not a valid Meteor package version.\n"
                     + "Valid package versions are semver (see http://semver.org/), "
                     + "optionally followed by '_' and an integer greater or equal to 1.");
@@ -974,7 +974,7 @@ _.extend(PackageSource.prototype, {
         // and then continue.
         api.sources = {};
         _.each(compiler.ALL_ARCHES, function (arch) {
-          api.sources[arch] = [];
+          api.sources[arch] = {};
         });
 
         fileAndDepLoader = null;
@@ -1103,7 +1103,7 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: api.uses[arch],
         implies: api.implies[arch],
-        getSourcesFunc: function () { return api.sources[arch]; },
+        getSourcesFunc: function () { return _.values(api.sources[arch]); },
         declaredExports: api.exports[arch],
         watchSet: watchSet
       }));

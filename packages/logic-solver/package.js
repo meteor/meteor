@@ -1,14 +1,14 @@
 Package.describe({
   summary: "General satisfiability solver for logic problems",
-  version: '1.0.0-vs.3'
+  version: '2.0.0'
 });
 
 Package.on_use(function (api) {
   api.export('Logic');
-  api.use('check');
   api.use('underscore');
   api.add_files(['minisat.js',
                  'minisat_wrapper.js',
+                 'types.js',
                  'logic.js',
                  'optimize.js']);
 });
