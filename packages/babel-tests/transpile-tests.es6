@@ -54,11 +54,11 @@ var Foo = (function () {
   }
 
   Foo.staticMethod = function staticMethod() {
-    return "classy";
+    return 'classy';
   };
 
   Foo.prototype.prototypeMethod = function prototypeMethod() {
-    return "prototypical";
+    return 'prototypical';
   };
 
   return Foo;
@@ -389,12 +389,14 @@ for (var i = 0; i < 10; i++) {
   print(i);
 }
 
+var _loop = function (i) {
+  doLater(function () {
+    print(i);
+  });
+};
+
 for (var i = 0; i < 10; i++) {
-  (function (i) {
-    doLater(function () {
-      print(i);
-    });
-  })(i);
+  _loop(i);
 }`
       }
     ]
