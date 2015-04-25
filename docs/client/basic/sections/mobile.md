@@ -13,8 +13,8 @@ of the edge cases associated with mobile app development.
 Install the development tools for Android or iOS with one command:
 
 ```bash
-meteor install-sdk android     # for Android
-meteor install-sdk ios         # for iOS
+$ meteor install-sdk android     # for Android
+$ meteor install-sdk ios         # for iOS
 ```
 
 ### Adding platforms
@@ -22,22 +22,22 @@ meteor install-sdk ios         # for iOS
 Add the relevant platform to your app:
 
 ```bash
-meteor add-platform android    # for Android
-meteor add-platform ios        # for iOS
+$ meteor add-platform android    # for Android
+$ meteor add-platform ios        # for iOS
 ```
 
 ### Running on a simulator
 
 ```bash
-meteor run android             # for Android
-meteor run ios                 # for iOS
+$ meteor run android             # for Android
+$ meteor run ios                 # for iOS
 ```
 
 ### Running on a device
 
 ```bash
-meteor run android-device      # for Android
-meteor run ios-device          # for iOS
+$ meteor run android-device      # for Android
+$ meteor run ios-device          # for iOS
 ```
 
 ### Configuring app icons and metadata
