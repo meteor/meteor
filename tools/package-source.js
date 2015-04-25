@@ -1144,7 +1144,7 @@ _.extend(PackageSource.prototype, {
     // pretty clearly easy and possible to do, so why bother doing it for
     // HAXWEEEEK?
     // #EKATEHAX EKATEHAX EKATEHAX
-    var npmDependencies = { lodash: '3.7.0' };
+    var npmDependencies = projectContext.npms._versions;
     self.npmCacheDirectory =
       files.pathResolve(files.pathJoin(self.sourceRoot, '.meteor/my-npm'));
     self.npmDependencies = npmDependencies;

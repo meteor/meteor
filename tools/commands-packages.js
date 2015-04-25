@@ -90,6 +90,22 @@ var formatArchitecture = function (s) {
   }
 };
 
+var getNpmInfo = function (packageName) {
+  var info = files.run('npm', 'info', packageName, '--json');
+  if (! info) {
+    buildmessage.error("unknown NPM package");
+    return {};
+  }
+  // XXX: Error checking.
+  var parsedInfo = JSON.parse(info);
+  return parsedInfo;
+};
+
+var getNewNpmVersion = function (packageName) {
+  var parsedInfo = getNpmInfo(packageName);
+  return parsedInfo.version;
+};
+
 // Internal use only. Makes sure that your Meteor install is totally good to go
 // (is "airplane safe"). Specifically, it:
 //    - Builds all local packages, even those you're not using in your current
@@ -1176,7 +1192,21 @@ main.registerCommand({
     }
   );
 
+  // NPM packages. #EKATEHAX
+  _.each(projectContext.npms._versions, function (value, key) {
+    var newVersion = getNewNpmVersion(key);
+    var versionMod = value;
+    if (newVersion !== value) {
+      newVersionsAvailable = true;
+      versionMod+="*";
+    } else {
+      versionMod+=" ";
+    }
+    var desc = versionMod + " " + projectContext.npms._descriptions[key];
+    items.push( { name: "npm:" + key, description: desc });
+  });
   utils.printPackageList(items);
+
 
   if (newVersionsAvailable) {
     Console.info();
@@ -1195,6 +1225,7 @@ main.registerCommand({
       "These packages are built locally from source.",
       Console.options({ bulletPoint: "+ " }));
   }
+
   return 0;
 });
 
@@ -1599,6 +1630,25 @@ main.registerCommand({
 
       // Finish preparing the project.
       projectContext.prepareProjectForBuild();
+
+
+      // Update NPM packages.
+      var npms = _.clone(projectContext.npms._versions);
+      _.each(npms, function (version, name) {
+        var info = getNpmInfo(name);
+        if (! info || _.isEmpty(info)) return;
+        var latest = info.version;
+        if (version !== latest) {
+          npms[name] = latest + "@" + info.description;
+          projectContext.packageMapDelta._changedPackages["npm:" + name] = {
+            oldVersion: version,
+            newVersion: latest,
+            isBackwardsIncompatible: false,
+            isUnanticipatedPrerelease: false
+          };
+        }
+      });
+      projectContext.npms.write(npms);
     }
   );
 
@@ -1783,6 +1833,9 @@ main.registerCommand({
   // constraints. Don't run the constraint solver until you have added all of
   // them -- add should be an atomic operation regardless of the package
   // order.
+
+  var npms = {};
+
   var messages = buildmessage.capture(function () {
     _.each(args, function (packageReq) {
       buildmessage.enterJob("adding package " + packageReq, function () {
@@ -1791,6 +1844,23 @@ main.registerCommand({
         });
         if (buildmessage.jobHasMessages())
           return;
+
+        // Check if this is an NPM package. #EKATEHAX
+        var p = packageReq.split(':');
+        if(p.length === 2 && p[0] === "npm") {
+          var newNpm = p[1].split('@');
+          if (newNpm.length > 2) {
+            buildmessage.error("invalid specification");
+            return;
+          }
+          var name = newNpm[0];
+          var info = getNpmInfo(name);
+          if (! info) return;
+          var desc = info.description;
+          var version = newNpm.length < 2 ? info.version : newNpm[1];
+          npms[name] = { version : version, desc: desc};
+          return;
+        }
 
         // It's OK to make errors based on looking at the catalog, because this
         // is a OnceAtStart command.
@@ -1869,6 +1939,16 @@ main.registerCommand({
     Console.printMessages(messages);
     utils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
     return 1;
+  }
+
+  // Now we are going to add in NPMs.
+  if (!_.isEmpty(npms)) {
+    var newVersions = _.clone(projectContext.npms._versions);
+    _.each(npms, function (value, key) {
+      Console.info("adding NPM package", key, "@", value.version, "... success");
+      newVersions[key] = value.version + "@" + value.desc;
+    });
+    projectContext.npms.write(newVersions);
   }
 
   projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
@@ -1964,7 +2044,21 @@ main.registerCommand({
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
   var packagesToRemove = [];
+  var npms = [];
   _.each(args, function (package) {
+
+    // Check if this is an NPM package. #EKATEHAX
+    var p = package.split(':');
+    if(p.length === 2 && p[0] === "npm") {
+      // some checks.
+      if (/@/.test(package)) {
+        Console.error(package + ": do not specify version constraints.");
+        exitCode = 1;
+      }
+      npms.push(p[1]);
+      return;
+    }
+
     if (/@/.test(package)) {
       Console.error(package + ": do not specify version constraints.");
       exitCode = 1;
@@ -1977,8 +2071,21 @@ main.registerCommand({
       packagesToRemove.push(package);
     }
   });
-  if (! packagesToRemove.length)
+  if (! packagesToRemove.length && ! npms.length)
     return exitCode;
+
+  // Remove the NPM packages.
+  if (!_.isEmpty(npms)) {
+    var newNPMs = _.clone(projectContext.npms._versions);
+    _.each(npms, function (key) {
+      Console.info("removing NPM package", key, "... success");
+      delete newNPMs[key];
+    });
+    projectContext.npms.write(newNPMs);
+    if (! packagesToRemove.length) {
+      return;
+    }
+  }
 
   // Remove the packages from the in-memory representation of .meteor/packages.
   projectContext.projectConstraintsFile.removePackages(packagesToRemove);

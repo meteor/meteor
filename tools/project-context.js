@@ -71,6 +71,9 @@ _.extend(ProjectContext.prototype, {
     self._packageMapFilename = options.packageMapFilename ||
       files.pathJoin(self.projectDir, '.meteor', 'versions');
 
+    self._npmFilename = options.packageMapFilename ||
+      files.pathJoin(self.projectDir, '.meteor', 'npm-packages');
+
     self._serverArchitectures = options.serverArchitectures || [];
     // We always need to download host versions of packages, at least for
     // plugins.
@@ -286,6 +289,13 @@ _.extend(ProjectContext.prototype, {
       // Read .meteor/versions.
       self.packageMapFile = new exports.PackageMapFile({
         filename: self._packageMapFilename
+      });
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // Read .meteor/npm-packages
+      self.npms= new exports.NPMFile({
+        filename: self._npmFilename
       });
       if (buildmessage.jobHasMessages())
         return;
@@ -1006,6 +1016,95 @@ _.extend(exports.PackageMapFile.prototype, {
     var lines = [];
     _.each(packageNames, function (packageName) {
       lines.push(packageName + "@" + self._versions[packageName] + "\n");
+    });
+    var fileContents = new Buffer(lines.join(''));
+    files.writeFileAtomically(self.filename, fileContents);
+
+    // Replace our watchSet with one for the new contents of the file.
+    var hash = watch.sha1(fileContents);
+    self.watchSet = new watch.WatchSet;
+    self.watchSet.addFile(self.filename, hash);
+  }
+});
+
+// Represents .meteor/versions.
+exports.NPMFile = function (options) {
+  var self = this;
+  buildmessage.assertInCapture();
+
+  self.filename = options.filename;
+  self.watchSet = new watch.WatchSet;
+  self.fileHash = null;
+  self._versions = {};
+  self._descriptions = {};
+
+  self._readFile();
+};
+
+_.extend(exports.NPMFile.prototype, {
+  _readFile: function () {
+    var self = this;
+
+    var fileInfo = watch.readAndWatchFileWithHash(self.watchSet, self.filename);
+    var contents = fileInfo.contents;
+    self.fileHash = fileInfo.hash;
+    // No .meteor/versions? That's OK, you just get to start your calculation
+    // from scratch.
+    if (contents === null)
+      return;
+
+    buildmessage.assertInCapture();
+    var lines = files.splitBufferToLines(contents);
+    _.each(lines, function (line) {
+      // We don't allow comments here, since it's cruel to allow comments in a
+      // file when you're going to overwrite them anyway.
+      line = files.trimSpace(line);
+      if (line === '')
+        return;
+      var info = line.split('@');
+      if (info.length < 2) return;
+      if (info.length < 3) info.push("");
+      var packageName = info[0];
+      var packageVersion = info[1];
+      var packageDesc = info[2];
+
+      // If a package appears multiple times in .meteor/versions, we just ignore
+      // the second one. This file is more meteor-controlled than
+      // .meteor/packages and people shouldn't be surprised to see it
+      // automatically fixed.
+      if (_.has(self._versions, packageName))
+        return;
+
+      self._versions[packageName] = packageVersion;
+      self._descriptions[packageName] = packageDesc;
+    });
+  },
+
+  // Note that this is really specific to wanting to know what versions are in
+  // the .meteor/versions file on disk, which is a slightly different question
+  // from "so, what versions should I be building with?"  Usually you want the
+  // NPM produced by resolving constraints instead! Returns a map from
+  // package name to version.
+  getCachedVersions: function () {
+    var self = this;
+    return _.clone(self._versions);
+  },
+
+  write: function (newVersions) {
+    var self = this;
+
+    // Only write the file if some version changed. (We don't need to do no-op
+    // writes, even if they fix sorting in the file.)
+    if (_.isEqual(self._versions, newVersions))
+      return;
+
+    self._versions = newVersions;
+    var packageNames = _.keys(self._versions);
+    packageNames.sort();
+    var lines = [];
+    _.each(packageNames, function (packageName) {
+      lines.push(
+        packageName + "@" + self._versions[packageName] + "@" + self._descriptions[packageName] + "\n");
     });
     var fileContents = new Buffer(lines.join(''));
     files.writeFileAtomically(self.filename, fileContents);
