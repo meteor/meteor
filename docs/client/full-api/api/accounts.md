@@ -186,7 +186,7 @@ is exported by the `service-configuration` package.
 First, add the service configuration package:
 
 ```bash
-meteor add service-configuration
+$ meteor add service-configuration
 ```
 
 Then, in your app:
