@@ -62,6 +62,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   // a block helper, say
   var isTemplate = (options && options.isTemplate);
   var isBody = (options && options.isBody);
+  var genReactCode = (options && options.genReactCode);
 
   var tree = parseTree;
 
@@ -81,7 +82,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     code += 'var view = this; ';
   }
   code += 'return ';
-  code += BlazeTools.toJS(tree);
+  code += BlazeTools.toJS(tree, genReactCode);
   code += '; })';
 
   code = SpacebarsCompiler._beautify(code);

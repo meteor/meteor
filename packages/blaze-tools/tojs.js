@@ -59,7 +59,11 @@ ToJSVisitor.def({
     return '[' + parts.join(', ') + ']';
   },
   visitTag: function (tag) {
-    return this.generateCall(tag.tagName, tag.attrs, tag.children);
+    if (this.genReactCode) {
+      return "1";
+    } else {
+      return this.generateCall(tag.tagName, tag.attrs, tag.children);
+    }
   },
   visitComment: function (comment) {
     return this.generateCall('HTML.Comment', null, [comment.value]);
@@ -151,6 +155,6 @@ ToJSVisitor.def({
 });
 BlazeTools.ToJSVisitor = ToJSVisitor;
 
-BlazeTools.toJS = function (content) {
-  return (new ToJSVisitor).visit(content);
+BlazeTools.toJS = function (content, genReactCode) {
+  return (new ToJSVisitor({genReactCode: genReactCode})).visit(content);
 };

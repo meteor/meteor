@@ -161,6 +161,7 @@ html_scanner = {
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isTemplate: true,
+            genReactCode: true,
             sourceName: 'Template "' + name + '"'
           });
 
@@ -182,6 +183,7 @@ html_scanner = {
         var renderFuncCode = SpacebarsCompiler.compile(
           contents, {
             isBody: true,
+            genReactCode: true,
             sourceName: "<body>"
           });
 
