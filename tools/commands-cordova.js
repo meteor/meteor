@@ -1,6 +1,7 @@
 var main = require('./main.js');
 var _ = require('underscore');
 var util = require('util');
+var path = require('path');
 var chalk = require('chalk');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
@@ -468,14 +469,14 @@ var targetsToPlatforms = cordova.targetsToPlatforms = function (targets) {
 
 // --- Cordova plugins ---
 
-var installPlugin = function (cordovaPath, name, version, conf) {
+var installPlugin = function (cordovaPath, name, version, conf, projectDir) {
   verboseLog('Installing a plugin', name, version);
 
   var pluginInstallCommand;
 
   if (utils.isUrlWithFileScheme(version)) {
-    // Strip file://
-    pluginInstallCommand = version.substr(7);
+    // Strip file:// and compute the relative path from plugin to corodova-build
+    pluginInstallCommand = getCordovaLocalPluginPath(version, cordovaPath, projectDir);
   } else {
     pluginInstallCommand = version ? name + '@' + version : name;
   }
@@ -534,6 +535,15 @@ var uninstallPlugin = function (cordovaPath, name, isFromTarballUrl) {
     verboseLog('Plugin removal threw an error:', err.message);
   }
 };
+
+// Strips the file:// from the path and if a relative path was used, it translates it to a relative path to the
+// cordova-build directory instead of meteor project directory.
+var getCordovaLocalPluginPath = function (pluginPath, cordovaPath, projectDir) {
+    pluginPath = pluginPath.substr("file://".length);
+    if (utils.isPathRelative(pluginPath))
+        return path.relative(cordovaPath, path.resolve(projectDir, pluginPath));
+    return pluginPath;
+}
 
 var getTarballPluginsLock = function (cordovaPath) {
   verboseLog('Will check for cordova-tarball-plugins.json' +
@@ -663,10 +673,10 @@ var ensureCordovaPlugins = function (projectContext, options) {
     }
   });
 
-  if (pluginsFromLocalPath.length > 0)
+  if (! _.isEmpty(pluginsFromLocalPath))
     verboseLog('Reinstalling cordova plugins added from the local path');
 
-  if (shouldReinstallPlugins || pluginsFromLocalPath.length > 0) {
+  if (shouldReinstallPlugins || ! _.isEmpty(pluginsFromLocalPath)) {
     // Loop through all of the current plugins and remove them one by one until
     // we have deleted proper amount of plugins. It's necessary to loop because
     // we might have dependencies between plugins.
@@ -720,7 +730,7 @@ var ensureCordovaPlugins = function (projectContext, options) {
 
         buildmessage.reportProgress({ current: 0, end: pluginsCount });
         _.each(pluginsToInstall, function (version, name) {
-          installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
+          installPlugin(cordovaPath, name, version, pluginsConfiguration[name], projectContext.projectDir);
 
           buildmessage.reportProgress({
             current: ++pluginsInstalled,

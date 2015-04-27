@@ -476,6 +476,10 @@ exports.isUrlWithSha = function (x) {
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 };
 
+exports.isPathRelative = function (x) {
+  return x.charAt(0) !== '/';
+};
+
 // If there is a version that isn't exact, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
