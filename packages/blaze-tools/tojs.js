@@ -65,11 +65,14 @@ ToJSVisitor.def({
       argsStrs.push("\"" + tag.tagName + "\"");
       argsStrs.push(JSON.stringify(tag.attrs)); // XXX this won't work for dynamic attributes
 
+      var childrenArgsStrs = [];
       var children = tag.children;
       if (children) {
         for (var i = 0; i < children.length; i++)
-          argsStrs.push(this.visit(children[i]));
+          childrenArgsStrs.push(this.visit(children[i]));
       }
+
+      argsStrs.push("[" + childrenArgsStrs.join(', ') + "]");
 
       return "React.createElement(" + argsStrs.join(', ') + ")";
     } else {
