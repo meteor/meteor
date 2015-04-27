@@ -421,7 +421,7 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   );
 
   // Add the local cordova plugin
-  run = s.run("add", "cordova:com.cordova.empty@file://../../../../cordova-local-plugin");
+  run = s.run("add", "cordova:com.cordova.empty@file://../cordova-local-plugin");
   run.waitSecs(60);
   run.match("added cordova plugin com.cordova.empty");
   run.expectExit(0);
