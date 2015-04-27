@@ -69,7 +69,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   if (isTemplate || isBody) {
     // optimizing fragments would require being smarter about whether we are
     // in a TEXTAREA, say.
-    tree = SpacebarsCompiler.optimize(tree);
+//    tree = SpacebarsCompiler.optimize(tree);
   }
 
   var codegen = new SpacebarsCompiler.CodeGen;
