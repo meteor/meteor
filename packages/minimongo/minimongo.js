@@ -40,15 +40,6 @@ Minimongo = {};
 // Use it to export private functions to test in Tinytest.
 MinimongoTest = {};
 
-LocalCollection._applyChanges = function (doc, changeFields) {
-  _.each(changeFields, function (value, key) {
-    if (value === undefined)
-      delete doc[key];
-    else
-      doc[key] = value;
-  });
-};
-
 MinimongoError = function (message) {
   var e = new Error(message);
   e.name = "MinimongoError";
@@ -873,7 +864,7 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
   if (!EJSON.equals(doc._id, old_doc._id))
     throw new Error("Can't change a doc's _id while updating");
   var projectionFn = query.projectionFn;
-  var changedFields = LocalCollection._makeChangedFields(
+  var changedFields = DiffSequence.makeChangedFields(
     projectionFn(doc), projectionFn(old_doc));
 
   if (!query.ordered) {
@@ -1094,19 +1085,3 @@ LocalCollection._idParse = function (id) {
   }
 };
 
-LocalCollection._makeChangedFields = function (newDoc, oldDoc) {
-  var fields = {};
-  LocalCollection._diffObjects(oldDoc, newDoc, {
-    leftOnly: function (key, value) {
-      fields[key] = undefined;
-    },
-    rightOnly: function (key, value) {
-      fields[key] = value;
-    },
-    both: function (key, leftValue, rightValue) {
-      if (!EJSON.equals(leftValue, rightValue))
-        fields[key] = rightValue;
-    }
-  });
-  return fields;
-};

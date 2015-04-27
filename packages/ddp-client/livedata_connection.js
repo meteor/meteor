@@ -1292,7 +1292,7 @@ _.extend(Connection.prototype, {
     if (serverDoc) {
       if (serverDoc.document === undefined)
         throw new Error("Server sent changed for nonexisting id: " + msg.id);
-      LocalCollection._applyChanges(serverDoc.document, msg.fields);
+      DiffSequence.applyChanges(serverDoc.document, msg.fields);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }

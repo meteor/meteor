@@ -18,7 +18,8 @@ Package.onUse(function (api) {
 
   api.use('reload', 'client', {weak: true});
 
-  // we depend on LocalCollection._diffObjects, _applyChanges,
+  // we depend on _diffObjects, _applyChanges,
+  api.use('diff-sequence', ['client', 'server']);
   // _idParse, _idStringify.
   api.use('minimongo', ['client', 'server']);
 
