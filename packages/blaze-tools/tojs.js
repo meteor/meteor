@@ -60,7 +60,9 @@ ToJSVisitor.def({
   },
   visitTag: function (tag) {
     if (this.genReactCode) {
-      return "1";
+      return "React.createElement(\"" + tag.tagName + "\", "
+        + JSON.stringify(tag.attrs) + ", "
+        + JSON.stringify(tag.children) + ")";
     } else {
       return this.generateCall(tag.tagName, tag.attrs, tag.children);
     }

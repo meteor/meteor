@@ -23,7 +23,8 @@ Package.onUse(function (api) {
     'domrange.js',
     'events.js',
     'attrs.js',
-    'materializer.js'
+    'materializer.js',
+    'react.js'
   ], 'client');
 
   // client and server

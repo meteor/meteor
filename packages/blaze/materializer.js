@@ -83,6 +83,12 @@ var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
         Blaze._materializeView(htmljs, parentView, workStack, intoArray);
         return;
       }
+      if (React.isValidElement(htmljs)) {
+        var div = document.createElement('div'); // XXX shouldn't always be a div!
+        React.render(htmljs, div);
+        intoArray.push(div);
+        return;
+      }
     }
   }
 
