@@ -24,10 +24,11 @@ your app with `meteor add`:
 </h3>
 
 Include the `loginButtons` template somewhere in your HTML to use Meteor's
-default UI for logging in. To use this, you need to add the `accounts-ui` package:
+default UI for logging in. To use this, you need to add the `accounts-ui` package,
+in your terminal:
 
 ```
-$ meteor add accounts-ui
+meteor add accounts-ui
 ```
 
 {{> autoApiBox "Meteor.user"}}

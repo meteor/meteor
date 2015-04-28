@@ -3,8 +3,12 @@
 
 <h2 id="reactivevar_pkg"><span>ReactiveVar</span></h2>
 
-To use `ReactiveVar`, add the `reactive-var` package to your project with
-`$ meteor add reactive-var`.
+To use `ReactiveVar`, add the `reactive-var` package to your project by running
+in your terminal:
+
+```bash
+meteor add reactive-var
+```
 
 {{> autoApiBox "ReactiveVar"}}
 
