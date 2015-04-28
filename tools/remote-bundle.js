@@ -92,7 +92,7 @@ exports.createRemoteBundle = function (buildDir, arch) {
   // XXX: Fix this so hard.
   var result = buildmessage.enterJob({ title: "uploading" }, function () {
     _.each(connOptions, function (myConnOpts) {
-   //   callSCP(myConnOpts);
+      callSCP(myConnOpts);
     });
     return 0;
   });
@@ -114,7 +114,7 @@ exports.createRemoteBundle = function (buildDir, arch) {
      loginBun, ".remote-bundle"];
 
   result = buildmessage.enterJob({ title: "downloading" }, function () {
- //   callSCP(downOptions);
+    callSCP(downOptions);
   });
 
   // Remember to untar the tar file that we are downloading.
