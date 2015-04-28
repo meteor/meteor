@@ -197,7 +197,5 @@ function isEmpty (child) {
 }
 
 function isSimpleMustache (child) {
-  var res = child && child.value && mustacheRegex.test(child.value)
-  if (res) {console.log(child.value)}
   return child && child.value && mustacheRegex.test(child.value);
 }
