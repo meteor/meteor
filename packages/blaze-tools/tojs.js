@@ -55,9 +55,8 @@ ToJSVisitor.def({
   visitArray: function (array) {
     var parts = [];
     for (var i = 0; i < array.length; i++) {
-      var child = array[i];
-      if (!isEmptyTextNode(child)) {
-        parts.push(this.visit(child));
+      if (!isRemovableWhiteSpace(array, i)) {
+        parts.push(this.visit(array[i]));
       }
     }
     return '[' + parts.join(', ') + ']';
@@ -73,9 +72,8 @@ ToJSVisitor.def({
       var self = this;
       if (children) {
         for (var i = 0; i < children.length; i++) {
-          var child = children[i];
-          if (!isEmptyTextNode(child)) {
-            argsStrs.push(this.visit(child));
+          if (!isRemovableWhiteSpace(children, i)) {
+            argsStrs.push(this.visit(children[i]));
           }
         }
       }
@@ -180,11 +178,26 @@ BlazeTools.toJS = function (content, genReactCode) {
 };
 
 // XXX
-// Check if an HTMLJS node is a raw string that is empty.
+// Check if an HTMLJS node is a raw string that is empty and
+// removable. (i.e. not between two simple interpolations)
 // It's probably better off removing them since React
 // converts them into useless spans, and JSX ignores newline
 // whitespaces anyway.
 var trimRegex = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
-function isEmptyTextNode (child) {
+var mustacheRegex = /^Spacebars\.mustache\(view.lookup\(.*\)\)$/;
+
+function isRemovableWhiteSpace (children, i) {
+  return isEmpty(children[i]) &&
+    !(isSimpleMustache(children[i - 1])) &&
+    !(isSimpleMustache(children[i + 1]));
+}
+
+function isEmpty (child) {
   return typeof child === 'string' && !child.replace(trimRegex, '');
+}
+
+function isSimpleMustache (child) {
+  var res = child && child.value && mustacheRegex.test(child.value)
+  if (res) {console.log(child.value)}
+  return child && child.value && mustacheRegex.test(child.value);
 }
