@@ -33,10 +33,10 @@ support Mongo-style `find`, `insert`, `update`, and `remove` operations.
 
 By default, Meteor automatically publishes every document in your
 collection to each connected client. To disable this behavior, you must
-remove the `autopublish` package:
+remove the `autopublish` package, in your terminal:
 
 ```
-$ meteor remove autopublish
+meteor remove autopublish
 ```
 
 Then, use [`Meteor.publish`](#meteor_publish) and
@@ -214,10 +214,10 @@ In newly created apps, Meteor allows almost any calls to `insert`, `update`, and
 `meteor create` include the `insecure` package by default to simplify
 development. Obviously, if any user could change the database whenever they
 wanted it would be bad for security, so it is important to remove the
-`insecure` package and specify some permissions rules:
+`insecure` package and specify some permissions rules, in your terminal:
 
 ```
-$ meteor remove insecure
+meteor remove insecure
 ```
 
 Once you have removed the `insecure` package, use the `allow` and `deny`

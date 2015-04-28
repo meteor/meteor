@@ -77,9 +77,11 @@ client and the server, this scratchpad is implemented using Minimongo.)
 
 By default, Meteor automatically publishes every document in your
 collection to each connected client.  To turn this behavior off, remove
-the `autopublish` package:
+the `autopublish` package, in your terminal:
 
-    $ meteor remove autopublish
+```bash
+meteor remove autopublish
+```
 
 and instead call [`Meteor.publish`](#meteor_publish) to specify which parts of
 your collection should be published to which users.
@@ -489,7 +491,11 @@ rules on a collection, then all users have full write access to the
 collection. This is the only effect of insecure mode. If you call `allow` or
 `deny` at all on a collection, even `Posts.allow({})`, then access is checked
 just like normal on that collection. __New Meteor projects start in insecure
-mode by default.__ To turn it off just run `$ meteor remove insecure`.
+mode by default.__ To turn it off just run in your terminal:
+
+```bash
+meteor remove insecure
+```
 
 {{> autoApiBox "Mongo.Collection#deny"}}
 

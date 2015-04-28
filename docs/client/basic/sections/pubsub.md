@@ -10,10 +10,10 @@ method of client collections.
 By default, every newly created Meteor app contains the `autopublish`
 package, which automatically publishes all available documents to every
 client. To exercise finer-grained control over what documents different
-clients receive, first remove `autopublish`:
+clients receive, first remove `autopublish`, in your terminal:
 
 ```
-$ meteor remove autopublish
+meteor remove autopublish
 ```
 
 Now you can use `Meteor.publish` and `Meteor.subscribe` to control what
