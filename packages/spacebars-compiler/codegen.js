@@ -135,14 +135,28 @@ _.extend(CodeGen.prototype, {
           // XXX hack the each
           // temporarily patch the outer scope `view` to check for the local
           // data context first.
-          if (this.genReactCode && path[0] === 'each') {
-            var code = '_.map((' + dataCode + ')(), function (data) {' +
-              'var originLookup = view.lookup;' +
-              'view.lookup = function (name) { return data[name] || originLookup.call(view, name) };' +
-              'var content = ' + contentBlock + '();' +
-              'view.lookup = originLookup;' +
-              'return content' +
-            '})';
+          if (this.genReactCode) {
+            var code
+            if (path[0] === 'each') {
+              code =
+                '_.map((' + dataCode + ')(), function (data) {' +
+                'var originLookup = view.lookup;' +
+                'view.lookup = function (name) { return data[name] || originLookup.call(view, name) };' +
+                'var content = ' + contentBlock + '();' +
+                'view.lookup = originLookup;' +
+                'return content' +
+              '})';
+            } else if (path[0] === 'if' || path[0] === 'unless') {
+              code =
+                '(' + dataCode + ')() ? ' +
+                contentBlock + '() : ' +
+                (elseContentBlock ? (elseContentBlock + '()') : '""');
+              if (path[0] === 'unless') {
+                code = '!' + code;
+              }
+            } else {
+              code = builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')'
+            }
             return BlazeTools.EmitCode(code)
           } else {
             return BlazeTools.EmitCode(
