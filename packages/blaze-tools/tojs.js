@@ -78,7 +78,11 @@ ToJSVisitor.def({
               attrsStrings.push('"' + prop + '":"' + tag.attrs[prop] + '"');
             } else {
               var propFunc = tag.attrs[prop].value
-              attrsStrings.push('"' + prop + '":' + propFunc + '()');
+              attrsStrings.push('"' + prop +
+                '":(function (propFunc) {' +
+                    'var props = propFunc();' +
+                    'return _.isArray(props) ? props.join("") : props' +
+                  '})(' + propFunc + ')');
             }
           }
         }
