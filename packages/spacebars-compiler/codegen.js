@@ -139,13 +139,14 @@ _.extend(CodeGen.prototype, {
             var code
             if (path[0] === 'each') {
               code =
-                '_.map((' + dataCode + ')(), function (data) {' +
-                'var originLookup = view.lookup;' +
-                'view.lookup = function (name) { return data[name] || originLookup.call(view, name) };' +
-                'var content = ' + contentBlock + '();' +
-                'view.lookup = originLookup;' +
-                'return content' +
-              '})';
+                '(function (parentView) {' +
+                  'return _.map((' + dataCode + ')(), function (data) {' +
+                    'var view = { lookup: function (name) {' +
+                      'return data[name] || parentView.lookup(name)}};' +
+                    'var content = ' + contentBlock + '();' +
+                    'return content.length > 1 ? content : content[0]' +
+                  '})' +
+                '}(view))';
             } else if (path[0] === 'if' || path[0] === 'unless') {
               code =
                 '(' + dataCode + ')() ? ' +
