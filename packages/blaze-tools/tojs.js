@@ -54,8 +54,12 @@ ToJSVisitor.def({
   },
   visitArray: function (array) {
     var parts = [];
-    for (var i = 0; i < array.length; i++)
-      parts.push(this.visit(array[i]));
+    for (var i = 0; i < array.length; i++) {
+      var child = array[i];
+      if (!isEmptyTextNode(child)) {
+        parts.push(this.visit(child));
+      }
+    }
     return '[' + parts.join(', ') + ']';
   },
   visitTag: function (tag) {
@@ -65,14 +69,16 @@ ToJSVisitor.def({
       argsStrs.push("\"" + tag.tagName + "\"");
       argsStrs.push(JSON.stringify(tag.attrs)); // XXX this won't work for dynamic attributes
 
-      var childrenArgsStrs = [];
       var children = tag.children;
+      var self = this;
       if (children) {
-        for (var i = 0; i < children.length; i++)
-          childrenArgsStrs.push(this.visit(children[i]));
+        for (var i = 0; i < children.length; i++) {
+          var child = children[i];
+          if (!isEmptyTextNode(child)) {
+            argsStrs.push(this.visit(child));
+          }
+        }
       }
-
-      argsStrs.push("[" + childrenArgsStrs.join(', ') + "]");
 
       return "React.createElement(" + argsStrs.join(', ') + ")";
     } else {
@@ -172,3 +178,13 @@ BlazeTools.ToJSVisitor = ToJSVisitor;
 BlazeTools.toJS = function (content, genReactCode) {
   return (new ToJSVisitor({genReactCode: genReactCode})).visit(content);
 };
+
+// XXX
+// Check if an HTMLJS node is a raw string that is empty.
+// It's probably better off removing them since React
+// converts them into useless spans, and JSX ignores newline
+// whitespaces anyway.
+var trimRegex = /^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g;
+function isEmptyTextNode (child) {
+  return typeof child === 'string' && !child.replace(trimRegex, '');
+}
