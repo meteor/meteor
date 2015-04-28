@@ -11,10 +11,10 @@ and `meteor remove`:
 
 ```bash
 # add the less package
-meteor add less
+$ meteor add less
 
 # remove the less package
-meteor remove less
+$ meteor remove less
 ```
 
 Your app will restart itself automatically when you add or remove a
