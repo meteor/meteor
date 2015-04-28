@@ -45,11 +45,11 @@ Template.__define__ = function (name, renderFunc) {
  * @locus Client
  */
 Template.body = new Template('body', function () {
-  var view = this;
-  return _.map(Template.body.contentRenderFuncs, function (func) {
-    return func.apply(view);
-  });
-});
+  var self = this;
+  return React.DOM.div(null, _.map(Template.body.contentRenderFuncs, function (func) {
+    return func.apply(self);
+  }));
+}, true);
 Template.body.contentRenderFuncs = []; // array of Blaze.Views
 Template.body.view = null;
 
@@ -60,12 +60,7 @@ Template.body.addContent = function (renderFunc) {
 // This function does not use `this` and so it may be called
 // as `Meteor.startup(Template.body.renderIntoDocument)`.
 Template.body.renderToDocument = function () {
-  // Only do it once.
-  if (Template.body.view)
-    return;
-
-  var view = Blaze.render(Template.body, document.body);
-  Template.body.view = view;
+  Blaze.renderWithReact(Template.body, document.body);
 };
 
 // XXX COMPAT WITH 0.9.0

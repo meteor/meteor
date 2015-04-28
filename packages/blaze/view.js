@@ -906,3 +906,18 @@ Blaze._addEventMap = function (view, eventMap, thisInHandler) {
     handles.length = 0;
   });
 };
+
+Blaze.renderWithReact = function (template, container) {
+  var view = template.constructView();
+  Blaze._createView(view);
+  Tracker.nonreactive(function () {
+    view.autorun(function () {
+      React.render(
+        React.createElement(template.reactComponent, {
+          view: view
+        }),
+        container
+      );
+    });
+  });
+}

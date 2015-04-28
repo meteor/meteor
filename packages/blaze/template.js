@@ -13,7 +13,7 @@
  * @param {String} [viewName] Optional.  A name for Views constructed by this Template.  See [`view.name`](#view_name).
  * @param {Function} renderFunction A function that returns [*renderable content*](#renderable_content).  This function is used as the `renderFunction` for Views constructed by this Template.
  */
-Blaze.Template = function (viewName, renderFunction) {
+Blaze.Template = function (viewName, renderFunction, usingReact) {
   if (! (this instanceof Blaze.Template))
     // called without `new`
     return new Blaze.Template(viewName, renderFunction);
@@ -39,6 +39,12 @@ Blaze.Template = function (viewName, renderFunction) {
     rendered: [],
     destroyed: []
   };
+
+  if (usingReact) {
+    this.reactComponent = React.createClass({
+      render: renderFunction
+    });
+  }
 };
 var Template = Blaze.Template;
 

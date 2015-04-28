@@ -170,7 +170,7 @@ html_scanner = {
 
         results.js += "\nTemplate.__checkName(" + nameLiteral + ");\n" +
           "Template[" + nameLiteral + "] = new Template(" +
-          templateDotNameLiteral + ", " + renderFuncCode + ");\n";
+          templateDotNameLiteral + ", " + renderFuncCode + ", true);\n";
       } else {
         // <body>
         if (hasAttribs) {
