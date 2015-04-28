@@ -10,7 +10,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'tracker',
-           'logging', 'retry'],
+           'logging', 'retry', 'id-map'],
           ['client', 'server']);
 
   // common functionality
@@ -21,10 +21,11 @@ Package.onUse(function (api) {
   // we depend on _diffObjects, _applyChanges,
   api.use('diff-sequence', ['client', 'server']);
   // _idParse, _idStringify.
-  api.use('minimongo', ['client', 'server']);
+  api.use('mongo-id', ['client', 'server']);
 
   api.addFiles('namespace.js', ['client', 'server']);
 
+  api.addFiles('id_map.js', ['client', 'server']);
   api.addFiles(['sockjs-0.3.4.js', 'stream_client_sockjs.js'], 'client');
   api.addFiles('stream_client_nodejs.js', 'server');
   api.addFiles('stream_client_common.js', ['client', 'server']);
@@ -45,7 +46,7 @@ Package.onTest(function (api) {
   api.use('livedata', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);
-  api.use(['underscore', 'tinytest', 'random', 'tracker', 'minimongo', 'reactive-var']);
+  api.use(['underscore', 'tinytest', 'random', 'tracker', 'reactive-var', 'mongo-id', 'diff-sequence']);
 
   api.addFiles('stub_stream.js');
   api.addFiles('livedata_connection_tests.js', ['client', 'server']);

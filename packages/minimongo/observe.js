@@ -25,7 +25,7 @@ LocalCollection._CachingChangeObserver = function (options) {
   var callbacks = options.callbacks || {};
 
   if (self.ordered) {
-    self.docs = new OrderedDict(LocalCollection._idStringify);
+    self.docs = new OrderedDict(MongoID.idStringify);
     self.applyChange = {
       addedBefore: function (id, fields, before) {
         var doc = EJSON.clone(fields);

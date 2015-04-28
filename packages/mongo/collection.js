@@ -136,7 +136,7 @@ Mongo.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = LocalCollection._idParse(msg.id);
+        var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -661,7 +661,7 @@ Mongo.Collection.prototype.rawDatabase = function () {
  * @class
  * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.ObjectID = LocalCollection._ObjectID;
+Mongo.ObjectID = MongoID.ObjectID;
 
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.

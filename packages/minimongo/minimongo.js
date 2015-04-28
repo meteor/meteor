@@ -539,7 +539,7 @@ LocalCollection.prototype.insert = function (doc, callback) {
   if (!_.has(doc, '_id')) {
     // if you really want to use ObjectIDs, set this global.
     // Mongo.Collection specifies its own ids and does not use this code.
-    doc._id = LocalCollection._useOID ? new LocalCollection._ObjectID()
+    doc._id = LocalCollection._useOID ? new MongoID.ObjectID()
                                       : Random.id();
   }
   var id = doc._id;
@@ -1040,48 +1040,5 @@ LocalCollection.prototype.resumeObservers = function () {
     query.resultsSnapshot = null;
   }
   self._observeQueue.drain();
-};
-
-
-// NB: used by livedata
-LocalCollection._idStringify = function (id) {
-  if (id instanceof LocalCollection._ObjectID) {
-    return id.valueOf();
-  } else if (typeof id === 'string') {
-    if (id === "") {
-      return id;
-    } else if (id.substr(0, 1) === "-" || // escape previously dashed strings
-               id.substr(0, 1) === "~" || // escape escaped numbers, true, false
-               LocalCollection._looksLikeObjectID(id) || // escape object-id-form strings
-               id.substr(0, 1) === '{') { // escape object-form strings, for maybe implementing later
-      return "-" + id;
-    } else {
-      return id; // other strings go through unchanged.
-    }
-  } else if (id === undefined) {
-    return '-';
-  } else if (typeof id === 'object' && id !== null) {
-    throw new Error("Meteor does not currently support objects other than ObjectID as ids");
-  } else { // Numbers, true, false, null
-    return "~" + JSON.stringify(id);
-  }
-};
-
-
-// NB: used by livedata
-LocalCollection._idParse = function (id) {
-  if (id === "") {
-    return id;
-  } else if (id === '-') {
-    return undefined;
-  } else if (id.substr(0, 1) === '-') {
-    return id.substr(1);
-  } else if (id.substr(0, 1) === '~') {
-    return JSON.parse(id.substr(1));
-  } else if (LocalCollection._looksLikeObjectID(id)) {
-    return new LocalCollection._ObjectID(id);
-  } else {
-    return id;
-  }
 };
 

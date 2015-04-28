@@ -139,8 +139,8 @@ _.extend(DDPServer._Crossbar.prototype, {
         notification.id !== trigger.id) {
       return false;
     }
-    if (notification.id instanceof LocalCollection._ObjectID &&
-        trigger.id instanceof LocalCollection._ObjectID &&
+    if (notification.id instanceof MongoID.ObjectID &&
+        trigger.id instanceof MongoID.ObjectID &&
         ! notification.id.equals(trigger.id)) {
       return false;
     }

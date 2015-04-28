@@ -628,7 +628,7 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
   match({a: {$type: 5}}, {a: EJSON.newBinary(4)});
   nomatch({a: {$type: 5}}, {a: []});
   nomatch({a: {$type: 5}}, {a: [42]});
-  match({a: {$type: 7}}, {a: new LocalCollection._ObjectID()});
+  match({a: {$type: 7}}, {a: new MongoID.ObjectID()});
   nomatch({a: {$type: 7}}, {a: "1234567890abcd1234567890"});
   match({a: {$type: 8}}, {a: true});
   match({a: {$type: 8}}, {a: false});
@@ -1581,8 +1581,8 @@ Tinytest.add("minimongo - ordering", function (test) {
     {b: {}}, {b: [1, 2, 3]}, {b: [1, 2, 4]},
     [], [1, 2], [1, 2, 3], [1, 2, 4], [1, 2, "4"], [1, 2, [4]],
     shortBinary, longBinary1, longBinary2,
-    new LocalCollection._ObjectID("1234567890abcd1234567890"),
-    new LocalCollection._ObjectID("abcd1234567890abcd123456"),
+    new MongoID.ObjectID("1234567890abcd1234567890"),
+    new MongoID.ObjectID("abcd1234567890abcd123456"),
     false, true,
     date1, date2
   ]);
@@ -2588,27 +2588,27 @@ Tinytest.add("minimongo - saveOriginals errors", function (test) {
 
 Tinytest.add("minimongo - objectid transformation", function (test) {
   var testId = function (item) {
-    test.equal(item, LocalCollection._idParse(LocalCollection._idStringify(item)));
+    test.equal(item, MongoID.idParse(MongoID.idStringify(item)));
   };
-  var randomOid = new LocalCollection._ObjectID();
+  var randomOid = new MongoID.ObjectID();
   testId(randomOid);
   testId("FOO");
   testId("ffffffffffff");
   testId("0987654321abcdef09876543");
-  testId(new LocalCollection._ObjectID());
+  testId(new MongoID.ObjectID());
   testId("--a string");
 
-  test.equal("ffffffffffff", LocalCollection._idParse(LocalCollection._idStringify("ffffffffffff")));
+  test.equal("ffffffffffff", MongoID.idParse(MongoID.idStringify("ffffffffffff")));
 });
 
 
 Tinytest.add("minimongo - objectid", function (test) {
-  var randomOid = new LocalCollection._ObjectID();
-  var anotherRandomOid = new LocalCollection._ObjectID();
+  var randomOid = new MongoID.ObjectID();
+  var anotherRandomOid = new MongoID.ObjectID();
   test.notEqual(randomOid, anotherRandomOid);
-  test.throws(function() { new LocalCollection._ObjectID("qqqqqqqqqqqqqqqqqqqqqqqq");});
-  test.throws(function() { new LocalCollection._ObjectID("ABCDEF"); });
-  test.equal(randomOid, new LocalCollection._ObjectID(randomOid.valueOf()));
+  test.throws(function() { new MongoID.ObjectID("qqqqqqqqqqqqqqqqqqqqqqqq");});
+  test.throws(function() { new MongoID.ObjectID("ABCDEF"); });
+  test.equal(randomOid, new MongoID.ObjectID(randomOid.valueOf()));
 });
 
 Tinytest.add("minimongo - pause", function (test) {
@@ -2662,7 +2662,7 @@ Tinytest.add("minimongo - ids matched by selector", function (test) {
   };
   check("foo", ["foo"]);
   check({_id: "foo"}, ["foo"]);
-  var oid1 = new LocalCollection._ObjectID();
+  var oid1 = new MongoID.ObjectID();
   check(oid1, [oid1]);
   check({_id: oid1}, [oid1]);
   check({_id: "foo", x: 42}, ["foo"]);
