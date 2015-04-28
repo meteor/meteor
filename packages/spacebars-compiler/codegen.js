@@ -141,8 +141,10 @@ _.extend(CodeGen.prototype, {
               code =
                 '(function (parentView) {' +
                   'return _.map((' + dataCode + ')(), function (data) {' +
-                    'var view = { lookup: function (name) {' +
-                      'return data[name] || parentView.lookup(name)}};' +
+                    'var view = {' +
+                      'lookup: function (name) {return data[name] || parentView.lookup(name)},' +
+                      'lookupTemplate: function (name) {return parentView.lookupTemplate(name)}' +
+                    '};' +
                     'var content = ' + contentBlock + '();' +
                     'return content.length > 1 ? content : content[0]' +
                   '})' +
