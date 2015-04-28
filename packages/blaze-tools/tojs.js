@@ -66,7 +66,26 @@ ToJSVisitor.def({
       var argsStrs = [];
 
       argsStrs.push("\"" + tag.tagName + "\"");
-      argsStrs.push(JSON.stringify(tag.attrs)); // XXX this won't work for dynamic attributes
+      
+      // handle dynamic attrs
+      if (tag.attrs) {
+        var attrsStrings = [];
+        if (tag.attrs['class']) {
+          tag.attrs.className = tag.attrs['class'];
+          delete tag.attrs['class'];
+          for (var prop in tag.attrs) {
+            if (typeof tag.attrs[prop] === 'string') {
+              attrsStrings.push('"' + prop + '":"' + tag.attrs[prop] + '"');
+            } else {
+              var propFunc = tag.attrs[prop].value
+              attrsStrings.push('"' + prop + '":' + propFunc + '()');
+            }
+          }
+        }
+        argsStrs.push('{' + attrsStrings.join(',') + '}');
+      } else {
+        argsStrs.push('null');
+      }
 
       var children = tag.children;
       var self = this;
@@ -77,8 +96,8 @@ ToJSVisitor.def({
           }
         }
       }
-
-      return "React.createElement(" + argsStrs.join(', ') + ")";
+      var code = "React.createElement(" + argsStrs.join(', ') + ")";
+      return code;
     } else {
       return this.generateCall(tag.tagName, tag.attrs, tag.children);
     }
