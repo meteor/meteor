@@ -42,7 +42,17 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
 
   if (usingReact) {
     this.reactComponent = React.createClass({
-      render: renderFunction
+      render: function () {
+        var vdom = renderFunction.call(this.props.view);
+        if (_.isArray(vdom)) {
+          vdom.unshift(null);
+          return React.DOM.div.apply(null, vdom);
+        } else if (typeof vdom === 'string') {
+          return React.DOM.span(null, vdom);
+        } else {
+          return vdom;
+        }
+      }
     });
   }
 };

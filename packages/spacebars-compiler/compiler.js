@@ -79,7 +79,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
 
   var code = '(function () { ';
   if (isTemplate || isBody) {
-    code += 'var view = this.props ? this.props.view : this;';
+    code += 'var view = this;';
   }
   code += 'return ';
   code += BlazeTools.toJS(tree, genReactCode);
