@@ -399,7 +399,15 @@ var bundleAndDeploy = function (options) {
       settings = files.getSettings(options.settingsFile);
   });
 
-  if (! messages.hasMessages()) {
+
+  Console.info("Going to bundle now");
+  var archinfo = require('./archinfo.js');
+  if (archinfo.host() !== options.buildOptions.serverArch) {
+    var remoteBundler = require('./remote-bundle.js');
+    remoteBundler.createRemoteBundle(buildDir, options.buildOptions.serverArch);
+    process.exit(1);
+  } else {
+    if (! messages.hasMessages()) {
     var bundler = require('./bundler.js');
 
     var bundleResult = bundler.bundle({
@@ -425,6 +433,7 @@ var bundleAndDeploy = function (options) {
       site: site
     });
   }
+ }
 
   var result = buildmessage.enterJob({ title: "uploading" }, function () {
     return authedRpc({
