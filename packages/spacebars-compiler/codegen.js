@@ -170,8 +170,13 @@ _.extend(CodeGen.prototype, {
               includeArgs.push(elseContent);
           }
 
-          var includeCode =
-                'Spacebars.include(' + includeArgs.join(', ') + ')';
+          var includeCode
+
+          if (this.genReactCode) {
+            includeCode = 'Spacebars.reactInclude(' + includeArgs.join(', ') + ')';
+          } else {
+            includeCode = 'Spacebars.include(' + includeArgs.join(', ') + ')';
+          }
 
           // calling convention compat -- set the data context around the
           // entire inclusion, so that if the name of the inclusion is

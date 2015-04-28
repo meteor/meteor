@@ -34,6 +34,13 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
   return view;
 };
 
+Spacebars.reactInclude = function (template) {
+  var view = template.constructView();
+  return React.createElement(template.reactComponent, {
+    view: view
+  });
+};
+
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
 // If `bar` and `baz` are functions, they are called before
 // `foo` is called on them.
