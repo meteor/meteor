@@ -73,7 +73,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
 //    tree = SpacebarsCompiler.optimize(tree);
   }
 
-  var codegen = new SpacebarsCompiler.CodeGen;
+  var codegen = new SpacebarsCompiler.CodeGen({genReactCode: genReactCode});
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
     {codegen: codegen})).visit(tree);
 

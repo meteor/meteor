@@ -4,7 +4,9 @@
 // The `CodeGen` class currently has no instance state, but in theory
 // it could be useful to track per-function state, like whether we
 // need to emit `var self = this` or not.
-var CodeGen = SpacebarsCompiler.CodeGen = function () {};
+var CodeGen = SpacebarsCompiler.CodeGen = function (options) {
+  this.genReactCode = options && options.genReactCode;
+};
 
 var builtInBlockHelpers = SpacebarsCompiler._builtInBlockHelpers = {
   'if': 'Blaze.If',
@@ -130,8 +132,22 @@ _.extend(CodeGen.prototype, {
           if (elseContentBlock)
             callArgs.push(elseContentBlock);
 
-          return BlazeTools.EmitCode(
-            builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
+          // XXX hack the each
+          // temporarily patch the outer scope `view` to check for the local
+          // data context first.
+          if (this.genReactCode && path[0] === 'each') {
+            var code = '_.map((' + dataCode + ')(), function (data) {' +
+              'var originLookup = view.lookup;' +
+              'view.lookup = function (name) { return data[name] || originLookup.call(view, name) };' +
+              'var content = ' + contentBlock + '();' +
+              'view.lookup = originLookup;' +
+              'return content' +
+            '})';
+            return BlazeTools.EmitCode(code)
+          } else {
+            return BlazeTools.EmitCode(
+              builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')');
+          }
 
         } else {
           var compCode = self.codeGenPath(path, {lookupTemplate: true});
@@ -314,7 +330,9 @@ _.extend(CodeGen.prototype, {
   },
 
   codeGenBlock: function (content) {
-    return SpacebarsCompiler.codeGen(content);
+    return SpacebarsCompiler.codeGen(content, {
+      genReactCode: this.genReactCode
+    });
   },
 
   codeGenInclusionDataFunc: function (args) {
