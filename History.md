@@ -17,6 +17,8 @@
 
 * XXX `#each .. in ..` and `#let x=y` forms. https://github.com/meteor/meteor/pull/3560
 
+* Fix memory leak.  #4289
+
 
 ## DDP
 
@@ -91,6 +93,8 @@
   [Details here.](https://github.com/andris9/mailcomposer#add-attachments)
 
 ### Tracker
+
+* New `Tracker.Computation#onStop` method.  #3915
 
 * `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
   the dictionary as if no items had been added, meaning all calls to `get` will
