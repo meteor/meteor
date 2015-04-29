@@ -1535,7 +1535,7 @@ DocsData = {
   "Blaze.currentView": {
     "filepath": "blaze/view.js",
     "kind": "member",
-    "lineno": 523,
+    "lineno": 536,
     "locus": "Client",
     "longname": "Blaze.currentView",
     "memberof": "Blaze",
@@ -1551,7 +1551,7 @@ DocsData = {
   "Blaze.getData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 734,
+    "lineno": 747,
     "locus": "Client",
     "longname": "Blaze.getData",
     "memberof": "Blaze",
@@ -1576,7 +1576,7 @@ DocsData = {
   "Blaze.getView": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 772,
+    "lineno": 785,
     "locus": "Client",
     "longname": "Blaze.getView",
     "memberof": "Blaze",
@@ -1623,7 +1623,7 @@ DocsData = {
   "Blaze.remove": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 668,
+    "lineno": 681,
     "locus": "Client",
     "longname": "Blaze.remove",
     "memberof": "Blaze",
@@ -1646,7 +1646,7 @@ DocsData = {
   "Blaze.render": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 605,
+    "lineno": 618,
     "locus": "Client",
     "longname": "Blaze.render",
     "memberof": "Blaze",
@@ -1699,7 +1699,7 @@ DocsData = {
   "Blaze.renderWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 656,
+    "lineno": 669,
     "locus": "Client",
     "longname": "Blaze.renderWithData",
     "memberof": "Blaze",
@@ -1762,7 +1762,7 @@ DocsData = {
   "Blaze.toHTML": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 689,
+    "lineno": 702,
     "locus": "Client",
     "longname": "Blaze.toHTML",
     "memberof": "Blaze",
@@ -1786,7 +1786,7 @@ DocsData = {
   "Blaze.toHTMLWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 701,
+    "lineno": 714,
     "locus": "Client",
     "longname": "Blaze.toHTMLWithData",
     "memberof": "Blaze",
@@ -5972,7 +5972,7 @@ DocsData = {
   "Tracker.Computation#invalidate": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 247,
+    "lineno": 268,
     "locus": "Client",
     "longname": "Tracker.Computation#invalidate",
     "memberof": "Tracker.Computation",
@@ -6001,7 +6001,7 @@ DocsData = {
   "Tracker.Computation#onInvalidate": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 226,
+    "lineno": 227,
     "locus": "Client",
     "longname": "Tracker.Computation#onInvalidate",
     "memberof": "Tracker.Computation",
@@ -6021,10 +6021,33 @@ DocsData = {
     "scope": "instance",
     "summary": "Registers `callback` to run when this computation is next invalidated, or runs it immediately if the computation is already invalidated.  The callback is run exactly once and not upon future invalidations unless `onInvalidate` is called again after the computation becomes valid again."
   },
+  "Tracker.Computation#onStop": {
+    "filepath": "tracker/tracker.js",
+    "kind": "function",
+    "lineno": 247,
+    "locus": "Client",
+    "longname": "Tracker.Computation#onStop",
+    "memberof": "Tracker.Computation",
+    "name": "onStop",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>Function to be called on stop. Receives one argument, the computation that was stopped.</p>",
+        "name": "callback",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Registers `callback` to run when this computation is stopped, or runs it immediately if the computation is already stopped.  The callback is run after any `onInvalidate` callbacks."
+  },
   "Tracker.Computation#stop": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 276,
+    "lineno": 297,
     "locus": "Client",
     "longname": "Tracker.Computation#stop",
     "memberof": "Tracker.Computation",
@@ -6048,7 +6071,7 @@ DocsData = {
   "Tracker.ComputationFunction": {
     "filepath": "tracker/tracker.js",
     "kind": "typedef",
-    "lineno": 509,
+    "lineno": 538,
     "longname": "Tracker.ComputationFunction",
     "memberof": "Tracker",
     "name": "ComputationFunction",
@@ -6072,7 +6095,7 @@ DocsData = {
     "filepath": "tracker/tracker.js",
     "instancename": "dependency",
     "kind": "class",
-    "lineno": 339,
+    "lineno": 368,
     "longname": "Tracker.Dependency",
     "memberof": "Tracker",
     "name": "Dependency",
@@ -6084,7 +6107,7 @@ DocsData = {
   "Tracker.Dependency#changed": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 385,
+    "lineno": 414,
     "locus": "Client",
     "longname": "Tracker.Dependency#changed",
     "memberof": "Tracker.Dependency",
@@ -6097,7 +6120,7 @@ DocsData = {
   "Tracker.Dependency#depend": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 360,
+    "lineno": 389,
     "locus": "Client",
     "longname": "Tracker.Dependency#depend",
     "memberof": "Tracker.Dependency",
@@ -6130,7 +6153,7 @@ DocsData = {
   "Tracker.Dependency#hasDependents": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 398,
+    "lineno": 427,
     "locus": "Client",
     "longname": "Tracker.Dependency#hasDependents",
     "memberof": "Tracker.Dependency",
@@ -6168,7 +6191,7 @@ DocsData = {
   "Tracker.afterFlush": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 587,
+    "lineno": 616,
     "locus": "Client",
     "longname": "Tracker.afterFlush",
     "memberof": "Tracker",
@@ -6191,7 +6214,7 @@ DocsData = {
   "Tracker.autorun": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 526,
+    "lineno": 555,
     "locus": "Client",
     "longname": "Tracker.autorun",
     "memberof": "Tracker",
@@ -6258,7 +6281,7 @@ DocsData = {
   "Tracker.flush": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 411,
+    "lineno": 440,
     "locus": "Client",
     "longname": "Tracker.flush",
     "memberof": "Tracker",
@@ -6271,7 +6294,7 @@ DocsData = {
   "Tracker.nonreactive": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 556,
+    "lineno": 585,
     "locus": "Client",
     "longname": "Tracker.nonreactive",
     "memberof": "Tracker",
@@ -6294,7 +6317,7 @@ DocsData = {
   "Tracker.onInvalidate": {
     "filepath": "tracker/tracker.js",
     "kind": "function",
-    "lineno": 573,
+    "lineno": 602,
     "locus": "Client",
     "longname": "Tracker.onInvalidate",
     "memberof": "Tracker",

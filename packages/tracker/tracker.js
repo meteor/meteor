@@ -195,6 +195,7 @@ Tracker.Computation = function (f, parent, onError) {
 
   self._id = nextId++;
   self._onInvalidateCallbacks = [];
+  self._onStopCallbacks = [];
   // the plan is at some point to use the parent relation
   // to constrain the order that computations are processed
   self._parent = parent;
@@ -238,6 +239,26 @@ Tracker.Computation.prototype.onInvalidate = function (f) {
   }
 };
 
+/**
+ * @summary Registers `callback` to run when this computation is stopped, or runs it immediately if the computation is already stopped.  The callback is run after any `onInvalidate` callbacks.
+ * @locus Client
+ * @param {Function} callback Function to be called on stop. Receives one argument, the computation that was stopped.
+ */
+Tracker.Computation.prototype.onStop = function (f) {
+  var self = this;
+
+  if (typeof f !== 'function')
+    throw new Error("onStop requires a function");
+
+  if (self.stopped) {
+    Tracker.nonreactive(function () {
+      withNoYieldsAllowed(f)(self);
+    });
+  } else {
+    self._onStopCallbacks.push(f);
+  }
+};
+
 // http://docs.meteor.com/#computation_invalidate
 
 /**
@@ -274,11 +295,19 @@ Tracker.Computation.prototype.invalidate = function () {
  * @locus Client
  */
 Tracker.Computation.prototype.stop = function () {
-  if (! this.stopped) {
-    this.stopped = true;
-    this.invalidate();
+  var self = this;
+
+  if (! self.stopped) {
+    self.stopped = true;
+    self.invalidate();
     // Unregister from global Tracker.
-    delete Tracker._computations[this._id];
+    delete Tracker._computations[self._id];
+    for(var i = 0, f; f = self._onStopCallbacks[i]; i++) {
+      Tracker.nonreactive(function () {
+        withNoYieldsAllowed(f)(self);
+      });
+    }
+    self._onStopCallbacks = [];
   }
 };
 
