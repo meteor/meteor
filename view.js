@@ -123,6 +123,19 @@ Blaze.View.prototype.onViewDestroyed = function (cb) {
   this._callbacks.destroyed = this._callbacks.destroyed || [];
   this._callbacks.destroyed.push(cb);
 };
+Blaze.View.prototype.removeViewDestroyedListener = function (cb) {
+  var destroyed = this._callbacks.destroyed;
+  if (! destroyed)
+    return;
+  var index = _.lastIndexOf(destroyed, cb);
+  if (index !== -1) {
+    // XXX You'd think the right thing to do would be splice, but _fireCallbacks
+    // gets sad if you remove callbacks while iterating over the list.  Should
+    // change this to use callback-hook or EventEmitter or something else that
+    // properly supports removal.
+    destroyed[index] = null;
+  }
+};
 
 /// View#autorun(func)
 ///
@@ -203,7 +216,11 @@ Blaze.View.prototype.autorun = function (f, _inViewScope, displayName) {
     (self.name || 'anonymous') + ':' + (displayName || 'anonymous');
   locals.c = Tracker.autorun(locals.f);
 
-  self.onViewDestroyed(function () { locals.c.stop(); });
+  var stopComputation = function () { locals.c.stop(); };
+  self.onViewDestroyed(stopComputation);
+  locals.c.onStop(function () {
+    self.removeViewDestroyedListener(stopComputation);
+  });
 
   return locals.c;
 };
@@ -267,7 +284,7 @@ Blaze._fireCallbacks = function (view, which) {
     Tracker.nonreactive(function fireCallbacks() {
       var cbs = view._callbacks[which];
       for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-        cbs[i].call(view);
+        cbs[i] && cbs[i].call(view);
     });
   });
 };
