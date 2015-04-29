@@ -275,7 +275,12 @@ _.extend(PackageAPI.prototype, {
   /**
    * @memberOf PackageAPI
    * @instance
-   * @summary Specify the source code for your package.
+   * @summary Specify the source code for your package. Order matters!  You may repeat this command
+   * as many times as necessary, and you may put multiple file paths in an array in each command. The
+   * key thing is -- declare files that depend on other files **after** the files they depend upon. Also
+   * be careful that you write correctly the full path from the root of the package.
+   * So; 'client/views/theView.html' should precede 'client/views/theView.js'
+   * A typical error message is  "Uncaught TypeError: Cannot read property 'helpers' of undefined."
    * @locus package.js
    * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
    * @param {String} [architecture] If you only want to export the file
