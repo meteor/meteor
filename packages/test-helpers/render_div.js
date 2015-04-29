@@ -3,7 +3,7 @@ renderToDiv = function (template, optData) {
   if (optData == null) {
     Blaze.render(template, div);
   } else {
-    Blaze.renderWithData(template, optData, div);
+    Blaze.render(template, div, { data: optData });
   }
   return div;
 };

@@ -686,3 +686,35 @@ Tinytest.add("ui - attributes", function (test) {
   test.equal(HTML.toHTML(SPAN({title: ['M', amp, 'Ms']}, 'M', amp, 'M candies')),
              '<span title="M&amp;Ms">M&amp;M candies</span>');
 });
+
+Tinytest.add("ui - parentDocument", function (test) {
+  var R = ReactiveVar({'class': 'test1', id: 'foo'});
+
+  var spanFunc = function () {
+    return SPAN(HTML.Attrs(function () { return R.get(); }));
+  };
+
+  var win = window.open(''); // Open a new tab to test the parentDocument feature
+  if (win === undefined) {
+    throw new Meteor.Error('You must not block popups for the parentDocument test to work');
+  }
+  win.onbeforeunload = function() {
+    win = undefined;
+  };
+
+  Blaze.render(spanFunc, win.document.body, { 'parentDocument': win.document }); 
+
+  test.equal(canonicalizeHtml(win.document.body.innerHTML), '<span class="test1" id="foo"></span>');
+  test.equal(R._numListeners(), 1);
+
+  var span = win.document.body.firstChild;
+  test.equal(span.nodeName, 'SPAN');
+  span.className += ' blah'; // change the element's class outside of Blaze. this simulates what a jQuery could do
+
+  R.set({'class': 'test2', id: 'bar'});
+  Tracker.flush();
+  test.equal(canonicalizeHtml(win.document.body.innerHTML), '<span class="blah test2" id="bar"></span>');
+  test.equal(R._numListeners(), 1);
+
+  win.close();
+});

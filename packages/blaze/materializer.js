@@ -14,7 +14,7 @@
 //   task).
 //
 // Returns `intoArray`, which is especially useful if you pass in `[]`.
-Blaze._materializeDOM = function (htmljs, intoArray, parentView,
+Blaze._materializeDOM = function (htmljs, intoArray, parentView, parentDocument,
                                   _existingWorkStack) {
   // In order to use fewer stack frames, materializeDOMInner can push
   // tasks onto `workStack`, and they will be popped off
@@ -22,7 +22,7 @@ Blaze._materializeDOM = function (htmljs, intoArray, parentView,
   // reason we use a stack instead of a queue is so that we recurse
   // depth-first, doing newer tasks first.
   var workStack = (_existingWorkStack || []);
-  materializeDOMInner(htmljs, intoArray, parentView, workStack);
+  materializeDOMInner(htmljs, intoArray, parentView, parentDocument, workStack);
 
   if (! _existingWorkStack) {
     // We created the work stack, so we are responsible for finishing
@@ -38,32 +38,34 @@ Blaze._materializeDOM = function (htmljs, intoArray, parentView,
   return intoArray;
 };
 
-var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
+var materializeDOMInner = function (htmljs, intoArray, parentView, parentDocument, workStack) {
   if (htmljs == null) {
     // null or undefined
     return;
   }
 
+  var doc = parentDocument || document;
+
   switch (typeof htmljs) {
   case 'string': case 'boolean': case 'number':
-    intoArray.push(document.createTextNode(String(htmljs)));
+    intoArray.push(doc.createTextNode(String(htmljs)));
     return;
   case 'object':
     if (htmljs.htmljsType) {
       switch (htmljs.htmljsType) {
       case HTML.Tag.htmljsType:
-        intoArray.push(materializeTag(htmljs, parentView, workStack));
+        intoArray.push(materializeTag(htmljs, parentView, doc, workStack));
         return;
       case HTML.CharRef.htmljsType:
-        intoArray.push(document.createTextNode(htmljs.str));
+        intoArray.push(doc.createTextNode(htmljs.str));
         return;
       case HTML.Comment.htmljsType:
-        intoArray.push(document.createComment(htmljs.sanitizedValue));
+        intoArray.push(doc.createComment(htmljs.sanitizedValue));
         return;
       case HTML.Raw.htmljsType:
         // Get an array of DOM nodes by using the browser's HTML parser
         // (like innerHTML).
-        var nodes = Blaze._DOMBackend.parseHTML(htmljs.value);
+        var nodes = Blaze._DOMBackend.parseHTML(htmljs.value, doc);
         for (var i = 0; i < nodes.length; i++)
           intoArray.push(nodes[i]);
         return;
@@ -71,7 +73,7 @@ var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
     } else if (HTML.isArray(htmljs)) {
       for (var i = htmljs.length-1; i >= 0; i--) {
         workStack.push(_.bind(Blaze._materializeDOM, null,
-                              htmljs[i], intoArray, parentView, workStack));
+                              htmljs[i], intoArray, parentView, doc, workStack));
       }
       return;
     } else {
@@ -80,7 +82,7 @@ var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
         // fall through to Blaze.View case below
       }
       if (htmljs instanceof Blaze.View) {
-        Blaze._materializeView(htmljs, parentView, workStack, intoArray);
+        Blaze._materializeView(htmljs, parentView, doc, workStack, intoArray);
         return;
       }
     }
@@ -89,16 +91,17 @@ var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
   throw new Error("Unexpected object in htmljs: " + htmljs);
 };
 
-var materializeTag = function (tag, parentView, workStack) {
+var materializeTag = function (tag, parentView, parentDocument, workStack) {
   var tagName = tag.tagName;
   var elem;
+  var doc = parentDocument || document;
   if ((HTML.isKnownSVGElement(tagName) || isSVGAnchor(tag))
-      && document.createElementNS) {
+      && doc.createElementNS) {
     // inline SVG
-    elem = document.createElementNS('http://www.w3.org/2000/svg', tagName);
+    elem = doc.createElementNS('http://www.w3.org/2000/svg', tagName);
   } else {
     // normal elements
-    elem = document.createElement(tagName);
+    elem = doc.createElement(tagName);
   }
 
   var rawAttrs = tag.attrs;
@@ -165,7 +168,7 @@ var materializeTag = function (tag, parentView, workStack) {
     // now push the task that calculates childNodesAndRanges
     workStack.push(_.bind(Blaze._materializeDOM, null,
                           children, childNodesAndRanges, parentView,
-                          workStack));
+                          doc, workStack));
   }
 
   return elem;

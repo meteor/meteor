@@ -325,7 +325,7 @@ var doFirstRender = function (view, initialContent) {
 // we return.  When there is a _workStack, we do not return the new
 // DOMRange, but instead push it into _intoArray from a _workStack
 // task.
-Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
+Blaze._materializeView = function (view, parentView, parentDocument, _workStack, _intoArray) {
   Blaze._createView(view, parentView);
 
   var domrange;
@@ -345,7 +345,7 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       if (! c.firstRun) {
         Tracker.nonreactive(function doMaterialize() {
           // re-render
-          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view);
+          var rangesAndNodes = Blaze._materializeDOM(htmljs, [], view, parentDocument);
           if (! Blaze._isContentEqual(lastHtmljs, htmljs)) {
             domrange.setMembers(rangesAndNodes);
             Blaze._fireCallbacks(view, 'rendered');
@@ -368,7 +368,7 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
     // first render.  lastHtmljs is the first htmljs.
     var initialContents;
     if (! _workStack) {
-      initialContents = Blaze._materializeDOM(lastHtmljs, [], view);
+      initialContents = Blaze._materializeDOM(lastHtmljs, [], view, parentDocument);
       domrange = doFirstRender(view, initialContents);
       initialContents = null; // help GC because we close over this scope a lot
     } else {
@@ -388,7 +388,7 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
       });
       // now push the task that calculates initialContents
       _workStack.push(_.bind(Blaze._materializeDOM, null,
-                             lastHtmljs, initialContents, view, _workStack));
+                             lastHtmljs, initialContents, view, parentDocument, _workStack));
     }
   });
 
@@ -597,15 +597,31 @@ var contentAsFunc = function (content) {
 /**
  * @summary Renders a template or View to DOM nodes and inserts it into the DOM, returning a rendered [View](#blaze_view) which can be passed to [`Blaze.remove`](#blaze_remove).
  * @locus Client
- * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned.
- * @param {DOMNode} parentNode The node that will be the parent of the rendered template.  It must be an Element node.
- * @param {DOMNode} [nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
- * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
+ * @param {Template|Blaze.View} content The template (e.g. `Template.myTemplate`) or View object to render.  If a template, a View object is [constructed](#template_constructview).  If a View, it must be an unrendered View, which becomes a rendered View and is returned.
+ * @param {DOMNode} parentElement The node that will be the parent of the rendered template.  It must be an Element node.
+ * @param {Object} [options]
+ * @param {DOMNode} [options.nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
+ * @param {Blaze.View} [options.parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
+ * @param {DOMDocument} [options.parentDocument] The document that will be used to create the elements in this call to Blaze.render.
  */
+
+// XXX COMPAT WITH x.x.x
+// In the future, change this to look like function (content, parentElement, options)
 Blaze.render = function (content, parentElement, nextNode, parentView) {
   if (! parentElement) {
     Blaze._warn("Blaze.render without a parent element is deprecated. " +
                 "You must specify where to insert the rendered content.");
+  }
+
+  // Check to see if we are using the new syntax and process appropriately
+  // The second check is necessary in case nextNode is passed as a jQuery object
+  if (typeof nextNode === 'object' && !(nextNode instanceof jQuery)) {
+    var options = nextNode;
+    nextNode = options.nextNode;
+    var parentView = options.parentView;
+    var parentDocument = options.parentDocument;
+    var data = options.data;
+    content = Blaze._TemplateWith(data, contentAsFunc(content));
   }
 
   if (nextNode instanceof Blaze.View) {
@@ -625,7 +641,7 @@ Blaze.render = function (content, parentElement, nextNode, parentView) {
   parentView = parentView || currentViewIfRendering();
 
   var view = contentAsView(content);
-  Blaze._materializeView(view, parentView);
+  Blaze._materializeView(view, parentView, parentDocument);
 
   if (parentElement) {
     view._domrange.attach(parentElement, nextNode);
@@ -647,17 +663,17 @@ Blaze.insert = function (view, parentElement, nextNode) {
 /**
  * @summary Renders a template or View to DOM nodes with a data context.  Otherwise identical to `Blaze.render`.
  * @locus Client
- * @param {Template|Blaze.View} templateOrView The template (e.g. `Template.myTemplate`) or View object to render.
- * @param {Object|Function} data The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run.
- * @param {DOMNode} parentNode The node that will be the parent of the rendered template.  It must be an Element node.
+ * @param {Template|Blaze.View} content The template (e.g. `Template.myTemplate`) or View object to render.
+ * @param {DOMNode} parentElement The node that will be the parent of the rendered template.  It must be an Element node.
  * @param {DOMNode} [nextNode] Optional. If provided, must be a child of <em>parentNode</em>; the template will be inserted before this node. If not provided, the template will be inserted as the last child of parentNode.
  * @param {Blaze.View} [parentView] Optional. If provided, it will be set as the rendered View's [`parentView`](#view_parentview).
+ * @param {Object|Function} data The data context to use, or a function returning a data context.  If a function is provided, it will be reactively re-run.
  */
+
+// XXX COMPAT WITH x.x.x
+// In the future, eliminate this entirely.
 Blaze.renderWithData = function (content, data, parentElement, nextNode, parentView) {
-  // We defer the handling of optional arguments to Blaze.render.  At this point,
-  // `nextNode` may actually be `parentView`.
-  return Blaze.render(Blaze._TemplateWith(data, contentAsFunc(content)),
-                          parentElement, nextNode, parentView);
+  return Blaze.render(content, parentElement, { 'nextNode': nextNode, 'parentView': parentView, 'data': data});
 };
 
 /**

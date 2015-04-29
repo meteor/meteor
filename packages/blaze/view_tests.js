@@ -18,8 +18,8 @@ if (Meteor.isClient) {
     v.onViewReady(function () {
       buf += 'y' + v.renderCount;
     });
-    v.onViewDestroyed(function () {
-      buf += 'd' + v.renderCount;
+    v.onViewDestroyed(function() {
+        buf += 'd' + v.renderCount;
     });
 
     test.equal(buf, '');
