@@ -59,6 +59,7 @@ nameToId = {
   "Tracker.Dependency#depend": "dependency_depend",
   "Tracker.onInvalidate": "tracker_oninvalidate",
   "Tracker.Computation#onInvalidate": "computation_oninvalidate",
+  "Tracker.Computation#onStop": "computation_onstop",
   "Tracker.Computation#stop": "computation_stop",
   "Tracker.currentComputation": "tracker_currentcomputation",
   "Session.equals": "session_equals",

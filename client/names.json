@@ -213,6 +213,7 @@
   "Tracker.Computation#invalidate",
   "Tracker.Computation#invalidated",
   "Tracker.Computation#onInvalidate",
+  "Tracker.Computation#onStop",
   "Tracker.Computation#stop",
   "Tracker.Computation#stopped",
   "Tracker.ComputationFunction",
