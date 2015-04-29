@@ -972,7 +972,7 @@ DocsData = {
   "Blaze.Each": {
     "filepath": "blaze/builtins.js",
     "kind": "function",
-    "lineno": 75,
+    "lineno": 123,
     "locus": "Client",
     "longname": "Blaze.Each",
     "memberof": "Blaze",
@@ -980,7 +980,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A function to reactively re-run.  The function may return a Cursor, an array, null, or undefined.</p>",
+        "description": "<p>A function to reactively re-run. The function can\nreturn one of two options:</p>\n<ol>\n<li><p>An object with two fields: '_variable' and '_sequence'. Each iterates over\n'_sequence', it may be a Cursor, an array, null, or undefined. Inside the\nEach body you will be able to get the current item from the sequence using\nthe name specified in the '_variable' field.</p>\n</li>\n<li><p>Just a sequence (Cursor, array, null, or undefined) not wrapped into an\nobject. Inside the Each body, the current item will be set as the data\ncontext.</p>\n</li>\n</ol>",
         "name": "argFunc",
         "type": {
           "names": [
@@ -989,7 +989,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>A Function that returns <a href=\"#renderable_content\"><em>renderable content</em></a>.</p>",
+        "description": "<p>A Function that returns  <a href=\"#renderable_content\"><em>renderable\ncontent</em></a>.</p>",
         "name": "contentFunc",
         "type": {
           "names": [
@@ -998,7 +998,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional.  A Function that returns <a href=\"#renderable_content\"><em>renderable content</em></a> to display in the case when there are no items to display.</p>",
+        "description": "<p>A Function that returns <a href=\"#renderable_content\"><em>renderable\ncontent</em></a> to display in the case when there are no items\nin the sequence.</p>",
         "name": "elseFunc",
         "optional": true,
         "type": {
@@ -1014,7 +1014,7 @@ DocsData = {
   "Blaze.If": {
     "filepath": "blaze/builtins.js",
     "kind": "function",
-    "lineno": 39,
+    "lineno": 74,
     "locus": "Client",
     "longname": "Blaze.If",
     "memberof": "Blaze",
@@ -1052,6 +1052,37 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Constructs a View that renders content conditionally."
+  },
+  "Blaze.Let": {
+    "filepath": "blaze/builtins.js",
+    "kind": "function",
+    "lineno": 60,
+    "longname": "Blaze.Let",
+    "memberof": "Blaze",
+    "name": "Let",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>A function to reactively re-run. The returned\ndictionary maps names of bindings with values or computations to reactively\nre-run.</p>",
+        "name": "bindingsFunc",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      },
+      {
+        "description": "<p>A Function that returns <a href=\"#renderable_content\"><em>renderable content</em></a>.</p>",
+        "name": "contentFunc",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Constructs a View setting the local lexical scope in the block."
   },
   "Blaze.Template": {
     "filepath": "blaze/template.js",
@@ -1396,7 +1427,7 @@ DocsData = {
   "Blaze.Unless": {
     "filepath": "blaze/builtins.js",
     "kind": "function",
-    "lineno": 64,
+    "lineno": 99,
     "locus": "Client",
     "longname": "Blaze.Unless",
     "memberof": "Blaze",
@@ -1504,7 +1535,7 @@ DocsData = {
   "Blaze.currentView": {
     "filepath": "blaze/view.js",
     "kind": "member",
-    "lineno": 520,
+    "lineno": 523,
     "locus": "Client",
     "longname": "Blaze.currentView",
     "memberof": "Blaze",
@@ -1520,7 +1551,7 @@ DocsData = {
   "Blaze.getData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 731,
+    "lineno": 734,
     "locus": "Client",
     "longname": "Blaze.getData",
     "memberof": "Blaze",
@@ -1545,7 +1576,7 @@ DocsData = {
   "Blaze.getView": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 769,
+    "lineno": 772,
     "locus": "Client",
     "longname": "Blaze.getView",
     "memberof": "Blaze",
@@ -1592,7 +1623,7 @@ DocsData = {
   "Blaze.remove": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 665,
+    "lineno": 668,
     "locus": "Client",
     "longname": "Blaze.remove",
     "memberof": "Blaze",
@@ -1615,7 +1646,7 @@ DocsData = {
   "Blaze.render": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 602,
+    "lineno": 605,
     "locus": "Client",
     "longname": "Blaze.render",
     "memberof": "Blaze",
@@ -1668,7 +1699,7 @@ DocsData = {
   "Blaze.renderWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 653,
+    "lineno": 656,
     "locus": "Client",
     "longname": "Blaze.renderWithData",
     "memberof": "Blaze",
@@ -1731,7 +1762,7 @@ DocsData = {
   "Blaze.toHTML": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 686,
+    "lineno": 689,
     "locus": "Client",
     "longname": "Blaze.toHTML",
     "memberof": "Blaze",
@@ -1755,7 +1786,7 @@ DocsData = {
   "Blaze.toHTMLWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 698,
+    "lineno": 701,
     "locus": "Client",
     "longname": "Blaze.toHTMLWithData",
     "memberof": "Blaze",
@@ -2197,17 +2228,17 @@ DocsData = {
     "summary": "Specify which [Cordova / PhoneGap](http://cordova.apache.org/)\nplugins your Meteor package depends on.\n\nPlugins are installed from\n[plugins.cordova.io](http://plugins.cordova.io/), so the plugins and\nversions specified must exist there. Alternatively, the version\ncan be replaced with a GitHub tarball URL as described in the\n[Cordova / PhoneGap](https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration#meteor-packages-with-cordovaphonegap-dependencies)\npage of the Meteor wiki on GitHub."
   },
   "DDP": {
-    "filepath": "ddp/common.js",
+    "filepath": "ddp-client/namespace.js",
     "kind": "namespace",
     "lineno": 1,
     "longname": "DDP",
     "name": "DDP",
-    "summary": "The namespace for DDP-related methods."
+    "summary": "Namespace for DDP-related methods/classes."
   },
   "DDP.connect": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1619,
+    "lineno": 1624,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -2226,6 +2257,111 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Connect to the server of a different Meteor application to subscribe to its document sets and invoke its remote methods."
+  },
+  "DDPCommon": {
+    "filepath": "ddp-common/namespace.js",
+    "kind": "namespace",
+    "lineno": 1,
+    "longname": "DDPCommon",
+    "name": "DDPCommon",
+    "summary": "Namespace for DDPCommon-related methods/classes. Shared between \n`ddp-client` and `ddp-server`, where the ddp-client is the implementation\nof a ddp client for both client AND server; and the ddp server is the\nimplementation of the livedata server and stream server. Common \nfunctionality shared between both can be shared under this namespace"
+  },
+  "DDPCommon.MethodInvocation": {
+    "filepath": "ddp-common/method_invocation.js",
+    "instancename": "this",
+    "kind": "function",
+    "lineno": 9,
+    "longname": "DDPCommon.MethodInvocation",
+    "memberof": "DDPCommon",
+    "name": "MethodInvocation",
+    "options": [],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "The state for a single invocation of a method, referenced by this\ninside a method definition."
+  },
+  "DDPCommon.MethodInvocation#connection": {
+    "filepath": "ddp-common/method_invocation.js",
+    "kind": "member",
+    "lineno": 53,
+    "locus": "Server",
+    "longname": "DDPCommon.MethodInvocation#connection",
+    "memberof": "DDPCommon.MethodInvocation",
+    "name": "connection",
+    "scope": "instance",
+    "summary": "Access inside a method invocation. The [connection](#meteor_onconnection) that this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call."
+  },
+  "DDPCommon.MethodInvocation#isSimulation": {
+    "filepath": "ddp-common/method_invocation.js",
+    "kind": "member",
+    "lineno": 20,
+    "locus": "Anywhere",
+    "longname": "DDPCommon.MethodInvocation#isSimulation",
+    "memberof": "DDPCommon.MethodInvocation",
+    "name": "isSimulation",
+    "scope": "instance",
+    "summary": "Access inside a method invocation.  Boolean value, true if this invocation is a stub.",
+    "type": {
+      "names": [
+        "Boolean"
+      ]
+    }
+  },
+  "DDPCommon.MethodInvocation#setUserId": {
+    "filepath": "ddp-common/method_invocation.js",
+    "kind": "function",
+    "lineno": 89,
+    "locus": "Server",
+    "longname": "DDPCommon.MethodInvocation#setUserId",
+    "memberof": "DDPCommon.MethodInvocation",
+    "name": "setUserId",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The value that should be returned by <code>userId</code> on this connection.</p>",
+        "name": "userId",
+        "type": {
+          "names": [
+            "String",
+            "null"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Set the logged in user."
+  },
+  "DDPCommon.MethodInvocation#unblock": {
+    "filepath": "ddp-common/method_invocation.js",
+    "kind": "function",
+    "lineno": 76,
+    "locus": "Server",
+    "longname": "DDPCommon.MethodInvocation#unblock",
+    "memberof": "DDPCommon.MethodInvocation",
+    "name": "unblock",
+    "options": [],
+    "params": [],
+    "scope": "instance",
+    "summary": "Call inside a method invocation.  Allow subsequent method from this client to begin running in a new fiber."
+  },
+  "DDPCommon.MethodInvocation#userId": {
+    "filepath": "ddp-common/method_invocation.js",
+    "kind": "member",
+    "lineno": 38,
+    "locus": "Anywhere",
+    "longname": "DDPCommon.MethodInvocation#userId",
+    "memberof": "DDPCommon.MethodInvocation",
+    "name": "userId",
+    "scope": "instance",
+    "summary": "The id of the user that made this method call, or `null` if no user was logged in."
   },
   "EJSON": {
     "filepath": "ejson/ejson.js",
@@ -2585,7 +2721,7 @@ DocsData = {
   "Email.send": {
     "filepath": "email/email.js",
     "kind": "function",
-    "lineno": 128,
+    "lineno": 142,
     "locus": "Server",
     "longname": "Email.send",
     "memberof": "Email",
@@ -2647,6 +2783,16 @@ DocsData = {
         "type": {
           "names": [
             "Array.<Object>"
+          ]
+        }
+      },
+      {
+        "description": "<p>A <a href=\"https://github.com/andris9/mailcomposer\">MailComposer</a>\nobject representing the message to be sent. Overrides all other options. You\ncan access the <code>mailcomposer</code> npm module at\n<code>EmailInternals.NpmModules.mailcomposer.module</code>.</p>",
+        "name": "mailComposer",
+        "optional": true,
+        "type": {
+          "names": [
+            "MailComposer"
           ]
         }
       }
@@ -3152,7 +3298,7 @@ DocsData = {
     "summary": "Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for apps deployed with `meteor deploy`, but must be provided when using `meteor build`."
   },
   "Meteor.apply": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
     "lineno": 703,
     "locus": "Anywhere",
@@ -3222,7 +3368,7 @@ DocsData = {
     "summary": "Invoke a method passing an array of arguments."
   },
   "Meteor.call": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
     "lineno": 662,
     "locus": "Anywhere",
@@ -3311,9 +3457,9 @@ DocsData = {
     "summary": "Cancel a function call scheduled by `Meteor.setTimeout`."
   },
   "Meteor.disconnect": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1010,
+    "lineno": 1015,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
@@ -3555,7 +3701,7 @@ DocsData = {
     "summary": "Log out other clients logged in as the current user, but does not log out the client that calls this function."
   },
   "Meteor.methods": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1457,
     "locus": "Anywhere",
@@ -3578,7 +3724,7 @@ DocsData = {
     "summary": "Defines functions that can be invoked over the network by clients."
   },
   "Meteor.onConnection": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1318,
     "locus": "Server",
@@ -3601,7 +3747,7 @@ DocsData = {
     "summary": "Register a callback to be called when a new DDP connection is made to the server."
   },
   "Meteor.publish": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1392,
     "locus": "Server",
@@ -3633,9 +3779,9 @@ DocsData = {
     "summary": "Publish a record set."
   },
   "Meteor.reconnect": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1000,
+    "lineno": 1005,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
@@ -3765,9 +3911,9 @@ DocsData = {
     "summary": "Run code when a client or a server starts."
   },
   "Meteor.status": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 988,
+    "lineno": 993,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
@@ -3778,7 +3924,7 @@ DocsData = {
     "summary": "Get the current connection status. A reactive data source."
   },
   "Meteor.subscribe": {
-    "filepath": "ddp/livedata_connection.js",
+    "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
     "lineno": 479,
     "locus": "Client",
@@ -3895,102 +4041,6 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Wrap a function that takes a callback function as its final parameter. On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback."
-  },
-  "MethodInvocation": {
-    "filepath": "ddp/livedata_common.js",
-    "instancename": "this",
-    "kind": "function",
-    "lineno": 15,
-    "longname": "MethodInvocation",
-    "name": "MethodInvocation",
-    "options": [],
-    "params": [
-      {
-        "name": "options",
-        "type": {
-          "names": [
-            "Object"
-          ]
-        }
-      }
-    ],
-    "scope": "global",
-    "summary": "The state for a single invocation of a method, referenced by this\ninside a method definition."
-  },
-  "MethodInvocation#connection": {
-    "filepath": "ddp/livedata_common.js",
-    "kind": "member",
-    "lineno": 59,
-    "locus": "Server",
-    "longname": "MethodInvocation#connection",
-    "memberof": "MethodInvocation",
-    "name": "connection",
-    "scope": "instance",
-    "summary": "Access inside a method invocation. The [connection](#meteor_onconnection) that this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call."
-  },
-  "MethodInvocation#isSimulation": {
-    "filepath": "ddp/livedata_common.js",
-    "kind": "member",
-    "lineno": 26,
-    "locus": "Anywhere",
-    "longname": "MethodInvocation#isSimulation",
-    "memberof": "MethodInvocation",
-    "name": "isSimulation",
-    "scope": "instance",
-    "summary": "Access inside a method invocation.  Boolean value, true if this invocation is a stub.",
-    "type": {
-      "names": [
-        "Boolean"
-      ]
-    }
-  },
-  "MethodInvocation#setUserId": {
-    "filepath": "ddp/livedata_common.js",
-    "kind": "function",
-    "lineno": 95,
-    "locus": "Server",
-    "longname": "MethodInvocation#setUserId",
-    "memberof": "MethodInvocation",
-    "name": "setUserId",
-    "options": [],
-    "params": [
-      {
-        "description": "<p>The value that should be returned by <code>userId</code> on this connection.</p>",
-        "name": "userId",
-        "type": {
-          "names": [
-            "String",
-            "null"
-          ]
-        }
-      }
-    ],
-    "scope": "instance",
-    "summary": "Set the logged in user."
-  },
-  "MethodInvocation#unblock": {
-    "filepath": "ddp/livedata_common.js",
-    "kind": "function",
-    "lineno": 82,
-    "locus": "Server",
-    "longname": "MethodInvocation#unblock",
-    "memberof": "MethodInvocation",
-    "name": "unblock",
-    "options": [],
-    "params": [],
-    "scope": "instance",
-    "summary": "Call inside a method invocation.  Allow subsequent method from this client to begin running in a new fiber."
-  },
-  "MethodInvocation#userId": {
-    "filepath": "ddp/livedata_common.js",
-    "kind": "member",
-    "lineno": 44,
-    "locus": "Anywhere",
-    "longname": "MethodInvocation#userId",
-    "memberof": "MethodInvocation",
-    "name": "userId",
-    "scope": "instance",
-    "summary": "The id of the user that made this method call, or `null` if no user was logged in."
   },
   "Mongo": {
     "filepath": "mongo/collection.js",
@@ -5368,7 +5418,7 @@ DocsData = {
     "summary": "Set a variable in the session if it hasn't been set before.\nOtherwise works exactly the same as [`Session.set`](#session_set)."
   },
   "Subscription": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "instancename": "this",
     "kind": "class",
     "lineno": 860,
@@ -5379,7 +5429,7 @@ DocsData = {
     "summary": "The server's side of a subscription"
   },
   "Subscription#added": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1148,
     "locus": "Server",
@@ -5420,7 +5470,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Informs the subscriber that a document has been added to the record set."
   },
   "Subscription#changed": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1166,
     "locus": "Server",
@@ -5461,7 +5511,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Informs the subscriber that a document in the record set has been modified."
   },
   "Subscription#connection": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
     "lineno": 870,
     "locus": "Server",
@@ -5472,7 +5522,7 @@ DocsData = {
     "summary": "Access inside the publish function. The incoming [connection](#meteor_onconnection) for this subscription."
   },
   "Subscription#error": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1091,
     "locus": "Server",
@@ -5495,7 +5545,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Stops this client's subscription, triggering a call on the client to the `onStop` callback passed to [`Meteor.subscribe`](#meteor_subscribe), if any. If `error` is not a [`Meteor.Error`](#meteor_error), it will be [sanitized](#meteor_error)."
   },
   "Subscription#onStop": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1123,
     "locus": "Server",
@@ -5518,7 +5568,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Registers a callback function to run when the subscription is stopped."
   },
   "Subscription#ready": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1199,
     "locus": "Server",
@@ -5531,7 +5581,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady` callback passed to  [`Meteor.subscribe`](#meteor_subscribe), if any."
   },
   "Subscription#removed": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1182,
     "locus": "Server",
@@ -5563,7 +5613,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Informs the subscriber that a document has been removed from the record set."
   },
   "Subscription#stop": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
     "lineno": 1109,
     "locus": "Server",
@@ -5576,7 +5626,7 @@ DocsData = {
     "summary": "Call inside the publish function.  Stops this client's subscription and invokes the client's `onStop` callback with no error."
   },
   "Subscription#userId": {
-    "filepath": "ddp/livedata_server.js",
+    "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
     "lineno": 912,
     "locus": "Server",
