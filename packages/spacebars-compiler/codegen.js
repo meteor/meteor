@@ -138,15 +138,25 @@ _.extend(CodeGen.prototype, {
           if (this.genReactCode) {
             var code
             if (path[0] === 'each') {
+              // if the each block contains only 1 tag element, we should give
+              // it the key prop so that React doesn't complain.
+              var shouldHaveKey = _.filter(tag.content, function (child) {
+                return !(typeof child === 'string' && !child.trim());
+              }).length === 1;
               code =
                 '(function (parentView) {' +
-                  'return _.map((' + dataCode + ')(), function (data) {' +
+                  'var list = (' + dataCode + ')();' +
+                  'list = list && list.fetch ? list.fetch() : list;' +
+                  'return _.map(list, function (eachData, i) {' +
                     'var view = {' +
-                      'lookup: function (name) {return data[name] || parentView.lookup(name)},' +
+                      // XXX this does not handle paths with dots.
+                      'lookup: function (name) {return eachData[name] || parentView.lookup(name)},' +
                       'lookupTemplate: function (name) {return parentView.lookupTemplate(name)}' +
                     '};' +
                     'var content = ' + contentBlock + '();' +
-                    'return content.length > 1 ? content : content[0]' +
+                    'var res = content.length > 1 ? content : content[0];' +
+                    (shouldHaveKey ? 'res = React.cloneElement(res, {key: eachData._id || i});' : '') +
+                    'return res;' +
                   '})' +
                 '}(view))';
             } else if (path[0] === 'if' || path[0] === 'unless') {
@@ -190,7 +200,9 @@ _.extend(CodeGen.prototype, {
           var includeCode
 
           if (this.genReactCode) {
-            includeCode = 'Spacebars.reactInclude(' + includeArgs.join(', ') + ')';
+            includeCode =
+              'Spacebars.reactInclude(' + includeArgs.join(', ') +
+              ', typeof eachData === "undefined" ? null : eachData)';
           } else {
             includeCode = 'Spacebars.include(' + includeArgs.join(', ') + ')';
           }
