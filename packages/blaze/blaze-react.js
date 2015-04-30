@@ -4,7 +4,7 @@ BlazeReact = {};
  * Create a ReactComponnet class from a render function.
  * This component is attached to a Blaze.Template.
  */
-BlazeReact.createComponent = function (renderFunction) {
+BlazeReact.createComponent = function (template, renderFunction) {
   return React.createClass({
     componentWillMount: function () {
       // Optimization
@@ -30,6 +30,10 @@ BlazeReact.createComponent = function (renderFunction) {
           }
         });
       });
+      fireCallbacks(this, template, 'created');
+    },
+    componentDidMount: function () {
+      fireCallbacks(this, template, 'rendered');
     },
     render: function () {
       var view = this.props.view;
@@ -41,7 +45,7 @@ BlazeReact.createComponent = function (renderFunction) {
         // wrapped inside a div because React Components must return only
         // a single element.
         vdom.unshift(null);
-        return React.DOM.div.apply(null, vdom);
+        return React.DOM.span.apply(null, vdom);
       } else if (typeof vdom === 'string') {
         // wrap string inside a span
         return React.DOM.span(null, vdom);
@@ -51,9 +55,17 @@ BlazeReact.createComponent = function (renderFunction) {
     },
     componentWillUnmount: function () {
       Blaze._destroyView(this.props.view);
+      fireCallbacks(this, template, 'destroyed');
     }
   });
 };
+
+function fireCallbacks (component, template, type) {
+  var callbacks = template._getCallbacks(type);
+  for (var i = 0, l = callbacks.length; i < l; i++) {
+    callbacks[i].call(component);
+  }
+}
 
 // the internal with that renders a content block
 // with a data context.
@@ -107,9 +119,6 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
 };
 
 BlazeReact.include = function (template, parentView, data) {
-  if (typeof template === 'function') {
-    debugger
-  }
   if (typeof data === 'function') {
     data = data();
   }
