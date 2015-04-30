@@ -1,5 +1,20 @@
 BlazeReact = {};
 
+BlazeReact.render = function (template, container) {
+  var view = template.constructView();
+  Blaze._createView(view);
+  Tracker.nonreactive(function () {
+    view.autorun(function () {
+      React.render(
+        React.createElement(template.reactComponent, {
+          view: view
+        }),
+        container
+      );
+    });
+  });
+};
+
 BlazeReact.If = function (dataFunc, contentFunc, elseFunc, unless) {
   var condition = dataFunc();
   if (unless) condition = !condition;
