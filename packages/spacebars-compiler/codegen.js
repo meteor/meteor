@@ -66,7 +66,9 @@ _.extend(CodeGen.prototype, {
       if (tag.type === 'DOUBLE' || tag.type === 'TRIPLE') {
         var code = self.codeGenMustache(tag.path, tag.args);
         if (tag.type === 'TRIPLE') {
-          code = 'Spacebars.makeRaw(' + code + ')';
+          code = this.genReactCode
+            ? 'BlazeReact.raw(' + code + ')'
+            : 'Spacebars.makeRaw(' + code + ')';
         }
         if (tag.position !== HTMLTools.TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
           // Reactive attributes are already wrapped in a function,

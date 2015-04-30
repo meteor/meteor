@@ -44,3 +44,11 @@ BlazeReact.include = function (template, parentView) {
     view: view
   });
 };
+
+BlazeReact.raw = function (value) {
+  return React.DOM.div({
+    dangerouslySetInnerHTML: {
+      __html: value
+    }
+  });
+};
