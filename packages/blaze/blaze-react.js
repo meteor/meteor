@@ -33,11 +33,20 @@ BlazeReact.createComponent = function (template, renderFunction) {
           }
         });
       });
+      view.templateInstance = function () {
+        return self;
+      };
       fireCallbacks(this, template, 'created');
     },
 
     componentDidMount: function () {
       fireCallbacks(this, template, 'rendered');
+      var self = this;
+      var view = this.props.view;
+      // initialize events
+      _.each(template.__eventMaps, function (m) {
+        BlazeReact._addEventMap(view, m, view, self);
+      });
     },
 
     render: function () {
@@ -45,19 +54,23 @@ BlazeReact.createComponent = function (template, renderFunction) {
       var vdom = Blaze._withCurrentView(view, function () {
         return renderFunction.call(view);
       });
+      var wrapperProps = {
+        'data-blaze-view': view._id
+      };
       if (_.isArray(vdom)) {
         // if the template has more than 1 top-level elements, it has to be
         // wrapped inside a div because React Components must return only
         // a single element.
         this.isWrapped = true;
-        vdom.unshift(null);
+        vdom.unshift(wrapperProps);
         return React.DOM.span.apply(null, vdom);
       } else if (typeof vdom === 'string') {
         // wrap string inside a span
         this.isWrapped = true;
-        return React.DOM.span(null, vdom);
+        return React.DOM.span(wrapperProps, vdom);
       } else {
         this.isWrapped = false;
+        vdom = React.cloneElement(vdom, wrapperProps);
         return vdom;
       }
     },
@@ -89,7 +102,18 @@ BlazeReact._With = function (data, contentFunc, parentView) {
   // so that the block is rendered with the correct
   // data context.
   return Blaze._withCurrentView(view, function () {
-    return contentFunc.call(null, view);
+    return _.map(contentFunc.call(null, view), function (c) {
+      // for every top-level element in the with block, we need to set the
+      // data-blaze-view attribute so that event handlers can pick up the
+      // correct data context.
+      if (typeof c.type === 'string') {
+        // normal element
+        return React.cloneElement(c, { 'data-blaze-view': view._id });
+      } else {
+        // component will set its own blaze-view
+        return c;
+      }
+    });
   });
 };
 
@@ -148,6 +172,44 @@ BlazeReact.raw = function (value) {
     dangerouslySetInnerHTML: {
       __html: value
     }
+  });
+};
+
+// Event Handling
+
+BlazeReact._addEventMap = function (view, eventMap, thisInHandler, component) {
+  thisInHandler = (thisInHandler || null);
+  var handles = [];
+  var element = React.findDOMNode(component);
+
+  _.each(eventMap, function (handler, spec) {
+    var clauses = spec.split(/,\s+/);
+    // iterate over clauses of spec, e.g. ['click .foo', 'click .bar']
+    _.each(clauses, function (clause) {
+      var parts = clause.split(/\s+/);
+      if (parts.length === 0)
+        return;
+
+      var newEvents = parts.shift();
+      var selector = parts.join(' ');
+      handles.push(Blaze._EventSupport.listen(
+        element, newEvents, selector,
+        function (evt) {
+          var handlerThis = thisInHandler || this;
+          var handlerArgs = arguments;
+          return Blaze._withCurrentView(view, function () {
+            return handler.apply(handlerThis, handlerArgs);
+          });
+        }
+      ));
+    });
+  });
+
+  view.onViewDestroyed(function () {
+    _.each(handles, function (h) {
+      h.stop();
+    });
+    handles.length = 0;
   });
 };
 
