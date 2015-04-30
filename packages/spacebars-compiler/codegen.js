@@ -139,20 +139,25 @@ _.extend(CodeGen.prototype, {
           // data context first.
           if (this.genReactCode) {
             var code
+            if (path[0] === 'each' || path[0] === 'with') {
+              // for block helpers that needs to establish a data context, we need
+              // to pass down the parent view into the contentBlock.
+              contentBlock = contentBlock.replace(/^\(function\(\)/, '(function (view)');
+            }
             if (path[0] === 'each') {
               // if the each block contains only 1 tag element, we should give
               // it the key prop so that React doesn't complain.
               var shouldHaveKey = _.filter(tag.content, function (child) {
                 return !(typeof child === 'string' && !child.trim());
               }).length === 1;
-              contentBlock = contentBlock.replace(/^\(function\(\)/, '(function (view)');
               callArgs = [dataCode, contentBlock, 'view', shouldHaveKey];
               code = 'BlazeReact.Each(' + callArgs.join(', ') + ')';
-            } else if (path[0] === 'if' || path[0] === 'unless') {
+            } else if (path[0] === 'with') {
+              callArgs = [dataCode, contentBlock, elseContentBlock || 'null', 'view'];
+              code = 'BlazeReact.With(' + callArgs.join(', ') + ')';
+            } else {
               callArgs = [dataCode, contentBlock, elseContentBlock || 'null', path[0] === 'unless'];
               code = 'BlazeReact.If(' + callArgs.join(', ') + ')';
-            } else {
-              code = builtInBlockHelpers[path[0]] + '(' + callArgs.join(', ') + ')'
             }
             return BlazeTools.EmitCode(code)
           } else {

@@ -15,8 +15,33 @@ BlazeReact.render = function (template, container) {
   });
 };
 
-BlazeReact.If = function (dataFunc, contentFunc, elseFunc, unless) {
-  var condition = dataFunc();
+// the internal with that renders a content block
+// with a data context.
+BlazeReact._With = function (data, contentFunc, parentView) {
+  // local data context
+  var view = Blaze.With(data);
+  // set parent view for ../ lookups
+  Blaze._createView(view, parentView);
+  // inherit parent helpers
+  view.template = parentView.template;
+  // call render using the with view as current view
+  // so that the block is rendered with the correct
+  // data context.
+  return Blaze._withCurrentView(view, function () {
+    return contentFunc.call(null, view);
+  });
+};
+
+// the external with that also handles the {{else}} condition.
+BlazeReact.With = function (argFunc, contentFunc, elseFunc, parentView) {
+  var withContentFunc = function () {
+    return BlazeReact._With(argFunc(), contentFunc, parentView);
+  };
+  return BlazeReact.If(argFunc, withContentFunc, elseFunc);
+};
+
+BlazeReact.If = function (argFunc, contentFunc, elseFunc, unless) {
+  var condition = argFunc();
   if (unless) condition = !condition;
   return condition
     ? contentFunc()
@@ -30,19 +55,8 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   list = list && list.fetch
     ? list.fetch()
     : list;
-  return _.map(list, function (data, i) {
-    // local data context
-    var view = Blaze.With(data);
-    // set parent view for ../ lookups
-    Blaze._createView(view, parentView);
-    // inherit parent helpers
-    view.template = parentView.template;
-    // call render using the with view as current view
-    // so that the block is rendered with the correct
-    // data context.
-    var content = Blaze._withCurrentView(view, function () {
-      return contentFunc.call(null, view);
-    });
+  return _.map(list, function (data) {
+    var content = BlazeReact._With(data, contentFunc, parentView);
     var res = content.length > 1 ? content : content[0];
     return res;
   });
