@@ -66,11 +66,18 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   }));
 };
 
-BlazeReact.include = function (template, parentView) {
-  // instead of calling template.constructView, we can
-  // simply create a blank view and set its template
-  // to enable template helper lookups.
-  var view = new Blaze.View();
+BlazeReact.include = function (template, parentView, data) {
+  if (typeof template === 'function') {
+    debugger
+  }
+  if (typeof data === 'function') {
+    data = data();
+  }
+  var view = data
+    ? Blaze.With(data)
+    : new Blaze.View();
+  // instead of calling template.constructView, we can simply set the view's
+  // template to enable template helper lookups.
   view.template = template;
   Blaze._createView(view, parentView);
   return React.createElement(template.reactComponent, {

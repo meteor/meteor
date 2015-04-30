@@ -180,32 +180,33 @@ _.extend(CodeGen.prototype, {
                              self.codeGenBlock(tag.elseContent) : null);
 
           var includeArgs = [compCode];
-          if (content) {
-            includeArgs.push(content);
-            if (elseContent)
-              includeArgs.push(elseContent);
-          }
-
           var includeCode
 
           if (this.genReactCode) {
-            includeCode =
-              'BlazeReact.include(' + includeArgs.join(', ') + ', view)';
+            includeArgs.push('view');
+            if (dataCode) {
+              includeArgs.push(dataCode);
+            }
+            includeCode = 'BlazeReact.include(' + includeArgs.join(', ') + ')';
           } else {
+            if (content) {
+              includeArgs.push(content);
+              if (elseContent)
+                includeArgs.push(elseContent);
+            }
             includeCode = 'Spacebars.include(' + includeArgs.join(', ') + ')';
-          }
-
-          // calling convention compat -- set the data context around the
-          // entire inclusion, so that if the name of the inclusion is
-          // a helper function, it gets the data context in `this`.
-          // This makes for a pretty confusing calling convention --
-          // In `{{#foo bar}}`, `foo` is evaluated in the context of `bar`
-          // -- but it's what we shipped for 0.8.0.  The rationale is that
-          // `{{#foo bar}}` is sugar for `{{#with bar}}{{#foo}}...`.
-          if (dataCode) {
-            includeCode =
-              'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
-              includeCode + '; })';
+            // calling convention compat -- set the data context around the
+            // entire inclusion, so that if the name of the inclusion is
+            // a helper function, it gets the data context in `this`.
+            // This makes for a pretty confusing calling convention --
+            // In `{{#foo bar}}`, `foo` is evaluated in the context of `bar`
+            // -- but it's what we shipped for 0.8.0.  The rationale is that
+            // `{{#foo bar}}` is sugar for `{{#with bar}}{{#foo}}...`.
+            if (dataCode) {
+              includeCode =
+                'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
+                includeCode + '; })';
+            }
           }
 
           // XXX BACK COMPAT - UI is the old name, Template is the new
