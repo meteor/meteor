@@ -85,7 +85,7 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
           return vdom;
         }
       },
-      componentDidUnmount: function () {
+      componentWillUnmount: function () {
         Blaze._destroyView(this.props.view);
       }
     });
