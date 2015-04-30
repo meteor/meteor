@@ -73,17 +73,17 @@ ToJSVisitor.def({
         if (tag.attrs['class']) {
           tag.attrs.className = tag.attrs['class'];
           delete tag.attrs['class'];
-          for (var prop in tag.attrs) {
-            if (typeof tag.attrs[prop] === 'string') {
-              attrsStrings.push('"' + prop + '":"' + tag.attrs[prop] + '"');
-            } else {
-              var propFunc = tag.attrs[prop].value
-              attrsStrings.push('"' + prop +
-                '":(function (propFunc) {' +
-                    'var props = propFunc();' +
-                    'return _.isArray(props) ? props.join("") : props' +
-                  '})(' + propFunc + ')');
-            }
+        }
+        for (var prop in tag.attrs) {
+          if (typeof tag.attrs[prop] === 'string') {
+            attrsStrings.push('"' + prop + '":"' + tag.attrs[prop] + '"');
+          } else {
+            var propFunc = tag.attrs[prop].value
+            attrsStrings.push('"' + prop +
+              '":(function (propFunc) {' +
+                  'var props = propFunc();' +
+                  'return _.isArray(props) ? props.join("") : props' +
+                '})(' + propFunc + ')');
           }
         }
         argsStrs.push('{' + attrsStrings.join(',') + '}');
