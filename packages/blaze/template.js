@@ -43,14 +43,40 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
   if (usingReact) {
     this.reactComponent = React.createClass({
       render: function () {
+        var self = this;
         var view = this.props.view;
-        var vdom = Blaze._withCurrentView(view, function () {
-          return renderFunction.call(view);
+        var rendered = false;
+        var vdom
+        // Optimization
+        // 
+        // First, we don't want the entire application to re-render when a
+        // deeply nested template's dependency changed. So we wrap our own
+        // render call inside Tracker.nonreactive to prevent it registering
+        // dependency on the root render autorun.
+        // 
+        // Then, we do our own autorun: on first call we render this component,
+        // and later on whenever a dependency changes, we simply call setState()
+        // on this component only.
+        Tracker.nonreactive(function () {
+          view.autorun(function () {
+            if (!rendered) {
+              Blaze._withCurrentView(view, function () {
+                vdom = renderFunction.call(view);
+              });
+              rendered = true;
+            } else {
+              self.setState({});
+            }
+          });
         });
         if (_.isArray(vdom)) {
+          // if the template has more than 1 top-level elements, it has to be
+          // wrapped inside a div because React Components must return only
+          // a single element.
           vdom.unshift(null);
           return React.DOM.div.apply(null, vdom);
         } else if (typeof vdom === 'string') {
+          // wrap string inside a span
           return React.DOM.span(null, vdom);
         } else {
           return vdom;
