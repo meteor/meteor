@@ -6,6 +6,9 @@ BlazeReact = {};
  */
 BlazeReact.createComponent = function (template, renderFunction) {
   return React.createClass({
+
+    mixins: [TemplateInstanceAPIMixin],
+
     componentWillMount: function () {
       // Optimization
       // 
@@ -32,9 +35,11 @@ BlazeReact.createComponent = function (template, renderFunction) {
       });
       fireCallbacks(this, template, 'created');
     },
+
     componentDidMount: function () {
       fireCallbacks(this, template, 'rendered');
     },
+
     render: function () {
       var view = this.props.view;
       var vdom = Blaze._withCurrentView(view, function () {
@@ -44,15 +49,19 @@ BlazeReact.createComponent = function (template, renderFunction) {
         // if the template has more than 1 top-level elements, it has to be
         // wrapped inside a div because React Components must return only
         // a single element.
+        this.isWrapped = true;
         vdom.unshift(null);
         return React.DOM.span.apply(null, vdom);
       } else if (typeof vdom === 'string') {
         // wrap string inside a span
+        this.isWrapped = true;
         return React.DOM.span(null, vdom);
       } else {
+        this.isWrapped = false;
         return vdom;
       }
     },
+
     componentWillUnmount: function () {
       Blaze._destroyView(this.props.view);
       fireCallbacks(this, template, 'destroyed');
@@ -140,4 +149,32 @@ BlazeReact.raw = function (value) {
       __html: value
     }
   });
+};
+
+// Template instance API mixin
+
+var TemplateInstanceAPIMixin = {};
+
+TemplateInstanceAPIMixin.$ = function (selector) {
+  var el = $(React.findDOMNode(this));
+  var els = el.find(selector);
+  if (!this.isWrapped) {
+    // we need to include the root node itself if we
+    // don't have a wrapper node.
+    els = els.add(el.filter(selector));
+  }
+  return els;
+};
+
+TemplateInstanceAPIMixin.findAll = function (selector) {
+  return Array.prototype.slice.call(this.$(selector));
+};
+
+TemplateInstanceAPIMixin.find = function (selector) {
+  var result = this.$(selector);
+  return result[0] || null;
+};
+
+TemplateInstanceAPIMixin.autorun = function (f) {
+  return this.props.view.autorun(f);
 };
