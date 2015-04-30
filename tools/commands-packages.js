@@ -1503,7 +1503,7 @@ main.registerCommand({
   maxArgs: Infinity,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, function (options) {
-  // If you are specifying packaging individually, you probably don't want to
+  // If you are specifying packages individually, you probably don't want to
   // update the release.
   if (options.args.length > 0) {
     options["packages-only"] = true;
@@ -1511,7 +1511,8 @@ main.registerCommand({
 
   // Some basic checks to make sure that this command is being used correctly.
   if (options["packages-only"] && options["patch"]) {
-    Console.error("There is no such thing as a patch update to packages.");
+    Console.error(
+      "The --patch option only applies to the release, not packages.");
     return 1;
   }
 
