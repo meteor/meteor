@@ -62,7 +62,16 @@ Template.body.addContent = function (renderFunc) {
 // This function does not use `this` and so it may be called
 // as `Meteor.startup(Template.body.renderIntoDocument)`.
 Template.body.renderToDocument = function () {
-  BlazeReact.render(Template.body, document.body);
+  // root view
+  var view = new Blaze.View();
+  view.template = Template.body;
+  Blaze._createView(view);
+  React.render(
+    React.createElement(Template.body.reactComponent, {
+      view: view
+    }),
+    document.body
+  );
 };
 
 // XXX COMPAT WITH 0.9.0
