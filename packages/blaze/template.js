@@ -42,11 +42,7 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
 
   if (usingReact) {
     this.reactComponent = React.createClass({
-      render: function () {
-        var self = this;
-        var view = this.props.view;
-        var rendered = false;
-        var vdom
+      componentWillMount: function () {
         // Optimization
         // 
         // First, we don't want the entire application to re-render when a
@@ -56,18 +52,25 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
         // 
         // Then, we do our own autorun: on first call we render this component,
         // and later on whenever a dependency changes, we simply call setState()
-        // on this component only.
+        // on this component only to trigger a local re-render.
+        var self = this;
+        var view = this.props.view;
+        var rendered = false;
         Tracker.nonreactive(function () {
           view.autorun(function () {
             if (!rendered) {
-              Blaze._withCurrentView(view, function () {
-                vdom = renderFunction.call(view);
-              });
+              renderFunction.call(view);
               rendered = true;
             } else {
               self.setState({});
             }
           });
+        });
+      },
+      render: function () {
+        var view = this.props.view;
+        var vdom = Blaze._withCurrentView(view, function () {
+          return renderFunction.call(view);
         });
         if (_.isArray(vdom)) {
           // if the template has more than 1 top-level elements, it has to be
