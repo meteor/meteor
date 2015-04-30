@@ -46,9 +46,11 @@ Template.__define__ = function (name, renderFunc) {
  */
 Template.body = new Template('body', function () {
   var self = this;
-  return React.DOM.div(null, _.map(Template.body.contentRenderFuncs, function (func) {
+  var contents = _.flatten(_.map(Template.body.contentRenderFuncs, function (func) {
     return func.apply(self);
   }));
+  contents.unshift(null); // props
+  return React.DOM.div.apply(null, contents);
 }, true);
 Template.body.contentRenderFuncs = []; // array of Blaze.Views
 Template.body.view = null;

@@ -55,11 +55,15 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   list = list && list.fetch
     ? list.fetch()
     : list;
-  return _.map(list, function (data) {
+  return _.flatten(_.map(list, function (data, i) {
     var content = BlazeReact._With(data, contentFunc, parentView);
     var res = content.length > 1 ? content : content[0];
+    if (shouldHaveKey) { // this also means there's only one element
+      // supply a key so React doesn't complain
+      res = React.cloneElement(res, { key: data._id || i });
+    }
     return res;
-  });
+  }));
 };
 
 BlazeReact.include = function (template, parentView) {
