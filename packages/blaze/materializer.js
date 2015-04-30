@@ -83,29 +83,6 @@ var materializeDOMInner = function (htmljs, intoArray, parentView, workStack) {
         Blaze._materializeView(htmljs, parentView, workStack, intoArray);
         return;
       }
-      if (React.isValidElement(htmljs)) {
-        var div = document.createElement('div'); // XXX shouldn't always be a div!
-        parentView.autorun(function () {
-          if (htmljs.props.children) {
-            var newChildren = _.map(htmljs.props.children, function(child) {
-              if (child instanceof Blaze.View) {
-                var view = child;
-                return Blaze._withCurrentView(parentView, function () {
-                  return view._render();
-                });
-              } else {
-                return child;
-              }
-            });
-
-            var activeReactEl = React.cloneElement(htmljs, {children: newChildren});
-          }
-
-          React.render(activeReactEl, div);
-        });
-        intoArray.push(div);
-        return;
-      }
     }
   }
 
