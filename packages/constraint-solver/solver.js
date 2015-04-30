@@ -570,6 +570,17 @@ CS.Solver.prototype.setSolution = function (solution) {
   if (! self.solution) {
     throw new Error("Unexpected unsatisfiability");
   }
+  // When we query a Solution, we always want to treat unknown variables
+  // as "false".  Logic Solver normally throws an error if you ask it
+  // to evaluate a formula containing a variable that isn't found in any
+  // constraints, as a courtesy to help catch bugs, but we treat
+  // variables as an open class of predicates ("foo" means package foo
+  // is selected, for example), and we don't ensure that every package
+  // or package version we might ask about is registered with the Solver.
+  // For example, when we go to explain a conflict or generate an error
+  // about an unknown package, we may ask about packages that were
+  // forbidden in an early analysis of the problem and never entered
+  // into the Solver.
   self.solution.ignoreUnknownVariables();
 };
 
