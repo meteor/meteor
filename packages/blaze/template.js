@@ -43,7 +43,10 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
   if (usingReact) {
     this.reactComponent = React.createClass({
       render: function () {
-        var vdom = renderFunction.call(this.props.view);
+        var view = this.props.view;
+        var vdom = Blaze._withCurrentView(view, function () {
+          return renderFunction.call(view);
+        });
         if (_.isArray(vdom)) {
           vdom.unshift(null);
           return React.DOM.div.apply(null, vdom);
@@ -52,6 +55,9 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
         } else {
           return vdom;
         }
+      },
+      componentDidUnmount: function () {
+        Blaze._destroyView(this.props.view);
       }
     });
   }

@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.export(['Blaze', 'UI', 'Handlebars']);
+  api.export(['Blaze', 'UI', 'Handlebars', 'BlazeReact']);
   api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('tracker');
   api.use('underscore'); // only the subset in microscore.js
@@ -24,7 +24,8 @@ Package.onUse(function (api) {
     'events.js',
     'attrs.js',
     'materializer.js',
-    'react.js'
+    'react.js',
+    'blaze-react.js'
   ], 'client');
 
   // client and server

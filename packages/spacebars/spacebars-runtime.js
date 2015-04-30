@@ -34,20 +34,6 @@ Spacebars.include = function (templateOrFunction, contentFunc, elseFunc) {
   return view;
 };
 
-Spacebars.reactInclude = function (template, eachData) {
-  var view = template.constructView();
-  Blaze._createView(view);
-  if (eachData) {
-    var originalLookup = view.lookup;
-    view.lookup = function (name) {
-      return eachData[name] || originalLookup.apply(view, arguments);
-    };
-  }
-  return React.createElement(template.reactComponent, {
-    view: view
-  });
-};
-
 // Executes `{{foo bar baz}}` when called on `(foo, bar, baz)`.
 // If `bar` and `baz` are functions, they are called before
 // `foo` is called on them.
