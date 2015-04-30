@@ -24,8 +24,10 @@ if (Meteor.isServer) {
       // parser is a later.parse object
       return parser.text('every 5 seconds');
     }, 
-    job: function() {
-      console.log('crunching numbers')
+    job: function(intendedAt) {
+      console.log('crunching numbers');
+      console.log('job should be running at:');
+      console.log(intendedAt);
     }
   });
   
