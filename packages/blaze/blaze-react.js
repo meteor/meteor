@@ -21,7 +21,7 @@ BlazeReact.createComponent = function (template, renderFunction) {
       // and later on whenever a dependency changes, we simply call setState()
       // on this component only to trigger a local re-render.
       var self = this;
-      var view = this.props.view;
+      var view = this.view = this.props.view;
       var rendered = false;
       Tracker.nonreactive(function () {
         view.autorun(function () {
@@ -36,6 +36,11 @@ BlazeReact.createComponent = function (template, renderFunction) {
       view.templateInstance = function () {
         return self;
       };
+      // subscription state
+      this._allSubsReadyDep = new Tracker.Dependency();
+      this._allSubsReady = false;
+      this._subscriptionHandles = {};
+      // fire created callbacks
       fireCallbacks(this, template, 'created');
     },
 
@@ -228,15 +233,10 @@ TemplateInstanceAPIMixin.$ = function (selector) {
   return els;
 };
 
-TemplateInstanceAPIMixin.findAll = function (selector) {
-  return Array.prototype.slice.call(this.$(selector));
-};
-
-TemplateInstanceAPIMixin.find = function (selector) {
-  var result = this.$(selector);
-  return result[0] || null;
-};
-
-TemplateInstanceAPIMixin.autorun = function (f) {
-  return this.props.view.autorun(f);
-};
+// just reuse Blaze.TemplateInstance prototype methods
+_.each(
+  ['find', 'findAll', 'autorun', 'subscribe', 'subscriptionsReady'],
+  function (method) {
+    TemplateInstanceAPIMixin[method] = Blaze.TemplateInstance.prototype[method];
+  }
+);

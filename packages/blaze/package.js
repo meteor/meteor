@@ -23,9 +23,7 @@ Package.onUse(function (api) {
     'domrange.js',
     'events.js',
     'attrs.js',
-    'materializer.js',
-    'react.js',
-    'blaze-react.js'
+    'materializer.js'
   ], 'client');
 
   // client and server
@@ -35,7 +33,9 @@ Package.onUse(function (api) {
     'builtins.js',
     'lookup.js',
     'template.js',
-    'backcompat.js'
+    'backcompat.js',
+    'react.js',
+    'blaze-react.js'
   ]);
 });
 
