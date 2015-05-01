@@ -183,10 +183,8 @@ _.extend(CodeGen.prototype, {
           var includeCode
 
           if (this.genReactCode) {
-            includeArgs.push('view');
-            if (dataCode) {
-              includeArgs.push(dataCode);
-            }
+            includeArgs.push('view', dataCode || 'null',
+                              content || 'null', elseContent || 'null');
             includeCode = 'BlazeReact.include(' + includeArgs.join(', ') + ')';
           } else {
             if (content) {
@@ -207,14 +205,13 @@ _.extend(CodeGen.prototype, {
                 'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
                 includeCode + '; })';
             }
-          }
-
-          // XXX BACK COMPAT - UI is the old name, Template is the new
-          if ((path[0] === 'UI' || path[0] === 'Template') &&
-              (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
-            // Call contentBlock and elseBlock in the appropriate scope
-            includeCode = 'Blaze._InOuterTemplateScope(view, function () { return '
-              + includeCode + '; })';
+            // XXX BACK COMPAT - UI is the old name, Template is the new
+            if ((path[0] === 'UI' || path[0] === 'Template') &&
+                (path[1] === 'contentBlock' || path[1] === 'elseBlock')) {
+              // Call contentBlock and elseBlock in the appropriate scope
+              includeCode = 'Blaze._InOuterTemplateScope(view, function () { return '
+                + includeCode + '; })';
+            }
           }
 
           return BlazeTools.EmitCode(includeCode);

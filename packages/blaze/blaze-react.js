@@ -199,33 +199,42 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   }));
 };
 
-BlazeReact.include = function (template, parentView, data) {
+BlazeReact.include = function (content, parentView, data, contentFunc, elseContentFunc) {
   if (typeof data === 'function') {
     data = data();
   }
-  // three possible types for template here:
+  // three possible types for content here:
   // 1. a Blaze.Template (static include)
   // 2. a raw React Component
-  // 3. a function (dynamic inclusion)
-  if (BlazeReact.isReactComponent(template)) {
+  // 3. a function (dynamic inclusion or content block render function)
+  if (BlazeReact.isReactComponent(content)) {
     // just pass the data as props to the raw component
-    return React.createElement(template, data || null);
+    return React.createElement(content, data || null);
   } else {
-    if (typeof template === 'function') {
-      template = template();
-      if (! Blaze.isTemplate(template)) {
-        // in __dynamicWithDataContext, {{> .. ../data}} here we'd get a
-        // context object in the form of { template: ..., data: ... }
-        data = template.data;
-        template = Template[template.template];
+    if (typeof content === 'function') {
+      content = content();
+      if (! Blaze.isTemplate(content)) {
+        if (_.isArray(content)) {
+          // an already-rendered content block, just return it
+          return content.length > 1 ? content : content[0];
+        } else {
+          // in __dynamicWithDataContext, {{> .. ../data}} here we'd get a
+          // context object in the form of { template: ..., data: ... }
+          data = content.data;
+          content = Template[content.template];
+        }
       }
     }
+    // if we get here, content has been resolved as a Blaze.Template instance.
+    var template = content;
     var view = data
       ? Blaze.With(data)
       : new Blaze.View();
     // instead of calling template.constructView, we can simply set the view's
     // template to enable template helper lookups.
     view.template = template;
+    view.templateContentBlock = contentFunc;
+    view.templateElseBlock = elseContentFunc;
     Blaze._createView(view, parentView);
     return React.createElement(template._getReactComponent(), {
       view: view
