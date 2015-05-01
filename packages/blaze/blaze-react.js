@@ -117,9 +117,13 @@ BlazeReact.createComponent = function (template) {
 
 function fireCallbacks (component, template, type) {
   var callbacks = template._getCallbacks(type);
-  for (var i = 0, l = callbacks.length; i < l; i++) {
-    callbacks[i].call(component);
-  }
+  Template._withTemplateInstanceFunc(
+    function () { return component; },
+    function () {
+      for (var i = 0, N = callbacks.length; i < N; i++) {
+        callbacks[i].call(component);
+      }
+    });
 }
 
 // the internal with that renders a content block
