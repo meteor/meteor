@@ -50,7 +50,6 @@ BlazeReact.createComponent = function (template) {
       // that's the one we do the autorun with, and is the one we need to
       // destroy when the component unmounts.
       var view = this.view = this.props.view;
-      console.log('mounting: ' + view.name)
       var rendered = false;
       this._mounted = false;
       Tracker.nonreactive(function () {
@@ -83,7 +82,6 @@ BlazeReact.createComponent = function (template) {
       fireCallbacks(this, template, 'rendered');
       var self = this;
       var view = this.props.view;
-      console.log('mounted: ' + view.name)
       // initialize events
       _.each(template.__eventMaps, function (m) {
         BlazeReact._addEventMap(view, m, view, self);
@@ -92,7 +90,6 @@ BlazeReact.createComponent = function (template) {
 
     render: function () {
       var view = this.props.view;
-      console.log('rendering: ' + view.name)
       var vdom = Blaze._withCurrentView(view, function () {
         return template.renderFunction.call(view);
       });

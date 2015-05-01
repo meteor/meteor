@@ -134,9 +134,6 @@ _.extend(CodeGen.prototype, {
           if (elseContentBlock)
             callArgs.push(elseContentBlock);
 
-          // XXX hack the each
-          // temporarily patch the outer scope `view` to check for the local
-          // data context first.
           if (this.genReactCode) {
             var code
             if (path[0] === 'each' || path[0] === 'with') {
