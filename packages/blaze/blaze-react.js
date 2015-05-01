@@ -199,22 +199,35 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   }));
 };
 
-BlazeReact.include = function (templateOrComponent, parentView, data) {
+BlazeReact.include = function (template, parentView, data) {
   if (typeof data === 'function') {
     data = data();
   }
-  if (BlazeReact.isReactComponent(templateOrComponent)) {
+  // three possible types for template here:
+  // 1. a Blaze.Template (static include)
+  // 2. a raw React Component
+  // 3. a function (dynamic inclusion)
+  if (BlazeReact.isReactComponent(template)) {
     // just pass the data as props to the raw component
-    return React.createElement(templateOrComponent, data || null);
+    return React.createElement(template, data || null);
   } else {
+    if (typeof template === 'function') {
+      template = template();
+      if (! Blaze.isTemplate(template)) {
+        // in __dynamicWithDataContext, {{> .. ../data}} here we'd get a
+        // context object in the form of { template: ..., data: ... }
+        data = template.data;
+        template = Template[template.template];
+      }
+    }
     var view = data
       ? Blaze.With(data)
       : new Blaze.View();
     // instead of calling template.constructView, we can simply set the view's
     // template to enable template helper lookups.
-    view.template = templateOrComponent;
+    view.template = template;
     Blaze._createView(view, parentView);
-    return React.createElement(templateOrComponent._getReactComponent(), {
+    return React.createElement(template._getReactComponent(), {
       view: view
     });
   }
