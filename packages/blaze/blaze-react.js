@@ -1,5 +1,8 @@
 BlazeReact = {};
 
+// raw components registry
+BlazeReact.components = {};
+
 /**
  * Create a ReactComponnet class from a render function.
  * This component is attached to a Blaze.Template.
@@ -7,6 +10,9 @@ BlazeReact = {};
 BlazeReact.createComponent = function (template, renderFunction) {
   return React.createClass({
 
+    // Mixin template instance API.
+    // Note that here we are using the component instance as `this` inside
+    // lifecycle callbacks instead of a real template instance.
     mixins: [TemplateInstanceAPIMixin],
 
     componentWillMount: function () {
@@ -156,20 +162,25 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   }));
 };
 
-BlazeReact.include = function (template, parentView, data) {
+BlazeReact.include = function (templateOrComponent, parentView, data) {
   if (typeof data === 'function') {
     data = data();
   }
-  var view = data
-    ? Blaze.With(data)
-    : new Blaze.View();
-  // instead of calling template.constructView, we can simply set the view's
-  // template to enable template helper lookups.
-  view.template = template;
-  Blaze._createView(view, parentView);
-  return React.createElement(template.reactComponent, {
-    view: view
-  });
+  if (BlazeReact.isReactComponent(templateOrComponent)) {
+    // just pass the data as props to the raw component
+    return React.createElement(templateOrComponent, data || null);
+  } else {
+    var view = data
+      ? Blaze.With(data)
+      : new Blaze.View();
+    // instead of calling template.constructView, we can simply set the view's
+    // template to enable template helper lookups.
+    view.template = templateOrComponent;
+    Blaze._createView(view, parentView);
+    return React.createElement(templateOrComponent.reactComponent, {
+      view: view
+    });
+  }
 };
 
 BlazeReact.raw = function (value) {
@@ -240,3 +251,11 @@ _.each(
     TemplateInstanceAPIMixin[method] = Blaze.TemplateInstance.prototype[method];
   }
 );
+
+// Utils
+
+//XXX A non-rigid check to tell if something is a ReactComponent class.
+BlazeReact.isReactComponent = function (component) {
+  return typeof component === 'function' &&
+    component.prototype.setState;
+}

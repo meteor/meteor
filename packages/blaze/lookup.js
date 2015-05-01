@@ -159,6 +159,12 @@ Blaze.View.prototype.lookup = function (name, _options) {
       boundTmplInstance);
   }
 
+  // 5. look up a React component
+  if (lookupTemplate && (name in BlazeReact.components) &&
+      BlazeReact.isReactComponent(BlazeReact.components[name])) {
+    return BlazeReact.components[name];
+  }
+
   // 5. throw an error when called: nothing is found
   return function () {
     var isCalledAsFunction = (arguments.length > 0);
