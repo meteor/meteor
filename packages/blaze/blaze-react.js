@@ -84,7 +84,11 @@ BlazeReact.createComponent = function (template) {
         return template.renderFunction.call(view);
       });
       var wrapperProps = {
-        'data-blaze-view': view._id
+        ref: function (comp) {
+          if (comp) {
+            React.findDOMNode(comp).$blaze_view = view;
+          }
+        }
       };
       if (_.isArray(vdom)) {
         // if the template has more than 1 top-level elements, it has to be
@@ -132,14 +136,19 @@ BlazeReact._With = function (data, contentFunc, parentView) {
   // data context.
   return Blaze._withCurrentView(view, function () {
     return _.map(contentFunc.call(null, view), function (c) {
-      // for every top-level element in the with block, we need to set the
-      // data-blaze-view attribute so that event handlers can pick up the
-      // correct data context.
+      // for every top-level element in the with block, we set a
+      // `$blaze_view` property on the rendered DOM element (which is
+      // not visible in the DOM inspector).  this is so that event
+      // handlers can pick up the correct data context.
       if (typeof c.type === 'string') {
         // normal element
-        return React.cloneElement(c, { 'data-blaze-view': view._id });
+        return React.cloneElement(c, { ref: function (comp) {
+          if (comp) {
+            React.findDOMNode(comp).$blaze_view = view;
+          }
+        }});
       } else {
-        // component will set its own blaze-view
+        // component will set its own `$blaze_view` property
         return c;
       }
     });

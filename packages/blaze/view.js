@@ -1,21 +1,3 @@
-// XXX BlazeReact specific
-// 
-// In order to locate the correct data context for event handlers, we need to
-// be able to get the associated view of any rendered DOM Node. However when
-// rendering with React, we only have access to virtual DOM Nodes and can only
-// persist attributes to the eventual rendered real DOM nodes. Therefore we
-// cannot attach views directly to DOM nodes (as we are attaching DOMRanges
-// in normal Blaze). Instead we give each Blaze.View a unique id and set that
-// on the virtual nodes as an attribute. This would get rendered to the acutal
-// DOM and we can use that information to locate the view and get the correct
-// data context.
-var view_uid = 0;
-var views = {};
-
-Blaze.getViewById = function (id) {
-  return views[id] || null;
-};
-
 /// [new] Blaze.View([name], renderMethod)
 ///
 /// Blaze.View is the building block of reactive DOM.  Views have
@@ -68,8 +50,6 @@ Blaze.View = function (name, render) {
     render = name;
     name = '';
   }
-  this._id = view_uid++;
-  views[this._id] = this;
   this.name = name;
   this._render = render;
 
@@ -521,7 +501,6 @@ Blaze._destroyView = function (view, _skipNodes) {
   if (view.isDestroyed)
     return;
   view.isDestroyed = true;
-  views[view._id] = null;
 
   Blaze._fireCallbacks(view, 'destroyed');
 
@@ -878,14 +857,12 @@ Blaze._getElementView = function (elem, name) {
 
   if (!range) {
     // a react-rendered element!
-    var viewId = null;
-    while (elem && ! viewId) {
-      viewId = elem.getAttribute('data-blaze-view');
-      if (! viewId) {
+    while (elem && ! view) {
+      view = elem.$blaze_view;
+      if (! view) {
         elem = elem.parentNode;
       }
     }
-    view = Blaze.getViewById(viewId);
   }
 
   if (name) {
