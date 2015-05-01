@@ -3,17 +3,35 @@ BlazeReact = {};
 // raw components registry
 BlazeReact.components = {};
 
+// allow Templates to add mixins to the underlying react component
+Blaze.Template.prototype.reactMixin = function (mixin) {
+  if (this.__reactMixins) {
+    this.__reactMixins.push(mixin);
+  } else {
+    throw new Error('cannot add React mixin to non-React template.');
+  }
+};
+
+// This method allows us to defer the definition of a template's ReactComponent
+// class until first render so that it can have access to user-defined mixins.
+Blaze.Template.prototype._getReactComponent = function () {
+  if (!this.__reactComponent) {
+    this.__reactComponent = BlazeReact.createComponent(this);
+  }
+  return this.__reactComponent;
+};
+
 /**
  * Create a ReactComponnet class from a render function.
  * This component is attached to a Blaze.Template.
  */
-BlazeReact.createComponent = function (template, renderFunction) {
+BlazeReact.createComponent = function (template) {
   return React.createClass({
 
     // Mixin template instance API.
     // Note that here we are using the component instance as `this` inside
     // lifecycle callbacks instead of a real template instance.
-    mixins: [TemplateInstanceAPIMixin],
+    mixins: [TemplateInstanceAPIMixin].concat(template.__reactMixins),
 
     componentWillMount: function () {
       // Optimization
@@ -32,7 +50,7 @@ BlazeReact.createComponent = function (template, renderFunction) {
       Tracker.nonreactive(function () {
         view.autorun(function () {
           if (!rendered) {
-            renderFunction.call(view);
+            template.renderFunction.call(view);
             rendered = true;
           } else {
             self.setState({});
@@ -63,7 +81,7 @@ BlazeReact.createComponent = function (template, renderFunction) {
     render: function () {
       var view = this.props.view;
       var vdom = Blaze._withCurrentView(view, function () {
-        return renderFunction.call(view);
+        return template.renderFunction.call(view);
       });
       var wrapperProps = {
         'data-blaze-view': view._id
@@ -177,7 +195,7 @@ BlazeReact.include = function (templateOrComponent, parentView, data) {
     // template to enable template helper lookups.
     view.template = templateOrComponent;
     Blaze._createView(view, parentView);
-    return React.createElement(templateOrComponent.reactComponent, {
+    return React.createElement(templateOrComponent._getReactComponent(), {
       view: view
     });
   }

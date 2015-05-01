@@ -41,7 +41,8 @@ Blaze.Template = function (viewName, renderFunction, usingReact) {
   };
 
   if (usingReact) {
-    this.reactComponent = BlazeReact.createComponent(this, renderFunction);
+    this.__reactMixins = [];
+    this.__reactComponent = null;
   }
 };
 var Template = Blaze.Template;

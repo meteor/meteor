@@ -67,7 +67,7 @@ Template.body.renderToDocument = function () {
   view.template = Template.body;
   Blaze._createView(view);
   React.render(
-    React.createElement(Template.body.reactComponent, {
+    React.createElement(Template.body._getReactComponent(), {
       view: view
     }),
     document.body
