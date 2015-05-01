@@ -81,7 +81,7 @@ BlazeReact.createComponent = function (template) {
       this._mounted = true;
       fireCallbacks(this, template, 'rendered');
       var self = this;
-      var view = this.props.view;
+      var view = this.view;
       // initialize events
       _.each(template.__eventMaps, function (m) {
         BlazeReact._addEventMap(view, m, view, self);
