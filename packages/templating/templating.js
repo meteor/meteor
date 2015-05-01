@@ -63,7 +63,7 @@ Template.body.addContent = function (renderFunc) {
 // as `Meteor.startup(Template.body.renderIntoDocument)`.
 Template.body.renderToDocument = function () {
   // root view
-  var view = new Blaze.View();
+  var view = new Blaze.View('Template.body');
   view.template = Template.body;
   Blaze._createView(view);
   React.render(

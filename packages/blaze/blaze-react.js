@@ -45,14 +45,24 @@ BlazeReact.createComponent = function (template) {
       // and later on whenever a dependency changes, we simply call setState()
       // on this component only to trigger a local re-render.
       var self = this;
+      // there will actually be a new view created every time the component
+      // re-renders, however we want to keep reference to the first one because
+      // that's the one we do the autorun with, and is the one we need to
+      // destroy when the component unmounts.
       var view = this.view = this.props.view;
+      console.log('mounting: ' + view.name)
       var rendered = false;
+      this._mounted = false;
       Tracker.nonreactive(function () {
         view.autorun(function () {
           if (!rendered) {
             template.renderFunction.call(view);
             rendered = true;
-          } else {
+          } else if (self._mounted) {
+            // it's possible that a dep collected in the render function above
+            // changes before this component is mounted, in that case React
+            // will warn about setState being called before the component is
+            // mounted.
             self.setState({});
           }
         });
@@ -69,9 +79,11 @@ BlazeReact.createComponent = function (template) {
     },
 
     componentDidMount: function () {
+      this._mounted = true;
       fireCallbacks(this, template, 'rendered');
       var self = this;
       var view = this.props.view;
+      console.log('mounted: ' + view.name)
       // initialize events
       _.each(template.__eventMaps, function (m) {
         BlazeReact._addEventMap(view, m, view, self);
@@ -80,6 +92,7 @@ BlazeReact.createComponent = function (template) {
 
     render: function () {
       var view = this.props.view;
+      console.log('rendering: ' + view.name)
       var vdom = Blaze._withCurrentView(view, function () {
         return template.renderFunction.call(view);
       });
@@ -95,23 +108,24 @@ BlazeReact.createComponent = function (template) {
         // wrapped inside a div because React Components must return only
         // a single element.
         this.isWrapped = true;
+        vdom = _.flatten(vdom);
         vdom.unshift(wrapperProps);
         return React.DOM.span.apply(null, vdom);
-      } else if (typeof vdom === 'string') {
+      } else if (typeof vdom === 'string' || !vdom) {
         // wrap string inside a span
         this.isWrapped = true;
         return React.DOM.span(wrapperProps, vdom);
-      } else {
+      } else if (React.isValidElement(vdom)) {
         this.isWrapped = false;
-        if (vdom) {
-          vdom = React.cloneElement(vdom, wrapperProps);
-        }
+        vdom = React.cloneElement(vdom, wrapperProps);
         return vdom;
+      } else { 
+        throw new Error('unexpected React render result: ' + vdom);
       }
     },
 
     componentWillUnmount: function () {
-      Blaze._destroyView(this.props.view);
+      Blaze._destroyView(this.view);
       fireCallbacks(this, template, 'destroyed');
     }
   });
@@ -150,7 +164,7 @@ BlazeReact._With = function (data, contentFunc, parentView) {
       // `$blaze_view` property on the rendered DOM element (which is
       // not visible in the DOM inspector).  this is so that event
       // handlers can pick up the correct data context.
-      if (c && typeof c.type === 'string') {
+      if (React.isValidElement(c) && typeof c.type === 'string') {
         // normal element
         return React.cloneElement(c, { ref: function (comp) {
           if (comp) {
@@ -188,15 +202,16 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   list = list && list.fetch
     ? list.fetch()
     : list;
-  return _.flatten(_.map(list, function (data, i) {
+  var block = _.flatten(_.map(list, function (data, i) {
     var content = BlazeReact._With(data, contentFunc, parentView);
     var res = content.length > 1 ? content : content[0];
-    if (shouldHaveKey && res) { // this also means there's only one element
+    if (shouldHaveKey && React.isValidElement(res)) { // this also means there's only one element
       // supply a key so React doesn't complain
       res = React.cloneElement(res, { key: data._id || i });
     }
     return res;
   }));
+  return block;
 };
 
 BlazeReact.include = function (content, parentView, data, contentFunc, elseContentFunc) {
@@ -229,7 +244,7 @@ BlazeReact.include = function (content, parentView, data, contentFunc, elseConte
     var template = content;
     var view = data
       ? Blaze.With(data)
-      : new Blaze.View();
+      : new Blaze.View(template.viewName);
     // instead of calling template.constructView, we can simply set the view's
     // template to enable template helper lookups.
     view.template = template;
