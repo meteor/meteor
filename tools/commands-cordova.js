@@ -1443,7 +1443,8 @@ var consumeControlFile = function (
   // set some defaults different from the Phonegap/Cordova defaults
   var additionalConfiguration = {
     'webviewbounce': false,
-    'DisallowOverscroll': true
+    'DisallowOverscroll': true,
+    'deployment-target': "7.0"
   };
 
   if (projectContext.packageMap.getInfo('launch-screen')) {
