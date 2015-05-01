@@ -103,7 +103,9 @@ BlazeReact.createComponent = function (template) {
         return React.DOM.span(wrapperProps, vdom);
       } else {
         this.isWrapped = false;
-        vdom = React.cloneElement(vdom, wrapperProps);
+        if (vdom) {
+          vdom = React.cloneElement(vdom, wrapperProps);
+        }
         return vdom;
       }
     },
@@ -126,6 +128,10 @@ function fireCallbacks (component, template, type) {
     });
 }
 
+//
+// Built-in Render Helpers
+//
+
 // the internal with that renders a content block
 // with a data context.
 BlazeReact._With = function (data, contentFunc, parentView) {
@@ -144,7 +150,7 @@ BlazeReact._With = function (data, contentFunc, parentView) {
       // `$blaze_view` property on the rendered DOM element (which is
       // not visible in the DOM inspector).  this is so that event
       // handlers can pick up the correct data context.
-      if (typeof c.type === 'string') {
+      if (c && typeof c.type === 'string') {
         // normal element
         return React.cloneElement(c, { ref: function (comp) {
           if (comp) {
@@ -185,7 +191,7 @@ BlazeReact.Each = function (dataFunc, contentFunc, parentView, shouldHaveKey) {
   return _.flatten(_.map(list, function (data, i) {
     var content = BlazeReact._With(data, contentFunc, parentView);
     var res = content.length > 1 ? content : content[0];
-    if (shouldHaveKey) { // this also means there's only one element
+    if (shouldHaveKey && res) { // this also means there's only one element
       // supply a key so React doesn't complain
       res = React.cloneElement(res, { key: data._id || i });
     }
