@@ -110,7 +110,10 @@ ToJSVisitor.def({
     return this.generateCall('HTML.Comment', null, [comment.value]);
   },
   visitCharRef: function (charRef) {
-    return '"' + charRef.str + '"';
+    return this.genReactCode
+      ? ('"' + charRef.str + '"')
+      : this.generateCall('HTML.CharRef',
+                          {html: charRef.html, str: charRef.str});
   },
   visitRaw: function (raw) {
     return this.generateCall('HTML.Raw', null, [raw.value]);
