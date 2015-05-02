@@ -4,7 +4,7 @@ var buildmessage = require('./buildmessage');
 var watch = require('./watch.js');
 
 var packageDot = function (name) {
-  if (/^[a-zA-Z0-9]*$/.exec(name))
+  if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name))
     return "Package." + name;
   else
     return "Package['" + name + "']";
