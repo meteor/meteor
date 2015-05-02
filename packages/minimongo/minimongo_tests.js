@@ -2244,6 +2244,16 @@ Tinytest.add("minimongo - modify", function (test) {
     {a: [1, 2, 3]});
   modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99, $slice: -2}}},
     {a: [2, 3]});
+  modify(
+    {a: [{x: 1}, {x: 2}]},
+    {$push: {a: {$each: [{x: 3}], $position: 0, $sort: {x: 1}, $slice: -3}}},
+    {a: [{x: 1}, {x: 2}, {x: 3}]}
+  );
+  modify(
+    {a: [{x: 1}, {x: 2}]},
+    {$push: {a: {$each: [{x: 3}], $position: 0, $sort: {x: 1}, $slice: 0}}},
+    {a: []}
+  );
 
 
   // $pushAll
