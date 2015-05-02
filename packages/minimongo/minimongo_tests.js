@@ -2229,6 +2229,22 @@ Tinytest.add("minimongo - modify", function (test) {
     {a: [{x: 3}, {x: 4}]});
   modify({}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
   modify({a: [1, 2]}, {$push: {a: {$each: [1, 2, 3], $slice: 0}}}, {a: []});
+  // $push with $position modifier
+  // No negative number for $position
+  exception({a: []}, {$push: {a: {$each: [0], $position: -1}}});
+  modify({a: [1, 2]}, {$push: {a: {$each: [0], $position: 0}}},
+    {a: [0, 1, 2]});
+  modify({a: [1, 2]}, {$push: {a: {$each: [-1, 0], $position: 0}}},
+    {a: [-1, 0, 1, 2]});
+  modify({a: [1, 3]}, {$push: {a: {$each: [2], $position: 1}}}, {a: [1, 2, 3]});
+  modify({a: [1, 4]}, {$push: {a: {$each: [2, 3], $position: 1}}},
+    {a: [1, 2, 3, 4]});
+  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 3}}}, {a: [1, 2, 3]});
+  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99}}},
+    {a: [1, 2, 3]});
+  modify({a: [1, 2]}, {$push: {a: {$each: [3], $position: 99, $slice: -2}}},
+    {a: [2, 3]});
+
 
   // $pushAll
   modify({}, {$pushAll: {a: [1]}}, {a: [1]});

@@ -226,10 +226,21 @@ var MODIFIERS = {
       return;
     }
 
-    // Fancy mode: $each (and maybe $slice and $sort)
+    // Fancy mode: $each (and maybe $slice and $sort and $position)
     var toPush = arg.$each;
     if (!(toPush instanceof Array))
       throw MinimongoError("$each must be an array");
+
+    // Parse $position
+    var position = undefined;
+    if ('$position' in arg) {
+      if (typeof arg.$position !== "number")
+        throw MinimongoError("$position must be a numeric value");
+      // XXX should check to make sure integer
+      if (arg.$position < 0)
+        throw MinimongoError("$position in $push must be zero or positive");
+      position = arg.$position;
+    }
 
     // Parse $slice.
     var slice = undefined;
@@ -261,8 +272,15 @@ var MODIFIERS = {
     }
 
     // Actually push.
-    for (var j = 0; j < toPush.length; j++)
-      target[field].push(EJSON.clone(toPush[j]));
+    if (position === undefined) {
+      for (var j = 0; j < toPush.length; j++)
+        target[field].push(EJSON.clone(toPush[j]));
+    } else {
+      var spliceArguments = [position, 0];
+      for (var j = 0; j < toPush.length; j++)
+        spliceArguments.push(EJSON.clone(toPush[j]));
+      Array.prototype.splice.apply(target[field], spliceArguments);
+    }
 
     // Actually sort.
     if (sortFunction)
