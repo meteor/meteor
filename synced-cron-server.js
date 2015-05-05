@@ -163,6 +163,17 @@ SyncedCron.remove = function(jobName) {
   }
 }
 
+// Pause processing, but do not remove jobs so that the start method will
+// restart existing jobs
+SyncedCron.pause = function() {
+  if (this.running) {
+    _.each(this._entries, function(entry) {
+      entry._timer.clear();
+    });
+    this.running = false;
+  }
+}
+
 // Stop processing and remove ALL jobs
 SyncedCron.stop = function() {
   _.each(this._entries, function(entry, name) {
