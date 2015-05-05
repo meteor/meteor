@@ -67,15 +67,25 @@ var loadOrderSort = function (templateExtensions) {
       return (islib_a ? -1 : 1);
     }
 
+    var a_parts = a.split(files.pathSep);
+    var b_parts = b.split(files.pathSep);
+
     // deeper paths loaded first.
-    var len_a = a.split(files.pathSep).length;
-    var len_b = b.split(files.pathSep).length;
-    if (len_a !== len_b) {
-      return (len_a < len_b ? 1 : -1);
+    var len_a = a_parts.length;
+    var len_b = b_parts.length;
+    if (len_a < len_b) return 1;
+    if (len_b < len_a) return -1;
+
+    // Otherwise compare path components lexicographically.
+    for (var i = 0; i < len_a; ++i) {
+      var a_part = a_parts[i];
+      var b_part = b_parts[i];
+      if (a_part < b_part) return -1;
+      if (b_part < a_part) return 1;
     }
 
-    // otherwise alphabetical
-    return (a < b ? -1 : 1);
+    // Never reached unless there are somehow duplicate paths.
+    return 0;
   };
 };
 
