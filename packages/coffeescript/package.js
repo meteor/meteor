@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.6"
+  version: "1.0.7"
 });
 
 Package.registerBuildPlugin({
@@ -9,7 +9,10 @@ Package.registerBuildPlugin({
   sources: [
     'plugin/compile-coffeescript.js'
   ],
-  npmDependencies: {"coffee-script": "1.7.1", "source-map": "0.1.32"}
+  npmDependencies: {
+    "coffee-script": "1.9.2",
+    "source-map": "0.4.2"
+  }
 });
 
 Package.onTest(function (api) {
