@@ -6,7 +6,6 @@ var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var querystring = require('querystring');
 var url = require('url');
-var Future = require('fibers/future');
 var isopackets = require('../tool-env/isopackets.js');
 var Console = require('../console/console.js').Console;
 
@@ -52,21 +51,20 @@ var loggedInAccountsConnection = function (token) {
     config.getAuthDDPUrl()
   );
 
-  var fut = new Future;
-  connection.apply(
-    'login',
-    [{ resume: token }],
-    { wait: true },
-    function (err, result) {
-      fut['return']({ err: err, result: result });
-    }
-  );
-  var outcome = fut.wait();
+  return new Promise(function (resolve, reject) {
+    connection.apply(
+      'login',
+      [{ resume: token }],
+      { wait: true },
+      function (err) {
+        err ? reject(err) : resolve(connection);
+      }
+    );
 
-  if (outcome.err) {
+  }).catch(function (err) {
     connection.close();
 
-    if (outcome.err.error === 403) {
+    if (err.error === 403) {
       // This is not an ideal value for the error code, but it means
       // "server rejected our access token". For example, it expired
       // or we revoked it from the web.
@@ -74,10 +72,9 @@ var loggedInAccountsConnection = function (token) {
     }
 
     // Something else went wrong
-    throw outcome.err;
-  }
+    throw err;
 
-  return connection;
+  }).await();
 };
 
 // The accounts server has some wrapped methods that take and return
@@ -98,30 +95,45 @@ var sessionMethodCaller = function (methodName, options) {
     args.push({
       session: auth.getSessionId(config.getAccountsDomain()) || null
     });
-    var fut = new Future();
+
+    var timer;
     var conn = options.connection || openAccountsConnection();
-    conn.apply(methodName, args, fiberHelpers.firstTimeResolver(fut));
-    if (options.timeout !== undefined) {
-      var timer = setTimeout(fiberHelpers.bindEnvironment(function () {
-        if (!fut.isResolved()) {
-          fut.throw(new Error('Method call timed out'));
+
+    function cleanUp() {
+      timer && clearTimeout(timer);
+      options.connection || conn.close();
+    }
+
+    return new Promise(function (resolve, reject) {
+      conn.apply(methodName, args, function (err, res) {
+        err ? reject(err) : resolve(res);
+      });
+
+      if (options.timeout !== undefined) {
+        timer = setTimeout(function () {
+          reject(new Error('Method call timed out'));
+        }, options.timeout);
+      }
+
+    }).then(function (result) {
+      cleanUp();
+
+      if (result) {
+        if (result.session) {
+          // The bindEnvironment call above ensures the file IO operations
+          // that happen in auth.setSessionId take place in a Fiber.
+          auth.setSessionId(config.getAccountsDomain(), result.session);
         }
-      }), options.timeout);
-    }
-    try {
-      var result = fut.wait();
-    } finally {
-      if (timer) {
-        clearTimeout(timer);
+        result = result.result;
       }
-      if (! options.connection) {
-        conn.close();
-      }
-    }
-    if (result && result.session) {
-      auth.setSessionId(config.getAccountsDomain(), result.session);
-    }
-    return result && result.result;
+
+      return result;
+
+    }, function (err) {
+      cleanUp();
+      throw err;
+
+    }).await();
   };
 };
 
@@ -626,8 +638,8 @@ exports.pollForRegistrationCompletion = function (options) {
   // We are logged in but we don't yet have a username. Ask the server
   // if a username was chosen since we last checked.
   var username = null;
-  var fut = new Future();
   var connection = loggedInAccountsConnection(session.token);
+  var timer;
 
   if (! connection) {
     // Server says our credential isn't any good anymore! Get rid of
@@ -641,32 +653,30 @@ exports.pollForRegistrationCompletion = function (options) {
     return;
   }
 
-  connection.call('getUsername', function (err, result) {
-    if (fut.isResolved()) {
-      return;
+  new Promise(function (resolve) {
+    connection.call('getUsername', function (err, username) {
+      // If anything went wrong, return null just as we would have if we
+      // hadn't bothered to ask the server.
+      resove(err ? null : username);
+    });
+
+    timer = setTimeout(function () {
+      resolve(null);
+    }, 5000);
+
+  // Intentionally calling bindEnvironment on the .then callback rather
+  // than the function that calls resolve.
+  }).then(fiberHelpers.bindEnvironment(function (username) {
+    connection.close();
+    clearTimeout(timer);
+
+    if (username) {
+      writeMeteorAccountsUsername(username);
     }
 
-    if (err) {
-      // If anything went wrong, return null just as we would have if
-      // we hadn't bothered to ask the server.
-      fut['return'](null);
-      return;
-    }
-    fut['return'](result);
-  });
-
-  var timer = setTimeout(fiberHelpers.bindEnvironment(function () {
-    if (! fut.isResolved()) {
-      fut['return'](null);
-    }
-  }), 5000);
-
-  username = fut.wait();
-  connection.close();
-  clearTimeout(timer);
-  if (username) {
-    writeMeteorAccountsUsername(username);
-  }
+  // We don't actually care about the result, just that the side-effects
+  // of writeMeteorAccountsUsername happen.
+  })).await();
 };
 
 exports.registrationUrl = function () {
