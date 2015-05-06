@@ -699,6 +699,11 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
+    if (bundleResult.warnings) {
+      runLog.log(
+        'Linting your app.\n\n' +
+          bundleResult.warnings.formatMessages(), { arrow: true })
+    }
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the
@@ -751,6 +756,11 @@ _.extend(AppRunner.prototype, {
         if (bundleResultOrRunResult.runResult)
           return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
+        if (bundleResult.warnings) {
+          runLog.log(
+            'Linting your app.\n\n' +
+              bundleResult.warnings.formatMessages(), { arrow: true })
+        }
 
         var oldFuture = self.runFuture = new Future;
 

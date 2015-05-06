@@ -157,14 +157,12 @@ compiler.compile = function (packageSource, options) {
   return isopk;
 };
 
-compiler.lint = function (isopack, options) {
-  // XXX BBP this is wrong, this should actually look at
-  // packageSource.architectures xcxc
-  _.each(isopack.unibuilds, function (unibuild) {
+compiler.lint = function (packageSource, options) {
+  _.each(packageSource.architectures, function (architecture) {
     lintUnibuild({
-      isopack: isopack,
+      isopack: options.isopack,
       isopackCache: options.isopackCache,
-      sourceArch: unibuild
+      sourceArch: architecture
     });
   });
 };
@@ -197,6 +195,7 @@ var lintUnibuild = function (options) {
   var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
   var wrappedSourceItems = _.map(sourceItems, function (source) {
     var relPath = source.relPath;
+    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var fileWatchSet = new watch.WatchSet;
     var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
     var hash = file.hash;
@@ -1047,8 +1046,22 @@ var runLinters = function (
       return;
 
     var linter = linterDef.instantiatePlugin();
+
+    var archToString = function (arch) {
+      if (arch.match(/web\.cordova/))
+        return "Cordova";
+      if (arch.match(/web\..*/))
+        return "Client";
+      if (arch.match(/os.*/))
+        return "Server";
+      throw new Error("Don't know how to display the arch: " + arch);
+    };
     buildmessage.enterJob({
-      title: "linting files with " + linterDef.isopack.name
+      title: "linting files with " +
+        linterDef.isopack.name +
+        " for target: " +
+        (inputSourceArch.pkg.name || "app") +
+        " (" + archToString(inputSourceArch.arch) + ")"
     }, function () {
       try {
         var markedLinter = buildmessage.markBoundary(linter.run.bind(linter));
