@@ -1,0 +1,30 @@
+{
+  "name": "meteor-promise",
+  "author": "Ben Newman <ben@meteor.com>",
+  "version": "0.0.1",
+  "description": "ES6 Promise polyfill with Fiber support",
+  "keywords": [
+    "meteor",
+    "promise",
+    "fiber",
+    "synchronous",
+    "async",
+    "await"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --reporter spec"
+  },
+  "homepage": "https://github.com/meteor/promise",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/meteor/promise.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meteor/promise/issues"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "mocha": "~2.2.4"
+  }
+}
