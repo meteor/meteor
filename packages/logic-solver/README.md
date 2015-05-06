@@ -27,9 +27,18 @@ Logic Solver can solve a hard Sudoku in under a second in a web browser,
 with very clean-looking code compared to many constraint solvers.
 [**Try this demo**](http://sudoku-demo.meteor.com/)
 
+## On NPM
+
+```
+var Logic = require('logic-solver');
+```
+
+https://www.npmjs.com/package/logic-solver
+
 ## Table of Contents
 
 - [Introduction](#introduction)
+- [On NPM](#on-npm)
 - [Example: Dinner Guests](#example-dinner-guests)
 - [Example: Magic Squares](#example-magic-squares)
 - [Variables](#variables)
