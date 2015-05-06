@@ -55,6 +55,8 @@ Call `SyncedCron.remove(jobName)` to remove and stop running the job referenced 
 
 Call `SyncedCron.stop()` to remove and stop all jobs.
 
+Call `SyncedCron.pause()` to stop all jobs without removing them.  The existing jobs can be rescheduled (i.e. restarted) with `SyncedCron.start()`.
+
 ### Configuration
 
 You can configure SyncedCron with the `config` method. Defaults are:
