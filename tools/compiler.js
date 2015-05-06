@@ -133,13 +133,13 @@ compiler.compile = function (packageSource, options) {
     debugOnly: packageSource.debugOnly
   });
 
-  _.each(packageSource.architectures, function (unibuild) {
-    if (unibuild.arch === 'web.cordova' && ! includeCordovaUnibuild)
+  _.each(packageSource.architectures, function (architecture) {
+    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild)
       return;
 
     var unibuildResult = compileUnibuild({
       isopack: isopk,
-      sourceArch: unibuild,
+      sourceArch: architecture,
       isopackCache: isopackCache,
       nodeModulesPath: nodeModulesPath,
       isPortable: isPortable,
@@ -155,6 +155,61 @@ compiler.compile = function (packageSource, options) {
   }
 
   return isopk;
+};
+
+compiler.lint = function (isopack, options) {
+  // XXX BBP this is wrong, this should actually look at
+  // packageSource.architectures xcxc
+  _.each(isopack.unibuilds, function (unibuild) {
+    lintUnibuild({
+      isopack: isopack,
+      isopackCache: options.isopackCache,
+      sourceArch: unibuild
+    });
+  });
+};
+
+var lintUnibuild = function (options) {
+  var isopack = options.isopack;
+  var isopackCache = options.isopackCache;
+  var inputSourceArch = options.sourceArch;
+  var activePluginPackages = getActivePluginPackages(
+    isopack,
+    // pass sourceArch and isopackCache
+    options);
+
+  var allLinters = [];
+  var sourceExtensions = {}; // maps source extension to isTemplate
+
+  _.each(activePluginPackages, function (otherPkg) {
+    otherPkg.ensurePluginsInitialized();
+
+    _.each(otherPkg.sourceProcessors.linter, function (linterPlugin, id) {
+      allLinters.push(linterPlugin);
+      // memorize all used extensions
+      _.each(linterPlugin.extensions, function (ext) {
+        sourceExtensions[ext] = linterPlugin.isTemplate;
+      });
+    });
+  });
+
+  var watchSet = new watch.WatchSet;
+  var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
+  var wrappedSourceItems = _.map(sourceItems, function (source) {
+    var relPath = source.relPath;
+    var fileWatchSet = new watch.WatchSet;
+    var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
+    var hash = file.hash;
+    var contents = file.contents;
+    return {
+      relPath: relPath,
+      contents: contents,
+      'package': isopack.name,
+      hash: hash
+    };
+  });
+
+  runLinters(inputSourceArch, isopackCache, wrappedSourceItems, allLinters);
 };
 
 // options.sourceArch is a SourceArch to compile.  Process all source files
@@ -181,31 +236,6 @@ var compileUnibuild = function (options) {
   pluginProviderPackageNames[isopk.name] = true;
   var watchSet = inputSourceArch.watchSet.clone();
 
-  // *** Determine and load active plugins
-
-  // XXX we used to include our own extensions only if we were the
-  // "use" role. now we include them everywhere because we don't have
-  // a special "use" role anymore. it's not totally clear to me what
-  // the correct behavior should be -- we need to resolve whether we
-  // think about extensions as being global to a package or particular
-  // to a unibuild.
-
-  // (there's also some weirdness here with handling implies, because
-  // the implies field is on the target unibuild, but we really only care
-  // about packages.)
-  var activePluginPackages = [isopk];
-
-  // We don't use plugins from weak dependencies, because the ability
-  // to compile a certain type of file shouldn't depend on whether or
-  // not some unrelated package in the target has a dependency. And we
-  // skip unordered dependencies, because it's not going to work to
-  // have circular build-time dependencies.
-  //
-  // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
-  // templating from standard-app-packages).
-  //
-  // We pass archinfo.host here, not self.arch, because it may be more specific,
-  // and because plugins always have to run on the host architecture.
   compiler.eachUsedUnibuild({
     dependencies: inputSourceArch.uses,
     arch: archinfo.host(),
@@ -223,16 +253,18 @@ var compileUnibuild = function (options) {
 
     if (_.isEmpty(unibuild.pkg.plugins))
       return;
-    activePluginPackages.push(unibuild.pkg);
   });
 
-  activePluginPackages = _.uniq(activePluginPackages);
+  // *** Determine and load active plugins
+  var activePluginPackages = getActivePluginPackages(isopk, {
+    sourceArch: inputSourceArch,
+    isopackCache: isopackCache
+  });
 
   // *** Assemble the list of source file handlers from the plugins
   // XXX BBP redoc
   var allHandlersWithPkgs = {};
   var compilerPluginsByExtension = {};
-  var allLinters = [];
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   sourceExtensions['js'] = false;
@@ -309,10 +341,6 @@ var compileUnibuild = function (options) {
         sourceExtensions[ext] = compilerPlugin.isTemplate;
       });
     });
-
-    _.each(otherPkg.sourceProcessors.linter, function (linterPlugin, id) {
-      allLinters.push(linterPlugin);
-    });
   });
 
   // *** Determine source files
@@ -368,7 +396,11 @@ var compileUnibuild = function (options) {
     return JSON.stringify(srcmap);
   };
 
-  var wrappedSourceItems = _.map(sourceItems, function (source) {
+  _.each(sourceItems, function (source) {
+    var relPath = source.relPath;
+    var fileOptions = _.clone(source.fileOptions) || {};
+    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
+    var filename = files.pathBasename(relPath);
     var fileWatchSet = new watch.WatchSet;
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
@@ -376,33 +408,9 @@ var compileUnibuild = function (options) {
     // We don't put this into the unibuild's watchSet immediately since we want
     // to avoid putting it there if it turns out not to be relevant to our
     // arch.
-    var absPath = files.pathResolve(
-      inputSourceArch.pkg.sourceRoot, source.relPath);
     var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
-
-    Console.nudge(true);
-
-    return {
-      relPath: source.relPath,
-      watchset: fileWatchSet,
-      contents: file.contents,
-      hash: file.hash,
-      source: source,
-      'package': isopk.name
-    };
-  });
-
-  runLinters(inputSourceArch, isopackCache, wrappedSourceItems, allLinters);
-
-  _.each(wrappedSourceItems, function (wrappedSource) {
-    var source = wrappedSource.source;
-    var relPath = source.relPath;
-    var fileOptions = _.clone(source.fileOptions) || {};
-    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
-    var filename = files.pathBasename(relPath);
-    var contents = wrappedSource.contents;
-    var hash = wrappedSource.hash;
-    var fileWatchSet = wrappedSource.watchset;
+    var hash = file.hash;
+    var contents = file.contents;
 
     Console.nudge(true);
 
@@ -1050,6 +1058,53 @@ var runLinters = function (
       }
     });
   });
+};
+
+// takes an isopack and returns a list of packages isopack depends on,
+// containing at least one plugin
+var getActivePluginPackages = function (isopk, options) {
+  var inputSourceArch = options.sourceArch;
+  var isopackCache = options.isopackCache;
+
+  // XXX we used to include our own extensions only if we were the
+  // "use" role. now we include them everywhere because we don't have
+  // a special "use" role anymore. it's not totally clear to me what
+  // the correct behavior should be -- we need to resolve whether we
+  // think about extensions as being global to a package or particular
+  // to a unibuild.
+
+  // (there's also some weirdness here with handling implies, because
+  // the implies field is on the target unibuild, but we really only care
+  // about packages.)
+  var activePluginPackages = [isopk];
+
+  // We don't use plugins from weak dependencies, because the ability
+  // to compile a certain type of file shouldn't depend on whether or
+  // not some unrelated package in the target has a dependency. And we
+  // skip unordered dependencies, because it's not going to work to
+  // have circular build-time dependencies.
+  //
+  // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
+  // templating from standard-app-packages).
+  //
+  // We pass archinfo.host here, not self.arch, because it may be more specific,
+  // and because plugins always have to run on the host architecture.
+  compiler.eachUsedUnibuild({
+    dependencies: inputSourceArch.uses,
+    arch: archinfo.host(),
+    isopackCache: isopackCache,
+    skipUnordered: true
+    // implicitly skip weak deps by not specifying acceptableWeakPackages option
+  }, function (unibuild) {
+    if (unibuild.pkg.name === isopk.name)
+      return;
+    if (_.isEmpty(unibuild.pkg.plugins))
+      return;
+    activePluginPackages.push(unibuild.pkg);
+  });
+
+  activePluginPackages = _.uniq(activePluginPackages);
+  return activePluginPackages;
 };
 
 // Iterates over each in options.dependencies as well as unibuilds implied by

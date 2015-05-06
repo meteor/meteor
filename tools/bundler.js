@@ -2113,6 +2113,10 @@ exports.bundle = function (options) {
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
 
+    compiler.lint(app, {
+      isopackCache: projectContext.isopackCache
+    });
+
     var clientTargets = [];
     // Client
     _.each(webArchs, function (arch) {

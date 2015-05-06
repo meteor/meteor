@@ -237,6 +237,8 @@ _.extend(exports.IsopackCache.prototype, {
               includeIsopackBuildInfo: true
             });
           }
+
+          // XXX if no errors, run the linter and save the results too
         }
       }
 
