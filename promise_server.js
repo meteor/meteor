@@ -31,3 +31,21 @@ Promise.await = function (arg) {
 Promise.prototype.await = function () {
   return await(this);
 };
+
+Promise.async = function (fn) {
+  return function () {
+    if (Fiber.current) {
+      return Promise.resolve(fn.apply(this, arguments));
+    }
+
+    return new Promise(function (resolve) {
+      new Fiber(function () {
+        resolve(fn.apply(this, arguments));
+      }).run();
+    });
+  }
+};
+
+Function.prototype.async = function () {
+  return Promise.async(this);
+};
