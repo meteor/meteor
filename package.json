@@ -14,7 +14,7 @@
   "main": "promise_server.js",
   "scripts": {
     "test": "mocha --reporter spec",
-    "postinstall": "webpack"
+    "postinstall": "node ./node_modules/webpack/bin/webpack.js"
   },
   "homepage": "https://github.com/meteor/promise",
   "repository": {
