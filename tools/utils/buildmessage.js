@@ -1,5 +1,4 @@
 var Fiber = require('fibers');
-var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../fs/files.js');
 var parseStack = require('./parse-stack.js');
@@ -554,75 +553,66 @@ var forkJoin = function (options, iterable, fn) {
     options = {};
   }
 
-  var futures = [];
-  var results = [];
-  // XXX: We could check whether the sub-jobs set estimates, and if not
-  // assume they each take the same amount of time and auto-report their completion
-  var errors = [];
-  var firstError = null;
-
   options.forkJoin = true;
 
-  enterJob(options, function () {
+  return enterJob(options, function () {
     var parallel = (options.parallel !== undefined) ? options.parallel : true;
+    var errors = [];
+    var results = _.map(iterable, function (...args) {
+      var runOne = fiberHelpers.bindEnvironment(function () {
+        return fn.apply(null, args);
+      });
+
+      var promise = new Promise(function (resolve, reject) {
+        function fiberFn() {
+          try {
+            resolve(enterJob({
+              title: (options.title || "") + " child"
+            }, runOne));
+          } catch (err) {
+            reject(err);
+          }
+        }
+
+        // If the jobs are intended to run in parallel, create a nested
+        // fiber for each one, so they don't get implicitly serialized.
+        parallel ? Fiber(fiberFn).run() : fiberFn();
+
+      }).catch(function (error) {
+        // Collect any errors thrown (and later re-throw the first one),
+        // but don't stop processing remaining jobs.
+        errors.push(error);
+        return null;
+      });
+
+      if (parallel) {
+        // If the jobs are intended to run in parallel, return each
+        // promise without awaiting it, so that Promise.all can wait for
+        // them all to be fulfilled.
+        return promise;
+      }
+
+      // By awaiting the promise during each iteration, we effectively
+      // serialize the execution of the jobs.
+      return promise.await();
+    });
+
     if (parallel) {
-      var runOne = fiberHelpers.bindEnvironment(function (fut, fnArguments) {
-        try {
-          var result = enterJob({title: (options.title || '') + ' child'}, function () {
-            return fn.apply(null, fnArguments);
-          });
-          fut['return'](result);
-        } catch (e) {
-          fut['throw'](e);
-        }
-      });
-
-      _.each(iterable, function (...args) {
-        var fut = new Future();
-        Fiber(function () {
-          runOne(fut, args);
-        }).run();
-        futures.push(fut);
-      });
-
-      _.each(futures, function (future) {
-        try {
-          var result = future.wait();
-          results.push(result);
-          errors.push(null);
-        } catch (e) {
-          results.push(null);
-          errors.push(e);
-
-          if (firstError === null) {
-            firstError = e;
-          }
-        }
-      });
-    } else {
-      // not parallel
-      _.each(iterable, function (...args) {
-        try {
-          var result = fn(...args);
-          results.push(result);
-          errors.push(null);
-        } catch (e) {
-          results.push(null);
-          errors.push(e);
-
-          if (firstError === null) {
-            firstError = e;
-          }
-        }
-      });
+      // If the jobs ran in parallel, then results is an array of Promise
+      // objects that still need to be resolved.
+      results = Promise.all(results).await();
     }
+
+    if (errors.length > 0) {
+      // If any errors were thrown, re-throw the first one. Note that this
+      // allows jobs to complete successfully (and have whatever
+      // side-effects they should have) after the first error is thrown,
+      // though the final results will not be returned below.
+      throw errors[0];
+    }
+
+    return results;
   });
-
-  if (firstError) {
-    throw firstError;
-  }
-
-  return results;
 };
 
 
