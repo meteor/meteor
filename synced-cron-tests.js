@@ -106,6 +106,37 @@ Tinytest.add('SyncedCron.stop works', function(test) {
   test.equal(_.keys(SyncedCron._entries).length, 0);
 });
 
+Tinytest.add('SyncedCron.pause works', function(test) {
+  SyncedCron._reset();
+  test.equal(SyncedCron._collection.find().count(), 0);
+
+  // addd 2 entries
+  SyncedCron.add(TestEntry);
+
+  var entry2 = _.extend({}, TestEntry, {
+    name: 'Test Job2',
+    schedule: function(parser) {
+      return parser.cron('30 11 * * ? *');
+    }
+  });
+  SyncedCron.add(entry2);
+
+  SyncedCron.start();
+
+  test.equal(_.keys(SyncedCron._entries).length, 2);
+
+  SyncedCron.pause();
+
+  test.equal(_.keys(SyncedCron._entries).length, 2);
+  test.isFalse(SyncedCron.running);
+
+  SyncedCron.start();
+
+  test.equal(_.keys(SyncedCron._entries).length, 2);
+  test.isTrue(SyncedCron.running);
+
+});
+
 // Tests SyncedCron.remove in the process
 Tinytest.add('SyncedCron.add starts by it self when running', function(test) {
   SyncedCron._reset();
@@ -172,7 +203,7 @@ Tinytest.addAsync('SyncedCron should pass correct arguments to logger', function
     test.include(opts, 'message');
     test.include(opts, 'tag');
     test.equal(opts.tag, 'SyncedCron');
-    
+
     done();
   };
 
