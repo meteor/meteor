@@ -16,6 +16,7 @@ TARGET="s3://com.meteor.static/test/"
 TEST=no
 if [ $# -ge 1 -a ${arg} = '--prod' ]; then
     shift
+    arg=$1
     TARGET="s3://com.meteor.static/"
 else
     TEST=yes
