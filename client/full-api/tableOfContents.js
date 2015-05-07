@@ -338,6 +338,7 @@ var toc = [
     "meteor mongo",
     "meteor reset",
     "meteor build",
+    "meteor lint",
     "meteor search",
     "meteor show",
     "meteor publish",
