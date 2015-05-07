@@ -1,4 +1,3 @@
-var Future = require('fibers/future');
 var _ = require('underscore');
 
 var config = require('../meteor-services/config.js');
@@ -189,9 +188,8 @@ var _updateServerPackageData = function (dataStore, options) {
       var zlib = require('zlib');
       var colsGzippedBuffer = new Buffer(
         remoteData.collectionsCompressed, 'base64');
-      var fut = new Future;
-      zlib.gunzip(colsGzippedBuffer, fut.resolver());
-      var colsJSON = fut.wait();
+      var gunzip = Promise.denodeify(zlib.gunzip);
+      var colsJSON = gunzip(colsGzippedBuffer).await();
       remoteData.collections = JSON.parse(colsJSON);
       delete remoteData.collectionsCompressed;
     }
