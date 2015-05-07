@@ -1,4 +1,3 @@
-var Future = require('fibers/future');
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
@@ -207,9 +206,9 @@ exports.sleepMs = function (ms) {
     return;
   }
 
-  var fut = new Future;
-  setTimeout(function () { fut['return']() }, ms);
-  fut.wait();
+  new Promise(function (resolve) {
+    setTimeout(resolve, ms);
+  }).await();
 };
 
 // Return a short, high entropy string without too many funny
@@ -518,8 +517,6 @@ exports.isValidVersion = function (version, {forCordova}) {
 
 
 exports.execFileSync = function (file, args, opts) {
-  var future = new Future;
-
   var child_process = require('child_process');
   var eachline = require('eachline');
 
@@ -539,26 +536,24 @@ exports.execFileSync = function (file, args, opts) {
       process.stderr.write(line + '\n');
     }));
 
-    p.on('exit', function (code) {
-      future.return(code);
-    });
-
     return {
-      success: !future.wait(),
+      success: ! new Promise(function (resolve) {
+        p.on('exit', resolve);
+      }).await(),
       stdout: "",
       stderr: ""
     };
   }
 
-  child_process.execFile(file, args, opts, function (err, stdout, stderr) {
-    future.return({
-      success: ! err,
-      stdout: stdout,
-      stderr: stderr
+  return new Promise(function (resolve) {
+    child_process.execFile(file, args, opts, function (err, stdout, stderr) {
+      resolve({
+        success: ! err,
+        stdout: stdout,
+        stderr: stderr
+      });
     });
-  });
-
-  return future.wait();
+  }).await();
 };
 
 exports.execFileAsync = function (file, args, opts) {
@@ -634,17 +629,13 @@ _.extend(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
     if (self._throttle.isAllowed()) {
-      var f = new Future;
       // setImmediate allows signals and IO to be processed but doesn't
       // otherwise add time-based delays. It is better for yielding than
       // process.nextTick (which doesn't allow signals or IO to be processed) or
       // setTimeout 1 (which adds a minimum of 1 ms and often more in delays).
       // XXX Actually, setImmediate is so fast that we might not even need
       // to use the throttler at all?
-      setImmediate(function () {
-        f.return();
-      });
-      f.wait();
+      new Promise(setImmediate).await();
     }
   }
 });
