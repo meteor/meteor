@@ -150,7 +150,6 @@
 
 var util = require('util');
 var Fiber = require('fibers');
-var Future = require('fibers/future');
 var _ = require('underscore');
 
 var compiler = require('./compiler.js');
@@ -1298,15 +1297,20 @@ class JsImage {
     // Some way to avoid this?
     var getAsset = function (assets, assetPath, encoding, callback) {
       assetPath = files.convertToStandardPath(assetPath);
-      var fut;
+      var promise;
       if (! callback) {
         if (! Fiber.current) {
           throw new Error("The synchronous Assets API can " +
                           "only be called from within a Fiber.");
         }
-        fut = new Future();
-        callback = fut.resolver();
+
+        promise = new Promise(function (resolve, reject) {
+          callback = function (err, res) {
+            err ? reject(err) : resolve(res);
+          };
+        });
       }
+
       var _callback = function (err, result) {
         if (result && ! encoding) {
           // Sadly, this copies in Node 0.10.
@@ -1322,8 +1326,9 @@ class JsImage {
         var result = encoding ? buffer.toString(encoding) : buffer;
         _callback(null, result);
       }
-      if (fut) {
-        return fut.wait();
+
+      if (promise) {
+        return promise.await();
       }
     };
 
