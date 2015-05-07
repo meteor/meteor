@@ -401,6 +401,7 @@ function doRunCommand (options) {
   //
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
+    process.env.VELOCITY_CI = '1';
     options.once = true;
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
@@ -1524,6 +1525,7 @@ main.registerCommand({
   }
 
   if (options.velocity) {
+    process.env.VELOCITY_CI = '1';
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
     var velocity = require('./run-velocity.js');
