@@ -13,7 +13,6 @@ var Fiber = require('fibers');
 var crypto = require('crypto');
 
 var rimraf = require('rimraf');
-var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
@@ -273,9 +272,7 @@ files.statOrNull = function (path) {
 // Like rm -r.
 files.rm_recursive = Profile("files.rm_recursive", function (p) {
   if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
-    var fut = new Future();
-    rimraf(files.convertToOSPath(p), fut.resolver());
-    fut.wait();
+    Promise.denodeify(rimraf)(files.convertToOSPath(p)).await();
   } else {
     rimraf.sync(files.convertToOSPath(p));
   }
@@ -313,13 +310,13 @@ files.fileHash = function (filename) {
   var hash = crypto.createHash('sha256');
   hash.setEncoding('base64');
   var rs = files.createReadStream(filename);
-  var fut = new Future();
-  rs.on('end', function () {
-    rs.close();
-    fut.return(hash.digest('base64'));
-  });
-  rs.pipe(hash, { end: false });
-  return fut.wait();
+  return new Promise(function (resolve) {
+    rs.on('end', function () {
+      rs.close();
+      resolve(hash.digest('base64'));
+    });
+    rs.pipe(hash, { end: false });
+  }).await();
 };
 
 // This is the result of running fileHash on a blank file.
@@ -577,19 +574,14 @@ files.copyFile = function (from, to) {
 var copyFileHelper = function (from, to, mode) {
   var readStream = files.createReadStream(from);
   var writeStream = files.createWriteStream(to, { mode: mode });
-  var future = new Future;
-  var onError = function (e) {
-    future.isResolved() || future.throw(e);
-  };
-  readStream.on('error', onError);
-  writeStream.on('error', onError);
-  writeStream.on('open', function () {
-    readStream.pipe(writeStream);
-  });
-  writeStream.once('finish', function () {
-    future.isResolved() || future.return();
-  });
-  future.wait();
+  new Promise(function (resolve, reject) {
+    readStream.on('error', reject);
+    writeStream.on('error', reject);
+    writeStream.on('open', function () {
+      readStream.pipe(writeStream);
+    });
+    writeStream.once('finish', resolve);
+  }).await();
 };
 
 // Make a temporary directory. Returns the path to the newly created
@@ -694,37 +686,30 @@ files.extractTarGz = function (buffer, destPath, options) {
   var tempDir = files.pathJoin(parentDir, '.tmp' + utils.randomToken());
   files.mkdir_p(tempDir);
 
-  var future = new Future;
-
   var tar = require("tar");
   var zlib = require("zlib");
-  var gunzip = zlib.createGunzip()
-    .on('error', function (e) {
-      future.isResolved() || future.throw(e);
-    });
 
-  var extractor = new tar.Extract({ path: files.convertToOSPath(tempDir) })
-    .on('entry', function (e) {
+  new Promise(function (resolve, reject) {
+    var gunzip = zlib.createGunzip().on('error', reject);
+
+    var extractor = new tar.Extract({
+      path: files.convertToOSPath(tempDir)
+    }).on('entry', function (e) {
       if (process.platform === "win32" || options.forceConvert) {
         // On Windows, try to convert old packages that have colons in paths
         // by blindly replacing all of the paths. Otherwise, we can't even
         // extract the tarball
         e.path = colonConverter.convert(e.path);
       }
-    })
-    .on('error', function (e) {
-      future.isResolved() || future.throw(e);
-    })
-    .on('end', function () {
-      future.isResolved() || future.return();
-    });
+    }).on('error', reject)
+      .on('end', resolve);
 
-  // write the buffer to the (gunzip|untar) pipeline; these calls
-  // cause the tar to be extracted to disk.
-  gunzip.pipe(extractor);
-  gunzip.write(buffer);
-  gunzip.end();
-  future.wait();
+    // write the buffer to the (gunzip|untar) pipeline; these calls
+    // cause the tar to be extracted to disk.
+    gunzip.pipe(extractor);
+    gunzip.write(buffer);
+    gunzip.end();
+  }).await();
 
   // succeed!
   var topLevelOfArchive = files.readdir(tempDir);
@@ -801,17 +786,12 @@ files.createTarGzStream = function (dirPath, options) {
 // Tar-gzips a directory into a tarball on disk, synchronously.
 // The tar archive will contain a top-level directory named after dirPath.
 files.createTarball = function (dirPath, tarball, options) {
-  var future = new Future;
   var out = files.createWriteStream(tarball);
-  out.on('error', function (err) {
-    future.throw(err);
-  });
-  out.on('close', function () {
-    future.return();
-  });
-
-  files.createTarGzStream(dirPath, options).pipe(out);
-  future.wait();
+  new Promise(function (resolve, reject) {
+    out.on('error', reject);
+    out.on('close', resolve);
+    files.createTarGzStream(dirPath, options).pipe(out);
+  }).await();
 };
 
 // Use this if you'd like to replace a directory with another
@@ -1343,43 +1323,52 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
       const shouldBeSync = alwaysSync || sync;
 
       if (canYield && shouldBeSync) {
-        const fut = new Future;
+        const promise = new Promise((resolve, reject) => {
+          args.push((err, value) => {
+            if (options.noErr) {
+              resolve(err);
+            } else if (err) {
+              reject(err);
+            } else {
+              resolve(value);
+            }
+          });
 
-        args.push(function callback(err, value) {
-          if (options.noErr) {
-            fut.return(err);
-          } else if (err) {
-            fut.throw(err);
-          } else {
-            fut.return(value);
-          }
+          fsFunc.apply(fs, args);
         });
 
-        fsFunc.apply(fs, args);
+        const result = promise.await();
 
-        const result = fut.wait();
         return options.modifyReturnValue
           ? options.modifyReturnValue(result)
           : result;
+
       } else if (shouldBeSync) {
         // Should be sync but can't yield: we are not in a Fiber.
         // Run the sync version of the fs.* method.
         const result = fsFuncSync.apply(fs, args);
         return options.modifyReturnValue ?
                options.modifyReturnValue(result) : result;
+
       } else if (! sync) {
         // wrapping a plain async version
-        const cb = args[fsFunc.length - 1];
-        if (typeof cb === 'function') {
-          args[fsFunc.length - 1] = function (err, res) {
+        let cb = args[args.length - 1];
+        if (typeof cb === "function") {
+          args.pop();
+        } else {
+          cb = null;
+        }
+
+        Promise.denodeify(fsFunc)
+          .apply(fs, args)
+          .then(function (res) {
             if (options.modifyReturnValue) {
               res = options.modifyReturnValue(res);
             }
-            Fiber(cb.bind(null, err, res)).run();
-          };
-        }
-        fsFunc.apply(fs, args);
-        return null;
+            cb && cb(null, res);
+          }, cb);
+
+        return;
       }
 
       throw new Error('unexpected');
