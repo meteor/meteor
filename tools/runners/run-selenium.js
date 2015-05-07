@@ -1,6 +1,5 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
-var Future = require('fibers/future');
 var files = require('../fs/files.js');
 var runLog = require('./run-log.js');
 var utils = require('../utils/utils.js');
@@ -21,16 +20,6 @@ var Selenium = function (options) {
   self.browser = options.browser || 'chrome';
 
   self.xunitLines = null;
-};
-
-var _promiseToFuture = function (promise) {
-  var fut = new Future;
-  promise.then(function (result) {
-    fut.isResolved() || fut['return'](result);
-  }, function (err) {
-    fut.isResolved() || fut['throw'](err);
-  });
-  return fut;
 };
 
 
@@ -78,10 +67,8 @@ _.extend(Selenium.prototype, {
     var builder = new webdriver.Builder().withCapabilities(capabilities);
     self.driver = builder.build();
 
-    var fut = _promiseToFuture(self.driver.getSession());
-    fut.wait();
-
-    _promiseToFuture(self.driver.get(self.url)).wait();
+    Promise.await(self.driver.getSession());
+    Promise.await(self.driver.get(self.url));
 
     Fiber(function () {
       try {
@@ -99,23 +86,23 @@ _.extend(Selenium.prototype, {
       return;
     }
 
-    _promiseToFuture(self.driver.close()).wait();
-    _promiseToFuture(self.driver.quit()).wait();
+    Promise.await(self.driver.close());
+    Promise.await(self.driver.quit());
+
     self.driver = null;
   },
 
   _flushLogs: function () {
     var self = this;
-
-    var promise = self.driver.executeScript("console.log('" + DUMMY_FLUSH + "');", []);
-    _promiseToFuture(promise).wait();
+    Promise.await(
+      self.driver.executeScript("console.log('" + DUMMY_FLUSH + "');", [])
+    );
   },
 
   _getLogs: function () {
     var self = this;
 
-    var promise = self.driver.manage().logs().get('browser');
-    return _promiseToFuture(promise).wait();
+    Promise.await(self.driver.manage().logs().get('browser'));
   },
 
   _gotStateDone: function () {
