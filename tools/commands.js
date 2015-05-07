@@ -966,6 +966,50 @@ var findApkPath = function (dirPath, debug) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// lint
+///////////////////////////////////////////////////////////////////////////////
+main.registerCommand({
+  name: 'lint',
+  maxArgs: 0,
+  requiresApp: true,
+  options: {
+    'allow-incompatible-updates': { type: Boolean }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  var projectContext = new projectContextModule.ProjectContext({
+    projectDir: options.appDir,
+    serverArchitectures: [archinfo.host()],
+    allowIncompatibleUpdate: options['allow-incompatible-update']
+  });
+  var messages = buildmessage.capture(function () {
+    projectContext.prepareProjectForBuild();
+  });
+  if (messages.hasMessages()) {
+    Console.error("Errors prevented the build:\n\n" + messages.formatMessages());
+    throw main.ExitWithCode(2);
+  }
+
+  var bundlePath = projectContext.getProjectLocalDirectory('build');
+  var bundler = require('./bundler.js');
+  var bundle = bundler.bundle({
+    projectContext: projectContext,
+    outputPath: bundlePath
+  });
+
+  if (bundle.errors) {
+    Console.error("Errors building your app:\n\n" + bundle.errors.formatMessages());
+    throw new main.ExitWithCode(-1);
+  }
+  if (bundle.warnings) {
+    Console.warn(bundle.warnings.formatMessages());
+    throw new main.ExitWithCode(-1);
+  }
+
+  return 0;
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // mongo
 ///////////////////////////////////////////////////////////////////////////////
 
