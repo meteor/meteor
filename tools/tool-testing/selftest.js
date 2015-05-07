@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var util = require('util');
 var Future = require('fibers/future');
+var fiberHelpers = require('../utils/fiber-helpers.js');
 var child_process = require('child_process');
 var phantomjs = require('phantomjs');
 var webdriver = require('browserstack-webdriver');
@@ -86,10 +87,9 @@ var expectThrows = markStack(function (f) {
 
 // Execute a command synchronously, discarding stderr.
 var execFileSync = function (binary, args, opts) {
-  return Future.wrap(function(cb) {
-    var cb2 = function(err, stdout, stderr) { cb(err, stdout); };
-    child_process.execFile(binary, args, opts, cb2);
-  })().wait();
+  return Promise.denodeify(child_process.execFile)(
+    binary, args, opts
+  ).await();
 };
 
 var doOrThrow = function (f) {
@@ -219,7 +219,7 @@ var Matcher = function (run) {
   self.buf = "";
   self.ended = false;
   self.matchPattern = null;
-  self.matchFuture = null;
+  self.matchPromise = null;
   self.matchStrict = null;
   self.run = run; // used only to set a field on exceptions
 };
@@ -233,13 +233,13 @@ _.extend(Matcher.prototype, {
 
   match: function (pattern, timeout, strict) {
     var self = this;
-    if (self.matchFuture) {
+    if (self.matchPromise) {
       throw new Error("already have a match pending?");
     }
     self.matchPattern = pattern;
     self.matchStrict = strict;
-    var f = self.matchFuture = new Future;
-    self._tryMatch(); // could clear self.matchFuture
+    var mp = self.matchPromise = fiberHelpers.makeFulfillablePromise();
+    self._tryMatch(); // could clear self.matchPromise
 
     var timer = null;
     if (timeout) {
@@ -247,14 +247,16 @@ _.extend(Matcher.prototype, {
         var pattern = self.matchPattern;
         self.matchPattern = null;
         self.matchStrict = null;
-        self.matchFuture = null;
-        f['throw'](new TestFailure('match-timeout', { run: self.run,
-                                                      pattern: pattern }));
+        self.matchPromise = null;
+        mp.reject(new TestFailure('match-timeout', {
+          run: self.run,
+          pattern: pattern
+        }));
       }, timeout * 1000);
     }
 
     try {
-      return f.wait();
+      return mp.await();
     } finally {
       if (timer) {
         clearTimeout(timer);
@@ -280,8 +282,8 @@ _.extend(Matcher.prototype, {
   _tryMatch: function () {
     var self = this;
 
-    var f = self.matchFuture;
-    if (! f) {
+    var mp = self.matchPromise;
+    if (! mp) {
       return;
     }
 
@@ -291,12 +293,14 @@ _.extend(Matcher.prototype, {
       var m = self.buf.match(self.matchPattern);
       if (m) {
         if (self.matchStrict && m.index !== 0) {
-          self.matchFuture = null;
+          self.matchPromise = null;
           self.matchStrict = null;
           self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, m.index));
-          f['throw'](new TestFailure(
-            'junk-before', { run: self.run, pattern: self.matchPattern }));
+          mp.reject(new TestFailure('junk-before', {
+            run: self.run,
+            pattern: self.matchPattern
+          }));
           return;
         }
         ret = m;
@@ -306,12 +310,14 @@ _.extend(Matcher.prototype, {
       var i = self.buf.indexOf(self.matchPattern);
       if (i !== -1) {
         if (self.matchStrict && i !== 0) {
-          self.matchFuture = null;
+          self.matchPromise = null;
           self.matchStrict = null;
           self.matchPattern = null;
           Console.info("Extra junk is: ", self.buf.substr(0, i));
-          f['throw'](new TestFailure('junk-before',
-                                     { run: self.run, pattern: self.matchPattern }));
+          mp.reject(new TestFailure('junk-before', {
+            run: self.run,
+            pattern: self.matchPattern
+          }));
           return;
         }
         ret = self.matchPattern;
@@ -320,20 +326,20 @@ _.extend(Matcher.prototype, {
     }
 
     if (ret !== null) {
-      self.matchFuture = null;
+      self.matchPromise = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['return'](ret);
+      mp.resolve(ret);
       return;
     }
 
     if (self.ended) {
       var failure = new TestFailure('no-match', { run: self.run,
                                                   pattern: self.matchPattern });
-      self.matchFuture = null;
+      self.matchPromise = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['throw'](failure);
+      mp.reject(failure);
       return;
     }
   }
@@ -1130,8 +1136,7 @@ var Run = function (execPath, options) {
   self.outputLog = new OutputLog(self);
 
   self.exitStatus = undefined; // 'null' means failed rather than exited
-  self.exitFutures = [];
-
+  self.exitPromiseResolvers = [];
   var opts = options.args || [];
   self.args.apply(self, opts || []);
 
@@ -1195,10 +1200,10 @@ _.extend(Run.prototype, {
     self.client && self.client.stop();
 
     self.exitStatus = status;
-    var exitFutures = self.exitFutures;
-    self.exitFutures = null;
-    _.each(exitFutures, function (f) {
-      f['return']();
+    var exitPromiseResolvers = self.exitPromiseResolvers;
+    self.exitPromiseResolvers = null;
+    _.each(exitPromiseResolvers, function (resolve) {
+      resolve();
     });
 
     self.stdoutMatcher.end();
@@ -1348,15 +1353,17 @@ _.extend(Run.prototype, {
       timeout *= utils.timeoutScaleFactor;
       self.extraTime = 0;
 
-      var fut = new Future;
-      self.exitFutures.push(fut);
-      var timer = setTimeout(function () {
-        self.exitFutures = _.without(self.exitFutures, fut);
-        fut['throw'](new TestFailure('exit-timeout', { run: self }));
-      }, timeout * 1000);
+      var timer;
+      var promise = new Promise(function (resolve, reject) {
+        self.exitPromiseResolvers.push(resolve);
+        timer = setTimeout(function () {
+          self.exitPromiseResolvers = _.without(self.exitPromiseResolvers, resolve);
+          reject(new TestFailure('exit-timeout', { run: self }));
+        }, timeout * 1000);
+      });
 
       try {
-        fut.wait();
+        promise.await();
       } finally {
         clearTimeout(timer);
       }
@@ -1459,35 +1466,26 @@ _.extend(Run.prototype, {
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
         lastStartTime = +(new Date);
 
-        // Use an anonymous function so that each iteration of the
-        // loop gets its own values of 'fut' and 'conn'.
-        (function () {
-          var fut = new Future;
+        new Promise(function (resolve) {
+          // This is all arranged so that if a previous attempt
+          // belatedly succeeds, somehow, we ignore it.
           var conn = net.connect(self.fakeMongoPort, function () {
-            if (fut) {
-              fut['return'](true);
+            if (resolve) {
+              self.fakeMongoConnection = conn;
+              resolve(true);
+              resolve = null;
             }
           });
           conn.setNoDelay();
-          conn.on('error', function () {
-            if (fut) {
-              fut['return'](false);
+          function fail() {
+            if (resolve) {
+              resolve(false);
+              resolve = null;
             }
-          });
-          setTimeout(function () {
-            if (fut) {
-              // 100ms connection timeout
-              fut['return'](false);
-            }
-          }, 100);
-
-          // This is all arranged so that if a previous attempt
-          // belatedly succeeds, somehow, we ignore it.
-          if (fut.wait()) {
-            self.fakeMongoConnection = conn;
           }
-          fut = null;
-        })();
+          conn.on('error', fail);
+          setTimeout(fail, 100); // 100ms connection timeout
+        }).await();
       }
 
       if (! self.fakeMongoConnection) {
