@@ -1,7 +1,7 @@
-var Future = require("fibers/future");
 var _ = require("underscore");
 var isopackets = require('../tool-env/isopackets.js');
 var files = require('../fs/files.js');
+var fiberHelpers = require("../utils/fiber-helpers.js");
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful
@@ -43,14 +43,15 @@ var ServiceConnection = function (endpointUrl, options) {
     retry: false,
     onConnected: function () {
       self.connected = true;
-      if (!self.currentFuture) {
+      if (! self.currentPromise) {
         throw Error("nobody waiting for connection?");
       }
-      if (self.currentFuture !== connectFuture) {
+      if (self.currentPromise !== connectPromise) {
         throw Error("waiting for something that isn't connection?");
       }
-      self.currentFuture = null;
-      connectFuture.return();
+      self.currentPromise = null;
+      connectPromise.resolve();
+      connectPromise.resolve = null;
     }
   });
   if (process.env.CAFILE) {
@@ -63,7 +64,10 @@ var ServiceConnection = function (endpointUrl, options) {
 
   // Wait until we have some sort of initial connection or error (including the
   // 10-second timeout built into our DDP client).
-  var connectFuture = self.currentFuture = new Future;
+
+  var connectPromise = self.currentPromise =
+    fiberHelpers.makeFulfillablePromise();
+
   self.connection._stream.on('disconnect', function (error) {
     self.connected = false;
     if (error && error.errorType === "DDP.ForcedReconnectError") {
@@ -71,7 +75,7 @@ var ServiceConnection = function (endpointUrl, options) {
       //
       // This ought to have happened before we successfully connect, unless
       // somebody adds other calls to forced reconnect to Meteor...
-      if (connectFuture.isResolved()) {
+      if (! connectPromise.resolve) {
         throw Error("disconnect before connect?");
       }
       // Otherwise, ignore this error. We're going to reconnect!
@@ -79,19 +83,21 @@ var ServiceConnection = function (endpointUrl, options) {
     }
     // Are we waiting to connect or for the result of a method apply or a
     // subscribeAndWait? If so, disconnecting is a problem.
-    if (self.currentFuture) {
-      var fut = self.currentFuture;
-      self.currentFuture = null;
-      fut.throw(error ||
-                new Package['ddp-client'].DDP.ConnectionError(
-                  "DDP disconnected while connection in progress"));
+    if (self.currentPromise) {
+      var promise = self.currentPromise;
+      self.currentPromise = null;
+      promise.reject(
+        error || new Package['ddp-client'].DDP.ConnectionError(
+          "DDP disconnected while connection in progress")
+      );
     } else if (error) {
       // We got some sort of error with nobody listening for it; handle it.
       // XXX probably have a better way to handle it than this
       throw error;
     }
   });
-  connectFuture.wait();
+
+  connectPromise.await();
 };
 
 _.extend(ServiceConnection.prototype, {
@@ -102,25 +108,29 @@ _.extend(ServiceConnection.prototype, {
   apply: function (...args) {
     var self = this;
 
-    if (self.currentFuture) {
+    if (self.currentPromise) {
       throw Error("Can't wait on two things at once!");
     }
-    self.currentFuture = new Future;
+    self.currentPromise = fiberHelpers.makeFulfillablePromise();
 
     args.push(function (err, result) {
-      if (!self.currentFuture) {
+      if (!self.currentPromise) {
         // We're not still waiting? That means we had a disconnect event. But
         // then how did we actually get this result?
         throw Error("nobody listening for result?");
       }
-      var fut = self.currentFuture;
-      self.currentFuture = null;
-      fut.resolver()(err, result);  // throw or return
+      var promise = self.currentPromise;
+      self.currentPromise = null;
+      if (err) {
+        promise.reject(err);
+      } else {
+        promise.resolve(result);
+      }
     });
 
     self.connection.apply(...args);
 
-    return self.currentFuture.wait();
+    return self.currentPromise.await();
   },
 
   // XXX derived from _subscribeAndWait in ddp_connection.js
@@ -128,27 +138,27 @@ _.extend(ServiceConnection.prototype, {
   subscribeAndWait: function (...args) {
     var self = this;
 
-    if (self.currentFuture) {
+    if (self.currentPromise) {
       throw Error("Can't wait on two things at once!");
     }
-    var subFuture = self.currentFuture = new Future;
+    var subPromise = self.currentPromise = fiberHelpers.makeFulfillablePromise();
 
     args.push({
       onReady: function () {
-        if (!self.currentFuture) {
+        if (!self.currentPromise) {
           // We're not still waiting? That means we had a disconnect event. But
           // then how did we actually get this result?
           throw Error("nobody listening for subscribe result?");
         }
-        var fut = self.currentFuture;
-        self.currentFuture = null;
-        fut.return();
+        var promise = self.currentPromise;
+        self.currentPromise = null;
+        promise.resolve();
       },
       onError: function (e) {
-        if (self.currentFuture === subFuture) {
+        if (self.currentPromise === subPromise) {
           // Error while waiting for this sub to become ready? Throw it.
-          self.currentFuture = null;
-          subFuture.throw(e);
+          self.currentPromise = null;
+          subPromise.reject(e);
         }
         // ... ok, this is a late error on the sub.
         // XXX handle it somehow better
@@ -157,7 +167,7 @@ _.extend(ServiceConnection.prototype, {
     });
 
     var sub = self.connection.subscribe(...args);
-    subFuture.wait();
+    subPromise.await();
     return sub;
   },
 

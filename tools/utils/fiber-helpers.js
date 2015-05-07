@@ -166,3 +166,15 @@ exports.inBareFiber = function (func) {
     }).run();
   };
 };
+
+// Returns a Promise that supports .resolve(result) and .reject(error).
+exports.makeFulfillablePromise = function () {
+  var resolve, reject;
+  var promise = new Promise(function (res, rej) {
+    resolve = res;
+    reject = rej;
+  });
+  promise.resolve = resolve;
+  promise.reject = reject;
+  return promise;
+};
