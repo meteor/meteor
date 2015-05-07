@@ -129,39 +129,7 @@ _.extend(InputFile.prototype, {
     return self._resourceSlot.inputResource.path;
   },
 
-  // XXX BBP remove these, they are duplicated in build-plugin.js
-  xxxContentsAsBuffer: function () {
-    var self = this;
-    return self._resourceSlot.inputResource.data;
-  },
-  xxxPathInPackage: function () {
-    var self = this;
-    return self._resourceSlot.inputResource.path;
-  },
-  xxxBasename: function () {
-    var self = this;
-    return files.pathBasename(self.xxxPathInPackage());
-  },
-  xxxDirname: function () {
-    var self = this;
-    return files.pathDirname(self.xxxPathInPackage());
-  },
-  // XXX is this null for app?
-  xxxPackageName: function () {
-    var self = this;
-    return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
-  },
-  xxxError: function (options) {
-    var self = this;
-    buildmessage.error(
-      options.message || ("error building " + self.xxxPathInPackage()), {
-        file: options.sourcePath || self.xxxPathInPackage(),
-        line: options.line ? options.line : undefined,
-        column: options.column ? options.column : undefined,
-        func: options.func ? options.func : undefined
-      }
-    );
-  },
+  // XXX BBP add more APIs similar to the build step of file handlers
   addStylesheet: function (options) {
     var self = this;
     // XXX BBP validate input!!

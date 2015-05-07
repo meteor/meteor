@@ -17,8 +17,8 @@ LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
   var mains = [];
 
   inputFiles.forEach(function (inputFile) {
-    var packageName = inputFile.xxxPackageName();
-    var pathInPackage = inputFile.xxxPathInPackage();
+    var packageName = inputFile.getPackageName();
+    var pathInPackage = inputFile.getPathInPackage();
     // XXX BBP think about windows slashes
     var absoluteImportPath = packageName === null
           ? ('{}/' + pathInPackage)
@@ -36,7 +36,7 @@ LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
     var inputFile = main.inputFile;
     var absoluteImportPath = main.absoluteImportPath;
     var f = new Future;
-    less.render(inputFile.xxxContentsAsBuffer().toString('utf8'), {
+    less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
       filename: absoluteImportPath,
       plugins: [importPlugin],
       // Generate a source map, and include the source files in the
@@ -48,7 +48,7 @@ LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
     try {
       var output = f.wait();
     } catch (e) {
-      inputFile.xxxError({
+      inputFile.error({
         message: e.message,
         sourcePath: e.filename,  // XXX BBP this has {} and stuff, is that OK?
         line: e.line,
@@ -61,7 +61,7 @@ LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
     //     be used for caching
     inputFile.addStylesheet({
       data: output.css,
-      path: inputFile.xxxPathInPackage() + '.css',
+      path: inputFile.getPathInPackage() + '.css',
       sourceMap: output.map
     });
   });
@@ -114,7 +114,7 @@ _.extend(MeteorImportLessFileManager.prototype, {
     }
     cb(null, {
       contents: self.filesByAbsoluteImportPath[filename]
-        .xxxContentsAsBuffer().toString('utf8'),
+        .getContentsAsBuffer().toString('utf8'),
       filename: filename
     });
     return;
