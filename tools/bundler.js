@@ -2114,16 +2114,18 @@ exports.bundle = function (options) {
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
 
-    lintingMessages = buildmessage.capture({
-      title: "linting the application"
-    }, function () {
-      compiler.lint(packageSource, {
-        isopackCache: projectContext.isopackCache,
-        isopack: app
+    if (buildOptions.lint) {
+      lintingMessages = buildmessage.capture({
+        title: "linting the application"
+      }, function () {
+        compiler.lint(packageSource, {
+          isopackCache: projectContext.isopackCache,
+          isopack: app
+        });
       });
-    });
-    if (! lintingMessages.hasMessages())
-      lintingMessages = null;
+      if (! lintingMessages.hasMessages())
+        lintingMessages = null;
+    }
 
     var clientTargets = [];
     // Client

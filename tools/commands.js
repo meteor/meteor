@@ -215,6 +215,8 @@ var runCommandOptions = {
     // bundled assets only. Encapsulates the behavior of once (does not rerun)
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean},
+    // Don't run linter on rebuilds
+    'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean }
@@ -400,7 +402,8 @@ function doRunCommand (options) {
     settingsFile: options.settings,
     buildOptions: {
       minify: options.production,
-      includeDebug: ! options.production
+      includeDebug: ! options.production,
+      lint: ! options['no-lint']
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -994,7 +997,10 @@ main.registerCommand({
   var bundler = require('./bundler.js');
   var bundle = bundler.bundle({
     projectContext: projectContext,
-    outputPath: bundlePath
+    outputPath: bundlePath,
+    buildOptions: {
+      lint: true
+    }
   });
 
   if (bundle.errors) {
