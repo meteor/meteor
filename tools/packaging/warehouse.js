@@ -37,7 +37,6 @@
 /// environment variable). The setup of that is handled by release.js.
 
 var os = require("os");
-var Future = require("fibers/future");
 var _ = require("underscore");
 
 var files = require('../fs/files.js');
@@ -190,7 +189,6 @@ _.extend(warehouse, {
   // all of the missing versioned packages referenced from the release manifest
   // @param releaseVersion {String} eg "0.1"
   _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
-    var future = new Future;
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
     files.mkdir_p(releasesDir, 0o755);
     var releaseManifestPath = files.pathJoin(releasesDir,
