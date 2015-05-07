@@ -6,7 +6,6 @@ if (showRequireProfile) {
 var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
-var Future = require('fibers/future');
 var Console = require('../console/console.js').Console;
 var files = require('../fs/files.js');
 var warehouse = require('../packaging/warehouse.js');
@@ -490,14 +489,13 @@ var springboard = function (rel, options) {
   }
 
   if (process.platform === 'win32') {
-    var ret = new Future();
-    var child = require("child_process").spawn(
-      files.convertToOSPath(executable + ".bat"), newArgv,
-      { env: process.env, stdio: 'inherit' });
-    child.on('exit', function (code) {
-      ret.return(code);
-    });
-    process.exit(ret.wait());
+    process.exit(new Promise(function (resolve) {
+      var batPath = files.convertToOSPath(executable + ".bat");
+      var child = require("child_process").spawn(batPath, newArgv, {
+        env: process.env,
+        stdio: 'inherit'
+      }).on('exit', resolve);
+    }).await());
   }
 
   // Now exec; we're not coming back.
