@@ -57,7 +57,6 @@
 /// support, that is mostly handled through buildmessage.js.
 var _ = require('underscore');
 var Fiber = require('fibers');
-var Future = require('fibers/future');
 var readline = require('readline');
 var util = require('util');
 var buildmessage = require('../utils/buildmessage.js');
@@ -1260,8 +1259,6 @@ _.extend(Console.prototype, {
 Console.prototype.readLine = function (options) {
   var self = this;
 
-  var fut = new Future();
-
   options = _.extend({
     echo: true,
     stream: self._stream
@@ -1298,16 +1295,16 @@ Console.prototype.readLine = function (options) {
     rl.prompt();
   }
 
-  rl.on('line', function (line) {
-    rl.close();
-    if (! options.echo) {
-      options.stream.write("\n");
-    }
-    self._setProgressDisplay(previousProgressDisplay);
-    fut['return'](line);
-  });
-
-  return fut.wait();
+  return new Promise(function (resolve) {
+    rl.on('line', function (line) {
+      rl.close();
+      if (! options.echo) {
+        options.stream.write("\n");
+      }
+      self._setProgressDisplay(previousProgressDisplay);
+      resolve(line);
+    });
+  }).await();
 };
 
 
