@@ -6,7 +6,6 @@ var os = require('os');
 var util = require('util');
 
 var _ = require('underscore');
-var Future = require('fibers/future');
 
 var files = require('../fs/files.js');
 var auth = require('../meteor-services/auth.js');
@@ -203,34 +202,35 @@ _.extend(exports, {
       }
     }
 
-    var fut;
+    var promise;
     if (! callback) {
-      fut = new Future();
-      callback = function (err, response, body) {
-        if (err) {
-          fut['throw'](err);
-          return;
-        }
-
-        var setCookie = {};
-        _.each(response.headers["set-cookie"] || [], function (h) {
-          var match = h.match(/^([^=\s]+)=([^;\s]+)/);
-          if (match) {
-            setCookie[match[1]] = match[2];
+      promise = new Promise(function (resolve, reject) {
+        callback = function (err, response, body) {
+          if (err) {
+            reject(err);
+            return;
           }
-        });
 
-        if (useSessionHeader && _.has(response.headers, "x-meteor-session")) {
-          auth.setSessionId(config.getAccountsDomain(),
-                            response.headers['x-meteor-session']);
-        }
+          var setCookie = {};
+          _.each(response.headers["set-cookie"] || [], function (h) {
+            var match = h.match(/^([^=\s]+)=([^;\s]+)/);
+            if (match) {
+              setCookie[match[1]] = match[2];
+            }
+          });
 
-        fut['return']({
-          response: response,
-          body: body,
-          setCookie: setCookie
-        });
-      };
+          if (useSessionHeader && _.has(response.headers, "x-meteor-session")) {
+            auth.setSessionId(config.getAccountsDomain(),
+                              response.headers['x-meteor-session']);
+          }
+
+          resolve({
+            response: response,
+            body: body,
+            setCookie: setCookie
+          });
+        };
+      });
     }
 
     // try to get proxy from environment.
@@ -279,9 +279,9 @@ _.extend(exports, {
       });
     }
 
-    if (fut) {
+    if (promise) {
       try {
-        return fut.wait();
+        return promise.await();
       } finally {
         if (progress) {
           progress.reportProgressDone();
