@@ -7,7 +7,6 @@ var child_process = require('child_process');
 
 var _ = require('underscore');
 var isopackets = require('../tool-env/isopackets.js');
-var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
@@ -78,7 +77,7 @@ if (process.platform === 'win32') {
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
   findMongoPids = function (app_dir, port) {
-    var fut = new Future;
+    var promise = fiberHelpers.makeFulfillablePromise();
 
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
       function (error, stdout, stderr) {
@@ -87,8 +86,9 @@ if (process.platform === 'win32') {
           if (error.code === 'ENOENT') {
             additionalInfo = "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
           }
-          fut['throw'](new Error("Couldn't run tasklist.exe: " +
-            additionalInfo));
+          promise.reject(
+            new Error("Couldn't run tasklist.exe: " + additionalInfo)
+          );
           return;
         } else {
           // Find the pids of all mongod processes
@@ -106,8 +106,10 @@ if (process.platform === 'win32') {
             {maxBuffer: 1024 * 1024 * 10},
             function (error, stdout, stderr) {
             if (error) {
-              fut['throw'](new Error("Couldn't run netstat -ano: " +
-                JSON.stringify(error)));
+              promise.reject(
+                new Error("Couldn't run netstat -ano: " +
+                          JSON.stringify(error))
+              );
               return;
             } else {
               var pids = [];
@@ -131,17 +133,17 @@ if (process.platform === 'win32') {
                 }
               });
 
-              fut['return'](pids);
+              promise.resolve(pids);
             }
           });
         }
       });
 
-    return fut.wait();
+    return promise.await();
   };
 } else {
   findMongoPids = function (appDir, port) {
-    var fut = new Future;
+    var promise = fiberHelpers.makeFulfillablePromise();
 
     // 'ps ax' should be standard across all MacOS and Linux.
     // However, ps on OS X corrupts some non-ASCII characters in arguments,
@@ -181,8 +183,11 @@ if (process.platform === 'win32') {
       {maxBuffer: 1024 * 1024 * 10},
       function (error, stdout, stderr) {
         if (error) {
-          fut['throw'](new Error("Couldn't run ps ax: " +
-            JSON.stringify(error) + "; " + error.message));
+          promise.reject(
+            new Error("Couldn't run ps ax: " +
+                      JSON.stringify(error) + "; " +
+                      error.message)
+          );
           return;
         }
 
@@ -208,10 +213,10 @@ if (process.platform === 'win32') {
           }
         });
 
-        fut['return'](ret);
+        promise.resolve(ret);
       });
 
-    return fut.wait();
+    return promise.await();
   };
 }
 
@@ -259,19 +264,17 @@ if (process.platform === 'win32') {
     // (The METEOR-PORT file may point to an old Mongo server that's now
     // stopped)
     var net = require('net');
-    var mongoTestConnectFuture = new Future;
-    var client = net.connect({port: mongoPort}, function() {
-      // The server is running.
-      client.end();
-      mongoTestConnectFuture.isResolved() || mongoTestConnectFuture.return();
-    });
-    client.on('error', function () {
-      mongoPort = null;
-      mongoTestConnectFuture.isResolved() || mongoTestConnectFuture.return();
-    });
-    mongoTestConnectFuture.wait();
 
-    return mongoPort;
+    return new Promise(resolve => {
+      var client = net.connect({
+        port: mongoPort
+      }, () => {
+        // The server is running.
+        client.end();
+        resolve(mongoPort);
+      });
+      client.on('error', () => resolve(null));
+    }).await();
   }
 }
 
@@ -374,18 +377,9 @@ var launchMongo = function (options) {
 
   var subHandles = [];
   var stopped = false;
-  var stopFuture = new Future;
-
-  // Like Future.wrap and _.bind in one.
-  var yieldingMethod = function (object, methodName, ...args) {
-    var f = new Future;
-    args.push(f.resolver());
-    object[methodName](...args);
-    return fiberHelpers.waitForOne(stopFuture, f);
-  };
-
-  var handle = {
-    stop: function () {
+  var handle = {};
+  var stopPromise = new Promise((resolve, reject) => {
+    handle.stop = function () {
       if (stopped) {
         return;
       }
@@ -394,8 +388,19 @@ var launchMongo = function (options) {
         handle.stop();
       });
 
-      stopFuture.throw(new StoppedDuringLaunch);
-    }
+      if (options.onStopped) {
+        options.onStopped();
+      }
+
+      reject(new StoppedDuringLaunch);
+    };
+  });
+
+  var yieldingMethod = function (object, methodName, ...args) {
+    return Promise.race([
+      stopPromise,
+      Promise.denodeify(object[methodName]).apply(object, args)
+    ]).await();
   };
 
   var launchOneMongoAndWaitForReadyForInitiate = function (dbPath, port,
@@ -403,7 +408,6 @@ var launchMongo = function (options) {
     files.mkdir_p(dbPath, 0o755);
 
     var proc = null;
-    var procExitHandler;
 
     if (options.allowKilling) {
       findMongoAndKillItDead(port, dbPath);
@@ -476,7 +480,7 @@ var launchMongo = function (options) {
       }
     });
 
-    procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
+    var procExitHandler = fiberHelpers.bindEnvironment(function (code, signal) {
       // Defang subHandle.stop().
       proc = null;
 
@@ -494,17 +498,23 @@ var launchMongo = function (options) {
     var replSetReadyToBeInitiated = false;
     var replSetReady = false;
 
-    var readyToTalkFuture = new Future;
+    var maybeReadyToTalk;
+    var readyToTalkPromise = new Promise(function (resolve) {
+      maybeReadyToTalk = function () {
+        if (resolve &&
+            listening &&
+            (noOplog || replSetReadyToBeInitiated || replSetReady)) {
+          proc.stdout.removeListener('data', stdoutOnData);
+          resolve();
+          resolve = null;
+        }
+      };
+    });
 
-    var maybeReadyToTalk = function () {
-      if (readyToTalkFuture.isResolved()) {
-        return;
-      }
-      if (listening && (noOplog || replSetReadyToBeInitiated || replSetReady)) {
-        proc.stdout.removeListener('data', stdoutOnData);
-        readyToTalkFuture.return();
-      }
-    };
+    var stopOrReadyPromise = Promise.race([
+      stopPromise,
+      readyToTalkPromise,
+    ]);
 
     var detectedErrors = {};
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
@@ -542,7 +552,7 @@ var launchMongo = function (options) {
       stderrOutput += data;
     });
 
-    fiberHelpers.waitForOne(stopFuture, readyToTalkFuture);
+    stopOrReadyPromise.await();
   };
 
 
@@ -708,7 +718,7 @@ var MongoRunner = function (options) {
 
   self.handle = null;
   self.shuttingDown = false;
-  self.startupFuture = null;
+  self.resolveStartupPromise = null;
 
   self.errorCount = 0;
   self.errorTimer = null;
@@ -746,9 +756,10 @@ _.extend(MRp, {
     }
 
     // Otherwise, wait for a successful _startOrRestart, or a failure.
-    if (!self.startupFuture) {
-      self.startupFuture = new Future;
-      self.startupFuture.wait();
+    if (! self.resolveStartupPromise) {
+      new Promise(function (resolve) {
+        self.resolveStartupPromise = resolve;
+      }).await();
     }
   },
 
@@ -783,7 +794,10 @@ _.extend(MRp, {
       port: self.port,
       multiple: self.multiple,
       allowKilling: allowKilling,
-      onExit: _.bind(self._exited, self)
+      onExit: _.bind(self._exited, self),
+      onStopped() {
+        self.suppressExitMessage = false;
+      },
     });
 
     // It has successfully started up, so if it exits after this point, that
@@ -905,10 +919,10 @@ _.extend(MRp, {
 
   _allowStartupToReturn: function () {
     var self = this;
-    if (self.startupFuture) {
-      var startupFuture = self.startupFuture;
-      self.startupFuture = null;
-      startupFuture.return();
+    if (self.resolveStartupPromise) {
+      var resolve = self.resolveStartupPromise;
+      self.resolveStartupPromise = null;
+      resolve();
     }
   },
 
