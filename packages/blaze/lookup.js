@@ -178,7 +178,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
     return helper;
   }
 
-  // 5. throw an error when called: nothing is found
+  // 5. look up in a data context
   return function () {
     var isCalledAsFunction = (arguments.length > 0);
     var data = Blaze.getData();
