@@ -32,20 +32,27 @@ Promise.prototype.await = function () {
   return await(this);
 };
 
-Promise.async = function (fn) {
+Promise.async = function (fn, allowReuseOfCurrentFiber) {
   return function () {
-    if (Fiber.current) {
-      return Promise.resolve(fn.apply(this, arguments));
+    var self = this;
+    var args = arguments;
+
+    if (allowReuseOfCurrentFiber && Fiber.current) {
+      return Promise.resolve(fn.apply(self, args));
     }
 
-    return new Promise(function (resolve) {
+    return new Promise(function (resolve, reject) {
       new Fiber(function () {
-        resolve(fn.apply(this, arguments));
+        try {
+          resolve(fn.apply(self, args));
+        } catch (err) {
+          reject(err);
+        }
       }).run();
     });
-  }
+  };
 };
 
-Function.prototype.async = function () {
-  return Promise.async(this);
+Function.prototype.async = function (allowReuseOfCurrentFiber) {
+  return Promise.async(this, allowReuseOfCurrentFiber);
 };
