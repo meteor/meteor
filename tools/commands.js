@@ -205,10 +205,15 @@ var runCommandOptions = {
     'raw-logs': { type: Boolean },
     settings: { type: String },
     test: {type: Boolean, default: false},
+    // A path relative ot the /tests directory or undefined.
+    // All files inside this directory will be included in the app.
+    // This allows running integration tests with Velocity.
     'include-tests': {type: String},
     // Test the app. Similar to test-packages.
+    // Used by Velocity.
     'test-app': {type: Boolean, default: false},
-    // Sets the path of where the temp app should be created
+    // Sets the path of where the temporary app should be created.
+    // Used by Velocity.
     'test-app-path': { type: String },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
@@ -283,7 +288,7 @@ function doRunCommand (options) {
   if (options['test-app']) {
     // Make a temporary app dir (based on the test runner app). This will be
     // cleaned up on process exit. Using a temporary app dir means that we can
-    // run multiple "test-packages" commands in parallel without them stomping
+    // run multiple "test-app" commands in parallel without them stomping
     // on each other.
     var testRunnerAppDir =
       options['test-app-path'] || files.mkdtemp('meteor-test-run');

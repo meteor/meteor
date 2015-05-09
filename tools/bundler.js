@@ -1988,7 +1988,8 @@ var writeSiteArchive = Profile(
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
  *
- * - includeTests: true if the files in the /tests directory should be included.
+ * - includeTests: A path relative ot the /tests directory or undefined.
+ *   All files inside this directory will be included in the app.
  *   This allows running integration tests with Velocity.
  *
  * Returns an object with keys:
