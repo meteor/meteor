@@ -70,7 +70,8 @@ _.extend(CodeGen.prototype, {
           // Reactive attributes are already wrapped in a function,
           // and there's no fine-grained reactivity.
           // Anywhere else, we need to create a View.
-          code = 'Blaze.View("lookup:' + tag.path.join('.') + '", ' +
+          code = 'Blaze.View(' +
+            BlazeTools.toJSLiteral('lookup:' + tag.path.join('.')) + ', ' +
             'function () { return ' + code + '; })';
         }
         return BlazeTools.EmitCode(code);
@@ -107,7 +108,7 @@ _.extend(CodeGen.prototype, {
                 throw new Error("Missing 'in' operator of #each. " + eachUsage);
               }
               // split out the variable name and sequence arguments
-              variable = args[0][1][0];// XXX take name as a string ignoring tag
+              var variable = args[0][1][0];// XXX take name as a string ignoring tag
               dataCode = 'function () { return { _sequence: Spacebars.call(' +
                 self.codeGenPath(args[2][1]) +
                 '), _variable: "' + variable + '" }; }';
