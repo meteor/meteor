@@ -75,7 +75,7 @@ _.extend(CodeGen.prototype, {
             'function () { return ' + code + '; })';
         }
         return BlazeTools.EmitCode(code);
-      } else if (tag.type === 'INCLUSION' || tag.type === 'BLOCKOPEN') {
+      } else if (_.contains(['INCLUSION', 'INCLUSION_ARGS', 'BLOCKOPEN'], tag.type)) {
         var path = tag.path;
         var args = tag.args;
 
@@ -143,16 +143,28 @@ _.extend(CodeGen.prototype, {
           }
 
           var dataCode = self.codeGenInclusionDataFunc(tag.args);
+          var argsCode = null;
+
+          // In the different inclusion type, arguments don't form a
+          // data-context, but rather set the template-level scope.
+          if (tag.type === 'INCLUSION_ARGS') {
+            argsCode = dataCode;
+            dataCode = null;
+          }
+
           var content = (('content' in tag) ?
                          self.codeGenBlock(tag.content) : null);
           var elseContent = (('elseContent' in tag) ?
                              self.codeGenBlock(tag.elseContent) : null);
 
           var includeArgs = [compCode];
-          if (content) {
-            includeArgs.push(content);
-            if (elseContent)
-              includeArgs.push(elseContent);
+          if (content || argsCode) {
+            includeArgs.push(content || 'null');
+            if (elseContent || argsCode) {
+              includeArgs.push(elseContent || 'null');
+              if (argsCode)
+                includeArgs.push(argsCode);
+            }
           }
 
           var includeCode =

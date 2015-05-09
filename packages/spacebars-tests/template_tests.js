@@ -3388,3 +3388,51 @@ Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", f
   test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
 });
 
+Tinytest.add("spacebars-tests - template_tests - template arguments - basic", function (test) {
+  var tmpl = Template.spacebars_template_test_template_pass_arguments;
+  var myVar = new ReactiveVar('init');
+  tmpl.helpers({
+    helper: function () {
+      return myVar.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference - init");
+
+  myVar.set('new');
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "my string - 2 - variable reference - new");
+});
+
+Tinytest.add("spacebars-tests - template_tests - template arguments - undeclared args", function (test) {
+  var tmpl = Template.spacebars_template_test_undeclared_args_caller;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "1 - 2 -");
+});
+
+Tinytest.add("spacebars-tests - template_tests - template arguments - @args symbol", function (test) {
+  var tmpl = Template.spacebars_template_test_at_args_symbol_caller;
+  var myVar = new ReactiveVar('init');
+  tmpl.helpers({
+    helper: function () {
+      return myVar.get();
+    }
+  });
+  Template.spacebars_template_test_at_args_symbol.helpers({
+    keyValues: function (obj) {
+      return _.map(obj, function (v, k) {
+        return k + ':' + v;
+      }).join(' ');
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "f - one:1 two:two three:3 four:init five:f");
+
+  myVar.set('new');
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "f - one:1 two:two three:3 four:new five:f");
+});
+
