@@ -28,7 +28,7 @@ var bindDataContext = function (x) {
 
 Blaze._OLDSTYLE_HELPER = {};
 
-var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
+Blaze._getTemplateHelper = function (template, name, tmplInstanceFunc) {
   // XXX COMPAT WITH 0.9.3
   var isKnownOldStyleHelper = false;
 
@@ -36,8 +36,10 @@ var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
     var helper = template.__helpers.get(name);
     if (helper === Blaze._OLDSTYLE_HELPER) {
       isKnownOldStyleHelper = true;
+    } else if (helper != null) {
+      return wrapHelper(bindDataContext(helper), tmplInstanceFunc);
     } else {
-      return helper;
+      return null;
     }
   }
 
@@ -52,7 +54,9 @@ var getTemplateHelper = Blaze._getTemplateHelper = function (template, name) {
                     '.helpers(...)` instead.');
       }
     }
-    return template[name];
+    if (template[name] != null) {
+      return wrapHelper(bindDataContext(template[name]), tmplInstanceFunc);
+    }
   }
 
   return null;
@@ -73,7 +77,7 @@ var wrapHelper = function (f, templateFunc) {
   };
 };
 
-var lexicalBindingLookup = function (view, name) {
+Blaze._lexicalBindingLookup = function (view, name) {
   var currentView = view;
   var blockHelpersStack = [];
 
@@ -100,6 +104,22 @@ var lexicalBindingLookup = function (view, name) {
   return null;
 };
 
+// templateInstance argument is provided to be available for possible
+// alternative implementations of this function by 3rd party packages.
+Blaze._getTemplate = function (name, templateInstance) {
+  if ((name in Blaze.Template) && (Blaze.Template[name] instanceof Blaze.Template)) {
+    return Blaze.Template[name];
+  }
+  return null;
+};
+
+Blaze._getGlobalHelper = function (name, templateInstance) {
+  if (Blaze._globalHelpers[name] != null) {
+    return wrapHelper(bindDataContext(Blaze._globalHelpers[name]), templateInstance);
+  }
+  return null;
+};
+
 // Looks up a name, like "foo" or "..", as a helper of the
 // current template; the name of a template; a global helper;
 // or a property of the data context.  Called on the View of
@@ -120,6 +140,7 @@ Blaze.View.prototype.lookup = function (name, _options) {
   var helper;
   var binding;
   var boundTmplInstance;
+  var foundTemplate;
 
   if (this.templateInstance) {
     boundTmplInstance = _.bind(this.templateInstance, this);
@@ -137,29 +158,27 @@ Blaze.View.prototype.lookup = function (name, _options) {
   }
 
   // 1. look up a helper on the current template
-  if (template && ((helper = getTemplateHelper(template, name)) != null)) {
-    return wrapHelper(bindDataContext(helper), boundTmplInstance);
+  if (template && ((helper = Blaze._getTemplateHelper(template, name, boundTmplInstance)) != null)) {
+    return helper;
   }
 
   // 2. look up a binding by traversing the lexical view hierarchy inside the
   // current template
-  if (template && (binding = lexicalBindingLookup(Blaze.currentView, name)) != null) {
+  if (template && (binding = Blaze._lexicalBindingLookup(Blaze.currentView, name)) != null) {
     return binding;
   }
 
   // 3. look up a template by name
-  if (lookupTemplate && (name in Blaze.Template) &&
-             (Blaze.Template[name] instanceof Blaze.Template)) {
-    return Blaze.Template[name];
+  if (lookupTemplate && ((foundTemplate = Blaze._getTemplate(name, boundTmplInstance)) != null)) {
+    return foundTemplate;
   }
 
   // 4. look up a global helper
-  if (Blaze._globalHelpers[name] != null) {
-    return wrapHelper(bindDataContext(Blaze._globalHelpers[name]),
-      boundTmplInstance);
+  if ((helper = Blaze._getGlobalHelper(name, boundTmplInstance)) != null) {
+    return helper;
   }
 
-  // 5. throw an error when called: nothing is found
+  // 5. look up in a data context
   return function () {
     var isCalledAsFunction = (arguments.length > 0);
     var data = Blaze.getData();
