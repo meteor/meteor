@@ -26,6 +26,10 @@ var defaultWarehouseDir = function () {
   if (process.env.METEOR_WAREHOUSE_DIR)
     return process.env.METEOR_WAREHOUSE_DIR;
 
+  // a hook to allow multi-user running meteor from single global meteor installation
+  if (process.env.METEOR_WAREHOUSE_BASE)
+    return process.env.METEOR_WAREHOUSE_BASE;
+
   var warehouseBase = files.inCheckout()
      ? files.getCurrentToolsDir() : files.getHomeDir();
   // XXX This will be `.meteor` soon, once we've written the code to make the
