@@ -190,39 +190,31 @@ Blaze.View.prototype.autorun = function (f, _inViewScope, displayName) {
     throw new Error("Can't call View#autorun from a Tracker Computation; try calling it from the created or rendered callback");
   }
 
-  // Each local variable allocate additional space on each frame of the
-  // execution stack. When too many variables are allocated on stack, you can
-  // run out of memory on stack running a deep recursion (which is typical for
-  // Blaze functions) and get stackoverlow error. (The size of the stack varies
-  // between browsers).
-  // The trick we use here is to allocate only one variable on stack `locals`
-  // that keeps references to all the rest. Since locals is allocated on heap,
-  // we don't take up any space on the stack.
-  var locals = {};
-  locals.templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
+  var templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
 
-  locals.f = function viewAutorun(c) {
+  var func = function viewAutorun(c) {
     return Blaze._withCurrentView(_inViewScope || self, function () {
-      return Blaze.Template._withTemplateInstanceFunc(locals.templateInstanceFunc, function () {
-        return f.call(self, c);
-      });
+      return Blaze.Template._withTemplateInstanceFunc(
+        templateInstanceFunc, function () {
+          return f.call(self, c);
+        });
     });
   };
 
   // Give the autorun function a better name for debugging and profiling.
   // The `displayName` property is not part of the spec but browsers like Chrome
   // and Firefox prefer it in debuggers over the name function was declared by.
-  locals.f.displayName =
+  func.displayName =
     (self.name || 'anonymous') + ':' + (displayName || 'anonymous');
-  locals.c = Tracker.autorun(locals.f);
+  var comp = Tracker.autorun(func);
 
-  var stopComputation = function () { locals.c.stop(); };
+  var stopComputation = function () { comp.stop(); };
   self.onViewDestroyed(stopComputation);
-  locals.c.onStop(function () {
+  comp.onStop(function () {
     self.removeViewDestroyedListener(stopComputation);
   });
 
-  return locals.c;
+  return comp;
 };
 
 Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
