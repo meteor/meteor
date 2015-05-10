@@ -3388,3 +3388,42 @@ Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", f
   test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
 });
 
+var testDoesntRerender = function (test, which) {
+  var tmpl = ({
+    "WITH": Template.spacebars_template_test_with_rerender,
+    "LET": Template.spacebars_template_test_let_rerender
+  })[which];
+
+  var x = new ReactiveVar("aaa");
+  tmpl.helpers({
+    x: function () {
+      return x.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  var input = div.querySelector('input.foo');
+  var span = div.querySelector('span.bar');
+  test.isTrue(input && input.className === 'foo');
+  test.isTrue(span && span.className === 'bar');
+  test.equal(canonicalizeHtml(span.innerHTML), 'aaa');
+
+  x.set('bbb');
+  Tracker.flush();
+  // make sure the input and span are still the same, but the new
+  // value of x is reflected
+  var input2 = div.querySelector('input.foo');
+  var span2 = div.querySelector('span.bar');
+  test.isTrue(input2 === input, 'input');
+  test.isTrue(span2 === span, 'span');
+  test.equal(canonicalizeHtml(span2.innerHTML), 'bbb');
+};
+
+
+Tinytest.add("spacebars-tests - template_tests - #with doesn't re-render template", function (test) {
+  testDoesntRerender(test, "WITH");
+});
+
+Tinytest.add("spacebars-tests - template_tests - #let doesn't re-render template", function (test) {
+  testDoesntRerender(test, "LET");
+});
