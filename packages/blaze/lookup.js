@@ -28,7 +28,7 @@ var bindDataContext = function (x) {
 
 Blaze._OLDSTYLE_HELPER = {};
 
-Blaze._getTemplateHelper = function (template, name, templateInstance) {
+Blaze._getTemplateHelper = function (template, name, tmplInstanceFunc) {
   // XXX COMPAT WITH 0.9.3
   var isKnownOldStyleHelper = false;
 
@@ -37,7 +37,7 @@ Blaze._getTemplateHelper = function (template, name, templateInstance) {
     if (helper === Blaze._OLDSTYLE_HELPER) {
       isKnownOldStyleHelper = true;
     } else if (helper != null) {
-      return wrapHelper(bindDataContext(helper), templateInstance);
+      return wrapHelper(bindDataContext(helper), tmplInstanceFunc);
     } else {
       return null;
     }
@@ -55,7 +55,7 @@ Blaze._getTemplateHelper = function (template, name, templateInstance) {
       }
     }
     if (template[name] != null) {
-      return wrapHelper(bindDataContext(template[name]), templateInstance);
+      return wrapHelper(bindDataContext(template[name]), tmplInstanceFunc);
     }
   }
 
