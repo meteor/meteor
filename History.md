@@ -119,6 +119,8 @@
 
   - uglify-js: 2.4.20 (from 2.4.17)
 
+* `Meteor.loginWithGoogle` now supports `prompt`. Choose a prompt to always be
+  displayed on Google login.
 
 ## v1.1.0.2, 2015-Apr-06
 
