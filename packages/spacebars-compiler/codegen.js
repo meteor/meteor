@@ -104,11 +104,19 @@ _.extend(CodeGen.prototype, {
             }
             if (args.length === 3) {
               // checks for {{#each person in people}} case
-              if (args[1][0] !== "PATH" || args[1][1][0] !== "in") {
+              var inArg = args[1];
+              if (! (inArg[0] === "PATH" && inArg[1].length === 1 &&
+                     inArg[1][0] === 'in')) {
+                // inArg doesn't look like ['PATH',['in']]
                 throw new Error("Missing 'in' operator of #each. " + eachUsage);
               }
               // split out the variable name and sequence arguments
-              var variable = args[0][1][0];// XXX take name as a string ignoring tag
+              var variableArg = args[0];
+              if (! (variableArg[0] === "PATH" && variableArg[1].length === 1 &&
+                     variableArg[1][0].replace(/\./g, ''))) {
+                throw new Error("Bad variable name in #each");
+              }
+              var variable = variableArg[1][0];
               dataCode = 'function () { return { _sequence: Spacebars.call(' +
                 self.codeGenPath(args[2][1]) +
                 '), _variable: "' + variable + '" }; }';
