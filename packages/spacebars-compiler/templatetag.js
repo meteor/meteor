@@ -109,9 +109,11 @@ TemplateTag.parse = function (scannerOrString) {
   };
 
   var scanIdentifier = function (isFirstInPath) {
-    var id = BlazeTools.parseIdentifierName(scanner);
-    if (! id)
+    var id = BlazeTools.parseIdentifierName(scanner) ||
+          run(/^(?:@index)/);
+    if (! id) {
       expected('IDENTIFIER');
+    }
     if (isFirstInPath &&
         (id === 'null' || id === 'true' || id === 'false'))
       scanner.fatal("Can't use null, true, or false, as an identifier at start of path");
