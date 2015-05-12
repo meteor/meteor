@@ -462,7 +462,8 @@ var validateTag = function (ttag, scanner) {
 
   if (ttag.type === 'INCLUSION' || ttag.type === 'BLOCKOPEN') {
     var args = ttag.args;
-    if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH') {
+    if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH' &&
+        ttag.path[0] !== 'each') {
       // we have a positional argument that is not a PATH followed by
       // other arguments
       scanner.fatal("First argument must be a function, to be called on the rest of the arguments; found " + args[0][0]);

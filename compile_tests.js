@@ -57,6 +57,7 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
       return e.message;
     }
     test.fail("Didn't throw an error: " + input);
+    return '';
   };
 
   var assertStartsWith = function (a, b) {
@@ -92,4 +93,11 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
           'asdf</a>', '{{!foo}}</a>', '{{!foo}} </a>'], function (badFrag) {
             isError(badFrag, "Unexpected HTML close tag");
           });
+
+  isError("{{#let myHelper}}{{/let}}", "Incorrect form of #let");
+  isError("{{#each foo on bar}}{{/each}}", "Missing 'in' operator");
+  isError("{{#each foo in.in bar}}{{/each}}", "Missing 'in' operator");
+  isError("{{#each foo.bar in baz}}{{/each}}", "Bad variable name in #each");
+  isError("{{#each ../foo in baz}}{{/each}}", "Bad variable name in #each");
+  isError("{{#each 3 in baz}}{{/each}}", "Bad variable name in #each");
 });
