@@ -1,6 +1,6 @@
 var assert = require("assert");
 var Fiber = require("fibers");
-var Promise = require("meteor-promise");
+var Promise = require("../promise_server.js");
 
 describe("Promise.await", function () {
   it("should work inside an existing Fiber", function () {
