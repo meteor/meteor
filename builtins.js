@@ -52,14 +52,13 @@ Blaze._attachBindingsToView = function (bindings, view) {
 
 /**
  * @summary Constructs a View setting the local lexical scope in the block.
- * @param {Function} bindingsFunc A function to reactively re-run. The returned
- * dictionary maps names of bindings with values or computations to reactively
- * re-run.
+ * @param {Function} bindings Dictionary mapping names of bindings to
+ * values or computations to reactively re-run.
  * @param {Function} contentFunc A Function that returns [*renderable content*](#renderable_content).
  */
-Blaze.Let = function (bindingsFunc, contentFunc) {
+Blaze.Let = function (bindings, contentFunc) {
   var view = Blaze.View('let', contentFunc);
-  Blaze._attachBindingsToView(bindingsFunc(), view);
+  Blaze._attachBindingsToView(bindings, view);
 
   return view;
 };
