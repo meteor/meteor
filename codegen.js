@@ -121,6 +121,19 @@ _.extend(CodeGen.prototype, {
                 self.codeGenPath(args[2][1]) +
                 '), _variable: "' + variable + '" }; }';
             }
+          } else if (path[0] === 'let') {
+            var dataProps = {};
+            _.each(args, function (arg) {
+              if (arg.length !== 3) {
+                // not a keyword arg (x=y)
+                throw new Error("Incorrect form of #let");
+              }
+              var argKey = arg[2];
+              dataProps[argKey] =
+                'function () { return Spacebars.call(' +
+                self.codeGenArgValue(arg) + '); }';
+            });
+            dataCode = makeObjectLiteral(dataProps);
           }
 
           if (! dataCode) {
