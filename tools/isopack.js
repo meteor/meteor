@@ -269,7 +269,8 @@ var Isopack = function () {
   // isopack-merge code in tropohouse.
   self.toolsOnDisk = [];
 
-  // XXX doc
+  // A map of package dependencies that can provide a plugin for this isopack.
+  // In practice, it is every direct dependency and implied packages.
   self.pluginProviderPackageMap = null;
 };
 
