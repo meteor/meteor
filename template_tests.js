@@ -3427,3 +3427,14 @@ Tinytest.add("spacebars-tests - template_tests - #with doesn't re-render templat
 Tinytest.add("spacebars-tests - template_tests - #let doesn't re-render template", function (test) {
   testDoesntRerender(test, "LET");
 });
+
+Tinytest.add("spacebars-tests - template_tests - #each takes multiple arguments", function (test) {
+  var tmpl = Template.spacebars_template_test_each_multiarg;
+  tmpl.helpers({
+    arg: ['a', 'b', 'c'],
+    helper: function (x) { return x; }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "<div>a</div><div>b</div><div>c</div>");
+});

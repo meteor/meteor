@@ -1124,3 +1124,9 @@ Hi there!
     <span class="bar">{{y}}</span>
   {{/let}}
 </template>
+
+<template name="spacebars_template_test_each_multiarg">
+  {{#each helper arg}}
+    <div>{{this}}</div>
+  {{/each}}
+</template>
