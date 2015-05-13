@@ -1608,8 +1608,53 @@ main.registerCommand({
       title: ("Changes to your project's package version selections from " +
               "updating package versions:")
     });
+  } else if (options.args.length) {
+    Console.info(
+      "The specified packages are at their latest compatible versions.");
   } else {
-    Console.info("Your packages are at their latest compatible versions.");
+    Console.info(
+      "Your top-level dependencies are at their latest compatible versions.");
+  }
+
+  if (! options.args.length) {
+    // Generate and print info about what is NOT at the latest version.
+    var topLevelPkgSet = {};
+    projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
+      topLevelPkgSet[constraint.package] = true;
+    });
+    var nonlatestDirectDeps = [];
+    var nonlatestIndirectDeps = [];
+    projectContext.packageMap.eachPackage(function (name, info) {
+      var selectedVersion = info.version;
+      var latestVersion = projectContext.projectCatalog.getLatestVersion(
+        name).version;
+      if (selectedVersion !== latestVersion) {
+        var rec = { name: name, selectedVersion: selectedVersion,
+                    latestVersion: latestVersion };
+        if (_.has(topLevelPkgSet, name)) {
+          nonlatestDirectDeps.push(rec);
+        } else {
+          nonlatestIndirectDeps.push(rec);
+        }
+      }
+    });
+    var printItem = function (rec) {
+      Console.info(" * " + rec.name + " " + rec.selectedVersion +
+                   " - " + rec.latestVersion + " is available");
+    };
+    if (nonlatestDirectDeps.length) {
+      Console.info("\nThe following top-level dependencies were not updated " +
+                   "to the very latest version available:");
+      _.each(nonlatestDirectDeps, printItem);
+    }
+    if (nonlatestIndirectDeps.length) {
+      Console.info("\nNewer versions of the following indirect dependencies" +
+                   " are available:");
+      _.each(nonlatestIndirectDeps, printItem);
+      Console.info(
+        "To update one or more of these packages, pass their names to " +
+          "`meteor update`.");
+    }
   }
 });
 

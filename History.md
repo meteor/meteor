@@ -80,6 +80,8 @@
 * Fix crash when downloading two builds of the same package version
   simultaneously.  #4163
 
+* Improve messages printed by `meteor update`, displaying list of packages
+  that are not at the latest version available.
 
 ### Meteor Accounts
 
