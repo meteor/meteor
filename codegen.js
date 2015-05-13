@@ -97,30 +97,28 @@ _.extend(CodeGen.prototype, {
           // #each has a special treatment as it features two different forms:
           // - {{#each people}}
           // - {{#each person in people}}
-          if (path[0] === 'each') {
-            var eachUsage = "Use either {{#each items}} or {{#each item in items}} form of #each.";
-            if (args.length !== 1 && args.length !== 3) {
-              throw new Error("#each has incorrect number of arguments. " + eachUsage);
+          if (path[0] === 'each' && args.length >= 2 && args[1][0] === 'PATH' &&
+              args[1][1].length && args[1][1][0] === 'in') {
+            // minimum conditions are met for each-in.  now validate this
+            // isn't some weird case.
+            var eachUsage = "Use either {{#each items}} or " +
+                  "{{#each item in items}} form of #each.";
+            var inArg = args[1];
+            if (! (args.length === 3 && inArg[1].length === 1)) {
+              // we don't have 3 space-separated parts after #each, or
+              // inArg doesn't look like ['PATH',['in']]
+              throw new Error("Malformed #each. " + eachUsage);
             }
-            if (args.length === 3) {
-              // checks for {{#each person in people}} case
-              var inArg = args[1];
-              if (! (inArg[0] === "PATH" && inArg[1].length === 1 &&
-                     inArg[1][0] === 'in')) {
-                // inArg doesn't look like ['PATH',['in']]
-                throw new Error("Missing 'in' operator of #each. " + eachUsage);
-              }
-              // split out the variable name and sequence arguments
-              var variableArg = args[0];
-              if (! (variableArg[0] === "PATH" && variableArg[1].length === 1 &&
-                     variableArg[1][0].replace(/\./g, ''))) {
-                throw new Error("Bad variable name in #each");
-              }
-              var variable = variableArg[1][0];
-              dataCode = 'function () { return { _sequence: Spacebars.call(' +
-                self.codeGenPath(args[2][1]) +
-                '), _variable: ' + BlazeTools.toJSLiteral(variable) + ' }; }';
+            // split out the variable name and sequence arguments
+            var variableArg = args[0];
+            if (! (variableArg[0] === "PATH" && variableArg[1].length === 1 &&
+                   variableArg[1][0].replace(/\./g, ''))) {
+              throw new Error("Bad variable name in #each");
             }
+            var variable = variableArg[1][0];
+            dataCode = 'function () { return { _sequence: Spacebars.call(' +
+              self.codeGenPath(args[2][1]) +
+              '), _variable: ' + BlazeTools.toJSLiteral(variable) + ' }; }';
           } else if (path[0] === 'let') {
             var dataProps = {};
             _.each(args, function (arg) {

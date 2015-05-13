@@ -464,11 +464,18 @@ var validateTag = function (ttag, scanner) {
 
   if (ttag.type === 'INCLUSION' || ttag.type === 'BLOCKOPEN') {
     var args = ttag.args;
-    if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH' &&
-        ttag.path[0] !== 'each') {
-      // we have a positional argument that is not a PATH followed by
-      // other arguments
-      scanner.fatal("First argument must be a function, to be called on the rest of the arguments; found " + args[0][0]);
+    if (ttag.path[0] === 'each' && args[1] && args[1][0] === 'PATH' &&
+        args[1][1][0] === 'in') {
+      // For slightly better error messages, we detect the each-in case
+      // here in order not to complain if the user writes `{{#each 3 in x}}`
+      // that "3 is not a function"
+    } else {
+      if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH') {
+        // we have a positional argument that is not a PATH followed by
+        // other arguments
+        scanner.fatal("First argument must be a function, to be called on " +
+                      "the rest of the arguments; found " + args[0][0]);
+      }
     }
   }
 
