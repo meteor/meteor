@@ -46,6 +46,17 @@ set to `true`.
 
 {{> autoApiBox "EJSON.addType"}}
 
+The factory function passed to the `addType` method should create an instance of our custom type and initialize it with the values from the object passed as the first argument of the factory function. Here is an example:
+
+    Parson = function (attrs) {
+      this.firstName = attrs.firstName;
+      this.lastName = attrs.lastName;
+    };
+    
+    EJSON.addType('Person', function (jsonValue) {
+      return new Person(jsonValue);
+    });
+
 When you add a type to EJSON, Meteor will be able to use that type in:
 
  - publishing objects of your type if you pass them to publish handlers.
