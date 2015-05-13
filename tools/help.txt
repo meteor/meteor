@@ -176,6 +176,10 @@ You can also 'or' constraints together: for example,
 meteor add 'package@=1.0.0 || =2.0.1' means either 1.0.0 (exactly) or 
 2.0.1 (exactly).
 
+Package version constraints for a project are stored in .meteor/packages
+Packages added with a version constraint are resolved with the dependencies 
+of any other packages being used.
+
 To remove a version constraint for a specific package, run meteor add again 
 without specifying a version. For example above, to stop using version 1.1.0 
 exactly, run meteor add package.
