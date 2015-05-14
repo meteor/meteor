@@ -95,8 +95,7 @@ debugger, just like it is in local development mode.
 
 
 
-To delete an application you've deployed, specify
-the `--delete` option along with the site.
+To delete an application you've deployed, see [meteor delete-site](#meteordeletesite).
 
 
 
@@ -118,6 +117,11 @@ server side of your application in [`Meteor.settings`](#meteor_settings).
 Settings are persistent.  When you redeploy your app, the old value will be
 preserved unless you explicitly pass new settings using the `--settings` option.
 To unset `Meteor.settings`, pass an empty settings file.
+
+<h3 id="meteordeletesite">meteor delete-site <i>site</i></h3>
+
+Permanently remove a deployed application, including all of its stored data.
+
 
 <h3 id="meteorlogs">meteor logs <i>site</i></h3>
 

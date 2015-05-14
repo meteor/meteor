@@ -389,6 +389,13 @@ Options:
                 constraints.
 
 
+>>> delete-site
+Delete an app deployed with 'meteor deploy'.
+Usage: meteor delete-site <site>
+
+Permanently remove a deployed application, including all of its stored data.
+
+
 >>> logs
 Show logs for specified site.
 Usage: meteor logs <site>
