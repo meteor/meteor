@@ -20,7 +20,7 @@
 * Fix memory leak.  #4289
 
 
-## DDP
+### DDP
 
 * Websockets now support the
   [`permessage-deflate`](https://tools.ietf.org/id/draft-ietf-hybi-permessage-compression-19.txt)
@@ -83,10 +83,21 @@
 * Improve messages printed by `meteor update`, displaying list of packages
   that are not at the latest version available.
 
+* When determining file load order, split file paths on path separator
+  before comparing path components alphabetically.  #4300
+
 ### Meteor Accounts
 
 * Add `Accounts.oauth.unregisterService` method, and ensure that users can only
   log in with currently registered services.  #4014
+
+* The `accounts-base` now defines reusable `AccountsClient` and
+  `AccountsServer` constructors, so that users can create multiple
+  independent instances of the `Accounts` namespace.  #4233
+
+### Minimongo
+
+* The `$push` query modifier now supports a `$position` argument.  #4312
 
 ### Email
 
@@ -120,9 +131,13 @@
 * Upgraded dependencies:
 
   - uglify-js: 2.4.20 (from 2.4.17)
+  - http-proxy: 1.11.1 (from 1.6.0)
 
 * `Meteor.loginWithGoogle` now supports `prompt`. Choose a prompt to always be
   displayed on Google login.
+
+* Upgraded `coffeescript` package to depend on NPM packages
+  coffeescript@1.9.2 and source-map@0.4.2.
 
 ## v1.1.0.2, 2015-Apr-06
 
