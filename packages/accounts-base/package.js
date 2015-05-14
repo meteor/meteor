@@ -34,11 +34,12 @@ Package.onUse(function (api) {
   api.use('oauth-encryption', 'server', {weak: true});
 
   api.export('Accounts');
+  api.export('AccountsClient', 'client');
+  api.export('AccountsServer', 'server');
   api.export('AccountsTest', {testOnly: true});
 
   api.addFiles('accounts_common.js', ['client', 'server']);
   api.addFiles('accounts_server.js', 'server');
-  api.addFiles('url_client.js', 'client');
   api.addFiles('url_server.js', 'server');
 
   // accounts_client must be before localstorage_token, because
@@ -46,7 +47,14 @@ Package.onUse(function (api) {
   // Accounts.callLoginMethod) on startup. And localstorage_token must be after
   // url_client, which sets autoLoginEnabled.
   api.addFiles('accounts_client.js', 'client');
+  api.addFiles('url_client.js', 'client');
   api.addFiles('localstorage_token.js', 'client');
+
+  // These files instantiate the default Accounts instance on the server
+  // and the client, so they must be evaluated last to ensure that the
+  // prototypes have been fully populated.
+  api.addFiles('globals_server.js', 'server');
+  api.addFiles('globals_client.js', 'client');
 });
 
 Package.onTest(function (api) {

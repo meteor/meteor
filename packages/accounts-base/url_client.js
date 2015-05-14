@@ -1,11 +1,30 @@
-// By default, allow the autologin process to happen
-autoLoginEnabled = true;
+var Ap = AccountsClient.prototype;
 
 // All of the special hash URLs we support for accounts interactions
 var accountsPaths = ["reset-password", "verify-email", "enroll-account"];
 
+var savedHash = window.location.hash;
+
+Ap._initUrlMatching = function () {
+  // By default, allow the autologin process to happen.
+  this._autoLoginEnabled = true;
+
+  // We only support one callback per URL.
+  this._accountsCallbacks = {};
+
+  // Try to match the saved value of window.location.hash.
+  this._attemptToMatchHash();
+};
+
 // Separate out this functionality for testing
-var attemptToMatchHash = function (hash, success) {
+
+Ap._attemptToMatchHash = function () {
+  attemptToMatchHash(this, savedHash, defaultSuccessHandler);
+};
+
+// Note that both arguments are optional and are currently only passed by
+// accounts_url_tests.js.
+function attemptToMatchHash(accounts, hash, success) {
   _.each(accountsPaths, function (urlPart) {
     var token;
 
@@ -17,50 +36,50 @@ var attemptToMatchHash = function (hash, success) {
 
       // XXX COMPAT WITH 0.9.3
       if (urlPart === "reset-password") {
-        Accounts._resetPasswordToken = token;
+        accounts._resetPasswordToken = token;
       } else if (urlPart === "verify-email") {
-        Accounts._verifyEmailToken = token;
+        accounts._verifyEmailToken = token;
       } else if (urlPart === "enroll-account") {
-        Accounts._enrollAccountToken = token;
+        accounts._enrollAccountToken = token;
       }
     } else {
       return;
     }
 
+    // If no handlers match the hash, then maybe it's meant to be consumed
+    // by some entirely different code, so we only clear it the first time
+    // a handler successfully matches. Note that later handlers reuse the
+    // savedHash, so clearing window.location.hash here will not interfere
+    // with their needs.
+    window.location.hash = "";
+
     // Do some stuff with the token we matched
-    success(token, urlPart);
+    success.call(accounts, token, urlPart);
   });
-};
+}
 
-// We only support one callback per URL
-var accountsCallbacks = {};
+function defaultSuccessHandler(token, urlPart) {
+  var self = this;
 
-// The UI flow will call this when done to log in the existing person
-var enableAutoLogin = function () {
-  Accounts._enableAutoLogin();
-};
-
-// Actually call the function, has to happen in the top level so that we can
-// mess with autoLoginEnabled.
-attemptToMatchHash(window.location.hash, function (token, urlPart) {
   // put login in a suspended state to wait for the interaction to finish
-  autoLoginEnabled = false;
-
-  // reset the URL
-  window.location.hash = "";
+  self._autoLoginEnabled = false;
 
   // wait for other packages to register callbacks
   Meteor.startup(function () {
     // if a callback has been registered for this kind of token, call it
-    if (accountsCallbacks[urlPart]) {
-      accountsCallbacks[urlPart](token, enableAutoLogin);
+    if (self._accountsCallbacks[urlPart]) {
+      self._accountsCallbacks[urlPart](token, function () {
+        self._enableAutoLogin();
+      });
     }
   });
-});
+}
 
 // Export for testing
 AccountsTest = {
-  attemptToMatchHash: attemptToMatchHash
+  attemptToMatchHash: function (hash, success) {
+    return attemptToMatchHash(Accounts, hash, success);
+  }
 };
 
 // XXX these should be moved to accounts-password eventually. Right now
@@ -82,13 +101,13 @@ AccountsTest = {
  * password for user A can be reset even if user B was logged in.
  * @locus Client
  */
-Accounts.onResetPasswordLink = function (callback) {
-  if (accountsCallbacks["reset-password"]) {
+Ap.onResetPasswordLink = function (callback) {
+  if (this._accountsCallbacks["reset-password"]) {
     Meteor._debug("Accounts.onResetPasswordLink was called more than once. " +
       "Only one callback added will be executed.");
   }
 
-  accountsCallbacks["reset-password"] = callback;
+  this._accountsCallbacks["reset-password"] = callback;
 };
 
 /**
@@ -107,13 +126,13 @@ Accounts.onResetPasswordLink = function (callback) {
  * being logged in.
  * @locus Client
  */
-Accounts.onEmailVerificationLink = function (callback) {
-  if (accountsCallbacks["verify-email"]) {
+Ap.onEmailVerificationLink = function (callback) {
+  if (this._accountsCallbacks["verify-email"]) {
     Meteor._debug("Accounts.onEmailVerificationLink was called more than once. " +
       "Only one callback added will be executed.");
   }
 
-  accountsCallbacks["verify-email"] = callback;
+  this._accountsCallbacks["verify-email"] = callback;
 };
 
 /**
@@ -132,11 +151,11 @@ Accounts.onEmailVerificationLink = function (callback) {
  * user A can be enrolled even if user B was logged in.
  * @locus Client
  */
-Accounts.onEnrollmentLink = function (callback) {
-  if (accountsCallbacks["enroll-account"]) {
+Ap.onEnrollmentLink = function (callback) {
+  if (this._accountsCallbacks["enroll-account"]) {
     Meteor._debug("Accounts.onEnrollmentLink was called more than once. " +
       "Only one callback added will be executed.");
   }
 
-  accountsCallbacks["enroll-account"] = callback;
+  this._accountsCallbacks["enroll-account"] = callback;
 };
