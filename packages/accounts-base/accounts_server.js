@@ -1113,26 +1113,11 @@ Accounts.updateOrCreateUserFromExternalService = function(
     throw new Error(
       "Service data for service " + serviceName + " must include id");
 
-  // Look for a user with the appropriate service user id.
-  var selector = {};
-  var serviceIdKey = "services." + serviceName + ".id";
-
-  // XXX Temporary special case for Twitter. (Issue #629)
-  //   The serviceData.id will be a string representation of an integer.
-  //   We want it to match either a stored string or int representation.
-  //   This is to cater to earlier versions of Meteor storing twitter
-  //   user IDs in number form, and recent versions storing them as strings.
-  //   This can be removed once migration technology is in place, and twitter
-  //   users stored with integer IDs have been migrated to string IDs.
-  if (serviceName === "twitter" && !isNaN(serviceData.id)) {
-    selector["$or"] = [{},{}];
-    selector["$or"][0][serviceIdKey] = serviceData.id;
-    selector["$or"][1][serviceIdKey] = parseInt(serviceData.id, 10);
-  } else {
-    selector[serviceIdKey] = serviceData.id;
-  }
-
-  var user = Meteor.users.findOne(selector);
+  // Look for an existing user for this service.
+  var user;
+  var selector = Accounts.externalServiceSelector(serviceName, serviceData, options);
+  if(selector)
+    user = Meteor.users.findOne(selector);
 
   if (user) {
     pinEncryptedFieldsToUser(serviceData, user._id);
@@ -1165,6 +1150,62 @@ Accounts.updateOrCreateUserFromExternalService = function(
     };
   }
 };
+
+Accounts.externalServiceSelector = function(
+  serviceName, serviceData, options){
+  var selector = false;
+
+  //check if specific selector is available for service
+  //eg externalServiceSelectorTwitter
+  var selectorMethod = "externalServiceSelector";
+    selectorMethod += serviceName.charAt(0).toUpperCase() + serviceName.slice(1);
+
+  if(Accounts[selectorMethod]){
+    selector = Accounts[selectorMethod](serviceName, serviceData, options);
+  }
+
+  // Default user selector: Look for a user with the appropriate service user id.
+  if(!selector) {
+    var serviceIdKey = "services." + serviceName + ".id";
+    selector[serviceIdKey] = serviceData.id;
+  }
+
+  return selector;
+};
+
+
+// Specific user selector for twitter
+Accounts.externalServiceSelectorTwitter = function(
+  serviceName, serviceData, options){
+  var selector = {};
+  // XXX Temporary special case for Twitter. (Issue #629)
+  //   The serviceData.id will be a string representation of an integer.
+  //   We want it to match either a stored string or int representation.
+  //   This is to cater to earlier versions of Meteor storing twitter
+  //   user IDs in number form, and recent versions storing them as strings.
+  //   This can be removed once migration technology is in place, and twitter
+  //   users stored with integer IDs have been migrated to string IDs.
+  if (!isNaN(serviceData.id)) {
+    selector["$or"] = [{},{}];
+    selector["$or"][0][serviceIdKey] = serviceData.id;
+    selector["$or"][1][serviceIdKey] = parseInt(serviceData.id, 10);
+  } else {
+    selector = false;
+  }
+  return selector;
+};
+
+//example custom facebook selector to also match on email
+// Accounts.externalServiceSelectorFacebook = function(
+//   serviceName, serviceData, options){
+//   var serviceIdKey = "services." + serviceName + ".id";
+//   var selector = {};
+//   selector["$or"] = [{},{}];
+//   selector["$or"][0][serviceIdKey] = serviceData.id;
+//   //also check on email
+//   selector["$or"][1]["emails.address"] = serviceData.email;
+//   return selector;
+// };
 
 
 ///
