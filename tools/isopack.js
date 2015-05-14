@@ -607,15 +607,15 @@ _.extend(Isopack.prototype, {
         if (! (options && options.extensions &&
                options.extensions instanceof Array &&
                options.extensions.length > 0)) {
-          buildmessage.error("registerBatchHandler call must specify a "
-                             + "non-empty array of extensions",
+          buildmessage.error(additionalOptions.methodName + " call must "
+                             + "specify a non-empty array of extensions",
                              { useMyCaller: 3 });
           // recover by ignoring
           return;
         }
         if (typeof factory !== 'function') {
-          buildmessage.error("registerBatchHandler call must specify a " +
-                             "factory function",
+          buildmessage.error(additionalOptions.methodName + " call must "
+                             + "specify a factory function",
                              { useMyCaller: 3 });
           // recover by ignoring
           return;
@@ -631,7 +631,7 @@ _.extend(Isopack.prototype, {
               buildmessage.error(
                 "duplicate handler for '*." +
                   ext + "'; may not use the same extension with " +
-                  "registerSourceHandler and registerBatchHandler in the " +
+                  "registerSourceHandler and registerCompiler in the " +
                   "same per plugin-providing package",
                 { useMyCaller: 4 });
               // recover by ignoring
@@ -679,6 +679,7 @@ _.extend(Isopack.prototype, {
         var self = this;
         self._registerSourceProcessor(options, factory, {
           type: "compiler",
+          methodName: "registerCompiler",
           buildPluginClass: compilerPluginModule.CompilerPlugin,
           skipUniqExtCheck: false
         });
@@ -690,6 +691,7 @@ _.extend(Isopack.prototype, {
         isopack.sourceProcessors.linter = isopack.sourceProcessors.linter || {};
         self._registerSourceProcessor(options, factory, {
           type: "linter",
+          methodName: "registerLinter",
           buildPluginClass: linterPluginModule.LinterPlugin,
           // Several linters can handle the same extension
           skipUniqExtCheck: true
