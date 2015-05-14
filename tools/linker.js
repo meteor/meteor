@@ -72,6 +72,14 @@ _.extend(Module.prototype, {
       return self.declaredExports;
     }
 
+    // The assigned variables in the app aren't actually used for anything:
+    // we're using the global namespace, so there's no header where we declare
+    // all of the assigned variables as vars.  So there's no use wasting time
+    // running static analysis on app code.
+    if (self.useGlobalNamespace) {
+      return [];
+    }
+
     // Find all global references in any files
     var assignedVariables = [];
     _.each(self.files, function (file) {
