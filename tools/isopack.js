@@ -13,7 +13,7 @@ var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
 var compilerPluginModule = require('./compiler-plugin.js');
 var linterPluginModule = require('./linter-plugin.js');
-var BuildPluginDefintion = require('./build-plugin.js').BuildPluginDefintion;
+var BuildPluginDefinition = require('./build-plugin.js').BuildPluginDefinition;
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
@@ -661,7 +661,7 @@ _.extend(Isopack.prototype, {
         // We're finally done validating!  Save the processor plugin, and mark
         // all its extensions as used.
         self.sourceProcessors[type][processorPluginId] =
-          new BuildPluginDefintion({
+          new BuildPluginDefinition({
             id: processorPluginId,
             isopack: self,
             extensions: options.extensions,

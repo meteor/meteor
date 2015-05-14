@@ -4,7 +4,7 @@ var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 
-exports.BuildPluginDefintion = function (options, factoryFunction) {
+exports.BuildPluginDefinition = function (options, factoryFunction) {
   var self = this;
   self.id = options.id;
   self.isopack = options.isopack;
@@ -14,7 +14,7 @@ exports.BuildPluginDefintion = function (options, factoryFunction) {
   self.buildPluginClass = options.buildPluginClass;
   self.factoryFunction = factoryFunction;
 };
-_.extend(exports.BuildPluginDefintion.prototype, {
+_.extend(exports.BuildPluginDefinition.prototype, {
   instantiatePlugin: function () {
     var self = this;
     // XXX BBP proper error handling --- this is running user-supplied plugin
