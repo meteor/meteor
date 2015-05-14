@@ -12,7 +12,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "compileLessBatch",
-  use: ['underscore'],
+  use: ['underscore', 'compiler-plugin'],
   sources: [
     'plugin/compile-less.js'
   ],

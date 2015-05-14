@@ -244,7 +244,7 @@ var Isopack = function () {
 
   // -- Loaded plugin state --
 
-  // True if plugins have been initialized (if _ensurePluginsInitialized has
+  // True if plugins have been initialized (if ensurePluginsInitialized has
   // been called)
   self._pluginsInitialized = false;
 
@@ -532,12 +532,52 @@ _.extend(Isopack.prototype, {
   ensurePluginsInitialized: Profile(
     "Isopack#ensurePluginsInitialized", function () {
     var self = this;
-    var isopack = self;
 
     if (self._pluginsInitialized)
       return;
 
+    // Used to ensure that a given extension is used by at most one
+    // registerSourceHandler and registerCompiler call per package. We don't
+    // need to persist it past loading plugins, but we do need to share it
+    // across multiple plugins in the package.
     var pluginSourceExtensions = {};
+
+    self.sourceHandlers = {};
+    self.sourceProcessors.compiler = {};
+
+    _.each(self.plugins, function (pluginsByArch, name) {
+      var arch = archinfo.mostSpecificMatch(
+        archinfo.host(), _.keys(pluginsByArch));
+      if (! arch) {
+        buildmessage.error("package `" + name + "` is built for incompatible " +
+                           "architecture");
+        // Recover by ignoring plugin
+        // XXX does this recovery work?
+        return;
+      }
+
+      var plugin = pluginsByArch[arch];
+      buildmessage.enterJob({
+        title: "loading plugin `" + name +
+          "` from package `" + self.name + "`"
+        // don't necessarily have rootPath anymore
+        // (XXX we do, if the isopack was locally built, which is
+        // the important case for debugging. it'd be nice to get this
+        // case right.)
+      }, function () {
+        // Make a new Plugin API object for this plugin; each plugin needs its
+        // own object so that it can be mutated by packages like
+        // compiler-plugin.
+        var Plugin = self._makePluginApi(pluginSourceExtensions);
+        plugin.load({ Plugin: Plugin });
+      });
+    });
+
+    self._pluginsInitialized = true;
+  }),
+
+  _makePluginApi: function (pluginSourceExtensions) {
+    var self = this;
 
     /**
      * @global
@@ -675,7 +715,18 @@ _.extend(Isopack.prototype, {
       },
 
       // XXX BBP doc
-      registerCompiler: function (options, factory) {
+      //
+      // Note: It's important to ensure that all plugins that want to call
+      // plugin compiler use the compiler-plugin module (which itself will rely
+      // on a version of meteor that requires this tool to exist), so that
+      // Version Solver will not let you use registerCompiler plugins with old
+      // versions of the tool.  We implement that by making compiler-plugin
+      // define Plugin.registerCompiler.  If you call
+      // Plugin._doNotCallThisDirectly_registerCompiler directly in your plugin,
+      // you'll be routing around this logic and you may end up with situations
+      // where people with older versions of Meteor end up using your package
+      // and it mysteriously doesn't work. So don't do that.
+      _doNotCallThisDirectly_registerCompiler: function (options, factory) {
         var self = this;
         self._registerSourceProcessor(options, factory, {
           type: "compiler",
@@ -685,10 +736,19 @@ _.extend(Isopack.prototype, {
         });
       },
 
+      // This function gets overridden in your plugin when it uses
+      // compiler-plugin.
+      registerCompiler: function () {
+        buildmessage.error(
+          "your plugin must `use: ['compiler-plugin']` in order to call "
+            + "Plugin.registerCompiler"
+        );
+      },
+
       // XXX BBP doc
       registerLinter: function (options, factory) {
         var self = this;
-        isopack.sourceProcessors.linter = isopack.sourceProcessors.linter || {};
+        self.sourceProcessors.linter = self.sourceProcessors.linter || {};
         self._registerSourceProcessor(options, factory, {
           type: "linter",
           methodName: "registerLinter",
@@ -698,36 +758,8 @@ _.extend(Isopack.prototype, {
         });
       }
     };
-
-    self.sourceHandlers = {};
-    self.sourceProcessors.compiler = {};
-
-    _.each(self.plugins, function (pluginsByArch, name) {
-      var arch = archinfo.mostSpecificMatch(
-        archinfo.host(), _.keys(pluginsByArch));
-      if (! arch) {
-        buildmessage.error("package `" + name + "` is built for incompatible " +
-                           "architecture");
-        // Recover by ignoring plugin
-        // XXX does this recovery work?
-        return;
-      }
-
-      var plugin = pluginsByArch[arch];
-      buildmessage.enterJob({
-        title: "loading plugin `" + name +
-          "` from package `" + self.name + "`"
-        // don't necessarily have rootPath anymore
-        // (XXX we do, if the isopack was locally built, which is
-        // the important case for debugging. it'd be nice to get this
-        // case right.)
-      }, function () {
-        plugin.load({ Plugin: Plugin });
-      });
-    });
-
-    self._pluginsInitialized = true;
-  }),
+    return Plugin;
+  },
 
   // Load a Isopack on disk.
   //
