@@ -292,16 +292,11 @@ Meteor.logoutOtherClients = function (callback) {
 /// LOGIN SERVICES
 ///
 
-var loginServicesHandle =
-  Accounts.connection.subscribe("meteor.loginServiceConfiguration");
-
 // A reactive function returning whether the loginServiceConfiguration
 // subscription is ready. Used by accounts-ui to hide the login button
 // until we have all the configuration loaded
 //
-Accounts.loginServicesConfigured = function () {
-  return loginServicesHandle.ready();
-};
+Accounts.loginServicesConfigured = ServiceConfiguration.loginServicesConfigured;
 
 // Some login services such as the redirect login flow or the resume
 // login handler can log the user in at page load time.  The

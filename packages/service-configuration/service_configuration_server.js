@@ -28,3 +28,8 @@ try {
     );
     throw err;
 }
+
+// Publish all login service configuration fields other than secret.
+Meteor.publish("meteor.loginServiceConfiguration", function () {
+  return ServiceConfiguration.configurations.find({}, {fields: {secret: 0}});
+}, {is_auto: true}); // not techincally autopublish, but stops the warning.

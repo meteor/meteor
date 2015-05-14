@@ -113,20 +113,7 @@ if (Meteor.isClient) {
   // It would be much preferable for this to be in accounts_client.js,
   // but it has to be here because it's needed to create the
   // Meteor.users collection.
-  Accounts.connection = Meteor.connection;
-
-  if (typeof __meteor_runtime_config__ !== "undefined" &&
-      __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL) {
-    // Temporary, internal hook to allow the server to point the client
-    // to a different authentication server. This is for a very
-    // particular use case that comes up when implementing a oauth
-    // server. Unsupported and may go away at any point in time.
-    //
-    // We will eventually provide a general way to use account-base
-    // against any DDP connection, not just one special one.
-    Accounts.connection = DDP.connect(
-      __meteor_runtime_config__.ACCOUNTS_CONNECTION_URL)
-  }
+  Accounts.connection = Accounts_connection;
 }
 
 // Users table. Don't use the normal autopublish, since we want to hide
@@ -146,12 +133,10 @@ Meteor.users = new Mongo.Collection("users", {
 // collection.
 
 // loginServiceConfiguration and ConfigError are maintained for backwards compatibility
-Meteor.startup(function () {
-  var ServiceConfiguration =
-    Package['service-configuration'].ServiceConfiguration;
-  Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
-  Accounts.ConfigError = ServiceConfiguration.ConfigError;
-});
+
+Accounts.loginServiceConfiguration = ServiceConfiguration.configurations;
+Accounts.ConfigError = ServiceConfiguration.ConfigError;
+
 
 // Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)
