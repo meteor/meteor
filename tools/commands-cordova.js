@@ -1051,7 +1051,7 @@ var execCordovaOnPlatform = function (projectContext, platformName, options) {
     // XXX this is buggy if your app directory is under something with a space,
     // because the cordovaPath part is not quoted for sh!
     args = ['-c', 'open ' +
-            files.pathJoin(cordovaPath, 'platforms', 'ios', '*.xcodeproj')];
+      '"' + files.pathJoin(cordovaPath, 'platforms', 'ios').replace(/"/g, "\\\"") + '"/*.xcodeproj'];
 
     try {
       execFileSyncOrThrow('sh', args);
