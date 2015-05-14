@@ -15,8 +15,9 @@ var urlParser = Npm.require('url');
 Spiderable.userAgentRegExps = [
     /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
 
-// how long to let phantomjs run before we kill it
-var REQUEST_TIMEOUT = 15*1000;
+// how long to let phantomjs run before we kill it (and send down the
+// regular page instead). Users may modify this number.
+Spiderable.requestTimeout = 15*1000;
 // maximum size of result HTML. node's default is 200k which is too
 // small for our docs.
 var MAX_BUFFER = 5*1024*1024; // 5MB
@@ -107,7 +108,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
       ['-c',
        ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
-      {timeout: REQUEST_TIMEOUT, maxBuffer: MAX_BUFFER},
+      {timeout: Spiderable.requestTimeout, maxBuffer: MAX_BUFFER},
       function (error, stdout, stderr) {
         if (!error && /<html/i.test(stdout)) {
           res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
