@@ -8,5 +8,5 @@ Package.onUse(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.statusbar': '0.1.10'
+    'cordova-plugin-statusbar': '1.0.0'
 });
