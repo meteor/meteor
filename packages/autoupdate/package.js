@@ -4,8 +4,8 @@ Package.describe({
 });
 
 Cordova.depends({
-  'org.apache.cordova.file': '1.3.3',
-  'org.apache.cordova.file-transfer': '0.5.0'
+    'cordova-plugin-file': '2.0.0',
+    'cordova-plugin-file-transfer': '1.0.0'
 });
 
 Package.onUse(function (api) {
