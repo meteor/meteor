@@ -25,15 +25,15 @@ if [ "$UNAME" == "Linux" ]; then
     # not guaranteed to have java yikes
     # let's just see if they have it and prompt to install?
 
-    curl -O http://dl.google.com/android/android-sdk_r23.0.2-linux.tgz
-    tar xzf android-sdk_r23.0.2-linux.tgz > /dev/null
-    rm android-sdk_r23.0.2-linux.tgz
+    curl -O http://dl.google.com/android/android-sdk_r24.2-linux.tgz
+    tar xzf android-sdk_r24.2-linux.tgz > /dev/null
+    rm android-sdk_r24.2-linux.tgz
 
     mv android-sdk-linux android-sdk
 else
-    curl -O http://dl.google.com/android/android-sdk_r23.0.2-macosx.zip
-    unzip android-sdk_r23.0.2-macosx.zip > /dev/null
-    rm android-sdk_r23.0.2-macosx.zip
+    curl -O http://dl.google.com/android/android-sdk_r24.2-macosx.zip
+    unzip android-sdk_r24.2-macosx.zip > /dev/null
+    rm android-sdk_r24.2-macosx.zip
 
     mv android-sdk-macosx android-sdk
 fi
@@ -53,7 +53,7 @@ fi
     echo y | android-sdk/tools/android update sdk -t platform-tools -u
 
     # the platform that cordova likes
-    echo y | android-sdk/tools/android update sdk -t android-19 -u
+    echo y | android-sdk/tools/android update sdk -t android-22 -u
 
     # We now download system images only if needed, before starting the avd
     # system image for android 19 - arm
@@ -62,7 +62,7 @@ fi
     #echo y | android-sdk/tools/android update sdk -t sys-img-x86-android-19 --all -u
 
     # build tools
-    echo y | android-sdk/tools/android update sdk -t "build-tools-20.0.0" -u
+    echo y | android-sdk/tools/android update sdk -t "build-tools-22.0.1" -u
 
     # intel HAXM
     # echo y | android-sdk/tools/android update sdk -t "extra-intel-Hardware_Accelerated_Execution_Manager" -u
@@ -70,9 +70,9 @@ fi
 } &> /dev/null
 
 # Strip header & footer from license
-sed -i '' '1,/License id:/d' ${CHECKOUT_DIR}/license_cordova_android.txt
-sed -i '' '1,/------------/d' ${CHECKOUT_DIR}/license_cordova_android.txt
-sed -i '' '/Do you accept the license/,$d'  ${CHECKOUT_DIR}/license_cordova_android.txt
+sed -i '1,/License id:/d' ${CHECKOUT_DIR}/license_cordova_android.txt
+sed -i '1,/------------/d' ${CHECKOUT_DIR}/license_cordova_android.txt
+sed -i '/Do you accept the license/,$d'  ${CHECKOUT_DIR}/license_cordova_android.txt
 
 echo BUNDLING
 
