@@ -68,8 +68,10 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
     var convertedMetadata = colonConverter.convertIsopack(metadata);
 
     // Step 2. Write the isopack.json file
+    // XXX BBP we only need this for pre-1.1 packages, and this will corrupt BBP
+    // packages, so detect the BBP case and don't do this.
     var isopackFileData = {};
-    isopackFileData[Isopack.currentFormat] = convertedMetadata;
+    isopackFileData['isopack-2'] = convertedMetadata;
 
     var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
 
@@ -333,7 +335,9 @@ _.extend(exports.Tropohouse.prototype, {
     var self = this;
 
     if (self.platform === "win32") {
-      isopack.saveToPath(self.packagePath(packageName, isopack.version));
+      isopack.saveToPath(self.packagePath(packageName, isopack.version), {
+        includePreCompilerPluginIsopackVersions: true
+      });
     } else {
       // Note: wipeAllPackages depends on this filename structure
       // On Mac and Linux, we used to use a filename structure that used the
@@ -347,7 +351,9 @@ _.extend(exports.Tropohouse.prototype, {
       var combinedDirectory = self.packagePath(
         packageName, newPackageLinkTarget);
 
-      isopack.saveToPath(combinedDirectory);
+      isopack.saveToPath(combinedDirectory, {
+        includePreCompilerPluginIsopackVersions: true
+      });
 
       files.symlinkOverSync(newPackageLinkTarget,
         self.packagePath(packageName, isopack.version));

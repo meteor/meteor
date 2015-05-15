@@ -169,26 +169,13 @@ _.extend(ResourceSlot.prototype, {
     if (! self.buildPlugin)
       throw Error("addStylesheet on non-source ResourceSlot?");
 
-    // XXX BBP this is wrong (eg totally broken for in app) and is in the wrong
-    // place
-    var unibuild = self.packageSourceBatch.unibuild;
-    var serveRoot;
-    if (unibuild.pkg.name) {
-      serveRoot = files.pathJoin('/packages/', unibuild.pkg.name);
-    } else {
-      serveRoot = '/';
-    }
-
     // XXX BBP prototype?
     self.outputResources.push({
       type: "css",
       refreshable: true,
       data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-      servePath: colonConverter.convert(
-        files.pathJoin(
-          serveRoot,
-          // XXX BBP should we decide in our API that everything is / ?
-          files.convertToStandardPath(options.path, true))),
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
+        options.path),
       // XXX BBP convertSourceMapPaths ???
       sourceMap: options.sourceMap
     });

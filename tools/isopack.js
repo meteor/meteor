@@ -274,15 +274,19 @@ var Isopack = function () {
   self.pluginProviderPackageMap = null;
 };
 
-Isopack.currentFormat = "isopack-1";
-
-Isopack.knownFormats = ["unipackage-pre2", "isopack-1"];
+// XXX BBP we're not really using the convert functions as much any more; make
+// sure tey still make sense
+Isopack.knownFormats = ["unipackage-pre2", "isopack-1", "isopack-2"];
 Isopack.convertOneStepForward = function (data, fromFormat) {
   var convertedData = _.clone(data);
   // XXX COMPAT WITH 0.9.3
   if (fromFormat === "unipackage-pre2") {
     convertedData.builds = convertedData.unibuilds;
     delete convertedData.unibuilds;
+    return convertedData;
+  }
+  if (fromFormat === "isopack-1") {
+    // For now, there's no difference in this direction at the isopack level.
     return convertedData;
   }
 };
@@ -293,6 +297,11 @@ Isopack.convertOneStepBackward = function (data, fromFormat) {
     convertedData.format = "unipackage-pre2";
     delete convertedData.builds;
     return convertedData;
+  }
+  if (fromFormat === "isopack-2") {
+    // The conversion from isopack-2 requires converting the nested
+    // unibuild data as well.  This shouldn't happen.
+    throw Error("Can't automatically convert backwards from isopack-2");
   }
 };
 Isopack.convertIsopackFormat = Profile(
@@ -333,11 +342,14 @@ Isopack.readMetadataFromDirectory =
   if (files.exists(isopackJsonPath)) {
     var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
 
-    if (isopackJson[Isopack.currentFormat]) {
-      metadata = isopackJson[Isopack.currentFormat];
+    if (isopackJson['isopack-2']) {
+      metadata = isopackJson['isopack-2'];
+    } else if (isopackJson['isopack-1']) {
+      metadata = Isopack.convertIsopackFormat(
+        isopackJson['isopack-1'], 'isopack-1', 'isopack-2');
     } else {
       // This file is from the future and no longer supports this version
-      throw new Error("Could not find isopack data with format " + Isopack.currentFormat + ".\n" +
+      throw new Error("Could not find isopack data supported any supported format (isopack-1 or isopack-2).\n" +
         "This isopack was likely built with a much newer version of Meteor.");
     }
   } else if (files.exists(unipackageJsonPath)) {
@@ -346,12 +358,8 @@ Isopack.readMetadataFromDirectory =
     if (files.exists(unipackageJsonPath)) {
       metadata = JSON.parse(files.readFile(unipackageJsonPath));
 
-      // in the old format, builds were called unibuilds
-      // use string to make sure this doesn't get caught in a find/replace
-      metadata.builds = metadata["unibuilds"];
-
       metadata = Isopack.convertIsopackFormat(metadata,
-        "unipackage-pre2", Isopack.currentFormat);
+        "unipackage-pre2", "isopack-2");
     }
 
     if (metadata.format !== "unipackage-pre2") {
@@ -864,9 +872,14 @@ _.extend(Isopack.prototype, {
       var unibuildBasePath =
         files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
-      if (unibuildJson.format !== "unipackage-unibuild-pre1")
+      // XXX BBP for now these are the same format (except that
+      // isopack-2-unibuild can contain "source" resources) but later we'll
+      // change eg packageVariables -> exportVariables
+      if (unibuildJson.format !== "unipackage-unibuild-pre1" &&
+          unibuildJson.format !== "isopack-2-unibuild") {
         throw new Error("Unsupported isopack unibuild format: " +
                         JSON.stringify(unibuildJson.format));
+      }
 
       var nodeModulesPath = null;
       if (unibuildJson.node_modules) {
@@ -898,6 +911,7 @@ _.extend(Isopack.prototype, {
         } else if (resource.type === "source") {
           resources.push({
             type: "source",
+            extension: resource.extension,
             data: data,
             path: resource.path,
             hash: resource.hash
@@ -951,6 +965,20 @@ _.extend(Isopack.prototype, {
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
+  // - includePreCompilerPluginIsopackVersions: By default, saveToPath only
+  //   creates an isopack of format 'isopack-2', with unibuilds of format
+  //   'isopack-2-unibuild'.  These isopacks may contain "source" resources,
+  //   which are processed at *bundle* time by compiler plugins.  They cannot
+  //   be properly processed by older tools.  If this flag is set, saveToPath
+  //   also tries to save data for older formats (isopack-1 and
+  //   unipackage-pre2), converting JS and CSS "source" resources into "prelink"
+  //   and "css" resources.  This is not possible if there are "source"
+  //   resources other than JS or CSS; however, such packages must indirectly
+  //   depend on the "compiler-plugin" package which is not compatible with
+  //   older releases.  For packages that can't be converted to the older
+  //   format, this function silently only saves the newer format.  (The point
+  //   of this flag is allow us to optimize cases that never need to write the
+  //   older format, such as the per-app isopack cache.)
   saveToPath: Profile("Isopack#saveToPath", function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
@@ -972,6 +1000,14 @@ _.extend(Isopack.prototype, {
       }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
+      }
+
+      var writeLegacyBuilds = false;
+      if (options.includePreCompilerPluginIsopackVersions) {
+        // We will reset this to false if at any point later we determine that
+        // this package cannot be saved in the legacy format (because it uses a
+        // compiler plugin other than JS or CSS).
+        writeLegacyBuilds = true;
       }
 
       var isopackBuildInfoJson = null;
@@ -1024,6 +1060,8 @@ _.extend(Isopack.prototype, {
           "utf8")
       });
 
+      var unibuildInfos = [];
+
       // Unibuilds
       _.each(self.unibuilds, function (unibuild) {
         // Make up a filename for this unibuild
@@ -1037,6 +1075,18 @@ _.extend(Isopack.prototype, {
           arch: unibuild.arch,
           path: unibuildJsonFile
         });
+
+        if (writeLegacyBuilds) {
+          if (_.any(unibuild.resources, function (resource) {
+            return resource.type === "source" && resource.extension !== "js"
+              && resource.extension !== "css";
+          })) {
+            // This package cannot be represented as an isopack-1 Isopack
+            // because it uses a file implemented by registerCompiler other than
+            // the very basic JS and CSS types.
+            writeLegacyBuilds = false;
+          }
+        }
 
         // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
@@ -1063,7 +1113,9 @@ _.extend(Isopack.prototype, {
 
         // Construct unibuild metadata
         var unibuildJson = {
-          format: "unipackage-unibuild-pre1",
+          format: "isopack-2-unibuild",
+          // XXX BBP isopack-2-unibuild eventually will not contain
+          // packageVariables
           packageVariables: unibuild.packageVariables,
           uses: _.map(unibuild.uses, function (u) {
             return {
@@ -1116,6 +1168,7 @@ _.extend(Isopack.prototype, {
 
           unibuildJson.resources.push({
             type: resource.type,
+            extension: resource.extension || undefined,
             file: builder.writeToGeneratedFilename(
               files.pathJoin(unibuildDir,
                              resource.servePath || resource.path),
@@ -1164,6 +1217,10 @@ _.extend(Isopack.prototype, {
 
         // Control file for unibuild
         builder.writeJson(unibuildJsonFile, unibuildJson);
+        unibuildInfos.push({
+          unibuild: unibuild,
+          unibuildJson: unibuildJson
+        });
       });
 
       // Plugins
@@ -1175,11 +1232,12 @@ _.extend(Isopack.prototype, {
             'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
             { directory: true });
           var pluginBuild = plugin.write(builder.enter(pluginDir));
-          mainJson.plugins.push({
+          var pluginEntry = {
             name: name,
             arch: plugin.arch,
             path: files.pathJoin(pluginDir, pluginBuild.controlFile)
-          });
+          };
+          mainJson.plugins.push(pluginEntry);
         });
       });
 
@@ -1206,21 +1264,65 @@ _.extend(Isopack.prototype, {
         mainJson.tools.push(toolMeta);
       });
 
-      // old unipackage.json format/filename
-      // XXX COMPAT WITH 0.9.3
-      builder.writeJson("unipackage.json",
-        Isopack.convertIsopackFormat(mainJson, Isopack.currentFormat, "unipackage-pre2"));
+      var mainLegacyJson = null;
+      if (writeLegacyBuilds) {
+        mainLegacyJson = _.clone(mainJson);
+        mainLegacyJson.builds = [];
 
-      // write several versions of the file
-      // add your new format here, and define some stuff
-      // in convertIsopackFormat
-      var formats = ["isopack-1"];
+        _.each(unibuildInfos, function (unibuildInfo) {
+          var unibuild = unibuildInfo.unibuild;
+          var unibuildJson = unibuildInfo.unibuildJson;
+          var legacyFilename = builder.generateFilename(
+            unibuild.arch + '-legacy.json');
+          mainLegacyJson.builds.push({
+            kind: unibuild.kind,
+            arch: unibuild.arch,
+            path: legacyFilename
+          });
+
+          unibuildJson.format = 'unipackage-unibuild-pre1';
+          unibuildJson.resources = _.map(
+            unibuildJson.resources,
+            function (resource) {
+              if (resource.type !== 'source')
+                return resource;
+              if (resource.extension !== 'css') {
+                // XXX BBP this will add 'js' later too
+                throw Error("shouldn't write legacy builds for non-CSS source "
+                            + JSON.stringify(resource));
+              }
+              // Convert this resource from a new-style "source" to an old-style
+              // "css".
+              return {
+                type: 'css',
+                file: resource.file,
+                length: resource.length,
+                offset: resource.offset,
+                servePath: self._getServePath(resource.path)
+              };
+            }
+          );
+          builder.writeJson(legacyFilename, unibuildJson);
+        });
+      }
+
+      // old unipackage.json format/filename.  no point to save this if
+      // we can't even support isopack-1.
+      // XXX COMPAT WITH 0.9.3
+      if (writeLegacyBuilds) {
+        builder.writeJson(
+          "unipackage.json",
+          Isopack.convertIsopackFormat(
+            // Note that mainLegacyJson is isopack-1 (has no "source" resources)
+            // rather than isopack-2.
+            mainLegacyJson, "isopack-1", "unipackage-pre2"));
+      }
+
       var isopackJson = {};
-      _.each(formats, function (format) {
-        // new, extensible format - forwards-compatible
-        isopackJson[format] = Isopack.convertIsopackFormat(mainJson,
-          Isopack.currentFormat, format);
-      });
+      isopackJson['isopack-2'] = mainJson;
+      if (writeLegacyBuilds) {
+        isopackJson['isopack-1'] = mainLegacyJson;
+      }
 
       // writes one file with all of the new formats, so that it is possible
       // to invent a new format and have old versions of meteor still read the
@@ -1362,7 +1464,23 @@ _.extend(Isopack.prototype, {
       _.each(unibuild.implies, processUse);
     });
     return _.keys(packages);
-  })
+  }),
+
+  _getServePath: function (pathInPackage) {
+    var self = this;
+    var serveRoot;
+    if (self.name) {
+      serveRoot = files.pathJoin('/packages/', self.name);
+    } else {
+      serveRoot = '/';
+    }
+
+    return colonConverter.convert(
+      files.pathJoin(
+        serveRoot,
+        // XXX BBP should we decide in our API that everything is / ?
+        files.convertToStandardPath(pathInPackage, true)));
+  }
 });
 
 exports.Isopack = Isopack;

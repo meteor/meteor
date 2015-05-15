@@ -350,7 +350,11 @@ var bundleBuild = function (isopack) {
   // disk in an IsopackCache, because we don't want to include
   // isopack-buildinfo.json. (We don't include it because we're not passing
   // includeIsopackBuildInfo to saveToPath here.)
-  isopack.saveToPath(tarInputDir);
+  isopack.saveToPath(tarInputDir, {
+    // When publishing packages that don't use new registerCompiler plugins,
+    // make sure that old Meteors can use it too
+    includePreCompilerPluginIsopackVersions: true
+  });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
 

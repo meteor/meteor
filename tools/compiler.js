@@ -29,7 +29,7 @@ var compiler = exports;
 // end up as watched dependencies. (At least for now, packages only used in
 // target creation (eg minifiers) don't require you to update BUILT_BY, though
 // you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/16';
+compiler.BUILT_BY = 'meteor/17';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -422,7 +422,7 @@ var compileUnibuild = function (options) {
 
     // Find the handler for source files with this extension.
     var handler = null;
-    var isBuildPluginSource = false;
+    var buildPluginExtension = null;
     if (! fileOptions.isAsset) {
       var parts = filename.split('.');
       // don't use iteration functions, so we can return/break
@@ -436,7 +436,7 @@ var compileUnibuild = function (options) {
             // the server.)
             return;
           }
-          isBuildPluginSource = true;
+          buildPluginExtension = extension;
           break;
         }
         if (_.has(allHandlersWithPkgs, extension)) {
@@ -449,11 +449,12 @@ var compileUnibuild = function (options) {
     // OK, this is relevant to this arch, so watch it.
     watchSet.merge(fileWatchSet);
 
-    if (isBuildPluginSource) {
+    if (buildPluginExtension !== null) {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
       resources.push({
         type: "source",
+        extension: buildPluginExtension,
         data: contents,
         path: relPath,
         hash: hash
