@@ -119,7 +119,6 @@ _.extend(InputFile.prototype, {
     var self = this;
     return self._resourceSlot.inputResource.data;
   },
-  // XXX is this null for app?
   getPackageName: function () {
     var self = this;
     return self._resourceSlot.packageSourceBatch.unibuild.pkg.name;
@@ -129,11 +128,60 @@ _.extend(InputFile.prototype, {
     return self._resourceSlot.inputResource.path;
   },
 
-  // XXX BBP add more APIs similar to the build step of file handlers
+  /**
+   * @summary Web targets only. Add a stylesheet to the document. Not available
+   * for linter build plugins.
+   * @param {Object} options
+   * @param {String} options.path The requested path for the added CSS, may not
+   * be satisfied if there are path conflicts.
+   * @param {String} options.data The content of the stylesheet that should be
+   * added.
+   * @param {String} options.sourceMap A stringified JSON sourcemap, in case the
+   * stylesheet was generated from a different file.
+   * @memberOf InputFile
+   * @instance
+   */
   addStylesheet: function (options) {
     var self = this;
     // XXX BBP validate input!!
     self._resourceSlot.addStylesheet(options);
+  },
+  /**
+   * @summary Add JavaScript code. The code added will only see the
+   * namespaces imported by this package as runtime dependencies using
+   * ['api.use'](#PackageAPI-use). If the file being compiled was added
+   * with the bare flag, the resulting JavaScript won't be wrapped in a
+   * closure.
+   * @param {Object} options
+   * @param {String} options.path The path at which the JavaScript file
+   * should be inserted, may not be honored in case of path conflicts.
+   * @param {String} options.data The code to be added.
+   * @param {String} options.sourceMap A stringified JSON sourcemap, in case the
+   * JavaScript file was generated from a different file.
+   * @memberOf InputFile
+   * @instance
+   */
+  addJavaScript: function (options) {
+    var self = this;
+    self._resourceSlot.addJavaScript(options);
+  },
+  /**
+   * @summary Add a file to serve as-is to the browser or to include on
+   * the browser, depending on the target. On the web, it will be served
+   * at the exact path requested. For server targets, it can be retrieved
+   * using `Assets.getText` or `Assets.getBinary`.
+   * @param {Object} options
+   * @param {String} options.path The path at which to serve the asset.
+   * @param {Buffer|String} options.data The data that should be placed in the
+   * file.
+   * @param {String} [options.hash] Optionally, supply a hash for the output
+   * file.
+   * @memberOf InputFile
+   * @instance
+   */
+  addAsset: function (options) {
+    var self = this;
+    self._resourceSlot.addAsset(options);
   }
 });
 
@@ -178,6 +226,48 @@ _.extend(ResourceSlot.prototype, {
         options.path),
       // XXX BBP convertSourceMapPaths ???
       sourceMap: options.sourceMap
+    });
+  },
+  addJavaScript: function (options) {
+    var self = this;
+    if (! self.buildPlugin)
+      throw Error("addJavaScript on non-source ResourceSlot?");
+
+    // XXX BBP implement it!
+  },
+  addAsset: function (options) {
+    var self = this;
+    if (! self.buildPlugin)
+      throw Error("addAsset on non-source ResourceSlot?");
+
+    if (! (options.data instanceof Buffer)) {
+      if (_.isString(options.data)) {
+        options.data = new Buffer(options.data);
+      } else {
+        throw new Error("'data' option to addAsset must be a Buffer or String.");
+      }
+    }
+
+    // XXX BBP this is partially duplicated in isopack.js
+    var outputPath = files.convertToStandardPath(options.path, true);
+    var unibuild = self.packageSourceBatch.unibuild;
+    var serveRoot;
+    if (unibuild.pkg.name) {
+      serveRoot = files.pathJoin('/packages/', unibuild.pkg.name);
+    } else {
+      serveRoot = '/';
+    }
+    if (! unibuild.name) {
+      // XXX hack for app's special folders
+      outputPath = outputPath.replace(/^(private|public)\//, '');
+    }
+    resources.push({
+      type: 'asset',
+      data: options.data,
+      path: outputPath,
+      servePath: colonConverter.convert(
+        files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
+      hash: options.hash
     });
   }
 });

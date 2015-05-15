@@ -29,36 +29,74 @@ _.extend(exports.BuildPluginDefinition.prototype, {
 });
 
 // This is the base class of the object presented to the user's plugin code.
-// XXX BBP actually design its API
-// XXX BBP decide if the API always presents / to the code (it probably
-// should because you're not supposed to do your own IO anyway)
 exports.InputFile = function (resourceSlot) {
 };
 _.extend(exports.InputFile.prototype, {
-  // XXX BBP refine this API and document it
+  /**
+   * @summary Returns the full contents of the file as a buffer.
+   * @memberof InputFile
+   * @returns {Buffer}
+   */
   getContentsAsBuffer: function () {
     throw new Error("Not Implemented");
   },
-  // XXX is this null for app?
+  /**
+   * @summary Returns the name of the package or `null` if the file is not in a
+   * package.
+   * @memberof InputFile
+   * @returns {String}
+   */
   getPackageName: function () {
     throw new Error("Not Implemented");
   },
+  /**
+   * @summary Returns the relative path of file to the package or app root
+   * directory. The returned path always uses forward slashes.
+   * @memberof InputFile
+   * @returns {String}
+   */
   getPathInPackage: function () {
     throw new Error("Not Implemented");
   },
 
+  /**
+   * @summary Returns the full contents of the file as a string.
+   * @memberof InputFile
+   * @returns {String}
+   */
   getContentsAsString: function () {
     var self = this;
     return self.getContentsAsBuffer().toString('utf8');
   },
+  /**
+   * @summary Returns the filename of the file.
+   * @memberof InputFile
+   * @returns {String}
+   */
   getBasename: function () {
     var self = this;
     return files.pathBasename(self.getPathInPackage());
   },
+  /**
+   * @summary Returns the directory path relative to the package or app root.
+   * The returned path always uses forward slashes.
+   * @memberof InputFile
+   * @returns {String}
+   */
   getDirname: function () {
     var self = this;
     return files.pathDirname(self.getPathInPackage());
   },
+  /**
+   * @summary Call this method to raise a compilation or linting error for the
+   * file.
+   * @param {Object} options
+   * @param {String} options.message The error message to display.
+   * @param {String} [options.sourcePath] The path to display in the error message.
+   * @param {Integer} options.line The line number to display in the error message.
+   * @param {String} options.func The function name to display in the error message.
+   * @memberof InputFile
+   */
   error: function (options) {
     var self = this;
     var relPath = self.getPathInPackage();
@@ -68,7 +106,6 @@ _.extend(exports.InputFile.prototype, {
       column: options.column ? options.column : undefined,
       func: options.func ? options.func : undefined
     });
-    // XXX BBP handle errors here
   }
 });
 
