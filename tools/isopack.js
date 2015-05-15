@@ -585,7 +585,7 @@ _.extend(Isopack.prototype, {
   }),
 
   _makePluginApi: function (pluginSourceExtensions) {
-    var self = this;
+    var isopack = this;
 
     /**
      * @global
@@ -623,7 +623,7 @@ _.extend(Isopack.prototype, {
           options = {};
         }
 
-        if (_.has(self.sourceHandlers, extension)) {
+        if (_.has(isopack.sourceHandlers, extension)) {
           buildmessage.error(
             "duplicate handler for '*." +
               extension + "'; may only have one per plugin-providing package",
@@ -644,7 +644,7 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        self.sourceHandlers[extension] = {
+        isopack.sourceHandlers[extension] = {
           handler: handler,
           isTemplate: !!options.isTemplate,
           archMatching: options.archMatching
@@ -675,7 +675,7 @@ _.extend(Isopack.prototype, {
         if (! additionalOptions.skipUniqExtCheck) {
           _.each(options.extensions, function (ext) {
             // Check to see if a legacy handler uses this extension.
-            if (_.has(self.sourceHandlers, ext)) {
+            if (_.has(isopack.sourceHandlers, ext)) {
               buildmessage.error(
                 "duplicate handler for '*." +
                   ext + "'; may not use the same extension with " +
@@ -701,17 +701,17 @@ _.extend(Isopack.prototype, {
         // Unique ID within a given bundler call.  Used internally in
         // compiler-plugin.js and others, and human-readable for debugging
         // purposes.
-        var processorPluginId = JSON.stringify([self.name, options.extensions]);
-        if (_.has(self.sourceProcessors[type], processorPluginId)) {
+        var processorPluginId = JSON.stringify([isopack.name, options.extensions]);
+        if (_.has(isopack.sourceProcessors[type], processorPluginId)) {
           throw Error("duplicate plugin ID " + processorPluginId);
         }
 
         // We're finally done validating!  Save the processor plugin, and mark
         // all its extensions as used.
-        self.sourceProcessors[type][processorPluginId] =
+        isopack.sourceProcessors[type][processorPluginId] =
           new BuildPluginDefinition({
             id: processorPluginId,
-            isopack: self,
+            isopack: isopack,
             extensions: options.extensions,
             archMatching: options.archMatching,
             isTemplate: options.isTemplate,
@@ -735,8 +735,7 @@ _.extend(Isopack.prototype, {
       // where people with older versions of Meteor end up using your package
       // and it mysteriously doesn't work. So don't do that.
       _doNotCallThisDirectly_registerCompiler: function (options, factory) {
-        var self = this;
-        self._registerSourceProcessor(options, factory, {
+        Plugin._registerSourceProcessor(options, factory, {
           type: "compiler",
           methodName: "registerCompiler",
           buildPluginClass: compilerPluginModule.CompilerPlugin,
@@ -755,9 +754,8 @@ _.extend(Isopack.prototype, {
 
       // XXX BBP doc
       registerLinter: function (options, factory) {
-        var self = this;
-        self.sourceProcessors.linter = self.sourceProcessors.linter || {};
-        self._registerSourceProcessor(options, factory, {
+        isopack.sourceProcessors.linter = isopack.sourceProcessors.linter || {};
+        Plugin._registerSourceProcessor(options, factory, {
           type: "linter",
           methodName: "registerLinter",
           buildPluginClass: linterPluginModule.LinterPlugin,
