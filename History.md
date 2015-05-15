@@ -125,7 +125,7 @@
   package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
   object to `Email.send` instead of individual options.  #4209
 
-* Expose `Spiderable.requestTimeout` from `spiderable` package to
+* Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
   allow apps to set the timeout for running phantomjs.
 
 
