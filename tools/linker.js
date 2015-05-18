@@ -96,16 +96,6 @@ _.extend(Module.prototype, {
   getPrelinkedFiles: function () {
     var self = this;
 
-    // If there are no files *and* we are a no-exports-at-all unibuild, then
-    // generate no prelink output.
-    //
-    // If there are no files, but we are a non-test package (and thus
-    // self.declaredExports is an actual, albeit potentially empty, list), we
-    // DON'T want to take this path: we want to return an empty prelink file, so
-    // that at link time we end up at least setting `Package.foo = {}`.
-    if (_.isEmpty(self.files) && !self.declaredExports)
-      return [];
-
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
