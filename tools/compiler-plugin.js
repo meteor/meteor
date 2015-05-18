@@ -195,7 +195,25 @@ var ResourceSlot = function (unibuildResourceInfo,
   self.buildPlugin = buildPlugin;
   self.packageSourceBatch = packageSourceBatch;
 
-  if (self.inputResource.type === "source") {
+  if (self.inputResource.type === "source" &&
+      self.inputResource.extension === "js") {
+    // #HardcodeJs
+    if (buildPlugin) {
+      throw Error("buildPlugin found for js source? " +
+                  JSON.stringify(unibuildResourceInfo));
+    }
+    self.addJavaScript({
+      // XXX it's a shame to keep converting between Buffer and string, but
+      // files.convertToStandardLineEndings only works on strings for now
+      data: self.inputResource.data.toString('utf8'),
+      path: self.inputResource.path,
+      bare: self.inputResource.fileOptions &&
+        (self.inputResource.fileOptions.bare ||
+         // XXX eventually get rid of backward-compatibility "raw" name
+         // XXX COMPAT WITH 0.6.4
+         self.inputResource.fileOptions.raw)
+    });
+  } else if (self.inputResource.type === "source") {
     if (! buildPlugin) {
       throw Error("no buildPlugin plugin for source? " +
                   JSON.stringify(unibuildResourceInfo));
@@ -230,10 +248,19 @@ _.extend(ResourceSlot.prototype, {
   },
   addJavaScript: function (options) {
     var self = this;
-    if (! self.buildPlugin)
+    // #HardcodeJs this gets called by constructor in the "js" case
+    if (! self.buildPlugin && self.inputResource.extension !== "js")
       throw Error("addJavaScript on non-source ResourceSlot?");
 
-    // XXX BBP implement it!
+    self.outputResources.push({
+      type: "js",
+      data: new Buffer(
+        files.convertToStandardLineEndings(options.data), 'utf8'),
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
+        options.path),
+      sourceMap: options.sourceMap,
+      bare: options.bare
+    });
   },
   addAsset: function (options) {
     var self = this;
@@ -281,18 +308,15 @@ var PackageSourceBatch = function (unibuild, processor) {
   self.resourceSlots = _.map(unibuild.resources, function (resource) {
     var buildPlugin = null;
     if (resource.type === "source") {
-      var basename = files.pathBasename(resource.path);
-      var parts = basename.split('.');
-      for (var i = 1; i < parts.length; i++) {
-        var extension = parts.slice(i).join('.');
-        if (_.has(buildPluginsByExtension, extension)) {
-          buildPlugin = buildPluginsByExtension[extension];
-          break;
-        }
-      }
-      if (! buildPlugin) {
+      var extension = resource.extension;
+      if (extension === 'js') {
+        // #HardcodeJs In this case, we just leave buildPlugin null; it is
+        // #specially handled by ResourceSlot too.
+      } else if (_.has(buildPluginsByExtension, extension)) {
+        buildPlugin = buildPluginsByExtension[extension];
+      } else {
         // XXX BBP better error handling
-        throw Error("no plugin found for " + resource.path);
+        throw Error("no plugin found for " + JSON.stringify(resource));
       }
     }
     return new ResourceSlot(resource, buildPlugin, self);

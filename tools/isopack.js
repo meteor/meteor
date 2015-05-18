@@ -912,7 +912,8 @@ _.extend(Isopack.prototype, {
             extension: resource.extension,
             data: data,
             path: resource.path,
-            hash: resource.hash
+            hash: resource.hash,
+            fileOptions: resource.fileOptions
           });
         } else if (_.contains(["head", "body", "css", "js", "asset"],
                               resource.type)) {
@@ -1175,7 +1176,8 @@ _.extend(Isopack.prototype, {
             offset: 0,
             servePath: resource.servePath || undefined,
             path: resource.path || undefined,
-            hash: resource.hash || undefined
+            hash: resource.hash || undefined,
+            fileOptions: resource.fileOptions || undefined
           });
         });
 

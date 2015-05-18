@@ -267,31 +267,12 @@ var compileUnibuild = function (options) {
   var compilerPluginsByExtension = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
+  // We specially handle 'js' in the build tool, because you can't provide a
+  // plugin to handle 'js' files, because the plugin would need to be built with
+  // JavaScript itself!  Places that hardcode JS are tagged with #HardcodeJs.
+  // This line means to look for 'js' files in the project directory, and they
+  // are not templates.
   sourceExtensions['js'] = false;
-  allHandlersWithPkgs['js'] = {
-    pkgName: null /* native handler */,
-    handler: function (compileStep) {
-      // This is a hardcoded handler for *.js files. Since plugins
-      // are written in JavaScript we have to start somewhere.
-
-      var options = {
-        data: compileStep.read().toString('utf8'),
-        path: compileStep.inputPath,
-        sourcePath: compileStep.inputPath,
-        _hash: compileStep._hash
-      };
-
-      if (compileStep.fileOptions.hasOwnProperty("bare")) {
-        options.bare = compileStep.fileOptions.bare;
-      } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
-        // XXX eventually get rid of backward-compatibility "raw" name
-        // XXX COMPAT WITH 0.6.4
-        options.bare = compileStep.fileOptions.raw;
-      }
-
-      compileStep.addJavaScript(options);
-    }
-  };
 
   _.each(activePluginPackages, function (otherPkg) {
     otherPkg.ensurePluginsInitialized();
@@ -428,6 +409,12 @@ var compileUnibuild = function (options) {
       // don't use iteration functions, so we can return/break
       for (var i = 1; i < parts.length; i++) {
         var extension = parts.slice(i).join('.');
+        // Hardcode 'js' handler (which doesn't actually have a compiler plugin
+        // object). #HardcodeJs
+        if (extension === 'js') {
+          buildPluginExtension = 'js';
+          break;
+        }
         if (_.has(compilerPluginsByExtension, extension)) {
           var compilerPlugin = compilerPluginsByExtension[extension];
           if (! compilerPlugin.relevantForArch(inputSourceArch.arch)) {
@@ -457,7 +444,8 @@ var compileUnibuild = function (options) {
         extension: buildPluginExtension,
         data: contents,
         path: relPath,
-        hash: hash
+        hash: hash,
+        fileOptions: fileOptions
       });
       return;
     }
