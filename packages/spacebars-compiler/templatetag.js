@@ -109,8 +109,7 @@ TemplateTag.parse = function (scannerOrString) {
   };
 
   var scanIdentifier = function (isFirstInPath) {
-    var id = BlazeTools.parseIdentifierName(scanner) ||
-          run(/^(?:@index)/);
+    var id = BlazeTools.parseExtendedIdentifierName(scanner);
     if (! id) {
       expected('IDENTIFIER');
     }
