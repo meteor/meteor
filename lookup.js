@@ -182,15 +182,26 @@ Blaze.View.prototype.lookup = function (name, _options) {
   return function () {
     var isCalledAsFunction = (arguments.length > 0);
     var data = Blaze.getData();
-    if (lookupTemplate && ! (data && data[name])) {
-      throw new Error("No such template: " + name);
+    var x = data && data[name];
+    if (! x) {
+      if (lookupTemplate) {
+        throw new Error("No such template: " + name);
+      } else if (isCalledAsFunction) {
+        throw new Error("No such function: " + name);
+      } else if (name.charAt(0) === '@' && ((x === null) ||
+                                            (x === undefined))) {
+        // Throw an error if the user tries to use a `@directive`
+        // that doesn't exist.  We don't implement all directives
+        // from Handlebars, so there's a potential for confusion
+        // if we fail silently.  On the other hand, we want to
+        // throw late in case some app or package wants to provide
+        // a missing directive.
+        throw new Error("Unsupported directive: " + name);
+      }
     }
-    if (isCalledAsFunction && ! (data && data[name])) {
-      throw new Error("No such function: " + name);
-    }
-    if (! data)
+    if (! data) {
       return null;
-    var x = data[name];
+    }
     if (typeof x !== 'function') {
       if (isCalledAsFunction) {
         throw new Error("Can't call non-function: " + x);
