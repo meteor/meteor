@@ -19,7 +19,6 @@
 #define LOG true
 
 
-
     
 
 
@@ -234,6 +233,14 @@ HRESULT UnzipToFolder(
 
 UINT __stdcall Extract_MeteorFiles(MSIHANDLE hInstall)
 {
+	// If cancelled, don't try to extract anything.
+	wchar_t szValueBuf[64];
+	DWORD szValueBufSize = 64;
+	MsiGetProperty(hInstall, L"Cancelled", szValueBuf, &szValueBufSize);
+	if (szValueBuf[0] == L'Y')
+		return 0;
+
+	// Go ahead.
 	HRESULT hr = S_OK;
 	UINT er = ERROR_SUCCESS;
 
@@ -336,7 +343,7 @@ HRESULT Download_Package(
     		capacity,
     		&bytes_read);
 
-		if (!request) {
+		if (!result) {
 			return HRESULT_FROM_WIN32(::GetLastError());
 		}
 
@@ -363,9 +370,15 @@ HRESULT Download_Package(
         MsiRecordSetString(hActionRec, 3, NULL);
 
         UINT iResult = MsiProcessMessage(hInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
-        if ((iResult == IDCANCEL) || (iResult == IDABORT)) {
+
+        // XXX I *thought* this should return IDCANCEL, and have verified that
+        // that's what
+        // WixStandardBootstrapperApplication.cpp::OnExecuteMsiMessage
+        // returns. But for some reason `iResult` ends up being 1.
+        if (iResult == 1) {
         	fclose(output);
-            return E_ABORT;
+        	MsiSetProperty(hInstall, L"Cancelled", L"Y"); // read from Extract_MeteorFiles
+            return ERROR_INSTALL_USEREXIT;
         }
 	}
 
