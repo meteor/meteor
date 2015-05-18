@@ -34,8 +34,7 @@ var rejectBadPath = function (p) {
 // - implies
 // - watchSet
 // - nodeModulesPath
-// - prelinkFiles
-// - packageVariables
+// - declaredExports
 // - resources
 
 var nextBuildId = 1;
@@ -65,22 +64,10 @@ var Unibuild = function (isopack, options) {
   self.id = self.pkg.name + "." + self.kind + "@" + self.arch + "#" +
     (nextBuildId ++);
 
-  // Prelink output.
-  //
-  // 'prelinkFiles' is the partially linked JavaScript code (an
-  // array of objects with keys 'source' and 'servePath', both strings -- see
-  // prelink() in linker.js)
-  //
-  // 'packageVariables' are variables that are syntactically globals
-  // in our input files and which we capture with a package-scope
-  // closure. A list of objects with keys 'name' (required) and
-  // 'export' (true, 'tests', or falsy).
-  //
-  // Both of these are saved into unibuilds on disk, and are inputs into the final
-  // link phase, which inserts the final JavaScript resources into
-  // 'resources'.
-  self.prelinkFiles = options.prelinkFiles;
-  self.packageVariables = options.packageVariables;
+  // 'declaredExports' are the variables which are exported from this package.
+  // A list of objects with keys 'name' (required) and 'testOnly' (boolean,
+  // defaults to false).
+  self.declaredExports = options.declaredExports;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
@@ -109,84 +96,6 @@ var Unibuild = function (isopack, options) {
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
 };
-
-_.extend(Unibuild.prototype, {
-  // Get the resources that this function contributes to a bundle, in
-  // the same format as self.resources as documented above. This
-  // includes static assets and fully linked JavaScript.
-  //
-  // @param bundleArch The architecture targeted by the bundle. Might
-  // be more specific than self.arch.
-  //
-  // It is when you call this function that we read our dependent
-  // packages and commit to whatever versions of them we currently
-  // have in the library -- at least for the purpose of imports, which
-  // is resolved at bundle time. (On the other hand, when it comes to
-  // the extension handlers we'll use, we previously commited to those
-  // versions at package build ('compile') time.)
-  getResources: Profile(
-    "Unibuild#getResources", function (bundleArch, options) {
-    var self = this;
-    var isopackCache = options.isopackCache;
-    if (! isopackCache)
-      throw Error("no isopackCache?");
-
-    if (! archinfo.matches(bundleArch, self.arch))
-      throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
-                      bundleArch + "'?");
-
-    // Compute imports by merging the exports of all of the packages
-    // we use. Note that in the case of conflicting symbols, later
-    // packages get precedence.
-    //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak/debugOnly dependencies (because the meaning of
-    // a name shouldn't be affected by the non-local decision of whether or not
-    // an unrelated package in the target depends on something).
-    var imports = {}; // map from symbol to supplying package name
-
-    var addImportsForUnibuild = function (depUnibuild) {
-      _.each(depUnibuild.packageVariables, function (symbol) {
-        // Slightly hacky implementation of test-only exports.
-        if (symbol.export === true ||
-            (symbol.export === "tests" && self.pkg.isTest))
-          imports[symbol.name] = depUnibuild.pkg.name;
-      });
-    };
-    compiler.eachUsedUnibuild({
-      dependencies: self.uses,
-      arch: bundleArch,
-      isopackCache: isopackCache,
-      skipUnordered: true,
-      skipDebugOnly: true
-    }, addImportsForUnibuild);
-
-    // Phase 2 link
-    var isApp = ! self.pkg.name;
-    var files = linker.link({
-      imports: imports,
-      useGlobalNamespace: isApp,
-      // XXX report an error if there is a package called global-imports
-      importStubServePath: isApp && '/packages/global-imports.js',
-      prelinkFiles: self.prelinkFiles,
-      packageVariables: self.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.arch, "web"),
-      name: self.pkg.name || null
-    });
-
-    // Add each output as a resource
-    var jsResources = _.map(files, function (file) {
-      return {
-        type: "js",
-        data: new Buffer(file.source, 'utf8'), // XXX encoding
-        servePath: file.servePath,
-        sourceMap: file.sourceMap
-      };
-    });
-
-    return _.union(self.resources, jsResources); // union preserves order
-  })
-});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Isopack
@@ -870,14 +779,18 @@ _.extend(Isopack.prototype, {
       var unibuildBasePath =
         files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
-      // XXX BBP for now these are the same format (except that
-      // isopack-2-unibuild can contain "source" resources) but later we'll
-      // change eg packageVariables -> exportVariables
       if (unibuildJson.format !== "unipackage-unibuild-pre1" &&
           unibuildJson.format !== "isopack-2-unibuild") {
         throw new Error("Unsupported isopack unibuild format: " +
                         JSON.stringify(unibuildJson.format));
       }
+
+      // Is this unibuild the legacy pre-"compiler plugin" format which contains
+      // "prelink" resources of pre-processed JS files (as well as the
+      // "packageVariables" field) instead of individual "source" resources (and
+      // a "declaredExports" field)?
+      var unibuildHasPrelink =
+            unibuildJson.format === "unipackage-unibuild-pre1";
 
       var nodeModulesPath = null;
       if (unibuildJson.node_modules) {
@@ -886,7 +799,6 @@ _.extend(Isopack.prototype, {
           files.pathJoin(unibuildBasePath, unibuildJson.node_modules);
       }
 
-      var prelinkFiles = [];
       var resources = [];
 
       _.each(unibuildJson.resources, function (resource) {
@@ -896,16 +808,35 @@ _.extend(Isopack.prototype, {
           resource.length, resource.offset);
 
         if (resource.type === "prelink") {
-          var prelinkFile = {
-            source: data.toString('utf8'),
-            servePath: resource.servePath
+          if (! unibuildHasPrelink) {
+            throw Error("Unexpected prelink resource in " +
+                        unibuildJson.format + " at " + dir);
+          }
+          // We found a "prelink" resource, because we're processing a package
+          // published with an older version of Meteor which did not create
+          // isopack-2 isopacks and which always preprocessed and linked all JS
+          // files instead of leaving that until bundle time.  Let's pretend it
+          // was just a single js source file, but leave a "legacyPrelink" field
+          // on it so we can not re-link that part (and not re-analyze for
+          // assigned variables).
+          var prelinkResource = {
+            type: "source",
+            extension: "js",
+            data: data,
+            path: resource.servePath,
+            // It's a shame to have to calculate the hash here instead of having
+            // it on disk, but this only runs for legacy packages anyway.
+            hash: watch.sha1(data),
+            legacyPrelink: {
+              packageVariables: unibuildJson.packageVariables || []
+            }
           };
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
-            prelinkFile.sourceMap = files.readFile(
+            prelinkResource.legacyPrelink.sourceMap = files.readFile(
               files.pathJoin(unibuildBasePath, resource.sourceMap), 'utf8');
           }
-          prelinkFiles.push(prelinkFile);
+          resources.push(prelinkResource);
         } else if (resource.type === "source") {
           resources.push({
             type: "source",
@@ -937,8 +868,7 @@ _.extend(Isopack.prototype, {
         implies: unibuildJson.implies,
         watchSet: unibuildWatchSets[unibuildMeta.path],
         nodeModulesPath: nodeModulesPath,
-        prelinkFiles: prelinkFiles,
-        packageVariables: unibuildJson.packageVariables || [],
+        declaredExports: unibuildJson.declaredExports || [],
         resources: resources
       }));
     });
@@ -1113,9 +1043,7 @@ _.extend(Isopack.prototype, {
         // Construct unibuild metadata
         var unibuildJson = {
           format: "isopack-2-unibuild",
-          // XXX BBP isopack-2-unibuild eventually will not contain
-          // packageVariables
-          packageVariables: unibuild.packageVariables,
+          declaredExports: unibuild.declaredExports,
           uses: _.map(unibuild.uses, function (u) {
             return {
               'package': u.package,
@@ -1179,30 +1107,6 @@ _.extend(Isopack.prototype, {
             hash: resource.hash || undefined,
             fileOptions: resource.fileOptions || undefined
           });
-        });
-
-        // Output prelink resources
-        _.each(unibuild.prelinkFiles, function (file) {
-          var data = new Buffer(file.source, 'utf8');
-          var resource = {
-            type: 'prelink',
-            file: builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, file.servePath),
-              { data: data }),
-            length: data.length,
-            offset: 0,
-            servePath: file.servePath || undefined
-          };
-
-          if (file.sourceMap) {
-            // Write the source map.
-            resource.sourceMap = builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, file.servePath + '.map'),
-              { data: new Buffer(file.sourceMap, 'utf8') }
-            );
-          }
-
-          unibuildJson.resources.push(resource);
         });
 
         // If unibuild has included node_modules, copy them in
@@ -1281,35 +1185,43 @@ _.extend(Isopack.prototype, {
           });
 
           unibuildJson.format = 'unipackage-unibuild-pre1';
-          unibuildJson.resources = _.map(
-            unibuildJson.resources,
-            function (resource) {
-              if (resource.type !== 'source')
-                return resource;
-              if (resource.extension !== 'css') {
-                // XXX BBP this will add 'js' later too
-                throw Error("shouldn't write legacy builds for non-CSS source "
-                            + JSON.stringify(resource));
-              }
-              // Convert this resource from a new-style "source" to an old-style
-              // "css".
-              return {
+          var newResources = [];
+          var jsResources = [];
+          _.each(unibuildJson.resources, function (resource) {
+            if (resource.type !== 'source') {
+              newResources.push(resource);
+            } else if (resource.extension === 'css') {
+              // Convert this resource from a new-style "source" to an
+              // old-style "css".
+              newResources.push({
                 type: 'css',
                 file: resource.file,
                 length: resource.length,
                 offset: resource.offset,
                 servePath: self._getServePath(resource.path)
-              };
+              });
+            } else if (resource.extension === 'js') {
+              jsResources.push(resource);
+            } else {
+              throw Error(
+                "shouldn't write legacy builds for non-JS/CSS source "
+                  + JSON.stringify(resource));
             }
-          );
+          });
+          if (jsResources.length) {
+            // XXX BBP either: see that legacyPrelink field exists and just
+            // reverse that transformation... or run prelink, push it onto
+            // newResources, and put packageVariables onto unibuildJson
+            // DO IT HERE
+          }
+          unibuildJson.resources = newResources;
+          delete unibuildJson.declaredExports;
           builder.writeJson(legacyFilename, unibuildJson);
         });
-      }
 
-      // old unipackage.json format/filename.  no point to save this if
-      // we can't even support isopack-1.
-      // XXX COMPAT WITH 0.9.3
-      if (writeLegacyBuilds) {
+        // old unipackage.json format/filename.  no point to save this if
+        // we can't even support isopack-1.
+        // XXX COMPAT WITH 0.9.3
         builder.writeJson(
           "unipackage.json",
           Isopack.convertIsopackFormat(

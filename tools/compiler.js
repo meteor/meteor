@@ -213,8 +213,8 @@ var lintUnibuild = function (options) {
 };
 
 // options.sourceArch is a SourceArch to compile.  Process all source files
-// through the appropriate handlers and run the prelink phase on any resulting
-// JavaScript. Create a new Unibuild and add it to options.isopack.
+// through the appropriate legacy handlers. Create a new Unibuild and add it to
+// options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
 var compileUnibuild = function (options) {
@@ -477,52 +477,9 @@ var compileUnibuild = function (options) {
     }
   });
 
-  // *** Run Phase 1 link
-
-  // Load jsAnalyze from the js-analyze package... unless we are the
-  // js-analyze package, in which case never mind. (The js-analyze package's
-  // default unibuild is not allowed to depend on anything!)
-  var jsAnalyze = null;
-  if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
-    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
-  }
-
-  var results = linker.prelink({
-    inputFiles: js,
-    useGlobalNamespace: isApp,
-    // I was confused about this, so I am leaving a comment -- the
-    // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
-    // XXX: If we change this, we can get rid of source arch names!
-    combinedServePath: isApp ? null :
-      "/packages/" + colonConverter.convert(
-        inputSourceArch.pkg.name +
-        (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) +
-        ".js"),
-    name: inputSourceArch.pkg.name || null,
-    declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
-    jsAnalyze: jsAnalyze,
-    noLineNumbers: noLineNumbers
-  });
-
   // *** Determine captured variables
-  var packageVariables = [];
-  var packageVariableNames = {};
-  _.each(inputSourceArch.declaredExports, function (symbol) {
-    if (_.has(packageVariableNames, symbol.name))
-      return;
-    packageVariables.push({
-      name: symbol.name,
-      export: symbol.testOnly? "tests" : true
-    });
-    packageVariableNames[symbol.name] = true;
-  });
-  _.each(results.assignedVariables, function (name) {
-    if (_.has(packageVariableNames, name))
-      return;
-    packageVariables.push({
-      name: name
-    });
-    packageVariableNames[name] = true;
+  var declaredExports = _.map(inputSourceArch.declaredExports, function (symbol) {
+    return _.pick(symbol, ['name', 'testOnly']);
   });
 
   // *** Consider npm dependencies and portability
@@ -544,8 +501,7 @@ var compileUnibuild = function (options) {
     implies: inputSourceArch.implies,
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPath,
-    prelinkFiles: results.files,
-    packageVariables: packageVariables,
+    declaredExports: declaredExports,
     resources: resources
   });
 
@@ -597,9 +553,10 @@ var runLinters = function (
   }, function (unibuild) {
     if (unibuild.pkg.name === inputSourceArch.pkg.name)
       return;
-    _.each(unibuild.packageVariables, function (symbol) {
-      if (symbol.export === true)
+    _.each(unibuild.declaredExports, function (symbol) {
+      if (! symbol.testOnly || inputSourceArch.isTest) {
         globalImports.push(symbol.name);
+      }
     });
   });
 

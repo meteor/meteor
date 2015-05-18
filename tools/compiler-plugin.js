@@ -386,7 +386,6 @@ _.extend(PackageSourceBatch.prototype, {
     return resources.concat(self._getPrelinkedJsResources());
   },
 
-  // XXX BBP copied from Unibuild.getResources, which should get deleted
   // XXX BBP this should also support JS resources produced by buildPlugin plugins
   _getPrelinkedJsResources: function () {
     var self = this;
@@ -409,11 +408,11 @@ _.extend(PackageSourceBatch.prototype, {
     var imports = {}; // map from symbol to supplying package name
 
     var addImportsForUnibuild = function (depUnibuild) {
-      _.each(depUnibuild.packageVariables, function (symbol) {
+      _.each(depUnibuild.declaredExports, function (symbol) {
         // Slightly hacky implementation of test-only exports.
-        if (symbol.export === true ||
-            (symbol.export === "tests" && self.unibuild.pkg.isTest))
+        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
           imports[symbol.name] = depUnibuild.pkg.name;
+        }
       });
     };
     compiler.eachUsedUnibuild({
