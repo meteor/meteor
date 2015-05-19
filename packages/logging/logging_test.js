@@ -10,7 +10,7 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
       // Note that we want this to work in --production too, so we need to allow
       // for the minified filename.
       test.matches(details.file,
-                   /^(?:local-test_logging\.js|[a-f0-9]{40}\.js)$/);
+                   /^(?:tinytest\.js|[a-f0-9]{40}\.js)$/);
     }
 
     // evaled statements shouldn't crash
