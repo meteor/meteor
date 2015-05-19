@@ -1626,8 +1626,8 @@ main.registerCommand({
     var nonlatestIndirectDeps = [];
     projectContext.packageMap.eachPackage(function (name, info) {
       var selectedVersion = info.version;
-      var latestVersion = projectContext.projectCatalog.getLatestVersion(
-        name).version;
+      var catalog = projectContext.projectCatalog;
+      var latestVersion = catalog.getLatestMainlineVersion(name).version;
       if (selectedVersion !== latestVersion) {
         var rec = { name: name, selectedVersion: selectedVersion,
                     latestVersion: latestVersion };
@@ -1640,7 +1640,7 @@ main.registerCommand({
     });
     var printItem = function (rec) {
       Console.info(" * " + rec.name + " " + rec.selectedVersion +
-                   " - " + rec.latestVersion + " is available");
+                   " (" + rec.latestVersion + " is available)");
     };
     if (nonlatestDirectDeps.length) {
       Console.info("\nThe following top-level dependencies were not updated " +
