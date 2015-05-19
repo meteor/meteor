@@ -148,7 +148,7 @@ _.extend(InputFile.prototype, {
    */
   getDisplayPath: function () {
     var self = this;
-    return self._resourceSlot.packageSourceBatch.unibuild.pkg._getServePath() + "/" + self.getPathInPackage();
+    return self._resourceSlot.packageSourceBatch.unibuild.pkg._getServePath(self.getPathInPackage());
   },
 
   /**

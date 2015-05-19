@@ -151,7 +151,8 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
     } catch (e) {
       inputFile.error({
         message: e.message,
-        line: e.location && e.location.first_line
+        line: e.location && (e.location.first_line + 1),
+        column: e.location && (e.location.first_column + 1)
       });
 
       return;
