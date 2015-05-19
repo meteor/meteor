@@ -7,7 +7,7 @@
 
     <?include Configuration.wxi?>
 
-    <Product Id="*" Name="$(var.METEOR_ProductName)" Language="1033" Version="$(var.METEOR_Version)" Manufacturer="$(var.METEOR_Manufacturer)" UpgradeCode="$(var.METEOR_UpgradeCode)">
+    <Product Id="*" Name="$(var.METEOR_ProductName)" Language="1033" Version="1.0" Manufacturer="$(var.METEOR_Manufacturer)" UpgradeCode="$(var.METEOR_UpgradeCode)">
         <Package Description="This package will install Meteor on your computer." InstallerVersion="300" Compressed="yes" InstallScope="perUser" InstallPrivileges="limited"/>
 
         <!-- This will allow a new msi package to upgrade an existing older version (in case patch is not used) -->
@@ -19,8 +19,6 @@
         <Property Id="ARPURLINFOABOUT" Value="$(var.METEOR_ProductName)"/>
         <Property Id="ARPURLUPDATEINFO" Value="$(var.METEOR_ProductName)"/>
         <Property Id="ARPHELPLINK" Value="$(var.METEOR_ProductName)"/>
-
-        <Property Id="METEOR_DWN_URL" Value="$(var.METEOR_PkgDwnUrl)" />
 
         <?if $(var.Platform)="x86"?>
             <Binary Id="WiXHelper"        SourceFile="..\WiXHelper\bin\Release\Win32\WiXHelper.dll"/>
