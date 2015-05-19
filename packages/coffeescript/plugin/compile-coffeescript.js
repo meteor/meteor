@@ -1,8 +1,15 @@
 var fs = Npm.require('fs');
 var path = Npm.require('path');
-var coffee = Npm.require('coffee-script');
 var _ = Npm.require('underscore');
 var sourcemap = Npm.require('source-map');
+
+// The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
+// use of coffee.run which we don't use.  This conflicts with the tool's use of
+// Error.prepareStackTrace to properly show error messages in linked code.  Save
+// the tool's one and restore it after coffee-script clobbers it.
+var prepareStackTrace = Error.prepareStackTrace;
+var coffee = Npm.require('coffee-script');
+Error.prepareStackTrace = prepareStackTrace;
 
 var stripExportedVars = function (source, exports) {
   if (!exports || _.isEmpty(exports))
