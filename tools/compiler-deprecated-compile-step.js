@@ -11,7 +11,7 @@ var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var colonConverter = require('./colon-converter.js');
-
+var watch = require('./watch.js');
 
 var convertSourceMapPaths = function (sourcemap, f) {
   if (! sourcemap) {
@@ -25,7 +25,6 @@ var convertSourceMapPaths = function (sourcemap, f) {
 };
 
 exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) {
-  var js = options.js;
   var resources = options.resources;
   var addAsset = options.addAsset;
 
@@ -351,6 +350,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
     addJavaScript: function (options) {
       if (typeof options.data !== "string")
         throw new Error("'data' option to addJavaScript must be a string");
+      // XXX BBP sourcePath vs path?
       if (typeof options.sourcePath !== "string")
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
 
@@ -361,16 +361,21 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         bare = options.bare;
       }
 
-      js.push({
-        source: files.convertToStandardLineEndings(options.data),
-        sourcePath: files.convertToStandardPath(options.sourcePath, true),
-        servePath: files.pathJoin(
-          inputSourceArch.pkg.serveRoot,
-          files.convertToStandardPath(options.path, true)),
-        bare: !! bare,
+      var data = new Buffer(
+        files.convertToStandardLineEndings(options.data), 'utf8');
+      resources.push({
+        type: "js",
+        data: data,
+        // XXX BBP what about options.sourcePath?  (which is the name
+        //     of the file in the preprocessing language probably)
+        servePath: colonConverter.convert(
+          files.pathJoin(
+            inputSourceArch.pkg.serveRoot,
+            files.convertToStandardPath(options.path, true))),
+        hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        hash: options._hash
+        bare: !! bare
       });
     },
 

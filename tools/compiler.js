@@ -229,7 +229,6 @@ var compileUnibuild = function (options) {
 
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
-  var js = [];
   var pluginProviderPackageNames = {};
   // The current package always is a plugin provider. (This also means we no
   // longer need a buildOfPath entry in buildinfo.json.)
@@ -461,7 +460,6 @@ var compileUnibuild = function (options) {
     }
 
     var compileStep = compileStepModule.makeCompileStep(source, file, inputSourceArch, {
-      js: js,
       resources: resources,
       addAsset: addAsset
     });

@@ -666,8 +666,7 @@ var fullLink = function (options) {
   // js-analyze package, in which case never mind. (The js-analyze package's
   // default unibuild is not allowed to depend on anything!)
   var jsAnalyze = null;
-  if (! _.isEmpty(options.inputFiles) &&
-      options.name !== "js-analyze") {
+  if (! _.isEmpty(options.inputFiles) && options.name !== "js-analyze") {
     jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
   }
 

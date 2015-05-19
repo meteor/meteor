@@ -229,7 +229,11 @@ var ResourceSlot = function (unibuildResourceInfo,
     }
     // Any resource that isn't handled by buildPlugin plugins just gets passed
     // through.
-    self.outputResources.push(self.inputResource);
+    if (self.inputResource.type === "js") {
+      self.jsOutputResources.push(self.inputResource);
+    } else {
+      self.outputResources.push(self.inputResource);
+    }
   }
 };
 _.extend(ResourceSlot.prototype, {
@@ -401,9 +405,7 @@ _.extend(PackageSourceBatch.prototype, {
     };
     var resources = flatten(_.pluck(self.resourceSlots, 'outputResources'));
     var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
-    if (jsResources.length) {
-      Array.prototype.push.apply(resources, self._linkJS(jsResources));
-    }
+    Array.prototype.push.apply(resources, self._linkJS(jsResources));
     return resources;
   },
 
