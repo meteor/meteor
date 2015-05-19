@@ -263,7 +263,7 @@ LExit:
 HRESULT Download_Package(
 	MSIHANDLE hInstall,
 	__in LPCWSTR wzFriendlyName,
-	__in LPCWSTR wzProperty_DWNURL,
+	__in LPCWSTR szDwnUrl,
 	__in LPCWSTR wzZipFile)
 {
 	HRESULT hr = S_OK;
@@ -271,13 +271,11 @@ HRESULT Download_Package(
 	WcaLog(LOGMSG_STANDARD, "Download package \"%S\" initialized.", wzFriendlyName);
 
 	wchar_t szSourceDir[BUF_LEN] = L"";	DWORD nSourceDirDirLen = BUF_LEN;
-	wchar_t szDwnUrl[BUF_LEN]  = L"";	DWORD nDwnUrlLen  = BUF_LEN;
 	wchar_t szDwnUser[BUF_LEN] = L"";	DWORD nDwnUserLen = BUF_LEN;
 	wchar_t szDwnPass[BUF_LEN] = L"";	DWORD nDwnPassLen = BUF_LEN;
 	wchar_t szZipFile[BUF_LEN] = L"";
 
 	MsiGetProperty(hInstall, L"SourceDir", szSourceDir, &nSourceDirDirLen);
-	MsiGetProperty(hInstall, wzProperty_DWNURL, szDwnUrl, &nDwnUrlLen);
 	MsiGetProperty(hInstall, L"HTTP_DWN_USER", szDwnUser, &nDwnUserLen);
 	MsiGetProperty(hInstall, L"HTTP_DWN_PASS", szDwnPass, &nDwnPassLen);
 	StringCchPrintf(szZipFile, BUF_LEN, L"%s%s", szSourceDir, wzZipFile);
@@ -390,16 +388,76 @@ HRESULT Download_Package(
 }
 
 
+// assumes content is at most 1024 characters
+UINT FetchHTTPSToShortString(wchar_t *url, char *result) {
+	HINTERNET internet = InternetOpen(
+		L"MeteorWindowsInstaller/1.0",
+		INTERNET_OPEN_TYPE_PRECONFIG,
+		NULL,
+		NULL,
+		0);
+
+	if (internet == NULL) {
+		return ::GetLastError();
+	}
+
+	HINTERNET request = InternetOpenUrl(
+		internet,
+		url,
+		NULL,
+		0,
+		INTERNET_FLAG_SECURE,
+		NULL);
+
+	if (request == NULL) {
+		return ::GetLastError();
+	}
+
+    DWORD dwContentLen;
+    DWORD dwBufLen = sizeof(dwContentLen);
+
+	DWORD bytes_read;
+	BOOL readResult = InternetReadFile(
+		request,
+		result,
+		1023,
+		&bytes_read);
+	if (!readResult) {
+		return ::GetLastError();
+	}
+	wchar_t buf[256];
+	StringCchPrintf(buf, 256, L"%d", bytes_read);
+	result[bytes_read] = 0;
+
+	return 0;
+}
+
 
 UINT __stdcall Download_MeteorPackage(MSIHANDLE hInstall)
 {
 	HRESULT hr = S_OK;
 	UINT er = ERROR_SUCCESS;
+	UINT httpEr;
 
 	hr = WcaInitialize(hInstall, "Download_MeteorPackage");
 	ExitOnFailure(hr, "Failed to initialize Download_MeteorPackage");
 
-	hr = Download_Package(hInstall, L"Meteor", L"METEOR_DWN_URL", L"meteor-bootstrap-os.windows.x86_32.tar.gz");
+	char bootstrapLink[1024];
+	httpEr = FetchHTTPSToShortString(L"https://packages.meteor.com/bootstrap-link", bootstrapLink);
+	if (httpEr) {
+		hr = HRESULT_FROM_WIN32(httpEr);
+		ExitOnFailure(hr, "Failed to get bootstrap-link."); 
+	}
+
+	// strip trailing newline
+	*strchr(bootstrapLink, '\n') = '\0';
+
+	char downloadUrl[1024];
+	sprintf(downloadUrl, "%s/meteor-bootstrap-os.windows.x86_32.tar.gz", bootstrapLink);
+
+	wchar_t wDownloadUrl[1024];
+	mbstowcs(wDownloadUrl, downloadUrl, 1024);
+	hr = Download_Package(hInstall, L"Meteor", wDownloadUrl, L"meteor-bootstrap-os.windows.x86_32.tar.gz");
 	ExitOnFailure(hr, "Failed to download Meteor package from specified URL."); 
 
 LExit:
