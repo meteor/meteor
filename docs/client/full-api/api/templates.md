@@ -276,6 +276,23 @@ Template.comments.onCreated(function () {
 {{dstache}}/with}}
 ```
 
+Another example where you want to initialize a plugin when the subscription is
+done:
+
+```js
+Template.listing.onRendered(function () {
+  var template = this;
+
+  template.subscribe('listOfThings', function () {
+    Tracker.afterFlush(function() {
+      // Use highlight.js to highlight a code snippet after
+      // the data has loaded.
+      highlightBlock(template.find('.code'));
+    });
+  });
+});
+```
+
 {{> autoApiBox "Blaze.TemplateInstance#view"}}
 
 {{> autoApiBox "Template.registerHelper"}}
