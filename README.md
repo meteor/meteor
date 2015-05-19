@@ -404,8 +404,8 @@ data context, another variable) with a short-hand within the template:
 
 ```handlebars
 {{#let name=person.bio.firstName color=generateColor}}
-  <div>{{name}} get a {{color}} card!</div>
-{{/each}}
+  <div>{{name}} gets a {{color}} card!</div>
+{{/let}}
 ```
 
 Variables introduced this way take precedence over names of templates, global
