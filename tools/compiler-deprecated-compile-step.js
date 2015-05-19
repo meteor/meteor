@@ -370,7 +370,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         bare: !! bare,
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        sourceHash: options._hash
+        hash: options._hash
       });
     },
 

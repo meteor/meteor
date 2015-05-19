@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
-var buildmessage = require('./buildmessage');
+var buildmessage = require('./buildmessage.js');
+var isopackets = require('./isopackets.js');
 var watch = require('./watch.js');
 
 var packageDot = function (name) {
@@ -15,8 +16,8 @@ var packageDot = function (name) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options include name, imports, exports, useGlobalNamespace,
-// combinedServePath, and importStubServePath, all of which have the
-// same meaning as they do when passed to import().
+// combinedServePath, all of which have the same meaning as they do when passed
+// to import().
 var Module = function (options) {
   var self = this;
 
@@ -30,7 +31,6 @@ var Module = function (options) {
   self.declaredExports = options.declaredExports;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
-  self.importStubServePath = options.importStubServePath;
   self.jsAnalyze = options.jsAnalyze;
   self.noLineNumbers = options.noLineNumbers;
 };
@@ -88,7 +88,7 @@ _.extend(Module.prototype, {
     });
     assignedVariables = _.uniq(assignedVariables);
 
-    return _.isEmpty(assignedVariables) ? undefined : assignedVariables;
+    return _.isEmpty(assignedVariables) ? null : assignedVariables;
   },
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
@@ -211,18 +211,14 @@ var File = function (inputFile, module) {
   var self = this;
 
   // source code for this file (a string)
-  self.source = inputFile.source;
+  self.source = inputFile.data.toString('utf8');
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
-  self.sourceHash = inputFile.sourceHash || watch.sha1(self.source);
+  self.sourceHash = inputFile.hash || watch.sha1(self.source);
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
-
-  // The relative path of this input file in its source tree (eg,
-  // package or app). Used for source maps, error messages..
-  self.sourcePath = inputFile.sourcePath;
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
@@ -270,7 +266,7 @@ _.extend(File.prototype, {
         throw e;
 
       var errorOptions = {
-        file: self.sourcePath,
+        file: self.servePath,
         line: e.lineNumber,
         column: e.column
       };
@@ -520,7 +516,6 @@ var bannerPadding = function (bannerWidth) {
 //    the bundle (this will only be seen by someone looking at the
 //    bundle, not in error messages, but it's still nice to make it
 //    look good)
-//  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
 //
 // declaredExports: an array of symbols that the module exports. Symbols are
@@ -532,11 +527,6 @@ var bannerPadding = function (bannerWidth) {
 //
 // combinedServePath: if we end up combining all of the files into
 // one, use this as the servePath.
-//
-// importStubServePath: if useGlobalNamespace is true, then to
-// preserve line numbers, we may want to emit an additional file
-// containing import setup code for the global environment. this is
-// the servePath to use for it.
 //
 // jsAnalyze: if possible, the JSAnalyze object from the js-analyze
 // package. (This is not possible if we are currently linking the main unibuild of
@@ -553,7 +543,6 @@ var prelink = function (options) {
     name: options.name,
     declaredExports: options.declaredExports,
     useGlobalNamespace: options.useGlobalNamespace,
-    importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
     jsAnalyze: options.jsAnalyze,
     noLineNumbers: options.noLineNumbers
@@ -578,15 +567,8 @@ var prelink = function (options) {
 var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
   "This is a generated file. You can view the original",
   "source in your browser if your browser supports source maps.",
-  "",
-  "If you are using Chrome, open the Developer Tools and click the gear",
-  "icon in its lower right corner. In the General Settings panel, turn",
-  "on 'Enable source maps'.",
-  "",
-  "If you are using Firefox 23, go to `about:config` and set the",
-  "`devtools.debugger.source-maps-enabled` preference to true.",
-  "(The preference should be on by default in Firefox 24; versions",
-  "older than 23 do not support source maps.)"
+  "Source maps are supported by all recent versions of Chrome, Safari, ",
+  "and Firefox, and by Internet Explorer 11."
 ]);
 
 // Finish the linking.
@@ -607,67 +589,7 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 //
 // Output is an array of final output files in the same format as the
 // 'inputFiles' argument to prelink().
-var link = function (options) {
-  if (options.useGlobalNamespace) {
-    var ret = [];
-    if (!_.isEmpty(options.imports)) {
-      ret.push({
-        source: getImportCode(options.imports,
-                              "/* Imports for global scope */\n\n", true),
-        servePath: options.importStubServePath
-      });
-    }
-    return ret.concat(options.prelinkFiles);
-  }
-
-  var header = getHeader({
-    imports: options.imports,
-    packageVariables: options.packageVariables
-  });
-
-  var exported = _.pluck(_.filter(options.packageVariables, function (v) {
-    return v.export;
-  }), 'name');
-
-  var footer = getFooter({
-    exported: exported,
-    name: options.name
-  });
-
-  var ret = [];
-  _.each(options.prelinkFiles, function (file) {
-    if (file.sourceMap) {
-      if (options.includeSourceMapInstructions)
-        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
-
-      // Bias the source map by the length of the header without
-      // (fully) parsing and re-serializing it. (We used to do this
-      // with the source-map library, but it was incredibly slow,
-      // accounting for over half of bundling time.) It would be nice
-      // if we could use "index maps" for this (the 'sections' key),
-      // as that would let us avoid even JSON-parsing the source map,
-      // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n")
-        header += "\n"; // make sure it's a whole number of lines
-      var headerLines = header.split('\n').length - 1;
-      var sourceMapJson = JSON.parse(file.sourceMap);
-      sourceMapJson.mappings = (new Array(headerLines + 1).join(';')) +
-        sourceMapJson.mappings;
-      ret.push({
-        source: header + file.source + footer,
-        servePath: file.servePath,
-        sourceMap: JSON.stringify(sourceMapJson)
-      });
-    } else {
-      ret.push({
-        source: header + file.source + footer,
-        servePath: file.servePath
-      });
-    }
-  });
-
-  return ret;
-};
+// XXX BBP delete comment
 
 var getHeader = function (options) {
   var chunks = [];
@@ -675,7 +597,7 @@ var getHeader = function (options) {
   chunks.push(getImportCode(options.imports, "/* Imports */\n", false));
   if (!_.isEmpty(options.packageVariables)) {
     chunks.push("/* Package-scope variables */\n");
-    chunks.push("var " + _.pluck(options.packageVariables, 'name').join(', ') +
+    chunks.push("var " + options.packageVariables.join(', ') +
                 ";\n\n");
   }
   return chunks.join('');
@@ -736,7 +658,99 @@ var getFooter = function (options) {
   return chunks.join('');
 };
 
+// XXX BBP doc
+var fullLink = function (options) {
+  buildmessage.assertInJob();
+
+  // Load jsAnalyze from the js-analyze package... unless we are the
+  // js-analyze package, in which case never mind. (The js-analyze package's
+  // default unibuild is not allowed to depend on anything!)
+  var jsAnalyze = null;
+  if (! _.isEmpty(options.inputFiles) &&
+      options.name !== "js-analyze") {
+    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
+  }
+
+  var module = new Module({
+    name: options.name,
+    declaredExports: options.declaredExports,
+    useGlobalNamespace: options.useGlobalNamespace,
+    combinedServePath: options.combinedServePath,
+    jsAnalyze: jsAnalyze,
+    noLineNumbers: options.noLineNumbers
+  });
+
+  _.each(options.inputFiles, function (inputFile) {
+    module.addFile(inputFile);
+  });
+
+  var prelinkedFiles = module.getPrelinkedFiles();
+
+  // If we're in the app, then we just add the import code as its own file in
+  // the front.
+  if (options.useGlobalNamespace) {
+    if (!_.isEmpty(options.imports)) {
+      prelinkedFiles.unshift({
+        source: getImportCode(options.imports,
+                              "/* Imports for global scope */\n\n", true),
+        servePath: options.importStubServePath
+      });
+    }
+    return prelinkedFiles;
+  }
+
+  // Do static analysis to compute module-scoped variables. Error recovery from
+  // the static analysis mutates the sources, so this has to be done before
+  // concatenation.
+  var assignedVariables = module.computeAssignedVariables();
+  if (buildmessage.jobHasMessages())
+    return [];  // recover by pretending there are no files
+
+  // Otherwise we're making a package and we have to actually combine the files
+  // into a single scope.
+  var header = getHeader({
+    imports: options.imports,
+    packageVariables: assignedVariables
+  });
+
+  var footer = getFooter({
+    exported: options.declaredExports,
+    name: options.name
+  });
+
+  return _.map(prelinkedFiles, function (file) {
+    if (file.sourceMap) {
+      if (options.includeSourceMapInstructions)
+        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+
+      // Bias the source map by the length of the header without
+      // (fully) parsing and re-serializing it. (We used to do this
+      // with the source-map library, but it was incredibly slow,
+      // accounting for over half of bundling time.) It would be nice
+      // if we could use "index maps" for this (the 'sections' key),
+      // as that would let us avoid even JSON-parsing the source map,
+      // but that doesn't seem to be supported by Firefox yet.
+      if (header.charAt(header.length - 1) !== "\n")
+        header += "\n"; // make sure it's a whole number of lines
+      var headerLines = header.split('\n').length - 1;
+      var sourceMapJson = JSON.parse(file.sourceMap);
+      sourceMapJson.mappings = (new Array(headerLines + 1).join(';')) +
+        sourceMapJson.mappings;
+      return {
+        source: header + file.source + footer,
+        servePath: file.servePath,
+        sourceMap: JSON.stringify(sourceMapJson)
+      };
+    } else {
+      return {
+        source: header + file.source + footer,
+        servePath: file.servePath
+      };
+    }
+  });
+};
+
 var linker = module.exports = {
   prelink: prelink,
-  link: link
+  fullLink: fullLink
 };

@@ -191,7 +191,10 @@ var ResourceSlot = function (unibuildResourceInfo,
                              packageSourceBatch) {
   var self = this;
   self.inputResource = unibuildResourceInfo;  // XXX BBP prototype?
+  // Everything but JS.
   self.outputResources = [];
+  // JS, which gets linked together at the end.
+  self.jsOutputResources = [];
   self.buildPlugin = buildPlugin;
   self.packageSourceBatch = packageSourceBatch;
 
@@ -207,6 +210,7 @@ var ResourceSlot = function (unibuildResourceInfo,
       // files.convertToStandardLineEndings only works on strings for now
       data: self.inputResource.data.toString('utf8'),
       path: self.inputResource.path,
+      hash: self.inputResource.hash,
       bare: self.inputResource.fileOptions &&
         (self.inputResource.fileOptions.bare ||
          // XXX eventually get rid of backward-compatibility "raw" name
@@ -252,12 +256,17 @@ _.extend(ResourceSlot.prototype, {
     if (! self.buildPlugin && self.inputResource.extension !== "js")
       throw Error("addJavaScript on non-source ResourceSlot?");
 
-    self.outputResources.push({
+    self.jsOutputResources.push({
       type: "js",
       data: new Buffer(
         files.convertToStandardLineEndings(options.data), 'utf8'),
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
+      // XXX BBP this hash is from before the line ending conversion!  is that
+      // right?
+      // XXX BBP should we trust this if it comes from a user instead of from
+      // our own call in the ResourceSlot constructor?
+      hash: options.hash,
       sourceMap: options.sourceMap,
       bare: options.bare
     });
@@ -288,6 +297,7 @@ _.extend(ResourceSlot.prototype, {
       // XXX hack for app's special folders
       outputPath = outputPath.replace(/^(private|public)\//, '');
     }
+    throw Error("assets are apparently broken")  // XXX BBP
     resources.push({
       type: 'asset',
       data: options.data,
@@ -378,17 +388,29 @@ _.extend(PackageSourceBatch.prototype, {
     return buildPluginsByExtension;
   },
 
+  // Called by bundler's Target._emitResources.  It returns the actual resources
+  // that end up in the program for this package.  By this point, it knows what
+  // its dependencies are and what their exports are, so it can set up
+  // linker-style imports and exports.
   getResources: function () {
     var self = this;
-    var resources = Array.prototype.concat.apply(
-      [],
-      _.pluck(self.resourceSlots, 'outputResources'));
-    return resources.concat(self._getPrelinkedJsResources());
+    buildmessage.assertInJob();
+
+    var flatten = function (arrays) {
+      return Array.prototype.concat.apply([], arrays);
+    };
+    var resources = flatten(_.pluck(self.resourceSlots, 'outputResources'));
+    var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
+    if (jsResources.length) {
+      Array.prototype.push.apply(resources, self._linkJS(jsResources));
+    }
+    return resources;
   },
 
-  // XXX BBP this should also support JS resources produced by buildPlugin plugins
-  _getPrelinkedJsResources: function () {
+  _linkJS: function (jsResources) {
     var self = this;
+    buildmessage.assertInJob();
+
     var isopackCache = self.processor.isopackCache;
     var bundleArch = self.processor.arch;
 
@@ -423,29 +445,43 @@ _.extend(PackageSourceBatch.prototype, {
       skipDebugOnly: true
     }, addImportsForUnibuild);
 
-    // Phase 2 link
+    // Run the linker.
     var isApp = ! self.unibuild.pkg.name;
-    var files = linker.link({
-      imports: imports,
+    var linkedFiles = linker.fullLink({
+      inputFiles: jsResources,
       useGlobalNamespace: isApp,
+      // I was confused about this, so I am leaving a comment -- the
+      // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
+      // XXX: If we change this, we can get rid of source arch names!
+      combinedServePath: isApp ? null :
+        "/packages/" + colonConverter.convert(
+          self.unibuild.pkg.name +
+            (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
+            ".js"),
+      name: self.unibuild.pkg.name || null,
+      declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
+      // It's not clear how much people end up looking at these generated files,
+      // so for now let's not spend lots of time writing tons of spaces every
+      // time we bundle the app.
+      // XXX BBP theory: 'meteor build' writes line numbers and 'meteor run'
+      // does not???
+      noLineNumbers: true,
+      imports: imports,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
-      prelinkFiles: self.unibuild.prelinkFiles,
-      packageVariables: self.unibuild.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web"),
-      name: self.unibuild.pkg.name || null
+      includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")
     });
 
     // Add each output as a resource
-    var jsResources = _.map(files, function (file) {
+    return _.map(linkedFiles, function (file) {
       return {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
         sourceMap: file.sourceMap
+        // XXX BBP hash?
       };
     });
-    return jsResources;
   }
 });
 
