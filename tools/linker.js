@@ -88,7 +88,7 @@ _.extend(Module.prototype, {
     });
     assignedVariables = _.uniq(assignedVariables);
 
-    return _.isEmpty(assignedVariables) ? null : assignedVariables;
+    return assignedVariables;
   },
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
@@ -709,7 +709,7 @@ var fullLink = function (options) {
   // into a single scope.
   var header = getHeader({
     imports: options.imports,
-    packageVariables: assignedVariables
+    packageVariables: _.union(assignedVariables, options.declaredExports)
   });
 
   var footer = getFooter({
