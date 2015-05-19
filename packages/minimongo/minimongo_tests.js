@@ -3133,6 +3133,17 @@ Tinytest.add("minimongo - $near operator tests", function (test) {
   handle.stop();
 });
 
+// Regression test for #4377. Previously, "replace" updates didn't clone the
+// argument.
+Tinytest.add("minimongo - update should clone", function (test) {
+  var x = [];
+  var coll = new LocalCollection;
+  var id = coll.insert({});
+  coll.update(id, {x: x});
+  x.push(1);
+  test.equal(coll.findOne(id), {_id: id, x: []});
+});
+
 // See #2275.
 Tinytest.add("minimongo - fetch in observe", function (test) {
   var coll = new LocalCollection;

@@ -14,6 +14,10 @@ LocalCollection._modify = function (doc, mod, options) {
   options = options || {};
   if (!isPlainObject(mod))
     throw MinimongoError("Modifier must be an object");
+
+  // Make sure the caller can't mutate our data structures.
+  mod = EJSON.clone(mod);
+
   var isModifier = isOperatorObject(mod);
 
   var newDoc;
@@ -200,7 +204,7 @@ var MODIFIERS = {
       e.setPropertyError = true;
       throw e;
     }
-    target[field] = EJSON.clone(arg);
+    target[field] = arg;
   },
   $setOnInsert: function (target, field, arg) {
     // converted to `$set` in `_modify`
@@ -222,7 +226,7 @@ var MODIFIERS = {
 
     if (!(arg && arg.$each)) {
       // Simple mode: not $each
-      target[field].push(EJSON.clone(arg));
+      target[field].push(arg);
       return;
     }
 
@@ -274,11 +278,11 @@ var MODIFIERS = {
     // Actually push.
     if (position === undefined) {
       for (var j = 0; j < toPush.length; j++)
-        target[field].push(EJSON.clone(toPush[j]));
+        target[field].push(toPush[j]);
     } else {
       var spliceArguments = [position, 0];
       for (var j = 0; j < toPush.length; j++)
-        spliceArguments.push(EJSON.clone(toPush[j]));
+        spliceArguments.push(toPush[j]);
       Array.prototype.splice.apply(target[field], spliceArguments);
     }
 
@@ -328,7 +332,7 @@ var MODIFIERS = {
         for (var i = 0; i < x.length; i++)
           if (LocalCollection._f._equal(value, x[i]))
             return;
-        x.push(EJSON.clone(value));
+        x.push(value);
       });
     }
   },

@@ -99,6 +99,9 @@
 
 * The `$push` query modifier now supports a `$position` argument.  #4312
 
+* `c.update(selector, replacementDoc)` no longer shares mutable state between
+  replacementDoc and Minimongo internals. #4377
+
 ### Email
 
 * `Email.send` now has a new option, `attachments`, in the same style as
