@@ -127,6 +127,29 @@ _.extend(InputFile.prototype, {
     var self = this;
     return self._resourceSlot.inputResource.path;
   },
+  // XXX BBP document it and implement it for linting, too
+  getDeclaredExports: function () {
+    var self = this;
+    return self._resourceSlot.packageSourceBatch.unibuild.declaredExports;
+  },
+  // XXX BBP document and implement for linting, too
+  getFileOptions: function () {
+    var self = this;
+    // XXX fileOptions only exists on some resources (of type "source"). The JS
+    // resources might not have this property.
+    return self._resourceSlot.inputResource.fileOptions;
+  },
+
+  /**
+   * @summary Returns a relative path that can be used to form error messages or
+   * other display properties. Can be used as an input to a source map.
+   * @memberof InputFile
+   * @returns {String}
+   */
+  getDisplayPath: function () {
+    var self = this;
+    return self._resourceSlot.packageSourceBatch.unibuild.pkg._getServePath() + "/" + self.getPathInPackage();
+  },
 
   /**
    * @summary Web targets only. Add a stylesheet to the document. Not available

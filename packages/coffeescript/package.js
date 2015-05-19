@@ -5,7 +5,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "compileCoffeescript",
-  use: [],
+  use: ['compiler-plugin'],
   sources: [
     'plugin/compile-coffeescript.js'
   ],

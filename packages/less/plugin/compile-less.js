@@ -7,7 +7,7 @@ Plugin.registerCompiler({
   extensions: ['less'],
   archMatching: 'web'
 }, function () {
-    return new LessCompiler;
+    return new LessCompiler();
 });
 
 var LessCompiler = function () {
@@ -32,7 +32,7 @@ LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
 
   var importPlugin = new MeteorImportLessPlugin(filesByAbsoluteImportPath);
 
-  _.each(mains, function (main) {
+  mains.forEach(function (main) {
     var inputFile = main.inputFile;
     var absoluteImportPath = main.absoluteImportPath;
     var f = new Future;
@@ -120,3 +120,4 @@ _.extend(MeteorImportLessFileManager.prototype, {
     return;
   }
 });
+

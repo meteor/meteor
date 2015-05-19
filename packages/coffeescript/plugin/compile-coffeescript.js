@@ -120,51 +120,65 @@ var addSharedHeader = function (source, sourceMap) {
   };
 };
 
-var handler = function (compileStep, isLiterate) {
-  var source = compileStep.read().toString('utf8');
-  var outputFile = compileStep.inputPath + ".js";
+var CoffeeCompiler = function (isLiterate) {
+  this.isLiterate = isLiterate;
+};
 
-  var options = {
-    bare: true,
-    filename: compileStep.inputPath,
-    literate: !!isLiterate,
-    // Return a source map.
-    sourceMap: true,
-    // Include the original source in the source map (sourcesContent field).
-    inline: true,
-    // This becomes the "file" field of the source map.
-    generatedFile: "/" + outputFile,
-    // This becomes the "sources" field of the source map.
-    sourceFiles: [compileStep.pathForSourceMap]
-  };
+CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
+  var self = this;
 
-  try {
-    var output = coffee.compile(source, options);
-  } catch (e) {
-    // XXX better error handling, once the Plugin interface support it
-    throw new Error(
-      compileStep.inputPath + ':' +
-      (e.location ? (e.location.first_line + ': ') : ' ') +
-      e.message
-    );
-  }
+  inputFiles.forEach(function (inputFile) {
+    var source = inputFile.getContentsAsString();
+    var outputFilePath = inputFile.getPathInPackage() + ".js";
 
-  var stripped = stripExportedVars(output.js, compileStep.declaredExports);
-  var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
+    var options = {
+      bare: true,
+      filename: inputFile.getPathInPackage(),
+      literate: !!self.isLiterate,
+      // Return a source map.
+      sourceMap: true,
+      // Include the original source in the source map (sourcesContent field).
+      inline: true,
+      // This becomes the "file" field of the source map.
+      generatedFile: "/" + outputFilePath,
+      // This becomes the "sources" field of the source map.
+      sourceFiles: [inputFile.getDisplayPath()]
+    };
 
-  compileStep.addJavaScript({
-    path: outputFile,
-    sourcePath: compileStep.inputPath,
-    data: sourceWithMap.source,
-    sourceMap: sourceWithMap.sourceMap,
-    bare: compileStep.fileOptions.bare
+    var output;
+    try {
+      output = coffee.compile(source, options);
+    } catch (e) {
+      inputFile.error({
+        message: e.message,
+        line: e.location && e.location.first_line
+      });
+
+      return;
+    }
+
+    var stripped = stripExportedVars(output.js, inputFile.getDeclaredExports());
+    var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
+
+    inputFile.addJavaScript({
+      path: outputFilePath,
+      sourcePath: inputFile.getPathInPackage(),
+      data: sourceWithMap.source,
+      sourceMap: sourceWithMap.sourceMap,
+      bare: inputFile.getFileOptions().bare
+    });
   });
 };
 
-var literateHandler = function (compileStep) {
-  return handler(compileStep, true);
-};
+Plugin.registerCompiler({
+  extensions: ['coffee']
+}, function () {
+  return new CoffeeCompiler();
+});
 
-Plugin.registerSourceHandler("coffee", handler);
-Plugin.registerSourceHandler("litcoffee", literateHandler);
-Plugin.registerSourceHandler("coffee.md", literateHandler);
+Plugin.registerCompiler({
+  extensions: ['litcoffee', 'coffee.md']
+}, function () {
+  return new CoffeeCompiler(true);
+});
+
