@@ -142,6 +142,9 @@
 * Upgraded `coffeescript` package to depend on NPM packages
   coffeescript@1.9.2 and source-map@0.4.2.
 
+* Upgraded `fastclick` to 1.0.6 to fix an issue in iOS Safari. #4393
+
+
 ## v1.1.0.2, 2015-Apr-06
 
 ### `meteor` command-line tool
