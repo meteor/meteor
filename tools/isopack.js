@@ -859,6 +859,23 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
+      var declaredExports;
+      if (unibuildHasPrelink) {
+        // Legacy unibuild; it stores packageVariables and says some of them
+        // are exports.
+        declaredExports = [];
+        _.each(unibuildJson.packageVariables, function (pv) {
+          if (pv.export) {
+            declaredExports.push({
+              name: pv.name,
+              testOnly: pv.export === 'tests'
+            });
+          }
+        });
+      } else {
+        declaredExports = unibuildJson.declaredExports || [];
+      }
+
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -868,7 +885,7 @@ _.extend(Isopack.prototype, {
         implies: unibuildJson.implies,
         watchSet: unibuildWatchSets[unibuildMeta.path],
         nodeModulesPath: nodeModulesPath,
-        declaredExports: unibuildJson.declaredExports || [],
+        declaredExports: declaredExports,
         resources: resources
       }));
     });
