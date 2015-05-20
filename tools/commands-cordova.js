@@ -1430,7 +1430,7 @@ var consumeControlFile = function (
     code = files.readFile(controlFilePath, 'utf8');
   }
 
-  var defaultBuildNumber = Date.now().toString();
+  var defaultBuildNumber = (Date.now() % 1000000).toString();
   var metadata = {
     id: 'com.id' + projectContext.appIdentifier,
     version: '0.0.1',
