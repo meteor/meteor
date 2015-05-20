@@ -454,6 +454,23 @@ testAsyncMulti("httpcall - npmRequestOptions", [
   }
 ]);
 
+testAsyncMulti("httpcall - beforeSend", [
+  function (test, expect) {
+    var fired = false;
+    var bSend = function(xhr){
+      test.isFalse(fired);
+      fired = true;
+      test.isTrue(temp1 instanceof XMLHttpRequest);
+    };
+
+    if (Meteor.isClient) {
+      HTTP.get(url_prefix() + "/", {beforeSend: bSend}, function () {
+        test.isTrue(fired)
+      });
+    }
+  }
+]);
+
 
 if (Meteor.isServer) {
   // This is testing the server's static file sending code, not the http
