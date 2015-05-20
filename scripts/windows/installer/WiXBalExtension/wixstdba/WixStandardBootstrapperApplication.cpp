@@ -3759,7 +3759,7 @@ BOOL REST_SignInOrRegister(
 
   wchar_t wzAgentInfo[BUF_LEN] = L"";
   StringCchPrintfW(wzAgentInfo, BUF_LEN, L"agentInfo[host]=%s&agentInfo[agent]=%s&agentInfo[agentVersion]=%s&agentInfo[arch]=%s",
-      aiHostW, L"Windows Installer", "0.0", L"os.windows.x64_32");
+      aiHostW, L"Windows Installer", L"0.0", L"os.windows.x64_32");
   StringCchCatW(wzFormData, BUF_LEN, L"&");
   StringCchCatW(wzFormData, BUF_LEN, wzAgentInfo);
 
