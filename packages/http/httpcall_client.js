@@ -173,6 +173,19 @@ HTTP.call = function(method, url, options, callback) {
       }
     };
 
+    // Allow custom control over XHR and abort early.
+    if(options.beforeSend) {
+      // Sanity
+      var beforeSend = _.once(options.beforeSend);
+
+      // Possibly change the call so the xhr is the context.
+      if(false === beforeSend.call(null, xhr, options)) {
+
+        // Abort the request
+        return xhr.abort();
+      }
+    }
+
     // send it on its way
     xhr.send(content);
 
