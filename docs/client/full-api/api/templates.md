@@ -6,7 +6,8 @@
 
 When you write a template as `<{{! }}template name="foo"> ... <{{!
 }}/template>` in an HTML file in your app, Meteor generates a
-"template object" named `Template.foo`.
+"template object" named `Template.foo`. Note that template name cannot
+containg hyphens and other special characters.
 
 The same template may occur many times on a page, and these
 occurrences are called template instances.  Template instances have a
