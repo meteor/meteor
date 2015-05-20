@@ -11,7 +11,7 @@
 #include <dirutil.h>
 
 #include <urlmon.h>
-#include <winhttp.h>
+#include <wininet.h>
 #include <sys/stat.h>
 
 #define BUF_LEN 1024
@@ -19,83 +19,7 @@
 #define LOG true
 
 
-
     
-
-
-
-
-using namespace std;
-
-class MyCallback : public IBindStatusCallback  
-{
-public:
-	MSIHANDLE iHInstall;
-    MyCallback() {}
-
-    ~MyCallback() { }
-
-    // This one is called by URLDownloadToFile
-    STDMETHOD(OnProgress)(/* [in] */ ULONG ulProgress, /* [in] */ ULONG ulProgressMax, /* [in] */ ULONG ulStatusCode, /* [in] */ LPCWSTR wszStatusText)
-    {
-		PMSIHANDLE hActionRec = MsiCreateRecord(3);
-        PMSIHANDLE hProgressRec = MsiCreateRecord(3);
-
-		DWORD ulPrc = 0;
-		WCHAR wzInfo[1024] = { };
-
-		if (ulProgressMax > 0) 
-		{
-			ulPrc  = static_cast<DWORD>(100 * static_cast<double>(ulProgress) / static_cast<double>(ulProgressMax));
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
-		}
-		else
-			::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...");
-
-
- 
-        MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
-        MsiRecordSetString(hActionRec, 2, wzInfo);
-        MsiRecordSetString(hActionRec, 3, NULL);
-        UINT iResult = MsiProcessMessage(iHInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
-        if ((iResult == IDCANCEL) || (iResult == IDABORT))
-            return E_ABORT;
-
-        return S_OK;
-    }
-
-    // The rest  don't do anything...
-    STDMETHOD(OnStartBinding)(/* [in] */ DWORD dwReserved, /* [in] */ IBinding __RPC_FAR *pib)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(GetPriority)(/* [out] */ LONG __RPC_FAR *pnPriority)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnLowResource)(/* [in] */ DWORD reserved)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnStopBinding)(/* [in] */ HRESULT hresult, /* [unique][in] */ LPCWSTR szError)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(GetBindInfo)(/* [out] */ DWORD __RPC_FAR *grfBINDF, /* [unique][out][in] */ BINDINFO __RPC_FAR *pbindinfo)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnDataAvailable)(/* [in] */ DWORD grfBSCF, /* [in] */ DWORD dwSize, /* [in] */ FORMATETC __RPC_FAR *pformatetc, /* [in] */ STGMEDIUM __RPC_FAR *pstgmed)
-    { return E_NOTIMPL; }
-
-    STDMETHOD(OnObjectAvailable)(/* [in] */ REFIID riid, /* [iid_is][in] */ IUnknown __RPC_FAR *punk)
-    { return E_NOTIMPL; }
-
-	// IUnknown stuff
-    STDMETHOD_(ULONG,AddRef)()
-    { return 0; }
-
-    STDMETHOD_(ULONG,Release)()
-    { return 0; }
-
-    STDMETHOD(QueryInterface)(/* [in] */ REFIID riid, /* [iid_is][out] */ void __RPC_FAR *__RPC_FAR *ppvObject)
-    { return E_NOTIMPL; }
-};
 
 
 
@@ -244,53 +168,61 @@ HRESULT UnzipToFolder(
 	StringCchPrintf(szTarGzFilePath, BUF_LEN, L"%s%s", szSourceDir, wzTarGzFileName);
 	StringCchPrintf(szTarFilePath, BUF_LEN, L"%s*.tar", szSourceDir);
 
-	//Extacting quality_cloud_production.sql to %TEMP% folder
-	wchar_t szTmpDir[BUF_LEN] = L"";		DWORD nTmpDirLen = BUF_LEN;
-	wchar_t sz7Zip[BUF_LEN] = L"";
-	wchar_t packedTarball[BUF_LEN] = L"";
-
-	wchar_t szCommandLine1[BUF_LEN] = L"";
-	wchar_t szCommandLine2[BUF_LEN] = L"";
-
-	MsiGetProperty(hInstall, L"TempFolder", szTmpDir, &nTmpDirLen);
-	StringCchPrintf(sz7Zip, BUF_LEN, L"%s%s", szTmpDir, L"7za.exe");
-	StringCchPrintf(packedTarball, BUF_LEN, L"%s%s", szTmpDir, L"meteor-bootstrap-os.windows.x86_32.tar.gz");
-
 	DWORD pdwAttr;
+	if (FileExistsEx(szTarGzFilePath, &pdwAttr) == TRUE)
+	{
+		//Extacting quality_cloud_production.sql to %TEMP% folder
+		wchar_t szTmpDir[BUF_LEN] = L"";		DWORD nTmpDirLen = BUF_LEN;
+		wchar_t sz7Zip[BUF_LEN] = L"";
 
-	hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
-	hr = ExtractBinaryToFile(L"BootstrapTarball", packedTarball);
+		wchar_t szCommandLine1[BUF_LEN] = L"";
+		wchar_t szCommandLine2[BUF_LEN] = L"";
 
-	DWORD nRes=0;
+		MsiGetProperty(hInstall, L"TempFolder", szTmpDir, &nTmpDirLen);
+		StringCchPrintf(sz7Zip, BUF_LEN, L"%s%s", szTmpDir, L"7za.exe");
 
-	// Remove old Meteor installs
-	wchar_t szCmdRemoveOld[BUF_LEN] = L"";
-	wchar_t szSysDir[BUF_LEN] = L"";
-	DWORD nSysDirLen = BUF_LEN;
-	MsiGetProperty(hInstall, L"SystemFolder", szSysDir, &nSysDirLen);
+		DWORD pdwAttr;
+		if (FileExistsEx(sz7Zip, &pdwAttr) == FALSE)
+		{
+			hr = ExtractBinaryToFile(L"SevenZip", sz7Zip);
+		}
 
-	LPTSTR ErrorMessage = NULL;
+		DWORD nRes=0;
 
-	StringCchPrintf(szCmdRemoveOld, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\\.meteor\">NUL\"", szSysDir, wzDestPath);
-	StringCchPrintf(szCommandLine1, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, szSourceDir, packedTarball);
-	StringCchPrintf(szCommandLine2, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, wzDestPath, szTarFilePath);
+		// Remove old Meteor installs
+		wchar_t szCmdRemoveOld[BUF_LEN] = L"";
+		wchar_t szSysDir[BUF_LEN] = L"";
+		DWORD nSysDirLen = BUF_LEN;
+		MsiGetProperty(hInstall, L"SystemFolder", szSysDir, &nSysDirLen);
 
-	if (! ExecuteCommandLine(szCmdRemoveOld, nRes)) {
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Deleting old install completed with (%d): %S", nRes, ErrorMessage);
-		return HRESULT_FROM_WIN32(nRes);
+		LPTSTR ErrorMessage = NULL;
+
+		StringCchPrintf(szCmdRemoveOld, BUF_LEN, L"%s\\cmd.exe /C \"RD /S /Q \"%s\\.meteor\">NUL\"", szSysDir, wzDestPath);
+		StringCchPrintf(szCommandLine1, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, szSourceDir, szTarGzFilePath);
+		StringCchPrintf(szCommandLine2, BUF_LEN, L"\"%s\" x -o\"%s\" -y \"%s\"", sz7Zip, wzDestPath, szTarFilePath);
+
+		if (! ExecuteCommandLine(szCmdRemoveOld, nRes)) {
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Deleting old install completed with (%d): %S", nRes, ErrorMessage);
+			return HRESULT_FROM_WIN32(nRes);
+		}
+
+		if (! ExecuteCommandLine(szCommandLine1, nRes)) {
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive expanding completed with (%d): %S", nRes, ErrorMessage);
+			return HRESULT_FROM_WIN32(nRes);
+		}
+
+		if (! ExecuteCommandLine(szCommandLine2, nRes)) {
+			FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
+			if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive deployment completed with (%d): %S", nRes, ErrorMessage);
+			return HRESULT_FROM_WIN32(nRes);
+		}
 	}
-
-	if (! ExecuteCommandLine(szCommandLine1, nRes)) {
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive expanding completed with (%d): %S", nRes, ErrorMessage);
-		return HRESULT_FROM_WIN32(nRes);
-	}
-
-	if (! ExecuteCommandLine(szCommandLine2, nRes)) {
-		FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_FROM_WIN32(nRes), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&ErrorMessage, 0, NULL);
-		if (NULL != ErrorMessage) WcaLog(LOGMSG_STANDARD, "Archive deployment completed with (%d): %S", nRes, ErrorMessage);
-		return HRESULT_FROM_WIN32(nRes);
+	else
+	{
+		hr = HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
+		WcaLog(LOGMSG_STANDARD, "Failed to extract %S files. File not found: %S", wzFriendlyName, szTarGzFilePath); 
 	}
 
 	WcaLog(LOGMSG_STANDARD, "Extracting \"%S\" package completed.", wzFriendlyName);
@@ -301,6 +233,14 @@ HRESULT UnzipToFolder(
 
 UINT __stdcall Extract_MeteorFiles(MSIHANDLE hInstall)
 {
+	// If cancelled, don't try to extract anything.
+	wchar_t szValueBuf[64];
+	DWORD szValueBufSize = 64;
+	MsiGetProperty(hInstall, L"Cancelled", szValueBuf, &szValueBufSize);
+	if (szValueBuf[0] == L'Y')
+		return 0;
+
+	// Go ahead.
 	HRESULT hr = S_OK;
 	UINT er = ERROR_SUCCESS;
 
@@ -323,7 +263,7 @@ LExit:
 HRESULT Download_Package(
 	MSIHANDLE hInstall,
 	__in LPCWSTR wzFriendlyName,
-	__in LPCWSTR wzProperty_DWNURL,
+	__in LPCWSTR szDwnUrl,
 	__in LPCWSTR wzZipFile)
 {
 	HRESULT hr = S_OK;
@@ -331,45 +271,103 @@ HRESULT Download_Package(
 	WcaLog(LOGMSG_STANDARD, "Download package \"%S\" initialized.", wzFriendlyName);
 
 	wchar_t szSourceDir[BUF_LEN] = L"";	DWORD nSourceDirDirLen = BUF_LEN;
-	wchar_t szDwnUrl[BUF_LEN]  = L"";	DWORD nDwnUrlLen  = BUF_LEN;
-	wchar_t szDwnUser[BUF_LEN] = L"";	DWORD nDwnUserLen = BUF_LEN;
-	wchar_t szDwnPass[BUF_LEN] = L"";	DWORD nDwnPassLen = BUF_LEN;
 	wchar_t szZipFile[BUF_LEN] = L"";
 
 	MsiGetProperty(hInstall, L"SourceDir", szSourceDir, &nSourceDirDirLen);
-	MsiGetProperty(hInstall, wzProperty_DWNURL, szDwnUrl, &nDwnUrlLen);
-	MsiGetProperty(hInstall, L"HTTP_DWN_USER", szDwnUser, &nDwnUserLen);
-	MsiGetProperty(hInstall, L"HTTP_DWN_PASS", szDwnPass, &nDwnPassLen);
+
 	StringCchPrintf(szZipFile, BUF_LEN, L"%s%s", szSourceDir, wzZipFile);
 
-	// Checking for Prerequisites\localFile
-	wchar_t szBundleSrc[BUF_LEN] = L"";	DWORD nBundleSrcLen = BUF_LEN;
-	wchar_t szPrereqDir[BUF_LEN] = L"";	DWORD nPrereqDirLen = BUF_LEN;
-	wchar_t szLocalFile[BUF_LEN] = L"";
-	wchar_t* szBundlePath;
-	MsiGetProperty(hInstall, L"BUNDLE_SOURCE", szBundleSrc, &nBundleSrcLen);
-	MsiGetProperty(hInstall, L"PREREQ_FOLDER", szPrereqDir, &nPrereqDirLen);
-	PathGetDirectory(szBundleSrc, &szBundlePath);
-	StringCchPrintf(szLocalFile, BUF_LEN, L"%s%s\\%s", szBundlePath, szPrereqDir, wzZipFile);
+	HINTERNET internet = InternetOpen(
+		L"MeteorWindowsInstaller/1.0",
+		INTERNET_OPEN_TYPE_PRECONFIG,
+		NULL,
+		NULL,
+		0);
 
-	// If local file exists use it instaead of download.
-	DWORD pdwAttr;
-	if (FileExistsEx(szLocalFile, &pdwAttr) == TRUE)
-	{
-		FileEnsureCopy(szLocalFile, szZipFile, TRUE);
-		WcaLog(LOGMSG_STANDARD, "Nginx local package found \"%S\", will use that.", szLocalFile);		
+	if (internet == NULL) {
+		return HRESULT_FROM_WIN32(::GetLastError());
 	}
-	else
-	{
-		MyCallback pCallback;
-		pCallback.iHInstall = hInstall;
-		hr = URLDownloadToFile(NULL, szDwnUrl, szZipFile, 0, &pCallback);
 
-		if (FAILED(hr))
-			WcaLog(LOGMSG_STANDARD, "Failed to download %S package from url: %S", wzFriendlyName, szDwnUrl);			
-		else
-			WcaLog(LOGMSG_STANDARD, "%S package should be here: %S", wzFriendlyName, szZipFile);
+	HINTERNET request = InternetOpenUrl(
+		internet,
+		szDwnUrl,
+		NULL,
+		0,
+		INTERNET_FLAG_SECURE,
+		NULL);
+
+	if (request == NULL) {
+		return HRESULT_FROM_WIN32(::GetLastError());
 	}
+
+    DWORD dwContentLen;
+    DWORD dwBufLen = sizeof(dwContentLen);
+
+	BOOL result = HttpQueryInfo(
+		request,
+		HTTP_QUERY_CONTENT_LENGTH | HTTP_QUERY_FLAG_NUMBER,
+    	(LPVOID)&dwContentLen,
+	    &dwBufLen,
+	    0);
+
+	if (!request) {
+		return HRESULT_FROM_WIN32(::GetLastError());
+	}
+
+    const int capacity = 1024*64;
+    char* buffer = new char[capacity];
+  	DWORD bytes_downloaded = 0;
+
+    FILE* output = _wfopen(szZipFile, L"wb");
+    for (;;) {
+    	DWORD bytes_read;
+
+    	BOOL result = InternetReadFile(
+    		request,
+    		buffer,
+    		capacity,
+    		&bytes_read);
+
+		if (!result) {
+			return HRESULT_FROM_WIN32(::GetLastError());
+		}
+
+	    if (bytes_read == 0) {
+	    	break;
+	    }
+
+	    bytes_downloaded += bytes_read;
+
+    	fwrite(buffer, 1, bytes_read, output);
+
+    	// update progress bar
+   		PMSIHANDLE hActionRec = MsiCreateRecord(3);
+        PMSIHANDLE hProgressRec = MsiCreateRecord(3);
+
+		DWORD ulPrc = 0;
+		WCHAR wzInfo[1024] = { };
+
+		ulPrc  = static_cast<DWORD>(100 * static_cast<double>(bytes_downloaded) / static_cast<double>(dwContentLen));
+		::StringCchPrintfW(wzInfo, countof(wzInfo), L"Downloading Meteor...  %u%%", ulPrc);
+ 
+        MsiRecordSetString(hActionRec, 1, TEXT("Download_MeteorPackage"));
+        MsiRecordSetString(hActionRec, 2, wzInfo);
+        MsiRecordSetString(hActionRec, 3, NULL);
+
+        UINT iResult = MsiProcessMessage(hInstall, INSTALLMESSAGE_ACTIONSTART, hActionRec);
+
+        // XXX I *thought* this should return IDCANCEL, and have verified that
+        // that's what
+        // WixStandardBootstrapperApplication.cpp::OnExecuteMsiMessage
+        // returns. But for some reason `iResult` ends up being 1.
+        if (iResult == 1) {
+        	fclose(output);
+        	MsiSetProperty(hInstall, L"Cancelled", L"Y"); // read from Extract_MeteorFiles
+            return ERROR_INSTALL_USEREXIT;
+        }
+	}
+
+    fclose(output);
 
 	WcaLog(LOGMSG_STANDARD, "Download package \"%S\" completed.", wzFriendlyName);
 
@@ -377,16 +375,84 @@ HRESULT Download_Package(
 }
 
 
+// assumes content is at most 1024 characters
+UINT FetchHTTPSToShortString(wchar_t *url, char *result) {
+	HINTERNET internet = InternetOpen(
+		L"MeteorWindowsInstaller/1.0",
+		INTERNET_OPEN_TYPE_PRECONFIG,
+		NULL,
+		NULL,
+		0);
+
+	if (internet == NULL) {
+		return ::GetLastError();
+	}
+
+	HINTERNET request = InternetOpenUrl(
+		internet,
+		url,
+		NULL,
+		0,
+		INTERNET_FLAG_SECURE,
+		NULL);
+
+	if (request == NULL) {
+		return ::GetLastError();
+	}
+
+	DWORD bytes_read;
+	BOOL readResult = InternetReadFile(
+		request,
+		result,
+		1023,
+		&bytes_read);
+	if (!readResult) {
+		return ::GetLastError();
+	}
+	result[bytes_read] = 0;
+
+	return 0;
+}
+
 
 UINT __stdcall Download_MeteorPackage(MSIHANDLE hInstall)
 {
 	HRESULT hr = S_OK;
 	UINT er = ERROR_SUCCESS;
+	UINT httpEr;
 
 	hr = WcaInitialize(hInstall, "Download_MeteorPackage");
 	ExitOnFailure(hr, "Failed to initialize Download_MeteorPackage");
 
-	hr = Download_Package(hInstall, L"Meteor", L"METEOR_DWN_URL", L"meteor-bootstrap-os.windows.x86_32.tar.gz");
+	char bootstrapLink[1024];
+
+	httpEr = FetchHTTPSToShortString(L"https://packages.meteor.com/bootstrap-link", bootstrapLink);
+	if (httpEr) {
+		hr = HRESULT_FROM_WIN32(httpEr);
+		MessageBoxA(NULL, "Failed to contact install server. Please try again later.", NULL, NULL);
+		ExitOnFailure(hr, "Couldn't get bootstap-link"); 
+	}
+
+	// strip trailing newline; if it's not there it's probably because we're
+	// getting some bad response from packages.meteor.com.
+	char *bootstrapLinkNewline = strchr(bootstrapLink, '\n');
+	if (!bootstrapLinkNewline) {
+		MessageBoxA(NULL, "Malformed response from install server. Please try again later.", NULL, NULL);
+		ExitOnFailure(E_FAIL, "Couldn't parse bootstrap-link"); 		
+	}
+
+	*bootstrapLinkNewline = '\0';
+
+	char downloadUrl[1024];
+	sprintf(downloadUrl, "%s/meteor-bootstrap-os.windows.x86_32.tar.gz", bootstrapLink);
+
+	wchar_t wDownloadUrl[1024];
+	mbstowcs(wDownloadUrl, downloadUrl, 1024);
+
+	hr = Download_Package(hInstall, L"Meteor", wDownloadUrl, L"meteor-bootstrap-os.windows.x86_32.tar.gz");
+	if (FAILED(hr)) {
+		MessageBoxA(NULL, "Failed to download Meteor installation package. Please try again later.", NULL, NULL);
+	}	
 	ExitOnFailure(hr, "Failed to download Meteor package from specified URL."); 
 
 LExit:
