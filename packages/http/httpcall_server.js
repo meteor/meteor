@@ -25,6 +25,10 @@ var _call = function(method, url, options, callback) {
 
   options = options || {};
 
+  if (_.has(options, 'beforeSend')) {
+    throw new Error("Option beforeSend not supported on server.");
+  }
+
   method = (method || "").toUpperCase();
 
   if (! /^https?:\/\//.test(url))
