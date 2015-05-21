@@ -778,9 +778,9 @@ LExit:
 		)
 	{
 		if (m_fIsUninstall) {
-			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"Uninstalling Meteor, The JavaScript App Platform");
+			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"Uninstalling Meteor,\nThe JavaScript App Platform");
 		} else {
-			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"Installing Meteor, The JavaScript App Platform");			
+			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"Installing Meteor,\nThe JavaScript App Platform");			
 		}
 
 		LPWSTR sczFormattedString = NULL;
