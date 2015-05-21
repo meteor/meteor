@@ -2848,17 +2848,17 @@ _.extend(Android.prototype, {
         }
       }
 
-      if (self.isPlatformInstalled('android-19')) {
-        log && Console.success("Found Android 19 API");
+      if (self.isPlatformInstalled('android-22')) {
+        log && Console.success("Found Android 22 API");
       } else {
         if (fixSilent) {
-          log && Console.info("Installing Android 19 API");
-          self.installTarget('android-19', function () {
-            return self.isPlatformInstalled('android-19');
+          log && Console.info("Installing Android 22 API");
+          self.installTarget('android-22', function () {
+            return self.isPlatformInstalled('android-22');
           });
-          log && Console.success("Installed Android 19 API");
+          log && Console.success("Installed Android 22 API");
         } else {
-          log && Console.failInfo("Android API 19 not found");
+          log && Console.failInfo("Android API 22 not found");
 
           result.missing.push("android-api");
           result.acceptable = false;
@@ -2866,8 +2866,8 @@ _.extend(Android.prototype, {
       }
 
       // (We could alternatively check for
-      // {SDK}/system-images/android-19/default/x86/build.prop)
-      if (self.hasTarget('19', 'default/x86')) {
+      // {SDK}/system-images/android-22/default/x86/build.prop)
+      if (self.hasTarget('22', 'default/x86')) {
         log && Console.success("Found suitable Android x86 image");
       } else {
         if (fixSilent) {
@@ -2881,8 +2881,8 @@ _.extend(Android.prototype, {
           });
 
           log && Console.info("Installing Android x86 image");
-          self.installTarget('sys-img-x86-android-19', function () {
-            return self.hasTarget('19', 'default/x86');
+          self.installTarget('sys-img-x86-android-22', function () {
+            return self.hasTarget('22', 'default/x86');
           });
           log && Console.success("Installed Android x86 image");
         } else {
