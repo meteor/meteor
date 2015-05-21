@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        id="com.cordova.empty" version="0.2.3">
+    <name>Empty</name>
+    <description>Cordova Empty Plugin</description>
+    <keywords>cordova,empty</keywords>
+    <repo>https://github.com</repo>
+
+    <js-module src="www/Empty.js" name="Empty">
+        <clobbers target="cordova.plugins.Empty" />
+    </js-module>
+
+
+     <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="Empty" >
+                <param name="android-package" value="com.cordova.empty.Empty"/>
+            </feature>
+        </config-file>
+
+        <source-file src="src/android/Empty.java" target-dir="src/com/cordova/empty" />
+    </platform>
+
+</plugin>
