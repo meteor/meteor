@@ -391,7 +391,7 @@ if (Meteor.isClient) (function () {
       this.userId = Meteor.userId();
       test.notEqual(this.userId, null);
       test.notEqual(this.userId, this.otherUserId);
-      // Can't update fields other than profile.
+      // Can't update any fields on the current user, including `profile`.
       Meteor.users.update(
         this.userId, {$set: {disallowed: true, 'profile.updated': 42}},
         expect(function (err) {
@@ -419,12 +419,12 @@ if (Meteor.isClient) (function () {
       test.isFalse(_.has(Meteor.user().profile, 'updated'));
     },
     function(test, expect) {
-      // Can update own profile using ID.
+      // Can't update own profile, even using ID.
       Meteor.users.update(
         this.userId, {$set: {'profile.updated': 42}},
         expect(function (err) {
-          test.isFalse(err);
-          test.equal(42, Meteor.user().profile.updated);
+          test.isTrue(err);
+          test.isFalse(_.has(Meteor.user().profile, 'updated'));
         }));
     },
     logoutStep

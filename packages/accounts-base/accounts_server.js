@@ -1390,28 +1390,6 @@ Ap.updateOrCreateUserFromExternalService = function (
 };
 
 function setupUsersCollection(users) {
-  ///
-  /// RESTRICTING WRITES TO USER OBJECTS
-  ///
-  users.allow({
-    // clients can modify the profile field of their own document, and
-    // nothing else.
-    update: function (userId, user, fields, modifier) {
-      // make sure it is our record
-      if (user._id !== userId)
-        return false;
-
-      // user can only modify the 'profile' field. sets to multiple
-      // sub-keys (eg profile.foo and profile.bar) are merged into entry
-      // in the fields list.
-      if (fields.length !== 1 || fields[0] !== 'profile')
-        return false;
-
-      return true;
-    },
-    fetch: ['_id'] // we only look at _id.
-  });
-
   /// DEFAULT INDEXES ON USERS
   users._ensureIndex('username', {unique: 1, sparse: 1});
   users._ensureIndex('emails.address', {unique: 1, sparse: 1});
