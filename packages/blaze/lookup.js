@@ -81,13 +81,6 @@ Blaze._lexicalBindingLookup = function (view, name) {
   var currentView = view;
   var blockHelpersStack = [];
 
-  var boundaryTemplateView = null;
-
-  Tracker.nonreactive(function () {
-    if (view.templateInstance)
-      boundaryTemplateView = view.templateInstance().view;
-  });
-
   // walk up the views up to the templateInstance view, inclusive
   do {
     // skip block helpers views
@@ -98,7 +91,7 @@ Blaze._lexicalBindingLookup = function (view, name) {
         return bindingReactiveVar.get();
       };
     }
-  } while (currentView !== boundaryTemplateView
+  } while (! currentView.templateInstance
            && (currentView = currentView.parentView));
 
   return null;
