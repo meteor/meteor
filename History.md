@@ -132,6 +132,25 @@
   allow apps to set the timeout for running phantomjs.
 
 
+### Meteor Mobile
+
+* Upgrade the Cordova CLI dependency from 4.2.0 to 5.0.0. See the release notes
+  for the 5.x series of the Cordova CLI [on Apache
+  Cordova](https://cordova.apache.org/news/2015/04/21/tools-release.html). #4390
+
+* Upgrade the Cordova Android dependency to 4.0. Now requires Android 22 images
+  and uses Gradle instead of Ant as a build system.
+
+* Add the following Cordova Plugins dependencies in core packages:
+  - `cordova-plugin-legacy-whitelist`: `n/a -> 1.0.1`
+* Switch to Core Cordova Plugins served from npm.
+
+* Allow adding local Cordova plugins with `file://` URIs. #4229
+
+* Automatically set default values for `'android-versionCode'` and
+  `'ios-CFBundleVersion'` options of Cordova project. (The feature is helpful to
+  use with tooling such as TestFlight.) #4048
+
 ### Other bug fixes and improvements
 
 * Upgraded dependencies:
