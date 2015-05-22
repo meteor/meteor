@@ -221,7 +221,7 @@ TemplateTag.parse = function (scannerOrString) {
       return ['PATH', scanPath()];
     } else if (run(/^\(/)) {
       return ['EXPR', scanExpr('EXPR')];
-    } else if ((result = BlazeTools.parseIdentifierName(scanner))) {
+    } else if ((result = BlazeTools.parseExtendedIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
         return ['NULL', null];
