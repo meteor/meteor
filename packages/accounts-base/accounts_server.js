@@ -30,10 +30,13 @@ AccountsServer = function AccountsServer(server) {
   // connectionId -> {connection, loginToken}
   this._accountData = {};
 
-  // connection id -> observe handle for the login token that this
-  // connection is currently associated with, or null. Null indicates that
-  // we are in the process of setting up the observe.
+  // connection id -> observe handle for the login token that this connection is
+  // currently associated with, or a number. The number indicates that we are in
+  // the process of setting up the observe (using a number instead of a single
+  // sentinel allows multiple attempts to set up the observe to identify which
+  // one was theirs).
   this._userObservesForConnections = {};
+  this._nextUserObserveNumber = 1;  // for the number described above.
 
   // list of all registered handlers.
   this._loginHandlers = [];
@@ -820,11 +823,11 @@ Ap._getUserObserve = function (connectionId) {
 Ap._removeTokenFromConnection = function (connectionId) {
   if (_.has(this._userObservesForConnections, connectionId)) {
     var observe = this._userObservesForConnections[connectionId];
-    if (observe === null) {
-      // We're in the process of setting up an observe for this
-      // connection. We can't clean up that observe yet, but if we
-      // delete the null placeholder for this connection, then the
-      // observe will get cleaned up as soon as it has been set up.
+    if (typeof observe === 'number') {
+      // We're in the process of setting up an observe for this connection. We
+      // can't clean up that observe yet, but if we delete the placeholder for
+      // this connection, then the observe will get cleaned up as soon as it has
+      // been set up.
       delete this._userObservesForConnections[connectionId];
     } else {
       delete this._userObservesForConnections[connectionId];
@@ -851,15 +854,24 @@ Ap._setLoginToken = function (userId, connection, newToken) {
     // to ensure that the connection will get closed at some point if
     // the token gets deleted.
     //
-    // Initially, we set the observe for this connection to null; this
-    // signifies to other code (which might run while we yield) that we
-    // are in the process of setting up an observe for this
-    // connection. Once the observe is ready to go, we replace null with
-    // the real observe handle (unless the placeholder has been deleted,
-    // signifying that the connection was closed already -- in this case
-    // we just clean up the observe that we started).
-    self._userObservesForConnections[connection.id] = null;
+    // Initially, we set the observe for this connection to a number; this
+    // signifies to other code (which might run while we yield) that we are in
+    // the process of setting up an observe for this connection. Once the
+    // observe is ready to go, we replace the number with the real observe
+    // handle (unless the placeholder has been deleted or replaced by a
+    // different placehold number, signifying that the connection was closed
+    // already -- in this case we just clean up the observe that we started).
+    var myObserveNumber = ++self._nextUserObserveNumber;
+    self._userObservesForConnections[connection.id] = myObserveNumber;
     Meteor.defer(function () {
+      // If something else happened on this connection in the meantime (it got
+      // closed, or another call to _setLoginToken happened), just do
+      // nothing. We don't need to start an observe for an old connection or old
+      // token.
+      if (self._userObservesForConnections[connection.id] !== myObserveNumber) {
+        return;
+      }
+
       var foundMatchingUser;
       // Because we upgrade unhashed login tokens to hashed tokens at
       // login time, sessions will only be logged in with a hashed
@@ -879,22 +891,17 @@ Ap._setLoginToken = function (userId, connection, newToken) {
         }
       });
 
-      // If the user ran another login or logout command we were waiting for
-      // the defer or added to fire, then we let the later one win (start an
-      // observe, etc) and just stop our observe now.
+      // If the user ran another login or logout command we were waiting for the
+      // defer or added to fire (ie, another call to _setLoginToken occurred),
+      // then we let the later one win (start an observe, etc) and just stop our
+      // observe now.
       //
       // Similarly, if the connection was already closed, then the onClose
-      // callback would have called _removeTokenFromConnection and there won't be
-      // an entry in _userObservesForConnections. We can stop the observe.
-      if (self._getAccountData(connection.id, 'loginToken') !== newToken ||
-          !_.has(self._userObservesForConnections, connection.id)) {
+      // callback would have called _removeTokenFromConnection and there won't
+      // be an entry in _userObservesForConnections. We can stop the observe.
+      if (self._userObservesForConnections[connection.id] !== myObserveNumber) {
         observe.stop();
         return;
-      }
-
-      if (self._userObservesForConnections[connection.id] !== null) {
-        throw new Error("Non-null user observe for connection " +
-                        connection.id + " while observe was being set up?");
       }
 
       self._userObservesForConnections[connection.id] = observe;
