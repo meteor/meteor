@@ -6,11 +6,11 @@ Package.describe({
   // between such packages and the build tool.
   name: 'launch-screen',
   summary: 'Default and customizable launch screen on mobile.',
-  version: '1.0.2'
+  version: '1.0.3'
 });
 
 Cordova.depends({
-  'org.apache.cordova.splashscreen': '1.0.0'
+    'cordova-plugin-splashscreen': '2.0.0'
 });
 
 Package.onUse(function(api) {

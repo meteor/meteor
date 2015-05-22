@@ -466,10 +466,18 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
+exports.isUrlWithFileScheme = function (x) {
+  return /^file:\/\/.+/.test(x);
+};
+
 exports.isUrlWithSha = function (x) {
   // For now, just support http/https, which is at least less restrictive than
   // the old "github only" rule.
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+};
+
+exports.isPathRelative = function (x) {
+  return x.charAt(0) !== '/';
 };
 
 // If there is a version that isn't exact, throws an Error with a
@@ -491,7 +499,8 @@ exports.ensureOnlyExactVersions = function (dependencies) {
   });
 };
 exports.isExactVersion = function (version) {
-  return semver.valid(version) || exports.isUrlWithSha(version);
+  return semver.valid(version) || exports.isUrlWithSha(version)
+    || exports.isUrlWithFileScheme(version);
 };
 
 
