@@ -832,6 +832,16 @@ Hi there!
   {{/each}}
 </template>
 
+<template name="spacebars_test_template_parent_template_helper">
+  {{#with "parent"}}
+    {{> spacebars_test_template_parent_template_helper_child}}
+  {{/with}}
+</template>
+
+<template name="spacebars_test_template_parent_template_helper_child">
+  {{foo}}
+</template>
+
 <template name="spacebars_test_svg_anchor">
   <svg>
     <a xlink:href="http://www.example.com">Foo</a>

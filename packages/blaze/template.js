@@ -431,6 +431,26 @@ Blaze.TemplateInstance.prototype.subscriptionsReady = function () {
   return this._allSubsReady;
 };
 
+
+/**
+ * @summary Accesses other template instances that enclose the current template instance.
+ * @locus Client
+ * @function
+ * @param {Integer} [numLevels] The number of levels beyond the template instance to look. Defaults to 1.
+ */
+Blaze.TemplateInstance.prototype.parentTemplate = function (levels) {
+    var view = Blaze.currentView;
+    if (typeof levels === "undefined") {
+        levels = 1;
+    }
+    while (view) {
+        if (view.name.substring(0, 9) === "Template." && !(levels--)) {
+            return view.templateInstance();
+        }
+        view = view.parentView;
+    }
+};
+
 /**
  * @summary Specify template helpers available to this template.
  * @locus Client

@@ -2390,6 +2390,34 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "spacebars-tests - template_tests - Template.parentTemplate from helpers",
+  function (test) {
+    var childTmpl = Template.spacebars_test_template_parent_template_helper_child;
+    var parentTmpl = Template.spacebars_test_template_parent_template_helper;
+    var bar = new ReactiveVar("bar");
+    parentTmpl.onCreated(function() {
+      this.bar = bar;
+      console.log(this.bar);
+    });
+
+    var height = new ReactiveVar(1);
+
+    childTmpl.helpers({
+      foo: function () {
+        return Template.instance().parentTemplate(height.get()).bar.get();
+      }
+    });
+
+    var div = renderToDiv(parentTmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "bar");
+
+    bar.set("baz");
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "baz");
+  }
+);
+
+Tinytest.add(
   "spacebars - SVG <a> elements",
   function (test) {
     if (! document.createElementNS) {
