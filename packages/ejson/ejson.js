@@ -192,6 +192,10 @@ EJSON._getTypes = function () {
   return customTypes;
 };
 
+EJSON._getConverters = function () {
+  return builtinConverters;
+};
+
 // for both arrays and objects, in-place modification.
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
