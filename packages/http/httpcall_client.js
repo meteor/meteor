@@ -175,12 +175,12 @@ HTTP.call = function(method, url, options, callback) {
     };
 
     // Allow custom control over XHR and abort early.
-    if(options.beforeSend) {
+    if (options.beforeSend) {
       // Sanity
       var beforeSend = _.once(options.beforeSend);
 
       // Call the callback and check to see if the request was aborted
-      if(false === beforeSend.call(null, xhr, options)) {
+      if (false === beforeSend.call(null, xhr, options)) {
         return xhr.abort();
       }
     }
