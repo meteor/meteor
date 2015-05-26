@@ -179,10 +179,8 @@ HTTP.call = function(method, url, options, callback) {
       // Sanity
       var beforeSend = _.once(options.beforeSend);
 
-      // Possibly change the call so the xhr is the context.
+      // Call the callback and check to see if the request was aborted
       if(false === beforeSend.call(null, xhr, options)) {
-
-        // Abort the request
         return xhr.abort();
       }
     }
