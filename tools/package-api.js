@@ -282,6 +282,8 @@ _.extend(PackageAPI.prototype, {
    * on the server (or the client), you can pass in the second argument
    * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
    * what architecture the file is used with.
+   * @param {Object} [fileOptions] Options that get will be passed to build
+   * plugins (f.e. the coffeescript plugin).
    */
   addFiles: function (paths, arch, fileOptions) {
     var self = this;
