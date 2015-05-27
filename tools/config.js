@@ -201,7 +201,7 @@ _.extend(exports, {
     serverUrl = serverUrl.replace(/\.meteor\.com$/, '');
 
     // Replace other weird stuff with X.
-    serverUrl = serverUrl.replace(/[^a-zA-Z0-9.:-]/g, 'X');
+    serverUrl = serverUrl.replace(/[^a-zA-Z0-9.-]/g, 'X');
 
     return serverUrl;
   },
