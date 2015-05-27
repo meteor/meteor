@@ -141,6 +141,13 @@ treated specially by Meteor:
     Any directory named `tests` is not loaded anywhere. Use this for any local
     test code.
 
+- **node_modules**
+
+    For compatibility with node.js tools used alongside Meteor, any directory named
+    `node_modules` is not loaded anywhere. node.js packages installed into
+    `node_modules` directories will not be available to your Meteor code. Use
+    `Npm.depends` in your package `package.js` file for that.
+
 ### Files outside special directories
 
 All JavaScript files outside special directories are loaded on both the client
