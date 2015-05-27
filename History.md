@@ -17,7 +17,7 @@
 
 * XXX `#each .. in ..` and `#let x=y` forms. https://github.com/meteor/meteor/pull/3560
 
-* Fix external <script> tags in body or templates.  #4415
+* Fix external `<script>` tags in body or templates.  #4415
 
 * Fix memory leak.  #4289
 
