@@ -1241,6 +1241,10 @@ _.extend(PackageSource.prototype, {
                     //     suddenly start treating it as part of the main
                     //     app program.
                     /^programs\/$/,
+                    // node.js based tooling often uses dependencies which
+                    // are installed into node_modules in the root of the
+                    // project.
+                    /^node_modules\/$/,
                     /^public\/$/, /^private\/$/,
                     /^cordova-build-override\/$/,
                     otherUnibuildRegExp].concat(sourceExclude)
