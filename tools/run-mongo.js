@@ -465,7 +465,7 @@ var launchMongo = function (options) {
       handle.stop();
 
       // Invoke the outer onExit callback.
-      onExit(code, signal, stderrOutput, detectedErrors);
+      onExit(code, signal, stderrOutput, detectedErrors, stdoutOutput);
     });
     proc.on('exit', procExitHandler);
 
@@ -485,7 +485,9 @@ var launchMongo = function (options) {
     };
 
     var detectedErrors = {};
+    var stdoutOutput = '';
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
+      stdoutOutput += data;
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
       if (/config from self or any seed \(EMPTYCONFIG\)/.test(data)) {
@@ -758,7 +760,7 @@ _.extend(MRp, {
     }
   },
 
-  _exited: function (code, signal, stderr, detectedErrors) {
+  _exited: function (code, signal, stderr, detectedErrors, stdout) {
     var self = this;
 
     self.handle = null;
@@ -775,6 +777,8 @@ _.extend(MRp, {
     // since findMongoAndKillItDead is a very slow operation.
     if (! self.suppressExitMessage) {
       // Print the last 20 lines of stderr.
+      console.log("MONGOD STDOUT", stdout);
+      console.log("MONGOD STDERR", stderr);
       runLog.log(
         stderr.split('\n').slice(-20).join('\n') +
           "Unexpected mongo exit code " + code +
