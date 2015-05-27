@@ -583,7 +583,7 @@ _.extend(Roles, {
 
 
   /**
-   * Internal function that users the Template pattern to adds or sets roles 
+   * Internal function that uses the Template pattern to adds or sets roles 
    * for users.
    *
    * @method _updateUserRoles
