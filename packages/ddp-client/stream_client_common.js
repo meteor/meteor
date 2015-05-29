@@ -256,11 +256,13 @@ _.extend(LivedataTest.ClientStream.prototype, {
   }
 });
 
-DDP.ConnectionError = Meteor.makeErrorType(
-  "DDP.ConnectionError", function (message) {
+DDP.ConnectionError = function (message) {
     var self = this;
     self.message = message;
-});
+};
+DDP.ConnectionError.errorName = "DDP.ConnectionError";
+Meteor._inherits(DDP.ConnectionError, Meteor.BaseError);
 
-DDP.ForcedReconnectError = Meteor.makeErrorType(
-  "DDP.ForcedReconnectError", function () {});
+DDP.ForcedReconnectError = function () {};
+DDP.ForcedReconnectError.errorName = "DDP.ForcedReconnectError";
+Meteor._inherits(DDP.ForcedReconnectError, Meteor.BaseError);

@@ -1,34 +1,51 @@
-// Makes an error subclass which properly contains a stack trace in most
+// An error subclass which properly contains a stack trace in most
 // environments. constructor can set fields on `this` (and should probably set
 // `message`, which is what gets displayed at the top of a stack trace).
 //
-Meteor.makeErrorType = function (name, constructor) {
-  var errorClass = function (/*arguments*/) {
-    var self = this;
-
+Meteor.BaseError = function(message) {
+    var caller, first, stack;
+    this.message = message;
+    this.name = this.constructor.errorName;
     // Ensure we get a proper stack trace in most Javascript environments
     if (Error.captureStackTrace) {
-      // V8 environments (Chrome and Node.js)
-      Error.captureStackTrace(self, errorClass);
+      // V8/Blink environments (Chrome, Node.js, recent Operas)
+      Error.captureStackTrace(this, this.constructor);
     } else {
-      // Firefox
-      var e = new Error;
-      e.__proto__ = errorClass.prototype;
-      if (e instanceof errorClass)
-        self = e;
+      // IE only sets the stack property on throw.
+      // Gecko/Firefox and Webkit/Safari have a \n-separated string.
+      stack = (new Error).stack;
+      if (typeof stack === 'string') {
+        // Firefox
+        stack = stack.split('\n');
+        while (true) {
+          first = stack.shift();
+          if (stack.length === 0 || first.match(new RegExp("^" + this.constructor.name))) {
+            break;
+          }
+        }
+        if(stack.length) {
+            // Optionally, on recent enough engines, extract the correct
+            // fileName, lineNumber, columnNumber from the stack
+            caller = stack[0].match(/(.*)@(.*?):(\d+)(?::(\d+))?$/);
+            if (caller) {
+              this.functionName = caller[1];
+              this.fileName = caller[2];
+              this.lineNumber = caller[3];
+              this.columnNumber = caller[4];
+            }
+        }
+        this.stack = stack.join('\n');
+      }
     }
-    // Safari magically works.
+};
+Meteor.BaseError.errorName = 'Meteor.BaseError';
+Meteor._inherits(Meteor.BaseError, Error);
 
-    constructor.apply(self, arguments);
-
-    self.errorType = name;
-
-    return self;
-  };
-
-  Meteor._inherits(errorClass, Error);
-
-  return errorClass;
+// backwards compatibility in case some package is using this
+Meteor.makeErrorType = function (name, constructor) {
+  constructor.errorName = name;
+  Meteor._inherits(constructor, Meteor.BaseError);
+  return constructor;
 };
 
 // This should probably be in the livedata package, but we don't want
@@ -54,7 +71,7 @@ Meteor.makeErrorType = function (name, constructor) {
  * ```
  * // on the server, pick a code unique to this error
  * // the reason field should be a useful debug message
- * throw new Meteor.Error("logged-out", 
+ * throw new Meteor.Error("logged-out",
  *   "The user must be logged in to post a comment.");
  *
  * // on the client
@@ -66,44 +83,40 @@ Meteor.makeErrorType = function (name, constructor) {
  *   }
  * });
  * ```
- * 
+ *
  * For legacy reasons, some built-in Meteor functions such as `check` throw
  * errors with a number in this field.
- * 
+ *
  * @param {String} [reason] Optional.  A short human-readable summary of the
  * error, like 'Not Found'.
  * @param {String} [details] Optional.  Additional information about the error,
  * like a textual stack trace.
  */
-Meteor.Error = Meteor.makeErrorType(
-  "Meteor.Error",
-  function (error, reason, details) {
-    var self = this;
-
-    // Currently, a numeric code, likely similar to a HTTP code (eg,
-    // 404, 500). That is likely to change though.
-    self.error = error;
-
-    // Optional: A short human-readable summary of the error. Not
-    // intended to be shown to end users, just developers. ("Not Found",
-    // "Internal Server Error")
-    self.reason = reason;
-
-    // Optional: Additional information about the error, say for
-    // debugging. It might be a (textual) stack trace if the server is
-    // willing to provide one. The corresponding thing in HTTP would be
-    // the body of a 404 or 500 response. (The difference is that we
-    // never expect this to be shown to end users, only developers, so
-    // it doesn't need to be pretty.)
-    self.details = details;
-
-    // This is what gets displayed at the top of a stack trace. Current
-    // format is "[404]" (if no reason is set) or "File not found [404]"
-    if (self.reason)
-      self.message = self.reason + ' [' + self.error + ']';
-    else
-      self.message = '[' + self.error + ']';
-  });
+Meteor.Error = function (error, reason, details) {
+  var self = this;
+  // Currently, a numeric code, likely similar to a HTTP code (eg,
+  // 404, 500). That is likely to change though.
+  self.error = error;
+  // Optional: A short human-readable summary of the error. Not
+  // intended to be shown to end users, just developers. ("Not Found",
+  // "Internal Server Error")
+  self.reason = reason;
+  // Optional: Additional information about the error, say for
+  // debugging. It might be a (textual) stack trace if the server is
+  // willing to provide one. The corresponding thing in HTTP would be
+  // the body of a 404 or 500 response. (The difference is that we
+  // never expect this to be shown to end users, only developers, so
+  // it doesn't need to be pretty.)
+  self.details = details;
+  // This is what gets displayed at the top of a stack trace. Current
+  // format is "[404]" (if no reason is set) or "File not found [404]"
+  if (self.reason)
+    self.message = self.reason + ' [' + self.error + ']';
+  else
+    self.message = '[' + self.error + ']';
+};
+Meteor.Error.errorName = "Meteor.Error";
+Meteor._inherits(Meteor.Error, Meteor.BaseError);
 
 // Meteor.Error is basically data and is sent over DDP, so you should be able to
 // properly EJSON-clone it. This is especially important because if a
