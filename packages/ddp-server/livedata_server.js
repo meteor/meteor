@@ -1457,6 +1457,8 @@ _.extend(Server.prototype, {
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
+      if (typeof func !== 'function')
+        throw new Error("Method '" + name + "' must be a function");
       if (self.method_handlers[name])
         throw new Error("A method named '" + name + "' is already defined");
       self.method_handlers[name] = func;

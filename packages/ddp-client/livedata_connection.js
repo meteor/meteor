@@ -645,6 +645,8 @@ _.extend(Connection.prototype, {
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
+      if (typeof func !== 'function')
+        throw new Error("Method '" + name + "' must be a function");
       if (self._methodHandlers[name])
         throw new Error("A method named '" + name + "' is already defined");
       self._methodHandlers[name] = func;
