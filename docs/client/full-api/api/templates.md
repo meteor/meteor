@@ -284,9 +284,10 @@ Template.listing.onRendered(function () {
   var template = this;
 
   template.subscribe('listOfThings', function () {
-    Tracker.afterFlush(function() {
-      // Use highlight.js to highlight a code snippet after
-      // the data has loaded.
+    // Wait for the data to load using the callback
+    Tracker.afterFlush(function () {
+      // Use Tracker.afterFlush to wait for the UI to re-render
+      // then use highlight.js to highlight a code snippet
       highlightBlock(template.find('.code'));
     });
   });
