@@ -538,13 +538,23 @@ var bannerPadding = function (bannerWidth) {
 //     sourceMap (a string) (XXX)
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
+// XXX BBP redoc
 var prelink = function (options) {
+  // Load jsAnalyze from the js-analyze package... unless we are the
+  // js-analyze package, in which case never mind. (The js-analyze package's
+  // default unibuild is not allowed to depend on anything!)
+  var jsAnalyze = null;
+  if (! _.isEmpty(options.inputFiles) && options.name !== "js-analyze") {
+    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
+  }
+
   var module = new Module({
     name: options.name,
     declaredExports: options.declaredExports,
+    // XXX BBP we never pass this any more
     useGlobalNamespace: options.useGlobalNamespace,
     combinedServePath: options.combinedServePath,
-    jsAnalyze: options.jsAnalyze,
+    jsAnalyze: jsAnalyze,
     noLineNumbers: options.noLineNumbers
   });
 

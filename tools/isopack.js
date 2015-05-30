@@ -1022,6 +1022,7 @@ _.extend(Isopack.prototype, {
           path: unibuildJsonFile
         });
 
+        var jsResourcesForLegacyPrelink = [];
         if (writeLegacyBuilds) {
           if (_.any(unibuild.resources, function (resource) {
             return resource.type === "source" && resource.extension !== "js"
@@ -1110,6 +1111,20 @@ _.extend(Isopack.prototype, {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
+          // If we're going to write a legacy prelink file later, track the
+          // original form of the resource object (with the source in a Buffer,
+          // etc) instead of the later version.
+          if (writeLegacyBuilds && resource.type === "source" &&
+              resource.extension == "js") {
+            jsResourcesForLegacyPrelink.push({
+              data: resource.data,
+              hash: resource.hash,
+              servePath: unibuild.pkg._getServePath(resource.path),
+              bare: resource.fileOptions && resource.fileOptions.bare,
+              sourceMap: resource.sourceMap
+            });
+          }
+
           unibuildJson.resources.push({
             type: resource.type,
             extension: resource.extension || undefined,
@@ -1140,7 +1155,8 @@ _.extend(Isopack.prototype, {
         builder.writeJson(unibuildJsonFile, unibuildJson);
         unibuildInfos.push({
           unibuild: unibuild,
-          unibuildJson: unibuildJson
+          unibuildJson: unibuildJson,
+          jsResourcesForLegacyPrelink: jsResourcesForLegacyPrelink
         });
       });
 
@@ -1193,8 +1209,11 @@ _.extend(Isopack.prototype, {
         _.each(unibuildInfos, function (unibuildInfo) {
           var unibuild = unibuildInfo.unibuild;
           var unibuildJson = unibuildInfo.unibuildJson;
+          var jsResourcesForLegacyPrelink =
+                unibuildInfo.jsResourcesForLegacyPrelink;
           var legacyFilename = builder.generateFilename(
             unibuild.arch + '-legacy.json');
+          var legacyDir = unibuild.arch + '-legacy';
           mainLegacyJson.builds.push({
             kind: unibuild.kind,
             arch: unibuild.arch,
@@ -1203,7 +1222,6 @@ _.extend(Isopack.prototype, {
 
           unibuildJson.format = 'unipackage-unibuild-pre1';
           var newResources = [];
-          var jsResources = [];
           _.each(unibuildJson.resources, function (resource) {
             if (resource.type !== 'source') {
               newResources.push(resource);
@@ -1218,18 +1236,76 @@ _.extend(Isopack.prototype, {
                 servePath: self._getServePath(resource.path)
               });
             } else if (resource.extension === 'js') {
-              jsResources.push(resource);
+              // Skip; we saved this in jsResourcesForLegacyPrelink above
+              // already, in the format that linker.prelink understands.
             } else {
               throw Error(
                 "shouldn't write legacy builds for non-JS/CSS source "
                   + JSON.stringify(resource));
             }
           });
-          if (jsResources.length) {
-            // XXX BBP either: see that legacyPrelink field exists and just
-            // reverse that transformation... or run prelink, push it onto
-            // newResources, and put packageVariables onto unibuildJson
-            // DO IT HERE
+          if (jsResourcesForLegacyPrelink.length) {
+            // XXX BBP we should look for legacyPrelink field too and just
+            // reverse that transformation...
+            var results = linker.prelink({
+              inputFiles: jsResourcesForLegacyPrelink,
+              // I was confused about this, so I am leaving a comment -- the
+              // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
+              // XXX: If we change this, we can get rid of source arch names!
+              combinedServePath: (
+                "/packages/" + colonConverter.convert(
+                  unibuild.pkg.name +
+                    (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
+                    ".js")),
+              name: unibuild.pkg.name,
+              // XXX BBP this is barely used
+              declaredExports: _.pluck(unibuild.declaredExports, 'name')
+            });
+            if (results.files.length !== 1) {
+              throw Error("prelink should return 1 file, not " +
+                          results.files.length);
+            }
+            var prelinkFile = results.files[0];
+            var prelinkData = new Buffer(prelinkFile.source, 'utf8');
+            var prelinkResource = {
+              type: 'prelink',
+              file: builder.writeToGeneratedFilename(
+                files.pathJoin(legacyDir, prelinkFile.servePath),
+                { data: prelinkData }),
+              length: prelinkData.length,
+              offset: 0,
+              servePath: prelinkFile.servePath || undefined
+            };
+            if (prelinkFile.sourceMap) {
+              // Write the source map.
+              prelinkResource.sourceMap = builder.writeToGeneratedFilename(
+                files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
+                { data: new Buffer(prelinkFile.sourceMap, 'utf8') }
+              );
+            }
+            newResources.push(prelinkResource);
+
+            // Determine captured variables, legacy way.
+            var packageVariables = [];
+            var packageVariableNames = {};
+            _.each(unibuild.declaredExports, function (symbol) {
+              if (_.has(packageVariableNames, symbol.name))
+                return;
+              packageVariables.push({
+                name: symbol.name,
+                export: symbol.testOnly? "tests" : true
+              });
+              packageVariableNames[symbol.name] = true;
+            });
+            _.each(results.assignedVariables, function (name) {
+              if (_.has(packageVariableNames, name))
+                return;
+              packageVariables.push({
+                name: name
+              });
+              packageVariableNames[name] = true;
+            });
+            unibuildJson.packageVariables = packageVariables;
           }
           unibuildJson.resources = newResources;
           delete unibuildJson.declaredExports;
