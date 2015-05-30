@@ -491,12 +491,6 @@ _.extend(PackageSourceBatch.prototype, {
             ".js"),
       name: self.unibuild.pkg.name || null,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
-      // It's not clear how much people end up looking at these generated files,
-      // so for now let's not spend lots of time writing tons of spaces every
-      // time we bundle the app.
-      // XXX BBP theory: 'meteor build' writes line numbers and 'meteor run'
-      // does not???
-      noLineNumbers: true,
       imports: imports,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
