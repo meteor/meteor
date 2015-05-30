@@ -60,7 +60,10 @@ WebApp.connectHandlers.use(function (req, res, next) {
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {
 
-    var url = Spiderable._urlForPhantom(Meteor.absoluteUrl(), req.url);
+    // Gets the absolute URL for requested host - it takes the protocol (http or https) from Meteor absoluteUrl
+    // And replaces the Meteor configured host with the original one coming in main request
+    var absoluteUrlForRequestedHost = Meteor.absoluteUrl().replace(/:\/\/.*/, '://' + req.headers.host + '/');
+    var url = Spiderable._urlForPhantom(absoluteUrlForRequestedHost, req.url);
 
     // This string is going to be put into a bash script, so it's important
     // that 'url' (which comes from the network) can neither exploit phantomjs
