@@ -100,6 +100,10 @@
   `AccountsServer` constructors, so that users can create multiple
   independent instances of the `Accounts` namespace.  #4233
 
+* Create an index for `Meteor.users` on
+  `services.email.verificationTokens.token` (instead of
+  `emails.validationTokens.token`, which never was used for anything).  #4482
+
 ### Minimongo
 
 * The `$push` query modifier now supports a `$position` argument.  #4312
