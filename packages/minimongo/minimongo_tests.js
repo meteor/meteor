@@ -1265,6 +1265,12 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
   });
 
   test.throws(function () {
+    testProjection({ _id: 1, a: 0 }, [
+      [ { _id: "uid", a: 42 }, { _id: "uid" }, "Can only combine incl/excl rules with _id when excluding id" ]
+    ]);
+  });
+
+  test.throws(function () {
     testProjection({ 'a': 1, 'a.b': 1 }, [
       [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
     ]);
