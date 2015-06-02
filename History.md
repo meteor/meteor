@@ -104,6 +104,8 @@
   `services.email.verificationTokens.token` (instead of
   `emails.validationTokens.token`, which never was used for anything).  #4482
 
+* Remove an IE7-specific workaround from accounts-ui.  #4485
+
 ### Minimongo
 
 * The `$push` query modifier now supports a `$position` argument.  #4312
