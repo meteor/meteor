@@ -668,7 +668,8 @@ main.registerCommand({
 
   main.captureAndExit(
     "=> Errors while publishing build:",
-    "publishing package " + name,
+    ("publishing package " + name + " for architecture "
+     + isopk.buildArchitectures()),
     function () {
       packageClient.createAndPublishBuiltPackage(conn, isopk);
     }
