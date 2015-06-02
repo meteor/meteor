@@ -55,6 +55,9 @@
 * You may now specify the `bare` option for JavaScript files on the server.
   Previous versions only allowed this on the client. #3681
 
+* Ignore `node_modules` directories in apps instead of processing them as Meteor
+  source code.  #4457 #4452
+
 ### Livequery
 
 * The oplog observe driver now properly updates queries when you drop a
