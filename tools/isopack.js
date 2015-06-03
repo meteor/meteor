@@ -1121,7 +1121,11 @@ _.extend(Isopack.prototype, {
               hash: resource.hash,
               servePath: unibuild.pkg._getServePath(resource.path),
               bare: resource.fileOptions && resource.fileOptions.bare,
-              sourceMap: resource.sourceMap
+              sourceMap: resource.sourceMap,
+              // If this file was actually read from a legacy isopack and is
+              // itself prelinked, this will be an object with some metadata
+              // about it, and we can skip re-running prelink later.
+              legacyPrelink: resource.legacyPrelink
             });
           }
 
@@ -1245,28 +1249,64 @@ _.extend(Isopack.prototype, {
             }
           });
           if (jsResourcesForLegacyPrelink.length) {
-            // XXX BBP we should look for legacyPrelink field too and just
-            // reverse that transformation...
-            var results = linker.prelink({
-              inputFiles: jsResourcesForLegacyPrelink,
-              // I was confused about this, so I am leaving a comment -- the
-              // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
-              // XXX: If we change this, we can get rid of source arch names!
-              combinedServePath: (
-                "/packages/" + colonConverter.convert(
-                  unibuild.pkg.name +
-                    (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
-                    ".js")),
-              name: unibuild.pkg.name,
-              // XXX BBP this is barely used
-              declaredExports: _.pluck(unibuild.declaredExports, 'name')
-            });
-            if (results.files.length !== 1) {
-              throw Error("prelink should return 1 file, not " +
-                          results.files.length);
+            var prelinkFile, prelinkData, packageVariables;
+            if (jsResourcesForLegacyPrelink.length === 1 &&
+                jsResourcesForLegacyPrelink[0].legacyPrelink) {
+              // Aha!  This isopack was actually a legacy isopack in the first
+              // place! So this source file is already the output of prelink,
+              // and we don't need to reprocess it.
+              prelinkFile = jsResourcesForLegacyPrelink[0];
+              // XXX BBP super weird that the type of object going in and
+              // out of linker.prelink is different (so that this prelinkData
+              // assignment differs from that below), *sigh*
+              prelinkData = prelinkFile.data;
+              packageVariables =
+                jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
+            } else {
+              // Not originally legacy; let's run prelink to make it legacy.
+              var results = linker.prelink({
+                inputFiles: jsResourcesForLegacyPrelink,
+                // I was confused about this, so I am leaving a comment -- the
+                // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
+                // XXX: If we change this, we can get rid of source arch names!
+                combinedServePath: (
+                  "/packages/" + colonConverter.convert(
+                    unibuild.pkg.name +
+                      (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
+                      ".js")),
+                name: unibuild.pkg.name,
+                // XXX BBP this is barely used
+                declaredExports: _.pluck(unibuild.declaredExports, 'name')
+              });
+              if (results.files.length !== 1) {
+                throw Error("prelink should return 1 file, not " +
+                            results.files.length);
+              }
+              prelinkFile = results.files[0];
+              prelinkData = new Buffer(prelinkFile.source, 'utf8');
+
+              // Determine captured variables, legacy way.
+              packageVariables = [];
+              var packageVariableNames = {};
+              _.each(unibuild.declaredExports, function (symbol) {
+                if (_.has(packageVariableNames, symbol.name))
+                  return;
+                packageVariables.push({
+                  name: symbol.name,
+                  export: symbol.testOnly? "tests" : true
+                });
+                packageVariableNames[symbol.name] = true;
+              });
+              _.each(results.assignedVariables, function (name) {
+                if (_.has(packageVariableNames, name))
+                  return;
+                packageVariables.push({
+                  name: name
+                });
+                packageVariableNames[name] = true;
+              });
             }
-            var prelinkFile = results.files[0];
-            var prelinkData = new Buffer(prelinkFile.source, 'utf8');
+
             var prelinkResource = {
               type: 'prelink',
               file: builder.writeToGeneratedFilename(
@@ -1285,26 +1325,6 @@ _.extend(Isopack.prototype, {
             }
             newResources.push(prelinkResource);
 
-            // Determine captured variables, legacy way.
-            var packageVariables = [];
-            var packageVariableNames = {};
-            _.each(unibuild.declaredExports, function (symbol) {
-              if (_.has(packageVariableNames, symbol.name))
-                return;
-              packageVariables.push({
-                name: symbol.name,
-                export: symbol.testOnly? "tests" : true
-              });
-              packageVariableNames[symbol.name] = true;
-            });
-            _.each(results.assignedVariables, function (name) {
-              if (_.has(packageVariableNames, name))
-                return;
-              packageVariables.push({
-                name: name
-              });
-              packageVariableNames[name] = true;
-            });
             unibuildJson.packageVariables = packageVariables;
           }
           unibuildJson.resources = newResources;
