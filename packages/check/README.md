@@ -13,7 +13,7 @@ Meteor.methods({addChat: function (roomId, message) {
   check(roomId, String);
   check(message, {
     text: String,
-    timestamp: Date,
+    timestamp: Number,
     // Optional, but if present must be an array of strings.
     tags: Match.Optional([String])
   });
