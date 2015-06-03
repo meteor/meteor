@@ -398,7 +398,19 @@ _.extend(LocalCollection.Cursor.prototype, {
     var handle = new LocalCollection.ObserveHandle;
     _.extend(handle, {
       collection: self.collection,
-      stop: function () {
+      stop: function (flush) {
+        if (flush && Meteor.isServer && self.collection._observeQueue._draining) {
+          var Future = Npm.require('fibers/future');
+          var future = new Future();
+          self.collection._observeQueue.queueTask(function () {
+            future.return()
+          });
+          // Just to make sure that this will be drained. Probably this is a noop because we are
+          // already draining when we enter this code path.
+          self.collection._observeQueue.drain();
+          future.wait();
+        }
+
         if (self.reactive)
           delete self.collection.queries[qid];
       }
