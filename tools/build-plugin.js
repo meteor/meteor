@@ -1,26 +1,30 @@
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
-var buildmessage = require('./buildmessage.js');
 var _ = require('underscore');
 
-exports.BuildPluginDefinition = function (options, factoryFunction) {
+exports.SourceProcessor = function (options) {
   var self = this;
   self.id = options.id;
   self.isopack = options.isopack;
   self.extensions = options.extensions.slice();
   self.archMatching = options.archMatching;
   self.isTemplate = !! options.isTemplate;
-  self.buildPluginClass = options.buildPluginClass;
-  self.factoryFunction = factoryFunction;
+  self.factoryFunction = options.factoryFunction;
+  self.userPlugin = null;
 };
-_.extend(exports.BuildPluginDefinition.prototype, {
+_.extend(exports.SourceProcessor.prototype, {
+  // Call the user's factory function to get the actual build plugin object.
+  // Note that we're supposed to have one userPlugin per project, so this
+  // assumes that each Isopack object is specific to a project.  We don't run
+  // this immediately on evaluating Plugin.registerCompiler; we instead wait
+  // until the whole plugin file has been evaluated (so that it can use things
+  // defined later in the file).
   instantiatePlugin: function () {
     var self = this;
     // XXX BBP proper error handling --- this is running user-supplied plugin
-    // code
-    var userPlugin = self.factoryFunction();
-    return new self.buildPluginClass(self, userPlugin);
+    // code, and use markBoundary too
+    self.userPlugin = self.factoryFunction.call(null);
   },
   relevantForArch: function (arch) {
     var self = this;

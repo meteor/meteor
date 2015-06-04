@@ -13,7 +13,7 @@ var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
 var compilerPluginModule = require('./compiler-plugin.js');
 var linterPluginModule = require('./linter-plugin.js');
-var BuildPluginDefinition = require('./build-plugin.js').BuildPluginDefinition;
+var buildPluginModule = require('./build-plugin.js');
 var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
@@ -487,6 +487,18 @@ _.extend(Isopack.prototype, {
         // compiler-plugin.
         var Plugin = self._makePluginApi(pluginSourceExtensions);
         plugin.load({ Plugin: Plugin });
+
+        // Instantiate each of the registered batch plugins.  Note that we don't
+        // do this directly in the registerCompiler (etc) call, because we want
+        // to allow people to do something like:
+        //   Plugin.registerCompiler({...}, function () { return new C; });
+        //   var C = function () {...}
+        // and so we want to wait for C to be defined.
+        _.each(self.sourceProcessors, function (sourceProcessors, type) {
+          _.each(sourceProcessors, function (sourceProcessor, id) {
+            sourceProcessor.instantiatePlugin();
+          });
+        });
       });
     });
 
@@ -618,14 +630,14 @@ _.extend(Isopack.prototype, {
         // We're finally done validating!  Save the processor plugin, and mark
         // all its extensions as used.
         isopack.sourceProcessors[type][processorPluginId] =
-          new BuildPluginDefinition({
+          new buildPluginModule.SourceProcessor({
             id: processorPluginId,
             isopack: isopack,
             extensions: options.extensions,
             archMatching: options.archMatching,
             isTemplate: options.isTemplate,
-            buildPluginClass: additionalOptions.buildPluginClass
-          }, factory);
+            factoryFunction: factory
+          });
         _.each(options.extensions, function (ext) {
           pluginSourceExtensions[ext] = true;
         });
@@ -647,7 +659,6 @@ _.extend(Isopack.prototype, {
         Plugin._registerSourceProcessor(options, factory, {
           type: "compiler",
           methodName: "registerCompiler",
-          buildPluginClass: compilerPluginModule.CompilerPlugin,
           skipUniqExtCheck: false
         });
       },
@@ -664,6 +675,7 @@ _.extend(Isopack.prototype, {
       // XXX BBP doc
       registerLinter: function (options, factory) {
         isopack.sourceProcessors.linter = isopack.sourceProcessors.linter || {};
+        // XXX BBP I just broke linters when I got rid of BuildPluginDefinition
         Plugin._registerSourceProcessor(options, factory, {
           type: "linter",
           methodName: "registerLinter",
