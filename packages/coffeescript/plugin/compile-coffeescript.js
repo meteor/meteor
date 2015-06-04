@@ -158,7 +158,9 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
       return;
     }
 
-    var stripped = stripExportedVars(output.js, inputFile.getDeclaredExports());
+    var stripped = stripExportedVars(
+      output.js,
+      _.pluck(inputFile.getDeclaredExports(), 'name'));
     var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
 
     inputFile.addJavaScript({
