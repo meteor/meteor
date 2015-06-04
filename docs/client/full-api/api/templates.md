@@ -110,7 +110,7 @@ Template.myPictures.onRendered(function () {
 
 {{> autoApiBox "Template#onCreated"}}
 
-Callbacks added with this method called before your template's logic is
+Callbacks added with this method are called before your template's logic is
 evaluated for the first time. Inside a callback, `this` is the new [template
 instance](#template_inst) object. Properties you set on this object will be
 visible from the callbacks added with `onRendered` and `onDestroyed` methods and
