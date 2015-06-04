@@ -11,7 +11,8 @@ Package.registerBuildPlugin({
   ],
   npmDependencies: {
     "coffee-script": "1.9.2",
-    "source-map": "0.4.2"
+    "source-map": "0.4.2",
+    "lru-cache": "2.6.4"
   }
 });
 

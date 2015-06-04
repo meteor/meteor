@@ -2,6 +2,7 @@ var fs = Npm.require('fs');
 var path = Npm.require('path');
 var _ = Npm.require('underscore');
 var sourcemap = Npm.require('source-map');
+var LRU = Npm.require('lru-cache');
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -10,6 +11,8 @@ var sourcemap = Npm.require('source-map');
 var prepareStackTrace = Error.prepareStackTrace;
 var coffee = Npm.require('coffee-script');
 Error.prepareStackTrace = prepareStackTrace;
+
+var CACHE_SIZE = process.env.METEOR_COFFEESCRIPT_CACHE_SIZE || 1024*1024*10;
 
 var stripExportedVars = function (source, exports) {
   if (!exports || _.isEmpty(exports))
@@ -121,7 +124,19 @@ var addSharedHeader = function (source, sourceMap) {
 };
 
 var CoffeeCompiler = function (isLiterate) {
-  this.isLiterate = isLiterate;
+  var self = this;
+  self.isLiterate = isLiterate;
+  // Maps from a cache key (encoding the source hash, exports, and the other
+  // options passed to coffee.compile) to a {source,sourceMap} object (both
+  // strings).  Note that this is the result of both coffee.compile and the
+  // post-processing that we do.
+  self._cache = new LRU({
+    max: CACHE_SIZE,
+    // Cache is measured in bytes.
+    length: function (value) {
+      return value.source.length + value.sourceMap.length;
+    }
+  });
 };
 
 CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
@@ -145,23 +160,30 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
       sourceFiles: [inputFile.getDisplayPath()]
     };
 
-    var output;
-    try {
-      output = coffee.compile(source, options);
-    } catch (e) {
-      inputFile.error({
-        message: e.message,
-        line: e.location && (e.location.first_line + 1),
-        column: e.location && (e.location.first_column + 1)
-      });
+    var cacheKey = JSON.stringify([inputFile.getSourceHash(),
+                                   inputFile.getDeclaredExports(),
+                                   options]);
+    var sourceWithMap = self._cache.get(cacheKey);
+    if (! sourceWithMap) {
+      var output;
+      try {
+        output = coffee.compile(source, options);
+      } catch (e) {
+        inputFile.error({
+          message: e.message,
+          line: e.location && (e.location.first_line + 1),
+          column: e.location && (e.location.first_column + 1)
+        });
 
-      return;
+        return;
+      }
+
+      var stripped = stripExportedVars(
+        output.js,
+        _.pluck(inputFile.getDeclaredExports(), 'name'));
+      sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
+      self._cache.set(cacheKey, sourceWithMap);
     }
-
-    var stripped = stripExportedVars(
-      output.js,
-      _.pluck(inputFile.getDeclaredExports(), 'name'));
-    var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
 
     inputFile.addJavaScript({
       path: outputFilePath,

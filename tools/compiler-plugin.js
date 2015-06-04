@@ -104,6 +104,9 @@ _.extend(InputFile.prototype, {
   getArch: function () {
     return this._resourceSlot.packageSourceBatch.processor.arch;
   },
+  getSourceHash: function () {
+    return this._resourceSlot.inputResource.hash;
+  },
 
   /**
    * @summary Returns a list of symbols declared as exports in this target. The
