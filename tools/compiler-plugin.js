@@ -39,30 +39,34 @@ exports.CompilerPluginProcessor = function (options) {
   self.unibuilds = options.unibuilds;
   self.arch = options.arch;
   self.isopackCache = options.isopackCache;
-  // id -> {buildPlugin, resourceSlots}
-  self.buildPlugins = null;
+  // id -> CompilerPlugin
+  self.compilerPlugins = null;
+  // id -> [ResourceSlot]
+  self.resourceSlotsByPluginId = {};
 };
 _.extend(exports.CompilerPluginProcessor.prototype, {
   // XXX BBP don't re-instantiate buildPlugins on every rebuild
   _loadPluginsAndInstantiatePlugins: function () {
     var self = this;
-    self.buildPlugins = {};
+    self.compilerPlugins = {};
+    self.resourceSlotsByPluginId = {};
     _.each(self.unibuilds, function (unibuild) {
       var isopack = unibuild.pkg;
       isopack.ensurePluginsInitialized();
-      _.each(isopack.sourceProcessors.compiler, function (buildPlugin, id) {
-        if (_.has(self.buildPlugins, id)) {
-            throw Error("duplicate buildPlugin plugin ID! " + id);
+      _.each(
+        isopack.sourceProcessors.compiler,
+        function (buildPluginDefinition, id) {
+          if (_.has(self.compilerPlugins, id)) {
+            throw Error("duplicate compilerPlugin plugin ID! " + id);
+          }
+          self.compilerPlugins[id] = buildPluginDefinition.instantiatePlugin();
+          self.resourceSlotsByPluginId[id] = [];
         }
-        self.buildPlugins[id] = {
-          buildPlugin: buildPlugin.instantiatePlugin(),
-          resourceSlots: []
-        };
-      });
+      );
     });
   },
 
-  runBuildPlugins: function () {
+  runCompilerPlugins: function () {
     var self = this;
     buildmessage.assertInJob();
 
@@ -72,36 +76,40 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
       return new PackageSourceBatch(unibuild, self);
     });
 
-    // Find out which files go with which buildPlugins.
+    // Find out which files go with which CompilerPlugins.
     _.each(sourceBatches, function (sourceBatch) {
       _.each(sourceBatch.resourceSlots, function (resourceSlot) {
-        var buildPlugin = resourceSlot.buildPlugin;
+        var buildPluginDefinition = resourceSlot.buildPluginDefinition;
         // Skip non-sources.
-        if (! buildPlugin)
+        if (! buildPluginDefinition)
           return;
 
-        if (! _.has(self.buildPlugins, buildPlugin.id)) {
-          throw Error("uninstantiated buildPlugin plugin " + buildPlugin.id);
+        if (! _.has(self.compilerPlugins, buildPluginDefinition.id)) {
+          throw Error("uninstantiated compiler plugin " +
+                      buildPluginDefinition.id);
         }
-        self.buildPlugins[buildPlugin.id].resourceSlots.push(resourceSlot);
+        self.resourceSlotsByPluginId[buildPluginDefinition.id].push(
+          resourceSlot);
       });
     });
 
     // Now actually run the handlers.
-    _.each(self.buildPlugins, function (buildPluginInfo, id) {
-      var buildPlugin = buildPluginInfo.buildPlugin;
-      var resourceSlots = buildPluginInfo.resourceSlots;
-      // Don't run buildPlugins with no files.
+    _.each(self.compilerPlugins, function (compilerPlugin, id) {
+      var resourceSlots = self.resourceSlotsByPluginId[id];
+      if (! resourceSlots) {
+        throw Error("compiler plugin without slots? " + id);
+      }
+      // Don't run CompilerPlugins with no files.
       if (! resourceSlots.length)
         return;
 
       buildmessage.enterJob({
         title: "processing files with " +
-          buildPlugin.pluginDefinition.isopack.name
+          compilerPlugin.pluginDefinition.isopack.name
       }, function () {
-        buildPlugin.run(resourceSlots);
-      });
-    });
+        compilerPlugin.run(resourceSlots);
+      });}
+    );
 
     return sourceBatches;
   }
@@ -216,7 +224,7 @@ _.extend(InputFile.prototype, {
 
 // XXX BBP doc
 var ResourceSlot = function (unibuildResourceInfo,
-                             buildPlugin,
+                             buildPluginDefinition,
                              packageSourceBatch) {
   var self = this;
   self.inputResource = unibuildResourceInfo;  // XXX BBP prototype?
@@ -224,14 +232,14 @@ var ResourceSlot = function (unibuildResourceInfo,
   self.outputResources = [];
   // JS, which gets linked together at the end.
   self.jsOutputResources = [];
-  self.buildPlugin = buildPlugin;
+  self.buildPluginDefinition = buildPluginDefinition;
   self.packageSourceBatch = packageSourceBatch;
 
   if (self.inputResource.type === "source" &&
       self.inputResource.extension === "js") {
     // #HardcodeJs
-    if (buildPlugin) {
-      throw Error("buildPlugin found for js source? " +
+    if (buildPluginDefinition) {
+      throw Error("buildPluginDefinition found for js source? " +
                   JSON.stringify(unibuildResourceInfo));
     }
     self.addJavaScript({
@@ -247,16 +255,16 @@ var ResourceSlot = function (unibuildResourceInfo,
          self.inputResource.fileOptions.raw)
     });
   } else if (self.inputResource.type === "source") {
-    if (! buildPlugin) {
-      throw Error("no buildPlugin plugin for source? " +
+    if (! buildPluginDefinition) {
+      throw Error("no buildPluginDefinition plugin for source? " +
                   JSON.stringify(unibuildResourceInfo));
     }
   } else {
-    if (buildPlugin) {
-      throw Error("buildPlugin plugin for non-source? " +
+    if (buildPluginDefinition) {
+      throw Error("buildPluginDefinition plugin for non-source? " +
                   JSON.stringify(unibuildResourceInfo));
     }
-    // Any resource that isn't handled by buildPlugin plugins just gets passed
+    // Any resource that isn't handled by compiler plugins just gets passed
     // through.
     if (self.inputResource.type === "js") {
       self.jsOutputResources.push(self.inputResource);
@@ -269,7 +277,7 @@ _.extend(ResourceSlot.prototype, {
   // XXX BBP check args
   addStylesheet: function (options) {
     var self = this;
-    if (! self.buildPlugin)
+    if (! self.buildPluginDefinition)
       throw Error("addStylesheet on non-source ResourceSlot?");
 
     // XXX BBP prototype?
@@ -286,7 +294,7 @@ _.extend(ResourceSlot.prototype, {
   addJavaScript: function (options) {
     var self = this;
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! self.buildPlugin && self.inputResource.extension !== "js")
+    if (! self.buildPluginDefinition && self.inputResource.extension !== "js")
       throw Error("addJavaScript on non-source ResourceSlot?");
 
     self.jsOutputResources.push({
@@ -306,7 +314,7 @@ _.extend(ResourceSlot.prototype, {
   },
   addAsset: function (options) {
     var self = this;
-    if (! self.buildPlugin)
+    if (! self.buildPluginDefinition)
       throw Error("addAsset on non-source ResourceSlot?");
 
     if (! (options.data instanceof Buffer)) {
@@ -347,26 +355,27 @@ var PackageSourceBatch = function (unibuild, processor) {
   var self = this;
   self.unibuild = unibuild;
   self.processor = processor;
-  var buildPluginsByExtension = self._getBuildPluginsByExtension();
+  var buildPluginDefinitionsByExtension =
+        self._getBuildPluginDefinitionsByExtension();
   self.resourceSlots = _.map(unibuild.resources, function (resource) {
-    var buildPlugin = null;
+    var buildPluginDefinition = null;
     if (resource.type === "source") {
       var extension = resource.extension;
       if (extension === 'js') {
         // #HardcodeJs In this case, we just leave buildPlugin null; it is
-        // #specially handled by ResourceSlot too.
-      } else if (_.has(buildPluginsByExtension, extension)) {
-        buildPlugin = buildPluginsByExtension[extension];
+        // specially handled by ResourceSlot too.
+      } else if (_.has(buildPluginDefinitionsByExtension, extension)) {
+        buildPluginDefinition = buildPluginDefinitionsByExtension[extension];
       } else {
         // XXX BBP better error handling
         throw Error("no plugin found for " + JSON.stringify(resource));
       }
     }
-    return new ResourceSlot(resource, buildPlugin, self);
+    return new ResourceSlot(resource, buildPluginDefinition, self);
   });
 };
 _.extend(PackageSourceBatch.prototype, {
-  _getBuildPluginsByExtension: function () {
+  _getBuildPluginDefinitionsByExtension: function () {
     var self = this;
     var isopack = self.unibuild.pkg;
     // Packages always get plugins from themselves.
@@ -397,28 +406,31 @@ _.extend(PackageSourceBatch.prototype, {
 
     activePluginPackages = _.uniq(activePluginPackages);
 
-    var buildPluginsByExtension = {};
+    var buildPluginDefinitionsByExtension = {};
     _.each(activePluginPackages, function (otherPkg) {
       // self.type is "compiler" or "linter" or similar
-      _.each(otherPkg.sourceProcessors.compiler, function (buildPlugin, id) {
-        if (! buildPlugin.relevantForArch(self.processor.arch)) {
-          return;
-        }
-
-        _.each(buildPlugin.extensions, function (ext) {
-          if (_.has(buildPluginsByExtension, ext)) {
-            // XXX BBP use buildmessage
-            throw Error("duplicate extension " + JSON.stringify({
-              package: isopack.name,
-              ext: ext
-            }));
+      _.each(
+        otherPkg.sourceProcessors.compiler,
+        function (buildPluginDefinition, id) {
+          if (! buildPluginDefinition.relevantForArch(self.processor.arch)) {
+            return;
           }
-          buildPluginsByExtension[ext] = buildPlugin;
-        });
-      });
+
+          _.each(buildPluginDefinition.extensions, function (ext) {
+            if (_.has(buildPluginDefinitionsByExtension, ext)) {
+              // XXX BBP use buildmessage
+              throw Error("duplicate extension " + JSON.stringify({
+                package: isopack.name,
+                ext: ext
+              }));
+            }
+            buildPluginDefinitionsByExtension[ext] = buildPluginDefinition;
+          });
+        }
+      );
     });
 
-    return buildPluginsByExtension;
+    return buildPluginDefinitionsByExtension;
   },
 
   // Called by bundler's Target._emitResources.  It returns the actual resources

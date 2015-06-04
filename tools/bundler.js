@@ -671,7 +671,7 @@ _.extend(Target.prototype, {
       arch: self.arch,
       isopackCache: self.isopackCache
     });
-    self.sourceBatches = processor.runBuildPlugins();
+    self.sourceBatches = processor.runCompilerPlugins();
   },
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
