@@ -419,7 +419,12 @@ var compileUnibuild = function (options) {
           if (! compilerPlugin.relevantForArch(inputSourceArch.arch)) {
             // This file is for a compiler plugin but not for this arch. Skip
             // it, and don't even watch it.  (eg, skip CSS preprocessor files on
-            // the server.)
+            // the server.)  This `return` goes on to the next
+            // `_.each(sourceItems` iteration.
+            // Note that this is DIFFERENT behavior from how archMatching works
+            // in legacy compiler plugins, where we'd end up treating the source
+            // file as a static asset in the other arches (which was almost
+            // certainly unintended behavior).
             return;
           }
           buildPluginExtension = extension;
