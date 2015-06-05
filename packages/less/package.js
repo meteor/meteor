@@ -18,7 +18,8 @@ Package.registerBuildPlugin({
   ],
   npmDependencies: {
     // XXX BBP should we fork and delete some files?
-    "less": "2.5.0"
+    "less": "2.5.0",
+    "lru-cache": "2.6.4"
   }
 });
 

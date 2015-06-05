@@ -2,6 +2,7 @@ var less = Npm.require('less');
 var util = Npm.require('util');
 var path = Npm.require('path');
 var Future = Npm.require('fibers/future');
+var LRU = Npm.require('lru-cache');
 
 Plugin.registerCompiler({
   extensions: ['less'],
@@ -10,62 +11,107 @@ Plugin.registerCompiler({
     return new LessCompiler();
 });
 
+var CACHE_SIZE = process.env.METEOR_LESS_CACHE_SIZE || 1024*1024*10;
+
 var LessCompiler = function () {
-};
-LessCompiler.prototype.processFilesForTarget = function (inputFiles) {
-  var filesByAbsoluteImportPath = {};
-  var mains = [];
-
-  inputFiles.forEach(function (inputFile) {
-    var packageName = inputFile.getPackageName();
-    var pathInPackage = inputFile.getPathInPackage();
-    // XXX BBP think about windows slashes
-    var absoluteImportPath = packageName === null
-          ? ('{}/' + pathInPackage)
-          : ('{' + packageName + '}/' + pathInPackage);
-    filesByAbsoluteImportPath[absoluteImportPath] = inputFile;
-    if (pathInPackage.match(/\.main\.less$/)) {
-      mains.push({inputFile: inputFile,
-                  absoluteImportPath: absoluteImportPath});
+  var self = this;
+  // XXX BBP doc
+  // absoluteImportPath -> { hashes, css, sourceMap }
+  //   where hashes is a map from absoluteImportPath -> hash of all
+  //   paths used by it (including it itself)
+  self._cache = new LRU({
+    max: CACHE_SIZE,
+    // Cache is measured in bytes (not counting the hashes).
+    length: function (value) {
+      return value.css.length + value.sourceMap.length;
     }
   });
+};
+_.extend(LessCompiler.prototype, {
+  processFilesForTarget: function (inputFiles) {
+    var self = this;
+    var filesByAbsoluteImportPath = {};
+    var mains = [];
 
-  var importPlugin = new MeteorImportLessPlugin(filesByAbsoluteImportPath);
-
-  mains.forEach(function (main) {
-    var inputFile = main.inputFile;
-    var absoluteImportPath = main.absoluteImportPath;
-    var f = new Future;
-    less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
-      filename: absoluteImportPath,
-      plugins: [importPlugin],
-      // Generate a source map, and include the source files in the
-      // sourcesContent field.  (Note that source files which don't themselves
-      // produce text (eg, are entirely variable definitions) won't end up in
-      // the source map!)
-      sourceMap: { outputSourceFiles: true }
-    }, f.resolver());
-    try {
-      var output = f.wait();
-    } catch (e) {
-      inputFile.error({
-        message: e.message,
-        sourcePath: e.filename,  // XXX BBP this has {} and stuff, is that OK?
-        line: e.line,
-        column: e.column
-      });
-      return;  // go on to next file
-    }
-
-    // XXX BBP note that output.imports has a list of imports, which can
-    //     be used for caching
-    inputFile.addStylesheet({
-      data: output.css,
-      path: inputFile.getPathInPackage() + '.css',
-      sourceMap: output.map
+    inputFiles.forEach(function (inputFile) {
+      var packageName = inputFile.getPackageName();
+      var pathInPackage = inputFile.getPathInPackage();
+      // XXX BBP think about windows slashes
+      var absoluteImportPath = packageName === null
+            ? ('{}/' + pathInPackage)
+            : ('{' + packageName + '}/' + pathInPackage);
+      filesByAbsoluteImportPath[absoluteImportPath] = inputFile;
+      if (pathInPackage.match(/\.main\.less$/)) {
+        mains.push({inputFile: inputFile,
+                    absoluteImportPath: absoluteImportPath});
+      }
     });
-  });
-};
+
+    var importPlugin = new MeteorImportLessPlugin(filesByAbsoluteImportPath);
+
+    mains.forEach(function (main) {
+      var inputFile = main.inputFile;
+      var absoluteImportPath = main.absoluteImportPath;
+
+      var cacheEntry = self._cache.get(absoluteImportPath);
+      if (! (cacheEntry &&
+             self._cacheEntryValid(cacheEntry, filesByAbsoluteImportPath))) {
+        var f = new Future;
+        less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
+        filename: absoluteImportPath,
+          plugins: [importPlugin],
+          // Generate a source map, and include the source files in the
+          // sourcesContent field.  (Note that source files which don't
+          // themselves produce text (eg, are entirely variable definitions)
+          // won't end up in the source map!)
+          sourceMap: { outputSourceFiles: true }
+        }, f.resolver());
+        try {
+          var output = f.wait();
+        } catch (e) {
+          inputFile.error({
+            message: e.message,
+            sourcePath: e.filename,  // XXX BBP this has {} and stuff, is that OK?
+            line: e.line,
+            column: e.column
+          });
+          return;  // go on to next file
+        }
+        cacheEntry = {
+          hashes: {},
+          css: output.css,
+          sourceMap: output.map
+        };
+        // Make this cache entry depend on the hash of the file itself...
+        cacheEntry.hashes[absoluteImportPath] = inputFile.getSourceHash();
+        // ... and of all files it (transitively) imports, helpfully provided
+        // to us by less.render.
+        output.imports.forEach(function (path) {
+          if (! filesByAbsoluteImportPath.hasOwnProperty(path)) {
+            throw Error("Imported an unknown file?");
+          }
+          var importedInputFile = filesByAbsoluteImportPath[path];
+          cacheEntry.hashes[path] = importedInputFile.getSourceHash();
+        });
+        // Override existing cache entry, if any.
+        self._cache.set(absoluteImportPath, cacheEntry);
+      }
+
+      inputFile.addStylesheet({
+        data: cacheEntry.css,
+        path: inputFile.getPathInPackage() + '.css',
+        sourceMap: cacheEntry.sourceMap
+      });
+    });
+  },
+  _cacheEntryValid: function (cacheEntry, filesByAbsoluteImportPath) {
+    var self = this;
+    return _.all(cacheEntry.hashes, function (hash, path) {
+      return _.has(filesByAbsoluteImportPath, path) &&
+        filesByAbsoluteImportPath[path].getSourceHash() === hash;
+    });
+  }
+});
 
 var MeteorImportLessPlugin = function (filesByAbsoluteImportPath) {
   var self = this;
