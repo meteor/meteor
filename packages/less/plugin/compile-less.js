@@ -12,6 +12,7 @@ Plugin.registerCompiler({
 });
 
 var CACHE_SIZE = process.env.METEOR_LESS_CACHE_SIZE || 1024*1024*10;
+var PRINT_ON_CACHE_MISS = !! process.env.METEOR_TEST_PRINT_ON_CACHE_MISS;
 
 var LessCompiler = function () {
   var self = this;
@@ -32,6 +33,7 @@ _.extend(LessCompiler.prototype, {
     var self = this;
     var filesByAbsoluteImportPath = {};
     var mains = [];
+    var cacheMisses = [];
 
     inputFiles.forEach(function (inputFile) {
       var packageName = inputFile.getPackageName();
@@ -56,9 +58,10 @@ _.extend(LessCompiler.prototype, {
       var cacheEntry = self._cache.get(absoluteImportPath);
       if (! (cacheEntry &&
              self._cacheEntryValid(cacheEntry, filesByAbsoluteImportPath))) {
+        cacheMisses.push(inputFile.getDisplayPath());
         var f = new Future;
         less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
-        filename: absoluteImportPath,
+          filename: absoluteImportPath,
           plugins: [importPlugin],
           // Generate a source map, and include the source files in the
           // sourcesContent field.  (Note that source files which don't
@@ -103,6 +106,9 @@ _.extend(LessCompiler.prototype, {
         sourceMap: cacheEntry.sourceMap
       });
     });
+    if (PRINT_ON_CACHE_MISS) {
+      console.log("Ran less.render on:", cacheMisses);
+    }
   },
   _cacheEntryValid: function (cacheEntry, filesByAbsoluteImportPath) {
     var self = this;

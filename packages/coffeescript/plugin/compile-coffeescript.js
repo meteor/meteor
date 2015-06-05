@@ -13,6 +13,7 @@ var coffee = Npm.require('coffee-script');
 Error.prepareStackTrace = prepareStackTrace;
 
 var CACHE_SIZE = process.env.METEOR_COFFEESCRIPT_CACHE_SIZE || 1024*1024*10;
+var PRINT_ON_CACHE_MISS = !! process.env.METEOR_TEST_PRINT_ON_CACHE_MISS;
 
 var stripExportedVars = function (source, exports) {
   if (!exports || _.isEmpty(exports))
@@ -141,6 +142,7 @@ var CoffeeCompiler = function (isLiterate) {
 
 CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
   var self = this;
+  var cacheMisses = [];
 
   inputFiles.forEach(function (inputFile) {
     var source = inputFile.getContentsAsString();
@@ -165,9 +167,9 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
                                    options]);
     var sourceWithMap = self._cache.get(cacheKey);
     if (! sourceWithMap) {
-      var output;
+      cacheMisses.push(inputFile.getDisplayPath());
       try {
-        output = coffee.compile(source, options);
+        var output = coffee.compile(source, options);
       } catch (e) {
         inputFile.error({
           message: e.message,
@@ -193,6 +195,10 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
       bare: inputFile.getFileOptions().bare
     });
   });
+
+  if (PRINT_ON_CACHE_MISS) {
+    console.log("Ran coffee.compile on:", cacheMisses);
+  }
 };
 
 Plugin.registerCompiler({
