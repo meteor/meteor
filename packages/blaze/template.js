@@ -438,7 +438,7 @@ Blaze.TemplateInstance.prototype.subscriptionsReady = function () {
  */
 Template.prototype.helpers = function (dict) {
   if (Object.prototype.toString.call(dict) !== "[object Object]") {
-    throw new Error('Dictionary of helper must be an object');
+    throw new Error('Template: Dictionary of helper must be an object');
   }
 
   for (var k in dict)
@@ -471,7 +471,7 @@ Template._withTemplateInstanceFunc = function (templateInstanceFunc, func) {
  */
 Template.prototype.events = function (eventMap) {
   if (Object.prototype.toString.call(eventMap) !== "[object Object]") {
-    throw new Error('Event Map must be an object');
+    throw new Error('Template: Event Map must be an object');
   }
 
   var template = this;
