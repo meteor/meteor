@@ -47,11 +47,15 @@ Meteor.BaseError = function (message) {
     }
   }
 };
+// In this case we don't use _inherits because we don't want to
+// copy over any properties. See
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error
+// for a custom error type pattern.
 Meteor.BaseError.prototype = Object.create(Error.prototype);
 Meteor.BaseError.prototype.constructor = Meteor.BaseError;
 Meteor.BaseError.errorName = 'Meteor.BaseError';
 
-// backwards compatibility in case some package is using this
+// Backwards compatibility in case some package is using this
 Meteor.makeErrorType = function (name, constructor) {
   Meteor._inherits(constructor, Meteor.BaseError);
   constructor.errorName = name;
