@@ -3,40 +3,41 @@
 // `message`, which is what gets displayed at the top of a stack trace).
 //
 Meteor.BaseError = function(message) {
-    var caller, first, stack;
-    this.message = message;
-    this.name = this.constructor.errorName;
-    // Ensure we get a proper stack trace in most Javascript environments
-    if (Error.captureStackTrace) {
-      // V8/Blink environments (Chrome, Node.js, recent Operas)
-      Error.captureStackTrace(this, this.constructor);
-    } else {
-      // IE only sets the stack property on throw.
-      // Gecko/Firefox and Webkit/Safari have a \n-separated string.
-      stack = (new Error).stack;
-      if (typeof stack === 'string') {
-        // Firefox
-        stack = stack.split('\n');
-        while (true) {
-          first = stack.shift();
-          if (stack.length === 0 || first.match(new RegExp("^" + this.constructor.name))) {
-            break;
-          }
+  var caller, first, stack;
+  this.message = message;
+  this.name = this.constructor.errorName;
+  // Ensure we get a proper stack trace in most Javascript environments
+  if (Error.captureStackTrace) {
+    // V8/Blink environments (Chrome, Node.js, recent Operas)
+    Error.captureStackTrace(this, this.constructor);
+  } else {
+    // IE only sets the stack property on throw.
+    // Gecko/Firefox and Webkit/Safari have a \n-separated string.
+    stack = (new Error).stack;
+    if (typeof stack === 'string') {
+      // Firefox
+      stack = stack.split('\n');
+      while (true) {
+        first = stack.shift();
+        if (stack.length === 0 ||
+            first.match(new RegExp("^" + this.constructor.name))) {
+          break;
         }
-        if(stack.length) {
-            // Optionally, on recent enough engines, extract the correct
-            // fileName, lineNumber, columnNumber from the stack
-            caller = stack[0].match(/(.*)@(.*?):(\d+)(?::(\d+))?$/);
-            if (caller) {
-              this.functionName = caller[1];
-              this.fileName = caller[2];
-              this.lineNumber = caller[3];
-              this.columnNumber = caller[4];
-            }
-        }
-        this.stack = stack.join('\n');
       }
+      if (stack.length) {
+        // Optionally, on recent enough engines, extract the correct
+        // fileName, lineNumber, columnNumber from the stack
+        caller = stack[0].match(/(.*)@(.*?):(\d+)(?::(\d+))?$/);
+        if (caller) {
+          this.functionName = caller[1];
+          this.fileName = caller[2];
+          this.lineNumber = caller[3];
+          this.columnNumber = caller[4];
+        }
+      }
+      this.stack = stack.join('\n');
     }
+  }
 };
 Meteor.BaseError.errorName = 'Meteor.BaseError';
 Meteor._inherits(Meteor.BaseError, Error);
