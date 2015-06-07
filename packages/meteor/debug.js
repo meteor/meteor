@@ -11,47 +11,57 @@ var suppress = 0;
 // be very visible. if you change _debug to go someplace else, etc,
 // please fix the autopublish code to do something reasonable.
 //
-Meteor._debug = function (/* arguments */) {
+var _debug = function (backend, self, args) {
   if (suppress) {
     suppress--;
     return;
   }
-  if (typeof console !== 'undefined' &&
-      typeof console.log !== 'undefined') {
-    if (arguments.length == 0) { // IE Companion breaks otherwise
+  args = Array.prototype.slice.call(args);
+  if (typeof backend !== 'undefined') {
+    if (args.length == 0) { // IE Companion breaks otherwise
       // IE10 PP4 requires at least one argument
-      console.log('');
+      backend('');
     } else {
       // IE doesn't have console.log.apply, it's not a real Object.
       // http://stackoverflow.com/questions/5538972/console-log-apply-not-working-in-ie9
       // http://patik.com/blog/complete-cross-browser-console-log/
-      if (typeof console.log.apply === "function") {
+      if (typeof backend.apply === "function") {
         // Most browsers
 
         // Chrome and Safari only hyperlink URLs to source files in first argument of
-        // console.log, so try to call it with one argument if possible.
-        // Approach taken here: If all arguments are strings, join them on space.
+        // backend, so try to call it with one argument if possible.
+        // Approach taken here: If all args are strings, join them on space.
         // See https://github.com/meteor/meteor/pull/732#issuecomment-13975991
-        var allArgumentsOfTypeString = true;
-        for (var i = 0; i < arguments.length; i++)
-          if (typeof arguments[i] !== "string")
-            allArgumentsOfTypeString = false;
+        var allargsOfTypeString = true;
+        for (var i = 0; i < args.length; i++)
+          if (typeof args[i] !== "string")
+            allargsOfTypeString = false;
 
-        if (allArgumentsOfTypeString)
-          console.log.apply(console, [Array.prototype.join.call(arguments, " ")]);
+        if (allargsOfTypeString)
+          backend.apply(self, [args.join(" ")]);
         else
-          console.log.apply(console, arguments);
+          backend.apply(self, args);
 
       } else if (typeof Function.prototype.bind === "function") {
         // IE9
-        var log = Function.prototype.bind.call(console.log, console);
-        log.apply(console, arguments);
+        var log = Function.prototype.bind.call(backend, self);
+        log.apply(self, args);
       } else {
         // IE8
-        Function.prototype.call.call(console.log, console, Array.prototype.slice.call(arguments));
+        Function.prototype.call.call(backend, self, args);
       }
     }
   }
+};
+
+Meteor._debug = function(/* arguments */) {
+  if (typeof console !== 'undefined')
+    _debug(console.log, console, arguments);
+};
+
+Meteor._error = function(/* arguments */) {
+  if (typeof console !== 'undefined')
+    _debug(console.error ? console.error : console.log, console, arguments);
 };
 
 // Suppress the next 'count' Meteor._debug messsages. Use this to
@@ -64,4 +74,3 @@ Meteor._suppress_log = function (count) {
 Meteor._supressed_log_expected = function () {
   return suppress !== 0;
 };
-
