@@ -629,6 +629,35 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     var selectorDoc = LocalCollection._removeDollarOperators(selector);
     LocalCollection._modify(selectorDoc, mod, {isInsert: true});
     newDoc = selectorDoc;
+
+    // Convert dotted keys into objects. (Resolves issue #4522).
+    _.each(newDoc, function (value, key) {
+      var trail = key.split(".");
+
+      if (trail.length > 1) {
+        //Key is dotted. Convert it into an object.
+        delete newDoc[key];
+
+        var obj = newDoc,
+            leaf = trail.pop();
+
+        // XXX It is not quite certain what should be done if there are clashing
+        // keys on the trail of the dotted key. For now we will just override it
+        // It wouldn't be a very sane query in the first place, but should look
+        // up what mongo does in this case.
+
+        while ((key = trail.shift())) {
+          if (typeof obj[key] !== "object") {
+            obj[key] = {};
+          }
+
+          obj = obj[key];
+        }
+
+        obj[leaf] = value;
+      }
+    });
+
   } else {
     newDoc = mod;
   }
