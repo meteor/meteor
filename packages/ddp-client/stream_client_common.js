@@ -80,7 +80,7 @@ toWebsocketUrl = function (url) {
 
 LivedataTest.toSockjsUrl = toSockjsUrl;
 
- 
+
 _.extend(LivedataTest.ClientStream.prototype, {
 
   // Register for callbacks.
@@ -257,12 +257,15 @@ _.extend(LivedataTest.ClientStream.prototype, {
 });
 
 DDP.ConnectionError = function (message) {
-    var self = this;
-    self.message = message;
+  var self = this;
+  Meteor.BaseError.call(self, message);
 };
-DDP.ConnectionError.errorName = "DDP.ConnectionError";
 Meteor._inherits(DDP.ConnectionError, Meteor.BaseError);
+DDP.ConnectionError.errorName = "DDP.ConnectionError";
 
-DDP.ForcedReconnectError = function () {};
-DDP.ForcedReconnectError.errorName = "DDP.ForcedReconnectError";
+DDP.ForcedReconnectError = function () {
+  var self = this;
+  Meteor.BaseError.call(self);
+};
 Meteor._inherits(DDP.ForcedReconnectError, Meteor.BaseError);
+DDP.ForcedReconnectError.errorName = "DDP.ForcedReconnectError";

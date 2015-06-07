@@ -2,14 +2,21 @@
 // environments. constructor can set fields on `this` (and should probably set
 // `message`, which is what gets displayed at the top of a stack trace).
 //
+// Subclasses should provide their error name as an errorName property of the
+// constructor function. Optionally, if this function will appear in a stack
+// with a name different than errorName, a regexp can be provided in a
+// _stackPattern property, to make sure the constructor itself doesn't
+// appear in the stack trace.
+//
 Meteor.BaseError = function(message) {
-  var caller, first, stack;
-  this.message = message;
-  this.name = this.constructor.errorName;
+  var self = this;
+  var caller, pattern, stack, stackIterator;
+  self.message = message;
+  self.name = self.constructor.errorName;
   // Ensure we get a proper stack trace in most Javascript environments
   if (Error.captureStackTrace) {
     // V8/Blink environments (Chrome, Node.js, recent Operas)
-    Error.captureStackTrace(this, this.constructor);
+    Error.captureStackTrace(self, self.constructor);
   } else {
     // IE only sets the stack property on throw.
     // Gecko/Firefox and Webkit/Safari have a \n-separated string.
@@ -17,25 +24,23 @@ Meteor.BaseError = function(message) {
     if (typeof stack === 'string') {
       // Firefox
       stack = stack.split('\n');
-      while (true) {
-        first = stack.shift();
-        if (stack.length === 0 ||
-            first.match(new RegExp("^" + this.constructor.name))) {
+      pattern = self.constructor._stackPattern || new RegExp("^" + self.name);
+      for (stackIterator = 0; stackIterator < stack.length; stackIterator++) {
+        if (stack[stackIterator].match(pattern)) {
+          stack = stack.slice(stackIterator + 1);
           break;
         }
       }
-      if (stack.length) {
-        // Optionally, on recent enough engines, extract the correct
-        // fileName, lineNumber, columnNumber from the stack
-        caller = stack[0].match(/(.*)@(.*?):(\d+)(?::(\d+))?$/);
-        if (caller) {
-          this.functionName = caller[1];
-          this.fileName = caller[2];
-          this.lineNumber = caller[3];
-          this.columnNumber = caller[4];
-        }
+      // Optionally, on recent enough engines, extract the correct
+      // fileName, lineNumber, columnNumber from the stack
+      caller = stack[0].match(/(.*)@(.*?):(\d+)(?::(\d+))?$/);
+      if (caller) {
+        self.functionName = caller[1];
+        self.fileName = caller[2];
+        self.lineNumber = caller[3];
+        self.columnNumber = caller[4];
       }
-      this.stack = stack.join('\n');
+      self.stack = stack.join('\n');
     }
   }
 };
@@ -95,6 +100,7 @@ Meteor.makeErrorType = function (name, constructor) {
  */
 Meteor.Error = function (error, reason, details) {
   var self = this;
+  Meteor.BaseError.call(self);
   // Currently, a numeric code, likely similar to a HTTP code (eg,
   // 404, 500). That is likely to change though.
   self.error = error;
@@ -116,8 +122,8 @@ Meteor.Error = function (error, reason, details) {
   else
     self.message = '[' + self.error + ']';
 };
-Meteor.Error.errorName = "Meteor.Error";
 Meteor._inherits(Meteor.Error, Meteor.BaseError);
+Meteor.Error.errorName = "Meteor.Error";
 
 // Meteor.Error is basically data and is sent over DDP, so you should be able to
 // properly EJSON-clone it. This is especially important because if a

@@ -63,7 +63,8 @@ Match = {
 
   // XXX matchers should know how to describe themselves for errors
   Error: function (msg) {
-    this.message = "Match error: " + msg;
+    var self = this;
+    Meteor.BaseError.call(self, "Match error: " + msg);
     // The path of the value that failed to match. Initially empty, this gets
     // populated by catching and rethrowing the exception as it goes back up the
     // stack.
@@ -380,5 +381,5 @@ var _prependPath = function (key, base) {
   return key + base;
 };
 
-Match.Error.errorName = "Match.Error";
 Meteor._inherits(Match.Error, Meteor.BaseError);
+Match.Error.errorName = "Match.Error";
