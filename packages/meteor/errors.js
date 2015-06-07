@@ -14,7 +14,8 @@
 Meteor.BaseError = function (message) {
   var self = this;
   var caller, pattern, stack, stackIterator;
-  self.message = message;
+  if(message)
+    self.message = message;
   self.name = self.constructor.errorName || self.constructor.name;
   // Ensure we get a proper stack trace in most Javascript environments
   if (Error.captureStackTrace) {
@@ -43,6 +44,9 @@ Meteor.BaseError = function (message) {
         self.lineNumber = caller[3];
         self.columnNumber = caller[4];
       }
+      // Prepend message to the stack, since many places in the code rely on a
+      // Chrome-style stack which begins with the message
+      stack.unshift(self.message);
       self.stack = stack.join('\n');
     }
   }
@@ -108,7 +112,7 @@ Meteor.makeErrorType = function (name, constructor) {
  */
 Meteor.Error = function (error, reason, details) {
   var self = this;
-  Meteor.BaseError.call(self);
+  var message;
   // Currently, a numeric code, likely similar to a HTTP code (eg,
   // 404, 500). That is likely to change though.
   self.error = error;
@@ -126,9 +130,10 @@ Meteor.Error = function (error, reason, details) {
   // This is what gets displayed at the top of a stack trace. Current
   // format is "[404]" (if no reason is set) or "File not found [404]"
   if (self.reason)
-    self.message = self.reason + ' [' + self.error + ']';
+    message = self.reason + ' [' + self.error + ']';
   else
-    self.message = '[' + self.error + ']';
+    message = '[' + self.error + ']';
+  Meteor.BaseError.call(self, message);
 };
 Meteor._inherits(Meteor.Error, Meteor.BaseError);
 Meteor.Error.errorName = "Meteor.Error";
