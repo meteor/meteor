@@ -3,16 +3,19 @@
 // `message`, which is what gets displayed at the top of a stack trace).
 //
 // Subclasses should provide their error name as an errorName property of the
-// constructor function. Optionally, if this function will appear in a stack
-// with a name different than errorName, a regexp can be provided in a
-// _stackPattern property, to make sure the constructor itself doesn't
-// appear in the stack trace.
+// constructor function. If absent, constructor.name will be used.
+// (Your constructor should have a name anyway, and it should end in Error,
+// because that's what Firefox checks for when formatting it to the console.)
 //
-Meteor.BaseError = function(message) {
+// Optionally, if this function will appear in a stack with a name different
+// than errorName, a regexp can be provided in a _stackPattern property, to make
+// sure the constructor itself doesn't appear in the stack trace.
+//
+Meteor.BaseError = function (message) {
   var self = this;
   var caller, pattern, stack, stackIterator;
   self.message = message;
-  self.name = self.constructor.errorName;
+  self.name = self.constructor.errorName || self.constructor.name;
   // Ensure we get a proper stack trace in most Javascript environments
   if (Error.captureStackTrace) {
     // V8/Blink environments (Chrome, Node.js, recent Operas)
@@ -44,13 +47,14 @@ Meteor.BaseError = function(message) {
     }
   }
 };
+Meteor.BaseError.prototype = Object.create(Error.prototype);
+Meteor.BaseError.prototype.constructor = Meteor.BaseError;
 Meteor.BaseError.errorName = 'Meteor.BaseError';
-Meteor._inherits(Meteor.BaseError, Error);
 
 // backwards compatibility in case some package is using this
 Meteor.makeErrorType = function (name, constructor) {
-  constructor.errorName = name;
   Meteor._inherits(constructor, Meteor.BaseError);
+  constructor.errorName = name;
   return constructor;
 };
 
