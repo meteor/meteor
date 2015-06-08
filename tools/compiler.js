@@ -608,7 +608,8 @@ var runLinters = function (
     if (! sourcesToLint.length)
       return;
 
-    var linter = linterDef.instantiatePlugin();
+    linterDef.instantiatePlugin();
+    var linter = linterDef.userPlugin.processFilesForTarget;
 
     var archToString = function (arch) {
       if (arch.match(/web\.cordova/))
@@ -627,7 +628,7 @@ var runLinters = function (
         " (" + archToString(inputSourceArch.arch) + ")"
     }, function () {
       try {
-        var markedLinter = buildmessage.markBoundary(linter.run.bind(linter));
+        var markedLinter = buildmessage.markBoundary(linter.bind(linter));
         markedLinter(sourcesToLint, globalImports);
       } catch (e) {
         buildmessage.exception(e);
