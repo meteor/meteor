@@ -487,18 +487,18 @@ _.extend(Isopack.prototype, {
         // compiler-plugin.
         var Plugin = self._makePluginApi(pluginSourceExtensions);
         plugin.load({ Plugin: Plugin });
+      });
+    });
 
-        // Instantiate each of the registered batch plugins.  Note that we don't
-        // do this directly in the registerCompiler (etc) call, because we want
-        // to allow people to do something like:
-        //   Plugin.registerCompiler({...}, function () { return new C; });
-        //   var C = function () {...}
-        // and so we want to wait for C to be defined.
-        _.each(self.sourceProcessors, function (sourceProcessors, type) {
-          _.each(sourceProcessors, function (sourceProcessor, id) {
-            sourceProcessor.instantiatePlugin();
-          });
-        });
+    // Instantiate each of the registered batch plugins.  Note that we don't
+    // do this directly in the registerCompiler (etc) call, because we want
+    // to allow people to do something like:
+    //   Plugin.registerCompiler({...}, function () { return new C; });
+    //   var C = function () {...}
+    // and so we want to wait for C to be defined.
+    _.each(self.sourceProcessors, function (sourceProcessors, type) {
+      _.each(sourceProcessors, function (sourceProcessor, id) {
+        sourceProcessor.instantiatePlugin();
       });
     });
 
