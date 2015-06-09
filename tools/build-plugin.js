@@ -22,6 +22,9 @@ _.extend(exports.SourceProcessor.prototype, {
   // defined later in the file).
   instantiatePlugin: function () {
     var self = this;
+    if (self.userPlugin) {
+      throw Error("Called instantiatePlugin twice?");
+    }
     // XXX BBP proper error handling --- this is running user-supplied plugin
     // code, and use markBoundary too
     self.userPlugin = self.factoryFunction.call(null);
