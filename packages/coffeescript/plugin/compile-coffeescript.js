@@ -138,6 +138,8 @@ var CoffeeCompiler = function (isLiterate) {
       return value.source.length + value.sourceMap.length;
     }
   });
+  // For testing.
+  self._callCount = 0;
 };
 
 CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
@@ -198,7 +200,8 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
 
   if (PRINT_ON_CACHE_MISS) {
     cacheMisses.sort();
-    console.log("Ran coffee.compile on:", JSON.stringify(cacheMisses));
+    console.log("Ran coffee.compile (#%s) on: %s",
+                ++self._callCount, JSON.stringify(cacheMisses));
   }
 };
 

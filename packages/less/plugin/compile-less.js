@@ -27,6 +27,8 @@ var LessCompiler = function () {
       return value.css.length + value.sourceMap.length;
     }
   });
+  // For testing.
+  self._callCount = 0;
 };
 _.extend(LessCompiler.prototype, {
   processFilesForTarget: function (inputFiles) {
@@ -108,7 +110,8 @@ _.extend(LessCompiler.prototype, {
     });
     if (PRINT_ON_CACHE_MISS) {
       cacheMisses.sort();
-      console.log("Ran less.render on:", JSON.stringify(cacheMisses));
+      console.log("Ran less.render (#%s) on: %s",
+                  ++self._callCount, JSON.stringify(cacheMisses));
     }
   },
   _cacheEntryValid: function (cacheEntry, filesByAbsoluteImportPath) {

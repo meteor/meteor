@@ -263,7 +263,7 @@ var compileUnibuild = function (options) {
   // *** Assemble the list of source file handlers from the plugins
   // XXX BBP redoc
   var allHandlersWithPkgs = {};
-  var compilerPluginsByExtension = {};
+  var compilerSourceProcessorsByPlugin = {};
   var sourceExtensions = {};  // maps source extensions to isTemplate
 
   // We specially handle 'js' in the build tool, because you can't provide a
@@ -304,10 +304,10 @@ var compileUnibuild = function (options) {
     });
 
     // Iterate over the compiler plugins.
-    _.each(otherPkg.sourceProcessors.compiler, function (compilerPlugin, id) {
-      _.each(compilerPlugin.extensions, function (ext) {
+    _.each(otherPkg.sourceProcessors.compiler, function (sourceProcessor, id) {
+      _.each(sourceProcessor.extensions, function (ext) {
         if (_.has(allHandlersWithPkgs, ext) ||
-            _.has(compilerPluginsByExtension, ext)) {
+            _.has(compilerSourceProcessorsByPlugin, ext)) {
           buildmessage.error(
             "conflict: two packages included in " +
               (inputSourceArch.pkg.name || "the app") + ", " +
@@ -317,8 +317,18 @@ var compileUnibuild = function (options) {
           // Recover by just going with the first one we found.
           return;
         }
-        compilerPluginsByExtension[ext] = compilerPlugin;
-        sourceExtensions[ext] = compilerPlugin.isTemplate;
+        // If this sourceProcessor is relevant to the arch we're building,
+        // search for files with that extension in the app.  Even if it's not
+        // relevant, store it in compilerSourceProcessorsByPlugin so that we
+        // know to ignore matching files in the "wrong" arch instead of adding
+        // them as static assets.  (ie, if you write `api.use('foo.less')`
+        // instead of `api.use('foo.less', 'client')` by mistake, we should just
+        // ignore `foo.less` on the server program rather than including it as a
+        // static asset there.)
+        compilerSourceProcessorsByPlugin[ext] = sourceProcessor;
+        if (sourceProcessor.relevantForArch(inputSourceArch.arch)) {
+          sourceExtensions[ext] = sourceProcessor.isTemplate;
+        }
       });
     });
   });
@@ -414,9 +424,9 @@ var compileUnibuild = function (options) {
           buildPluginExtension = 'js';
           break;
         }
-        if (_.has(compilerPluginsByExtension, extension)) {
-          var compilerPlugin = compilerPluginsByExtension[extension];
-          if (! compilerPlugin.relevantForArch(inputSourceArch.arch)) {
+        if (_.has(compilerSourceProcessorsByPlugin, extension)) {
+          var sourceProcessor = compilerSourceProcessorsByPlugin[extension];
+          if (! sourceProcessor.relevantForArch(inputSourceArch.arch)) {
             // This file is for a compiler plugin but not for this arch. Skip
             // it, and don't even watch it.  (eg, skip CSS preprocessor files on
             // the server.)  This `return` goes on to the next
