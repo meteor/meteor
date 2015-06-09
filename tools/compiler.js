@@ -131,7 +131,8 @@ compiler.compile = function (packageSource, options) {
     cordovaDependencies: packageSource.cordovaDependencies,
     npmDiscards: packageSource.npmDiscards,
     includeTool: packageSource.includeTool,
-    debugOnly: packageSource.debugOnly
+    debugOnly: packageSource.debugOnly,
+    pluginCacheDir: options.pluginCacheDir
   });
 
   _.each(packageSource.architectures, function (architecture) {

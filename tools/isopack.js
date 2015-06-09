@@ -181,6 +181,11 @@ var Isopack = function () {
   // A map of package dependencies that can provide a plugin for this isopack.
   // In practice, it is every direct dependency and implied packages.
   self.pluginProviderPackageMap = null;
+
+  // A directory on disk that plugins can use for caching. Should be created
+  // by the code that initializes the Isopack. If not provided, plugins don't
+  // get a disk cache.
+  self._pluginCacheDir = null;
 };
 
 // XXX BBP we're not really using the convert functions as much any more; make
@@ -308,6 +313,7 @@ _.extend(Isopack.prototype, {
     self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
+    self._pluginCacheDir = options.pluginCacheDir || null;
   },
 
   // Programmatically add a unibuild to this Isopack. Should only be
@@ -698,6 +704,10 @@ _.extend(Isopack.prototype, {
     var self = this;
     options = _.clone(options || {});
     options.firstIsopack = true;
+
+    if (options.pluginCacheDir) {
+      self._pluginCacheDir = options.pluginCacheDir;
+    }
 
     return self._loadUnibuildsFromPath(name, dir, options);
   }),

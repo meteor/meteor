@@ -85,7 +85,7 @@ _.extend(ProjectContext.prototype, {
       options.explicitlyAddedLocalPackageDirs;
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
-    // package names.
+    // package names.  Deletes the isopacks and their plugin caches.
     self._forceRebuildPackages = options.forceRebuildPackages;
 
     // Set in a few cases where we really want to only get packages from
@@ -696,6 +696,7 @@ _.extend(ProjectContext.prototype, {
       includeCordovaUnibuild: (self._forceIncludeCordovaUnibuild
                                || self.platformList.usesCordova()),
       cacheDir: self.getProjectLocalDirectory('isopacks'),
+      pluginCacheDirRoot: self.getProjectLocalDirectory('plugin-cache'),
       tropohouse: self.tropohouse,
       previousIsopackCache: self._previousIsopackCache
     });
