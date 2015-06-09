@@ -107,7 +107,8 @@ _.extend(LessCompiler.prototype, {
       });
     });
     if (PRINT_ON_CACHE_MISS) {
-      console.log("Ran less.render on:", cacheMisses);
+      cacheMisses.sort();
+      console.log("Ran less.render on:", JSON.stringify(cacheMisses));
     }
   },
   _cacheEntryValid: function (cacheEntry, filesByAbsoluteImportPath) {

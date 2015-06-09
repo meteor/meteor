@@ -692,6 +692,12 @@ _.extend(Sandbox.prototype, {
     files.writeFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
   },
 
+  // Like writeFile, but appends rather than writes.
+  append: function (filename, contents) {
+    var self = this;
+    files.appendFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
+  },
+
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
   // path intepreted relative to the Sandbox's cwd.  Returns null if
   // file does not exist.

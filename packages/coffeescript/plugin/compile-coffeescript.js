@@ -197,7 +197,8 @@ CoffeeCompiler.prototype.processFilesForTarget = function (inputFiles) {
   });
 
   if (PRINT_ON_CACHE_MISS) {
-    console.log("Ran coffee.compile on:", cacheMisses);
+    cacheMisses.sort();
+    console.log("Ran coffee.compile on:", JSON.stringify(cacheMisses));
   }
 };
 

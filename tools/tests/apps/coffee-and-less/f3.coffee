@@ -1,1 +1,1 @@
-console.log 'Coffeescript', share.X, share.Y
+console.log 'Coffeescript', share.X, share.Y, FromPackage
