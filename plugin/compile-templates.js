@@ -43,6 +43,7 @@ var doHTMLScanning = function (compileStep, htmlScanner) {
   }
 };
 
+// XXX BBP rewrite to registerCompiler
 Plugin.registerSourceHandler(
   "html", {isTemplate: true, archMatching: 'web'},
   function (compileStep) {
