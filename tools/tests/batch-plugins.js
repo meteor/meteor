@@ -16,8 +16,8 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   s.createApp("myapp", "coffee-and-less");
   s.cd("myapp");
   // Ask them to print out when they build a file (instead of using it from the
-  // cache).
-  s.set("METEOR_TEST_PRINT_ON_CACHE_MISS", "t");
+  // cache) as well as when they load cache from disk.
+  s.set("METEOR_TEST_PRINT_CACHE_DEBUG", "t");
   var run = s.run();
   run.match("myapp");
   run.match("proxy");
@@ -35,7 +35,6 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   // the second program, because it has archMatching: 'web'.  We'll see this
   // more clearly when the next call later is "#2" --- we didn't miss a call!)
   run.match("Ran coffee.compile (#2) on: []");
-
   // App prints this:
   run.match("Coffeescript X is 2 Y is 1 FromPackage is 4");
 
@@ -116,6 +115,32 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
+  // We never should have loaded cache from disk, since we only made
+  // CoffeeCompiler once and there was no cache.json at thispoint.
+  run.forbid('Loaded coffeescript cache');
+
+  // Kill the run. Change one coffee file and one less file and re-run.
+  run.stop();
+  s.write("f2.coffee", "share.Y = 'Y is edited'\n");
+  s.write('packages/local-pack/p.less', '@el4-style: double;\n');
+  expectedBorderStyles.el4 = 'double';
+  run = s.run();
+  run.match("myapp");
+  run.match("proxy");
+  run.tellMongo(MONGO_LISTENING);
+  run.match("MongoDB");
+
+  // This time there's a cache to load!
+  run.match('Loaded coffeescript cache');
+  // And we only need to re-compiler the changed file, even though we restarted.
+  run.match('Ran coffee.compile (#1) on: ["/f2.coffee"]');
+  // XXX BBP implement on-disk cache for less
+  run.match('Ran less.render (#1) on: ["/subdir/nested-root.main.less","/top.main.less","/yet-another-root.main.less"]');
+  run.match('Ran coffee.compile (#2) on: []');
+
+  run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
+  checkCSS(expectedBorderStyles);
+
   run.stop();
 });
 
@@ -159,4 +184,6 @@ selftest.define("compiler plugin caching - local plugin", function () {
   run.match("pmc: And print out quux");
 
   run.stop();
+
+  // XXX BBP test that cache gets reused but deleted at the right time
 });

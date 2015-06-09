@@ -12,7 +12,7 @@ Plugin.registerCompiler({
 });
 
 var CACHE_SIZE = process.env.METEOR_LESS_CACHE_SIZE || 1024*1024*10;
-var PRINT_ON_CACHE_MISS = !! process.env.METEOR_TEST_PRINT_ON_CACHE_MISS;
+var CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_CACHE_DEBUG;
 
 var LessCompiler = function () {
   var self = this;
@@ -108,7 +108,7 @@ _.extend(LessCompiler.prototype, {
         sourceMap: cacheEntry.sourceMap
       });
     });
-    if (PRINT_ON_CACHE_MISS) {
+    if (CACHE_DEBUG) {
       cacheMisses.sort();
       console.log("Ran less.render (#%s) on: %s",
                   ++self._callCount, JSON.stringify(cacheMisses));

@@ -107,6 +107,9 @@ _.extend(InputFile.prototype, {
   getSourceHash: function () {
     return this._resourceSlot.inputResource.hash;
   },
+  getExtension: function () {
+    return this._resourceSlot.inputResource.extension;
+  },
 
   /**
    * @summary Returns a list of symbols declared as exports in this target. The
