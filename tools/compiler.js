@@ -618,7 +618,6 @@ var runLinters = function (
     if (! sourcesToLint.length)
       return;
 
-    linterDef.instantiatePlugin();
     var linter = linterDef.userPlugin.processFilesForTarget;
 
     var archToString = function (arch) {
@@ -638,7 +637,7 @@ var runLinters = function (
         " (" + archToString(inputSourceArch.arch) + ")"
     }, function () {
       try {
-        var markedLinter = buildmessage.markBoundary(linter.bind(linter));
+        var markedLinter = buildmessage.markBoundary(linter.bind(linterDef.userPlugin));
         markedLinter(sourcesToLint, globalImports);
       } catch (e) {
         buildmessage.exception(e);
