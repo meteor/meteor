@@ -1,3 +1,5 @@
+var fs = Npm.require('fs');
+var path = Npm.require('path');
 var less = Npm.require('less');
 var util = Npm.require('util');
 var path = Npm.require('path');
@@ -27,6 +29,7 @@ var LessCompiler = function () {
       return value.css.length + value.sourceMap.length;
     }
   });
+  self._diskCache = null;
   // For testing.
   self._callCount = 0;
 };
@@ -108,6 +111,11 @@ _.extend(LessCompiler.prototype, {
         sourceMap: cacheEntry.sourceMap
       });
     });
+
+    // Rewrite the cache to disk.
+    // XXX BBP we should just write individual entries separately.
+    self._writeCache();
+
     if (CACHE_DEBUG) {
       cacheMisses.sort();
       console.log("Ran less.render (#%s) on: %s",
@@ -120,6 +128,45 @@ _.extend(LessCompiler.prototype, {
       return _.has(filesByAbsoluteImportPath, path) &&
         filesByAbsoluteImportPath[path].getSourceHash() === hash;
     });
+  },
+
+  setDiskCacheDirectory: function (diskCache) {
+    var self = this;
+    if (self._diskCache)
+      throw Error("setDiskCacheDirectory called twice?");
+    self._diskCache = diskCache;
+    self._readCache();
+  },
+  // XXX BBP this is an inefficiently designed cache that will cause quadratic
+  // behavior due to writing the whole cache on each write, and has no error
+  // handling, and uses sync, and has an exists/read race condition, and might
+  // not work on Windows
+  _cacheFile: function () {
+    var self = this;
+    return path.join(self._diskCache, 'cache.json');
+  },
+  _readCache: function () {
+    var self = this;
+    var cacheFile = self._cacheFile();
+    if (! fs.existsSync(cacheFile))
+      return;
+    var cacheJSON = JSON.parse(fs.readFileSync(cacheFile));
+    _.each(cacheJSON, function (value, cacheKey) {
+      self._cache.set(cacheKey, value);
+    });
+    if (CACHE_DEBUG) {
+      console.log("Loaded less cache");
+    }
+  },
+  _writeCache: function () {
+    var self = this;
+    if (! self._diskCache)
+      return;
+    var cacheJSON = {};
+    self._cache.forEach(function (value, cacheKey) {
+      cacheJSON[cacheKey] = value;
+    });
+    fs.writeFileSync(self._cacheFile(), JSON.stringify(cacheJSON));
   }
 });
 

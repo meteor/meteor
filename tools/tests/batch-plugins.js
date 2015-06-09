@@ -116,8 +116,9 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   checkCSS(expectedBorderStyles);
 
   // We never should have loaded cache from disk, since we only made
-  // CoffeeCompiler once and there was no cache.json at thispoint.
+  // each compiler once and there was no cache.json at this point.
   run.forbid('Loaded coffeescript cache');
+  run.forbid('Loaded less cache');
 
   // Kill the run. Change one coffee file and one less file and re-run.
   run.stop();
@@ -132,10 +133,10 @@ selftest.define("compiler plugin caching - coffee/less", function () {
 
   // This time there's a cache to load!
   run.match('Loaded coffeescript cache');
+  run.match('Loaded less cache');
   // And we only need to re-compiler the changed file, even though we restarted.
   run.match('Ran coffee.compile (#1) on: ["/f2.coffee"]');
-  // XXX BBP implement on-disk cache for less
-  run.match('Ran less.render (#1) on: ["/subdir/nested-root.main.less","/top.main.less","/yet-another-root.main.less"]');
+  run.match('Ran less.render (#1) on: ["/top.main.less"]');
   run.match('Ran coffee.compile (#2) on: []');
 
   run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
