@@ -9,7 +9,7 @@ var MONGO_LISTENING =
 
 
 // Tests the actual cache logic used by coffeescript and less.
-selftest.define("compiler plugin caching", function () {
+selftest.define("compiler plugin caching - coffee/less", function () {
   var s = new Sandbox({ fakeMongo: true });
 
   // Create an app that uses coffeescript and less.
@@ -119,4 +119,44 @@ selftest.define("compiler plugin caching", function () {
   run.stop();
 });
 
-// XXX BBP test that modifying a local plugin works
+// Tests that rebuilding a compiler plugin re-instantiates the source processor,
+// but other changes don't.
+selftest.define("compiler plugin caching - local plugin", function () {
+  var s = new Sandbox({ fakeMongo: true });
+
+  // Create an app that uses coffeescript and less.
+  s.createApp("myapp", "local-compiler-plugin");
+  s.cd("myapp");
+
+  var run = s.run();
+  run.match("myapp");
+  run.match("proxy");
+  run.tellMongo(MONGO_LISTENING);
+  run.match("MongoDB");
+
+  // The compiler gets used the first time...
+  run.match("PrintmeCompiler invocation 1");
+  // ... and the program runs the generated code.
+  run.match("PMC: Print out bar");
+  run.match("PMC: Print out foo");
+
+  s.write("quux.printme", "And print out quux");
+  // PrintmeCompiler gets reused.
+  run.match("PrintmeCompiler invocation 2");
+  // And the right output prints out
+  run.match("PMC: Print out bar");
+  run.match("PMC: Print out foo");
+  run.match("PMC: And print out quux");
+
+  // Edit the compiler itself.
+  s.write('packages/local-plugin/plugin.js',
+          s.read('packages/local-plugin/plugin.js').replace(/PMC/, 'pmc'));
+  // New PrintmeCompiler object.
+  run.match("PrintmeCompiler invocation 1");
+  // And the right output prints out (lower case now)
+  run.match("pmc: Print out bar");
+  run.match("pmc: Print out foo");
+  run.match("pmc: And print out quux");
+
+  run.stop();
+});
