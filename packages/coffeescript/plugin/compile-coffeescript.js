@@ -211,6 +211,8 @@ Plugin.registerCompiler({
   return new CoffeeCompiler();
 });
 
+// XXX BBP maybe this should just be one registerCompiler call that looks at the
+// filename?
 Plugin.registerCompiler({
   extensions: ['litcoffee', 'coffee.md']
 }, function () {
