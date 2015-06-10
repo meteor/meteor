@@ -169,6 +169,26 @@ compiler.lint = function (packageSource, options) {
   });
 };
 
+compiler.getMinifiers = function (packageSource, options) {
+  var minifiers = [];
+  _.each(packageSource.architectures, function (architecture) {
+    var activePluginPackages = getActivePluginPackages(options.isopack, {
+      isopackCache: options.isopackCache,
+      sourceArch: architecture
+    });
+
+    _.each(activePluginPackages, function (otherPkg) {
+      otherPkg.ensurePluginsInitialized();
+
+      _.each(otherPkg.sourceProcessors.minifier, function (minifierPlugin, id) {
+        minifiers.push(minifierPlugin);
+      });
+    });
+  });
+
+  return _.uniq(minifiers);
+};
+
 var lintUnibuild = function (options) {
   var isopack = options.isopack;
   var isopackCache = options.isopackCache;

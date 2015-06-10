@@ -167,6 +167,7 @@ var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
 var colonConverter = require('./colon-converter.js');
 var compilerPluginModule = require('./compiler-plugin.js');
+var minifierPluginModule = require('./minifier-plugin.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -464,10 +465,6 @@ var Target = function (options) {
   // vs
   // true: 99 KB / 315 KB
 
-  // METEOR_MINIFY_LEGACY is an undocumented safety-valve environment variable,
-  //  in case people hit trouble
-  self._minifyTogether = !!process.env.METEOR_MINIFY_LEGACY;
-
   self.includeDebug = options.includeDebug;
 };
 
@@ -511,12 +508,23 @@ _.extend(Target.prototype, {
 
       // Minify, if requested
       if (options.minify) {
-        var minifiers = isopackets.load('minifiers').minifiers;
-        self.minifyJs(minifiers);
+        var minifiersByExt = {};
+        var minifiers = options.minifiers;
+        ['js', 'css'].forEach(function (ext) {
+          minifiersByExt[ext] = _.find(minifiers, function (minifier) {
+            return minifier && _.contains(minifier.extensions, ext);
+          });
+        });
+
+        if (minifiersByExt.js) {
+          self.minifyJs(minifiersByExt.js);
+        }
 
         // CSS is minified only for client targets.
         if (self instanceof ClientTarget) {
-          self.minifyCss(minifiers);
+          if (minifiersByExt.css) {
+            self.minifyCss(minifiersByExt.css);
+          }
         }
       }
 
@@ -816,36 +824,28 @@ _.extend(Target.prototype, {
   },
 
   // Minify the JS in this target
-  minifyJs: Profile("Target#minifyJs", function (minifiers) {
+  minifyJs: Profile("Target#minifyJs", function (minifierDef) {
     var self = this;
 
-    var allJs;
+    var sources = _.map(self.js, function (file) {
+      return new minifierPluginModule.JsFile(file);
+    });
+    var minifier = minifierDef.userPlugin.processFilesForTarget.bind(
+      minifierDef.userPlugin);
 
-    var minifyOptions = {
-      fromString: true,
-      compress: {drop_debugger: false }
-    };
+    buildmessage.enterJob("minifying app code", function () {
+      try {
+        var markedMinifier = buildmessage.markBoundary(minifier);
+        markedMinifier(sources);
+      } catch (e) {
+        buildmessage.exception(e);
+      }
+    });
 
-    if (self._minifyTogether) {
-      var sources = _.map(self.js, function (file) {
-        return file.contents('utf8');
-      });
-
-      buildmessage.enterJob({title: "minifying"}, function () {
-        allJs = _minify(minifiers.UglifyJS, '', sources, minifyOptions).code;
-      });
-    } else {
-      minifyOptions.compress.unused = false;
-      minifyOptions.compress.dead_code = false;
-
-      allJs = buildmessage.forkJoin({title: "minifying" }, self.js, function (file) {
-        var source = file.contents('utf8');
-        return _minify(minifiers.UglifyJS, file.info, source, minifyOptions).code;
-      }).join("\n\n");
-    }
+    var allJs = _.pluck(sources, '_minified').join("\n\n");
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
-    self.js[0].setUrlToHash(".js");
+    self.js[0].setUrlToHash('.js');
   }),
 
   // Add a Cordova plugin dependency to the target. If the same plugin
@@ -913,129 +913,6 @@ _.extend(Target.prototype, {
   }
 });
 
-// This code is a copied-and-pasted version the minify function in UglifyJs2,
-// with our progress class inserted.
-var _minify = function (UglifyJS, key, files, options) {
-  options = UglifyJS.defaults(options, {
-    spidermonkey : false,
-    outSourceMap : null,
-    sourceRoot   : null,
-    inSourceMap  : null,
-    fromString   : false,
-    warnings     : false,
-    mangle       : {},
-    output       : null,
-    compress     : {}
-  });
-  UglifyJS.base54.reset();
-
-  var totalFileSize = 0;
-  _.forEach(files, function (file) {
-    totalFileSize += file.length;
-  });
-
-  var phases = 2;
-  if (options.compress) phases++;
-  if (options.mangle) phases++;
-  if (options.output) phases++;
-
-  var progress = {current: 0, end: totalFileSize * phases, done: false};
-  var progressTracker = buildmessage.getCurrentProgressTracker();
-
-  // 1. parse
-  var toplevel = null,
-    sourcesContent = {};
-
-  if (options.spidermonkey) {
-    toplevel = UglifyJS.AST_Node.from_mozilla_ast(files);
-  } else {
-    if (typeof files == "string")
-      files = [ files ];
-    buildmessage.forkJoin({title: 'minifying: parsing ' + key}, files, function (file) {
-      var code = options.fromString
-        ? file
-        : files.readFile(file, "utf8");
-      sourcesContent[file] = code;
-      toplevel = UglifyJS.parse(code, {
-        filename: options.fromString ? "?" : file,
-        toplevel: toplevel
-      });
-
-      progress.current += code.length;
-      progressTracker.reportProgress(progress);
-    });
-  }
-
-  // 2. compress
-  var compress;
-  if (options.compress) buildmessage.enterJob({title: "minify: compress 1 " + key}, function () {
-    compress = { warnings: options.warnings };
-    UglifyJS.merge(compress, options.compress);
-    toplevel.figure_out_scope();
-  });
-  if (options.compress) buildmessage.enterJob({title: "minify: compress 2 " + key}, function () {
-    var sq = UglifyJS.Compressor(compress);
-    toplevel = toplevel.transform(sq);
-
-    progress.current += totalFileSize;
-    progressTracker.reportProgress(progress);
-  });
-
-  // 3. mangle
-  if (options.mangle) buildmessage.enterJob({title: "minify: mangling " + key}, function () {
-    toplevel.figure_out_scope();
-    toplevel.compute_char_frequency();
-    toplevel.mangle_names(options.mangle);
-
-    progress.current += totalFileSize;
-    progressTracker.reportProgress(progress);
-  });
-
-  // 4. output
-  var inMap = options.inSourceMap;
-  var output = {};
-  if (typeof options.inSourceMap == "string") {
-    inMap = files.readFile(options.inSourceMap, "utf8");
-  }
-  if (options.outSourceMap) {
-    output.source_map = UglifyJS.SourceMap({
-      file: options.outSourceMap,
-      orig: inMap,
-      root: options.sourceRoot
-    });
-    if (options.sourceMapIncludeSources) {
-      for (var file in sourcesContent) {
-        if (sourcesContent.hasOwnProperty(file)) {
-          options.source_map.get().setSourceContent(file, sourcesContent[file]);
-        }
-      }
-    }
-  }
-  if (options.output) buildmessage.enterJob({title: "minify: merging " + key}, function () {
-    UglifyJS.merge(output, options.output);
-
-    progress.current += totalFileSize;
-    progressTracker.reportProgress(progress);
-  });
-
-
-  var stream;
-  buildmessage.enterJob({title: "minify: printing " + key}, function () {
-    stream = UglifyJS.OutputStream(output);
-    toplevel.print(stream);
-
-    progress.current += totalFileSize;
-    progressTracker.reportProgress(progress);
-  });
-
-  return {
-    code : stream + "",
-    map  : output.source_map + ""
-  };
-};
-
-
-
 //////////////////// ClientTarget ////////////////////
 
 var ClientTarget = function (options) {
@@ -1044,9 +921,6 @@ var ClientTarget = function (options) {
 
   // CSS files. List of File. They will be loaded in the order given.
   self.css = [];
-  // Cached CSS AST. If non-null, self.css has one item in it, processed CSS
-  // from merged input files, and this is its parse tree.
-  self._cssAstCache = null;
 
   // List of segments of additional HTML for <head>/<body>.
   self.head = [];
@@ -1093,11 +967,10 @@ _.extend(ClientTarget.prototype, {
       runLog.log(filename + ': warn: ' + msg);
     };
 
-    // Other build phases might need this AST later
-    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
+    var mergedCssAst = CssTools.mergeCssAsts(cssAsts, warnCb);
 
     // Overwrite the CSS files list with the new concatenated file
-    var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
+    var stringifiedCss = CssTools.stringifyCss(mergedCssAst,
                                                { sourcemap: true });
     if (! stringifiedCss.code)
       return;
@@ -1134,25 +1007,28 @@ _.extend(ClientTarget.prototype, {
     self.css[0].setUrlToHash(".css");
   }),
   // Minify the CSS in this target
-  minifyCss: Profile("ClientTarget#minifyCss", function (minifiers) {
+  minifyCss: Profile("ClientTarget#minifyCss", function (minifierDef) {
     var self = this;
-    var minifiedCss = '';
 
-    // If there is an AST already calculated, don't waste time on parsing it
-    // again.
-    if (self._cssAstCache) {
-      minifiedCss = minifiers.CssTools.minifyCssAst(self._cssAstCache);
-    } else if (self.css) {
-      var allCss = _.map(self.css, function (file) {
-        return file.contents('utf8');
-      }).join('\n');
+    var sources = _.map(self.css, function (file) {
+      return new minifierPluginModule.CssFile(file);
+    });
+    var minifier = minifierDef.userPlugin.processFilesForTarget.bind(
+      minifierDef.userPlugin);
 
-      minifiedCss = minifiers.CssTools.minifyCss(allCss);
-    }
-    if (!! minifiedCss) {
-      self.css = [new File({ info: 'minified css', data: new Buffer(minifiedCss, 'utf8') })];
-      self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
-    }
+    buildmessage.enterJob("minifying app stylesheet", function () {
+      try {
+        var markedMinifier = buildmessage.markBoundary(minifier);
+        markedMinifier(sources);
+      } catch (e) {
+        buildmessage.exception(e);
+      }
+    });
+
+    var allCss = _.pluck(sources, '_minified').join("\n");
+
+    self.css = [new File({ info: 'minified css', data: new Buffer(allCss, 'utf8') })];
+    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
   }),
 
   // Output the finished target to disk
@@ -2065,7 +1941,8 @@ exports.bundle = function (options) {
     title: "building the application"
   }, function () {
     var makeClientTarget = Profile(
-      "bundler.bundle..makeClientTarget", function (app, webArch) {
+      "bundler.bundle..makeClientTarget",
+      function (app, webArch, options) {
       var client = new ClientTarget({
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
@@ -2078,6 +1955,7 @@ exports.bundle = function (options) {
       client.make({
         packages: [app],
         minify: buildOptions.minify,
+        minifiers: options.minifiers || [],
         addCacheBusters: true
       });
 
@@ -2130,10 +2008,20 @@ exports.bundle = function (options) {
         lintingMessages = null;
     }
 
+    var minifiers = null;
+    if (buildOptions.minify) {
+      minifiers = compiler.getMinifiers(packageSource, {
+        isopackCache: projectContext.isopackCache,
+        isopack: app
+      });
+    }
+
     var clientTargets = [];
     // Client
     _.each(webArchs, function (arch) {
-      var client = makeClientTarget(app, arch);
+      var client = makeClientTarget(app, arch, {
+        minifiers: minifiers
+      });
       clientTargets.push(client);
       targets[arch] = client;
     });
