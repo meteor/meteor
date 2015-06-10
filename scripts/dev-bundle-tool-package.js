@@ -55,7 +55,8 @@ var packageJson = {
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     cordova: "5.0.0",
     pathwatcher: "4.1.0",
-    babel: "5.5.1"
+    babel: "5.5.1",
+    "source-map-support": "0.3.1"
   }
 };
 

@@ -2,8 +2,6 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
   require('./profile-require.js').start();
 
-require('babel/register'); // #RemoveInProd this line is removed in isopack.js
-
 var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');

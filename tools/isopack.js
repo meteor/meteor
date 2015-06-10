@@ -1140,7 +1140,7 @@ _.extend(Isopack.prototype, {
       // We don't actually want to load the babel auto-transpiler when we are
       // in a Meteor installation where everything is already transpiled for us.
       // Therefore, strip out that line in main.js
-      if (path === "tools/main.js") {
+      if (path === "tools/main-transpile-wrapper.js") {
         inputFileContents = inputFileContents.replace(/.+#RemoveInProd.+/, "");
       }
 
