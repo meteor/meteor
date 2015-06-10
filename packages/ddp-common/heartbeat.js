@@ -79,14 +79,23 @@ _.extend(DDPCommon.Heartbeat.prototype, {
     self._onTimeout();
   },
 
-  pingReceived: function () {
+  // Restart all timers, as we got a message from the counterparty.
+  _restartTimers: function () {
     var self = this;
-    // We know the connection is alive if we receive a ping, so we
-    // don't need to send a ping ourselves.  Reset the interval timer.
+    if (self._heartbeatTimeoutHandle) {
+      self._clearHeartbeatTimeoutTimer();
+    }
     if (self._heartbeatIntervalHandle) {
       self._clearHeartbeatIntervalTimer();
       self._startHeartbeatIntervalTimer();
     }
+  },
+
+  pingReceived: function () {
+    var self = this;
+    // We know the connection is alive if we receive a ping, so we
+    // don't need to send a ping ourselves.  Reset the interval timer.
+    self._restartTimers();
   },
 
   pongReceived: function () {
@@ -94,9 +103,6 @@ _.extend(DDPCommon.Heartbeat.prototype, {
 
     // Receiving a pong means we won't timeout, so clear the timeout
     // timer and start the interval again.
-    if (self._heartbeatTimeoutHandle) {
-      self._clearHeartbeatTimeoutTimer();
-      self._startHeartbeatIntervalTimer();
-    }
+    self._restartTimers();
   }
 });
