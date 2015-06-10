@@ -159,7 +159,7 @@ SyncedCron.remove = function(jobName) {
       entry._timer.clear();
 
     delete this._entries[jobName];
-    log.info('Removed "' + entry.name);
+    log.info('Removed "' + entry.name + '"');
   }
 }
 
