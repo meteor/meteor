@@ -1103,18 +1103,65 @@ _.extend(Isopack.prototype, {
         !f.match(/^examples\/unfinished/);
     });
 
-    var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
+    // Regexes matching paths to transpile using babel
+    var transpileRegexes = [
+      /^tools\/[^\/]+\.js$/, // General tools files
+      // We don't support running self-test from an install anymore
+    ];
 
+    // Split pathsToCopy into two arrays - one of files that should be copied
+    // directly, and one of files that should be transpiled with Babel
+    var pathsToTranspile = [];
+    var pathsToCopyStraight = [];
+    pathsToCopy.forEach((path) => {
+      var shouldTranspile =
+        _.some(transpileRegexes, (regex) => path.match(regex));
 
+      if (shouldTranspile) {
+        pathsToTranspile.push(path);
+      } else {
+        pathsToCopyStraight.push(path);
+      }
+    });
+
+    // Set up builder to write to the correct directory
     var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
+
+    // Transpile the files we selected
+    var babel = require("babel");
+    pathsToTranspile.forEach((path) => {
+      var fullPath = files.convertToOSPath(
+        files.pathJoin(files.getCurrentToolsDir(), path));
+
+      var inputFileContents = files.readFile(fullPath, "utf-8");
+
+      // #RemoveInProd
+      // We don't actually want to load the babel auto-transpiler when we are
+      // in a Meteor installation where everything is already transpiled for us.
+      // Therefore, strip out that line in main.js
+      if (path === "tools/main.js") {
+        inputFileContents = inputFileContents.replace(/.+#RemoveInProd.+/, "");
+      }
+
+      var transpiled = babel.transform(inputFileContents, {
+        sourceMaps: true,
+        filename: path
+      });
+
+      builder.write(path, {
+        data: new Buffer(transpiled.code, 'utf8')
+      });
+    });
+
+    var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
     builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
       from: files.getCurrentToolsDir(),
       to: '',
-      specificFiles: pathsToCopy,
+      specificFiles: pathsToCopyStraight,
       symlink: false
     });
 
