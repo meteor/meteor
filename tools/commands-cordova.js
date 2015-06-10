@@ -2473,8 +2473,31 @@ _.extend(Android.prototype, {
         avdPath = files.pathJoin(androidBundlePath, avd + '_avd');
       }
 
+      // Need to figure out which target has the ABI we need.
+      var stdout = self.runAndroidTool(['list', 'targets']);
+      var lastId = null;
+      var haveSeenTarget = false;
+      var idRe = /^id: ([0-9]+)/;
+      var tagRe = new RegExp("^\\s*Tag/ABIs\\s*:.*" + abi + ".*");
+      _.each(stdout.split('\n'), function (line) {
+        if (haveSeenTarget)
+          return;
+        var match = line.match(idRe);
+        if (match) {
+          lastId = match[1];
+        }
+        if (line.match(tagRe))
+          haveSeenTarget = true;
+      });
+
+      if (!haveSeenTarget || lastId === null) {
+        Console.error("Cannot create an android virtual device with ABI '"
+                     + abi + "'; no valid targets");
+        throw new Error("No valid targets for: " + abi);
+      }
+
       var args = ['create', 'avd',
-        '--target', '1',
+        '--target', lastId,
         '--name', avd,
         '--abi', abi,
         '--path', avdPath];
