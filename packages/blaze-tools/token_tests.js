@@ -71,4 +71,8 @@ Tinytest.add("blaze-tools - token parsers", function (test) {
   runValue(parseStringLiteral, "'\\\\'", '\\');
   runValue(parseStringLiteral, "'\\\"'", '\"');
   runValue(parseStringLiteral, "'\\\''", '\'');
+
+  test.throws(function () {
+    run(parseStringLiteral, "'this is my string");
+  }, /Unterminated string literal/);
 });
