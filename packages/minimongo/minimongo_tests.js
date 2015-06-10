@@ -1162,6 +1162,12 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
     });
   };
 
+  var testCompileProjectionThrows = function (projection, expectedError) {
+    test.throws(function () {
+      LocalCollection._compileProjection(projection);
+    }, expectedError);
+  };
+
   testProjection({ 'foo': 1, 'bar': 1 }, [
     [{ foo: 42, bar: "something", baz: "else" },
      { foo: 42, bar: "something" },
@@ -1258,34 +1264,21 @@ Tinytest.add("minimongo - projection_compiler", function (test) {
      "empty projection"]
   ]);
 
-  test.throws(function () {
-    testProjection({ 'inc': 1, 'excl': 0 }, [
-      [ { inc: 42, excl: 42 }, { inc: 42 }, "Can't combine incl/excl rules" ]
-    ]);
-  });
+  testCompileProjectionThrows(
+    { 'inc': 1, 'excl': 0 },
+    "You cannot currently mix including and excluding fields");
+  testCompileProjectionThrows(
+    { _id: 1, a: 0 },
+    "You cannot currently mix including and excluding fields");
 
-  test.throws(function () {
-    testProjection({ _id: 1, a: 0 }, [
-      [ { _id: "uid", a: 42 }, { _id: "uid" }, "Can only combine incl/excl rules with _id when excluding id" ]
-    ]);
-  });
+  testCompileProjectionThrows(
+    { 'a': 1, 'a.b': 1 },
+    "using both of them may trigger unexpected behavior");
+  testCompileProjectionThrows(
+    { 'a.b.c': 1, 'a.b': 1, 'a': 1 },
+    "using both of them may trigger unexpected behavior");
 
-  test.throws(function () {
-    testProjection({ 'a': 1, 'a.b': 1 }, [
-      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
-    ]);
-  });
-  test.throws(function () {
-    testProjection({ 'a.b.c': 1, 'a.b': 1, 'a': 1 }, [
-      [ { a: { b: 42 } }, { a: { b: 42 } }, "Can't have ambiguous rules (one is prefix of another)" ]
-    ]);
-  });
-
-  test.throws(function () {
-    testProjection("some string", [
-      [ { a: { b: 42 } }, { a: { b: 42 } }, "Projection is not a hash" ]
-    ]);
-  });
+  testCompileProjectionThrows("some string", "fields option must be an object");
 });
 
 Tinytest.add("minimongo - fetch with fields", function (test) {
