@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.4.21 # 0.4.22-27 on es6-tool branch!
+BUNDLE_VERSION=0.4.22
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
