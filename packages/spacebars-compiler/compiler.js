@@ -72,6 +72,8 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     tree = SpacebarsCompiler.optimize(tree);
   }
 
+  new ReactComponentSiblingForbidder().visit(tree);
+
   var codegen = new SpacebarsCompiler.CodeGen;
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
     {codegen: codegen})).visit(tree);
