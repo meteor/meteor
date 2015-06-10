@@ -106,10 +106,10 @@ selftest.define("report-stats", ["slow", "net"], function () {
                            _.sortBy(stats.packageList(projectContext), "name"));
 
       // Check that the direct and local dependency was recorded as such.
-      _.each(usage.packages, function (package) {
-        if (package.name === "local-package") {
-          selftest.expectTrue(package.direct);
-          selftest.expectTrue(package.local);
+      _.each(usage.packages, function (packageObj) {
+        if (packageObj.name === "local-package") {
+          selftest.expectTrue(packageObj.direct);
+          selftest.expectTrue(packageObj.local);
         }
       });
 

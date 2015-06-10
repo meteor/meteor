@@ -26,7 +26,7 @@ var packageJson = {
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
-    "source-map-support": "0.2.8",
+    "source-map-support": "0.3.1",
     semver: "4.1.0"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid

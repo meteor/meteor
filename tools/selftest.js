@@ -461,7 +461,7 @@ var Sandbox = function (options) {
   self.warehouse = null;
 
   self.home = files.pathJoin(self.root, 'home');
-  files.mkdir(self.home, 0755);
+  files.mkdir(self.home, 0o755);
   self.cwd = self.home;
   self.env = {};
   self.fakeMongo = options.fakeMongo;
@@ -1016,7 +1016,7 @@ _.extend(BrowserStackClient.prototype, {
     var self = this;
     var browserStackPath =
       files.pathJoin(files.getDevBundle(), 'bin', 'BrowserStackLocal');
-    files.chmod(browserStackPath, 0755);
+    files.chmod(browserStackPath, 0o755);
 
     var args = [
       browserStackPath,

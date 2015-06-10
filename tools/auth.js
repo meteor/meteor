@@ -151,7 +151,7 @@ var writeSessionData = function (data) {
           files.pathJoin(files.pathDirname(sessionPath), '.meteorsession.' +
                     Math.floor(Math.random() * 999999));
     try {
-      var fd = files.open(tempPath, 'wx', 0600);
+      var fd = files.open(tempPath, 'wx', 0o600);
     } catch (e) {
       continue;
     }
