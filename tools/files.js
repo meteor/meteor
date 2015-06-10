@@ -288,8 +288,8 @@ var makeTreeReadOnly = function (p) {
     });
   }
   if (stat.isFile()) {
-    var permissions = stat.mode & 0777;
-    var readOnlyPermissions = permissions & 0555;
+    var permissions = stat.mode & 0o777;
+    var readOnlyPermissions = permissions & 0o555;
     if (permissions !== readOnlyPermissions)
       files.chmod(p, readOnlyPermissions);
   }
@@ -356,7 +356,7 @@ files.treeHash = function (root, options) {
       }
       updateHash('file ' + JSON.stringify(relativePath) + ' ' +
                   stat.size + ' ' + files.fileHash(absPath) + '\n');
-      if (stat.mode & 0100) {
+      if (stat.mode & 0o100) {
         updateHash('exec\n');
       }
     } else if (stat.isSymbolicLink()) {
@@ -439,7 +439,7 @@ files.cp_r = function (from, to, options) {
   options = options || {};
 
   var absFrom = files.pathResolve(from);
-  files.mkdir_p(to, 0755);
+  files.mkdir_p(to, 0o755);
 
   _.each(files.readdir(from), function (f) {
     if (_.any(options.ignore || [], function (pattern) {
@@ -465,7 +465,7 @@ files.cp_r = function (from, to, options) {
       // be modified by umask.) We don't copy the mode *directly* because this
       // function is used by 'meteor create' which is copying from the read-only
       // tools tree into a writable app.
-      var mode = (stats.mode & 0100) ? 0777 : 0666;
+      var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
       if (!options.transformContents) {
         copyFileHelper(fullFrom, fullTo, mode);
       } else {
@@ -542,7 +542,7 @@ files.findPathsWithRegex = function (dir, regex, options) {
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
 files.copyFile = function (from, to) {
-  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0755);
+  files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
 
   var stats = files.stat(from);
   if (!stats.isFile()) {
@@ -554,7 +554,7 @@ files.copyFile = function (from, to) {
   // modified by umask.) We don't copy the mode *directly* because this function
   // is used by 'meteor create' which is copying from the read-only tools tree
   // into a writable app.
-  var mode = (stats.mode & 0100) ? 0777 : 0666;
+  var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
 
   copyFileHelper(from, to, mode);
 };
@@ -605,7 +605,7 @@ files.mkdtemp = function (prefix) {
       var dirPath = files.pathJoin(
         tmpDir, prefix + (Math.random() * 0x100000000 + 1).toString(36));
       try {
-        files.mkdir(dirPath, 0700);
+        files.mkdir(dirPath, 0o700);
         return dirPath;
       } catch (err) {
         tries--;
@@ -766,7 +766,7 @@ files.createTarGzStream = function (dirPath, options) {
       // setting it in an 'entry' handler is the same strategy that npm
       // does, so we do that here too.
       if (entry.type === "Directory") {
-        entry.mode = (entry.mode || entry.props.mode) | 0500;
+        entry.mode = (entry.mode || entry.props.mode) | 0o500;
         entry.props.mode = entry.mode;
       }
 

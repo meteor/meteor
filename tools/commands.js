@@ -2010,7 +2010,7 @@ main.registerCommand({
   var tmpDir = files.mkdtemp('meteor-ssh-');
   var idpath = tmpDir + '/id';
   maybeLog("Writing ssh key to " + idpath);
-  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
+  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0o400});
 
   // Add the known host key to a custom known hosts file.
   var hostpath = tmpDir + '/host';
