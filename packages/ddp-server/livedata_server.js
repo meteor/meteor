@@ -503,6 +503,15 @@ _.extend(Session.prototype, {
     // needs a Fiber. We could actually use regular setTimeout and avoid
     // these new fibers, but it is easier to just make everything use
     // Meteor.setTimeout and not think too hard.
+    //
+    // Any message counts as receiving a pong, as it demonstrates that
+    // the client is still alive.
+    if (self.heartbeat) {
+      Fiber(function () {
+        self.heartbeat.pongReceived();
+      }).run();
+    }
+
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
         self.send({msg: "pong", id: msg_in.id});
@@ -513,10 +522,7 @@ _.extend(Session.prototype, {
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
-      if (self.heartbeat)
-        Fiber(function () {
-          self.heartbeat.pongReceived();
-        }).run();
+      // Since everything is a pong, nothing to do
       return;
     }
 

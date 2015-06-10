@@ -211,6 +211,12 @@ var Connection = function (url, options) {
       return;
     }
 
+    // Any message counts as receiving a pong, as it demonstrates that
+    // the server is still alive.
+    if (self._heartbeat) {
+      self._heartbeat.pongReceived();
+    }
+
     if (msg === null || !msg.msg) {
       // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
       // compat.  Remove this 'if' once the server stops sending welcome
@@ -243,9 +249,7 @@ var Connection = function (url, options) {
         self._heartbeat.pingReceived();
     }
     else if (msg.msg === 'pong') {
-      if (self._heartbeat) {
-        self._heartbeat.pongReceived();
-      }
+      // noop, as we assume everything's a pong
     }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
