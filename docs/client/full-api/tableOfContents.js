@@ -79,7 +79,11 @@ var toc = [
         {instance: "collection", name: "upsert"},
         {instance: "collection", name: "remove"},
         {instance: "collection", name: "allow"},
-        {instance: "collection", name: "deny"}
+        {instance: "collection", name: "deny"},
+        {instance: "collection", name: "rawCollection",
+         id: "Mongo-Collection-rawCollection"},
+        {instance: "collection", name: "rawDatabase",
+         id: "Mongo-Collection-rawDatabase"}
       ],
 
       "Mongo.Cursor", [
