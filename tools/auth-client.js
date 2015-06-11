@@ -27,7 +27,7 @@ export function handleConnectionError(error, label) {
   }
 
   if (error.errorType === 'Meteor.Error') {
-    var errorMsg = 'Error from ' + label;
+    let errorMsg = 'Error from ' + label;
     if (error.message) {
       errorMsg += ': ' + error.message;
     }
@@ -67,8 +67,8 @@ export function loggedInConnection(url, domain, sessionType) {
     auth.doUsernamePasswordLogin({ retry: true });
   }
 
-  var conn = openServiceConnection(url);
-  var accountsConfiguration = auth.getAccountsConfiguration(conn);
+  const conn = openServiceConnection(url);
+  const accountsConfiguration = auth.getAccountsConfiguration(conn);
   try {
     auth.loginWithTokenOrOAuth(
       conn,
