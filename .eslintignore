@@ -8,8 +8,6 @@ tools/
 !tools/*.js
 
 # Below, files that have yet to be converted to match the linter
-tools/archinfo.js
-tools/auth-client.js
 tools/auth.js
 tools/builder.js
 tools/buildmessage.js
