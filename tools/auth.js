@@ -144,7 +144,7 @@ function readSessionData() {
 function writeSessionData(data) {
   const sessionPath = config.getSessionFilePath();
 
-  const tries = 0;
+  let tries = 0;
   while (true) {
     if (tries++ > 10) {
       throw new Error('can\'t find a unique name for temporary file?');
@@ -293,7 +293,7 @@ export function tryRevokeOldTokens(options) {
     timeout: 5000
   }, options || {});
 
-  const warned = false;
+  let warned = false;
   const domainsWithRevokedTokens = [];
   _.each(readSessionData().sessions || {}, (session, domain) => {
     if (session.pendingRevoke &&
@@ -545,7 +545,7 @@ exports.loginCommand = withAccountsConnection((options,
                                                         connection) => {
   config.printUniverseBanner();
 
-  const data = readSessionData();
+  let data = readSessionData();
 
   if (!getSession(data, config.getAccountsDomain()).token ||
        options.overwriteExistingToken) {
@@ -608,7 +608,7 @@ export function logoutCommand(options) {
 //    log out the session if wehave an invalid credential (for example,
 //    if a caller wants to do its own error handling for invalid
 //    credentials). Defaults to false.
-const alreadyPolledForRegistration = false;
+let alreadyPolledForRegistration = false;
 export function pollForRegistrationCompletion(options) {
   if (alreadyPolledForRegistration) {
     return;
@@ -626,7 +626,6 @@ export function pollForRegistrationCompletion(options) {
 
   // We are logged in but we don't yet have a username. Ask the server
   // if a username was chosen since we last checked.
-  const username = null;
   const fut = new Future();
   const connection = loggedInAccountsConnection(session.token);
 
@@ -662,7 +661,7 @@ export function pollForRegistrationCompletion(options) {
     }
   }), 5000);
 
-  username = fut.wait();
+  const username = fut.wait();
   connection.close();
   clearTimeout(timer);
   if (username) {
@@ -763,8 +762,8 @@ exports.registerOrLogIn = withAccountsConnection((connection) => {
       'An email has been sent to you with the link.');
     Console.error();
 
-    const animationFrame = 0;
-    const lastLinePrinted = '';
+    let animationFrame = 0;
+    let lastLinePrinted = '';
     const timer = setInterval(() => {
       const spinner = ['-', '\\', '|', '/'];
       lastLinePrinted = 'Waiting for you to register on the web... ' +
@@ -890,7 +889,7 @@ export function loggedInUsername() {
 export function getAccountsConfiguration(conn) {
   // Subscribe to the package server's service configurations so that we
   // can get the OAuth client ID to kick off the OAuth flow.
-  const accountsConfiguration = null;
+  let accountsConfiguration = null;
 
   // We avoid the overhead of creating a 'ddp-and-mongo' isopacket (or
   // always loading mongo whenever we load ddp) by just using the low-level
@@ -957,7 +956,7 @@ export function loginWithTokenOrOAuth(conn, accountsConfiguration,
 
   // Either we didn't have an existing token, or it didn't work. Do an
   // OAuth flow to log in.
-  const redirectUri = url + '/_oauth/meteor-developer';
+  let redirectUri = url + '/_oauth/meteor-developer';
 
   // Duplicate code from packages/oauth/oauth_common.js. In Meteor 0.9.1, we
   // switched to a new URL style for Oauth that no longer has the '?close'

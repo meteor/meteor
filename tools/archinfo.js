@@ -125,8 +125,8 @@ import os from 'os';
 // a fiber. Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
-var _host = null; // memoize
 
+let _host = null; // memoize
 function getHost() {
   if (!_host) {
     function run(...args) {
@@ -138,7 +138,7 @@ function getHost() {
       return result.replace(/\s*$/, ''); // trailing whitespace
     }
 
-    var platform = os.platform();
+    const platform = os.platform();
 
     if (platform === 'darwin') {
       // Can't just test uname -m = x86_64, because Snow Leopard can
@@ -150,7 +150,7 @@ function getHost() {
 
       _host = 'os.osx.x86_64';
     } else if (platform === 'linux') {
-      var machine = run('uname', '-m');
+      const machine = run('uname', '-m');
       if (_.contains(['i386', 'i686', 'x86'], machine)) {
         _host = 'os.linux.x86_32';
       } else if (_.contains(['x86_64', 'amd64', 'ia64'], machine)) {
@@ -190,8 +190,8 @@ export function matches(host, program) {
 // match, or null if none match. Throws an error if `programs`
 // contains exact duplicates.
 export function mostSpecificMatch(host, programs) {
-  var seen = {};
-  var best = null;
+  let seen = {};
+  let best = null;
 
   _.each(programs, function(p) {
     if (seen[p]) {
@@ -222,7 +222,7 @@ export function leastSpecificDescription(programs) {
   }
 
   // Find the longest string
-  var longest = _.max(programs, p => p.length);
+  const longest = _.max(programs, p => p.length);
 
   // If everything else in the list is compatible with the longest,
   // then it must be the most specific, and if everything is
