@@ -87,8 +87,8 @@ _.extend(DDPCommon.Heartbeat.prototype, {
     }
     if (self._heartbeatIntervalHandle) {
       self._clearHeartbeatIntervalTimer();
-      self._startHeartbeatIntervalTimer();
     }
+    self._startHeartbeatIntervalTimer();
   },
 
   pingReceived: function () {
