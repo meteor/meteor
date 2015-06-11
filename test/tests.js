@@ -95,3 +95,30 @@ describe("Promise.async", function () {
     });
   });
 });
+
+describe("Promise.then callbacks", function () {
+  it("should always run in a fiber", Promise.async(function () {
+    var parentFiber = Fiber.current;
+    assert.ok(parentFiber instanceof Fiber);
+
+    parentFiber._meteorDynamics = { user: "ben" };
+
+    function checkCallbackFiber() {
+      assert.ok(Fiber.current instanceof Fiber);
+      assert.notStrictEqual(Fiber.current, parentFiber);
+      assert.deepEqual(
+        Fiber.current._meteorDynamics,
+        parentFiber._meteorDynamics
+      );
+    }
+
+    return Promise.resolve("result").then(function (result) {
+      assert.strictEqual(result, "result");
+      checkCallbackFiber();
+      throw new Error("friendly exception");
+    }).catch(function (error) {
+      assert.strictEqual(error.message, "friendly exception");
+      checkCallbackFiber();
+    });
+  }));
+});

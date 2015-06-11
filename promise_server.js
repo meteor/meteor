@@ -1,8 +1,31 @@
 var assert = require("assert");
 var Fiber = require("fibers");
 var Promise = require("promise");
-module.exports = exports = Promise;
+var callbackQueue = require("./callback_queue.js").makeQueue();
 
+// Replace Promise.prototype.then with a wrapper that ensures the
+// onResolved and onRejected callbacks always run in a Fiber.
+var es6PromiseThen = Promise.prototype.then;
+Promise.prototype.then = function (onResolved, onRejected) {
+  return es6PromiseThen.call(
+    this,
+    wrapCallback(onResolved),
+    wrapCallback(onRejected)
+  );
+};
+
+function wrapCallback(callback) {
+  var fiber = Fiber.current;
+  return callback && function (arg) {
+    return callbackQueue.enqueue({
+      callback: callback,
+      args: [arg], // Avoid dealing with arguments.
+      callingFiber: fiber
+    });
+  };
+}
+
+// Yield the current Fiber until the given Promise has been fulfilled.
 function await(promise) {
   var fiber = Fiber.current;
 
@@ -11,9 +34,11 @@ function await(promise) {
     "Cannot await without a Fiber"
   );
 
-  promise.then(function (res) {
-    fiber.run(res);
-  }, function (err) {
+  // The overridden es6PromiseThen function is adequate here because these
+  // two callbacks do not need to run in a Fiber.
+  es6PromiseThen.call(promise, function (result) {
+    fiber.run(result);
+  }, function (error) {
     fiber.throwInto(err);
   });
 
@@ -21,18 +46,22 @@ function await(promise) {
 }
 
 Promise.awaitAll = function (args) {
-  return await(Promise.all(args));
+  return await(this.all(args));
 };
 
 Promise.await = function (arg) {
-  return await(Promise.resolve(arg));
+  return await(this.resolve(arg));
 };
 
 Promise.prototype.await = function () {
   return await(this);
 };
 
+// Return a wrapper function that returns a Promise for the eventual
+// result of the original function.
 Promise.async = function (fn, allowReuseOfCurrentFiber) {
+  var Promise = this;
+
   return function () {
     var self = this;
     var args = arguments;
@@ -56,3 +85,5 @@ Promise.async = function (fn, allowReuseOfCurrentFiber) {
 Function.prototype.async = function (allowReuseOfCurrentFiber) {
   return Promise.async(this, allowReuseOfCurrentFiber);
 };
+
+module.exports = exports = Promise;
