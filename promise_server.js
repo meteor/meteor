@@ -1,7 +1,7 @@
 var assert = require("assert");
 var Fiber = require("fibers");
 var Promise = require("promise");
-var callbackQueue = require("./callback_queue.js").makeQueue();
+var fiberPool = require("./fiber_pool.js").makePool(Promise);
 
 // Replace Promise.prototype.then with a wrapper that ensures the
 // onResolved and onRejected callbacks always run in a Fiber.
@@ -16,11 +16,13 @@ Promise.prototype.then = function (onResolved, onRejected) {
 
 function wrapCallback(callback) {
   var fiber = Fiber.current;
+  var dynamics = fiber && fiber._meteorDynamics;
+
   return callback && function (arg) {
-    return callbackQueue.enqueue({
+    return fiberPool.run({
       callback: callback,
-      args: [arg], // Avoid dealing with arguments.
-      callingFiber: fiber
+      args: [arg], // Avoid dealing with arguments objects.
+      dynamics: dynamics
     });
   };
 }
@@ -70,14 +72,10 @@ Promise.async = function (fn, allowReuseOfCurrentFiber) {
       return Promise.resolve(fn.apply(self, args));
     }
 
-    return new Promise(function (resolve, reject) {
-      new Fiber(function () {
-        try {
-          resolve(fn.apply(self, args));
-        } catch (err) {
-          reject(err);
-        }
-      }).run();
+    return fiberPool.run({
+      callback: fn,
+      context: self,
+      args: args
     });
   };
 };

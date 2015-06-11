@@ -101,15 +101,12 @@ describe("Promise.then callbacks", function () {
     var parentFiber = Fiber.current;
     assert.ok(parentFiber instanceof Fiber);
 
-    parentFiber._meteorDynamics = { user: "ben" };
+    var dynamics = { user: "ben" };
+    parentFiber._meteorDynamics = dynamics;
 
     function checkCallbackFiber() {
       assert.ok(Fiber.current instanceof Fiber);
-      assert.notStrictEqual(Fiber.current, parentFiber);
-      assert.deepEqual(
-        Fiber.current._meteorDynamics,
-        parentFiber._meteorDynamics
-      );
+      assert.deepEqual(Fiber.current._meteorDynamics, dynamics);
     }
 
     return Promise.resolve("result").then(function (result) {
