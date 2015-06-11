@@ -143,7 +143,7 @@ rules:
   space-after-keywords: 2
   space-before-blocks: 2
   space-before-function-parentheses: [2, "never"]
-  space-in-brackets: [0, "always"]
+  space-in-brackets: [2, "always"]
   space-in-parens: 2
   space-infix-ops: 2
   space-return-throw-case: 2
