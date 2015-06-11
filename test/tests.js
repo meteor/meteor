@@ -10,6 +10,23 @@ describe("Promise.await", function () {
     var obj = {};
     assert.strictEqual(Promise.resolve(obj).await(), obj);
   }.async());
+
+  it("should not switch Fibers", Promise.async(function () {
+    var originalFiber = Fiber.current;
+    assert.ok(originalFiber instanceof Fiber);
+    var promise = Promise.resolve(0);
+
+    for (var i = 0; i < 100; ++i) {
+      promise = promise.then(function (count) {
+        assert.ok(Fiber.current instanceof Fiber);
+        assert.notStrictEqual(Fiber.current, originalFiber);
+        return count + 1;
+      });
+    }
+
+    assert.strictEqual(Promise.await(promise), 100);
+    assert.strictEqual(Fiber.current, originalFiber);
+  }));
 });
 
 describe("Promise.awaitAll", function () {
