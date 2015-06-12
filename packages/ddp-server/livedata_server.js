@@ -508,17 +508,13 @@ _.extend(Session.prototype, {
     // the client is still alive.
     if (self.heartbeat) {
       Fiber(function () {
-        self.heartbeat.pongReceived();
+        self.heartbeat.messageReceived();
       }).run();
     }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
         self.send({msg: "pong", id: msg_in.id});
-      if (self.heartbeat)
-        Fiber(function () {
-          self.heartbeat.pingReceived();
-        }).run();
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {

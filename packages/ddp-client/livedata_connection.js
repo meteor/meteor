@@ -214,7 +214,7 @@ var Connection = function (url, options) {
     // Any message counts as receiving a pong, as it demonstrates that
     // the server is still alive.
     if (self._heartbeat) {
-      self._heartbeat.pongReceived();
+      self._heartbeat.messageReceived();
     }
 
     if (msg === null || !msg.msg) {
@@ -242,11 +242,8 @@ var Connection = function (url, options) {
         options.onDDPVersionNegotiationFailure(description);
       }
     }
-    else if (msg.msg === 'ping') {
-      if (options.respondToPings)
-        self._send({msg: "pong", id: msg.id});
-      if (self._heartbeat)
-        self._heartbeat.pingReceived();
+    else if (msg.msg === 'ping' && options.respondToPings) {
+      self._send({msg: "pong", id: msg.id});
     }
     else if (msg.msg === 'pong') {
       // noop, as we assume everything's a pong
