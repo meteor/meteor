@@ -6,9 +6,10 @@ var undefined;
 // with our processing of the callback queue.
 var originalYield = Fiber.yield;
 
-function FiberPool(Promise) {
+function FiberPool(Promise, targetFiberCount) {
   assert.ok(this instanceof FiberPool);
   assert.strictEqual(typeof Promise, "function");
+  assert.strictEqual(typeof targetFiberCount, "number");
 
   var fiberStack = [];
 
@@ -36,7 +37,13 @@ function FiberPool(Promise) {
         // property remain accessible on fibers waiting in the pool.
         delete fiber._meteorDynamics;
 
-        fiberStack.push(fiber);
+        if (fiberStack.length < targetFiberCount) {
+          fiberStack.push(fiber);
+        } else {
+          // If the pool has already reached the target maximum number of
+          // Fibers, don't bother recycling this Fiber.
+          break;
+        }
       }
     });
 
@@ -62,8 +69,28 @@ function FiberPool(Promise) {
 
     return promise;
   };
+
+  // Limit the maximum number of idle Fibers that may be kept in the
+  // pool. Note that the run method will never refuse to create a new
+  // Fiber if the pool is empty; it's just that excess Fibers might be
+  // thrown away upon completion, if the pool is full.
+  this.setTargetFiberCount = function (limit) {
+    assert.strictEqual(typeof limit, "number");
+
+    targetFiberCount = Math.max(limit, 0);
+
+    if (targetFiberCount < fiberStack.length) {
+      // If the requested target count is less than the current length of
+      // the stack, truncate the stack and terminate any surplus Fibers.
+      fiberStack.splice(targetFiberCount).forEach(function (fiber) {
+        fiber.reset();
+      });
+    }
+
+    return this;
+  };
 }
 
-exports.makePool = function (Promise) {
-  return new FiberPool(Promise);
+exports.makePool = function (Promise, targetFiberCount) {
+  return new FiberPool(Promise, targetFiberCount || 20);
 };
