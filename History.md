@@ -91,6 +91,9 @@
 * When determining file load order, split file paths on path separator
   before comparing path components alphabetically.  #4300
 
+* Fix inability to run `mongod` due to lack of locale configuration on some
+  platforms, and improve error message if the failure still occurs.  #4019
+
 ### Meteor Accounts
 
 * Add `Accounts.oauth.unregisterService` method, and ensure that users can only
