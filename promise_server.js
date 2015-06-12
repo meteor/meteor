@@ -67,15 +67,17 @@ Promise.async = function (fn, allowReuseOfCurrentFiber) {
   return function () {
     var self = this;
     var args = arguments;
+    var fiber = Fiber.current;
 
-    if (allowReuseOfCurrentFiber && Fiber.current) {
+    if (allowReuseOfCurrentFiber && fiber) {
       return Promise.resolve(fn.apply(self, args));
     }
 
     return fiberPool.run({
       callback: fn,
       context: self,
-      args: args
+      args: args,
+      dynamics: fiber && fiber._meteorDynamics
     });
   };
 };
