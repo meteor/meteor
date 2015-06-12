@@ -12,6 +12,7 @@ DDPCommon.Heartbeat = function (options) {
   self.heartbeatTimeout = options.heartbeatTimeout;
   self._sendPing = options.sendPing;
   self._onTimeout = options.onTimeout;
+  self._seenPacket = false;
 
   self._heartbeatIntervalHandle = null;
   self._heartbeatTimeoutHandle = null;
@@ -32,7 +33,7 @@ _.extend(DDPCommon.Heartbeat.prototype, {
 
   _startHeartbeatIntervalTimer: function () {
     var self = this;
-    self._heartbeatIntervalHandle = Meteor.setTimeout(
+    self._heartbeatIntervalHandle = Meteor.setInterval(
       _.bind(self._heartbeatIntervalFired, self),
       self.heartbeatInterval
     );
@@ -65,10 +66,12 @@ _.extend(DDPCommon.Heartbeat.prototype, {
   // The heartbeat interval timer is fired when we should send a ping.
   _heartbeatIntervalFired: function () {
     var self = this;
-    self._heartbeatIntervalHandle = null;
-    self._sendPing();
-    // Wait for a pong.
-    self._startHeartbeatTimeoutTimer();
+    if (!self._seenPacket) {
+      self._sendPing();
+      // Set up timeout, in case a pong doesn't arrive in time.
+      self._startHeartbeatTimeoutTimer();
+    }
+    self._seenPacket = false;
   },
 
   // The heartbeat timeout timer is fired when we sent a ping, but we
@@ -79,30 +82,13 @@ _.extend(DDPCommon.Heartbeat.prototype, {
     self._onTimeout();
   },
 
-  // Restart all timers, as we got a message from the counterparty.
-  _restartTimers: function () {
+  messageReceived: function () {
     var self = this;
+    // Tell periodic checkin that we're fine
+    self._seenPacket = true;
+    // If we were waiting for a pong, clear this.
     if (self._heartbeatTimeoutHandle) {
       self._clearHeartbeatTimeoutTimer();
     }
-    if (self._heartbeatIntervalHandle) {
-      self._clearHeartbeatIntervalTimer();
-    }
-    self._startHeartbeatIntervalTimer();
-  },
-
-  pingReceived: function () {
-    var self = this;
-    // We know the connection is alive if we receive a ping, so we
-    // don't need to send a ping ourselves.  Reset the interval timer.
-    self._restartTimers();
-  },
-
-  pongReceived: function () {
-    var self = this;
-
-    // Receiving a pong means we won't timeout, so clear the timeout
-    // timer and start the interval again.
-    self._restartTimers();
   }
 });
