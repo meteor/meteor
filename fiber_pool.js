@@ -97,6 +97,13 @@ function FiberPool(Promise, targetFiberCount) {
   };
 }
 
+// Call pool.drain() to terminate all Fibers waiting in the pool and
+// signal to any outstanding Fibers that they should exit upon completion,
+// instead of reinserting themselves into the pool.
+FiberPool.prototype.drain = function () {
+  return this.setTargetFiberCount(0);
+};
+
 exports.makePool = function (Promise, targetFiberCount) {
   return new FiberPool(Promise, targetFiberCount || 20);
 };
