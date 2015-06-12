@@ -125,7 +125,7 @@ _.extend(SessionCollectionView.prototype, {
 
   diff: function (previous) {
     var self = this;
-    LocalCollection._diffObjects(previous.documents, self.documents, {
+    DiffSequence.diffObjects(previous.documents, self.documents, {
       both: _.bind(self.diffDocument, self),
 
       rightOnly: function (id, nowDV) {
@@ -141,7 +141,7 @@ _.extend(SessionCollectionView.prototype, {
   diffDocument: function (id, prevDV, nowDV) {
     var self = this;
     var fields = {};
-    LocalCollection._diffObjects(prevDV.getFields(), nowDV.getFields(), {
+    DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
       both: function (key, prev, now) {
         if (!EJSON.equals(prev, now))
           fields[key] = now;
@@ -675,7 +675,7 @@ _.extend(Session.prototype, {
 
   _diffCollectionViews: function (beforeCVs) {
     var self = this;
-    LocalCollection._diffObjects(beforeCVs, self.collectionViews, {
+    DiffSequence.diffObjects(beforeCVs, self.collectionViews, {
       both: function (collectionName, leftValue, rightValue) {
         rightValue.diff(leftValue);
       },
@@ -919,7 +919,7 @@ var Subscription = function (
   self.userId = session.userId;
 
   // For now, the id filter is going to default to
-  // the to/from DDP methods on LocalCollection, to
+  // the to/from DDP methods on MongoID, to
   // specifically deal with mongo/minimongo ObjectIds.
 
   // Later, you will be able to make this be "raw"
@@ -928,8 +928,8 @@ var Subscription = function (
   // a ddp consumer that isn't minimongo
 
   self._idFilter = {
-    idStringify: LocalCollection._idStringify,
-    idParse: LocalCollection._idParse
+    idStringify: MongoID.idStringify,
+    idParse: MongoID.idParse
   };
 
   Package.facts && Package.facts.Facts.incrementServerFact(

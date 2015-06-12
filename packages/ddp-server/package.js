@@ -10,7 +10,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'json', 'underscore', 'tracker',
-           'logging', 'retry'],
+           'logging', 'retry', 'mongo-id', 'diff-sequence'],
           ['client', 'server']);
 
   // common functionality

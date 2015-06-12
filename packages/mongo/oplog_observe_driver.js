@@ -264,7 +264,7 @@ _.extend(OplogObserveDriver.prototype, {
       self._published.set(id, self._sharedProjectionFn(newDoc));
       var projectedNew = self._projectionFn(newDoc);
       var projectedOld = self._projectionFn(oldDoc);
-      var changed = LocalCollection._makeChangedFields(
+      var changed = DiffSequence.makeChangedFields(
         projectedNew, projectedOld);
       if (!_.isEmpty(changed))
         self._multiplexer.changed(id, changed);

@@ -990,7 +990,7 @@ LocalCollection._f = {
       return 9;
     if (EJSON.isBinary(v))
       return 5;
-    if (v instanceof LocalCollection._ObjectID)
+    if (v instanceof MongoID.ObjectID)
       return 7;
     return 3; // object
 
