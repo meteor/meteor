@@ -48,7 +48,18 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
       // initializes faster. (Not recommended for production!)
       '--oplogSize', '8',
       '--replSet', replSetName
-    ]);
+  ], {
+    // Apparently in some contexts, Mongo crashes if your locale isn't set up
+    // right. I wasn't able to reproduce it, but many people on #4019
+    // were. Let's default a couple environment variables to English UTF-8 if
+    // they aren't set already. If these few aren't good enough, we'll at least
+    // detect the locale error and print a link to #4019 (look for
+    // `detectedErrors.badLocale` below).
+    env: _.extend({
+      LANG: 'en_US.UTF-8',
+      LC_ALL: 'en_US.UTF-8'
+    }, process.env)
+  });
 };
 
 // Find all running Mongo processes that were started by this program
@@ -506,6 +517,10 @@ var launchMongo = function (options) {
       if (/Insufficient free space/.test(data)) {
         detectedErrors.freeSpace = true;
       }
+
+      if (/Invalid or no user locale set/.test(data)) {
+        detectedErrors.badLocale = true;
+      }
     });
     proc.stdout.setEncoding('utf8');
     proc.stdout.on('data', stdoutOnData);
@@ -833,6 +848,12 @@ _.extend(MRp, {
 "Looks like you are trying to run Meteor on an old Linux distribution.\n" +
 "Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
 "distribution to the latest version.";
+    }
+
+    if (detectedErrors.badLocale) {
+      message += "\n\n" +
+"Looks like MongoDB doesn't understand your locale settings. See\n" +
+"https://github.com/meteor/meteor/issues/4019 for more details.";
     }
 
     runLog.log(message);
