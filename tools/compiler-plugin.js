@@ -458,6 +458,7 @@ _.extend(PackageSourceBatch.prototype, {
 
     // Run the linker.
     var isApp = ! self.unibuild.pkg.name;
+    // XXX BBP surely this needs some kind of caching.
     var linkedFiles = linker.fullLink({
       inputFiles: jsResources,
       useGlobalNamespace: isApp,
