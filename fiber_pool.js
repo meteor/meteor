@@ -16,12 +16,15 @@ function FiberPool(Promise, targetFiberCount) {
   function makeNewFiber() {
     var fiber = new Fiber(function () {
       while (true) {
+        // Call Fiber.yield() to await further instructions.
         var entry = originalYield.call(Fiber);
 
         // Ensure this Fiber is no longer in the pool once it begins to
         // execute an entry.
         assert.strictEqual(fiberStack.indexOf(fiber), -1);
 
+        // Set the dynamic environment of this Fiber as if entry.callback
+        // had been wrapped by Meteor.bindEnvironment.
         fiber._meteorDynamics = entry.dynamics || undefined;
 
         try {
@@ -54,6 +57,9 @@ function FiberPool(Promise, targetFiberCount) {
     return fiber;
   }
 
+  // Run the entry.callback function in a Fiber either taken from the pool
+  // or created anew if the pool is empty. This method returns a Promise
+  // for the eventual result of the entry.callback function.
   this.run = function (entry) {
     assert.strictEqual(typeof entry, "object");
     assert.strictEqual(typeof entry.callback, "function");
