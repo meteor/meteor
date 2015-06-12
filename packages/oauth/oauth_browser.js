@@ -59,7 +59,7 @@ var openCenteredPopup = function(url, width, height) {
 
   if (typeof newwindow === 'undefined') {
     // blocked by a popup blocker maybe?
-    var err = new Error("The popup was blocked by the browser");
+    var err = new Error("The login popup was blocked by the browser");
     err.attemptedUrl = url;
     throw err;
   }
