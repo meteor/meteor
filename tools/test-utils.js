@@ -62,7 +62,7 @@ exports.cleanUpApp = function (sandbox, name) {
   }
 
   var run = sandbox.run('deploy', '-D', name);
-  run.waitSecs(90);
+  run.waitSecs(180);
   run.match('Deleted');
   run.expectExit(0);
   return name;
