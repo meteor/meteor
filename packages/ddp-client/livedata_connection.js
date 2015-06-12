@@ -231,7 +231,7 @@ var Connection = function (url, options) {
       self._livedata_connected(msg);
       options.onConnected();
     }
-    else if (msg.msg == 'failed') {
+    else if (msg.msg === 'failed') {
       if (_.contains(self._supportedDDPVersions, msg.version)) {
         self._versionSuggestion = msg.version;
         self._stream.reconnect({_force: true});
