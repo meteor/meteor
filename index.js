@@ -4,3 +4,8 @@ exports.compile = function compile(source) {
     require("./options")
   );
 };
+
+exports.runtime = function runtime() {
+  require("babel-core/external-helpers");
+  return global.babelHelpers;
+};
