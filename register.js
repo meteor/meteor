@@ -78,7 +78,7 @@ function babelHandler(module, filename) {
     fs.writeFile(
       path.join(cacheDir, cacheFile),
       JSON.stringify(result) + "\n",
-      "utf8",
+      { encoding: "utf8", flag: "wx" },
       function (error) {
         // Errors encountered while persisting cache files to disk will
         // not prevent the program from working, so should not be fatal.
