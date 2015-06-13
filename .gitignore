@@ -28,3 +28,6 @@ node_modules
 
 # Cache of JSON results previously compiled by Babel.
 .result-cache
+
+# No need to publish tests.
+test
