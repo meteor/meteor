@@ -79,7 +79,7 @@ var localPathPrefix = null;
 var onNewVersion = function () {
   var ft = new FileTransfer();
   var urlPrefix = Meteor.absoluteUrl() + '__cordova';
-  HTTP.get(urlPrefix + '/manifest.json', function (err, res) {
+  HTTP.get(urlPrefix + '/manifest.json?' + Random.id(), function (err, res) {
     if (err || ! res.data) {
       log('Failed to download the manifest ' + (err && err.message) + ' ' + (res && res.content));
       return;
@@ -307,4 +307,3 @@ var ensureLocalPathPrefix = function (cb) {
     cb();
   }
 };
-
