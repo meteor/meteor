@@ -1,0 +1,37 @@
+{
+  "name": "meteor-babel",
+  "author": "Ben <ben@meteor.com>",
+  "version": "0.0.0",
+  "license": "MIT",
+  "description": "Babel wrapper package for use with Meteor",
+  "keywords": [
+    "meteor",
+    "babel",
+    "es6",
+    "es7",
+    "transpiler",
+    "transpilation",
+    "compilation",
+    "transform",
+    "syntax",
+    "ast"
+  ],
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha --reporter spec --compilers js:babel/register test/tests.js"
+  },
+  "homepage": "https://github.com/meteor/babel",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meteor/babel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/meteor/babel/issues"
+  },
+  "dependencies": {
+    "babel": "5.5.6"
+  },
+  "devDependencies": {
+    "mocha": "^2.2.5"
+  }
+}
