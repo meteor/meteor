@@ -68,15 +68,15 @@ selftest.define("run", function () {
 
   // Bundle failure
   s.unlink("crash.js");
-  s.write("junk.js", "]");
+  s.write("junk.css", "/*");
   run.waitSecs(5);
   run.match("Modified");
   run.match("prevented startup");
-  run.match("Unexpected token");
+  run.match("End of comment missing");
   run.match("file change");
 
   // Back to working
-  s.unlink("junk.js");
+  s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
 
@@ -110,14 +110,14 @@ selftest.define("run", function () {
   run.stop();
 
   // How about a bundle failure right at startup
-  s.write("junk.js", "]");
+  s.write("junk.css", "/*");
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(5);
   run.match("prevented startup");
-  run.match("Unexpected token");
+  run.match("End of comment missing");
   run.match("file change");
-  s.unlink("junk.js");
+  s.unlink("junk.css");
   run.waitSecs(5);
   run.match("restarted");
   run.stop();
@@ -151,13 +151,13 @@ selftest.define("run --once", ["yet-unsolved-windows-failure"], function () {
 
   // run --once, bundle failure
   s.set("RUN_ONCE_OUTCOME", "exit");
-  s.write("junk.js", "]");
+  s.write("junk.css", "/*");
   run = s.run("--once");
   run.waitSecs(5);
   run.matchErr("Build failed");
-  run.matchErr("Unexpected token");
+  run.matchErr("End of comment missing");
   run.expectExit(254);
-  s.unlink("junk.js");
+  s.unlink("junk.css");
 
   // file changes don't make it restart
   s.set("RUN_ONCE_OUTCOME", "hang");
@@ -323,7 +323,7 @@ selftest.define("run with mongo crash", ["checkout"], function () {
 
   // Now create a build failure. Make sure that killing mongod three times
   // *also* successfully quits even if we're waiting on file change.
-  s.write('bad.js', ']');
+  s.write('bad.css', '/*');
   run = s.run();
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
