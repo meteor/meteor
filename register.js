@@ -80,6 +80,12 @@ function babelHandler(module, filename) {
       JSON.stringify(result) + "\n",
       { encoding: "utf8", flag: "wx" },
       function (error) {
+        if (error.code === "EEXIST") {
+          // Opening the file with the exclusive (x) flag failed because
+          // the file already existed, which is not a problem.
+          return;
+        }
+
         // Errors encountered while persisting cache files to disk will
         // not prevent the program from working, so should not be fatal.
         console.error(error.stack);
