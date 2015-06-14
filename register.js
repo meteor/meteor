@@ -1,38 +1,20 @@
+var assert = require("assert");
 var path = require("path");
 var fs = require("fs");
-var babelOptions = require("./options");
 var hasOwn = Object.hasOwnProperty;
 var defaultHandler = require.extensions[".js"];
+var homeDir = process.env.HOME || process.env.USERPROFILE;
+var config = {
+  version: require("./package.json").version,
+  cacheDir: path.join(homeDir, ".babel-cache"),
+  babelOptions: require("./options")
+};
 
-// TODO Make sure this directory is writable.
-var cacheDir = path.join(__dirname, ".result-cache");
-
-function shouldNotTransform(filename) {
-  return path.relative(__dirname, filename)
-    .split(path.sep)
-    .indexOf("node_modules") >= 0;
-}
-
-function getCache() {
-  if (! hasOwn.call(getCache, "_cache")) {
-    if (! fs.existsSync(cacheDir)) {
-      fs.mkdirSync(cacheDir);
-    }
-
-    getCache._cache = {};
-
-    fs.readdirSync(cacheDir).forEach(function (cacheFile) {
-      if (/\.json$/.test(cacheFile)) {
-        // Avoid actually reading the files until we know we need their
-        // contents, but record the filename so that we can quickly check
-        // whether a cached file exists on disk or not.
-        getCache._cache[cacheFile] = true;
-      }
-    });
-  }
-
-  return getCache._cache;
-}
+module.exports = function reconfigure(newConfig) {
+  Object.keys(newConfig).forEach(function (key) {
+    config[key] = newConfig[key];
+  });
+};
 
 require.extensions[".js"] = function(module, filename) {
   if (shouldNotTransform(filename)) {
@@ -42,17 +24,62 @@ require.extensions[".js"] = function(module, filename) {
   }
 };
 
+function shouldNotTransform(filename) {
+  return path.relative(__dirname, filename)
+    .split(path.sep)
+    .indexOf("node_modules") >= 0;
+}
+
+function getCache() {
+  var cacheDir = config.cacheDir;
+
+  if (! hasOwn.call(getCache, cacheDir)) {
+    mkdirp(cacheDir);
+    var cache = getCache[cacheDir] = {};
+
+    fs.readdirSync(cacheDir).forEach(function (cacheFile) {
+      if (/\.json$/.test(cacheFile)) {
+        // Avoid actually reading the files until we know we need their
+        // contents, but record the filename so that we can quickly check
+        // whether a cached file exists on disk or not.
+        cache[cacheFile] = true;
+      }
+    });
+  }
+
+  return getCache[cacheDir];
+}
+
+function mkdirp(dir) {
+  if (! fs.existsSync(dir)) {
+    var parentDir = path.dirname(dir);
+    if (parentDir !== dir) {
+      mkdirp(parentDir);
+    }
+
+    try {
+      fs.mkdirSync(dir);
+    } catch (error) {
+      if (error.code !== "EEXIST") {
+        throw error;
+      }
+    }
+  }
+
+  return dir;
+}
+
 function babelHandler(module, filename) {
   var source = fs.readFileSync(filename, "utf8");
   var cache = getCache();
   var cacheFile = deepHash([
-    filename,
     // Though it's tempting to include babel.version in this hash, we
     // don't want to call require("babel") unless we really have to, and
     // the package version should be good enough, especially if we make it
     // identical to babel.version.
-    require("./package.json").version,
-    babelOptions,
+    config.version,
+    config.babelOptions,
+    filename,
     source
   ]) + ".json";
   var result;
@@ -62,7 +89,7 @@ function babelHandler(module, filename) {
     if (result === true) {
       try {
         result = cache[cacheFile] =
-          require(path.join(cacheDir, cacheFile));
+          require(path.join(config.cacheDir, cacheFile));
       } catch (error) {
         console.error(error.stack);
       }
@@ -71,12 +98,12 @@ function babelHandler(module, filename) {
 
   if (! result) {
     result = cache[cacheFile] =
-      require("babel-core").transform(source, babelOptions);
+      require("babel-core").transform(source, config.babelOptions);
 
     // Use the asynchronous version of fs.writeFile so that we don't slow
     // down require by waiting for cache files to be written.
     fs.writeFile(
-      path.join(cacheDir, cacheFile),
+      path.join(config.cacheDir, cacheFile),
       JSON.stringify(result) + "\n",
       { encoding: "utf8", flag: "wx" },
       function (error) {
