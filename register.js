@@ -3,7 +3,7 @@ var path = require("path");
 var fs = require("fs");
 var hasOwn = Object.hasOwnProperty;
 var defaultHandler = require.extensions[".js"];
-var homeDir = process.env.HOME || process.env.USERPROFILE;
+var homeDir = process.env.HOME || process.env.USERPROFILE || __dirname;
 var config = {
   version: require("./package.json").version,
   cacheDir: path.join(homeDir, ".babel-cache"),
