@@ -29,6 +29,11 @@ require.extensions[".js"] = function(module, filename) {
 };
 
 function shouldNotTransform(filename) {
+  if (path.resolve(filename) !==
+      path.normalize(filename)) {
+    return true;
+  }
+
   return path.relative(__dirname, filename)
     .split(path.sep)
     .indexOf("node_modules") >= 0;
