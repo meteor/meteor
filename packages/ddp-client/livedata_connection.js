@@ -31,7 +31,7 @@ var Connection = function (url, options) {
     onDDPVersionNegotiationFailure: function (description) {
       Meteor._debug(description);
     },
-    heartbeatInterval: 35000,
+    heartbeatInterval: 17500,
     heartbeatTimeout: 15000,
     // These options are only for testing.
     reloadWithOutstanding: false,

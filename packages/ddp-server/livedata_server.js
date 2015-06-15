@@ -1226,7 +1226,7 @@ Server = function (options) {
   // Note: Troposphere depends on the ability to mutate
   // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
   self.options = _.defaults(options || {}, {
-    heartbeatInterval: 30000,
+    heartbeatInterval: 15000,
     heartbeatTimeout: 15000,
     // For testing, allow responding to pings to be disabled.
     respondToPings: true
