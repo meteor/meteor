@@ -842,10 +842,17 @@ _.extend(Target.prototype, {
       }
     });
 
-    var allJs = _.pluck(sources, '_minified').join("\n\n");
+    self.js = _.flatten(_.map(sources, function (source) {
+      return _.map(source._minifiedFiles, function (file) {
+        var newFile = new File({
+          info: 'minified js',
+          data: new Buffer(file.data, 'utf8')
+        });
+        newFile.setUrlToHash('.js');
 
-    self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
-    self.js[0].setUrlToHash('.js');
+        return newFile;
+      });
+    }));
   }),
 
   // Add a Cordova plugin dependency to the target. If the same plugin
@@ -1025,10 +1032,17 @@ _.extend(ClientTarget.prototype, {
       }
     });
 
-    var allCss = _.pluck(sources, '_minified').join("\n");
+    self.css = _.flatten(_.map(sources, function (source) {
+      return _.map(source._minifiedFiles, function (file) {
+        var newFile = new File({
+          info: 'minified css',
+          data: new Buffer(file.data, 'utf8')
+        });
+        newFile.setUrlToHash('.css', '?meteor_css_resource=true');
 
-    self.css = [new File({ info: 'minified css', data: new Buffer(allCss, 'utf8') })];
-    self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
+        return newFile;
+      });
+    }));
   }),
 
   // Output the finished target to disk

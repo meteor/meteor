@@ -17,12 +17,13 @@ UglifyJSMinifier.prototype.processFilesForTarget = function (files) {
     }
   };
 
+  var allJs = '';
   files.forEach(function (file) {
-    file.addJavaScript({
-      data: UglifyJSMinify(
-        file.getContentsAsString(), minifyOptions).code
-      });
+    allJs += UglifyJSMinify(file.getContentsAsString(), minifyOptions).code;
+    allJs += '\n\n';
   });
+
+  files[0].addJavaScript({ data: allJs });
 };
 
 

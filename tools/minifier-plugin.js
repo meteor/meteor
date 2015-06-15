@@ -7,7 +7,7 @@ var InputFile = exports.InputFile = function (source) {
 
   var self = this;
   self._source = source;
-  self._minified = source.contents('utf8');
+  self._minifiedFiles = [];
 };
 
 util.inherits(InputFile, buildPluginModule.InputFile);
@@ -35,7 +35,9 @@ _.extend(JsFile.prototype, {
   // - hash?
   addJavaScript: function (options) {
     var self = this;
-    self._minified = options.data.toString('utf8');
+    self._minifiedFiles.push({
+      data: options.data.toString('utf8')
+    });
   }
 });
 
@@ -50,7 +52,9 @@ _.extend(CssFile.prototype, {
   // - hash?
   addStylesheet: function (options) {
     var self = this;
-    self._minified = options.data.toString('utf8');
+    self._minifiedFiles.push({
+      data: options.data.toString('utf8')
+    });
   }
 });
 
