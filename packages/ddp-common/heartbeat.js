@@ -84,9 +84,10 @@ _.extend(DDPCommon.Heartbeat.prototype, {
 
   messageReceived: function () {
     var self = this;
-    // Tell periodic checkin that we're fine
+    // Tell periodic checkin that we have seen a packet, and thus it
+    // does not need to send a ping this cycle.
     self._seenPacket = true;
-    // If we were waiting for a pong, clear this.
+    // If we were waiting for a pong, we got it.
     if (self._heartbeatTimeoutHandle) {
       self._clearHeartbeatTimeoutTimer();
     }
