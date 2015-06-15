@@ -24,7 +24,10 @@ require.extensions[".js"] = function(module, filename) {
   if (shouldNotTransform(filename)) {
     defaultHandler(module, filename);
   } else {
-    babelHandler(module, filename);
+    module._compile(
+      getBabelResult(filename).code,
+      filename
+    );
   }
 };
 
@@ -78,7 +81,7 @@ function mkdirp(dir) {
   return dir;
 }
 
-function babelHandler(module, filename) {
+function getBabelResult(filename) {
   var source = fs.readFileSync(filename, "utf8");
   var cache = getCache();
   var cacheFile = deepHash([
@@ -139,7 +142,7 @@ function babelHandler(module, filename) {
     require("babel-core/external-helpers");
   }
 
-  module._compile(result.code, filename);
+  return result;
 }
 
 // Borrowed from another MIT-licensed project that I wrote:
