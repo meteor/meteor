@@ -130,7 +130,7 @@
                   "version": "2.14.0"
                 },
                 "boom": {
-                  "version": "2.7.2"
+                  "version": "2.8.0"
                 },
                 "cryptiles": {
                   "version": "2.0.4"
@@ -147,7 +147,7 @@
               "version": "0.0.4"
             },
             "combined-stream": {
-              "version": "1.0.3",
+              "version": "1.0.5",
               "dependencies": {
                 "delayed-stream": {
                   "version": "1.0.0"
@@ -161,7 +161,7 @@
               "version": "1.7.1",
               "dependencies": {
                 "bluebird": {
-                  "version": "2.9.27"
+                  "version": "2.9.30"
                 },
                 "chalk": {
                   "version": "1.0.0",

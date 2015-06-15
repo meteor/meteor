@@ -8,12 +8,21 @@ Plugin.registerMinifier({
 function CssToolsMinifier () {};
 
 CssToolsMinifier.prototype.processFilesForTarget = function (files) {
-  CssTools.blessCss();
+  var allCss = '';
   files.forEach(function (file) {
-    file.addStylesheet({
-      data: CssTools.minifyCss(file.getContentsAsString())
-    });
+    allCss += file.getContentsAsString();
+    allCss += '\n';
   });
+
+  var minifiedFiles = CssTools.minifyCss(allCss);
+
+  if (files.length) {
+    minifiedFiles.forEach(function (minified) {
+      files[0].addStylesheet({
+        data: minified
+      });
+    });
+  }
 };
 
 

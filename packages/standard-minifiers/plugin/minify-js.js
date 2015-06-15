@@ -21,9 +21,13 @@ UglifyJSMinifier.prototype.processFilesForTarget = function (files) {
   files.forEach(function (file) {
     allJs += UglifyJSMinify(file.getContentsAsString(), minifyOptions).code;
     allJs += '\n\n';
+
+    Plugin.nudge();
   });
 
-  files[0].addJavaScript({ data: allJs });
+  if (files.length) {
+    files[0].addJavaScript({ data: allJs });
+  }
 };
 
 

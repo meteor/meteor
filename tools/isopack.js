@@ -704,6 +704,10 @@ _.extend(Isopack.prototype, {
           methodName: "registerMinifier",
           skipUniqExtCheck: false
         });
+      },
+
+      nudge: function () {
+        Console.nudge(true);
       }
     };
     return Plugin;
