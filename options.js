@@ -18,6 +18,7 @@ exports.getDefaults = function getDefaults() {
       "es6.parameters.rest",
       "es6.parameters.default",
       "es6.spread",
+      "es7.objectRestSpread",
       "es6.destructuring",
       "es6.modules",
       "flow"
