@@ -140,7 +140,14 @@ function deepHash(val) {
 
   switch (type) {
   case "object":
-    Object.keys(val).sort().forEach(function(key) {
+    var keys = Object.keys(val);
+
+    // Array keys will already be sorted.
+    if (! Array.isArray(val)) {
+      keys.sort();
+    }
+
+    keys.forEach(function(key) {
       if (typeof val[key] === "function") {
         // Silently ignore nested methods, but nevertheless complain below
         // if the root value is a function.
@@ -149,6 +156,7 @@ function deepHash(val) {
 
       hash.update(key + "\0").update(deepHash(val[key]));
     });
+
     break;
 
   case "function":
