@@ -9,10 +9,10 @@ exports.getDefaults = function getDefaults() {
     // http://babeljs.io/docs/usage/loose/
     loose: ["all", "es6.modules"],
     whitelist: [
-      'es6.arrowFunctions',
-      'es6.templateLiterals',
-      'es6.classes',
-      'es6.blockScoping',
+      "es6.arrowFunctions",
+      "es6.templateLiterals",
+      "es6.classes",
+      "es6.blockScoping",
       "es6.properties.shorthand",
       "es6.properties.computed",
       "es6.parameters.rest",
