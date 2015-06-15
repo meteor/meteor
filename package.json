@@ -18,7 +18,7 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "mocha --reporter spec --compilers js:meteor-babel/register test/tests.js"
+    "test": "mocha --reporter spec --full-trace --compilers js:meteor-babel/register test/tests.js"
   },
   "homepage": "https://github.com/meteor/babel",
   "repository": {
