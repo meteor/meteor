@@ -66,7 +66,12 @@ _.extend(DDPCommon.Heartbeat.prototype, {
   // The heartbeat interval timer is fired when we should send a ping.
   _heartbeatIntervalFired: function () {
     var self = this;
-    if (! self._seenPacket) {
+    // don't send ping if we've seen a packet since we last checked,
+    // *or* if we have already sent a ping and are awaiting a timeout.
+    // That shouldn't happen, but it's possible if
+    // `self.heartbeatInterval` is smaller than
+    // `self.heartbeatTimeout`.
+    if (! self._seenPacket && ! self._heartbeatTimeoutHandle) {
       self._sendPing();
       // Set up timeout, in case a pong doesn't arrive in time.
       self._startHeartbeatTimeoutTimer();
