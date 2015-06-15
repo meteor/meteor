@@ -3,11 +3,15 @@ var path = require("path");
 var fs = require("fs");
 var hasOwn = Object.hasOwnProperty;
 var defaultHandler = require.extensions[".js"];
-var homeDir = process.env.HOME || process.env.USERPROFILE || __dirname;
+
 var config = {
   version: require("./package.json").version,
-  cacheDir: path.join(homeDir, ".babel-cache"),
-  babelOptions: require("./options")
+  cacheDir: process.env.BABEL_CACHE_DIR ||
+    path.join(
+      process.env.HOME || process.env.USERPROFILE || __dirname,
+      ".babel-cache"
+    ),
+  babelOptions: require("./options").getDefaults()
 };
 
 module.exports = function reconfigure(newConfig) {
@@ -92,11 +96,16 @@ function babelHandler(module, filename) {
           require(path.join(config.cacheDir, cacheFile));
       } catch (error) {
         console.error(error.stack);
+        // Fall through to re-transform the file below.
       }
     }
   }
 
   if (! result) {
+    if (config.babelOptions.sourceMap) {
+      config.babelOptions.sourceFileName = filename;
+    }
+
     result = cache[cacheFile] =
       require("babel-core").transform(source, config.babelOptions);
 

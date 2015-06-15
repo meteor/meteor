@@ -1,8 +1,13 @@
-exports.compile = function compile(source) {
-  return require("babel-core").transform(
-    source,
-    require("./options")
-  );
+var getDefaultOptions = require("./options").getDefaults;
+
+// Options passed to compile will completely replace the default options,
+// so if you only want to modify the default options, call this function
+// first, modify the result, and then pass those options to compile.
+exports.getDefaultOptions = getDefaultOptions;
+
+exports.compile = function compile(source, options) {
+  options = options || getDefaultOptions();
+  return require("babel-core").transform(source, options);
 };
 
 exports.runtime = function runtime() {
