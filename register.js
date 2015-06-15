@@ -112,6 +112,7 @@ function getBabelResult(filename) {
   if (! result) {
     if (config.babelOptions.sourceMap) {
       config.babelOptions.sourceFileName = filename;
+      config.babelOptions.sourceMapName = filename + ".map";
     }
 
     result = cache[cacheFile] =
