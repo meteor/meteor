@@ -503,20 +503,22 @@ _.extend(Session.prototype, {
     // needs a Fiber. We could actually use regular setTimeout and avoid
     // these new fibers, but it is easier to just make everything use
     // Meteor.setTimeout and not think too hard.
+    //
+    // Any message counts as receiving a pong, as it demonstrates that
+    // the client is still alive.
+    if (self.heartbeat) {
+      Fiber(function () {
+        self.heartbeat.messageReceived();
+      }).run();
+    }
+
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
         self.send({msg: "pong", id: msg_in.id});
-      if (self.heartbeat)
-        Fiber(function () {
-          self.heartbeat.pingReceived();
-        }).run();
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
-      if (self.heartbeat)
-        Fiber(function () {
-          self.heartbeat.pongReceived();
-        }).run();
+      // Since everything is a pong, nothing to do
       return;
     }
 
@@ -1224,7 +1226,7 @@ Server = function (options) {
   // Note: Troposphere depends on the ability to mutate
   // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
   self.options = _.defaults(options || {}, {
-    heartbeatInterval: 30000,
+    heartbeatInterval: 15000,
     heartbeatTimeout: 15000,
     // For testing, allow responding to pings to be disabled.
     respondToPings: true

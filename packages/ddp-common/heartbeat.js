@@ -12,6 +12,7 @@ DDPCommon.Heartbeat = function (options) {
   self.heartbeatTimeout = options.heartbeatTimeout;
   self._sendPing = options.sendPing;
   self._onTimeout = options.onTimeout;
+  self._seenPacket = false;
 
   self._heartbeatIntervalHandle = null;
   self._heartbeatTimeoutHandle = null;
@@ -32,7 +33,7 @@ _.extend(DDPCommon.Heartbeat.prototype, {
 
   _startHeartbeatIntervalTimer: function () {
     var self = this;
-    self._heartbeatIntervalHandle = Meteor.setTimeout(
+    self._heartbeatIntervalHandle = Meteor.setInterval(
       _.bind(self._heartbeatIntervalFired, self),
       self.heartbeatInterval
     );
@@ -49,7 +50,7 @@ _.extend(DDPCommon.Heartbeat.prototype, {
   _clearHeartbeatIntervalTimer: function () {
     var self = this;
     if (self._heartbeatIntervalHandle) {
-      Meteor.clearTimeout(self._heartbeatIntervalHandle);
+      Meteor.clearInterval(self._heartbeatIntervalHandle);
       self._heartbeatIntervalHandle = null;
     }
   },
@@ -65,10 +66,17 @@ _.extend(DDPCommon.Heartbeat.prototype, {
   // The heartbeat interval timer is fired when we should send a ping.
   _heartbeatIntervalFired: function () {
     var self = this;
-    self._heartbeatIntervalHandle = null;
-    self._sendPing();
-    // Wait for a pong.
-    self._startHeartbeatTimeoutTimer();
+    // don't send ping if we've seen a packet since we last checked,
+    // *or* if we have already sent a ping and are awaiting a timeout.
+    // That shouldn't happen, but it's possible if
+    // `self.heartbeatInterval` is smaller than
+    // `self.heartbeatTimeout`.
+    if (! self._seenPacket && ! self._heartbeatTimeoutHandle) {
+      self._sendPing();
+      // Set up timeout, in case a pong doesn't arrive in time.
+      self._startHeartbeatTimeoutTimer();
+    }
+    self._seenPacket = false;
   },
 
   // The heartbeat timeout timer is fired when we sent a ping, but we
@@ -79,24 +87,14 @@ _.extend(DDPCommon.Heartbeat.prototype, {
     self._onTimeout();
   },
 
-  pingReceived: function () {
+  messageReceived: function () {
     var self = this;
-    // We know the connection is alive if we receive a ping, so we
-    // don't need to send a ping ourselves.  Reset the interval timer.
-    if (self._heartbeatIntervalHandle) {
-      self._clearHeartbeatIntervalTimer();
-      self._startHeartbeatIntervalTimer();
-    }
-  },
-
-  pongReceived: function () {
-    var self = this;
-
-    // Receiving a pong means we won't timeout, so clear the timeout
-    // timer and start the interval again.
+    // Tell periodic checkin that we have seen a packet, and thus it
+    // does not need to send a ping this cycle.
+    self._seenPacket = true;
+    // If we were waiting for a pong, we got it.
     if (self._heartbeatTimeoutHandle) {
       self._clearHeartbeatTimeoutTimer();
-      self._startHeartbeatIntervalTimer();
     }
   }
 });
