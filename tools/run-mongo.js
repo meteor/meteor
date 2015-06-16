@@ -87,7 +87,7 @@ if (process.platform === 'win32') {
           child_process.exec('netstat -ano', function (error, stdout, stderr) {
             if (error) {
               fut['throw'](new Error("Couldn't run netstat -ano: " +
-                JSON.stringify(error)));
+                error));
               return;
             } else {
               var pids = [];
