@@ -7,10 +7,8 @@ html_scanner = {
   // and ignores top-level HTML comments.
 
   // Has fields 'message', 'line', 'file'
-  ParseError: function () {
-  },
-
-  bodyAttributes : [],
+  ParseError: function () {},
+  BodyAttrsError: function () {},
 
   scan: function (contents, source_name) {
     var rest = contents;
@@ -21,13 +19,22 @@ html_scanner = {
       index += amount;
     };
 
-    var throwParseError = function (msg, overrideIndex) {
-      var ret = new html_scanner.ParseError;
-      ret.message = msg || "bad formatting in template file";
+    var throwSpecialError = function (msg, errorClass, overrideIndex) {
+      var ret = new errorClass;
+      ret.message = msg;
       ret.file = source_name;
       var theIndex = (typeof overrideIndex === 'number' ? overrideIndex : index);
       ret.line = contents.substring(0, theIndex).split('\n').length;
       throw ret;
+    };
+    var throwParseError = function (msg, overrideIndex) {
+      throwSpecialError(
+        msg || "bad formatting in template file",
+        html_scanner.ParseError,
+        overrideIndex);
+    };
+    var throwBodyAttrsError = function (msg) {
+      throwSpecialError(msg, html_scanner.BodyAttrsError);
     };
 
     var results = html_scanner._initResults();
@@ -101,6 +108,10 @@ html_scanner = {
       var tagContents = rest.slice(0, end.index);
       var contentsStartIndex = index;
 
+      if (tagName === 'body') {
+        this._addBodyAttrs(results, tagAttribs, throwBodyAttrsError);
+      }
+
       // act on the tag
       html_scanner._handleTag(results, tagName, tagAttribs, tagContents,
                               throwParseError, contentsStartIndex,
@@ -118,7 +129,21 @@ html_scanner = {
     results.head = '';
     results.body = '';
     results.js = '';
+    results.bodyAttrs = {};
     return results;
+  },
+
+  _addBodyAttrs: function (results, attrs, throwBodyAttrsError) {
+    Object.keys(attrs).forEach(function (attr) {
+      var val = attrs[attr];
+
+      if (results.bodyAttrs.hasOwnProperty(attr) && results.bodyAttrs[attr] !== val) {
+        throwBodyAttrsError(
+          "<body> declarations have conflicting values for the '" + attr + "' attribute.");
+      }
+
+      results.bodyAttrs[attr] = val;
+    });
   },
 
   _handleTag: function (results, tag, attribs, contents, throwParseError,
@@ -173,9 +198,6 @@ html_scanner = {
       } else {
         // <body>
         if (hasAttribs) {
-          // XXX we would want to throw an error here if we have duplicate
-          // attributes, but this is complex to do with the current build system
-          // so we won't.
           results.js += "\nMeteor.startup(function() { $('body').attr(" + JSON.stringify(attribs) + "); });\n";
         }
 
