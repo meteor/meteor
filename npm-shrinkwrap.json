@@ -1,6 +1,6 @@
 {
   "name": "meteor-babel",
-  "version": "0.1.5",
+  "version": "0.1.10",
   "dependencies": {
     "babel-core": {
       "version": "5.5.7",
@@ -612,22 +612,27 @@
       "from": "convert-source-map@^1.1.1",
       "resolved": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-1.1.1.tgz"
     },
-    "source-map-support": {
-      "version": "0.3.1",
-      "from": "source-map-support@^0.3.1",
-      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.3.1.tgz",
+    "meteor-promise": {
+      "version": "0.2.2",
+      "from": "meteor-promise@^0.2.2",
+      "resolved": "https://registry.npmjs.org/meteor-promise/-/meteor-promise-0.2.2.tgz",
       "dependencies": {
-        "source-map": {
-          "version": "0.1.32",
-          "from": "source-map@0.1.32",
-          "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.1.32.tgz",
+        "promise": {
+          "version": "7.0.3",
+          "from": "promise@~7.0.1",
+          "resolved": "https://registry.npmjs.org/promise/-/promise-7.0.3.tgz",
           "dependencies": {
-            "amdefine": {
-              "version": "0.1.1",
-              "from": "amdefine@>=0.0.4",
-              "resolved": "https://registry.npmjs.org/amdefine/-/amdefine-0.1.1.tgz"
+            "asap": {
+              "version": "2.0.3",
+              "from": "asap@~2.0.3",
+              "resolved": "https://registry.npmjs.org/asap/-/asap-2.0.3.tgz"
             }
           }
+        },
+        "fibers": {
+          "version": "1.0.5",
+          "from": "fibers@~1.0.5",
+          "resolved": "https://registry.npmjs.org/fibers/-/fibers-1.0.5.tgz"
         }
       }
     }
