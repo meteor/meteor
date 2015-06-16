@@ -1,5 +1,14 @@
 ## v.NEXT
 
+
+### Utilities
+
+* New `beforeSend` option to `HTTP.call` on the client allows you to directly
+  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
+
+
+## in progress: v.1.1.1
+
 ### Blaze
 
 * Preparatory work for the yet-unreleased `react-template-helper`
