@@ -679,9 +679,8 @@ _.extend(Isopack.prototype, {
         );
       },
 
-      // XXX BBP make this method _doNotCallThisDirectly_
       // XXX BBP doc
-      registerLinter: function (options, factory) {
+      _doNotCallThisDirectly_registerLinter: function (options, factory) {
         Plugin._registerSourceProcessor(options, factory, {
           type: "linter",
           methodName: "registerLinter",
@@ -691,19 +690,36 @@ _.extend(Isopack.prototype, {
         });
       },
 
-      // XXX BBP make this method _doNotCallThisDirectly_
+      // This function gets overridden in your plugin when it uses
+      // linter-plugin.
+      registerLinter: function () {
+        buildmessage.error(
+          "your plugin must `use: ['linter-plugin']` in order to call "
+            + "Plugin.registerLinter"
+        );
+      },
+
       // The minifier plugins can fill into 2 types of minifiers: CSS or JS.
       // When the minifier is added to an app, it is used during "bundling" to
       // compress the app code and each package's code separately.
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
-      registerMinifier: function (options, factory) {
+      _doNotCallThisDirectly_registerMinifier: function (options, factory) {
         // XXX check options.extensions for uniquely having only js and css
         Plugin._registerSourceProcessor(options, factory, {
           type: "minifier",
           methodName: "registerMinifier",
           skipUniqExtCheck: false
         });
+      },
+
+      // This function gets overridden in your plugin when it uses
+      // minifier-plugin.
+      registerMinifier: function () {
+        buildmessage.error(
+          "your plugin must `use: ['minifier-plugin']` in order to call "
+            + "Plugin.registerMinifier"
+        );
       },
 
       nudge: function () {

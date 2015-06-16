@@ -8,6 +8,7 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "minifyStd",
   use: [
+    'minifier-plugin',
     'minifiers'
   ],
   sources: [

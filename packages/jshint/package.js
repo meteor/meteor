@@ -7,6 +7,9 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "lintJshint",
+  use: [
+    'linter-plugin'
+  ],
   sources: [
     'plugin/lint-jshint.js'
   ],
