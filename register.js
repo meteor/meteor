@@ -123,22 +123,31 @@ function getBabelResult(filename) {
     filename,
     source
   ]) + ".json";
+  var fullCacheFile = path.join(config.cacheDir, cacheFile);
   var result;
 
   if (hasOwn.call(cache, cacheFile)) {
     result = cache[cacheFile];
     if (result === true) {
       try {
-        result = cache[cacheFile] =
-          require(path.join(config.cacheDir, cacheFile));
+        result = cache[cacheFile] = require(fullCacheFile);
       } catch (error) {
-        console.error(error.stack);
-        // Fall through to re-transform the file below.
+        fs.unlinkSync(fullCacheFile);
+        result = cache[cacheFile] = false;
+
+        if (error.message.indexOf("Unexpected end of input") >= 0) {
+          // The cache file was not written completely, probably because
+          // we use the asynchronous version of fs.writeFile, and the
+          // program exited too soon. Fall through to transform again.
+        } else {
+          // Some other problem occurred that we should know about.
+          console.error(error.stack);
+        }
       }
     }
   }
 
-  if (! result) {
+  if (typeof result !== "object") {
     if (config.babelOptions.sourceMap) {
       config.babelOptions.filename = filename;
       config.babelOptions.sourceFileName = filename;
@@ -151,7 +160,7 @@ function getBabelResult(filename) {
     // Use the asynchronous version of fs.writeFile so that we don't slow
     // down require by waiting for cache files to be written.
     fs.writeFile(
-      path.join(config.cacheDir, cacheFile),
+      fullCacheFile,
       JSON.stringify(result) + "\n",
       { encoding: "utf8", flag: "wx" },
       function (error) {
