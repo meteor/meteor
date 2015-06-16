@@ -30,7 +30,8 @@
   },
   "dependencies": {
     "babel-core": "5.5.7",
-    "convert-source-map": "^1.1.1"
+    "convert-source-map": "^1.1.1",
+    "meteor-promise": "^0.2.2"
   },
   "devDependencies": {
     "mocha": "^2.2.5"

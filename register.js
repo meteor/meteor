@@ -179,7 +179,7 @@ function getBabelResult(filename) {
 
   var usedHelpers = result.metadata.usedHelpers;
   if (usedHelpers && usedHelpers.length > 0) {
-    require("babel-core/external-helpers");
+    require("./index.js").runtime();
   }
 
   return result;
