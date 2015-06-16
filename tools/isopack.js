@@ -646,7 +646,7 @@ _.extend(Isopack.prototype, {
             factoryFunction: factory
           });
         _.each(options.extensions, function (ext) {
-          pluginSourceExtensions[ext] = true;
+          pluginSourceExtensions[type][ext] = true;
         });
       },
 
@@ -705,7 +705,24 @@ _.extend(Isopack.prototype, {
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
       _doNotCallThisDirectly_registerMinifier: function (options, factory) {
-        // XXX check options.extensions for uniquely having only js and css
+        var badUsedExtenssion = _.find(options.extensions, function (ext) {
+          return ! _.contains(['js', 'css'], ext);
+        });
+
+        if (badUsedExtenssion !== undefined) {
+          buildmessage.error(badUsedExtenssion + ': Minifiers are only allowed to register "css" or "js" extensions.');
+          return;
+        }
+
+        var alreadyRegisteredExtenssion = _.find(options.extensions, function (ext) {
+          return !! (pluginSourceExtensions.minifier || {})[ext];
+        });
+
+        if (alreadyRegisteredExtenssion !== undefined) {
+          buildmessage.error(alreadyRegisteredExtenssion + ': Packages are not allowed to register more than one minifier for the same extension per application.');
+          return;
+        }
+
         Plugin._registerSourceProcessor(options, factory, {
           type: "minifier",
           methodName: "registerMinifier",
