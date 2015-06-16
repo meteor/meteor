@@ -107,9 +107,6 @@ _.extend(InputFile.prototype, {
   getSourceHash: function () {
     return this._resourceSlot.inputResource.hash;
   },
-  getExtension: function () {
-    return this._resourceSlot.inputResource.extension;
-  },
 
   /**
    * @summary Returns a list of symbols declared as exports in this target. The
@@ -188,6 +185,21 @@ _.extend(InputFile.prototype, {
   addAsset: function (options) {
     var self = this;
     self._resourceSlot.addAsset(options);
+  },
+
+  /**
+   * @summary Works in web targets only. Add markup to the `head` or `body`
+   * section of the document.
+   * @param  {Object} options
+   * @param {String} options.section Which section of the document should
+   * be appended to. Can only be "head" or "body".
+   * @param {String} options.data The content to append.
+   * @memberOf InputFile
+   * @instance
+   */
+  addHtml: function (options) {
+    var self = this;
+    self._resourceSlot.addHtml(options);
   }
 });
 
@@ -315,6 +327,23 @@ _.extend(ResourceSlot.prototype, {
       servePath: colonConverter.convert(
         files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
       hash: options.hash
+    });
+  },
+  addHtml: function (options) {
+    var self = this;
+    var unibuild = self.packageSourceBatch.unibuild;
+
+    if (! archinfo.matches(unibuild.arch, "web"))
+      throw new Error("Document sections can only be emitted to " +
+                      "web targets");
+    if (options.section !== "head" && options.section !== "body")
+      throw new Error("'section' must be 'head' or 'body'");
+    if (typeof options.data !== "string")
+      throw new Error("'data' option to appendDocument must be a string");
+
+    self.outputResources.push({
+      type: options.section,
+      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
     });
   }
 });
@@ -458,7 +487,6 @@ _.extend(PackageSourceBatch.prototype, {
 
     // Run the linker.
     var isApp = ! self.unibuild.pkg.name;
-    // XXX BBP surely this needs some kind of caching.
     var linkedFiles = linker.fullLink({
       inputFiles: jsResources,
       useGlobalNamespace: isApp,
