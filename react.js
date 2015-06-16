@@ -16,7 +16,9 @@ ReactComponentSiblingForbidder.def({
   visitObject: function (obj, parentTag) {
     if (obj.type === "INCLUSION" && obj.path.length === 1 && obj.path[0] === "React") {
       if (!parentTag) {
-        throw new Error("{{> React}} must be used in a container element");
+        throw new Error(
+          "{{> React}} must be used in a container element"
+            + (this.sourceName ? (" in " + this.sourceName) : ""));
       }
 
       var numSiblings = 0;
@@ -28,7 +30,9 @@ ReactComponentSiblingForbidder.def({
       }
 
       if (numSiblings > 0) {
-        throw new Error("{{> React}} must be used as the only child in a container element");
+        throw new Error(
+          "{{> React}} must be used as the only child in a container element"
+            + (this.sourceName ? (" in " + this.sourceName) : ""));
       }
     }
   },
