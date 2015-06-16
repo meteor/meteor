@@ -454,20 +454,18 @@ testAsyncMulti("httpcall - npmRequestOptions", [
   }
 ]);
 
-testAsyncMulti("httpcall - beforeSend", [
+Meteor.isClient && testAsyncMulti("httpcall - beforeSend", [
   function (test, expect) {
     var fired = false;
     var bSend = function(xhr){
       test.isFalse(fired);
       fired = true;
-      test.isTrue(temp1 instanceof XMLHttpRequest);
+      test.isTrue(xhr instanceof XMLHttpRequest);
     };
 
-    if (Meteor.isClient) {
-      HTTP.get(url_prefix() + "/", {beforeSend: bSend}, function () {
-        test.isTrue(fired)
-      });
-    }
+    HTTP.get(url_prefix() + "/", {beforeSend: bSend}, expect(function () {
+      test.isTrue(fired);
+    }));
   }
 ]);
 
