@@ -186,5 +186,5 @@ selftest.define("compiler plugin caching - local plugin", function () {
 
   run.stop();
 
-  // XXX BBP test that cache gets reused but deleted at the right time
+  // XXX BBP test that on-disk cache gets reused but deleted at the right time
 });

@@ -581,26 +581,6 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
   "and Firefox, and by Internet Explorer 11."
 ]);
 
-// Finish the linking.
-//
-// options include:
-//
-// imports: symbols to import. map from symbol name (something like
-// 'Foo', "Foo.bar", etc) to the module from which it should be
-// imported (which must load before us at runtime)
-//
-// packageVariables: package-scope variables, some of which may be exports.
-//   a list of {name, export} objects; any non-falsy value for "export" means
-//   to export it.
-//
-// useGlobalNamespace: must be the same value that was passed to link()
-//
-// prelinkFiles: the 'files' output from prelink()
-//
-// Output is an array of final output files in the same format as the
-// 'inputFiles' argument to prelink().
-// XXX BBP delete comment
-
 var getHeader = function (options) {
   var chunks = [];
   chunks.push("(function () {\n\n" );

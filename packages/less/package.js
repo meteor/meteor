@@ -6,9 +6,6 @@ Package.describe({
 });
 
 // XXX BBP remove from core?
-// XXX BBP update docs, examples
-
-// XXX BBP needs dependency on batch-plugins magic package
 
 Package.registerBuildPlugin({
   name: "compileLessBatch",
