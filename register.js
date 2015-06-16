@@ -4,7 +4,6 @@ var fs = require("fs");
 var createHash = require("crypto").createHash;
 var hasOwn = Object.hasOwnProperty;
 var defaultHandler = require.extensions[".js"];
-var sourceMapSupport = require("source-map-support");
 var convertSourceMap = require("convert-source-map");
 
 var config = {
@@ -17,7 +16,7 @@ var config = {
   babelOptions: require("./options").getDefaults()
 };
 
-module.exports = function reconfigure(newConfig) {
+exports = module.exports = function reconfigure(newConfig) {
   Object.keys(newConfig).forEach(function (key) {
     config[key] = newConfig[key];
   });
@@ -34,24 +33,20 @@ require.extensions[".js"] = function(module, filename) {
   }
 };
 
-sourceMapSupport.install({
-  handleUncaughtExceptions: false,
-
-  retrieveSourceMap: function(filename) {
-    if (shouldNotTransform(filename)) {
-      return null;
-    }
-
-    var result = getBabelResult(filename);
-    var converted = result && convertSourceMap.fromSource(result.code);
-    var map = converted && converted.toJSON();
-
-    return map && {
-      url: map.file,
-      map: map
-    } || null;
+exports.retrieveSourceMap = function(filename) {
+  if (shouldNotTransform(filename)) {
+    return null;
   }
-});
+
+  var result = getBabelResult(filename);
+  var converted = result && convertSourceMap.fromSource(result.code);
+  var map = converted && converted.toJSON();
+
+  return map && {
+    url: map.file,
+    map: map
+  } || null;
+};
 
 function shouldNotTransform(filename) {
   if (path.resolve(filename) !==
