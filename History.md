@@ -2,6 +2,12 @@
 
 ### Blaze
 
+* Preparatory work for the yet-unreleased `react-template-helper`
+  package -- don't let templates use {{> React}} with siblings since
+  `React.render` assumes it's being rendered into an empty container
+  element. (This lets us throw the error when compiling templates
+  rather than when the app runs.)
+
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
 * Fix a bug in `observe-sequence`. The bug was causing unnecessary rerenderings
