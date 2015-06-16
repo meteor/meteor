@@ -7,6 +7,11 @@ TemplateCompiler.prototype.processFilesForTarget = function (files) {
 
   files.forEach(function (file) {
     var scanned = doHTMLScanning(file, html_scanner);
+
+    // failed to parse?
+    if (! scanned)
+      return;
+
     Object.keys(scanned.bodyAttrs).forEach(function (attr) {
       var val = scanned.bodyAttrs[attr];
       if (bodyAttrs.hasOwnProperty(attr) && bodyAttrs[attr] !== val) {
