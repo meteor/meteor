@@ -1,5 +1,6 @@
 exports.getDefaults = function getDefaults() {
   return {
+    compact: false,
     sourceMap: "inline",
     externalHelpers: true,
     ast: false,
