@@ -714,19 +714,9 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        var alreadyRegisteredExtenssion = _.find(options.extensions, function (ext) {
-          return !! (pluginSourceExtensions.minifier || {})[ext];
-        });
-
-        if (alreadyRegisteredExtenssion !== undefined) {
-          buildmessage.error(alreadyRegisteredExtenssion + ': Packages are not allowed to register more than one minifier for the same extension per application.');
-          return;
-        }
-
         Plugin._registerSourceProcessor(options, factory, {
           type: "minifier",
-          methodName: "registerMinifier",
-          skipUniqExtCheck: false
+          methodName: "registerMinifier"
         });
       },
 

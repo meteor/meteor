@@ -186,7 +186,20 @@ compiler.getMinifiers = function (packageSource, options) {
     });
   });
 
-  return _.uniq(minifiers);
+  minifiers = _.uniq(minifiers);
+  // check for extension-wise uniqness
+  _.each(['js', 'css'], function (ext) {
+    var plugins = _.filter(minifiers, function (plugin) {
+      return _.contains(plugin.extensions, ext);
+    });
+
+    if (plugins.length > 1) {
+      var packages = _.map(plugins, function (p) { return p.isopack.name; });
+      buildmessage.error(packages.join(', ') + ': multiple packages registered minifiers for extension "' + ext + '".');
+    }
+  });
+
+  return minifiers;
 };
 
 var lintUnibuild = function (options) {
