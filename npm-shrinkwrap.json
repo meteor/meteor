@@ -1,6 +1,6 @@
 {
   "name": "meteor-babel",
-  "version": "0.0.0",
+  "version": "0.1.5",
   "dependencies": {
     "babel-core": {
       "version": "5.5.7",
@@ -25,9 +25,9 @@
           "resolved": "https://registry.npmjs.org/ast-types/-/ast-types-0.7.6.tgz"
         },
         "bluebird": {
-          "version": "2.9.27",
+          "version": "2.9.30",
           "from": "bluebird@^2.9.25",
-          "resolved": "https://registry.npmjs.org/bluebird/-/bluebird-2.9.27.tgz"
+          "resolved": "https://registry.npmjs.org/bluebird/-/bluebird-2.9.30.tgz"
         },
         "chalk": {
           "version": "1.0.0",
@@ -68,7 +68,7 @@
               "dependencies": {
                 "ansi-regex": {
                   "version": "1.1.1",
-                  "from": "ansi-regex@^1.1.0",
+                  "from": "ansi-regex@^1.0.0",
                   "resolved": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-1.1.1.tgz"
                 }
               }
@@ -80,15 +80,10 @@
             }
           }
         },
-        "convert-source-map": {
-          "version": "1.1.1",
-          "from": "convert-source-map@^1.1.0",
-          "resolved": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-1.1.1.tgz"
-        },
         "core-js": {
-          "version": "0.9.16",
+          "version": "0.9.17",
           "from": "core-js@^0.9.0",
-          "resolved": "https://registry.npmjs.org/core-js/-/core-js-0.9.16.tgz"
+          "resolved": "https://registry.npmjs.org/core-js/-/core-js-0.9.17.tgz"
         },
         "debug": {
           "version": "2.2.0",
@@ -288,6 +283,7 @@
                 "recast": {
                   "version": "0.9.18",
                   "from": "recast@~0.9.5",
+                  "resolved": "https://registry.npmjs.org/recast/-/recast-0.9.18.tgz",
                   "dependencies": {
                     "esprima-fb": {
                       "version": "10001.1.0-dev-harmony-fb",
@@ -308,7 +304,8 @@
                     },
                     "ast-types": {
                       "version": "0.6.16",
-                      "from": "ast-types@~0.6.1"
+                      "from": "ast-types@~0.6.1",
+                      "resolved": "https://registry.npmjs.org/ast-types/-/ast-types-0.6.16.tgz"
                     }
                   }
                 },
@@ -607,6 +604,30 @@
           "version": "1.0.0",
           "from": "trim-right@^1.0.0",
           "resolved": "https://registry.npmjs.org/trim-right/-/trim-right-1.0.0.tgz"
+        }
+      }
+    },
+    "convert-source-map": {
+      "version": "1.1.1",
+      "from": "convert-source-map@^1.1.1",
+      "resolved": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-1.1.1.tgz"
+    },
+    "source-map-support": {
+      "version": "0.3.1",
+      "from": "source-map-support@^0.3.1",
+      "resolved": "https://registry.npmjs.org/source-map-support/-/source-map-support-0.3.1.tgz",
+      "dependencies": {
+        "source-map": {
+          "version": "0.1.32",
+          "from": "source-map@0.1.32",
+          "resolved": "https://registry.npmjs.org/source-map/-/source-map-0.1.32.tgz",
+          "dependencies": {
+            "amdefine": {
+              "version": "0.1.1",
+              "from": "amdefine@>=0.0.4",
+              "resolved": "https://registry.npmjs.org/amdefine/-/amdefine-0.1.1.tgz"
+            }
+          }
         }
       }
     }
