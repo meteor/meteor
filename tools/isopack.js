@@ -8,13 +8,9 @@ var bundler = require('./bundler.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
-var isopackCacheModule = require('./isopack-cache.js');
-var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
-var compilerPluginModule = require('./compiler-plugin.js');
 var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
-var Future = require('fibers/future');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
 
