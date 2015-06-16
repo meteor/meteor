@@ -1,6 +1,7 @@
 var assert = require("assert");
 var path = require("path");
 var fs = require("fs");
+var createHash = require("crypto").createHash;
 var hasOwn = Object.hasOwnProperty;
 var defaultHandler = require.extensions[".js"];
 
@@ -149,7 +150,7 @@ function getBabelResult(filename) {
 // Borrowed from another MIT-licensed project that I wrote:
 // https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
 function deepHash(val) {
-  var hash = require("crypto").createHash("sha1");
+  var hash = createHash("sha1");
   var type = typeof val;
 
   if (val === null) {
