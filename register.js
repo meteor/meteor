@@ -67,7 +67,7 @@ function shouldNotTransform(filename) {
   }
 
   // If the file is inside the meteor-babel directory, then ignore it only
-  // if it is contained by meteor-babel/node_modules directory.
+  // if it is contained by the local meteor-babel/node_modules directory.
   return firstPart === "node_modules";
 }
 
