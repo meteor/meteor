@@ -56,12 +56,24 @@ sourceMapSupport.install({
 function shouldNotTransform(filename) {
   if (path.resolve(filename) !==
       path.normalize(filename)) {
+    // If the filename is not absolute, then it's a file in a core Node
+    // module, and should not be transformed.
     return true;
   }
 
-  return path.relative(__dirname, filename)
-    .split(path.sep)
-    .indexOf("node_modules") >= 0;
+  var relPath = path.relative(__dirname, filename);
+  var firstPart = relPath.split(path.sep, 1)[0];
+  var isExternal = firstPart === "..";
+
+  if (isExternal) {
+    // If the file is outside the meteor-babel directory, then ignore it
+    // if it is contained by any node_modules ancestor directory.
+    return filename.split(path.sep).indexOf("node_modules") >= 0;
+  }
+
+  // If the file is inside the meteor-babel directory, then ignore it only
+  // if it is contained by meteor-babel/node_modules directory.
+  return firstPart === "node_modules";
 }
 
 function getCache() {
