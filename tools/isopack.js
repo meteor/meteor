@@ -617,6 +617,9 @@ _.extend(Isopack.prototype, {
     dir = files.realpath(dir);
 
     var mainJson = Isopack.readMetadataFromDirectory(dir);
+    if (! mainJson) {
+      throw new Error("No metadata files found for isopack at: " + dir);
+    }
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
