@@ -9,14 +9,18 @@ Package.describe({
 // registry and a default templating system, ideally per-package.
 
 Package.registerBuildPlugin({
-  name: "compileTemplates",
+  name: "compileTemplatesBatch",
   // minifiers is a weak dependency of spacebars-compiler; adding it here
   // ensures that the output is minified.  (Having it as a weak dependency means
   // that we don't ship uglify etc with built apps just because
   // boilerplate-generator uses spacebars-compiler.)
   // XXX maybe uglify should be applied by this plugin instead of via magic
   // weak dependency.
-  use: ['minifiers', 'spacebars-compiler'],
+  use: [
+    'minifiers',
+    'spacebars-compiler',
+    'compiler-plugin'
+  ],
   sources: [
     'plugin/html_scanner.js',
     'plugin/compile-templates.js'
