@@ -1250,11 +1250,10 @@ Ap.insertUserDoc = function (options, user) {
     // XXX string parsing sucks, maybe
     // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
     if (e.name !== 'MongoError') throw e;
-    var match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/);
-    if (!match) throw e;
-    if (match[1].indexOf('$emails.address') !== -1)
+    if (e.code !== 11000) throw e;
+    if (e.err.indexOf('emails.address') !== -1)
       throw new Meteor.Error(403, "Email already exists.");
-    if (match[1].indexOf('username') !== -1)
+    if (e.err.indexOf('username') !== -1)
       throw new Meteor.Error(403, "Username already exists.");
     // XXX better error reporting for services.facebook.id duplicate, etc
     throw e;
