@@ -11,13 +11,21 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "double-ended-queue": "2.1.0-0",
+  "es5-shim": "4.1.6"
 });
 
 Package.onUse(function (api) {
   api.use('underscore', ['client', 'server']);
 
   api.export('Meteor');
+
+  // Polyfill built-ins like Object.create in IE8.
+  api.addFiles(
+    '.npm/package/node_modules/es5-shim/es5-sham.js',
+    'client',
+    { bare: true }
+  );
 
   api.addFiles('client_environment.js', 'client');
   api.addFiles('cordova_environment.js', 'web.cordova');
