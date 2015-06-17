@@ -53,7 +53,8 @@ AccountsServer = function AccountsServer(server) {
   this._deleteSavedTokensForAllUsersOnStartup();
 };
 
-var Ap = inherits(AccountsServer, AccountsCommon);
+Meteor._inherits(AccountsServer, AccountsCommon);
+var Ap = AccountsServer.prototype;
 
 ///
 /// CURRENT USER

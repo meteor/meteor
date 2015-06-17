@@ -30,17 +30,6 @@ AccountsCommon = function AccountsCommon(options) {
   });
 };
 
-// Like Npm.require("util").inherits, except that it works in all
-// browsers, including IE8 (which doesn't have Object.create).
-inherits = function (derivedClass, baseClass) {
-  function DerivedPrototype() {
-    // Important for instanceof to work in all browsers.
-    this.constructor = derivedClass;
-  }
-  DerivedPrototype.prototype = baseClass.prototype;
-  return derivedClass.prototype = new DerivedPrototype;
-};
-
 var Ap = AccountsCommon.prototype;
 
 /**
@@ -210,17 +199,19 @@ Meteor.startup(function () {
 
 // Thrown when the user cancels the login process (eg, closes an oauth
 // popup, declines retina scan, etc)
-Ap.LoginCancelledError = function (description) {
-  Error.apply(this, arguments);
-  this.message = description;
-};
+var lceName = 'Accounts.LoginCancelledError';
+Ap.LoginCancelledError = Meteor.makeErrorType(
+  lceName,
+  function (description) {
+    this.message = description;
+  }
+);
+Ap.LoginCancelledError.prototype.name = lceName;
 
 // This is used to transmit specific subclass errors over the wire. We should
 // come up with a more generic way to do this (eg, with some sort of symbolic
 // error code rather than a number).
 Ap.LoginCancelledError.numericError = 0x8acdc2f;
-var LCEp = inherits(Ap.LoginCancelledError, Error);
-LCEp.name = 'Accounts.LoginCancelledError';
 
 Ap._getTokenLifetimeMs = function () {
   return (this._options.loginExpirationInDays ||
