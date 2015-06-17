@@ -37,7 +37,7 @@ Tinytest.add('Check single rule with multiple invocations, only 1 that matches',
 	}, 1000); */
 }); 
 
-/*testAsyncMulti("Run multiple invocations and wait for one to return", [
+testAsyncMulti("Run multiple invocations and wait for one to return", [
   function (test, expect) {
   	var self = this;
     self.r = new RateLimiter();
@@ -54,7 +54,7 @@ Tinytest.add('Check single rule with multiple invocations, only 1 that matches',
 	}
 	test.equal(self.r.check(self.methodInvc1).valid, false);
 	test.equal(self.r.check(self.methodInvc2).valid, true);
-	setTimeout(expect(function(){}), 1000);
+	Meteor.setTimeout(expect(function(){}), 1000);
 }, function (test, expect) {
 	var self = this;
 	for (var i = 0; i < 100; i++) {
@@ -63,7 +63,7 @@ Tinytest.add('Check single rule with multiple invocations, only 1 that matches',
 	
 	test.equal(self.r.check(self.methodInvc1).valid, true);
 	test.equal(self.r.check(self.methodInvc2).valid, true);
-}]); */
+}]);
 
 Tinytest.add('Check two rules that affect same methodInvc still throw', function (test) { 
 	r = new RateLimiter();
