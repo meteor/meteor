@@ -84,10 +84,22 @@ if (process.platform === 'win32') {
           });
 
           // Now get the corresponding port numbers
-          child_process.exec('netstat -ano', function (error, stdout, stderr) {
+          child_process.exec(
+            'netstat -ano',
+            // this has been failing for some users due to the buffer
+            // being, as reported here:
+            // https://github.com/meteor/windows-preview/issues/85
+            //
+            // Though I don't see how 97 lines printed out from
+            // netstat are larger than 200K which is supposedly the
+            // default value for `maxBuffer)
+            // (https://nodejs.org/api/child_process.html#child_process_child_process_exec_command_options_callback),
+            // but this seems to resolve the users' problem
+            {maxBuffer: 1024 * 1024 * 10},
+            function (error, stdout, stderr) {
             if (error) {
               fut['throw'](new Error("Couldn't run netstat -ano: " +
-                error ));
+                error + "(" + JSON.stringify(error) + ")"));
               return;
             } else {
               var pids = [];
