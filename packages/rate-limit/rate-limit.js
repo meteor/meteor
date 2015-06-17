@@ -1,21 +1,15 @@
-// Write your package code here!
+// Default time interval (in milliseconds) to reset rate limit counters
 var DEFAULT_INTERVAL_TIME_IN_MILLISECONDS = 1000;
+// Default number of requets allowed per time interval
 var DEFAULT_REQUESTS_PER_INTERVAL = 10;
-var RateLimitingDict = {
-		userId: 'userId',
-		IPAddr: 'connection.clientAddress',
-		method: 'method'
-	}
+// Mapping from rate limiting rules format to method invocation fields.
+var RATE_LIMITING_DICT = {
+	userId: 'userId',
+	IPAddr: 'connection.clientAddress',
+	method: 'method'
+}
 
-var ruleMappingtoMethodInvocationDict = function(d, m) {
-		var arr = RateLimitingDict[d].split('.');
-		while  (firstGuy = arr.shift()) {
-			if (m[firstGuy])
-				m = m[firstGuy];
-		}
-		return m;
-	};
-
+// Initialize rules, ruleId, and invocations to be empty
 RateLimiter = function () {
 	var self = this;
 	self.rules = [];
@@ -24,9 +18,9 @@ RateLimiter = function () {
 }
 
 /**
- * Returns an object of invocation validity, time to reset and number of calls left
- * @param  {[type]}
- * @return {[type]}
+ * Checks if this method invocation is valid
+ * @param  {object} methodInvocation DDPCommon.MethodInvocation object with added 'method' attribute listing the method name
+ * @return {object}                  Returns object of whether method invocation is valid, time to next reset and number invocations left
  */
 RateLimiter.prototype.check = function(methodInvocation) {
 	var self = this;
@@ -35,7 +29,7 @@ RateLimiter.prototype.check = function(methodInvocation) {
 	_.find(self.rules, function(rule) {
 		// Check if this rule should be applied for this method invocation
 		if (RateLimiter.prototype.matchRuleUsingFind(rule, methodInvocation)) {
-			var methodString = RateLimiter._generateMethodInvocationKeyStringFromRuleMapping(rule, methodInvocation);
+			var methodString = self._generateMethodInvocationKeyStringFromRuleMapping(rule, methodInvocation);
 			var timeSinceLastReset = new Date().getTime() - rule._lastResetTime;
 			var timeToNextReset = rule.intervalTime - timeSinceLastReset;
 			var numInvocations = self.ruleInvocationCounters[rule.ruleId][methodString];
@@ -50,6 +44,7 @@ RateLimiter.prototype.check = function(methodInvocation) {
 			}
 		}
 	});
+	// console.log('method invocation ', methodInvocation, ' reply :' , reply);
 	return reply;
 }
 
@@ -66,6 +61,16 @@ RateLimiter.prototype.check = function(methodInvocation) {
  * @param {int} numRequestsAllowed number of requests allowed per timeframe
  */
 
+/**
+ * Adds a rule to with a specified identifier query to list of rules that are checked against on every method invocation
+ * @param {object} identifierQuery    Specified domain for rate limit rule
+ *                                    { userId: ID | function() | null,
+ * 							            IPAddr: ID | function() | null, 
+ * 							            method: name | function() | null
+ * 	                  ** All functions must return true/false to input to determine whether it applies or not ** 
+ * @param {integer} numRequestsAllowed Number of requests allowed per interval
+ * @param {integer} intervalTime       Number of milliseconds before interval is reset
+ */
 RateLimiter.prototype.addRule = function(identifierQuery, numRequestsAllowed, intervalTime) {
 	identifierQuery.ruleId = this._createNewRuleId();
 	identifierQuery.numRequestsAllowed = numRequestsAllowed ? numRequestsAllowed : DEFAULT_REQUESTS_PER_INTERVAL;
@@ -73,52 +78,24 @@ RateLimiter.prototype.addRule = function(identifierQuery, numRequestsAllowed, in
 	identifierQuery._lastResetTime = new Date().getTime();
 	this.rules.push(identifierQuery);
 }
-/**
- * Initial version of Match Rule - NO LONGER NECESSARY :D
- * @param  {[type]}
- * @param  {[type]}
- * @return {[type]}
- */
-RateLimiter.prototype.matchRule = function(rule, methodInvocation) {
-	console.log(rule);
-	var results = _.map(rule, function(value, key) {
-		if (typeof value === 'function') {
-			//  TODO BROKEN - metod invocation in this case must be specified to be an IP, user.Id or client addr
-			if (! value(methodInvocation)) {
-				return false;
-			}
-		} else if (value === null) {
-			return;
-		} else if (key === 'userId') {
-			if (value !== methodInvocation.userId) {
-				return false;
-			}
-		} else if (key === 'IPAddr') {
-			if (value !== methodInvocation.connection.clientAddress) { 
-				return false;
-			}
-		} else if (key === 'method') {
-			if (value !== methodInvocation.method) {
-				return false;
-			}
-		}
-		return true;
-	});
 
-	var firstFalse = _.find(results, function(v) { return !v; });
-	return firstFalse !== false;
-}
 /**
  * @param  {object}	rule Rule that is defined according to the spec above 
  * @param  {object} methodInvocation Method Invocation as described in DDPCommon.MethodInvocation with an added field of method
  * @return {boolean} boolean True if this methodInvocation matches said rule, false otherwise
  */
+/**
+ * Matches whether a given method invocation matches a certain rule. Short circuits search if rule and method invocation don't match
+ * @param  {object} rule             Rule as defined as an identifierQuery above
+ * @param  {object} methodInvocation DDPCommon.MethodInvocation object with added 'method' attribute listing the method name
+ * @return {boolean}                  Returns whether the methodInvocation matches inputted rule
+ */
 RateLimiter.prototype.matchRuleUsingFind = function(rule, methodInvocation) {
+	var self = this;
 	var ruleMatches = true;
-	
-	_.find(RateLimitingDict, function(value, key) {
+	_.find(RATE_LIMITING_DICT, function(value, key) {
 		if (rule[key]) {
-			var methodInvocationValue = ruleMappingtoMethodInvocationDict(key, methodInvocation);
+			var methodInvocationValue = self._ruleMappingtoMethodInvocationDict(key, methodInvocation);
 			if (typeof rule[key] === 'function') {
 				if (! rule[key](methodInvocationValue)) {
 					ruleMatches = false;
@@ -137,8 +114,8 @@ RateLimiter.prototype.matchRuleUsingFind = function(rule, methodInvocation) {
 }
 
 /**
- * @param  {object} methodInvocation Method invocation object
- * @return {[type]}
+ * Increment appropriate counters on every method invocation
+ * @param  {object} methodInvocation DDPCommon.MethodInvocation object with added 'method' attribute listing the method name
  */
 RateLimiter.prototype.increment = function(methodInvocation) {
 	var self = this;
@@ -146,13 +123,13 @@ RateLimiter.prototype.increment = function(methodInvocation) {
 	_.each(this.rules, function(rule) {
 		// Check if this rule should be applied for this method invocation
 		if (RateLimiter.prototype.matchRuleUsingFind(rule, methodInvocation)) {
-			var methodString = RateLimiter._generateMethodInvocationKeyStringFromRuleMapping(rule, methodInvocation);
+			var methodString = self._generateMethodInvocationKeyStringFromRuleMapping(rule, methodInvocation);
 			var timeSinceLastReset = new Date().getTime() - rule._lastResetTime;
 			if (timeSinceLastReset > rule.intervalTime) {
 				rule._lastResetTime = new Date().getTime();
 				// Reset all the counters for this rule
-				_.each(self.ruleInvocationCounters[rule.ruleId], function(methodString) {
-					methodString = 0;
+				_.each(self.ruleInvocationCounters[rule.ruleId], function(value, methodString) {
+					self.ruleInvocationCounters[rule.ruleId][methodString] = 0;
 				});
 			}
 			var timeToNextReset = rule.intervalTime - timeSinceLastReset;
@@ -170,23 +147,46 @@ RateLimiter.prototype.increment = function(methodInvocation) {
 	});
 }
 
+// Creates new unique rule id
 RateLimiter.prototype._createNewRuleId = function() {
 	return this.ruleId++;
 }
 
-RateLimiter._generateMethodInvocationKeyStringFromRuleMapping = function(rule, methodInvocation) {
+/**
+ * Generates string of fields that match between method invocation and rule to be used as a key for counters dictionary per rule
+ * @param  {object} rule             Rule defined as identifierQuery in addRule
+ * @param  {object} methodInvocation DDPCommon.MethodInvocation object with added 'method' attribute listing the method name
+ * @return {string}                  Key string made of all fields from rule that match in method invocation
+ */
+RateLimiter.prototype._generateMethodInvocationKeyStringFromRuleMapping = function(rule, methodInvocation) {
+	var self = this;
 	var returnString = "";
-
-	_.each(RateLimitingDict, function(value, key) {
+	_.each(RATE_LIMITING_DICT, function(value, key) {
 		if (rule[key]) {
-			var methodValue = ruleMappingtoMethodInvocationDict(key, methodInvocation);
+			var methodValue = self._ruleMappingtoMethodInvocationDict(key, methodInvocation);
 			if (typeof rule[key] === 'function') {
-				returnString += key + rule[key](methodValue)
-			}
-			returnString += key + methodValue;
+				if (rule[key](methodValue))
+					returnString += key + methodValue;
+			} else {
+				returnString += key + methodValue;
+			}	
 		}
 	});
 	return returnString;
 }
 
+/**
+ * Helper method that uses the RATE_LIMITING_DICT to create a fast way to access values in methodInvocation without manually parsing the paths
+ * @param  {string} key Key in rule dictionary (ie userId, IPAddr, method)
+ * @param  {string} methodInvocation MethodInvocation object that is traversed to get the final value
+ * @return {object}   Returns a string, value, or object of whatever is stored in appropriate field in MethodInvocation
+ */
+RateLimiter.prototype._ruleMappingtoMethodInvocationDict = function(key, methodInvocation) {
 
+	var arr = RATE_LIMITING_DICT[key].split('.');
+	while  (firstGuy = arr.shift()) {
+		if (firstGuy in methodInvocation)
+			methodInvocation = methodInvocation[firstGuy];
+	}
+	return methodInvocation;
+};

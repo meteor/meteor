@@ -37,6 +37,34 @@ Tinytest.add('Check single rule with multiple invocations, only 1 that matches',
 	}, 1000); */
 }); 
 
+/*testAsyncMulti("Run multiple invocations and wait for one to return", [
+  function (test, expect) {
+  	var self = this;
+    self.r = new RateLimiter();
+	self.myUserId = 1;
+	self.rule1 = { userId: self.myUserId, IPAddr: null, method: null};
+
+	self.r.addRule(self.rule1, 1, 1000);
+	self.connectionHandle = createTempConnectionHandle(123, '127.0.0.1')
+	self.methodInvc1 = createTempMethodInvocation(self.myUserId, self.connectionHandle, 'login');
+	self.methodInvc2 = createTempMethodInvocation(2, self.connectionHandle, 'login');
+	for (var i = 0; i < 2; i++) {
+		self.r.increment(self.methodInvc1);
+		self.r.increment(self.methodInvc2);	
+	}
+	test.equal(self.r.check(self.methodInvc1).valid, false);
+	test.equal(self.r.check(self.methodInvc2).valid, true);
+	setTimeout(expect(function(){}), 1000);
+}, function (test, expect) {
+	var self = this;
+	for (var i = 0; i < 100; i++) {
+		self.r.increment(self.methodInvc2);
+	}
+	
+	test.equal(self.r.check(self.methodInvc1).valid, true);
+	test.equal(self.r.check(self.methodInvc2).valid, true);
+}]); */
+
 Tinytest.add('Check two rules that affect same methodInvc still throw', function (test) { 
 	r = new RateLimiter();
 	var loginRule = { userId: null, IPAddr: null, method: 'login'};
@@ -106,8 +134,6 @@ Tinytest.add("add global rule", function (test) {
 	test.equal(r.check(methodInvc1).valid, false);
 	test.equal(r.check(methodInvc2).valid, false);
 	test.equal(r.check(methodInvc3).valid, false);
-
-
 })
 
 function createTempConnectionHandle(id, clientIP) {

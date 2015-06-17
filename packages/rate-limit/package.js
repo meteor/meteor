@@ -17,8 +17,10 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
+  api.use('test-helpers', ['client', 'server']);
+  api.use('ddp-rate-limiter');
   api.use('tinytest');
-  api.use('ddp-common');
   api.use('rate-limit');
+  api.use('ddp-common');
   api.addFiles('rate-limit-tests.js');
 });
