@@ -53,9 +53,7 @@ AccountsServer = function AccountsServer(server) {
   this._deleteSavedTokensForAllUsersOnStartup();
 };
 
-var Ap = AccountsServer.prototype =
-  Object.create(AccountsCommon.prototype);
-Ap.constructor = AccountsServer;
+var Ap = inherits(AccountsServer, AccountsCommon);
 
 ///
 /// CURRENT USER

@@ -30,6 +30,17 @@ AccountsCommon = function AccountsCommon(options) {
   });
 };
 
+// Like Npm.require("util").inherits, except that it works in all
+// browsers, including IE8 (which doesn't have Object.create).
+inherits = function (derivedClass, baseClass) {
+  function DerivedPrototype() {
+    // Important for instanceof to work in all browsers.
+    this.constructor = derivedClass;
+  }
+  DerivedPrototype.prototype = baseClass.prototype;
+  return derivedClass.prototype = new DerivedPrototype;
+};
+
 var Ap = AccountsCommon.prototype;
 
 /**
@@ -208,8 +219,7 @@ Ap.LoginCancelledError = function (description) {
 // come up with a more generic way to do this (eg, with some sort of symbolic
 // error code rather than a number).
 Ap.LoginCancelledError.numericError = 0x8acdc2f;
-var LCEp = Ap.LoginCancelledError.prototype = Object.create(Error.prototype);
-LCEp.constructor = Ap.LoginCancelledError;
+var LCEp = inherits(Ap.LoginCancelledError, Error);
 LCEp.name = 'Accounts.LoginCancelledError';
 
 Ap._getTokenLifetimeMs = function () {

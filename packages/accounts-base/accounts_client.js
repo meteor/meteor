@@ -24,9 +24,7 @@ AccountsClient = function AccountsClient(options) {
   this._initLocalStorage();
 };
 
-var Ap = AccountsClient.prototype =
-  Object.create(AccountsCommon.prototype);
-Ap.constructor = AccountsClient;
+var Ap = inherits(AccountsClient, AccountsCommon);
 
 ///
 /// CURRENT USER
