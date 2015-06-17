@@ -62,4 +62,8 @@ JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
   });
 };
 
+JsHintLinter.prototype.wipeCache = function () {
+  // XXX if we had on-disk cache, we would wipe it here
+};
+
 

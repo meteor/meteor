@@ -699,10 +699,16 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
-    if (bundleResult.warnings) {
+    if (self.buildOptions.lint) {
+      var messages = '';
+      if (bundleResult.warnings) {
+        messages += bundleResult.warnings.formatMessages();
+      }
+      messages +=
+        self.projectContext._getLintingMessagesForLocalPackages().join('\n');
+
       runLog.log(
-        'Linting your app.\n\n' +
-          bundleResult.warnings.formatMessages(), { arrow: true })
+        'Linting your app.\n\n' + messages, { arrow: true })
     }
 
     // Start watching for changes for files if requested. There's no

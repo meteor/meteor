@@ -164,7 +164,8 @@ compiler.lint = function (packageSource, options) {
     lintUnibuild({
       isopack: options.isopack,
       isopackCache: options.isopackCache,
-      sourceArch: architecture
+      sourceArch: architecture,
+      wipeLinterCache: true
     });
   });
 };
@@ -206,6 +207,7 @@ var lintUnibuild = function (options) {
   var isopack = options.isopack;
   var isopackCache = options.isopackCache;
   var inputSourceArch = options.sourceArch;
+  var wipeLinterCache = options.wipeLinterCache;
   var activePluginPackages = getActivePluginPackages(
     isopack,
     // pass sourceArch and isopackCache
@@ -243,7 +245,13 @@ var lintUnibuild = function (options) {
     };
   });
 
-  runLinters(inputSourceArch, isopackCache, wrappedSourceItems, allLinters);
+  runLinters({
+    inputSourceArch: inputSourceArch,
+    isopackCache: isopackCache,
+    wrappedSourceItems: wrappedSourceItems,
+    linters: allLinters,
+    wipeLinterCache: wipeLinterCache
+  });
 };
 
 // options.sourceArch is a SourceArch to compile.  Process all source files
@@ -557,11 +565,13 @@ var compileUnibuild = function (options) {
   };
 };
 
-var runLinters = function (
-  inputSourceArch,
-  isopackCache,
-  wrappedSourceItems,
-  linters) {
+var runLinters = function (options) {
+  var inputSourceArch = options.inputSourceArch;
+  var isopackCache = options.isopackCache;
+  var wrappedSourceItems = options.wrappedSourceItems;
+  var linters = options.linters;
+  var wipeLinterCache = options.wipeLinterCache;
+
   if (_.isEmpty(linters))
     return;
 
@@ -651,6 +661,12 @@ var runLinters = function (
 
     if (! sourcesToLint.length)
       return;
+
+    if (wipeLinterCache) {
+      // XXX BBP make `wipeCache` part of the interface for other types of
+      // plugins too?
+      linterDef.userPlugin.wipeCache();
+    }
 
     var linter = linterDef.userPlugin.processFilesForTarget;
 

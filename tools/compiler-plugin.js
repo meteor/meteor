@@ -104,6 +104,7 @@ _.extend(InputFile.prototype, {
   getArch: function () {
     return this._resourceSlot.packageSourceBatch.processor.arch;
   },
+  // XXX BBP this should be available on inputfile type for every plugin type
   getSourceHash: function () {
     return this._resourceSlot.inputResource.hash;
   },

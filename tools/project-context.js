@@ -732,6 +732,11 @@ _.extend(ProjectContext.prototype, {
     }
 
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
+  },
+
+  _getLintingMessagesForLocalPackages: function () {
+    var self = this;
+    return self.isopackCache._getLintingMessagesForLocalPackages();
   }
 });
 

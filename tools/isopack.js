@@ -182,6 +182,10 @@ var Isopack = function () {
   // by the code that initializes the Isopack. If not provided, plugins don't
   // get a disk cache.
   self.pluginCacheDir = null;
+
+  // An in-memory only string that is printed by the build tool when the app is
+  // linted. Is also printed when a package represented by Isopack is published.
+  self.lintingMessages = null;
 };
 
 // XXX BBP we're not really using the convert functions as much any more; make
