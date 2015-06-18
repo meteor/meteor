@@ -645,12 +645,6 @@ _.extend(Session.prototype, {
       });
       invocation.method = msg.method;
       try {
-        // xcxc maybe here something like:
-        // _.each(methodValidators, function (validator) {
-        // 
-        // }) (!validateMethodInvocation(invocation)) {
-        //   throw new RateLimitError(); 
-        // }
         DDPRateLimiter.RateLimiter.increment(invocation);
         var rateLimitResult = DDPRateLimiter.RateLimiter.check(invocation)
         if (!rateLimitResult.valid) {

@@ -18,7 +18,9 @@ Package.onUse(function(api) {
 });
 
 Package.onTest(function(api) {
-  api.use('tinytest');
+  api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
+           'accounts-base', 'random', 'email', 'underscore', 'check',
+           'ddp']);
   api.use('ddp-rate-limiter');
   api.addFiles('ddp-rate-limiter-tests.js');
 });
