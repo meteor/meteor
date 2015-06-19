@@ -292,22 +292,25 @@ SyncedCron._laterSetTimeout = function(fn, sched) {
   */
   function scheduleTimeout() {
     var now = Date.now(),
-        next = s.next(2, now),
-        diff = next[0].getTime() - now,
-        intendedAt = next[0];
+        next = s.next(2, now);
+      // don't assume that there is always a next occurrence
+      if(next[0]){
+        var diff = next[0].getTime() - now,
+            intendedAt = next[0];
 
-    // minimum time to fire is one second, use next occurrence instead
-    if(diff < 1000) {
-      diff = next[1].getTime() - now;
-      intendedAt = next[1];
-    }
+        // minimum time to fire is one second, use next occurrence instead
+        if(diff < 1000) {
+          diff = next[1].getTime() - now;
+          intendedAt = next[1];
+        }
 
-    if(diff < 2147483647) {
-      t = Meteor.setTimeout(function() { fn(intendedAt); }, diff);
-    }
-    else {
-      t = Meteor.setTimeout(scheduleTimeout, 2147483647);
-    }
+        if(diff < 2147483647) {
+          t = Meteor.setTimeout(function() { fn(intendedAt); }, diff);
+        }
+        else {
+          t = Meteor.setTimeout(scheduleTimeout, 2147483647);
+        }
+      }
   }
 
   return {
