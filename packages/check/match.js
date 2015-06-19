@@ -198,11 +198,12 @@ var testSubtree = function (value, pattern) {
 
   // Array (checked AFTER Any, which is implemented as an Array).
   if (pattern instanceof Array) {
-    if (pattern.length !== 1)
+    if (pattern.length !== 1) {
       return {
         message: "Bad pattern: arrays must have one type element" + EJSON.stringify(pattern),
         path: ""
       };
+    }
     if (!_.isArray(value) && !_.isArguments(value)) {
       return {
         message: "Expected array, got " + EJSON.stringify(value),
@@ -286,30 +287,34 @@ var testSubtree = function (value, pattern) {
     pattern = {};  // no required keys
   }
 
-  if (typeof pattern !== "object")
+  if (typeof pattern !== "object") {
     return {
       message: "Bad pattern: unknown pattern type",
       path: ""
     };
+  }
 
   // An object, with required and optional keys. Note that this does NOT do
   // structural matches against objects of special types that happen to match
   // the pattern: this really needs to be a plain old {Object}!
-  if (typeof value !== 'object')
+  if (typeof value !== 'object') {
     return {
       message: "Expected object, got " + typeof value,
       path: ""
     };
-  if (value === null)
+  }
+  if (value === null) {
     return {
       message: "Expected object, got null",
       path: ""
     };
-  if (value.constructor !== Object)
+  }
+  if (value.constructor !== Object) {
     return {
       message: "Expected plain object",
       path: ""
     };
+  }
 
   var requiredPatterns = {};
   var optionalPatterns = {};
@@ -337,11 +342,12 @@ var testSubtree = function (value, pattern) {
         return result;
       }
     } else {
-      if (!unknownKeysAllowed)
+      if (!unknownKeysAllowed) {
         return {
           message: "Unknown key",
           path: key
         };
+      }
       if (unknownKeyPattern) {
         var result = testSubtree(subValue, unknownKeyPattern[0]);
         if (result) {
