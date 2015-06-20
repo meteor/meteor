@@ -40,7 +40,19 @@ Blaze._reportException = function (e, msg) {
   // In Chrome, `e.stack` is a multiline string that starts with the message
   // and contains a stack trace.  Furthermore, `console.log` makes it clickable.
   // `console.log` supplies the space between the two arguments.
-  debugFunc()(msg || 'Exception caught in template:', e.stack || e.message || e);
+  var eRepr;
+  if (e.stack && e.stack.split) {
+    var firstLine = e.stack.split('\n')[0];
+    if(firstLine) {
+      if(firstLine.indexOf(e.name) > -1)
+        eRepr = e.stack;
+      else
+        eRepr = e.name + ': ' + e.message + '\n' + e.stack;
+    } else
+      eRepr = e.stack;
+  } else
+    eRepr = e.message || e;
+  debugFunc()(msg || 'Exception caught in template:', eRepr);
 };
 
 Blaze._wrapCatchingExceptions = function (f, where) {
