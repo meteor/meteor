@@ -68,7 +68,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
     var fut = new Future;
     var handle = {
       task: Meteor.bindEnvironment(task, function (e) {
-        Meteor._debug("Exception from task:", e && e.stack || e);
+        Meteor._reportException(e, "Exception from task:");
         throw e;
       }),
       future: fut,

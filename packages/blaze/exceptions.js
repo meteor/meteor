@@ -28,6 +28,9 @@ Blaze._reportException = function (e, msg) {
     throw e;
   }
 
+  if (typeof Meteor !== "undefined" && typeof Meteor._reportException !== "undefined")
+    return Meteor._reportException(e, msg);
+
   if (! debugFunc)
     // adapted from Tracker
     debugFunc = function () {

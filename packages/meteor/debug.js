@@ -64,6 +64,25 @@ Meteor._error = function(/* arguments */) {
     _debug(console.error ? console.error : console.log, console, arguments);
 };
 
+Meteor._reportException = function(e, msg) {
+  var eRepr;
+  if (e.stack && e.stack.split) {
+    var firstLine = e.stack.split('\n')[0];
+    if(firstLine) {
+      if(firstLine.indexOf(e.name) > -1)
+        eRepr = e.stack;
+      else
+        eRepr = e.name + ': ' + e.message + '\n' + e.stack;
+    } else
+      eRepr = e.stack;
+  } else
+    eRepr = e.message || e;
+  if(msg)
+    Meteor._error(msg, eRepr);
+  else
+    Meteor._error(eRepr);
+};
+
 // Suppress the next 'count' Meteor._debug messsages. Use this to
 // stop tests from spamming the console.
 //
