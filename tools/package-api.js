@@ -147,10 +147,11 @@ _.extend(PackageAPI.prototype, {
    * off version names for core packages. You may also specify constraints,
    * such as `my:forms@=1.0.0` (this package demands `my:forms` at `1.0.0` exactly),
    * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.x.y`, or exactly `2.0.1`).
-   * @param {String} [architecture] If you only use the package on the
+   * @param {String|String[]} [architecture] If you only use the package on the
    * server (or the client), you can pass in the second argument (e.g.,
    * `'server'`, `'client'`, `'web.browser'`, `'web.cordova'`) to specify
-   * what architecture the package is used with.
+   * what architecture the package is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    * @param {Object} [options]
    * @param {Boolean} options.weak Establish a weak dependency on a
    * package. If package A has a weak dependency on package B, it means
@@ -225,7 +226,12 @@ _.extend(PackageAPI.prototype, {
    * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
    * @locus package.js
    * @instance
-   * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
+   * @param {String|String[]} packageNames Name of a package, or array of package names, with an optional @version component for each.
+   * @param {String|String[]} [architecture] If you only use the package on the
+   * server (or the client), you can pass in the second argument (e.g.,
+   * `'server'`, `'client'`, `'web.browser'`, `'web.cordova'`) to specify
+   * what architecture the package is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    */
   imply: function (names, arch) {
     var self = this;
@@ -278,10 +284,11 @@ _.extend(PackageAPI.prototype, {
    * @summary Specify the source code for your package.
    * @locus package.js
    * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
-   * @param {String} [architecture] If you only want to export the file
+   * @param {String|String[]} [architecture] If you only want to export the file
    * on the server (or the client), you can pass in the second argument
    * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
-   * what architecture the file is used with.
+   * what architecture the file is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    * @param {Object} [fileOptions] Options that will be passed to build
    * plugins. For example, for JavaScript files, you can pass `{bare: true}`
    * to not wrap the individual file in its own closure.
@@ -395,11 +402,12 @@ _.extend(PackageAPI.prototype, {
    * @instance
    * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
    * @locus package.js
-   * @param {String} exportedObject Name of the object.
-   * @param {String} [architecture] If you only want to export the object
+   * @param {String|String[]} exportedObjects Name of the object to export, or an array of object names.
+   * @param {String|String[]} [architecture] If you only want to export the object
    * on the server (or the client), you can pass in the second argument
    * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
-   * what architecture the export is used with.
+   * what architecture the export is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    */
   export: function (symbols, arch, options) {
     var self = this;
