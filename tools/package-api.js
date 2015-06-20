@@ -278,10 +278,11 @@ _.extend(PackageAPI.prototype, {
    * @summary Specify the source code for your package.
    * @locus package.js
    * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
-   * @param {String} [architecture] If you only want to export the file
+   * @param {String|String[]} [architecture] If you only want to export the file
    * on the server (or the client), you can pass in the second argument
    * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
-   * what architecture the file is used with.
+   * what architecture the file is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    * @param {Object} [fileOptions] Options that will be passed to build
    * plugins. For example, for JavaScript files, you can pass `{bare: true}`
    * to not wrap the individual file in its own closure.
