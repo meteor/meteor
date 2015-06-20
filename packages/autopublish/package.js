@@ -3,5 +3,5 @@ Package.describe({
   version: '1.0.3'
 });
 
-// This package is empty; its presence is detected by livedata and
+// This package is empty; its presence is detected by ddp-server and
 // accounts-base.
