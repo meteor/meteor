@@ -74,10 +74,40 @@ sourcemap_support.install({
   // Use the source maps specified in program.json instead of parsing source
   // code for them.
   retrieveSourceMap: retrieveSourceMap,
-  // For now, don't fix the source line in uncaught exceptions, because we
-  // haven't fixed handleUncaughtExceptions in source-map-support to properly
-  // locate the source files.
+  // We handle uncaughtException ourselves to support showing line in plain
+  // JavaScript.
   handleUncaughtExceptions: false
+});
+
+process.on('uncaughtException', function(error) {
+  // Detect whether to show last line from source maps or plain JavaScript.
+  var matchSourceMap = /\n    at [^(]+ \((.*):(\d+):(\d+)\)/.exec(error.stack);
+  var matchCode = /\n    at (.*):(\d+):(\d+)/.exec(error.stack);
+
+  if (matchCode !== null && (matchSourceMap === null ||
+      matchCode.index < matchSourceMap.index)) {
+    var sourceFile = matchCode[1];
+    var line = +matchCode[2];
+    var column = +matchCode[3];
+    var contents = fs.readFileSync(sourceFile, 'utf8');
+    if (contents) {
+      var code = contents.split(/(?:\r\n|\r|\n)/)[line - 1];
+      if (code) {
+        source = (sourceFile + ':' + line + '\n' + code + '\n' +
+          new Array(column).join(' ') + '^');
+      }
+    }
+  } else {
+    source = sourcemap_support.getErrorSource(error);
+  }
+
+  if (source) {
+    console.error();
+    console.error(source);
+  }
+
+  console.error(error.stack);
+  process.exit(8);
 });
 
 // Only enabled by default in development.
