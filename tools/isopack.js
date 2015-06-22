@@ -183,8 +183,9 @@ var Isopack = function () {
   // get a disk cache.
   self.pluginCacheDir = null;
 
-  // An in-memory only string that is printed by the build tool when the app is
-  // linted. Is also printed when a package represented by Isopack is published.
+  // An in-memory only buildmessage.MessageSet object that is printed by the
+  // build tool when the app is linted. Is also printed when a package
+  // represented by Isopack is published.
   self.lintingMessages = null;
 };
 

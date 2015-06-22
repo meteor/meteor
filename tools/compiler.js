@@ -159,8 +159,18 @@ compiler.compile = function (packageSource, options) {
   return isopk;
 };
 
+// options:
+// - isopack
+// - isopackCache
+// - includeCordovaUnibuild
 compiler.lint = function (packageSource, options) {
   _.each(packageSource.architectures, function (architecture) {
+    // skip Cordova if not required
+    if (! options.includeCordovaUnibuild
+        && architecture.arch === 'web.cordova') {
+          return;
+        }
+
     lintUnibuild({
       isopack: options.isopack,
       isopackCache: options.isopackCache,

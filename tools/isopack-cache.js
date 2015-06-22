@@ -300,14 +300,14 @@ _.extend(exports.IsopackCache.prototype, {
         compiler.lint(packageInfo.packageSource, {
           isopackCache: self,
           isopack: isopack,
-          wipeLinterCache: wipeLinterCache
+          wipeLinterCache: wipeLinterCache,
+          includeCordovaUnibuild: self._includeCordovaUnibuild
         });
       });
       if (! lintingMessages.hasMessages()) {
         lintingMessages = null;
-      } else {
-        lintingMessages = lintingMessages.formatMessages();
       }
+
       isopack.lintingMessages = lintingMessages;
     });
   },
@@ -416,7 +416,7 @@ _.extend(exports.IsopackCache.prototype, {
       if (packageInfo.kind === 'local') {
         var isopackMessages = self._isopacks[name].lintingMessages;
         if (isopackMessages) {
-          messages.push(isopackMessages);
+          messages.push(isopackMessages.formatMessages());
         }
       }
     });

@@ -702,7 +702,7 @@ _.extend(AppRunner.prototype, {
     if (self.buildOptions.lint) {
       var messages = '';
       if (bundleResult.warnings) {
-        messages += bundleResult.warnings.formatMessages();
+        messages += bundleResult.warnings.formatMessages() + '\n';
       }
       messages +=
         self.projectContext._getLintingMessagesForLocalPackages().join('\n');
