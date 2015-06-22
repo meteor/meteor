@@ -70,6 +70,15 @@ _.extend(exports.InputFile.prototype, {
   getPathInPackage: function () {
     throw new Error("Not Implemented");
   },
+  /**
+   * @summary Returns a hash string for the file that can be used to implement
+   * caching.
+   * @memberof InputFile
+   * @returns {String}
+   */
+  getSourceHash: function () {
+    throw new Error("Not Implemented");
+  },
 
   /**
    * @summary Returns the full contents of the file as a string.

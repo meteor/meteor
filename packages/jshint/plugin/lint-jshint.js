@@ -10,9 +10,13 @@ Plugin.registerLinter({
   return linter;
 });
 
-function JsHintLinter () {};
+function JsHintLinter () {
+  this.hashDict = {};
+};
 
 JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
+  var self = this;
+
   var conf = {
     undef: true,
     unused: true,
@@ -21,6 +25,11 @@ JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
   };
 
   files.forEach(function (file) {
+    // skip files we already linted
+    if (self.hashDict[file.getPathInPackage()] === file.getSourceHash())
+      return;
+    self.hashDict[file.getPathInPackage()] = file.getSourceHash();
+
     // find the config file
     if (file.getBasename() === '.jshintrc') {
       var confStr = file.getContentsAsString();

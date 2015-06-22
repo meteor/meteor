@@ -26,6 +26,9 @@ _.extend(LintingFile.prototype, {
   },
   getPackageName: function () {
     return this._source['package'];
+  },
+  getSourceHash: function () {
+    return this._source.hash;
   }
 });
 
