@@ -242,7 +242,7 @@ var Session = function (server, version, socket, options) {
   self._namedSubs = {};
   self._universalSubs = [];
 
-  self.userId = null;  
+  self.userId = null;
   self.collectionViews = {};
 
   // Set this to false to not send messages when collectionViews are
@@ -648,9 +648,9 @@ _.extend(Session.prototype, {
         DDPRateLimiter.RateLimiter.increment(invocation);
         var rateLimitResult = DDPRateLimiter.RateLimiter.check(invocation)
         if (!rateLimitResult.valid) {
-          throw new Meteor.Error(429, DDPRateLimiter.ErrorMessage(rateLimitResult));
+          throw new Meteor.Error(429, DDPRateLimiter.getErrorMessage(rateLimitResult));
         }
-        
+
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
           return DDP._CurrentInvocation.withValue(invocation, function () {
             return maybeAuditArgumentChecks(

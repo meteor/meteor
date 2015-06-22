@@ -105,6 +105,7 @@ Tinytest.add( 'Check two rules that affect same methodInvc still throw',
     // After for loop runs, we only have 10 runs, so that's under the limit
     test.equal( r.check( methodInvc1 ).valid, true );
     // However, this triggers userId rule since this userId is even
+    test.equal(r.check(methodInvc2).valid, false);
     test.equal( r.check( methodInvc2 ).valid, false );
 
     // Running one more test causes it to be false, since we're at 11 now.

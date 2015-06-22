@@ -42,12 +42,7 @@ if ( Meteor.isClient ) {
           error ) {
           console.log( "We threw an error.", error );
         } );
-
-
       }
-
     }
-
-
   ] );
 };
