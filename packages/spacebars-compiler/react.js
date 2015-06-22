@@ -18,7 +18,8 @@ ReactComponentSiblingForbidder.def({
       if (!parentTag) {
         throw new Error(
           "{{> React}} must be used in a container element"
-            + (this.sourceName ? (" in " + this.sourceName) : ""));
+            + (this.sourceName ? (" in " + this.sourceName) : "")
+               + ". Learn more at https://github.com/meteor/meteor/wiki/React-components-must-be-the-only-thing-in-their-wrapper-element");
       }
 
       var numSiblings = 0;
@@ -32,7 +33,8 @@ ReactComponentSiblingForbidder.def({
       if (numSiblings > 0) {
         throw new Error(
           "{{> React}} must be used as the only child in a container element"
-            + (this.sourceName ? (" in " + this.sourceName) : ""));
+            + (this.sourceName ? (" in " + this.sourceName) : "")
+               + ". Learn more at https://github.com/meteor/meteor/wiki/React-components-must-be-the-only-thing-in-their-wrapper-element");
       }
     }
   },
