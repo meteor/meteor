@@ -2,9 +2,9 @@ var _ = require("underscore");
 var Fiber = require("fibers");
 var Future = require("fibers/future");
 
-exports.parallelEach = function (collection, callback, context) {
+exports.parallelEach = function (...args) {
+  var [collection, callback, context] = args;
   var futures = _.map(collection, function () {
-    var args = _.toArray(arguments);
     return function () {
       return callback.apply(context, args);
     }.future()();
@@ -27,16 +27,16 @@ exports.firstTimeResolver = function (fut) {
 // otherwise returns whichever one returns first.  (Because of this, you
 // probably want at most one of the futures to be capable of returning, and have
 // the other be throw-only.)
-exports.waitForOne = function (/* futures */) {
+exports.waitForOne = function (...futures) {
   var fiber = Fiber.current;
   if (!fiber)
     throw Error("Can't waitForOne without a fiber");
-  if (arguments.length === 0)
+  if (futures.length === 0)
     throw Error("Must wait for at least one future");
 
   var combinedFuture = new Future;
-  for (var i = 0; i < arguments.length; ++i) {
-    var f = arguments[i];
+  for (var i = 0; i < futures.length; ++i) {
+    var f = futures[i];
     if (f.isResolved()) {
       // Move its value into combinedFuture.
       f.resolve(combinedFuture.resolver());
@@ -126,9 +126,8 @@ exports.bindEnvironment = function (func) {
 
   var boundValues = _.clone(Fiber.current._meteorDynamics || {});
 
-  return function (/* arguments */) {
+  return function (...args) {
     var self = this;
-    var args = _.toArray(arguments);
 
     var runWithEnvironment = function () {
       var savedValues = Fiber.current._meteorDynamics;
@@ -154,9 +153,8 @@ exports.bindEnvironment = function (func) {
 // Eg, if you are trying to do the equivalent of start a background
 // thread.
 exports.inBareFiber = function (func) {
-  return function (/*arguments*/) {
+  return function (...args) {
     var self = this;
-    var args = arguments;
     new Fiber(function () {
       func.apply(self, args);
     }).run();

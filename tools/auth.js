@@ -31,9 +31,8 @@ var openAccountsConnection = function () {
 // that is a connection to the accounts server, which gets closed when
 // `f` returns or throws.
 var withAccountsConnection = function (f) {
-  return function (/* arguments */) {
+  return function (...args) {
     var self = this;
-    var args = _.toArray(arguments);
     var conn = openAccountsConnection();
     args.push(conn);
     try {
@@ -97,8 +96,7 @@ var loggedInAccountsConnection = function (token) {
 //    provided, one will be opened and then closed before returning.
 var sessionMethodCaller = function (methodName, options) {
   options = options || {};
-  return function (/* arguments */) {
-    var args = _.toArray(arguments);
+  return function (...args) {
     args.push({
       session: auth.getSessionId(config.getAccountsDomain()) || null
     });

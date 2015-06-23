@@ -188,13 +188,13 @@ var Profile = function (bucketName, f) {
   if (! enabled)
     return f;
 
-  return function (/*arguments*/) {
+  return function (...args) {
     if (! running)
-      return f.apply(this, arguments);
+      return f.apply(this, args);
 
     var name;
     if (_.isFunction(bucketName))
-      name = bucketName.apply(this, arguments);
+      name = bucketName.apply(this, args);
     else
       name = bucketName;
 
@@ -211,7 +211,7 @@ var Profile = function (bucketName, f) {
     var start = process.hrtime();
     var err = null;
     try {
-      return f.apply(this, arguments);
+      return f.apply(this, args);
     }
     catch (e) {
       err = e;
