@@ -251,7 +251,8 @@ var lintUnibuild = function (options) {
       relPath: relPath,
       contents: contents,
       'package': isopack.name,
-      hash: hash
+      hash: hash,
+      arch: inputSourceArch.arch
     };
   });
 

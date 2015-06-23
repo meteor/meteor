@@ -79,6 +79,16 @@ _.extend(exports.InputFile.prototype, {
   getSourceHash: function () {
     throw new Error("Not Implemented");
   },
+  /**
+   * @summary Returns a string symbol representing the architecture that is
+   * targetted by processing this file. Can be used to implement caching.
+   * XXX BBP is this doc string good?
+   * @memberof InputFile
+   * @returns {String}
+   */
+  getArch: function () {
+    throw new Error("Not Implemented");
+  },
 
   /**
    * @summary Returns the full contents of the file as a string.

@@ -29,6 +29,9 @@ _.extend(LintingFile.prototype, {
   },
   getSourceHash: function () {
     return this._source.hash;
+  },
+  getArch: function () {
+    return this._source.arch;
   }
 });
 

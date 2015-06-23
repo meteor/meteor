@@ -56,7 +56,9 @@ JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
       return;
 
     // skip files we already linted
-    var hashKey = file.getPackageName() + '/' + file.getPathInPackage();
+    var hashKey = JSON.stringify([
+      file.getPackageName(), file.getPathInPackage(), file.getArch()]);
+
     if (self.hashDict[hashKey] === file.getSourceHash())
       return;
     self.hashDict[hashKey] = file.getSourceHash();
