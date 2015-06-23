@@ -142,8 +142,8 @@ describe("Babel", function() {
     assert.deepEqual(objRest, { z: "zxcv" });
   });
 
-  xit("es6.modules (TODO broken)", () => {
-    import f, {g as h} from "./test-module";
+  it("es6.modules", () => {
+    import f, { helper as h } from "./test-module";
     assert.strictEqual(f(), "default");
     assert.strictEqual(h(), "helper");
   });
