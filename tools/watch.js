@@ -1,8 +1,8 @@
 import files from "./files.js";
 import _ from "underscore";
 import pathwatcher from "./safe-pathwatcher.js";
-import { createHash } from "crypto";
-import { coalesce } from "./func-utils.js";
+import {createHash} from "crypto";
+import {coalesce} from "./func-utils.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -55,7 +55,7 @@ import { coalesce } from "./func-utils.js";
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
 
-class WatchSet {
+export class WatchSet {
   constructor() {
     var self = this;
 
@@ -235,13 +235,13 @@ var readFile = function (absPath) {
   }
 };
 
-var sha1 = function (contents) {
+export function sha1(contents) {
   var hash = createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
+}
 
-var readDirectory = function (options) {
+export function readDirectory(options) {
   // Read the directory.
   try {
     var contents = files.readdir(options.absPath);
@@ -285,10 +285,10 @@ var readDirectory = function (options) {
   // Sort it!
   filtered.sort();
   return filtered;
-};
+}
 
 // All fields are private.
-class Watcher {
+export class Watcher {
   constructor(options) {
     var self = this;
 
@@ -655,7 +655,7 @@ class Watcher {
 
 // Given a WatchSet, returns true if it currently describes the state of the
 // disk.
-var isUpToDate = function (watchSet) {
+export function isUpToDate(watchSet) {
   var upToDate = true;
   var watcher = new Watcher({
     watchSet: watchSet,
@@ -668,14 +668,14 @@ var isUpToDate = function (watchSet) {
   });
   watcher.stop();
   return upToDate;
-};
+}
 
 // Options should have absPath/include/exclude.
-var readAndWatchDirectory = function (watchSet, options) {
+export function readAndWatchDirectory(watchSet, options) {
   var contents = readDirectory(options);
   watchSet.addDirectory(_.extend({contents: contents}, options));
   return contents;
-};
+}
 
 // Calculating the sha hash can be expensive for large files.  By
 // returning the calculated hash along with the file contents, the
@@ -684,7 +684,7 @@ var readAndWatchDirectory = function (watchSet, options) {
 // We only calculate the hash if needed here, so callers must not
 // *rely* on the hash being returned; merely that if the hash is
 // present, it is the correct hash of the contents.
-var readAndWatchFileWithHash = function (watchSet, absPath) {
+export function readAndWatchFileWithHash(watchSet, absPath) {
   var contents = readFile(absPath);
   var hash = null;
   // Allow null watchSet, if we want to use readFile-style error handling in a
@@ -695,19 +695,8 @@ var readAndWatchFileWithHash = function (watchSet, absPath) {
     watchSet.addFile(absPath, hash);
   }
   return {contents: contents, hash: hash};
-};
+}
 
-var readAndWatchFile = function (watchSet, absPath) {
+export function readAndWatchFile(watchSet, absPath) {
   return readAndWatchFileWithHash(watchSet, absPath).contents;
-};
-
-export {
-  WatchSet,
-  Watcher,
-  readDirectory,
-  isUpToDate,
-  readAndWatchDirectory,
-  readAndWatchFile,
-  readAndWatchFileWithHash,
-  sha1
-};
+}
