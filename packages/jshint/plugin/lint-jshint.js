@@ -25,11 +25,6 @@ JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
   };
 
   files.forEach(function (file) {
-    // skip files we already linted
-    if (self.hashDict[file.getPathInPackage()] === file.getSourceHash())
-      return;
-    self.hashDict[file.getPathInPackage()] = file.getSourceHash();
-
     // find the config file
     if (file.getBasename() === '.jshintrc') {
       var confStr = file.getContentsAsString();
@@ -59,6 +54,13 @@ JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
   files.forEach(function (file) {
     if (file.getBasename() === '.jshintrc')
       return;
+
+    // skip files we already linted
+    var hashKey = file.getPackageName() + '/' + file.getPathInPackage();
+    if (self.hashDict[hashKey] === file.getSourceHash())
+      return;
+    self.hashDict[hashKey] = file.getSourceHash();
+
     if (! jshint(file.getContentsAsString(), conf, predefinedGlobals)) {
       jshint.errors.forEach(function (error) {
         file.error({

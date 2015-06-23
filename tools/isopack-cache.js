@@ -424,7 +424,9 @@ _.extend(exports.IsopackCache.prototype, {
       var packageInfo = self._packageMap.getInfo(name);
       var isopack = self._isopacks[name];
       if (packageInfo.kind === 'local') {
-        if (self._buildIteration && isopack._buildIteration !== self._buildIteration) {
+        // skip the messages we previously reported
+        if (self._buildIteration &&
+            isopack._buildIteration !== self._buildIteration) {
           return;
         }
         var isopackMessages = isopack.lintingMessages;
