@@ -6,5 +6,5 @@
 
 meteor-platform
 standard-minifiers # JS/CSS minifiers ran for production mode
-autopublish
-insecure
+autopublish # publishes all data to the clients for prototyping
+insecure # allows all DB writes from clients for prototyping
