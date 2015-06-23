@@ -24,7 +24,7 @@ RateLimiter = function() {
  * @return {object} Returns object of whether method invocation is valid, time
  * to next reset and number invocations left
  */
-RateLimiter.prototype.check = function( methodInvocation ) {
+/*RateLimiter.prototype.check = function( methodInvocation ) {
   var self = this;
   var reply = {
     valid: true,
@@ -63,7 +63,7 @@ RateLimiter.prototype.check = function( methodInvocation ) {
   } );
 
   return reply;
-}
+} */
 
 RateLimiter.prototype.newCheck = function ( input )  {
   var self = this;
@@ -124,7 +124,7 @@ RateLimiter.prototype.addRule = function( rule, numRequestsAllowed,
  * added 'method' attribute listing the method name
  * @return {boolean} Returns whether the methodInvocation matches inputted rule
  */
-RateLimiter.prototype.matchRuleUsingFind = function( rule, methodInvocation ) {
+/*RateLimiter.prototype.matchRuleUsingFind = function( rule, methodInvocation ) {
   var self = this;
   var ruleMatches = true;
   _.find( RATE_LIMITING_DICT, function( value, key ) {
@@ -146,7 +146,7 @@ RateLimiter.prototype.matchRuleUsingFind = function( rule, methodInvocation ) {
   } );
 
   return ruleMatches;
-}
+}*/
 
 RateLimiter.prototype._matchRule = function ( rule, input ) {
   var self = this;
@@ -180,7 +180,7 @@ RateLimiter.prototype._matchRule = function ( rule, input ) {
  * @param  {object} methodInvocation DDPCommon.MethodInvocation object with
  * added 'method' attribute listing the method name
  */
-RateLimiter.prototype.increment = function( methodInvocation ) {
+/*RateLimiter.prototype.increment = function( methodInvocation ) {
   var self = this;
   // Figure out all the rules this method invocation matches
   _.each( this.rules, function( rule ) {
@@ -212,7 +212,7 @@ RateLimiter.prototype.increment = function( methodInvocation ) {
       }
     }
   } );
-}
+}*/
 
 RateLimiter.prototype.newIncrement = function ( input ) {
   var self = this;
@@ -258,7 +258,7 @@ RateLimiter.prototype._createNewRuleId = function() {
  * @return {string} Key string made of all fields from rule that match in
  * method invocation
  */
-RateLimiter.prototype._generateMethodInvocationKeyStringFromRuleMapping =
+/*RateLimiter.prototype._generateMethodInvocationKeyStringFromRuleMapping =
   function( rule, methodInvocation ) {
     var self = this;
     var returnString = "";
@@ -275,7 +275,7 @@ RateLimiter.prototype._generateMethodInvocationKeyStringFromRuleMapping =
       }
     } );
     return returnString;
-  }
+  }*/
 
 RateLimiter.prototype._generateKeyString = function (rule, input) {
   var self = this;
@@ -283,11 +283,13 @@ RateLimiter.prototype._generateKeyString = function (rule, input) {
   _.each( rule, function ( value, key) {
     if (value !== null) {
       if (typeof value === 'function') {
-        if (value(input[key]))
+        if (value(input[key])){
           returnString += key +  input[key];
+        }
       }
-      else
+      else{
         returnString += key + input[key];
+      }
     }
   });
   return returnString;
@@ -302,7 +304,7 @@ RateLimiter.prototype._generateKeyString = function (rule, input) {
  * @return {object} Returns a string, value, or object of whatever is stored in
  * appropriate field in MethodInvocation
  */
-RateLimiter.prototype._ruleMappingtoMethodInvocationDict = function( key,
+/*RateLimiter.prototype._ruleMappingtoMethodInvocationDict = function( key,
   methodInvocation ) {
 
   var arr = RATE_LIMITING_DICT[ key ].split( '.' );
@@ -311,8 +313,8 @@ RateLimiter.prototype._ruleMappingtoMethodInvocationDict = function( key,
       methodInvocation = methodInvocation[ firstGuy ];
   }
   return methodInvocation;
-};
-
+}; */
+/*
 RateLimiter.prototype._matchRuleHelper = function( rule, methodInvocation ) {
   var self = this;
 
@@ -325,7 +327,7 @@ RateLimiter.prototype._matchRuleHelper = function( rule, methodInvocation ) {
     timeSinceLastReset: timeSinceLastReset,
     timeToNextReset: timeToNextReset
   };
-}
+} */
 
 RateLimiter.prototype._newRuleHelper = function (rule, input) {
   var self = this;

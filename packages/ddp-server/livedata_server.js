@@ -545,16 +545,24 @@ _.extend(Session.prototype, {
 
         if (_.has(self.protocol_handlers, msg.msg)) {
           // Is it bad to do these checks here? Instead of inside session.protocol_handlers and then in method
-          // var rateLimiterInput = {
-          //   userId: self.userId,
-          //   IPAddr: self.connectionHandle.clientAddress,
-          //   type: msg.msg,
-          //   name: msg.name }
-          // DDPRateLimiter.RateLimiter.increment(rateLimiterInput);
-          // var rateLimitResult = DDPRateLimiter.RateLimiter.check(rateLimiterInput)
-          // if (!rateLimitResult.valid)
-          //   self.sendError('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult));
-          // else
+          var rateLimiterInput = {
+            userId: self.userId,
+            IPAddr: self.connectionHandle.clientAddress,
+            type: msg.msg,
+            name: null
+          };
+          // Janky solution because in method, methodName is in msg.method otherwise in msg.name for subscriptions
+          if (msg.msg === 'method') {
+            rateLimiterInput.name = msg.method;
+          } else if (msg.msg === 'sub') {
+            rateLimiterInput.name = msg.name;
+          }
+          DDPRateLimiter.RateLimiter.newIncrement(rateLimiterInput);
+          var rateLimitResult = DDPRateLimiter.RateLimiter.newCheck(rateLimiterInput)
+          if (!rateLimitResult.valid) {
+            self.sendError('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult));
+          }
+          else
             self.protocol_handlers[msg.msg].call(self, msg, unblock);
           }
         else
@@ -658,16 +666,16 @@ _.extend(Session.prototype, {
         randomSeed: randomSeed
       });
       // invocation.method = msg.method;
-      var rateLimiterInput = {
-            userId: self.userId,
-            IPAddr: self.connectionHandle.clientAddress,
-            method: msg.method};
+      // var rateLimiterInput = {
+      //       userId: self.userId,
+      //       IPAddr: self.connectionHandle.clientAddress,
+      //       method: msg.method};
       try {
-        DDPRateLimiter.RateLimiter.newIncrement(rateLimiterInput);
-        var rateLimitResult = DDPRateLimiter.RateLimiter.newCheck(rateLimiterInput)
-        if (!rateLimitResult.valid) {
-          throw new Meteor.Error(429, DDPRateLimiter.getErrorMessage(rateLimitResult));
-        }
+        // DDPRateLimiter.RateLimiter.newIncrement(rateLimiterInput);
+        // var rateLimitResult = DDPRateLimiter.RateLimiter.newCheck(rateLimiterInput)
+        // if (!rateLimitResult.valid) {
+        //   throw new Meteor.Error(429, DDPRateLimiter.getErrorMessage(rateLimitResult));
+        // }
 
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
           return DDP._CurrentInvocation.withValue(invocation, function () {

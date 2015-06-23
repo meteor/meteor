@@ -10,7 +10,8 @@ DDPRateLimiter.RateLimiter.addRule( {
   IPAddr: function( IPAddr ) {
     return true;
   },
-  method: 'login'
+  type: 'method',
+  name: 'login'
 }, 5, 10000 );
 
 DDPRateLimiter.getErrorMessage = function( rateLimitResult ) {
