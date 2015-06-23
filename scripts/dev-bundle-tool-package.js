@@ -21,7 +21,7 @@ var packageJson = {
   version: "0.0.0",
   dependencies: {
     fibers: fibersVersion,
-    "meteor-babel": "0.1.11",
+    "meteor-babel": "0.1.12",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
