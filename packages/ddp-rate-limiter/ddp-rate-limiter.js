@@ -8,7 +8,7 @@ DDPRateLimiter.RateLimiter = new RateLimiter();
 DDPRateLimiter.RateLimiter.addRule( {
   userId: null,
   IPAddr: function( IPAddr ) {
-    return true
+    return true;
   },
   method: 'login'
 }, 5, 10000 );

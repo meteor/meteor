@@ -14,7 +14,7 @@ RateLimiter = function() {
   var self = this;
   self.rules = [];
   self.ruleId = 0;
-  self.ruleInvocationCounters = {};
+  self.ruleCounters = {};
 }
 
 /**
@@ -37,7 +37,7 @@ RateLimiter.prototype.check = function( methodInvocation ) {
     if ( RateLimiter.prototype.matchRuleUsingFind( rule, methodInvocation ) ) {
       var matchRuleHelper = self._matchRuleHelper( rule, methodInvocation );
 
-      var numInvocations = self.ruleInvocationCounters[ rule.ruleId ]
+      var numInvocations = self.ruleCounters[ rule.ruleId ]
         [ matchRuleHelper.methodString ];
 
       if ( numInvocations > rule.numRequestsAllowed &&
@@ -65,10 +65,39 @@ RateLimiter.prototype.check = function( methodInvocation ) {
   return reply;
 }
 
+RateLimiter.prototype.newCheck = function ( input )  {
+  var self = this;
+  var reply = {
+    valid: true,
+    timeToReset: 0,
+    numInvocationsLeft: Infinity
+  };
+
+  _.each( self.rules, function( rule ) {
+    if ( self._matchRule( rule, input )) {
+      var matchRuleHelper = self._newRuleHelper( rule, input );
+      var numInvocations = self.ruleCounters[ rule.ruleId ][matchRuleHelper.methodString];
+      if (numInvocations > rule.numRequestsAllowed && matchRuleHelper.timeSinceLastReset < rule.intervalTime) {
+        if ( reply.timeToReset < matchRuleHelper.timeToNextReset ) {
+          reply.timeToReset = matchRuleHelper.timeToNextReset;
+        };
+        reply.valid = false;
+        reply.numInvocationsLeft = 0;
+      } else {
+        if (rule.numRequestsAllowed - numInvocations < reply.numInvocationsLeft && reply.valid) {
+          reply.valid = true;
+          reply.timeToReset =  matchRuleHelper.timeToNextReset < 0 ? rule.intervalTime : matchRuleHelper.timeToNextReset;
+          reply.numInvocationsLeft = rule.numRequestsAllowed - numInvocations;
+        }
+      }
+    }
+  });
+  return reply;
+}
+
 /**
- * Adds a rule to with a specified identifier query to list of rules that are
- * checked against on every method invocation
- * @param {object} identifierQuery    Specified domain for rate limit rule
+ * Appends a rule to list of rules that are checked against on every method invocation
+ * @param {object} rule    Specified domain for rate limit rule
  *                                    { userId: ID | function() | null,
  *                                      IPAddr: ID | function() | null,
  *                                      method: name | function() | null
@@ -76,15 +105,15 @@ RateLimiter.prototype.check = function( methodInvocation ) {
  * @param {integer} numRequestsAllowed Number of requests allowed per interval
  * @param {integer} intervalTime       Number of milliseconds before interval is reset
  */
-RateLimiter.prototype.addRule = function( identifierQuery, numRequestsAllowed,
+RateLimiter.prototype.addRule = function( rule, numRequestsAllowed,
   intervalTime ) {
-  identifierQuery.ruleId = this._createNewRuleId();
-  identifierQuery.numRequestsAllowed = numRequestsAllowed ||
+  rule.ruleId = this._createNewRuleId();
+  rule.numRequestsAllowed = numRequestsAllowed ||
     DEFAULT_REQUESTS_PER_INTERVAL;
-  identifierQuery.intervalTime = intervalTime ||
+  rule.intervalTime = intervalTime ||
     DEFAULT_INTERVAL_TIME_IN_MILLISECONDS;
-  identifierQuery._lastResetTime = new Date().getTime();
-  this.rules.push( identifierQuery );
+  rule._lastResetTime = new Date().getTime();
+  this.rules.push( rule );
 }
 
 /**
@@ -119,6 +148,33 @@ RateLimiter.prototype.matchRuleUsingFind = function( rule, methodInvocation ) {
   return ruleMatches;
 }
 
+RateLimiter.prototype._matchRule = function ( rule, input ) {
+  var self = this;
+  var ruleMatches = true;
+  _.find( rule, function ( value, key) {
+    if (value !== null && key != 'ruleId' && key != '_lastResetTime' && key != 'numRequestsAllowed' && key != 'intervalTime') {
+      if (!(key in input)) {
+        ruleMatches = false;
+        return true;
+      } else {
+        if (typeof value === 'function') {
+          if (!(value(input[key]))) {
+            ruleMatches = false;
+            return true;
+          }
+        } else {
+          if (value !== input[key]) {
+            ruleMatches = false;
+            return true;
+          }
+        }
+      }
+    }
+  });
+  return ruleMatches;
+}
+
+
 /**
  * Increment appropriate counters on every method invocation
  * @param  {object} methodInvocation DDPCommon.MethodInvocation object with
@@ -135,27 +191,57 @@ RateLimiter.prototype.increment = function( methodInvocation ) {
       if ( matchRuleHelper.timeSinceLastReset > rule.intervalTime ) {
         rule._lastResetTime = new Date().getTime();
         // Reset all the counters for this rule
-        _.each( self.ruleInvocationCounters[ rule.ruleId ], function(
+        _.each( self.ruleCounters[ rule.ruleId ], function(
           value, methodString ) {
-          self.ruleInvocationCounters[ rule.ruleId ][ methodString ] =
+          self.ruleCounters[ rule.ruleId ][ methodString ] =
             0;
         } );
       }
-      if ( rule.ruleId in self.ruleInvocationCounters ) {
-        if ( matchRuleHelper.methodString in self.ruleInvocationCounters[
+      if ( rule.ruleId in self.ruleCounters ) {
+        if ( matchRuleHelper.methodString in self.ruleCounters[
             rule.ruleId ] ) {
-          self.ruleInvocationCounters[ rule.ruleId ][ matchRuleHelper.methodString ]++;
+          self.ruleCounters[ rule.ruleId ][ matchRuleHelper.methodString ]++;
         } else {
-          self.ruleInvocationCounters[ rule.ruleId ][ matchRuleHelper.methodString ] =
+          self.ruleCounters[ rule.ruleId ][ matchRuleHelper.methodString ] =
             1;
         }
       } else {
-        self.ruleInvocationCounters[ rule.ruleId ] = {};
-        self.ruleInvocationCounters[ rule.ruleId ][ matchRuleHelper.methodString ] =
+        self.ruleCounters[ rule.ruleId ] = {};
+        self.ruleCounters[ rule.ruleId ][ matchRuleHelper.methodString ] =
           1;
       }
     }
   } );
+}
+
+RateLimiter.prototype.newIncrement = function ( input ) {
+  var self = this;
+
+  // Only increment rule counters that match this input
+  _.each ( self.rules, function ( rule ) {
+    if (self._matchRule( rule , input ) ) {
+      var matchRuleHelper = self._newRuleHelper( rule, input );
+
+      if ( matchRuleHelper.timeSinceLastReset > rule.intervalTime) {
+        // Reset all the counters since the rule has reset
+        rule._lastResetTime = new Date().getTime();
+        _.each( self.ruleCounters [ rule.ruleId ], function (value, keyString) {
+          self.ruleCounters[ rule.ruleId][keyString ] = 0;
+        });
+      }
+
+      if ( rule.ruleId in self.ruleCounters ) {
+        if ( matchRuleHelper.methodString  in self.ruleCounters[rule.ruleId] ) {
+          self.ruleCounters[ rule.ruleId ] [ matchRuleHelper.methodString ]++;
+        } else {
+          self.ruleCounters[ rule.ruleId ] [ matchRuleHelper.methodString ] = 1;
+        }
+      } else {
+        self.ruleCounters [ rule.ruleId ] = {};
+        self.ruleCounters [ rule.ruleId ] [matchRuleHelper.methodString ] = 1;
+      }
+    }
+  });
 }
 
 // Creates new unique rule id
@@ -191,6 +277,22 @@ RateLimiter.prototype._generateMethodInvocationKeyStringFromRuleMapping =
     return returnString;
   }
 
+RateLimiter.prototype._generateKeyString = function (rule, input) {
+  var self = this;
+  var returnString = "";
+  _.each( rule, function ( value, key) {
+    if (value !== null) {
+      if (typeof value === 'function') {
+        if (value(input[key]))
+          returnString += key +  input[key];
+      }
+      else
+        returnString += key + input[key];
+    }
+  });
+  return returnString;
+}
+
 /**
  * Helper method that uses the RATE_LIMITING_DICT to create a fast way to
  * access values in methodInvocation without manually parsing the paths
@@ -223,4 +325,17 @@ RateLimiter.prototype._matchRuleHelper = function( rule, methodInvocation ) {
     timeSinceLastReset: timeSinceLastReset,
     timeToNextReset: timeToNextReset
   };
+}
+
+RateLimiter.prototype._newRuleHelper = function (rule, input) {
+  var self = this;
+  var keyString = self._generateKeyString(rule, input);
+  var timeSinceLastReset = new Date().getTime() - rule._lastResetTime;
+  var timeToNextReset = rule.intervalTime - timeSinceLastReset;
+  return {
+    methodString: keyString,
+    timeSinceLastReset: timeSinceLastReset,
+    timeToNextReset: timeToNextReset
+  };
+
 }

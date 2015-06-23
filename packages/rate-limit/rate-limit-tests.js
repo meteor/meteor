@@ -8,7 +8,7 @@ Tinytest.add( 'Check empty constructor creation', function( test ) {
   r = new RateLimiter();
   test.equal( r.rules, [] );
   test.equal( r.ruleId, 0 );
-  test.equal( r.ruleInvocationCounters, {} );
+  test.equal( r.ruleCounters, {} );
 } );
 
 Tinytest.add(
@@ -169,6 +169,77 @@ Tinytest.add( "add global rule", function( test ) {
   test.equal( r.check( methodInvc2 ).valid, false );
   test.equal( r.check( methodInvc3 ).valid, false );
 } );
+
+Tinytest.add("test matchRule method", function (test) {
+  r = new RateLimiter();
+  var globalRule = {
+    userId: null,
+    IPAddr: null,
+    type: null,
+    name: null
+  }
+
+  var RateLimiterInput = {
+    userId: 1023,
+    IPAddr: "127.0.0.1",
+    type: 'sub',
+    name: 'getSubLists'
+  };
+
+  test.equal(r._matchRule(globalRule, RateLimiterInput), true);
+
+  var oneNotNullRule = {
+    userId: 102,
+    IPAddr: null,
+    type: null,
+    name: null
+  }
+
+  test.equal(r._matchRule(oneNotNullRule, RateLimiterInput), false);
+
+  oneNotNullRule.userId = 1023;
+  test.equal(r._matchRule(oneNotNullRule, RateLimiterInput), true);
+
+  var notCompleteInput = { userId: 102, IPAddr: '127.0.0.1'};
+  test.equal(r._matchRule(globalRule, notCompleteInput), true);
+  test.equal(r._matchRule(oneNotNullRule, notCompleteInput), false);
+});
+
+Tinytest.add('test generateMethodKey string', function(test) {
+  r = new RateLimiter();
+  var globalRule = {
+    userId: null,
+    IPAddr: null,
+    type: null,
+    name: null
+  }
+
+  var RateLimiterInput = {
+    userId: 1023,
+    IPAddr: "127.0.0.1",
+    type: 'sub',
+    name: 'getSubLists'
+  };
+
+  test.equal(r._generateKeyString(globalRule, RateLimiterInput), "");
+
+  globalRule.userId = 1023;
+  test.equal(r._generateKeyString(globalRule, RateLimiterInput), "userId1023");
+
+  var ruleWithFuncs = {
+    userId: function(input) { return input % 2 === 0},
+    IPAddr: null,
+    type: null
+  };
+
+  test.equal(r._generateKeyString(ruleWithFuncs, RateLimiterInput), "");
+  RateLimiterInput.userId = 1024;
+  test.equal(r._generateKeyString(ruleWithFuncs, RateLimiterInput), "userId1024");
+
+  var multipleRules = ruleWithFuncs;
+  multipleRules.IPAddr = '127.0.0.1';
+  test.equal(r._generateKeyString(multipleRules, RateLimiterInput), "userId1024IPAddr127.0.0.1")
+})
 
 function createTempConnectionHandle( id, clientIP ) {
   return {
