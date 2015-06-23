@@ -492,7 +492,6 @@ _.extend(Session.prototype, {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
-    // console.log(msg_in);
     // Respond to ping and pong messages immediately without queuing.
     // If the negotiated DDP version is "pre1" which didn't support
     // pings, preserve the "pre1" behavior of responding with a "bad
@@ -544,25 +543,6 @@ _.extend(Session.prototype, {
         };
 
         if (_.has(self.protocol_handlers, msg.msg)) {
-          // Is it bad to do these checks here? Instead of inside session.protocol_handlers and then in method
-          var rateLimiterInput = {
-            userId: self.userId,
-            IPAddr: self.connectionHandle.clientAddress,
-            type: msg.msg,
-            name: null
-          };
-          // Janky solution because in method, methodName is in msg.method otherwise in msg.name for subscriptions
-          if (msg.msg === 'method') {
-            rateLimiterInput.name = msg.method;
-          } else if (msg.msg === 'sub') {
-            rateLimiterInput.name = msg.name;
-          }
-          DDPRateLimiter.RateLimiter.newIncrement(rateLimiterInput);
-          var rateLimitResult = DDPRateLimiter.RateLimiter.newCheck(rateLimiterInput)
-          if (!rateLimitResult.valid) {
-            self.sendError('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult));
-          }
-          else
             self.protocol_handlers[msg.msg].call(self, msg, unblock);
           }
         else
@@ -599,9 +579,23 @@ _.extend(Session.prototype, {
         // reconnect.
         return;
 
+      var rateLimiterInput = {
+        userId: self.userId,
+        IPAddr: self.connectionHandle.clientAddress,
+        type: msg.msg,
+        name: msg.name
+      };
+
+      DDPRateLimiter.RateLimiter.increment(rateLimiterInput);
+      var rateLimitResult = DDPRateLimiter.RateLimiter.check(rateLimiterInput)
+      if (!rateLimitResult.valid) {
+        self.send({
+          msg: 'nosub', id: msg.id,
+          error: new Meteor.Error('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult))
+        });
+      }
       var handler = self.server.publish_handlers[msg.name];
 
-      // console.log(msg);
       self._startSubscription(handler, msg.id, msg.params, msg.name);
 
     },
@@ -665,17 +659,19 @@ _.extend(Session.prototype, {
         connection: self.connectionHandle,
         randomSeed: randomSeed
       });
-      // invocation.method = msg.method;
-      // var rateLimiterInput = {
-      //       userId: self.userId,
-      //       IPAddr: self.connectionHandle.clientAddress,
-      //       method: msg.method};
+
       try {
-        // DDPRateLimiter.RateLimiter.newIncrement(rateLimiterInput);
-        // var rateLimitResult = DDPRateLimiter.RateLimiter.newCheck(rateLimiterInput)
-        // if (!rateLimitResult.valid) {
-        //   throw new Meteor.Error(429, DDPRateLimiter.getErrorMessage(rateLimitResult));
-        // }
+        var rateLimiterInput = {
+          userId: self.userId,
+          IPAddr: self.connectionHandle.clientAddress,
+          type: msg.msg,
+          name: msg.method
+        };
+        DDPRateLimiter.RateLimiter.increment(rateLimiterInput);
+        var rateLimitResult = DDPRateLimiter.RateLimiter.check(rateLimiterInput)
+        if (!rateLimitResult.valid) {
+          throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));
+        }
 
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
           return DDP._CurrentInvocation.withValue(invocation, function () {

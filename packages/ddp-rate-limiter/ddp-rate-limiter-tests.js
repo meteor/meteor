@@ -4,11 +4,12 @@ Tinytest.add( 'example', function( test ) {
   test.equal( true, true );
 } );
 
+DDPRateLimiter.config = {};
 DDPRateLimiter.addRule( {
   userId: null,
   IPAddr: null,
   method: 'login'
-}, 5, 10000 );
+}, 5, 1000 );
 
 if ( Meteor.isClient ) {
   testAsyncMulti( "passwords - basic login with password", [
@@ -23,7 +24,7 @@ if ( Meteor.isClient ) {
           email: this.email,
           password: this.password
         },
-        function() {} );
+        expect(function() {} ));
     },
     function( test, expect ) {
       test.notEqual( Meteor.userId(), null );
@@ -36,13 +37,16 @@ if ( Meteor.isClient ) {
     },
     function( test, expect ) {
       var self = this;
-      for ( var i = 0; i < 100; i++ ) {
-
-        Meteor.loginWithPassword( self.username, 'fakePassword', function(
-          error ) {
-          console.log( "We threw an error.", error );
-        } );
+      for ( var i = 0; i < 5; i++ ) {
+        Meteor.loginWithPassword( self.username, 'fakePassword', expect(
+          function(error) {
+            test.equal(error.error, 403);
+        }));
       }
+      Meteor.loginWithPassword( self.username, 'fakePassword', expect(
+        function(error) {
+          test.equal(error.error, 'too-many-requests');
+        }));
     }
-  ] );
+  ]);
 };
