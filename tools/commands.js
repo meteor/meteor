@@ -1388,7 +1388,10 @@ main.registerCommand({
 
     // This could theoretically be useful/necessary in conjunction with
     // --test-app-path.
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+
+    // Don't print linting messages for tested packages
+    'no-lint': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1612,7 +1615,8 @@ var getTestPackageNames = function (projectContext, packageNames) {
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
     minify: options.production,
-    includeDebug: ! options.production
+    includeDebug: ! options.production,
+    lint: ! options['no-lint']
   };
 
   if (options.deploy) {

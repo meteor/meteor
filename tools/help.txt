@@ -519,6 +519,8 @@ Options:
                     usually /tmp.
   --velocity        [Experimental] Execute tests using phantomjs and exit.
   --verbose         Print all output from builds logs.
+  --no-lint         Don't run linters used by the tested packages on every
+                    test app rebuild.
 
 
 >>> self-test
