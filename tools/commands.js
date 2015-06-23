@@ -1007,8 +1007,17 @@ main.registerCommand({
     Console.error("Errors building your app:\n\n" + bundle.errors.formatMessages());
     throw new main.ExitWithCode(-1);
   }
-  if (bundle.warnings) {
-    Console.warn(bundle.warnings.formatMessages());
+
+  var localPackagesLintingErrors =
+    projectContext._getLintingMessagesForLocalPackages();
+  if (bundle.warnings || localPackagesLintingErrors.length > 0) {
+    var messages = '';
+    if (bundle.warnings) {
+      messages += bundle.warnings.formatMessages() + '\n';
+    }
+    messages += localPackagesLintingErrors.join('\n');
+
+    Console.warn(messages);
     throw new main.ExitWithCode(-1);
   }
 
