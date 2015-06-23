@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.4.21 # 0.4.22-29 on es6-tool branch!
+BUNDLE_VERSION=0.4.30
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -106,10 +106,12 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
+
+    export BABEL_CACHE_DIR="$SCRIPT_DIR/.babel-cache"
 fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-METEOR="$SCRIPT_DIR/tools/main.js"
+METEOR="$SCRIPT_DIR/tools/main-transpile-wrapper.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a

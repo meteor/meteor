@@ -35,7 +35,7 @@ var Builder = function (options) {
                                   '.build' + nonce + "." +
                                     files.pathBasename(self.outputPath));
   files.rm_recursive(self.buildPath);
-  files.mkdir_p(self.buildPath, 0755);
+  files.mkdir_p(self.buildPath, 0o755);
 
   self.watchSet = new watch.WatchSet();
 
@@ -60,7 +60,7 @@ _.extend(Builder.prototype, {
       var partial = partsSoFar.join(files.pathSep);
       if (! (partial in self.usedAsFile)) {
         // It's new -- create it
-        files.mkdir(files.pathJoin(self.buildPath, partial), 0755);
+        files.mkdir(files.pathJoin(self.buildPath, partial), 0o755);
         self.usedAsFile[partial] = false;
       } else if (self.usedAsFile[partial]) {
         // Already exists and is a file. Oops.
@@ -179,7 +179,7 @@ _.extend(Builder.prototype, {
       // users shouldn't be manually editing automatically generated files and
       // expecting the results to "stick".
       files.writeFile(absPath, data,
-                       { mode: options.executable ? 0555 : 0444 });
+                       { mode: options.executable ? 0o555 : 0o444 });
     }
     self.usedAsFile[relPath] = true;
 
@@ -199,7 +199,7 @@ _.extend(Builder.prototype, {
     self._ensureDirectory(files.pathDirname(relPath));
     files.writeFile(files.pathJoin(self.buildPath, relPath),
                      new Buffer(JSON.stringify(data, null, 2), 'utf8'),
-                     {mode: 0444});
+                     {mode: 0o444});
 
     self.usedAsFile[relPath] = true;
   }),
@@ -238,7 +238,7 @@ _.extend(Builder.prototype, {
       var shouldBeDirectory = (i < parts.length - 1) || options.directory;
       if (shouldBeDirectory) {
         if (! (soFar in self.usedAsFile)) {
-          files.mkdir(files.pathJoin(self.buildPath, soFar), 0755);
+          files.mkdir(files.pathJoin(self.buildPath, soFar), 0o755);
           self.usedAsFile[soFar] = false;
         }
       } else {

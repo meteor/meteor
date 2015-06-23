@@ -183,12 +183,12 @@ _.extend(LocalCatalog.prototype, {
 
   getVersionBySourceRoot: function (sourceRoot) {
     var self = this;
-    var package = _.find(self.packages, function (p) {
+    var packageObj = _.find(self.packages, function (p) {
       return p.packageSource.sourceRoot === sourceRoot;
     });
-    if (! package)
+    if (! packageObj)
       return null;
-    return package.versionRecord;
+    return packageObj.versionRecord;
   },
 
   // Compute self.effectiveLocalPackageDirs from self.localPackageSearchDirs and

@@ -394,7 +394,7 @@ var launchMongo = function (options) {
 
   var launchOneMongoAndWaitForReadyForInitiate = function (dbPath, port,
                                                            portFile) {
-    files.mkdir_p(dbPath, 0755);
+    files.mkdir_p(dbPath, 0o755);
 
     var proc = null;
     var procExitHandler;
@@ -407,7 +407,7 @@ var launchMongo = function (options) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
       files.rm_recursive(dbPath);
-      files.mkdir_p(dbPath, 0755);
+      files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;
       var matchingPortFileExists = false;
