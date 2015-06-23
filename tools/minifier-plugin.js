@@ -2,11 +2,14 @@ var buildPluginModule = require('./build-plugin.js');
 var util = require('util');
 var _ = require('underscore');
 
-var InputFile = exports.InputFile = function (source) {
+var InputFile = exports.InputFile = function (source, options) {
   buildPluginModule.InputFile.call(this);
 
   var self = this;
+  options = options || {};
+
   self._source = source;
+  self._arch = options.arch;
   self._minifiedFiles = [];
 };
 
@@ -21,11 +24,17 @@ _.extend(InputFile.prototype, {
   },
   getPackageName: function () {
     throw new Error("Compiled files don't belong to any package");
+  },
+  getSourceHash: function () {
+    return this._source.hash();
+  },
+  getArch: function () {
+    return this._arch;
   }
 });
 
-var JsFile = exports.JsFile = function (source) {
-  InputFile.call(this, source);
+var JsFile = exports.JsFile = function (source, options) {
+  InputFile.apply(this, arguments);
 };
 
 util.inherits(JsFile, InputFile);
@@ -41,8 +50,8 @@ _.extend(JsFile.prototype, {
   }
 });
 
-var CssFile = exports.CssFile = function (source) {
-  InputFile.call(this, source);
+var CssFile = exports.CssFile = function (source, options) {
+  InputFile.apply(this, arguments);
 };
 
 util.inherits(CssFile, InputFile);

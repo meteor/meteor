@@ -828,7 +828,9 @@ _.extend(Target.prototype, {
     var self = this;
 
     var sources = _.map(self.js, function (file) {
-      return new minifierPluginModule.JsFile(file);
+      return new minifierPluginModule.JsFile(file, {
+        arch: self.arch
+      });
     });
     var minifier = minifierDef.userPlugin.processFilesForTarget.bind(
       minifierDef.userPlugin);
@@ -1018,7 +1020,9 @@ _.extend(ClientTarget.prototype, {
     var self = this;
 
     var sources = _.map(self.css, function (file) {
-      return new minifierPluginModule.CssFile(file);
+      return new minifierPluginModule.CssFile(file, {
+        arch: self.arch
+      });
     });
     var minifier = minifierDef.userPlugin.processFilesForTarget.bind(
       minifierDef.userPlugin);
