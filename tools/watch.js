@@ -95,12 +95,14 @@ export class WatchSet {
   addFile(filePath, hash) {
     var self = this;
     // No need to update if this is in always-fire mode already.
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
+    }
     if (_.has(self.files, filePath)) {
       // Redundant?
-      if (self.files[filePath] === hash)
+      if (self.files[filePath] === hash) {
         return;
+      }
       // Nope, inconsistent.
       self.alwaysFire = true;
       return;
@@ -112,13 +114,16 @@ export class WatchSet {
   // above. contents does not need to be pre-sorted.
   addDirectory(options) {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
-    if (_.isEmpty(options.include))
+    }
+    if (_.isEmpty(options.include)) {
       return;
+    }
     var contents = _.clone(options.contents);
-    if (contents)
+    if (contents) {
       contents.sort();
+    }
 
     self.directories.push({
       absPath: options.absPath,
@@ -132,8 +137,9 @@ export class WatchSet {
   // WatchSet would have fired.
   merge(other) {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
+    }
     if (other.alwaysFire) {
       self.alwaysFire = true;
       return;
@@ -162,20 +168,25 @@ export class WatchSet {
 
   toJSON() {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return {alwaysFire: true};
+    }
     var ret = {files: self.files};
 
     var reToJSON = function (r) {
       var options = '';
-      if (r.ignoreCase)
+      if (r.ignoreCase) {
         options += 'i';
-      if (r.multiline)
+      }
+      if (r.multiline) {
         options += 'm';
-      if (r.global)
+      }
+      if (r.global) {
         options += 'g';
-      if (options)
+      }
+      if (options) {
         return {$regex: r.source, $options: options};
+      }
       return r.source;
     };
 
@@ -194,8 +205,9 @@ export class WatchSet {
   static fromJSON(json) {
     var set = new WatchSet();
 
-    if (! json)
+    if (! json) {
       return set;
+    }
 
     if (json.alwaysFire) {
       set.alwaysFire = true;
@@ -205,8 +217,9 @@ export class WatchSet {
     set.files = _.clone(json.files);
 
     var reFromJSON = function (j) {
-      if (_.has(j, '$regex'))
+      if (_.has(j, '$regex')) {
         return new RegExp(j.$regex, j.$options);
+      }
       return new RegExp(j);
     };
 
@@ -228,8 +241,9 @@ var readFile = function (absPath) {
     return files.readFile(absPath);
   } catch (e) {
     // Rethrow most errors.
-    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
+    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
       throw e;
+    }
     // File does not exist (or is a directory).
     return null;
   }
@@ -247,8 +261,9 @@ export function readDirectory(options) {
     var contents = files.readdir(options.absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
-    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
+    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
       return null;
+    }
     throw e;
   }
 
@@ -268,8 +283,9 @@ export function readDirectory(options) {
       }
       throw e;
     }
-    if (stats.isDirectory())
+    if (stats.isDirectory()) {
       entry += '/';
+    }
     contentsWithSlashes.push(entry);
   });
 
@@ -294,14 +310,16 @@ export class Watcher {
 
     // The set to watch.
     self.watchSet = options.watchSet;
-    if (! self.watchSet)
+    if (! self.watchSet) {
       throw new Error("watchSet option is required");
+    }
 
     // Function to call when a change is detected according to one of
     // the above.
     self.onChange = options.onChange;
-    if (! self.onChange)
+    if (! self.onChange) {
       throw new Error("onChange option is required");
+    }
 
     self.stopped = false;
     self.justCheckOnce = !! options._justCheckOnce;
@@ -329,21 +347,24 @@ export class Watcher {
   _fireIfFileChanged(absPath) {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return true;
+    }
 
     var oldHash = self.watchSet.files[absPath];
 
-    if (oldHash === undefined)
+    if (oldHash === undefined) {
       throw new Error("Checking unknown file " + absPath);
+    }
 
     var contents = readFile(absPath);
 
     if (contents === null) {
       // File does not exist (or is a directory).
       // Is this what we expected?
-      if (oldHash === null)
+      if (oldHash === null) {
         return false;
+      }
       // Nope, not what we expected.
       self._fire();
       return true;
@@ -358,8 +379,9 @@ export class Watcher {
     var newHash = sha1(contents);
 
     // Unchanged?
-    if (newHash === oldHash)
+    if (newHash === oldHash) {
       return false;
+    }
 
     self._fire();
     return true;
@@ -368,8 +390,9 @@ export class Watcher {
   _fireIfDirectoryChanged(info) {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return true;
+    }
 
     var newContents = readDirectory({
       absPath: info.absPath,
@@ -391,11 +414,13 @@ export class Watcher {
 
     // Set up a watch for each file
     _.each(self.watchSet.files, function (hash, absPath) {
-      if (self.stopped)
+      if (self.stopped) {
         return;
+      }
 
-      if (! self.justCheckOnce)
+      if (! self.justCheckOnce) {
         self._watchFileOrDirectory(absPath);
+      }
 
       // Check for the case where by the time we created the watch,
       // the file had already changed from the sha we were provided.
@@ -533,15 +558,17 @@ export class Watcher {
   // See #3854.
   _mustNotExist(absPath) {
     var wsFiles = this.watchSet.files;
-    if (_.has(wsFiles, absPath))
+    if (_.has(wsFiles, absPath)) {
       return wsFiles[absPath] === null;
+    }
     return false;
   }
 
   _mustBeAFile(absPath) {
     var wsFiles = this.watchSet.files;
-    if (_.has(wsFiles, absPath))
+    if (_.has(wsFiles, absPath)) {
       return _.isString(wsFiles[absPath]);
+    }
     return false;
   }
 
@@ -612,15 +639,18 @@ export class Watcher {
   _checkDirectories() {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     _.each(self.watchSet.directories, function (info) {
-      if (self.stopped)
+      if (self.stopped) {
         return;
+      }
 
-      if (! self.justCheckOnce)
+      if (! self.justCheckOnce) {
         self._watchFileOrDirectory(info.absPath);
+      }
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
@@ -631,8 +661,9 @@ export class Watcher {
   _fire() {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     self.stop();
     self.onChange();
