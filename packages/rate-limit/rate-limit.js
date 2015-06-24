@@ -2,9 +2,6 @@
 var DEFAULT_INTERVAL_TIME_IN_MILLISECONDS = 1000;
 // Default number of requets allowed per time interval
 var DEFAULT_REQUESTS_PER_INTERVAL = 10;
-var RULE_PRIVATE_FIELDS = ['_ruleId', '_lastResetTime', '_numRequestsAllowed',
-  '_intervalTime'
-];
 
 var Rule = function (options, matchers, id) {
   var self = this;
