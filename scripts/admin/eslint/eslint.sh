@@ -13,7 +13,14 @@ ${TOPDIR}/dev_bundle/bin/npm install
 
 cd "$TOPDIR"
 
+files_to_lint="."
+if [ "$1" == "modified" ]; then
+  files_to_lint=$(git ls-files --modified)
+fi
+
+
 "${TOPDIR}/dev_bundle/bin/node" \
   "${SCRIPTDIR}/node_modules/.bin/eslint" \
+  --quiet \
   -c "${SCRIPTDIR}/.eslintrc" \
-  "."
+  $files_to_lint
