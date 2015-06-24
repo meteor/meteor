@@ -99,11 +99,11 @@ rules:
   no-unused-vars: [2, {vars: 'all', args: 'after-used'}]
   no-use-before-define: 2
   no-void: 2
-  no-var: 0
+  no-var: 2
   no-warning-comments: [0, {terms: ['todo', 'fixme', 'xxx'], location: 'start'}]
   no-with: 2
   no-wrap-func: 2
-  block-scoped-var: 2
+  block-scoped-var: 0
   brace-style: 2
   camelcase: 0
   comma-spacing: 2
@@ -125,7 +125,7 @@ rules:
   key-spacing: [2, {beforeColon: false, afterColon: true}]
   max-depth: [1, 4]
   # Different from 80 chars of AirBnb Javascript
-  max-len: [2, 100]
+  max-len: [2, 80]
   max-nested-callbacks: [1, 2]
   max-params: [1, 4]
   max-statements: [0, 10]
