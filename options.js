@@ -10,6 +10,7 @@ exports.getDefaults = function getDefaults() {
     // http://babeljs.io/docs/usage/loose/
     loose: ["all", "es6.modules"],
     whitelist: [
+      "es3.propertyLiterals",
       "es3.memberExpressionLiterals",
       "es6.arrowFunctions",
       "es6.templateLiterals",

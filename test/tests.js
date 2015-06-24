@@ -1,13 +1,15 @@
 import assert from "assert";
 
 describe("Babel", function() {
-  it("es3.memberExpressionLiterals", () => {
-    function getCatch(x) {
-      return x.catch;
+  it("es3.{property,memberExpression}Literals", () => {
+    function getCatch(value) {
+      let obj = { catch: value };
+      return obj.catch;
     }
 
-    assert.strictEqual(getCatch({ catch: 42 }), 42);
-    assert.ok(getCatch.toString().indexOf('x["catch"]') >= 0);
+    assert.strictEqual(getCatch(42), 42);
+    assert.ok(getCatch.toString().indexOf('obj["catch"]') >= 0);
+    assert.ok(getCatch.toString().indexOf('"catch":') >= 0);
   });
 
   let self = this;
