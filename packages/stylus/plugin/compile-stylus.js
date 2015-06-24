@@ -1,7 +1,7 @@
-var fs = Npm.require('fs');
+var url = Npm.require('url');
+
 var stylus = Npm.require('stylus');
 var nib = Npm.require('nib');
-var path = Npm.require('path');
 var Future = Npm.require('fibers/future');
 
 Plugin.registerCompiler({
@@ -16,14 +16,30 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
   var filesByPackage = {};
   files.forEach(function (inputFile) {
     var packageName = inputFile.getPackageName() || '__app__';
-    var filePath = inputFile.getPathInPackage();
+    var filePath = '/' + inputFile.getPathInPackage();
     filesByPackage[packageName] = filesByPackage[packageName] || {};
     filesByPackage[packageName][filePath] = inputFile;
   });
 
-  var pathParser = function (filePath) {
-    // XXX match relative paths in the same package?
-    var match = /^({.*})\/(.*)$/.exec(filePath);
+  var currentlyCompiledFile = null;
+  var currentlyCompiledPackage = null;
+  var pathParser = function (filePath, importerPath) {
+    if (filePath === currentlyCompiledFile) {
+      return {
+        packageName: currentlyCompiledPackage,
+        pathInPackage: '/' + currentlyCompiledFile
+      };
+    }
+    if (! filePath.match(/^{.*}\//)) {
+      // relative path in the same package
+      var parsedImporter = pathParser(importerPath, null);
+      return {
+        packageName: parsedImporter.packageName,
+        pathInPackage: url.resolve(parsedImporter.pathInPackage, filePath)
+      };
+    }
+
+    var match = /^({.*})(\/.*)$/.exec(filePath);
     if (! match) { return null; }
 
     var packageName = match[1];
@@ -38,15 +54,19 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
   };
   var importer = {
     find: function (importPath, paths, importerPath) {
-      var parsed = pathParser(importPath);
+      var parsed = pathParser(importPath, importerPath);
 
       if (! parsed) { return null; }
 
       var packageName = parsed.packageName;
       var pathInPackage = parsed.pathInPackage;
 
-      return !!filesByPackage[packageName] &&
-        !!filesByPackage[packageName][pathInPackage] ? [importPath] : null;
+      if (! filesByPackage[packageName] ||
+          ! filesByPackage[packageName][pathInPackage]) {
+        return null;
+      }
+
+      return ['{' + packageName + '}' + pathInPackage];
     },
     readFile: function (filePath) {
       var parsed = pathParser(filePath);
@@ -62,6 +82,8 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       return;
     }
 
+    currentlyCompiledFile = inputFile.getPathInPackage();
+    currentlyCompiledPackage = inputFile.getPackageName() || '__app__';
     var f = new Future;
     var style = stylus(inputFile.getContentsAsString())
       .use(nib())
