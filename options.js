@@ -15,6 +15,7 @@ exports.getDefaults = function getDefaults() {
       "es6.arrowFunctions",
       "es6.templateLiterals",
       "es6.classes",
+      "es6.constants",
       "es6.blockScoping",
       "es6.properties.shorthand",
       "es6.properties.computed",

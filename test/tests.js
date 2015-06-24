@@ -58,6 +58,23 @@ describe("Babel", function() {
     assert.strictEqual(d.value, 2);
   });
 
+  it("es6.constants", () => {
+    var babel = require("../index.js");
+
+    let code = `
+const val = "oyez";
+val = "zxcv";`;
+
+    try {
+      babel.compile(code);
+    } catch (error) {
+      assert.ok(/"val" is read-only/.test(error.message));
+      return;
+    }
+
+    assert.ok(false, "should have returned from the catch block");
+  });
+
   it("es6.blockScoping", () => {
     let thunks = [];
 
