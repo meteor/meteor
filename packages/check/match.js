@@ -358,9 +358,10 @@ var testSubtree = function (value, pattern) {
     }
   }
 
-  for (var keys = _.keys(requiredPatterns), i = 0, length = keys.length; i < length; i++) {
+  var keys = _.keys(requiredPatterns);
+  if (keys.length) {
     return {
-      message: "Missing key '" + key + "'",
+      message: "Missing key '" + keys[0] + "'",
       path: ""
     };
   }
