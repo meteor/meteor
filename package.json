@@ -29,7 +29,7 @@
     "url": "https://github.com/meteor/babel/issues"
   },
   "dependencies": {
-    "babel-core": "5.6.4",
+    "babel-core": "5.6.5",
     "convert-source-map": "^1.1.1",
     "meteor-promise": "^0.2.2"
   },
