@@ -75,3 +75,4 @@ tools/updater.js
 tools/upgraders.js
 tools/utils.js
 tools/warehouse.js
+tools/watch.js
