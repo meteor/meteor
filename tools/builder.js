@@ -430,9 +430,7 @@ _.extend(Builder.prototype, {
     var relPathWithSep = relPath + files.pathSep;
 
     _.each(methods, function (method) {
-      subBuilder[method] = function (/* arguments */) {
-        var args = _.toArray(arguments);
-
+      subBuilder[method] = function (...args) {
         if (method !== "copyDirectory") {
           // Normal method (relPath as first argument)
           args = _.clone(args);
@@ -444,7 +442,7 @@ _.extend(Builder.prototype, {
           args[0].to = files.pathJoin(relPath, args[0].to);
         }
 
-        var ret = self[method].apply(self, args);
+        var ret = self[method](...args);
 
         if (method === "generateFilename") {
           // fix up the returned path to be relative to the

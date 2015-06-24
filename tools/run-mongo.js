@@ -369,13 +369,10 @@ var launchMongo = function (options) {
   var stopFuture = new Future;
 
   // Like Future.wrap and _.bind in one.
-  var yieldingMethod = function (/* object, methodName, args */) {
-    var args = _.toArray(arguments);
-    var object = args.shift();
-    var methodName = args.shift();
+  var yieldingMethod = function (object, methodName, ...args) {
     var f = new Future;
     args.push(f.resolver());
-    object[methodName].apply(object, args);
+    object[methodName](...args);
     return fiberHelpers.waitForOne(stopFuture, f);
   };
 

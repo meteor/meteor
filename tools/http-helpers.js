@@ -51,11 +51,11 @@ _.extend(WritableWithProgress.prototype, {
   },
 
   once: function () {
-    return this._inner.once.apply(this._inner, arguments);
+    return this._inner.once(...arguments);
   },
 
   emit: function () {
-    return this._inner.emit.apply(this._inner, arguments);
+    return this._inner.emit(...arguments);
   }
 });
 

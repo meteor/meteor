@@ -6,6 +6,9 @@
 * New `beforeSend` option to `HTTP.call` on the client allows you to directly
   access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
 
+* Parse `application/javascript` and `application/x-javascript` HTTP replies as
+  JSON too.  #4595
+
 
 ## in progress: v.1.1.1
 

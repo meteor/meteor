@@ -192,9 +192,9 @@ var verboseness = false;
 var setVerboseness = cordova.setVerboseness = function (v) {
   verboseness = !!v;
 };
-var verboseLog = cordova.verboseLog = function (/* args */) {
+var verboseLog = cordova.verboseLog = function (...args) {
   if (verboseness)
-    Console.rawError('%% ' + util.format.apply(null, arguments) + "\n");
+    Console.rawError('%% ' + util.format.apply(null, args) + "\n");
 };
 
 

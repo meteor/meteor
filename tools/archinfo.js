@@ -1,6 +1,6 @@
-var _ = require('underscore');
-var files = require('./files.js');
-var os = require('os');
+import _ from 'underscore';
+import files from './files';
+import os from 'os';
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -125,49 +125,51 @@ var os = require('os');
 // a fiber. Throws an error if it's not a supported architecture.
 //
 // If you change this, also change scripts/admin/launch-meteor
-var _host = null; // memoize
-var host = function () {
-  if (! _host) {
-    var run = function (/* arguments */) {
-      var result = files.run.apply(null, arguments);
-      if (! result)
-        throw new Error("can't get arch with " +
-                        _.toArray(arguments).join(" ") + "?");
+
+let _host = null; // memoize
+function getHost() {
+  if (!_host) {
+    function run(...args) {
+      var result = files.run.apply(null, args);
+      if (!result) {
+        throw new Error('can\'t get arch with ' + args.join(' ') + '?');
+      }
+
       return result.replace(/\s*$/, ''); // trailing whitespace
-    };
+    }
 
-    var platform = os.platform();
+    const platform = os.platform();
 
-    if (platform === "darwin") {
+    if (platform === 'darwin') {
       // Can't just test uname -m = x86_64, because Snow Leopard can
       // return other values.
-      if (run('uname', '-p') !== "i386" ||
-          run('sysctl', '-n', 'hw.cpu64bit_capable') !== "1")
-        throw new Error("Only 64-bit Intel processors are supported on OS X");
-      _host  = "os.osx.x86_64";
-    }
+      if (run('uname', '-p') !== 'i386' ||
+          run('sysctl', '-n', 'hw.cpu64bit_capable') !== '1') {
+        throw new Error('Only 64-bit Intel processors are supported on OS X');
+      }
 
-    else if (platform === "linux") {
-      var machine = run('uname', '-m');
-      if (_.contains(["i386", "i686", "x86"], machine))
-        _host = "os.linux.x86_32";
-      else if (_.contains(["x86_64", "amd64", "ia64"], machine))
-        _host = "os.linux.x86_64";
-      else
-        throw new Error("Unsupported architecture: " + machine);
-    }
-
-    else if (platform === "win32") {
+      _host = 'os.osx.x86_64';
+    } else if (platform === 'linux') {
+      const machine = run('uname', '-m');
+      if (_.contains(['i386', 'i686', 'x86'], machine)) {
+        _host = 'os.linux.x86_32';
+      } else if (_.contains(['x86_64', 'amd64', 'ia64'], machine)) {
+        _host = 'os.linux.x86_64';
+      } else {
+        throw new Error('Unsupported architecture: ' + machine);
+      }
+    } else if (platform === 'win32') {
       // We also use 32 bit builds on 64 bit Windows architectures.
-      _host = "os.windows.x86_32";
+      _host = 'os.windows.x86_32';
+    } else {
+      throw new Error('Unsupported operating system: ' + platform);
     }
-
-    else
-      throw new Error("Unsupported operating system: " + platform);
   }
 
   return _host;
-};
+}
+
+export { getHost as host };
 
 // True if `host` (an architecture name such as 'os.linux.x86_64') can run
 // programs of architecture `program` (which might be something like 'os',
@@ -177,31 +179,33 @@ var host = function () {
 // necessariy have to be a fully qualified architecture name. This
 // function just checks to see if `program` describes a set of
 // enviroments that is a (non-strict) superset of `host`.
-var matches = function (host, program) {
+export function matches(host, program) {
   return host.substr(0, program.length) === program &&
     (host.length === program.length ||
-     host.substr(program.length, 1) === ".");
-};
+     host.substr(program.length, 1) === '.');
+}
 
 // Like `supports`, but instead taken an array of possible
 // architectures as its second argument. Returns the most specific
 // match, or null if none match. Throws an error if `programs`
 // contains exact duplicates.
-var mostSpecificMatch = function (host, programs) {
-  var seen = {};
-  var best = null;
+export function mostSpecificMatch(host, programs) {
+  let seen = {};
+  let best = null;
 
-  _.each(programs, function (p) {
-    if (seen[p])
-      throw new Error("Duplicate architecture: " + p);
+  _.each(programs, function(p) {
+    if (seen[p]) {
+      throw new Error('Duplicate architecture: ' + p);
+    }
     seen[p] = true;
-    if (archinfo.matches(host, p) &&
-        (! best || p.length > best.length))
+    if (matches(host, p) &&
+        (!best || p.length > best.length)) {
       best = p;
+    }
   });
 
   return best;
-};
+}
 
 // `programs` is a set of architectures (as an array of string, which
 // may contain duplicates). Determine if there exists any architecture
@@ -212,37 +216,31 @@ var mostSpecificMatch = function (host, programs) {
 // For example, for 'os' and 'os.osx', return 'os.osx'. For 'os' and
 // 'os.linux.x86_64', return 'os.linux.x86_64'. For 'os' and 'browser', throw an
 // exception.
-var leastSpecificDescription = function (programs) {
-  if (programs.length === 0)
+export function leastSpecificDescription(programs) {
+  if (programs.length === 0) {
     return '';
+  }
 
   // Find the longest string
-  var longest = _.max(programs, function (p) { return p.length; });
+  const longest = _.max(programs, p => p.length);
 
   // If everything else in the list is compatible with the longest,
   // then it must be the most specific, and if everything is
   // compatible with the most specific then it must be the least
   // specific compatible description.
-  _.each(programs, function (p) {
-    if (! archinfo.matches(longest, p))
-      throw new Error("Incompatible architectures: '" + p + "' and '" +
-                      longest + "'");
+  _.each(programs, p => {
+    if (!matches(longest, p)) {
+      throw new Error('Incompatible architectures: \'' + p + '\' and \'' +
+                      longest + '\'');
+    }
   });
 
   return longest;
-};
+}
 
-var withoutSpecificOs = function (arch) {
-  if (arch.substr(0, 3) === 'os.')
+export function withoutSpecificOs(arch) {
+  if (arch.substr(0, 3) === 'os.') {
     return 'os';
+  }
   return arch;
-};
-
-var archinfo = exports;
-_.extend(archinfo, {
-  host: host,
-  matches: matches,
-  mostSpecificMatch: mostSpecificMatch,
-  leastSpecificDescription: leastSpecificDescription,
-  withoutSpecificOs: withoutSpecificOs
-});
+}

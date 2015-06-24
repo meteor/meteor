@@ -171,9 +171,9 @@ _.extend(LayeredCatalog.prototype, {
     return "LayeredCatalog []";
   },
 
-  getLatestVersion: function (name) {
+  getLatestVersion: function (...args) {
     var self = this;
-    return self._returnFirst("getLatestVersion", arguments, ACCEPT_NON_EMPTY);
+    return self._returnFirst("getLatestVersion", args, ACCEPT_NON_EMPTY);
   },
 
   getAllPackageNames: function () {
@@ -183,25 +183,24 @@ _.extend(LayeredCatalog.prototype, {
 
   _returnFirst: function(f, args, validityOracle) {
     var self = this;
-    var splittedArgs = Array.prototype.slice.call(args,0);
-    var result = self.localCatalog[f].apply(self.localCatalog, splittedArgs);
+    var result = self.localCatalog[f](...args);
     if (validityOracle(result)) {
       return result;
     }
-    return self.otherCatalog[f].apply(self.otherCatalog, splittedArgs);
+    return self.otherCatalog[f](...args);
   },
 
-  getPackage: function (name) {
-    return this._returnFirst("getPackage", arguments, ACCEPT_NON_EMPTY);
+  getPackage: function (...args) {
+    return this._returnFirst("getPackage", args, ACCEPT_NON_EMPTY);
   },
 
-  getSortedVersions: function (name) {
-    return this._returnFirst("getSortedVersions", arguments, ACCEPT_NON_EMPTY);
+  getSortedVersions: function (...args) {
+    return this._returnFirst("getSortedVersions", args, ACCEPT_NON_EMPTY);
   },
 
-  getSortedVersionRecords: function (name) {
+  getSortedVersionRecords: function (...args) {
     return this._returnFirst(
-      "getSortedVersionRecords", arguments, ACCEPT_NON_EMPTY);
+      "getSortedVersionRecords", args, ACCEPT_NON_EMPTY);
   },
 
   getVersion: function (name, version) {

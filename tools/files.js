@@ -856,10 +856,9 @@ files.symlinkOverSync = function (linkText, file) {
 // with the traditional POSIX execl(2).
 //
 // XXX 'files' is not the ideal place for this but it'll do for now
-files.run = function (command /*, arguments */) {
+files.run = function (command, ...args) {
   var Future = require('fibers/future');
   var future = new Future;
-  var args = _.toArray(arguments).slice(1);
 
   var child_process = require("child_process");
   child_process.execFile(
@@ -873,8 +872,7 @@ files.run = function (command /*, arguments */) {
   return future.wait();
 };
 
-files.runGitInCheckout = function (/* arguments */) {
-  var args = _.toArray(arguments);
+files.runGitInCheckout = function (...args) {
   args.unshift(
     'git', '--git-dir=' +
     files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
@@ -1317,13 +1315,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   var fsFunc = fs[fsFuncName];
   var fsFuncSync = fs[fsFuncName + "Sync"];
 
-  function wrapper() {
-    var argc = arguments.length;
-    var args = new Array(argc);
-    for (var i = 0; i < argc; ++i) {
-      args[i] = arguments[i];
-    }
-
+  function wrapper(...args) {
     for (var j = pathArgIndices.length - 1; j >= 0; --j) {
       i = pathArgIndices[j];
       args[i] = files.convertToOSPath(args[i]);
@@ -1427,38 +1419,33 @@ wrapFsFunc("symlink", [0, 1]);
 wrapFsFunc("readlink", [0]);
 
 // These don't need to be Fiberized
-files.createReadStream = function () {
-  var args = _.toArray(arguments);
+files.createReadStream = function (...args) {
   args[0] = files.convertToOSPath(args[0]);
-  return fs.createReadStream.apply(fs, args);
+  return fs.createReadStream(...args);
 };
 
-files.createWriteStream = function () {
-  var args = _.toArray(arguments);
+files.createWriteStream = function (...args) {
   args[0] = files.convertToOSPath(args[0]);
-  return fs.createWriteStream.apply(fs, args);
+  return fs.createWriteStream(...args);
 };
 
-files.watchFile = function () {
-  var args = _.toArray(arguments);
+files.watchFile = function (...args) {
   args[0] = files.convertToOSPath(args[0]);
-  return fs.watchFile.apply(fs, args);
+  return fs.watchFile(...args);
 };
 
-files.unwatchFile = function () {
-  var args = _.toArray(arguments);
+files.unwatchFile = function (...args) {
   args[0] = files.convertToOSPath(args[0]);
-  return fs.unwatchFile.apply(fs, args);
+  return fs.unwatchFile(...args);
 };
 
 // wrap pathwatcher because it works with file system paths
 // XXX we don't currently convert the path argument passed to the watch
 //     callback, but we currently don't use the argument either
-files.pathwatcherWatch = function () {
-  var args = _.toArray(arguments);
+files.pathwatcherWatch = function (...args) {
   args[0] = files.convertToOSPath(args[0]);
   // don't import pathwatcher until the moment we actually need it
   // pathwatcher has a record of keeping some global state
   var pathwatcher = require('pathwatcher');
-  return pathwatcher.watch.apply(pathwatcher, args);
+  return require("pathwatcher").watch(...args);
 };

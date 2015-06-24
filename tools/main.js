@@ -536,6 +536,12 @@ Fiber(function () {
     process.exit(1);
   }
 
+  // Set up git hooks
+  if (files.inCheckout()) {
+    var installGitHooks = require('./install-git-hooks.js');
+    installGitHooks();
+  }
+
   // This is a bit of a hack, but: if we don't check this in the tool, then the
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.

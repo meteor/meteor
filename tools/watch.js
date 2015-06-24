@@ -1,8 +1,8 @@
 import files from "./files.js";
 import _ from "underscore";
 import pathwatcher from "./safe-pathwatcher.js";
-import { createHash } from "crypto";
-import { coalesce } from "./func-utils.js";
+import {createHash} from "crypto";
+import {coalesce} from "./func-utils.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -55,7 +55,7 @@ import { coalesce } from "./func-utils.js";
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
 
-class WatchSet {
+export class WatchSet {
   constructor() {
     var self = this;
 
@@ -95,12 +95,14 @@ class WatchSet {
   addFile(filePath, hash) {
     var self = this;
     // No need to update if this is in always-fire mode already.
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
+    }
     if (_.has(self.files, filePath)) {
       // Redundant?
-      if (self.files[filePath] === hash)
+      if (self.files[filePath] === hash) {
         return;
+      }
       // Nope, inconsistent.
       self.alwaysFire = true;
       return;
@@ -112,13 +114,16 @@ class WatchSet {
   // above. contents does not need to be pre-sorted.
   addDirectory(options) {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
-    if (_.isEmpty(options.include))
+    }
+    if (_.isEmpty(options.include)) {
       return;
+    }
     var contents = _.clone(options.contents);
-    if (contents)
+    if (contents) {
       contents.sort();
+    }
 
     self.directories.push({
       absPath: options.absPath,
@@ -132,8 +137,9 @@ class WatchSet {
   // WatchSet would have fired.
   merge(other) {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
+    }
     if (other.alwaysFire) {
       self.alwaysFire = true;
       return;
@@ -162,20 +168,25 @@ class WatchSet {
 
   toJSON() {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return {alwaysFire: true};
+    }
     var ret = {files: self.files};
 
     var reToJSON = function (r) {
       var options = '';
-      if (r.ignoreCase)
+      if (r.ignoreCase) {
         options += 'i';
-      if (r.multiline)
+      }
+      if (r.multiline) {
         options += 'm';
-      if (r.global)
+      }
+      if (r.global) {
         options += 'g';
-      if (options)
+      }
+      if (options) {
         return {$regex: r.source, $options: options};
+      }
       return r.source;
     };
 
@@ -194,8 +205,9 @@ class WatchSet {
   static fromJSON(json) {
     var set = new WatchSet();
 
-    if (! json)
+    if (! json) {
       return set;
+    }
 
     if (json.alwaysFire) {
       set.alwaysFire = true;
@@ -205,8 +217,9 @@ class WatchSet {
     set.files = _.clone(json.files);
 
     var reFromJSON = function (j) {
-      if (_.has(j, '$regex'))
+      if (_.has(j, '$regex')) {
         return new RegExp(j.$regex, j.$options);
+      }
       return new RegExp(j);
     };
 
@@ -228,27 +241,29 @@ var readFile = function (absPath) {
     return files.readFile(absPath);
   } catch (e) {
     // Rethrow most errors.
-    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
+    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
       throw e;
+    }
     // File does not exist (or is a directory).
     return null;
   }
 };
 
-var sha1 = function (contents) {
+export function sha1(contents) {
   var hash = createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
+}
 
-var readDirectory = function (options) {
+export function readDirectory(options) {
   // Read the directory.
   try {
     var contents = files.readdir(options.absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
-    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
+    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
       return null;
+    }
     throw e;
   }
 
@@ -268,8 +283,9 @@ var readDirectory = function (options) {
       }
       throw e;
     }
-    if (stats.isDirectory())
+    if (stats.isDirectory()) {
       entry += '/';
+    }
     contentsWithSlashes.push(entry);
   });
 
@@ -285,23 +301,25 @@ var readDirectory = function (options) {
   // Sort it!
   filtered.sort();
   return filtered;
-};
+}
 
 // All fields are private.
-class Watcher {
+export class Watcher {
   constructor(options) {
     var self = this;
 
     // The set to watch.
     self.watchSet = options.watchSet;
-    if (! self.watchSet)
+    if (! self.watchSet) {
       throw new Error("watchSet option is required");
+    }
 
     // Function to call when a change is detected according to one of
     // the above.
     self.onChange = options.onChange;
-    if (! self.onChange)
+    if (! self.onChange) {
       throw new Error("onChange option is required");
+    }
 
     self.stopped = false;
     self.justCheckOnce = !! options._justCheckOnce;
@@ -329,21 +347,24 @@ class Watcher {
   _fireIfFileChanged(absPath) {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return true;
+    }
 
     var oldHash = self.watchSet.files[absPath];
 
-    if (oldHash === undefined)
+    if (oldHash === undefined) {
       throw new Error("Checking unknown file " + absPath);
+    }
 
     var contents = readFile(absPath);
 
     if (contents === null) {
       // File does not exist (or is a directory).
       // Is this what we expected?
-      if (oldHash === null)
+      if (oldHash === null) {
         return false;
+      }
       // Nope, not what we expected.
       self._fire();
       return true;
@@ -358,8 +379,9 @@ class Watcher {
     var newHash = sha1(contents);
 
     // Unchanged?
-    if (newHash === oldHash)
+    if (newHash === oldHash) {
       return false;
+    }
 
     self._fire();
     return true;
@@ -368,8 +390,9 @@ class Watcher {
   _fireIfDirectoryChanged(info) {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return true;
+    }
 
     var newContents = readDirectory({
       absPath: info.absPath,
@@ -391,11 +414,13 @@ class Watcher {
 
     // Set up a watch for each file
     _.each(self.watchSet.files, function (hash, absPath) {
-      if (self.stopped)
+      if (self.stopped) {
         return;
+      }
 
-      if (! self.justCheckOnce)
+      if (! self.justCheckOnce) {
         self._watchFileOrDirectory(absPath);
+      }
 
       // Check for the case where by the time we created the watch,
       // the file had already changed from the sha we were provided.
@@ -533,15 +558,17 @@ class Watcher {
   // See #3854.
   _mustNotExist(absPath) {
     var wsFiles = this.watchSet.files;
-    if (_.has(wsFiles, absPath))
+    if (_.has(wsFiles, absPath)) {
       return wsFiles[absPath] === null;
+    }
     return false;
   }
 
   _mustBeAFile(absPath) {
     var wsFiles = this.watchSet.files;
-    if (_.has(wsFiles, absPath))
+    if (_.has(wsFiles, absPath)) {
       return _.isString(wsFiles[absPath]);
+    }
     return false;
   }
 
@@ -612,15 +639,18 @@ class Watcher {
   _checkDirectories() {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     _.each(self.watchSet.directories, function (info) {
-      if (self.stopped)
+      if (self.stopped) {
         return;
+      }
 
-      if (! self.justCheckOnce)
+      if (! self.justCheckOnce) {
         self._watchFileOrDirectory(info.absPath);
+      }
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
@@ -631,8 +661,9 @@ class Watcher {
   _fire() {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     self.stop();
     self.onChange();
@@ -655,7 +686,7 @@ class Watcher {
 
 // Given a WatchSet, returns true if it currently describes the state of the
 // disk.
-var isUpToDate = function (watchSet) {
+export function isUpToDate(watchSet) {
   var upToDate = true;
   var watcher = new Watcher({
     watchSet: watchSet,
@@ -668,14 +699,14 @@ var isUpToDate = function (watchSet) {
   });
   watcher.stop();
   return upToDate;
-};
+}
 
 // Options should have absPath/include/exclude.
-var readAndWatchDirectory = function (watchSet, options) {
+export function readAndWatchDirectory(watchSet, options) {
   var contents = readDirectory(options);
   watchSet.addDirectory(_.extend({contents: contents}, options));
   return contents;
-};
+}
 
 // Calculating the sha hash can be expensive for large files.  By
 // returning the calculated hash along with the file contents, the
@@ -684,7 +715,7 @@ var readAndWatchDirectory = function (watchSet, options) {
 // We only calculate the hash if needed here, so callers must not
 // *rely* on the hash being returned; merely that if the hash is
 // present, it is the correct hash of the contents.
-var readAndWatchFileWithHash = function (watchSet, absPath) {
+export function readAndWatchFileWithHash(watchSet, absPath) {
   var contents = readFile(absPath);
   var hash = null;
   // Allow null watchSet, if we want to use readFile-style error handling in a
@@ -695,19 +726,8 @@ var readAndWatchFileWithHash = function (watchSet, absPath) {
     watchSet.addFile(absPath, hash);
   }
   return {contents: contents, hash: hash};
-};
+}
 
-var readAndWatchFile = function (watchSet, absPath) {
+export function readAndWatchFile(watchSet, absPath) {
   return readAndWatchFileWithHash(watchSet, absPath).contents;
-};
-
-export {
-  WatchSet,
-  Watcher,
-  readDirectory,
-  isUpToDate,
-  readAndWatchDirectory,
-  readAndWatchFile,
-  readAndWatchFileWithHash,
-  sha1
-};
+}
