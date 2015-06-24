@@ -1,15 +1,17 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "1.0.7"
+  version: "2.0.0_511"
 });
 
 Package.registerBuildPlugin({
-  name: "compileStylus",
-  use: [],
+  name: 'compileStylusBatch',
+  use: ['compiler-plugin'],
   sources: [
     'plugin/compile-stylus.js'
   ],
-  npmDependencies: { stylus: "0.46.3", nib: "1.0.2" }
+  npmDependencies: {
+    stylus: "https://github.com/meteor/stylus/tarball/ea5f990bb25aabbc2caf358b4922f176f626e085", // fork of 0.51.1
+    nib: "1.1.0" }
 });
 
 Package.onTest(function (api) {
