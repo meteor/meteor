@@ -11,13 +11,14 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-//  api.versionsFrom('1.1.0.2');
+  api.use('underscore');
   api.addFiles('rate-limit.js');
   api.export("RateLimiter");
 });
 
 Package.onTest(function(api) {
   api.use('test-helpers', ['client', 'server']);
+  api.use('underscore');
   api.use('ddp-rate-limiter');
   api.use('tinytest');
   api.use('rate-limit');

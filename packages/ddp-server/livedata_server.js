@@ -243,6 +243,7 @@ var Session = function (server, version, socket, options) {
   self._universalSubs = [];
 
   self.userId = null;
+
   self.collectionViews = {};
 
   // Set this to false to not send messages when collectionViews are
@@ -492,6 +493,7 @@ _.extend(Session.prototype, {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
+
     // Respond to ping and pong messages immediately without queuing.
     // If the negotiated DDP version is "pre1" which didn't support
     // pings, preserve the "pre1" behavior of responding with a "bad
@@ -542,9 +544,8 @@ _.extend(Session.prototype, {
           processNext();
         };
 
-        if (_.has(self.protocol_handlers, msg.msg)) {
-            self.protocol_handlers[msg.msg].call(self, msg, unblock);
-          }
+        if (_.has(self.protocol_handlers, msg.msg))
+          self.protocol_handlers[msg.msg].call(self, msg, unblock);
         else
           self.sendError('Bad request', msg);
         unblock(); // in case the handler didn't already do it
@@ -581,13 +582,13 @@ _.extend(Session.prototype, {
 
       var rateLimiterInput = {
         userId: self.userId,
-        IPAddr: self.connectionHandle.clientAddress,
+        ipAddr: self.connectionHandle.clientAddress,
         type: msg.msg,
         name: msg.name
       };
 
-      DDPRateLimiter.RateLimiter.increment(rateLimiterInput);
-      var rateLimitResult = DDPRateLimiter.RateLimiter.check(rateLimiterInput)
+      DDPRateLimiter.rateLimiter.increment(rateLimiterInput);
+      var rateLimitResult = DDPRateLimiter.rateLimiter.check(rateLimiterInput)
       if (!rateLimitResult.valid) {
         self.send({
           msg: 'nosub', id: msg.id,
@@ -663,12 +664,12 @@ _.extend(Session.prototype, {
       try {
         var rateLimiterInput = {
           userId: self.userId,
-          IPAddr: self.connectionHandle.clientAddress,
+          ipAddr: self.connectionHandle.clientAddress,
           type: msg.msg,
           name: msg.method
         };
-        DDPRateLimiter.RateLimiter.increment(rateLimiterInput);
-        var rateLimitResult = DDPRateLimiter.RateLimiter.check(rateLimiterInput)
+        DDPRateLimiter.rateLimiter.increment(rateLimiterInput);
+        var rateLimitResult = DDPRateLimiter.rateLimiter.check(rateLimiterInput)
         if (!rateLimitResult.valid) {
           throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));
         }
@@ -788,6 +789,7 @@ _.extend(Session.prototype, {
 
   _startSubscription: function (handler, subId, params, name) {
     var self = this;
+
     var sub = new Subscription(
       self, handler, subId, params, name);
     if (subId)
@@ -1556,7 +1558,6 @@ _.extend(Server.prototype, {
         connection: connection,
         randomSeed: DDPCommon.makeRpcSeed(currentInvocation, name)
       });
-
       try {
         var result = DDP._CurrentInvocation.withValue(invocation, function () {
           return maybeAuditArgumentChecks(
