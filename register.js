@@ -179,7 +179,7 @@ function getBabelResult(filename) {
 
   var usedHelpers = result.metadata.usedHelpers;
   if (usedHelpers && usedHelpers.length > 0) {
-    require("./index.js").runtime();
+    require("./index.js").installRuntime();
   }
 
   return result;
