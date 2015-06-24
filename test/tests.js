@@ -1,8 +1,16 @@
 import assert from "assert";
 
 describe("Babel", function() {
-  let self = this;
+  it("es3.memberExpressionLiterals", () => {
+    function getCatch(x) {
+      return x.catch;
+    }
 
+    assert.strictEqual(getCatch({ catch: 42 }), 42);
+    assert.ok(getCatch.toString().indexOf('x["catch"]') >= 0);
+  });
+
+  let self = this;
   it("es6.arrowFunctions", () => {
     // This assertion will only pass if `this` is implicitly bound to the
     // same value as `self` above.
@@ -146,6 +154,12 @@ describe("Babel", function() {
     import f, { helper as h } from "./test-module";
     assert.strictEqual(f(), "default");
     assert.strictEqual(h(), "helper");
+  });
+
+  it("es7.trailingFunctionCommas", () => {
+    // TODO Shouldn't this work for arrow functions too?
+    function add3(a, b, c,) { return a + b + c; }
+    assert.strictEqual(add3(1, 2, 3), 6);
   });
 
   it("flow", () => {
