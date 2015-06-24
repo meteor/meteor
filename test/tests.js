@@ -171,16 +171,4 @@ describe("Babel", function() {
 
     assert.strictEqual(add(1, 2, 3, 4, 5), 15);
   });
-
-  it("Promise", Promise.async(() => {
-    var sleeper = new Promise(
-      resolve => setTimeout(() => resolve("zxcv"), 10)
-    );
-
-    return Promise.resolve("asdf").then(result => {
-      assert.strictEqual(result, "asdf");
-      var zxcv = Promise.await(sleeper);
-      assert.strictEqual(zxcv, "zxcv");
-    });
-  }));
 });

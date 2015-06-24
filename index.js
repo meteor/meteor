@@ -15,7 +15,6 @@ exports.compile = function compile(source, options) {
 };
 
 exports.runtime = function runtime() {
-  global.Promise = require("meteor-promise");
   require("babel-core/external-helpers");
   return global.babelHelpers;
 };
