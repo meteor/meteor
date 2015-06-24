@@ -27,6 +27,16 @@ describe("Promise.await", function () {
     assert.strictEqual(Promise.await(promise), 100);
     assert.strictEqual(Fiber.current, originalFiber);
   }));
+
+  it("should throw rejection reasons", Promise.async(function () {
+    var reason = new Error("reason");
+    try {
+      Promise.await(Promise.reject(reason));
+      assert.ok(false, "should have thrown");
+    } catch (error) {
+      assert.strictEqual(error, reason);
+    }
+  }));
 });
 
 describe("Promise.awaitAll", function () {

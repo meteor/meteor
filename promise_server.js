@@ -41,7 +41,7 @@ function await(promise) {
   es6PromiseThen.call(promise, function (result) {
     fiber.run(result);
   }, function (error) {
-    fiber.throwInto(err);
+    fiber.throwInto(error);
   });
 
   return Fiber.yield();
