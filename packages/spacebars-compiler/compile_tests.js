@@ -99,4 +99,16 @@ Tinytest.add("spacebars-compiler - compiler errors", function (test) {
   isError("{{#each foo.bar in baz}}{{/each}}", "Bad variable name in #each");
   isError("{{#each ../foo in baz}}{{/each}}", "Bad variable name in #each");
   isError("{{#each 3 in baz}}{{/each}}", "Bad variable name in #each");
+
+  // errors using `{{> React}}`
+  isError("{{> React component=emptyComponent}}",
+          "{{> React}} must be used in a container element");
+  isError("<div>{{#if include}}{{> React component=emptyComponent}}{{/if}}</div>",
+          "{{> React}} must be used in a container element");
+  isError("<div><div>Sibling</div>{{> React component=emptyComponent}}</div>",
+          "{{> React}} must be used as the only child in a container element");
+  isError("<div>Sibling{{> React component=emptyComponent}}</div>",
+          "{{> React}} must be used as the only child in a container element");
+  isError("<div>{{#if sibling}}Sibling{{/if}}{{> React component=emptyComponent}}</div>",
+          "{{> React}} must be used as the only child in a container element");
 });

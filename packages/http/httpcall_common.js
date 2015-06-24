@@ -21,7 +21,8 @@ populateData = function(response) {
   var contentType = (response.headers['content-type'] || ';').split(';')[0];
 
   // Only try to parse data as JSON if server sets correct content type.
-  if (_.include(['application/json', 'text/javascript'], contentType)) {
+  if (_.include(['application/json', 'text/javascript',
+      'application/javascript', 'application/x-javascript'], contentType)) {
     try {
       response.data = JSON.parse(response.content);
     } catch (err) {

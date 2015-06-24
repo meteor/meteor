@@ -1,6 +1,8 @@
-var files = require('./files.js');
-var _ = require('underscore');
-var pathwatcher = require("./safe-pathwatcher.js");
+import files from "./files.js";
+import _ from "underscore";
+import pathwatcher from "./safe-pathwatcher.js";
+import {createHash} from "crypto";
+import {coalesce} from "./func-utils.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -53,44 +55,44 @@ var pathwatcher = require("./safe-pathwatcher.js");
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
 
-var WatchSet = function () {
-  var self = this;
+export class WatchSet {
+  constructor() {
+    var self = this;
 
-  // Set this to true if any Watcher built on this WatchSet must immediately
-  // fire (eg, if this WatchSet was given two different sha1 for the same file).
-  self.alwaysFire = false;
+    // Set this to true if any Watcher built on this WatchSet must immediately
+    // fire (eg, if this WatchSet was given two different sha1 for the same file).
+    self.alwaysFire = false;
 
-  // Map from the absolute path to a file, to a sha1 hash, or null if the file
-  // should not exist. A Watcher created from this set fires when the file
-  // changes from that sha, or is deleted (if non-null) or created (if null).
-  //
-  // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
-  // existing (it's not just an internal implementation detail of watch.js).
-  self.files = {};
+    // Map from the absolute path to a file, to a sha1 hash, or null if the file
+    // should not exist. A Watcher created from this set fires when the file
+    // changes from that sha, or is deleted (if non-null) or created (if null).
+    //
+    // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
+    // existing (it's not just an internal implementation detail of watch.js).
+    self.files = {};
 
-  // Array of object with keys:
-  // - 'absPath': absolute path to a directory
-  // - 'include': array of RegExps
-  // - 'exclude': array of RegExps
-  // - 'contents': array of strings, or null if the directory should not exist
-  //
-  // This represents the assertion that 'absPath' is a directory and that
-  // 'contents' is its immediate contents, as filtered by the regular
-  // expressions.  Entries in 'contents' are file and subdirectory names;
-  // directory names end with '/'. 'contents' is sorted. An entry is in
-  // 'contents' if its value (including the slash, for directories) matches at
-  // least one regular expression in 'include' and no regular expressions in
-  // 'exclude'.
-  //
-  // There is no recursion here: files contained in subdirectories never appear.
-  //
-  // A directory may have multiple entries (presumably with different
-  // include/exclude filters).
-  self.directories = [];
-};
+    // Array of object with keys:
+    // - 'absPath': absolute path to a directory
+    // - 'include': array of RegExps
+    // - 'exclude': array of RegExps
+    // - 'contents': array of strings, or null if the directory should not exist
+    //
+    // This represents the assertion that 'absPath' is a directory and that
+    // 'contents' is its immediate contents, as filtered by the regular
+    // expressions.  Entries in 'contents' are file and subdirectory names;
+    // directory names end with '/'. 'contents' is sorted. An entry is in
+    // 'contents' if its value (including the slash, for directories) matches at
+    // least one regular expression in 'include' and no regular expressions in
+    // 'exclude'.
+    //
+    // There is no recursion here: files contained in subdirectories never appear.
+    //
+    // A directory may have multiple entries (presumably with different
+    // include/exclude filters).
+    self.directories = [];
+  }
 
-_.extend(WatchSet.prototype, {
-  addFile: function (filePath, hash) {
+  addFile(filePath, hash) {
     var self = this;
     // No need to update if this is in always-fire mode already.
     if (self.alwaysFire)
@@ -104,11 +106,11 @@ _.extend(WatchSet.prototype, {
       return;
     }
     self.files[filePath] = hash;
-  },
+  }
 
   // Takes options absPath, include, exclude, and contents, as described
   // above. contents does not need to be pre-sorted.
-  addDirectory: function (options) {
+  addDirectory(options) {
     var self = this;
     if (self.alwaysFire)
       return;
@@ -124,11 +126,11 @@ _.extend(WatchSet.prototype, {
       exclude: options.exclude,
       contents: contents
     });
-  },
+  }
 
   // Merges another WatchSet into this one. This one will now fire if either
   // WatchSet would have fired.
-  merge: function (other) {
+  merge(other) {
     var self = this;
     if (self.alwaysFire)
       return;
@@ -144,9 +146,9 @@ _.extend(WatchSet.prototype, {
       // are never mutated #WatchSetShallowClone
       self.directories.push(dir);
     });
-  },
+  }
 
-  clone: function () {
+  clone() {
     var self = this;
     var ret = new WatchSet();
 
@@ -156,9 +158,9 @@ _.extend(WatchSet.prototype, {
     ret.files = _.clone(self.files);
     ret.directories = _.clone(self.directories);
     return ret;
-  },
+  }
 
-  toJSON: function () {
+  toJSON() {
     var self = this;
     if (self.alwaysFire)
       return {alwaysFire: true};
@@ -188,38 +190,38 @@ _.extend(WatchSet.prototype, {
 
     return ret;
   }
-});
 
-WatchSet.fromJSON = function (json) {
-  var set = new WatchSet();
+  static fromJSON(json) {
+    var set = new WatchSet();
 
-  if (! json)
-    return set;
+    if (! json)
+      return set;
 
-  if (json.alwaysFire) {
-    set.alwaysFire = true;
+    if (json.alwaysFire) {
+      set.alwaysFire = true;
+      return set;
+    }
+
+    set.files = _.clone(json.files);
+
+    var reFromJSON = function (j) {
+      if (_.has(j, '$regex'))
+        return new RegExp(j.$regex, j.$options);
+      return new RegExp(j);
+    };
+
+    set.directories = _.map(json.directories, function (d) {
+      return {
+        absPath: d.absPath,
+        include: _.map(d.include, reFromJSON),
+        exclude: _.map(d.exclude, reFromJSON),
+        contents: d.contents
+      };
+    });
+
     return set;
   }
-
-  set.files = _.clone(json.files);
-
-  var reFromJSON = function (j) {
-    if (_.has(j, '$regex'))
-      return new RegExp(j.$regex, j.$options);
-    return new RegExp(j);
-  };
-
-  set.directories = _.map(json.directories, function (d) {
-    return {
-      absPath: d.absPath,
-      include: _.map(d.include, reFromJSON),
-      exclude: _.map(d.exclude, reFromJSON),
-      contents: d.contents
-    };
-  });
-
-  return set;
-};
+}
 
 var readFile = function (absPath) {
   try {
@@ -233,14 +235,13 @@ var readFile = function (absPath) {
   }
 };
 
-var sha1 = function (contents) {
-  var crypto = require('crypto');
-  var hash = crypto.createHash('sha1');
+export function sha1(contents) {
+  var hash = createHash('sha1');
   hash.update(contents);
   return hash.digest('hex');
-};
+}
 
-var readDirectory = function (options) {
+export function readDirectory(options) {
   // Read the directory.
   try {
     var contents = files.readdir(options.absPath);
@@ -284,48 +285,48 @@ var readDirectory = function (options) {
   // Sort it!
   filtered.sort();
   return filtered;
-};
+}
 
 // All fields are private.
-var Watcher = function (options) {
-  var self = this;
+export class Watcher {
+  constructor(options) {
+    var self = this;
 
-  // The set to watch.
-  self.watchSet = options.watchSet;
-  if (! self.watchSet)
-    throw new Error("watchSet option is required");
+    // The set to watch.
+    self.watchSet = options.watchSet;
+    if (! self.watchSet)
+      throw new Error("watchSet option is required");
 
-  // Function to call when a change is detected according to one of
-  // the above.
-  self.onChange = options.onChange;
-  if (! self.onChange)
-    throw new Error("onChange option is required");
+    // Function to call when a change is detected according to one of
+    // the above.
+    self.onChange = options.onChange;
+    if (! self.onChange)
+      throw new Error("onChange option is required");
 
-  self.stopped = false;
-  self.justCheckOnce = !! options._justCheckOnce;
+    self.stopped = false;
+    self.justCheckOnce = !! options._justCheckOnce;
 
-  self.watches = {
-    // <absolute path of watched file or directory>: {
-    //   // Null until pathwatcher.watch succeeds in watching the file.
-    //   watcher: <object returned by pathwatcher.watch> | null,
-    //   // Undefined until we stat the file for the first time, then null
-    //   // if the file is observed to be missing.
-    //   lastStat: <object returned by files.stat> | null | undefined
-    // }
-  };
+    self.watches = {
+      // <absolute path of watched file or directory>: {
+      //   // Null until pathwatcher.watch succeeds in watching the file.
+      //   watcher: <object returned by pathwatcher.watch> | null,
+      //   // Undefined until we stat the file for the first time, then null
+      //   // if the file is observed to be missing.
+      //   lastStat: <object returned by files.stat> | null | undefined
+      // }
+    };
 
-  // Were we given an inconsistent WatchSet? Fire now and be done with it.
-  if (self.watchSet.alwaysFire) {
-    self._fire();
-    return;
+    // Were we given an inconsistent WatchSet? Fire now and be done with it.
+    if (self.watchSet.alwaysFire) {
+      self._fire();
+      return;
+    }
+
+    self._startFileWatches();
+    self._checkDirectories();
   }
 
-  self._startFileWatches();
-  self._checkDirectories();
-};
-
-_.extend(Watcher.prototype, {
-  _fireIfFileChanged: function (absPath) {
+  _fireIfFileChanged(absPath) {
     var self = this;
 
     if (self.stopped)
@@ -362,9 +363,9 @@ _.extend(Watcher.prototype, {
 
     self._fire();
     return true;
-  },
+  }
 
-  _fireIfDirectoryChanged: function (info) {
+  _fireIfDirectoryChanged(info) {
     var self = this;
 
     if (self.stopped)
@@ -383,9 +384,9 @@ _.extend(Watcher.prototype, {
     }
 
     return false;
-  },
+  }
 
-  _startFileWatches: function () {
+  _startFileWatches() {
     var self = this;
 
     // Set up a watch for each file
@@ -400,9 +401,9 @@ _.extend(Watcher.prototype, {
       // the file had already changed from the sha we were provided.
       self._fireIfFileChanged(absPath);
     });
-  },
+  }
 
-  _watchFileOrDirectory: function (absPath) {
+  _watchFileOrDirectory(absPath) {
     var self = this;
 
     if (! _.has(self.watches, absPath)) {
@@ -446,9 +447,9 @@ _.extend(Watcher.prototype, {
 
       self._watchFileOrDirectory(parentDir);
     }
-  },
+  }
 
-  _makeWatchEventCallback: function (absPath) {
+  _makeWatchEventCallback(absPath) {
     var self = this;
 
     // Sometimes we receive a rapid succession of change events, perhaps
@@ -460,7 +461,7 @@ _.extend(Watcher.prototype, {
     // canceling any additional calls if they happen within that window of
     // time, so that a rapid succession of calls will tend to trigger only
     // one inspection of the file system.
-    return require('./func-utils.js').coalesce(100, function onWatchEvent() {
+    return coalesce(100, function onWatchEvent() {
       if (self.stopped) {
         return;
       }
@@ -520,7 +521,7 @@ _.extend(Watcher.prototype, {
         });
       }
     });
-  },
+  }
 
   // XXX Erk! This is wrong!  A null entry in a WatchSet means "is not a file",
   // not "does not exist"; if you look at readAndWatchFileWithHash, "a directory
@@ -530,21 +531,21 @@ _.extend(Watcher.prototype, {
   // means "not a file" again. A simple way to reproduce is to run
   //    $ meteor --settings /tmp
   // See #3854.
-  _mustNotExist: function(absPath) {
+  _mustNotExist(absPath) {
     var wsFiles = this.watchSet.files;
     if (_.has(wsFiles, absPath))
       return wsFiles[absPath] === null;
     return false;
-  },
+  }
 
-  _mustBeAFile: function(absPath) {
+  _mustBeAFile(absPath) {
     var wsFiles = this.watchSet.files;
     if (_.has(wsFiles, absPath))
       return _.isString(wsFiles[absPath]);
     return false;
-  },
+  }
 
-  _updateStatForWatch: function(absPath) {
+  _updateStatForWatch(absPath) {
     var self = this;
     var entry = self.watches[absPath];
     var lastStat = entry.lastStat;
@@ -606,9 +607,9 @@ _.extend(Watcher.prototype, {
     }
 
     return stat;
-  },
+  }
 
-  _checkDirectories: function () {
+  _checkDirectories() {
     var self = this;
 
     if (self.stopped)
@@ -625,9 +626,9 @@ _.extend(Watcher.prototype, {
       // directory has already changed.
       self._fireIfDirectoryChanged(info);
     });
-  },
+  }
 
-  _fire: function () {
+  _fire() {
     var self = this;
 
     if (self.stopped)
@@ -635,9 +636,9 @@ _.extend(Watcher.prototype, {
 
     self.stop();
     self.onChange();
-  },
+  }
 
-  stop: function () {
+  stop() {
     var self = this;
     self.stopped = true;
 
@@ -650,11 +651,11 @@ _.extend(Watcher.prototype, {
     });
     self.watches = {};
   }
-});
+}
 
 // Given a WatchSet, returns true if it currently describes the state of the
 // disk.
-var isUpToDate = function (watchSet) {
+export function isUpToDate(watchSet) {
   var upToDate = true;
   var watcher = new Watcher({
     watchSet: watchSet,
@@ -667,14 +668,14 @@ var isUpToDate = function (watchSet) {
   });
   watcher.stop();
   return upToDate;
-};
+}
 
 // Options should have absPath/include/exclude.
-var readAndWatchDirectory = function (watchSet, options) {
+export function readAndWatchDirectory(watchSet, options) {
   var contents = readDirectory(options);
   watchSet.addDirectory(_.extend({contents: contents}, options));
   return contents;
-};
+}
 
 // Calculating the sha hash can be expensive for large files.  By
 // returning the calculated hash along with the file contents, the
@@ -683,7 +684,7 @@ var readAndWatchDirectory = function (watchSet, options) {
 // We only calculate the hash if needed here, so callers must not
 // *rely* on the hash being returned; merely that if the hash is
 // present, it is the correct hash of the contents.
-var readAndWatchFileWithHash = function (watchSet, absPath) {
+export function readAndWatchFileWithHash(watchSet, absPath) {
   var contents = readFile(absPath);
   var hash = null;
   // Allow null watchSet, if we want to use readFile-style error handling in a
@@ -694,19 +695,8 @@ var readAndWatchFileWithHash = function (watchSet, absPath) {
     watchSet.addFile(absPath, hash);
   }
   return {contents: contents, hash: hash};
-};
+}
 
-var readAndWatchFile = function (watchSet, absPath) {
+export function readAndWatchFile(watchSet, absPath) {
   return readAndWatchFileWithHash(watchSet, absPath).contents;
-};
-
-_.extend(exports, {
-  WatchSet: WatchSet,
-  Watcher: Watcher,
-  readDirectory: readDirectory,
-  isUpToDate: isUpToDate,
-  readAndWatchDirectory: readAndWatchDirectory,
-  readAndWatchFile: readAndWatchFile,
-  readAndWatchFileWithHash: readAndWatchFileWithHash,
-  sha1: sha1
-});
+}

@@ -17,6 +17,7 @@ Package.onUse(function (api) {
   api.use('minifiers', ['server'], { weak: true });
   api.addFiles(['templatetag.js',
                  'optimizer.js',
+                 'react.js',
                  'codegen.js',
                  'compiler.js']);
 });

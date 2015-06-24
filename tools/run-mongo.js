@@ -48,7 +48,18 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
       // initializes faster. (Not recommended for production!)
       '--oplogSize', '8',
       '--replSet', replSetName
-    ]);
+  ], {
+    // Apparently in some contexts, Mongo crashes if your locale isn't set up
+    // right. I wasn't able to reproduce it, but many people on #4019
+    // were. Let's default a couple environment variables to English UTF-8 if
+    // they aren't set already. If these few aren't good enough, we'll at least
+    // detect the locale error and print a link to #4019 (look for
+    // `detectedErrors.badLocale` below).
+    env: _.extend({
+      LANG: 'en_US.UTF-8',
+      LC_ALL: 'en_US.UTF-8'
+    }, process.env)
+  });
 };
 
 // Find all running Mongo processes that were started by this program
@@ -358,13 +369,10 @@ var launchMongo = function (options) {
   var stopFuture = new Future;
 
   // Like Future.wrap and _.bind in one.
-  var yieldingMethod = function (/* object, methodName, args */) {
-    var args = _.toArray(arguments);
-    var object = args.shift();
-    var methodName = args.shift();
+  var yieldingMethod = function (object, methodName, ...args) {
     var f = new Future;
     args.push(f.resolver());
-    object[methodName].apply(object, args);
+    object[methodName](...args);
     return fiberHelpers.waitForOne(stopFuture, f);
   };
 
@@ -383,7 +391,7 @@ var launchMongo = function (options) {
 
   var launchOneMongoAndWaitForReadyForInitiate = function (dbPath, port,
                                                            portFile) {
-    files.mkdir_p(dbPath, 0755);
+    files.mkdir_p(dbPath, 0o755);
 
     var proc = null;
     var procExitHandler;
@@ -396,7 +404,7 @@ var launchMongo = function (options) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
       files.rm_recursive(dbPath);
-      files.mkdir_p(dbPath, 0755);
+      files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;
       var matchingPortFileExists = false;
@@ -505,6 +513,10 @@ var launchMongo = function (options) {
 
       if (/Insufficient free space/.test(data)) {
         detectedErrors.freeSpace = true;
+      }
+
+      if (/Invalid or no user locale set/.test(data)) {
+        detectedErrors.badLocale = true;
       }
     });
     proc.stdout.setEncoding('utf8');
@@ -833,6 +845,12 @@ _.extend(MRp, {
 "Looks like you are trying to run Meteor on an old Linux distribution.\n" +
 "Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
 "distribution to the latest version.";
+    }
+
+    if (detectedErrors.badLocale) {
+      message += "\n\n" +
+"Looks like MongoDB doesn't understand your locale settings. See\n" +
+"https://github.com/meteor/meteor/issues/4019 for more details.";
     }
 
     runLog.log(message);

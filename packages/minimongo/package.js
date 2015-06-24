@@ -8,9 +8,11 @@ Package.onUse(function (api) {
   api.export('Minimongo');
   api.export('MinimongoTest', { testOnly: true });
   api.use(['underscore', 'json', 'ejson', 'id-map', 'ordered-dict', 'tracker',
-           'random', 'ordered-dict']);
+           'mongo-id', 'random', 'diff-sequence']);
   // This package is used for geo-location queries such as $near
   api.use('geojson-utils');
+  // This package is used to get diff results on arrays and objects
+  api.use('diff-sequence');
   api.addFiles([
     'minimongo.js',
     'wrap_transform.js',
@@ -37,7 +39,7 @@ Package.onTest(function (api) {
   api.use('minimongo', ['client', 'server']);
   api.use('test-helpers', 'client');
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
-           'random', 'tracker', 'reactive-var']);
+           'random', 'tracker', 'reactive-var', 'mongo-id']);
   api.addFiles('minimongo_tests.js', 'client');
   api.addFiles('wrap_transform_tests.js');
   api.addFiles('minimongo_server_tests.js', 'server');

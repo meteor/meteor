@@ -296,7 +296,7 @@ _.extend(exports.IsopackCache.prototype, {
     // If any of the direct dependencies changed their version or location, we
     // aren't up to date.
     if (!self._packageMap.isSupersetOfJSON(
-      previousIsopack.pluginProviderPackageMap)) {
+      previousIsopack.pluginProviderPackageMap.toJSON())) {
       return false;
     }
     // Merge in the watchsets for all unibuilds and plugins in the package, then

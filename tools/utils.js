@@ -232,10 +232,10 @@ exports.parsePackageAndVersion = function (packageAtVersionString, options) {
     error = new Error("Malformed package version: " +
                       JSON.stringify(packageAtVersionString));
   } else {
-    var package = packageAtVersionString.slice(0, separatorPos);
+    var packageName = packageAtVersionString.slice(0, separatorPos);
     var version = packageAtVersionString.slice(separatorPos+1);
     try {
-      packageVersionParser.validatePackageName(package);
+      packageVersionParser.validatePackageName(packageName);
       // validate the version, ignoring the parsed result:
       packageVersionParser.parse(version);
     } catch (e) {
@@ -245,7 +245,7 @@ exports.parsePackageAndVersion = function (packageAtVersionString, options) {
       error = e;
     }
     if (! error) {
-      return { package: package, version: version };
+      return { package: packageName, version: version };
     }
   }
   // `error` holds an Error

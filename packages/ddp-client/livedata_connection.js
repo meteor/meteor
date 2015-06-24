@@ -31,7 +31,7 @@ var Connection = function (url, options) {
     onDDPVersionNegotiationFailure: function (description) {
       Meteor._debug(description);
     },
-    heartbeatInterval: 35000,
+    heartbeatInterval: 17500,
     heartbeatTimeout: 15000,
     // These options are only for testing.
     reloadWithOutstanding: false,
@@ -211,6 +211,12 @@ var Connection = function (url, options) {
       return;
     }
 
+    // Any message counts as receiving a pong, as it demonstrates that
+    // the server is still alive.
+    if (self._heartbeat) {
+      self._heartbeat.messageReceived();
+    }
+
     if (msg === null || !msg.msg) {
       // XXX COMPAT WITH 0.6.6. ignore the old welcome message for back
       // compat.  Remove this 'if' once the server stops sending welcome
@@ -225,7 +231,7 @@ var Connection = function (url, options) {
       self._livedata_connected(msg);
       options.onConnected();
     }
-    else if (msg.msg == 'failed') {
+    else if (msg.msg === 'failed') {
       if (_.contains(self._supportedDDPVersions, msg.version)) {
         self._versionSuggestion = msg.version;
         self._stream.reconnect({_force: true});
@@ -236,16 +242,11 @@ var Connection = function (url, options) {
         options.onDDPVersionNegotiationFailure(description);
       }
     }
-    else if (msg.msg === 'ping') {
-      if (options.respondToPings)
-        self._send({msg: "pong", id: msg.id});
-      if (self._heartbeat)
-        self._heartbeat.pingReceived();
+    else if (msg.msg === 'ping' && options.respondToPings) {
+      self._send({msg: "pong", id: msg.id});
     }
     else if (msg.msg === 'pong') {
-      if (self._heartbeat) {
-        self._heartbeat.pongReceived();
-      }
+      // noop, as we assume everything's a pong
     }
     else if (_.include(['added', 'changed', 'removed', 'ready', 'updated'], msg.msg))
       self._livedata_data(msg);
@@ -936,7 +937,7 @@ _.extend(Connection.prototype, {
       originals.forEach(function (doc, id) {
         docsWritten.push({collection: collection, id: id});
         if (!_.has(self._serverDocuments, collection))
-          self._serverDocuments[collection] = new LocalCollection._IdMap;
+          self._serverDocuments[collection] = new MongoIDMap;
         var serverDoc = self._serverDocuments[collection].setDefault(id, {});
         if (serverDoc.writtenByStubs) {
           // We're not the first stub to write this doc. Just add our method ID
@@ -1274,7 +1275,7 @@ _.extend(Connection.prototype, {
 
   _process_added: function (msg, updates) {
     var self = this;
-    var id = LocalCollection._idParse(msg.id);
+    var id = MongoID.idParse(msg.id);
     var serverDoc = self._getServerDoc(msg.collection, id);
     if (serverDoc) {
       // Some outstanding stub wrote here.
@@ -1290,11 +1291,11 @@ _.extend(Connection.prototype, {
   _process_changed: function (msg, updates) {
     var self = this;
     var serverDoc = self._getServerDoc(
-      msg.collection, LocalCollection._idParse(msg.id));
+      msg.collection, MongoID.idParse(msg.id));
     if (serverDoc) {
       if (serverDoc.document === undefined)
         throw new Error("Server sent changed for nonexisting id: " + msg.id);
-      LocalCollection._applyChanges(serverDoc.document, msg.fields);
+      DiffSequence.applyChanges(serverDoc.document, msg.fields);
     } else {
       self._pushUpdate(updates, msg.collection, msg);
     }
@@ -1303,7 +1304,7 @@ _.extend(Connection.prototype, {
   _process_removed: function (msg, updates) {
     var self = this;
     var serverDoc = self._getServerDoc(
-      msg.collection, LocalCollection._idParse(msg.id));
+      msg.collection, MongoID.idParse(msg.id));
     if (serverDoc) {
       // Some outstanding stub wrote here.
       if (serverDoc.document === undefined)
@@ -1341,7 +1342,7 @@ _.extend(Connection.prototype, {
           // the ID because it's supposed to look like a wire message.)
           self._pushUpdate(updates, written.collection, {
             msg: 'replace',
-            id: LocalCollection._idStringify(written.id),
+            id: MongoID.idStringify(written.id),
             replace: serverDoc.document
           });
           // Call all flush callbacks.

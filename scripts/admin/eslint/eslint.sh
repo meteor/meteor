@@ -15,5 +15,5 @@ cd "$TOPDIR"
 
 "${TOPDIR}/dev_bundle/bin/node" \
   "${SCRIPTDIR}/node_modules/.bin/eslint" \
-  -c "${SCRIPTDIR}/config.json" \
+  -c "${SCRIPTDIR}/.eslintrc" \
   "."

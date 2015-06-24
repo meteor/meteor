@@ -183,7 +183,7 @@ BlazeTools.parseStringLiteral = function (scanner) {
     }
   }
 
-  if (match[0] !== quote)
+  if (! match || match[0] !== quote)
     scanner.fatal("Unterminated string literal");
 
   jsonLiteral += '"';

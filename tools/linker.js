@@ -327,19 +327,12 @@ _.extend(File.prototype, {
       // line numbers using comments (see above), just in case source maps
       // are not supported.
       preserveLineNumbers = false;
-
-    } else if (noLineNumbers) {
-      // If we're not annotating line numbers, then we'd better try to
-      // preserve them, otherwise we won't be able to make any sense of
-      // line numbers found in stack traces.
-      preserveLineNumbers = true;
-
-    } else if (preserveLineNumbers &&
-               ! _.has(options, noLineNumbers)) {
-      // If we don't have a source map, and we're supposed to be
-      // preserving line numbers, and options.noLineNumbers is
-      // unspecified, then we can get away without annotating line
-      // numbers, because they won't add any helpful information.
+    } else if (preserveLineNumbers) {
+      // If we don't have a source map, and we're supposed to be preserving line
+      // numbers (ie, we are not linking multiple files into one file, because
+      // we're the app), then we can get away without annotating line numbers
+      // (or making a source map), because they won't add any helpful
+      // information.
       noLineNumbers = true;
     }
 
@@ -349,7 +342,7 @@ _.extend(File.prototype, {
         map: self.sourceMap
       };
 
-    } else if (noLineNumbers) {
+    } else if (noLineNumbers && preserveLineNumbers) {
       // No need to generate a source map if we don't want line numbers.
       result = {
         code: self.source,

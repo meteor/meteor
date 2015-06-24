@@ -1,6 +1,24 @@
 ## v.NEXT
 
+
+### Utilities
+
+* New `beforeSend` option to `HTTP.call` on the client allows you to directly
+  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
+
+* Parse `application/javascript` and `application/x-javascript` HTTP replies as
+  JSON too.  #4595
+
+
+## in progress: v.1.1.1
+
 ### Blaze
+
+* Preparatory work for the yet-unreleased `react-template-helper`
+  package -- don't let templates use {{> React}} with siblings since
+  `React.render` assumes it's being rendered into an empty container
+  element. (This lets us throw the error when compiling templates
+  rather than when the app runs.)
 
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
@@ -90,6 +108,9 @@
 
 * When determining file load order, split file paths on path separator
   before comparing path components alphabetically.  #4300
+
+* Fix inability to run `mongod` due to lack of locale configuration on some
+  platforms, and improve error message if the failure still occurs.  #4019
 
 ### Meteor Accounts
 

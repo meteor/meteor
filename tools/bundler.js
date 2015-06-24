@@ -1672,9 +1672,10 @@ _.extend(JsImageTarget.prototype, {
 // options specific to this subclass:
 // - clientTarget: the ClientTarget to serve up over HTTP as our client
 // - releaseName: the Meteor release name (for retrieval at runtime)
-var ServerTarget = function (options) {
+var ServerTarget = function (options, ...args) {
   var self = this;
-  JsImageTarget.apply(this, arguments);
+
+  JsImageTarget.call(self, options, ...args);
 
   self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;

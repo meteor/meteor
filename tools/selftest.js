@@ -461,7 +461,7 @@ var Sandbox = function (options) {
   self.warehouse = null;
 
   self.home = files.pathJoin(self.root, 'home');
-  files.mkdir(self.home, 0755);
+  files.mkdir(self.home, 0o755);
   self.cwd = self.home;
   self.env = {};
   self.fakeMongo = options.fakeMongo;
@@ -537,12 +537,12 @@ var Sandbox = function (options) {
 
 _.extend(Sandbox.prototype, {
   // Create a new test run of the tool in this sandbox.
-  run: function (/* arguments */) {
+  run: function (...args) {
     var self = this;
 
     return new Run(self.execPath, {
       sandbox: self,
-      args: _.toArray(arguments),
+      args: args,
       cwd: self.cwd,
       env: self._makeEnv(),
       fakeMongo: self.fakeMongo
@@ -557,9 +557,9 @@ _.extend(Sandbox.prototype, {
   //   run.connectClient();
   //   // post-connection checks
   // });
-  testWithAllClients: function (f) {
+  testWithAllClients: function (f, ...args) {
     var self = this;
-    var argsArray = _.compact(_.toArray(arguments).slice(1));
+    args = _.compact(args);
 
     console.log("running test with " + self.clients.length + " client(s).");
 
@@ -567,7 +567,7 @@ _.extend(Sandbox.prototype, {
       console.log("testing with " + client.name + "...");
       var run = new Run(self.execPath, {
         sandbox: self,
-        args: argsArray,
+        args: args,
         cwd: self.cwd,
         env: self._makeEnv(),
         fakeMongo: self.fakeMongo,
@@ -1016,7 +1016,7 @@ _.extend(BrowserStackClient.prototype, {
     var self = this;
     var browserStackPath =
       files.pathJoin(files.getDevBundle(), 'bin', 'BrowserStackLocal');
-    files.chmod(browserStackPath, 0755);
+    files.chmod(browserStackPath, 0o755);
 
     var args = [
       browserStackPath,
@@ -1100,13 +1100,13 @@ _.extend(Run.prototype, {
   // Pass as many arguments as you want. Non-object values will be
   // cast to string, and object values will be treated as maps from
   // option names to values.
-  args: function (/* arguments */) {
+  args: function (...args) {
     var self = this;
 
     if (self.proc)
       throw new Error("already started?");
 
-    _.each(_.toArray(arguments), function (a) {
+    _.each(args, function (a) {
       if (typeof a !== "object") {
         self._args.push('' + a);
       } else {
