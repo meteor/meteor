@@ -70,8 +70,8 @@ _.extend(Rule.prototype, {
     return returnString;
   },
 
-  // XXX Need a better name. Generates helper values required in increment and
-  // check methods of RateLimiter.
+  // Generates the key, timeSinceLastReset and timeToNextReset once the rule
+  // is applied
   apply: function (input) {
     var self = this;
     var keyString = self._generateKeyString(input);

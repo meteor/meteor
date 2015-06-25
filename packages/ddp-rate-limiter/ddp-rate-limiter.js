@@ -28,7 +28,7 @@ DDPRateLimiter.setErrorMessage = function (message) {
   this.errorMessage = message;
 }
 
-DDPRateLimiter.config = function (rules) {
+DDPRateLimiter.setRules = function (rules) {
   DDPRateLimiter.rateLimiter.rules = rules;
 };
 
