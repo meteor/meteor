@@ -1,6 +1,6 @@
 {
   "name": "meteor-babel",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "dependencies": {
     "babel-core": {
       "version": "5.6.7",
@@ -138,7 +138,7 @@
               "dependencies": {
                 "ansi-regex": {
                   "version": "1.1.1",
-                  "from": "ansi-regex@^1.1.0",
+                  "from": "ansi-regex@^1.0.0",
                   "resolved": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-1.1.1.tgz"
                 }
               }
