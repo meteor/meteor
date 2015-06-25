@@ -18,7 +18,8 @@ var config = {
 
 exports = module.exports = function reconfigure(newConfig) {
   Object.keys(newConfig).forEach(function (key) {
-    config[key] = newConfig[key];
+    // Sanitize config values and prevent circular references.
+    config[key] = JSON.parse(JSON.stringify(newConfig[key]));
   });
 };
 
