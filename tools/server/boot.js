@@ -73,12 +73,20 @@ var retrieveSourceMap = function (pathForSourceMap) {
 var origWrapper = sourcemap_support.wrapCallSite;
 var wrapCallSite = function (frame) {
   var frame = origWrapper(frame);
-  var origSourceGetter = frame.getScriptNameOrSourceURL;
-  frame.getScriptNameOrSourceURL = function () {
-    // replace a custom location domain that we set for better UX in Chrome
-    // DevTools (separate domain group) in source maps.
-    return origSourceGetter().replace(/^meteor:\/\/..app\//, '');
+  var wrapGetter = function (name) {
+    var origGetter = frame[name];
+    frame[name] = function (arg) {
+      // replace a custom location domain that we set for better UX in Chrome
+      // DevTools (separate domain group) in source maps.
+      var source = origGetter(arg);
+      if (! source)
+        return source;
+      return source.replace(/(^|\()meteor:\/\/..app\//, '$1');
+    };
   };
+  wrapGetter('getScriptNameOrSourceURL');
+  wrapGetter('getEvalOrigin');
+
   return frame;
 };
 sourcemap_support.install({
