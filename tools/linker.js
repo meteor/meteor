@@ -106,12 +106,7 @@ _.extend(Module.prototype, {
           file: file.servePath
         }); // results has 'code' and 'map' attributes
 
-        var sourceMap = results.map.toJSON();
-        // No use generating empty source maps.
-        if (_.isEmpty(sourceMap.sources))
-          sourceMap = null;
-        else
-          sourceMap = JSON.stringify(sourceMap);
+        var sourceMap = JSON.stringify(results.map.toJSON());
 
         return {
           source: results.code,
@@ -414,10 +409,26 @@ _.extend(File.prototype, {
     var pathNoSlash = self.servePath.replace(/^\//, "");
 
     if (! self.bare) {
+      var closureHeader = "(function(){";
       chunks.push(
-        "(function(){",
+        closureHeader,
         preserveLineNumbers ? "" : "\n\n"
       );
+
+      if (! smc) {
+        // No sourcemap? Generate a new one that takes into account the fact
+        // that we added a closure
+        var map = new sourcemap.SourceMapGenerator({ file: self.servePath });
+        _.each(result.code.split('\n'), function (line, i) {
+          map.addMapping({
+            source: self.servePath,
+            original: { line: i + 1, column: 0 },
+            generated: { line: i + 1, column: i === 0 ? closureHeader.length + 1 : 0 }
+          });
+        });
+        map.setSourceContent(self.servePath, result.code);
+        smc = new sourcemap.SourceMapConsumer(map.toJSON());
+      }
     }
 
     if (! preserveLineNumbers) {
