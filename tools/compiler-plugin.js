@@ -53,8 +53,14 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
       var resourceSlots = data.resourceSlots;
       // XXX HERE
 
+      var jobTitle = [
+        "processing files with ",
+        sourceProcessor.isopack.name,
+        " (for target ", self.arch, ")"
+      ].join(' ');
+
       buildmessage.enterJob({
-        title: "processing files with " + sourceProcessor.isopack.name
+        title: jobTitle
       }, function () {
         var inputFiles = _.map(resourceSlots, function (resourceSlot) {
           return new InputFile(resourceSlot);
