@@ -4,13 +4,6 @@ OPLOG_COLLECTION = 'oplog.rs';
 
 var TOO_FAR_BEHIND = process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000;
 
-// Like Perl's quotemeta: quotes all regexp metacharacters. See
-//   https://github.com/substack/quotemeta/blob/master/index.js
-// XXX this is duplicated with accounts_server.js
-var quotemeta = function (str) {
-    return String(str).replace(/(\W)/g, '\\$1');
-};
-
 var showTS = function (ts) {
   return "Timestamp(" + ts.getHighBits() + ", " + ts.getLowBits() + ")";
 };
@@ -43,7 +36,7 @@ OplogHandle = function (oplogUrl, dbName) {
     factPackage: "mongo-livedata", factName: "oplog-watchers"
   });
   self._baseOplogSelector = {
-    ns: new RegExp('^' + quotemeta(self._dbName) + '\\.'),
+    ns: new RegExp('^' + Meteor._escapeRegExp(self._dbName) + '\\.'),
     $or: [
       { op: {$in: ['i', 'u', 'd']} },
       // drop collection

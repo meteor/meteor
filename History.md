@@ -9,6 +9,9 @@
 * Parse `application/javascript` and `application/x-javascript` HTTP replies as
   JSON too.  #4595
 
+### Meteor Accounts
+
+* `loginWithPassword` now matches username or email in a case insensitive manner. If there are multiple users with a username or email only differing in case, a case sensitive match is required. #550
 
 ## in progress: v.1.1.1
 
