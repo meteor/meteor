@@ -1,8 +1,6 @@
 Tinytest.add('Check empty constructor creation', function (test) {
   r = new RateLimiter();
   test.equal(r.rules, []);
-  test.equal(r._ruleId, 0);
-  test.equal(r.ruleCounters, {});
 });
 
 Tinytest.add(

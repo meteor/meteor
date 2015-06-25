@@ -3,10 +3,9 @@ var DEFAULT_INTERVAL_TIME_IN_MILLISECONDS = 1000;
 // Default number of requets allowed per time interval
 var DEFAULT_REQUESTS_PER_INTERVAL = 10;
 
-var Rule = function (options, matchers, id) {
+var Rule = function (options, matchers) {
   var self = this;
 
-  self._ruleId = id;
   // Options contains the timeToReset and intervalTime
   self.options = options;
 
@@ -17,6 +16,9 @@ var Rule = function (options, matchers, id) {
   self.matchers = matchers;
 
   self._lastResetTime = new Date().getTime();
+
+  // Dictionary of input keys to counters
+  self.counters = {};
 };
 
 _.extend(Rule.prototype, {
@@ -28,7 +30,7 @@ _.extend(Rule.prototype, {
     var ruleMatches = true;
     _.find(self.matchers, function (value, key) {
       if (value !== null) {
-        if (!(key in input)) {
+        if (!(_.has(input,key))) {
           ruleMatches = false;
           return true;
         } else {
@@ -50,7 +52,7 @@ _.extend(Rule.prototype, {
   },
 
   // Generates unique key string for provided input
-  // Depends on the rule and input matching.
+  // Only called if rule matches input.
   _generateKeyString: function (input) {
     var self = this;
     var returnString = "";
@@ -80,6 +82,15 @@ _.extend(Rule.prototype, {
       timeSinceLastReset: timeSinceLastReset,
       timeToNextReset: timeToNextReset
     };
+  },
+  // Reset all keys for this specific rule. Called once the timeSinceLastReset
+  // has exceeded the intervalTime.
+  resetCounter: function () {
+    var self = this;
+    _.each(self.counters, function (value, key) {
+      self.counters[key] = 0;
+    });
+    self._lastResetTime = new Date().getTime();
   }
 });
 
@@ -91,15 +102,6 @@ RateLimiter = function () {
   // the rule pattern, number of requests allowed, last reset time and the rule
   // reset interval in milliseconds.
   self.rules = [];
-
-  // Unique id associated with each rule
-  self._ruleId = 0;
-
-  // Dictionary of dictionaries which stores counters for all rules and all
-  // inputs that match the rules. First level is keyed by ruleId, after which
-  // for each input that matches the given rule, a unique key is generated
-  // which is incremented everytime that input is provided again
-  self.ruleCounters = {};
 }
 
 /**
@@ -119,11 +121,11 @@ RateLimiter.prototype.check = function (input) {
   var matchedRules = self._findAllMatchingRules(input);
   _.each(matchedRules, function (rule) {
     var ruleResult = rule.apply(input);
-    var numInvocations = self.ruleCounters[rule._ruleId][ruleResult.key];
+    var numInvocations = rule.counters[ruleResult.key];
 
     if (ruleResult.timeToNextReset < 0) {
       // Reset all the counters since the rule has reset
-      self._resetRuleCounters(rule);
+      rule.resetCounter();
       ruleResult.timeSinceLastReset = new Date().getTime() - rule._lastResetTime;
       ruleResult.timeToNextReset = rule.options.intervalTime;
       numInvocations = 0;
@@ -145,8 +147,8 @@ RateLimiter.prototype.check = function (input) {
       if (rule.options.numRequestsAllowed - numInvocations < reply.numInvocationsLeft &&
         reply.valid) {
         reply.valid = true;
-        reply.timeToReset = ruleResult.timeToNextReset < 0 ? rule.options
-          .intervalTime :
+        reply.timeToReset = ruleResult.timeToNextReset < 0 ?
+          rule.options.intervalTime :
           ruleResult.timeToNextReset;
         reply.numInvocationsLeft = rule.options.numRequestsAllowed -
           numInvocations;
@@ -172,7 +174,7 @@ RateLimiter.prototype.addRule = function (rule, numRequestsAllowed, intervalTime
     intervalTime: intervalTime || DEFAULT_INTERVAL_TIME_IN_MILLISECONDS
   }
 
-  var newRule = new Rule(options, rule, self._createNewRuleId());
+  var newRule = new Rule(options, rule);
   this.rules.push(newRule);
 }
 
@@ -191,37 +193,16 @@ RateLimiter.prototype.increment = function (input) {
 
     if (ruleResult.timeSinceLastReset > rule.options.intervalTime) {
       // Reset all the counters since the rule has reset
-      self._resetRuleCounters(rule);
+      rule.resetCounter();
     }
 
     // Check whether the key exists, incrementing it if so or otherwise
     // adding the key and setting its value to 1
-    if (rule._ruleId in self.ruleCounters) {
-      if (ruleResult.key in self.ruleCounters[rule._ruleId])
-        self.ruleCounters[rule._ruleId][ruleResult.key]++;
-      else
-        self.ruleCounters[rule._ruleId][ruleResult.key] = 1;
-    } else {
-      self.ruleCounters[rule._ruleId] = {};
-      self.ruleCounters[rule._ruleId][ruleResult.key] = 1;
-    }
+    if (_.has(rule.counters, ruleResult.key))
+      rule.counters[ruleResult.key]++;
+    else
+      rule.counters[ruleResult.key] = 1;
   });
-}
-
-// Creates new unique rule id
-RateLimiter.prototype._createNewRuleId = function () {
-  return this._ruleId++;
-}
-
-// Reset all keys for this specific rule. Called once the timeSinceLastReset
-// has exceeded the intervalTime.
-RateLimiter.prototype._resetRuleCounters = function (rule) {
-  var self = this;
-
-  _.each(self.ruleCounters[rule._ruleId], function (value, key) {
-    self.ruleCounters[rule._ruleId][key] = 0;
-  });
-  rule._lastResetTime = new Date().getTime();
 }
 
 RateLimiter.prototype._findAllMatchingRules = function (input) {
