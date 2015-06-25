@@ -16,11 +16,17 @@ var config = {
   babelOptions: require("./options").getDefaults()
 };
 
+// Reset to null in the reconfigure function below.
+var cachedConfigHash = null;
+
 exports = module.exports = function reconfigure(newConfig) {
   Object.keys(newConfig).forEach(function (key) {
     // Sanitize config values and prevent circular references.
     config[key] = JSON.parse(JSON.stringify(newConfig[key]));
   });
+
+  // Force config properties to be rehashed next time (see below).
+  cachedConfigHash = null;
 };
 
 require.extensions[".js"] = function(module, filename) {
@@ -95,13 +101,22 @@ function getCache() {
 function getBabelResult(filename) {
   var source = fs.readFileSync(filename, "utf8");
   var cache = getCache();
+
+  var configHash = cachedConfigHash || (
+    cachedConfigHash = util.deepHash([
+      // Since we make a defensive deep copy of new config properties, we
+      // can avoid rehashing if we know they have not changed.
+      config.version,
+      config.babelOptions
+    ])
+  );
+
   var cacheFile = util.deepHash([
     // Though it's tempting to include babel.version in this hash, we
     // don't want to call require("babel") unless we really have to, and
     // the package version should be good enough, especially if we make it
     // identical to babel.version.
-    config.version,
-    config.babelOptions,
+    configHash,
     filename,
     source
   ]) + ".json";
