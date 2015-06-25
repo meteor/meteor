@@ -15,7 +15,7 @@ cd "$TOPDIR"
 
 files_to_lint="."
 if [ "$1" == "modified" ]; then
-  files_to_lint=$(git ls-files --modified)
+  files_to_lint=$(git diff --cached --name-only --diff-filter=ACM)
 fi
 
 
