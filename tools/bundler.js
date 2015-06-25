@@ -528,6 +528,8 @@ _.extend(Target.prototype, {
         }
       }
 
+      self.rewriteSourceMaps();
+
       if (options.addCacheBusters) {
         // Make client-side CSS and JS assets cacheable forever, by
         // adding a query string with a cache-busting hash.
@@ -856,6 +858,36 @@ _.extend(Target.prototype, {
       });
     }));
   }),
+
+  // For every source file we process, sets the domain name to
+  // 'meteor://[emoji]app/', so there is a separate category in Chrome DevTools
+  // with the original sources.
+  rewriteSourceMaps: function () {
+    var self = this;
+
+    function rewriteSourceMap (sm) {
+      var smPlain = JSON.parse(sm);
+      smPlain.sources = smPlain.sources.map(function (path) {
+        // This emoji makes sure the category is always last
+        return 'meteor://💻app/' + path;
+      });
+      return JSON.stringify(smPlain);
+    }
+
+    if (self.js) {
+      self.js.forEach(function (js) {
+        if (js.sourceMap)
+          js.sourceMap = rewriteSourceMap(js.sourceMap);
+      });
+    }
+
+    if (self.css) {
+      self.css.forEach(function (css) {
+        if (css.sourceMap)
+          css.sourceMap = rewriteSourceMap(css.sourceMap);
+      });
+    }
+  },
 
   // Add a Cordova plugin dependency to the target. If the same plugin
   // has already been added at a different version and `override` is
