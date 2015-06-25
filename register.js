@@ -1,10 +1,10 @@
 var assert = require("assert");
 var path = require("path");
 var fs = require("fs");
-var createHash = require("crypto").createHash;
 var hasOwn = Object.hasOwnProperty;
 var defaultHandler = require.extensions[".js"];
 var convertSourceMap = require("convert-source-map");
+var util = require("./util.js");
 
 var config = {
   version: require("./package.json").version,
@@ -75,7 +75,7 @@ function getCache() {
   var cacheDir = config.cacheDir;
 
   if (! hasOwn.call(getCache, cacheDir)) {
-    mkdirp(cacheDir);
+    util.mkdirp(cacheDir);
     var cache = getCache[cacheDir] = {};
 
     fs.readdirSync(cacheDir).forEach(function (cacheFile) {
@@ -91,29 +91,10 @@ function getCache() {
   return getCache[cacheDir];
 }
 
-function mkdirp(dir) {
-  if (! fs.existsSync(dir)) {
-    var parentDir = path.dirname(dir);
-    if (parentDir !== dir) {
-      mkdirp(parentDir);
-    }
-
-    try {
-      fs.mkdirSync(dir);
-    } catch (error) {
-      if (error.code !== "EEXIST") {
-        throw error;
-      }
-    }
-  }
-
-  return dir;
-}
-
 function getBabelResult(filename) {
   var source = fs.readFileSync(filename, "utf8");
   var cache = getCache();
-  var cacheFile = deepHash([
+  var cacheFile = util.deepHash([
     // Though it's tempting to include babel.version in this hash, we
     // don't want to call require("babel") unless we really have to, and
     // the package version should be good enough, especially if we make it
@@ -183,47 +164,4 @@ function getBabelResult(filename) {
   }
 
   return result;
-}
-
-// Borrowed from another MIT-licensed project that I wrote:
-// https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
-function deepHash(val) {
-  var hash = createHash("sha1");
-  var type = typeof val;
-
-  if (val === null) {
-    type = "null";
-  }
-
-  switch (type) {
-  case "object":
-    var keys = Object.keys(val);
-
-    // Array keys will already be sorted.
-    if (! Array.isArray(val)) {
-      keys.sort();
-    }
-
-    keys.forEach(function(key) {
-      if (typeof val[key] === "function") {
-        // Silently ignore nested methods, but nevertheless complain below
-        // if the root value is a function.
-        return;
-      }
-
-      hash.update(key + "\0").update(deepHash(val[key]));
-    });
-
-    break;
-
-  case "function":
-    assert.ok(false, "cannot hash function objects");
-    break;
-
-  default:
-    hash.update("" + val);
-    break;
-  }
-
-  return hash.digest("hex");
 }
