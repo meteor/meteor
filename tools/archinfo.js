@@ -128,17 +128,17 @@ import os from 'os';
 
 let _host = null; // memoize
 function getHost() {
-  if (!_host) {
-    function run(...args) {
-      const result = files.run(...args);
+  function run(...args) {
+    const result = files.run(...args);
 
-      if (!result) {
-        throw new Error('can\'t get arch with ' + args.join(' ') + '?');
-      }
-
-      return result.replace(/\s*$/, ''); // trailing whitespace
+    if (!result) {
+      throw new Error('can\'t get arch with ' + args.join(' ') + '?');
     }
 
+    return result.replace(/\s*$/, ''); // trailing whitespace
+  }
+
+  if (!_host) {
     const platform = os.platform();
 
     if (platform === 'darwin') {
