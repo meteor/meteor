@@ -22,7 +22,7 @@ const allPossibleHooks = [
   'update',
   'post-update',
   'pre-auto-gc',
-  'post-rewrite'
+  'post-rewrite',
 ];
 
 // A suffix that we append to our hook scripts

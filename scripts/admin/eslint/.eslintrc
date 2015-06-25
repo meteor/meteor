@@ -52,7 +52,7 @@
 /**
  * Possible errors
  */
-    "comma-dangle": [2, "never"],    // http://eslint.org/docs/rules/comma-dangle
+    "comma-dangle": [2, "always-multiline"],    // http://eslint.org/docs/rules/comma-dangle
     "no-cond-assign": [2, "always"], // http://eslint.org/docs/rules/no-cond-assign
     "no-console": 1,                 // http://eslint.org/docs/rules/no-console
     "no-debugger": 1,                // http://eslint.org/docs/rules/no-debugger
@@ -117,11 +117,12 @@
     "vars-on-top": 2,                // http://eslint.org/docs/rules/vars-on-top
     "wrap-iife": [2, "any"],         // http://eslint.org/docs/rules/wrap-iife
     "yoda": 2,                       // http://eslint.org/docs/rules/yoda
+    "max-len": [2, 80, 2],           // http://eslint.org/docs/rules/max-len
 
 /**
  * Style
  */
-    "indent": [2, 2],                // http://eslint.org/docs/rules/
+    "indent": [2, 2],                // http://eslint.org/docs/rules/indent
     "brace-style": [2,               // http://eslint.org/docs/rules/brace-style
       "1tbs", {
       "allowSingleLine": true
@@ -139,6 +140,7 @@
     "comma-style": [2, "last"],      // http://eslint.org/docs/rules/comma-style
     "eol-last": 2,                   // http://eslint.org/docs/rules/eol-last
     "func-names": 1,                 // http://eslint.org/docs/rules/func-names
+    "func-style": [2, "declaration"], // http://eslint.org/docs/rules/func-style
     "key-spacing": [2, {             // http://eslint.org/docs/rules/key-spacing
         "beforeColon": false,
         "afterColon": true
@@ -151,6 +153,7 @@
     }],
     "no-nested-ternary": 2,          // http://eslint.org/docs/rules/no-nested-ternary
     "no-new-object": 2,              // http://eslint.org/docs/rules/no-new-object
+    "no-array-constructor": 2,       // http://eslint.org/docs/rules/no-array-constructor
     "no-spaced-func": 2,             // http://eslint.org/docs/rules/no-spaced-func
     "no-trailing-spaces": 2,         // http://eslint.org/docs/rules/no-trailing-spaces
     "no-wrap-func": 2,               // http://eslint.org/docs/rules/no-wrap-func
