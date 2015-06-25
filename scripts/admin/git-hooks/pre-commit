@@ -8,7 +8,7 @@ eslint=$(git config hooks.ignore-eslint)
 
 echo "Linting Meteor tool code..."
 
-./scripts/admin/eslint/eslint.sh
+./scripts/admin/eslint/eslint.sh modified
 linter_exit_code=$?
 
 if [ "$eslint" != "true" ] && [ $linter_exit_code != 0 ]
