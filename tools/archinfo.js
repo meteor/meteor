@@ -119,6 +119,15 @@ import os from 'os';
  * to some of these strings.
  */
 
+function runToGetHost(...args) {
+  const result = files.run(...args);
+
+  if (!result) {
+    throw new Error('can\'t get arch with ' + args.join(' ') + '?');
+  }
+
+  return result.replace(/\s*$/, ''); // trailing whitespace
+}
 
 // Returns the fully qualified arch of this host -- something like
 // "os.linux.x86_32" or "os.osx.x86_64". Must be called inside
@@ -128,30 +137,20 @@ import os from 'os';
 
 let _host = null; // memoize
 function getHost() {
-  function run(...args) {
-    const result = files.run(...args);
-
-    if (!result) {
-      throw new Error('can\'t get arch with ' + args.join(' ') + '?');
-    }
-
-    return result.replace(/\s*$/, ''); // trailing whitespace
-  }
-
   if (!_host) {
     const platform = os.platform();
 
     if (platform === 'darwin') {
       // Can't just test uname -m = x86_64, because Snow Leopard can
       // return other values.
-      if (run('uname', '-p') !== 'i386' ||
-          run('sysctl', '-n', 'hw.cpu64bit_capable') !== '1') {
+      if (runToGetHost('uname', '-p') !== 'i386' ||
+          runToGetHost('sysctl', '-n', 'hw.cpu64bit_capable') !== '1') {
         throw new Error('Only 64-bit Intel processors are supported on OS X');
       }
 
       _host = 'os.osx.x86_64';
     } else if (platform === 'linux') {
-      const machine = run('uname', '-m');
+      const machine = runToGetHost('uname', '-m');
       if (_.contains(['i386', 'i686', 'x86'], machine)) {
         _host = 'os.linux.x86_32';
       } else if (_.contains(['x86_64', 'amd64', 'ia64'], machine)) {
