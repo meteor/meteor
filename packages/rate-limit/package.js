@@ -12,6 +12,7 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use('underscore');
+  api.use('random');
   api.addFiles('rate-limit.js');
   api.export("RateLimiter");
 });
@@ -19,6 +20,7 @@ Package.onUse(function(api) {
 Package.onTest(function(api) {
   api.use('test-helpers', ['client', 'server']);
   api.use('underscore');
+  api.use('random');
   api.use('ddp-rate-limiter');
   api.use('tinytest');
   api.use('rate-limit');

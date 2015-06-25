@@ -6,6 +6,7 @@ var DEFAULT_REQUESTS_PER_INTERVAL = 10;
 var Rule = function (options, matchers) {
   var self = this;
 
+  self.id = Random.id();
   // Options contains the timeToReset and intervalTime
   self.options = options;
 
@@ -98,10 +99,10 @@ _.extend(Rule.prototype, {
 RateLimiter = function () {
   var self = this;
 
-  // List of all rules associated with this RateLimiter. Each rule object stores
-  // the rule pattern, number of requests allowed, last reset time and the rule
-  // reset interval in milliseconds.
-  self.rules = [];
+  // Dictionary of all rules associated with this RateLimiter, keyed by their
+  // id. Each rule object stores the rule pattern, number of requests allowed,
+  // last reset time and the rule reset interval in milliseconds.
+  self.rules = {};
 }
 
 /**
@@ -175,7 +176,8 @@ RateLimiter.prototype.addRule = function (rule, numRequestsAllowed, intervalTime
   }
 
   var newRule = new Rule(options, rule);
-  this.rules.push(newRule);
+  this.rules[newRule.id] = newRule;
+  return newRule.id;
 }
 
 /**
@@ -214,4 +216,14 @@ RateLimiter.prototype._findAllMatchingRules = function (input) {
       matchingRules.push(rule);
   });
   return matchingRules;
+}
+
+RateLimiter.prototype.removeRule = function (id) {
+  var self = this;
+  if (self.rules[id]) {
+    delete self.rules[id];
+    return true;
+  } else {
+    return false;
+  }
 }

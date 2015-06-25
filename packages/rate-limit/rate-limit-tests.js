@@ -1,6 +1,6 @@
 Tinytest.add('Check empty constructor creation', function (test) {
   r = new RateLimiter();
-  test.equal(r.rules, []);
+  test.equal(r.rules, {});
 });
 
 Tinytest.add(
@@ -220,7 +220,7 @@ Tinytest.add("test matchRule method", function (test) {
     type: null,
     name: null
   }
-  r.addRule(globalRule);
+  var globalRuleId = r.addRule(globalRule);
 
   var RateLimiterInput = {
     userId: 1023,
@@ -229,7 +229,7 @@ Tinytest.add("test matchRule method", function (test) {
     name: 'getSubLists'
   };
 
-  test.equal(r.rules[0].match(RateLimiterInput), true);
+  test.equal(r.rules[globalRuleId].match(RateLimiterInput), true);
 
   var oneNotNullRule = {
     userId: 102,
@@ -238,18 +238,18 @@ Tinytest.add("test matchRule method", function (test) {
     name: null
   }
 
-  r.addRule(oneNotNullRule);
-  test.equal(r.rules[1].match(RateLimiterInput), false);
+  var oneNotId = r.addRule(oneNotNullRule);
+  test.equal(r.rules[oneNotId].match(RateLimiterInput), false);
 
   oneNotNullRule.userId = 1023;
-  test.equal(r.rules[1].match(RateLimiterInput), true);
+  test.equal(r.rules[oneNotId].match(RateLimiterInput), true);
 
   var notCompleteInput = {
     userId: 102,
     IPAddr: '127.0.0.1'
   };
-  test.equal(r.rules[0].match(notCompleteInput), true);
-  test.equal(r.rules[1].match(notCompleteInput), false);
+  test.equal(r.rules[globalRuleId].match(notCompleteInput), true);
+  test.equal(r.rules[oneNotId].match(notCompleteInput), false);
 });
 
 Tinytest.add('test generateMethodKey string', function (test) {
@@ -260,7 +260,7 @@ Tinytest.add('test generateMethodKey string', function (test) {
     type: null,
     name: null
   }
-  r.addRule(globalRule);
+  var globalRuleId = r.addRule(globalRule);
 
   var RateLimiterInput = {
     userId: 1023,
@@ -268,11 +268,11 @@ Tinytest.add('test generateMethodKey string', function (test) {
     type: 'sub',
     name: 'getSubLists'
   };
-  // test.equal(r._generateKeyString(globalRule, RateLimiterInput), "");
-  test.equal(r.rules[0]._generateKeyString(RateLimiterInput), "");
+
+  test.equal(r.rules[globalRuleId]._generateKeyString(RateLimiterInput), "");
   globalRule.userId = 1023;
 
-  test.equal(r.rules[0]._generateKeyString(RateLimiterInput),
+  test.equal(r.rules[globalRuleId]._generateKeyString(RateLimiterInput),
     "userId1023");
 
   var ruleWithFuncs = {
@@ -282,16 +282,16 @@ Tinytest.add('test generateMethodKey string', function (test) {
     IPAddr: null,
     type: null
   };
-  r.addRule(ruleWithFuncs);
-  test.equal(r.rules[1]._generateKeyString(RateLimiterInput), "");
+  var funcRuleId = r.addRule(ruleWithFuncs);
+  test.equal(r.rules[funcRuleId]._generateKeyString(RateLimiterInput), "");
   RateLimiterInput.userId = 1024;
-  test.equal(r.rules[1]._generateKeyString(RateLimiterInput),
+  test.equal(r.rules[funcRuleId]._generateKeyString(RateLimiterInput),
     "userId1024");
 
   var multipleRules = ruleWithFuncs;
   multipleRules.IPAddr = '127.0.0.1';
-  r.addRule(multipleRules);
-  test.equal(r.rules[2]._generateKeyString(RateLimiterInput),
+  var multipleRuleId = r.addRule(multipleRules);
+  test.equal(r.rules[multipleRuleId]._generateKeyString(RateLimiterInput),
     "userId1024IPAddr127.0.0.1")
 })
 
