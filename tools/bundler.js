@@ -869,7 +869,7 @@ _.extend(Target.prototype, {
       var smPlain = JSON.parse(sm);
       smPlain.sources = smPlain.sources.map(function (path) {
         // This emoji makes sure the category is always last
-        return 'meteor://💻app/' + path;
+        return 'meteor://💻app' + (path[0] === '/' ? '' : '/') + path;
       });
       return JSON.stringify(smPlain);
     }
