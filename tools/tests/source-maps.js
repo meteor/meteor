@@ -87,6 +87,6 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   // For some reason, we don't get the whole path anymore, but at least we get
   // the right line number. If you print out the source map at the following
   // line, it doesn't have the whole path: https://github.com/meteor/meteor/blob/a3f553b302248ef829daa0569d43d66828e2af84/tools/files.js#L948
-  run.match(/build-plugin.js:2:1/);
+  run.match(/packages\/build-plugin\/build-plugin.js:2:1/);
   run.stop();
 });

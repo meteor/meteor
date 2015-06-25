@@ -2225,7 +2225,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     sources: options.sources || [],
     // it is correct to set slash and not files.pathSep because serverRoot is a
     // url path and not a file system path
-    serveRoot: '/',
+    serveRoot: options.serveRoot || '/',
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });
