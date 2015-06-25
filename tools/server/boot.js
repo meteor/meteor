@@ -70,6 +70,17 @@ var retrieveSourceMap = function (pathForSourceMap) {
   return null;
 };
 
+var origWrapper = sourcemap_support.wrapCallSite;
+var wrapCallSite = function (frame) {
+  var frame = origWrapper(frame);
+  var origSourceGetter = frame.getScriptNameOrSourceURL;
+  frame.getScriptNameOrSourceURL = function () {
+    // replace a custom location domain that we set for better UX in Chrome
+    // DevTools (separate domain group) in source maps.
+    return origSourceGetter().replace(/^meteor:\/\/..app\//, '');
+  };
+  return frame;
+};
 sourcemap_support.install({
   // Use the source maps specified in program.json instead of parsing source
   // code for them.
@@ -77,7 +88,8 @@ sourcemap_support.install({
   // For now, don't fix the source line in uncaught exceptions, because we
   // haven't fixed handleUncaughtExceptions in source-map-support to properly
   // locate the source files.
-  handleUncaughtExceptions: false
+  handleUncaughtExceptions: false,
+  wrapCallSite: wrapCallSite
 });
 
 // Only enabled by default in development.
