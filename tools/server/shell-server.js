@@ -7,6 +7,7 @@ var tty = require("tty");
 var vm = require("vm");
 var Fiber = require("fibers");
 var _ = require("underscore");
+var babel = require("meteor-babel");
 var INFO_FILE_MODE = 0600; // Only the owner can read or write.
 var EXITING_MESSAGE =
   // Exported so that ./client.js can know what to expect.
@@ -256,9 +257,19 @@ function getTerminalWidth() {
   }
 }
 
+var babelOptions = babel.getDefaultOptions();
+delete babelOptions.sourceMap;
+babelOptions.externalHelpers = false;
+
 // Shell commands need to be executed in fibers in case they call into
 // code that yields.
 function evalCommand(command, context, filename, callback) {
+  try {
+    command = babel.compile(command, babelOptions).code;
+  } catch (didNotCompile) {
+    // Leave the original command untouched.
+  }
+
   Fiber(function() {
     try {
       var result = vm.runInThisContext(command, filename);
