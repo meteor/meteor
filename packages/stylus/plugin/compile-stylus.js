@@ -79,6 +79,19 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
     }
   };
 
+  function processSourcemap(sourcemap) {
+    delete sourcemap.file;
+    sourcemap.sourcesContent = sourcemap.sources.map(importer.readFile);
+    sourcemap.sources = sourcemap.sources.map(function (filePath) {
+      var parsed = pathParser(filePath);
+      if (parsed.packageName === APP_SYMBOL)
+        return parsed.pathInPackage.substr(1);
+      return 'packages/' + parsed.packageName + parsed.pathInPackage;
+    });
+
+    return sourcemap;
+  }
+
   files.forEach(function (inputFile) {
     if (! inputFile.getPathInPackage().match(/\.main\.styl$/)) {
       return;
@@ -104,11 +117,14 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       return;
     }
 
+    var sourcemap = processSourcemap(style.sourcemap);
+
     inputFile.addStylesheet({
       path: inputFile.getPathInPackage() + ".css",
       data: css,
-      sourcemap: style.sourcemap
+      sourceMap: JSON.stringify(sourcemap)
     });
   });
 };
+
 
