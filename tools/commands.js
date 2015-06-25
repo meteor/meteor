@@ -194,6 +194,7 @@ var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
   options: {
+    'no-db': { type: Boolean },
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
@@ -230,6 +231,13 @@ main.registerCommand(_.extend(
 function doRunCommand (options) {
   cordova.setVerboseness(options.verbose);
   Console.setVerbose(options.verbose);
+
+  var mongoUrl = process.env.MONGO_URL;
+  var oplogUrl = process.env.MONGO_OPLOG_URL;
+  if (options['no-db']) {
+    mongoUrl = "THIS_IS_A_FAKE_MONGO_URL";
+    oplogUrl = "THIS_IS_A_FAKE_MONGO_OPLOG_URL";
+  }
 
   cordova.verboseLog('Parsing the --port option');
   try {
@@ -403,8 +411,8 @@ function doRunCommand (options) {
       includeDebug: ! options.production
     },
     rootUrl: process.env.ROOT_URL,
-    mongoUrl: process.env.MONGO_URL,
-    oplogUrl: process.env.MONGO_OPLOG_URL,
+    mongoUrl: mongoUrl,
+    oplogUrl: oplogUrl,
     mobileServerUrl: mobileServer,
     once: options.once,
     extraRunners: runners
