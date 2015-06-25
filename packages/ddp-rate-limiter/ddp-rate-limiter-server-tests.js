@@ -18,3 +18,9 @@ Meteor.methods({
 		console.log('Current list of rules :', DDPRateLimiter.rateLimiter.rules);
 	}
 });
+
+Tinytest.add("Test rule gets added and removed from Accounts_base", function(test) {
+	test.notEqual(DDPRateLimiter.rateLimiter.rules, {});
+	Accounts.removeDefaultAccountsRateLimitRule();
+	test.equal(DDPRateLimiter.rateLimiter.rules, {});
+});
