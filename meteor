@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.4.34
+BUNDLE_VERSION=0.4.34 # Achtung! The version 0.4.35 is used on branch batch-plugins
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
