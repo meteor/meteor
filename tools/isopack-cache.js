@@ -51,14 +51,6 @@ exports.IsopackCache = function (options) {
   self._noLineNumbers = !! options.noLineNumbers;
 
   self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
-
-  // a number that is incremented from the previous IsopackCache passed, used to
-  // figure out what packages are freshly (re)built and which were pre-built
-  // previously.
-  self._buildIteration = 0;
-  if (self._previousIsopackCache) {
-    self._buildIteration = self._previousIsopackCache._buildIteration + 1;
-  }
 };
 
 _.extend(exports.IsopackCache.prototype, {
@@ -277,7 +269,6 @@ _.extend(exports.IsopackCache.prototype, {
             includePluginProviderPackageMap: true,
             pluginCacheDir: pluginCacheDir
           });
-          isopack._buildIteration = self._buildIteration;
           // Accept the compiler's result, even if there were errors (since it
           // at least will have a useful WatchSet and will allow us to keep
           // going and compile other packages that depend on this one). However,
@@ -424,11 +415,6 @@ _.extend(exports.IsopackCache.prototype, {
       var packageInfo = self._packageMap.getInfo(name);
       var isopack = self._isopacks[name];
       if (packageInfo.kind === 'local') {
-        // skip the messages we previously reported
-        if (self._buildIteration &&
-            isopack._buildIteration !== self._buildIteration) {
-          return;
-        }
         var isopackMessages = isopack.lintingMessages;
         if (isopackMessages) {
           messages.push(isopackMessages.formatMessages());

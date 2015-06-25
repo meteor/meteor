@@ -12,6 +12,7 @@ Plugin.registerLinter({
 
 function JsHintLinter () {
   this.hashDict = {};
+  this.cachedErrors = {};
 };
 
 JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
@@ -59,20 +60,32 @@ JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
     var hashKey = JSON.stringify([
       file.getPackageName(), file.getPathInPackage(), file.getArch()]);
 
-    if (self.hashDict[hashKey] === file.getSourceHash())
+    // XXX a memory leak for removed files? A cached errors object would be
+    // stored for it indefinitely
+    if (self.hashDict[hashKey] === file.getSourceHash()) {
+      reportErrors(file, self.cachedErrors[hashKey]);
       return;
+    }
+
     self.hashDict[hashKey] = file.getSourceHash();
 
     if (! jshint(file.getContentsAsString(), conf, predefinedGlobals)) {
-      jshint.errors.forEach(function (error) {
-        file.error({
-          message: error.reason,
-          line: error.line,
-          column: error.character
-        });
-      });
+      reportErrors(file, jshint.errors);
+      self.cachedErrors[hashKey] = jshint.errors;
+    } else {
+      self.cachedErrors[hashKey] = [];
     }
   });
+
+  function reportErrors(file, errors) {
+    errors.forEach(function (error) {
+      file.error({
+        message: error.reason,
+        line: error.line,
+        column: error.character
+      });
+    });
+  }
 };
 
 JsHintLinter.prototype.wipeCache = function () {

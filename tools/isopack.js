@@ -187,9 +187,6 @@ var Isopack = function () {
   // build tool when the app is linted. Is also printed when a package
   // represented by Isopack is published.
   self.lintingMessages = null;
-
-  // An in-memory only number that is used by IsopackCache
-  self._buildIteration = null;
 };
 
 // XXX BBP we're not really using the convert functions as much any more; make
