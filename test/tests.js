@@ -1,4 +1,5 @@
 import assert from "assert";
+import {transform} from "babel-core";
 
 describe("Babel", function() {
   it("es3.{property,memberExpression}Literals", () => {
@@ -59,14 +60,12 @@ describe("Babel", function() {
   });
 
   it("es6.constants", () => {
-    var babel = require("../index.js");
-
     let code = `
 const val = "oyez";
 val = "zxcv";`;
 
     try {
-      babel.compile(code);
+      transform(code, { whitelist: ["es6.constants"] });
     } catch (error) {
       assert.ok(/"val" is read-only/.test(error.message));
       return;
