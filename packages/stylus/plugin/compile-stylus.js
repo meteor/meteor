@@ -11,11 +11,13 @@ Plugin.registerCompiler({
   return new StylusCompiler();
 });
 
+var APP_SYMBOL = '__app__';
+
 function StylusCompiler () {}
 StylusCompiler.prototype.processFilesForTarget = function (files) {
   var filesByPackage = {};
   files.forEach(function (inputFile) {
-    var packageName = inputFile.getPackageName() || '__app__';
+    var packageName = inputFile.getPackageName() || APP_SYMBOL;
     var filePath = '/' + inputFile.getPathInPackage();
     filesByPackage[packageName] = filesByPackage[packageName] || {};
     filesByPackage[packageName][filePath] = inputFile;
@@ -44,7 +46,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
     var packageName = match[1];
     if (!packageName || packageName === '{}')
-      packageName = '__app__';
+      packageName = APP_SYMBOL;
     else
       packageName = packageName.substr(1, packageName.length - 2);
 
@@ -83,7 +85,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
     }
 
     currentlyCompiledFile = inputFile.getPathInPackage();
-    currentlyCompiledPackage = inputFile.getPackageName() || '__app__';
+    currentlyCompiledPackage = inputFile.getPackageName() || APP_SYMBOL;
     var f = new Future;
     var style = stylus(inputFile.getContentsAsString())
       .use(nib())
