@@ -40,10 +40,22 @@ _.extend(LessCompiler.prototype, {
     var mains = [];
     var cacheMisses = [];
 
+    function decodeFilePath (filePath) {
+      var match = filePath.match(/^{(.*)}\/(.*)$/);
+      if (! match)
+        throw new Error('Failed to decode Less path: ' + filePath);
+
+      if (match[1] === '') {
+        // app
+        return match[2];
+      }
+
+      return 'packages/' + match[1] + '/' + match[2];
+    }
+
     inputFiles.forEach(function (inputFile) {
       var packageName = inputFile.getPackageName();
       var pathInPackage = inputFile.getPathInPackage();
-      // XXX BBP think about windows slashes
       var absoluteImportPath = packageName === null
             ? ('{}/' + pathInPackage)
             : ('{' + packageName + '}/' + pathInPackage);
@@ -79,11 +91,17 @@ _.extend(LessCompiler.prototype, {
         } catch (e) {
           inputFile.error({
             message: e.message,
-            sourcePath: e.filename,  // XXX BBP this has {} and stuff, is that OK?
+            sourcePath: decodeFilePath(e.filename),
             line: e.line,
             column: e.column
           });
           return;  // go on to next file
+        }
+
+        if (output.map) {
+          var map = JSON.parse(output.map);
+          map.sources = map.sources.map(decodeFilePath);
+          output.map = JSON.stringify(map);
         }
         cacheEntry = {
           hashes: {},
