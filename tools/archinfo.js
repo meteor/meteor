@@ -130,7 +130,7 @@ let _host = null; // memoize
 function getHost() {
   if (!_host) {
     function run(...args) {
-      const result = files.run.apply(null, args);
+      const result = files.run(...args);
 
       if (!result) {
         throw new Error('can\'t get arch with ' + args.join(' ') + '?');
