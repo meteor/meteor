@@ -81,7 +81,7 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   });
 
   s.cd("myapp");
-  run = s.run("run");
+  var run = s.run("run");
   run.waitSecs(10);
 
   // For some reason, we don't get the whole path anymore, but at least we get
