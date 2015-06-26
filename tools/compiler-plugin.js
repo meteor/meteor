@@ -57,7 +57,7 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
         "processing files with ",
         sourceProcessor.isopack.name,
         " (for target ", self.arch, ")"
-      ].join(' ');
+      ].join('');
 
       buildmessage.enterJob({
         title: jobTitle
