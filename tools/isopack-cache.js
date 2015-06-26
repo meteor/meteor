@@ -403,14 +403,14 @@ _.extend(exports.IsopackCache.prototype, {
   _getLintingMessagesForLocalPackages: function () {
     var self = this;
 
-    var messages = [];
+    var messages = new buildmessage._MessageSet();
     self._packageMap.eachPackage(function (name, packageInfo) {
       var packageInfo = self._packageMap.getInfo(name);
       var isopack = self._isopacks[name];
       if (packageInfo.kind === 'local') {
         var isopackMessages = isopack.lintingMessages;
         if (isopackMessages) {
-          messages.push(isopackMessages.formatMessages());
+          messages.merge(isopackMessages);
         }
       }
     });
