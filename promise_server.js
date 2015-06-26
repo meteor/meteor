@@ -64,27 +64,36 @@ Promise.prototype.await = function () {
 // result of the original function.
 Promise.async = function (fn, allowReuseOfCurrentFiber) {
   var Promise = this;
-
   return function () {
-    var self = this;
-    var args = arguments;
-    var fiber = Fiber.current;
-
-    if (allowReuseOfCurrentFiber && fiber) {
-      return Promise.resolve(fn.apply(self, args));
-    }
-
-    return fiberPool.run({
-      callback: fn,
-      context: self,
-      args: args,
-      dynamics: fiber && fiber._meteorDynamics
-    }, Promise);
+    return Promise.asyncApply(
+      fn, this, arguments,
+      allowReuseOfCurrentFiber
+    );
   };
+};
+
+Promise.asyncApply = function (fn, context, args,
+                               allowReuseOfCurrentFiber) {
+  var fiber = Fiber.current;
+  if (fiber && allowReuseOfCurrentFiber) {
+    return this.resolve(fn.apply(context, args));
+  }
+
+  return fiberPool.run({
+    callback: fn,
+    context: context,
+    args: args,
+    dynamics: fiber && fiber._meteorDynamics
+  }, this);
 };
 
 Function.prototype.async = function (allowReuseOfCurrentFiber) {
   return Promise.async(this, allowReuseOfCurrentFiber);
+};
+
+Function.prototype.asyncApply = function (context, args,
+                                          allowReuseOfCurrentFiber) {
+  return Promise.asyncApply(this, context, args, allowReuseOfCurrentFiber);
 };
 
 module.exports = exports = Promise;
