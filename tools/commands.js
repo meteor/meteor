@@ -400,10 +400,10 @@ function doRunCommand (options) {
     appHost: appHost,
     debugPort: options['debug-port'],
     settingsFile: options.settings,
+    lint: ! options['no-lint'],
     buildOptions: {
       minify: options.production,
-      includeDebug: ! options.production,
-      lint: ! options['no-lint']
+      includeDebug: ! options.production
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -997,10 +997,8 @@ main.registerCommand({
   var bundler = require('./bundler.js');
   var bundle = bundler.bundle({
     projectContext: projectContext,
-    outputPath: bundlePath,
-    buildOptions: {
-      lint: true
-    }
+    outputPath: null,
+    lint: true,
   });
 
   if (bundle.errors) {

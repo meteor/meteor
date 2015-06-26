@@ -70,6 +70,7 @@ var AppProcess = function (options) {
   self.proc = null;
   self.madeExitCallback = false;
   self.ipcPipe = options.ipcPipe;
+  self.lint = options.lint;
 };
 
 _.extend(AppProcess.prototype, {
@@ -556,7 +557,8 @@ _.extend(AppRunner.prototype, {
           outputPath: bundlePath,
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
-          hasCachedBundle: !! cachedServerWatchSet
+          hasCachedBundle: !! cachedServerWatchSet,
+          lint: self.lint
         });
       });
 
@@ -699,7 +701,7 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
-    if (self.buildOptions.lint) {
+    if (self.lint) {
       var warnings = bundleResult.warnings;
 
       if (warnings.hasMessages()) {

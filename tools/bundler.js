@@ -1907,6 +1907,7 @@ var writeSiteArchive = Profile(
  * - outputPath: Required. Path to the directory where the output (an
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
+ *   Nothing is written to disk if this option is null.
  *
  * - includeNodeModules: specifies how node_modules for program should be
  *   included:
@@ -1925,6 +1926,7 @@ var writeSiteArchive = Profile(
  *   fallback option for Windows). For isopacks (meteor packages), link to the
  *   location of the locally stored isopack build (e.g.
  *   ~/.meteor/packages/package/version/npm)
+ * - lint: specifies if linting is required
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
@@ -1933,6 +1935,8 @@ var writeSiteArchive = Profile(
  *   - includeDebug: include packages marked debugOnly (boolean, default false)
  *   - webArchs: array of 'web.*' options to build (defaults to
  *     projectContext.platformList.getWebArchs())
+ *   - warnings: a MessageSet of linting messages or null if there were no
+ *     messages or linting wasn't perfored.
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
@@ -1964,6 +1968,7 @@ exports.bundle = function (options) {
   var outputPath = options.outputPath;
   var includeNodeModules = options.includeNodeModules;
   var buildOptions = options.buildOptions || {};
+  var shouldLint = options.lint || false;
 
   var appDir = projectContext.projectDir;
 
@@ -2045,7 +2050,7 @@ exports.bundle = function (options) {
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
 
-    if (! buildmessage.jobHasMessages() && buildOptions.lint) {
+    if (! buildmessage.jobHasMessages() && shouldLint) {
       lintingMessages = lintBundle(projectContext, app, packageSource);
     }
 
@@ -2100,20 +2105,22 @@ exports.bundle = function (options) {
       getRelativeTargetPath: getRelativeTargetPath
     };
 
-    if (options.hasCachedBundle) {
-      // If we already have a cached bundle, just recreate the new targets.
-      // XXX This might make the contents of "star.json" out of date.
-      _.each(targets, function (target, name) {
-        var targetBuild =
-          writeTargetToPath(name, target, outputPath, writeOptions);
-        nodePath = nodePath.concat(targetBuild.nodePath);
-        clientWatchSet.merge(target.getWatchSet());
-      });
-    } else {
-      starResult = writeSiteArchive(targets, outputPath, writeOptions);
-      nodePath = nodePath.concat(starResult.nodePath);
-      serverWatchSet.merge(starResult.serverWatchSet);
-      clientWatchSet.merge(starResult.clientWatchSet);
+    if (outputPath !== null) {
+      if (options.hasCachedBundle) {
+        // If we already have a cached bundle, just recreate the new targets.
+        // XXX This might make the contents of "star.json" out of date.
+        _.each(targets, function (target, name) {
+          var targetBuild =
+            writeTargetToPath(name, target, outputPath, writeOptions);
+          nodePath = nodePath.concat(targetBuild.nodePath);
+          clientWatchSet.merge(target.getWatchSet());
+        });
+      } else {
+        starResult = writeSiteArchive(targets, outputPath, writeOptions);
+        nodePath = nodePath.concat(starResult.nodePath);
+        serverWatchSet.merge(starResult.serverWatchSet);
+        clientWatchSet.merge(starResult.clientWatchSet);
+      }
     }
 
     success = true;
