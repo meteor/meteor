@@ -662,6 +662,10 @@
       "version": "1.1.1",
       "from": "convert-source-map@>=1.1.1 <2.0.0",
       "resolved": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-1.1.1.tgz"
+    },
+    "meteor-async-await": {
+      "version": "0.1.1",
+      "from": "meteor-async-await@>=0.1.1 <0.2.0"
     }
   }
 }

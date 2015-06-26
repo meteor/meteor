@@ -189,4 +189,16 @@ val = "zxcv";`;
 
     assert.strictEqual(add(1, 2, 3, 4, 5), 15);
   });
+
+  let Promise = require("meteor-promise");
+  it("async/await", async () => {
+    var two = Promise.resolve(2);
+    var three = Promise.resolve(3);
+    var ten = await new Promise(resolve => resolve(10));
+
+    assert.strictEqual(
+      (await two) + (await three) + ten,
+      await 15
+    );
+  });
 });

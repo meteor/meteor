@@ -30,9 +30,11 @@
   },
   "dependencies": {
     "babel-core": "5.6.7",
-    "convert-source-map": "^1.1.1"
+    "convert-source-map": "^1.1.1",
+    "meteor-async-await": "^0.1.1"
   },
   "devDependencies": {
+    "meteor-promise": "^0.2.4",
     "mocha": "^2.2.5"
   }
 }
