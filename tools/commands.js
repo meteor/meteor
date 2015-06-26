@@ -1008,16 +1008,8 @@ main.registerCommand({
     throw new main.ExitWithCode(-1);
   }
 
-  var localPackagesLintingErrors =
-    projectContext._getLintingMessagesForLocalPackages();
-  if (bundle.warnings || localPackagesLintingErrors.length > 0) {
-    var messages = '';
-    if (bundle.warnings) {
-      messages += bundle.warnings.formatMessages() + '\n';
-    }
-    messages += localPackagesLintingErrors.join('\n');
-
-    Console.warn(messages);
+  if (bundle.warnings) {
+    Console.warn(bundle.warnings.formatMessages());
     throw new main.ExitWithCode(-1);
   }
 

@@ -700,8 +700,7 @@ _.extend(AppRunner.prototype, {
 
     appProcess.start();
     if (self.buildOptions.lint) {
-      var warnings = new buildmessage._MessageSet(bundleResult.warnings);
-      warnings.merge(self.projectContext._getLintingMessagesForLocalPackages());
+      var warnings = bundleResult.warnings;
 
       if (warnings.hasMessages()) {
         runLog.log(

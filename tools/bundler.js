@@ -2046,16 +2046,7 @@ exports.bundle = function (options) {
     });
 
     if (! buildmessage.jobHasMessages() && buildOptions.lint) {
-      lintingMessages = buildmessage.capture({
-        title: "linting the application"
-      }, function () {
-        compiler.lint(packageSource, {
-          isopackCache: projectContext.isopackCache,
-          isopack: app
-        });
-      });
-      if (! lintingMessages.hasMessages())
-        lintingMessages = null;
+      lintingMessages = lintBundle(projectContext, app, packageSource);
     }
 
     var minifiers = null;
@@ -2140,6 +2131,27 @@ exports.bundle = function (options) {
     nodePath: nodePath
   };
 };
+
+function lintBundle (projectContext, isopack, packageSource) {
+  var allMessages = new buildmessage._MessageSet();
+  var lintingMessages = buildmessage.capture({
+    title: "linting the application"
+  }, function () {
+    compiler.lint(packageSource, {
+      isopackCache: projectContext.isopackCache,
+      isopack: isopack
+    });
+  });
+
+  allMessages.merge(lintingMessages);
+  allMessages.merge(projectContext._getLintingMessagesForLocalPackages());
+
+  if (! allMessages.hasMessages()) {
+    return null;
+  }
+
+  return allMessages;
+}
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript
 // program). It can either be loaded into memory with load(), which
