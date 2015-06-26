@@ -703,8 +703,11 @@ _.extend(AppRunner.prototype, {
       var warnings = new buildmessage._MessageSet(bundleResult.warnings);
       warnings.merge(self.projectContext._getLintingMessagesForLocalPackages());
 
-      runLog.log(
-        'Linting your app.\n\n' + warnings.formatMessages(), { arrow: true })
+      if (warnings.hasMessages()) {
+        runLog.log(
+          'Linting your app.\n\n' + warnings.formatMessages(),
+          { arrow: true });
+      }
     }
 
     // Start watching for changes for files if requested. There's no
