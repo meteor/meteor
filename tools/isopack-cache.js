@@ -285,20 +285,23 @@ _.extend(exports.IsopackCache.prototype, {
       self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
       self._isopacks[name] = isopack;
 
-      var lintingMessages = buildmessage.capture({
-        title: "linting isopack " + name
-      }, function () {
-        compiler.lint(packageInfo.packageSource, {
-          isopackCache: self,
-          isopack: isopack,
-          includeCordovaUnibuild: self._includeCordovaUnibuild
+      // lint isopack if compilation succeeded or if we loaded it from cache
+      if (! buildmessage.jobHasMessages()) {
+        var lintingMessages = buildmessage.capture({
+          title: "linting isopack " + name
+        }, function () {
+          compiler.lint(packageInfo.packageSource, {
+            isopackCache: self,
+            isopack: isopack,
+            includeCordovaUnibuild: self._includeCordovaUnibuild
+          });
         });
-      });
-      if (! lintingMessages.hasMessages()) {
-        lintingMessages = null;
-      }
+        if (! lintingMessages.hasMessages()) {
+          lintingMessages = null;
+        }
 
-      isopack.lintingMessages = lintingMessages;
+        isopack.lintingMessages = lintingMessages;
+      }
     });
   },
 
