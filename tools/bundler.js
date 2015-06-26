@@ -2045,7 +2045,7 @@ exports.bundle = function (options) {
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
 
-    if (buildOptions.lint) {
+    if (! buildmessage.jobHasMessages() && buildOptions.lint) {
       lintingMessages = buildmessage.capture({
         title: "linting the application"
       }, function () {
