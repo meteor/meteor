@@ -1,6 +1,6 @@
 {
   "name": "meteor-babel",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "dependencies": {
     "babel-core": {
       "version": "5.6.7",
