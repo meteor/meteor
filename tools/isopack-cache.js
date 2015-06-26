@@ -285,22 +285,12 @@ _.extend(exports.IsopackCache.prototype, {
       self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
       self._isopacks[name] = isopack;
 
-      // Isopack is built and loaded. Run linters and save the result in the
-      // Isopack object.
-      var wipeLinterCache = false;
-      if (! previousIsopack) {
-        // We don't have previous Isopack-cache which probably means we are
-        // running the build for the first time in this process. Let's lint the
-        // isopack from scratch and collect all errors.
-        wipeLinterCache = true;
-      }
       var lintingMessages = buildmessage.capture({
         title: "linting isopack " + name
       }, function () {
         compiler.lint(packageInfo.packageSource, {
           isopackCache: self,
           isopack: isopack,
-          wipeLinterCache: wipeLinterCache,
           includeCordovaUnibuild: self._includeCordovaUnibuild
         });
       });

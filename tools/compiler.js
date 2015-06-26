@@ -174,8 +174,7 @@ compiler.lint = function (packageSource, options) {
     lintUnibuild({
       isopack: options.isopack,
       isopackCache: options.isopackCache,
-      sourceArch: architecture,
-      wipeLinterCache: true
+      sourceArch: architecture
     });
   });
 };
@@ -217,7 +216,6 @@ var lintUnibuild = function (options) {
   var isopack = options.isopack;
   var isopackCache = options.isopackCache;
   var inputSourceArch = options.sourceArch;
-  var wipeLinterCache = options.wipeLinterCache;
   var activePluginPackages = getActivePluginPackages(
     isopack,
     // pass sourceArch and isopackCache
@@ -260,8 +258,7 @@ var lintUnibuild = function (options) {
     inputSourceArch: inputSourceArch,
     isopackCache: isopackCache,
     wrappedSourceItems: wrappedSourceItems,
-    linters: allLinters,
-    wipeLinterCache: wipeLinterCache
+    linters: allLinters
   });
 };
 
@@ -581,7 +578,6 @@ var runLinters = function (options) {
   var isopackCache = options.isopackCache;
   var wrappedSourceItems = options.wrappedSourceItems;
   var linters = options.linters;
-  var wipeLinterCache = options.wipeLinterCache;
 
   if (_.isEmpty(linters))
     return;
@@ -672,12 +668,6 @@ var runLinters = function (options) {
 
     if (! sourcesToLint.length)
       return;
-
-    if (wipeLinterCache) {
-      // XXX BBP make `wipeCache` part of the interface for other types of
-      // plugins too?
-      linterDef.userPlugin.wipeCache();
-    }
 
     var linter = linterDef.userPlugin.processFilesForTarget;
 
