@@ -6,9 +6,8 @@ var undefined;
 // with our processing of the callback queue.
 var originalYield = Fiber.yield;
 
-function FiberPool(Promise, targetFiberCount) {
+function FiberPool(targetFiberCount) {
   assert.ok(this instanceof FiberPool);
-  assert.strictEqual(typeof Promise, "function");
   assert.strictEqual(typeof targetFiberCount, "number");
 
   var fiberStack = [];
@@ -60,7 +59,7 @@ function FiberPool(Promise, targetFiberCount) {
   // Run the entry.callback function in a Fiber either taken from the pool
   // or created anew if the pool is empty. This method returns a Promise
   // for the eventual result of the entry.callback function.
-  this.run = function (entry) {
+  this.run = function (entry, Promise) {
     assert.strictEqual(typeof entry, "object");
     assert.strictEqual(typeof entry.callback, "function");
 
@@ -104,6 +103,6 @@ FiberPool.prototype.drain = function () {
   return this.setTargetFiberCount(0);
 };
 
-exports.makePool = function (Promise, targetFiberCount) {
-  return new FiberPool(Promise, targetFiberCount || 20);
+exports.makePool = function (targetFiberCount) {
+  return new FiberPool(targetFiberCount || 20);
 };

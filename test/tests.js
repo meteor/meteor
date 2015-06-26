@@ -149,14 +149,14 @@ describe("Promise.then callbacks", function () {
 
 describe("FiberPool", function () {
   it("should still work when the target size is 1 or 0", function () {
-    var fiberPool = require("../fiber_pool.js").makePool(Promise);
+    var fiberPool = require("../fiber_pool.js").makePool();
 
     return fiberPool.setTargetFiberCount(1).run({
       callback: function () {
         assert.ok(Fiber.current instanceof Fiber);
         return Fiber.current;
       }
-    }).then(function (firstFiber) {
+    }, Promise).then(function (firstFiber) {
       return fiberPool.run({
         callback: function () {
           assert.ok(Fiber.current instanceof Fiber);
@@ -164,14 +164,14 @@ describe("FiberPool", function () {
           fiberPool.drain();
           return Fiber.current;
         }
-      });
+      }, Promise);
     }).then(function (secondFiber) {
       return fiberPool.run({
         callback: function () {
           assert.ok(Fiber.current instanceof Fiber);
           assert.notStrictEqual(Fiber.current, secondFiber);
         }
-      });
+      }, Promise);
     });
   });
 });

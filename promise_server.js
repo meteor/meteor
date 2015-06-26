@@ -1,20 +1,21 @@
 var assert = require("assert");
 var Fiber = require("fibers");
 var Promise = require("promise");
-var fiberPool = require("./fiber_pool.js").makePool(Promise);
+var fiberPool = require("./fiber_pool.js").makePool();
 
 // Replace Promise.prototype.then with a wrapper that ensures the
 // onResolved and onRejected callbacks always run in a Fiber.
 var es6PromiseThen = Promise.prototype.then;
 Promise.prototype.then = function (onResolved, onRejected) {
+  var Promise = this.constructor;
   return es6PromiseThen.call(
     this,
-    wrapCallback(onResolved),
-    wrapCallback(onRejected)
+    wrapCallback(onResolved, Promise),
+    wrapCallback(onRejected, Promise)
   );
 };
 
-function wrapCallback(callback) {
+function wrapCallback(callback, Promise) {
   var fiber = Fiber.current;
   var dynamics = fiber && fiber._meteorDynamics;
 
@@ -23,7 +24,7 @@ function wrapCallback(callback) {
       callback: callback,
       args: [arg], // Avoid dealing with arguments objects.
       dynamics: dynamics
-    });
+    }, Promise);
   };
 }
 
@@ -78,7 +79,7 @@ Promise.async = function (fn, allowReuseOfCurrentFiber) {
       context: self,
       args: args,
       dynamics: fiber && fiber._meteorDynamics
-    });
+    }, Promise);
   };
 };
 
