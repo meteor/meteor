@@ -32,7 +32,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
         pathInPackage: '/' + currentlyCompiledFile
       };
     }
-    if (! filePath.match(/^{.*}\//)) {
+    if (! filePath.match(/^\{.*\}\//)) {
       // relative path in the same package
       var parsedImporter = pathParser(importerPath, null);
       return {
@@ -41,7 +41,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       };
     }
 
-    var match = /^({.*})(\/.*)$/.exec(filePath);
+    var match = /^(\{.*\})(\/.*)$/.exec(filePath);
     if (! match) { return null; }
 
     var packageName = match[1];
