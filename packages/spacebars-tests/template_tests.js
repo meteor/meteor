@@ -10,15 +10,6 @@ var nodesToArray = function (array) {
   return _.map(array, _.identity);
 };
 
-var clickIt = function (elem) {
-  // jQuery's bubbling change event polyfill for IE 8 seems
-  // to require that the element in question have focus when
-  // it receives a simulated click.
-  if (elem.focus)
-    elem.focus();
-  clickElement(elem);
-};
-
 // maybe use created callback on the template instead of this?
 var extendTemplateWithInit = function (template, initFunc) {
   var tmpl = new Template(template.viewName+'-extended', template.renderFunction);
@@ -1252,9 +1243,12 @@ Tinytest.add('spacebars-tests - template_tests - inclusion helpers are isolated'
   }});
 
   var div = renderToDiv(tmpl);
-    subtmplCopy.rendered = function () {
+  subtmplCopy.rendered = function () {
     test.fail("shouldn't re-render when same value returned from helper");
   };
+  subtmplCopy.onRendered(function () {
+    test.fail("shouldn't re-render when same value returned from helper");
+  });
 
   dep.changed();
   Tracker.flush({_throwFirstError: true}); // `subtmplCopy.rendered` not called
@@ -2386,6 +2380,12 @@ Tinytest.add(
     height.set(3);
     Tracker.flush();
     test.equal(canonicalizeHtml(div.innerHTML), "parent");
+
+    // Test that calling Template.parentData() without any arguments is the same as Template.parentData(1)
+
+    height.set(null);
+    Tracker.flush();
+    test.equal(canonicalizeHtml(div.innerHTML), "baz");
   }
 );
 
@@ -2728,6 +2728,30 @@ Tinytest.add('spacebars-tests - template_tests - current view in event handler',
 });
 
 
+Tinytest.add('spacebars-tests - template_tests - helper invalidates self', function (test) {
+  var tmpl = Template.spacebars_template_test_bracketed_foo;
+
+  var count = new ReactiveVar(0);
+
+  tmpl.helpers({
+    // It's unusual for a helper to have side effects, but it's possible
+    // and people do it.  Regression test for #4097.
+    foo: function () {
+      // Make count odd and return it.
+      var c = count.get();
+      if ((c % 2) === 0) {
+        count.set(c+1);
+      }
+      return c;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  divRendersTo(test, div, '[1]');
+  count.set(2);
+  divRendersTo(test, div, '[3]');
+});
+
 Tinytest.add(
   "spacebars-tests - template_tests - textarea attrs", function (test) {
     var tmplNoContents = {
@@ -3030,4 +3054,366 @@ Tinytest.add("spacebars-tests - template_tests - old-style helpers", function (t
   delete tmpl.foo;
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), '');
+});
+
+Tinytest.add("spacebars-tests - template_tests - with data remove (#3130)", function (test) {
+  var tmpl = Template.spacebars_template_test_with_data_remove;
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.renderWithData(tmpl, { foo: 3130 }, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<b>some data - 3130</b>');
+  var view = Blaze.getView(div.querySelector('b'));
+  test.isFalse(theWith.isDestroyed);
+  Blaze.remove(view);
+  test.isTrue(theWith.isDestroyed);
+  test.equal(div.innerHTML, "");
+});
+
+Tinytest.add("spacebars-tests - template_tests - inclusion with data remove (#3130)", function (test) {
+  var tmpl = Template.spacebars_template_test_inclusion_with_data_remove;
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), '<span><b>stuff</b></span>');
+  var view = Blaze.getView(div.querySelector('b'));
+  var parentView = view.parentView;
+  test.isTrue(parentView.__isTemplateWith);
+  test.isFalse(parentView.isDestroyed);
+  Blaze.remove(view);
+  test.isTrue(parentView.isDestroyed);
+  test.equal(canonicalizeHtml(div.innerHTML), "<span></span>");
+});
+
+Tinytest.add("spacebars-tests - template_tests - custom block helper doesn't break Template.instance() (#3540)", function (test) {
+  var tmpl = Template.spacebars_template_test_template_instance_wrapper_outer;
+
+  tmpl.helpers({
+    thisShouldOutputHello: function () {
+      return Template.instance().customProp;
+    }
+  });
+
+  tmpl.created = function () {
+    this.customProp = "hello";
+  };
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "hello hello");
+});
+
+testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions", [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_template_level_subscriptions;
+    var tmplInstance;
+    var div;
+
+    // Make sure the subscriptions stop when the template is destroyed
+    var stopCallback = expect();
+    var stopCallback2 = expect();
+
+    var futureId = Random.id();
+
+    // Make sure the HTML is what we expect when one subscription is ready
+    var checkOneReady = expect(function () {
+      test.equal(canonicalizeHtml(div.innerHTML), "");
+      Meteor.call('makeTemplateSubReady', futureId);
+    });
+
+    // Make sure the HTML is what we expect when both subscriptions are ready
+    var checkBothReady = expect(function () {
+      test.equal(canonicalizeHtml(div.innerHTML), "ready! true");
+
+      // This will call the template's destroyed callback
+      Blaze.remove(tmplInstance.view);
+    });
+
+    var subscriptionsFinished = 0;
+
+    // Manually use the subscribe ready callback to make sure the template is
+    // doing the right thing
+    var subscribeCallback = expect(function () {
+      subscriptionsFinished++;
+
+      if (subscriptionsFinished === 1) {
+        // We need to use Tracker.afterFlush here and Tracker.flush doesn't work
+        // because we need to wait for the other callback to fire (the one that
+        // makes ready return true) _and_ we need the UI to rerender
+        Tracker.afterFlush(checkOneReady);
+      }
+
+      if (subscriptionsFinished === 2) {
+        Tracker.afterFlush(checkBothReady);
+      }
+    });
+
+    tmpl.onCreated(function () {
+      var subHandle = this.subscribe("templateSub", subscribeCallback);
+      var subHandle2 = this.subscribe("templateSub", futureId, {
+        onReady: subscribeCallback,
+        connection: Meteor.connection
+      });
+
+      subHandle.stop = stopCallback;
+      subHandle2.stop = stopCallback2;
+
+      tmplInstance = this;
+    });
+
+    // Insertion point
+    div = renderToDiv(tmpl);
+
+    // To start, there is no content because the template isn't ready
+    test.equal(canonicalizeHtml(div.innerHTML), "");
+  }
+]);
+
+testAsyncMulti("spacebars-tests - template_tests - template-level subscriptions don't resubscribe unnecessarily", [
+  function (test, expect) {
+    var tmpl = Template.spacebars_template_test_template_level_subs_resubscribe;
+    var subHandle;
+    var trueThenFalse = new ReactiveVar(true);
+
+    tmpl.helpers({
+      ifArg: function () {
+        return trueThenFalse.get();
+      },
+      subscribingHelper1: expect(function () {
+        subHandle = Template.instance().subscribe("templateSub");
+      }),
+      subscribingHelper2: expect(function () {
+        var subHandle2 = Template.instance().subscribe("templateSub");
+        test.isTrue(subHandle.subscriptionId === subHandle2.subscriptionId);
+
+        // Make sure we didn't add two subscription handles to our internal list
+        test.equal(_.keys(Template.instance()._subscriptionHandles).length, 1);
+      })
+    });
+
+    renderToDiv(tmpl);
+    Tracker.flush();
+    trueThenFalse.set(false);
+  }
+]);
+
+Tinytest.add("spacebars-tests - template_tests - old #each sets data context", function (test) {
+  var tmpl = Template.spacebars_template_test_old_each_data_context;
+  tmpl.helpers({
+    items: [{text:"a"}, {text:"b"}]
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a</div><div>b</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - new #each extends data context", function (test) {
+  var tmpl = Template.spacebars_template_test_new_each_data_context;
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        items: [{text:"a"}, {text:"b"}],
+        toplevel: "XYZ"
+      };
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a -- XYZ</div><div>b -- XYZ</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - new #each binding lookup is scoped to the template", function (test) {
+  var tmpl = Template.spacebars_template_test_new_each_lookup_top_level;
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        letter_a: ["a"],
+        subcontext: {
+          letter_b: ["b"]
+        }
+      };
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - let bindings", function (test) {
+  var tmpl = Template.spacebars_template_test_let_bindings;
+
+  v = new ReactiveVar("var");
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        varFromContext: "from context",
+        anotherVarFromContext: "another var from context"
+      };
+    },
+    helper: function () {
+      return v.get();
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>var -- var -- from context -- override</div>');
+
+  v.set("new var");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>new var -- new var -- from context -- override</div>');
+
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - #each @index", function (test) {
+  var tmpl = Template.spacebars_template_test_each_index;
+
+  var c = new Mongo.Collection();
+  c.insert({ num: 2 });
+  c.insert({ num: 4 });
+  tmpl.helpers({
+    things: function () {
+      return c.find({}, {sort:{num: 1}});
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theEach = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 2</span><span>1 - 4</span>');
+
+  c.insert({ num: 1 });
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 1</span><span>1 - 2</span><span>2 - 4</span>');
+
+  var three = c.insert({ num: 3 });
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 1</span><span>1 - 2</span><span>2 - 3</span><span>3 - 4</span>');
+
+  c.update(three, { num: 0 });
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 0</span><span>1 - 1</span><span>2 - 2</span><span>3 - 4</span>');
+
+  c.remove(three);
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), '<span>0 - 1</span><span>1 - 2</span><span>2 - 4</span>');
+
+  var view = Blaze.getView(div.querySelector('span'));
+  Blaze.remove(view);
+});
+
+Tinytest.add("spacebars-tests - template_tests - nested expressions", function (test) {
+  var tmpl = Template.spacebars_template_test_nested_exprs;
+
+  tmpl.helpers({
+    add: function (a, b) {
+      return a + b;
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "6");
+});
+
+Tinytest.add("spacebars-tests - template_tests - nested sub-expressions", function (test) {
+  var tmpl = Template.spacebars_template_test_nested_subexprs;
+
+  var sentence = new ReactiveVar("can't even imagine a world without Light");
+  tmpl.helpers({
+    capitalize: function (str) {
+      return str.charAt(0).toUpperCase() + str.substring(1);
+    },
+    firstWord: function (sentence) {
+      return sentence.split(' ')[0];
+    },
+    generateSentence: function () {
+      return sentence.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "Can't");
+
+  sentence.set("that would be quite dark");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "That");
+});
+
+Tinytest.add("spacebars-tests - template_tests - expressions as keyword args", function (test) {
+  var tmpl = Template.spacebars_template_test_exprs_keyword;
+
+  var name = new ReactiveVar("light");
+  tmpl.helpers({
+    capitalize: function (str) {
+      return str.charAt(0).toUpperCase() + str.substring(1);
+    },
+    name: function () {
+      return name.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "Light Mello");
+
+  name.set("misa");
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), "Misa Mello");
+});
+
+var testDoesntRerender = function (test, which) {
+  var tmpl = ({
+    "WITH": Template.spacebars_template_test_with_rerender,
+    "LET": Template.spacebars_template_test_let_rerender
+  })[which];
+
+  var x = new ReactiveVar("aaa");
+  tmpl.helpers({
+    x: function () {
+      return x.get();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  var input = div.querySelector('input.foo');
+  var span = div.querySelector('span.bar');
+  test.isTrue(input && input.className === 'foo');
+  test.isTrue(span && span.className === 'bar');
+  test.equal(canonicalizeHtml(span.innerHTML), 'aaa');
+
+  x.set('bbb');
+  Tracker.flush();
+  // make sure the input and span are still the same, but the new
+  // value of x is reflected
+  var input2 = div.querySelector('input.foo');
+  var span2 = div.querySelector('span.bar');
+  test.isTrue(input2 === input, 'input');
+  test.isTrue(span2 === span, 'span');
+  test.equal(canonicalizeHtml(span2.innerHTML), 'bbb');
+};
+
+
+Tinytest.add("spacebars-tests - template_tests - #with doesn't re-render template", function (test) {
+  testDoesntRerender(test, "WITH");
+});
+
+Tinytest.add("spacebars-tests - template_tests - #let doesn't re-render template", function (test) {
+  testDoesntRerender(test, "LET");
+});
+
+Tinytest.add("spacebars-tests - template_tests - #each takes multiple arguments", function (test) {
+  var tmpl = Template.spacebars_template_test_each_multiarg;
+  tmpl.helpers({
+    arg: ['a', 'b', 'c'],
+    helper: function (x) { return x; }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "<div>a</div><div>b</div><div>c</div>");
 });

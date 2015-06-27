@@ -1,7 +1,5 @@
 var _ = require('underscore');
-var path = require('path');
 var files = require('./files.js');
-var project = require('./project.js').project;
 var warehouse = require('./warehouse.js');
 var catalog = require('./catalog.js');
 var utils = require('./utils.js');
@@ -90,7 +88,6 @@ _.extend(Release.prototype, {
   // meteor-tool package in checkout.
   getCurrentToolsVersion: function () {
     var self = this;
-    buildmessage.assertInCapture();
 
     if (release.current.name) {
       return self._manifest.tool;
@@ -125,10 +122,11 @@ _.extend(Release.prototype, {
     return self._manifest;
   },
 
-  getDisplayName: function () {
+  getDisplayName: function (options) {
     var self = this;
     return utils.displayRelease(self.getReleaseTrack(),
-                                self.getReleaseVersion());
+                                self.getReleaseVersion(),
+                                options);
   }
 });
 
@@ -163,26 +161,20 @@ release.explicit = null;
 // True if release.current is the release we'd use if we wanted to run the app
 // in the current project. (taking into account release.forced and whether we're
 // currently running from a checkout).
-release.usingRightReleaseForApp = function () {
-  buildmessage.assertInCapture();
+release.usingRightReleaseForApp = function (projectContext) {
   if (release.current === null)
     throw new Error("no release?");
 
   if (! files.usesWarehouse() || release.forced)
     return true;
 
-  var appRelease = project.getMeteorReleaseVersion();
-  if (appRelease === null)
-    // Really old app that has no release specified.
-    appRelease = release.latestDownloaded();
-  return release.current.name === appRelease;
+  return release.current.name === projectContext.releaseFile.fullReleaseName;
 };
 
 // Return the name of the latest release that is downloaded and ready
 // for use. May not be called when running from a checkout.
 // 'track' is optional (it defaults to the default track).
-release.latestDownloaded = function (track) {
-  buildmessage.assertInCapture();
+release.latestKnown = function (track) {
   if (! files.usesWarehouse())
     throw new Error("called from checkout?");
   // For self-test only.
@@ -193,9 +185,6 @@ release.latestDownloaded = function (track) {
   var defaultRelease = catalog.official.getDefaultReleaseVersion(track);
 
   if (!defaultRelease) {
-    if (!track || track === catalog.DEFAULT_TRACK) {
-      throw new Error("no latest release available on default track?");
-    }
     return null;
   }
   return defaultRelease.track + '@' + defaultRelease.version;
@@ -221,7 +210,6 @@ release.latestDownloaded = function (track) {
 //   in the world (confirmed with server).
 release.load = function (name, options) {
   options = options || {};
-  buildmessage.assertInCapture();
 
   if (! name) {
     return new Release({ name: null });
@@ -244,9 +232,6 @@ release.load = function (name, options) {
 
   var releaseVersion = catalog.official.getReleaseVersion(track, version);
   if (releaseVersion === null) {
-    if (process.env.METEOR_TEST_FAIL_RELEASE_DOWNLOAD === "offline") {
-      throw new files.OfflineError(new Error("scripted failure for tests"));
-    }
     throw new release.NoSuchReleaseError;
   }
 
@@ -270,17 +255,6 @@ release.setCurrent = function (releaseObject, forced, explicit) {
   release.current = releaseObject;
   release.forced = !! forced;
   release.explicit = !! explicit;
-};
-
-// XXX hack
-release._setCurrentForOldTest = function () {
-  buildmessage.assertInCapture();
-  if (process.env.METEOR_SPRINGBOARD_RELEASE) {
-    release.setCurrent(release.load(process.env.METEOR_SPRINGBOARD_RELEASE),
-                       true);
-  } else {
-    release.setCurrent(release.load(null));
-  }
 };
 
 // An exception meaning that you asked for a release that doesn't exist in the

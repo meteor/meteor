@@ -102,11 +102,20 @@
   };
 
   document.addEventListener("deviceready", function () {
-    if (window.cordova.logger)
-      window.cordova.logger.__onDeviceReady();
+    var startLoading = function () {
+      if (! cordova.file) {
+        // If the plugin didn't actually load, try again later.
+        // See a larger comment with details in
+        // packages/meteor/startup_client.js
+        setTimeout(startLoading, 20);
+        return;
+      }
 
-    var localPathPrefix = cordova.file.dataDirectory + 'meteor/';
-    loadApp(localPathPrefix);
+      var localPathPrefix = cordova.file.dataDirectory + 'meteor/';
+      loadApp(localPathPrefix);
+    };
+
+    startLoading();
   }, false);
 })();
 

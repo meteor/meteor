@@ -1,0 +1,20 @@
+<template name="nav">
+  <nav class="{{#if black}}black{{/if}}">
+    <div class="nav-group">
+      {{#if back}}
+        <a class="nav-item js-back" href="#"><span class="icon-arrow-left-alt"></span></a>
+      {{else}}
+        <a class="nav-item js-menu" href="#"><span class="icon-menu"></span></a>
+      {{/if}}
+    </div>
+
+    <div class="title-page">
+      {{title}}
+      <span class="subtext-page">{{subtext}}</span>
+    </div>
+
+    <div class="nav-group right">
+      {{> Template.contentBlock }}
+    </div>
+  </nav>
+</template>

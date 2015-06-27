@@ -1,7 +1,7 @@
 var _ = require('underscore');
-var fs = require('fs');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
+var files = require('./files.js');
 var runLog = require('./run-log.js');
 var utils = require('./utils.js');
 
@@ -121,7 +121,7 @@ _.extend(Selenium.prototype, {
 
     if (self.xunitOutputFile) {
       runLog.log("Writing xunit output to: " + self.xunitOutputFile);
-      fs.writeFileSync(self.xunitOutputFile, self.xunitLines.join('\n'));
+      files.writeFile(self.xunitOutputFile, self.xunitLines.join('\n'));
     }
 
     if (self.runner) {
@@ -144,11 +144,11 @@ _.extend(Selenium.prototype, {
   _gotMagicLog: function (facility, msg) {
     var self = this;
 
-    if (facility == 'xunit') {
+    if (facility === 'xunit') {
       self.xunitLines.push(msg);
-    } else if (facility == 'state') {
+    } else if (facility === 'state') {
       self._gotState(msg);
-    } else if (facility == 'flush') {
+    } else if (facility === 'flush') {
       // Ignore
     } else {
       runLog.log("Unknown magic: " + facility + ": " + msg);
@@ -170,10 +170,10 @@ _.extend(Selenium.prototype, {
       }
       msg = match[3];
       if (msg === DUMMY_FLUSH) return;
-      if (msg.indexOf(MAGIC_PREFIX) == 0) {
+      if (msg.indexOf(MAGIC_PREFIX) === 0) {
         msg = msg.substring(MAGIC_PREFIX.length);
         var colonIndex = msg.indexOf(': ');
-        if (colonIndex == -1) {
+        if (colonIndex === -1) {
           self._gotMagicLog('', msg);
         } else {
           var facility = msg.substring(0, colonIndex);

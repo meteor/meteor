@@ -7,54 +7,48 @@ Session.setDefault(USER_MENU_KEY, false);
 var SHOW_CONNECTION_ISSUE_KEY = 'showConnectionIssue';
 Session.setDefault(SHOW_CONNECTION_ISSUE_KEY, false);
 
-var CONNECTION_ISSUE_TIMEOUT = 1000;
+var CONNECTION_ISSUE_TIMEOUT = 5000;
 
 Meteor.startup(function () {
-  if (Meteor.isCordova) {
-    // set up a swipe left / right handler
-    var hammer = new Hammer.Manager(document.body);
-
-    hammer.add(new Hammer.Swipe({
-      velocity: 0.1
-    }));
-
-    hammer.on('swipeleft', function () {
+  // set up a swipe left / right handler
+  $(document.body).touchwipe({
+    wipeLeft: function () {
       Session.set(MENU_KEY, false);
-    });
-
-    hammer.on('swiperight', function () {
+    },
+    wipeRight: function () {
       Session.set(MENU_KEY, true);
-    });
-  }
+    },
+    preventDefaultEvents: false
+  });
 
-  // Don't show the connection error box unless we haven't connected within
-  // 1 second of app starting
+  // Only show the connection error box if it has been 5 seconds since
+  // the app started
   setTimeout(function () {
+    // Launch screen handle created in lib/router.js
+    dataReadyHold.release();
+
+    // Show the connection error box
     Session.set(SHOW_CONNECTION_ISSUE_KEY, true);
   }, CONNECTION_ISSUE_TIMEOUT);
 });
 
-Template.appBody.rendered = function() {
+Template.appBody.onRendered(function() {
   this.find('#content-container')._uihooks = {
     insertElement: function(node, next) {
       $(node)
         .hide()
         .insertBefore(next)
-        .fadeIn();
+        .fadeIn(function () {
+          listFadeInHold.release();
+        });
     },
     removeElement: function(node) {
       $(node).fadeOut(function() {
-        this.remove();
+        $(this).remove();
       });
     }
   };
-};
-
-Template.appBody.destroyed = function() {
-  if (Meteor.isCordova) {
-    this.hammer.destroy();
-  }
-};
+});
 
 Template.appBody.helpers({
   // We use #each on an array of one item so that the "list" template is
@@ -70,8 +64,9 @@ Template.appBody.helpers({
   cordova: function() {
     return Meteor.isCordova && 'cordova';
   },
-  email: function() {
-    return Meteor.user().emails[0].address;
+  emailLocalPart: function() {
+    var email = Meteor.user().emails[0].address;
+    return email.substring(0, email.indexOf('@'));
   },
   userMenuOpen: function() {
     return Session.get(USER_MENU_KEY);

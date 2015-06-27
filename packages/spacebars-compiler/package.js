@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Compiler for Spacebars template language",
-  version: '1.0.3-rc.0'
+  version: '1.0.6'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('SpacebarsCompiler');
 
   api.use('htmljs');
@@ -11,20 +11,24 @@ Package.on_use(function (api) {
   api.use('blaze-tools');
 
   api.use('underscore');
-  api.use('minifiers', ['server']);
-  api.add_files(['templatetag.js',
+  // The templating plugin will pull in minifiers, so that generated code will
+  // be beautified. But it's a weak dependency so that eg boilerplate-generator
+  // doesn't pull in minifiers.
+  api.use('minifiers', ['server'], { weak: true });
+  api.addFiles(['templatetag.js',
                  'optimizer.js',
+                 'react.js',
                  'codegen.js',
                  'compiler.js']);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('underscore');
   api.use('spacebars-compiler');
   api.use('tinytest');
   api.use('blaze-tools');
   api.use('coffeescript');
-  api.add_files('spacebars_tests.js');
-  api.add_files('compile_tests.js');
-  api.add_files('compiler_output_tests.coffee');
+  api.addFiles('spacebars_tests.js');
+  api.addFiles('compile_tests.js');
+  api.addFiles('compiler_output_tests.coffee');
 });

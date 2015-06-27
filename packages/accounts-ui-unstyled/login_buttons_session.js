@@ -18,7 +18,8 @@ var VALID_KEYS = [
 
   'configureLoginServiceDialogVisible',
   'configureLoginServiceDialogServiceName',
-  'configureLoginServiceDialogSaveDisabled'
+  'configureLoginServiceDialogSaveDisabled',
+  'configureOnDesktopVisible'
 ];
 
 var validateKey = function (key) {
@@ -97,8 +98,12 @@ Accounts._loginButtonsSession = {
   },
 
   configureService: function (name) {
-    this.set('configureLoginServiceDialogVisible', true);
-    this.set('configureLoginServiceDialogServiceName', name);
-    this.set('configureLoginServiceDialogSaveDisabled', true);
+    if (Meteor.isCordova) {
+      this.set('configureOnDesktopVisible', true);
+    } else {
+      this.set('configureLoginServiceDialogVisible', true);
+      this.set('configureLoginServiceDialogServiceName', name);
+      this.set('configureLoginServiceDialogSaveDisabled', true);
+    }
   }
 };

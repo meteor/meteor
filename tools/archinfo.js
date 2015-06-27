@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var files = require('./files.js');
+var os = require('os');
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -64,8 +65,10 @@ var files = require('./files.js');
  *   hardware is virtually extinct. Meteor has never supported it and
  *   nobody has asked for it.
  *
- * In the future there will be a os.windows architecture, probably
- * also with x86_64 and x86_32 variants.
+ * os.windows.x86_32
+ *   This is 32 and 64 bit Windows. It seems like there is not much of
+ *   a benefit to using 64 bit Node on Windows, and 32 bit works properly
+ *   even on 64 bit systems.
  *
  * To be (more but far from completely) precise, the ABI for os.*
  * architectures includes a CPU type, a mode in which the code will be
@@ -125,17 +128,16 @@ var files = require('./files.js');
 var _host = null; // memoize
 var host = function () {
   if (! _host) {
-    var run = function (/* arguments */) {
-      var result = files.run.apply(null, arguments);
+    var run = function (...args) {
+      var result = files.run.apply(null, args);
       if (! result)
-        throw new Error("can't get arch with " +
-                        _.toArray(arguments).join(" ") + "?");
+        throw new Error("can't get arch with " + args.join(" ") + "?");
       return result.replace(/\s*$/, ''); // trailing whitespace
     };
 
-    var uname = run('uname');
+    var platform = os.platform();
 
-    if (uname === "Darwin") {
+    if (platform === "darwin") {
       // Can't just test uname -m = x86_64, because Snow Leopard can
       // return other values.
       if (run('uname', '-p') !== "i386" ||
@@ -144,7 +146,7 @@ var host = function () {
       _host  = "os.osx.x86_64";
     }
 
-    else if (uname === "Linux") {
+    else if (platform === "linux") {
       var machine = run('uname', '-m');
       if (_.contains(["i386", "i686", "x86"], machine))
         _host = "os.linux.x86_32";
@@ -154,8 +156,13 @@ var host = function () {
         throw new Error("Unsupported architecture: " + machine);
     }
 
+    else if (platform === "win32") {
+      // We also use 32 bit builds on 64 bit Windows architectures.
+      _host = "os.windows.x86_32";
+    }
+
     else
-      throw new Error("Unsupported operating system: " + uname);
+      throw new Error("Unsupported operating system: " + platform);
   }
 
   return _host;

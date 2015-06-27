@@ -160,11 +160,18 @@ _.extend(TestCaseResults.prototype, {
     this.equal(actual, expected, message, true);
   },
 
-  instanceOf: function (obj, klass) {
+  instanceOf: function (obj, klass, message) {
     if (obj instanceof klass)
       this.ok();
     else
-      this.fail({type: "instanceOf"}); // XXX what other data?
+      this.fail({type: "instanceOf", message: message, not: false}); // XXX what other data?
+  },
+
+  notInstanceOf: function (obj, klass, message) {
+    if (obj instanceof klass)
+      this.fail({type: "instanceOf", message: message, not: true}); // XXX what other data?
+    else
+      this.ok();
   },
 
   matches: function (actual, regexp, message) {
@@ -172,7 +179,15 @@ _.extend(TestCaseResults.prototype, {
       this.ok();
     else
       this.fail({type: "matches", message: message,
-                 actual: actual, regexp: regexp.toString()});
+                 actual: actual, regexp: regexp.toString(), not: false});
+  },
+
+  notMatches: function (actual, regexp, message) {
+    if (regexp.test(actual))
+      this.fail({type: "matches", message: message,
+                 actual: actual, regexp: regexp.toString(), not: true});
+    else
+      this.ok();
   },
 
   // expected can be:
@@ -234,12 +249,12 @@ _.extend(TestCaseResults.prototype, {
     if (v)
       this.ok();
     else
-      this.fail({type: "true", message: msg});
+      this.fail({type: "true", message: msg, not: false});
   },
 
   isFalse: function (v, msg) {
     if (v)
-      this.fail({type: "true", message: msg});
+      this.fail({type: "true", message: msg, not: true});
     else
       this.ok();
   },
@@ -248,12 +263,12 @@ _.extend(TestCaseResults.prototype, {
     if (v === null)
       this.ok();
     else
-      this.fail({type: "null", message: msg});
+      this.fail({type: "null", message: msg, not: false});
   },
 
   isNotNull: function (v, msg) {
     if (v === null)
-      this.fail({type: "true", message: msg});
+      this.fail({type: "null", message: msg, not: true});
     else
       this.ok();
   },
@@ -262,17 +277,31 @@ _.extend(TestCaseResults.prototype, {
     if (v === undefined)
       this.ok();
     else
-      this.fail({type: "undefined", message: msg});
+      this.fail({type: "undefined", message: msg, not: false});
+  },
+
+  isNotUndefined: function (v, msg) {
+    if (v === undefined)
+      this.fail({type: "undefined", message: msg, not: true});
+    else
+      this.ok();
   },
 
   isNaN: function (v, msg) {
     if (isNaN(v))
       this.ok();
     else
-      this.fail({type: "NaN", message: msg});
+      this.fail({type: "NaN", message: msg, not: false});
   },
 
-  include: function (s, v) {
+  isNotNaN: function (v, msg) {
+    if (isNaN(v))
+      this.fail({type: "NaN", message: msg, not: true});
+    else
+      this.ok();
+  },
+
+  include: function (s, v, message, not) {
     var pass = false;
     if (s instanceof Array)
       pass = _.any(s, function(it) {return _.isEqual(v, it);});
@@ -284,11 +313,16 @@ _.extend(TestCaseResults.prototype, {
       }
     else
       /* fail -- not something that contains other things */;
-    if (pass)
+    if (pass === ! not)
       this.ok();
     else {
-      this.fail({type: "include", sequence: s, should_contain_value: v});
+      this.fail({type: "include", message: message,
+                 sequence: s, should_contain_value: v, not: !!not});
     }
+  },
+
+  notInclude: function (s, v, message) {
+    this.include(s, v, message, true);
   },
 
   // XXX should change to lengthOf to match vowsjs
@@ -392,6 +426,10 @@ TestManager = function () {
   self.testQueue = Meteor.isServer && new Meteor._SynchronousQueue();
 };
 
+if (Meteor.isServer && process.env.TINYTEST_FILTER) {
+  __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
+}
+
 _.extend(TestManager.prototype, {
   addCase: function (test) {
     var self = this;
@@ -399,6 +437,10 @@ _.extend(TestManager.prototype, {
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
           test.name + "'");
+    if (__meteor_runtime_config__.tinytestFilter &&
+        test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
+      return;
+    }
     self.tests[test.name] = test;
     self.ordered_tests.push(test);
   },

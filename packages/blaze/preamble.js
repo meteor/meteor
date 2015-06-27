@@ -1,3 +1,7 @@
+/**
+ * @namespace Blaze
+ * @summary The namespace for all Blaze-related methods and classes.
+ */
 Blaze = {};
 
 // Utility to HTML-escape a string.  Included for legacy reasons.
@@ -22,8 +26,8 @@ Blaze._escape = (function() {
 Blaze._warn = function (msg) {
   msg = 'Warning: ' + msg;
 
-  if ((typeof 'Log' !== 'undefined') && Log && Log.warn)
+  if ((typeof Log !== 'undefined') && Log && Log.warn)
     Log.warn(msg); // use Meteor's "logging" package
-  else if ((typeof 'console' !== 'undefined') && console.log)
+  else if ((typeof console !== 'undefined') && console.log)
     console.log(msg);
 };

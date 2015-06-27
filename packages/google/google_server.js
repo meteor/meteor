@@ -9,10 +9,12 @@ OAuth.registerService('google', 2, null, function(query) {
 
   var response = getTokens(query);
   var accessToken = response.accessToken;
+  var idToken = response.idToken;
   var identity = getIdentity(accessToken);
 
   var serviceData = {
     accessToken: accessToken,
+    idToken: idToken,
     expiresAt: (+new Date) + (1000 * response.expiresIn)
   };
 
@@ -61,7 +63,8 @@ var getTokens = function (query) {
     return {
       accessToken: response.data.access_token,
       refreshToken: response.data.refresh_token,
-      expiresIn: response.data.expires_in
+      expiresIn: response.data.expires_in,
+      idToken: response.data.id_token
     };
   }
 };

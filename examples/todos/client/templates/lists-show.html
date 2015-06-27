@@ -31,9 +31,9 @@
           <div class="options-web">
             <a class="js-toggle-list-privacy nav-item">
               {{#if userId}}
-                <span class="icon-lock" title="Make list private"></span>
+                <span class="icon-lock" title="Make list public"></span>
               {{else}}
-                <span class="icon-unlock" title="Make list public"></span>
+                <span class="icon-unlock" title="Make list private"></span>
               {{/if}}
             </a>
 
@@ -53,14 +53,18 @@
 
     <div class="content-scrollable list-items">
       {{#if todosReady}}
-        {{#each todos}}
-          {{> todosItem}}
-        {{else}}
-          <div class="wrapper-message">
-            <div class="title-message">No tasks here</div>
-            <div class="subtitle-message">Add new tasks using the field above</div>
-          </div>
-        {{/each}}
+        {{#with _id}} {{! Establish new data context with only the '_id'
+                          field. This way, when the 'incompleteCount' field
+                          changes, we don't re-render the list contents }}
+          {{#each todos this}}
+            {{> todosItem}}
+          {{else}}
+            <div class="wrapper-message">
+              <div class="title-message">No tasks here</div>
+              <div class="subtitle-message">Add new tasks using the field above</div>
+            </div>
+          {{/each}}
+        {{/with}}
       {{else}}
           <div class="wrapper-message">
             <div class="title-message">Loading tasks...</div>

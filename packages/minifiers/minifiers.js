@@ -1,7 +1,7 @@
 var cssParse = Npm.require('css-parse');
 var cssStringify = Npm.require('css-stringify');
-var path = Npm.require('path');
 var url = Npm.require('url');
+var path = Npm.require('path');
 UglifyJS = Npm.require('uglify-js');
 UglifyJSMinify = UglifyJS.minify;
 
@@ -14,7 +14,7 @@ CssTools = {
   minifyCssAst: function (cssAst) {
     return MinifyAst(cssAst);
   },
-  mergeCssAsts: function (cssAsts, warnCb, shouldKeepRelPaths) {
+  mergeCssAsts: function (cssAsts, warnCb) {
     var rulesPredicate = function (rules) {
       if (! _.isArray(rules))
         rules = [rules];
@@ -54,9 +54,7 @@ CssTools = {
           break;
         }
 
-      if (! shouldKeepRelPaths) {
-        CssTools.rewriteCssUrls(ast);
-      }
+      CssTools.rewriteCssUrls(ast);
 
       var imports = ast.stylesheet.rules.splice(0, importCount);
       newAst.stylesheet.rules = newAst.stylesheet.rules.concat(imports);
@@ -85,53 +83,91 @@ CssTools = {
   // For performance reasons this function acts by side effect by modifying the
   // given AST without doing a deep copy.
   rewriteCssUrls: function (ast) {
-
-    var isRelative = function(path) {
-      return path && path.charAt(0) !== '/';
-    };
-
-    _.each(ast.stylesheet.rules, function(rule, ruleIndex) {
-      var basePath = path.dirname(rule.position.source);
-
-      // Set the correct basePath based on how the linked asset will be served.
-      // XXX This is wrong. We are coupling the information about how files will
-      // be served by the web server to the information how they were stored
-      // originally on the filesystem in the project structure. Ideally, there
-      // should be some module that tells us precisely how each asset will be
-      // served but for now we are just assuming that everything that comes from
-      // a folder starting with "/packages/" is served on the same path as
-      // it was on the filesystem and everything else is served on root "/".
-      if (! basePath.match(/^\/?packages\//i))
-          basePath = "/";
-
-      _.each(rule.declarations, function(declaration, declarationIndex) {
-        var parts, resource, absolutePath, quotes, oldCssUrl, newCssUrl;
-        var value = declaration.value;
-
-        // Match css values containing some functional calls to `url(URI)` where
-        // URI is optionally quoted.
-        // Note that a css value can contains other elements, for instance:
-        //   background: top center url("background.png") black;
-        // or even multiple url(), for instance for multiple backgrounds.
-        var cssUrlRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
-        while (parts = cssUrlRegex.exec(value)) {
-          oldCssUrl = parts[0];
-          quotes = parts[1];
-          resource = url.parse(parts[2]);
-
-          // Rewrite relative paths to absolute paths.
-          // We don't rewrite urls starting with a protocol definition such as
-          // http, https, or data.
-          if (isRelative(resource.path) && resource.protocol === null) {
-            absolutePath = path.join(basePath, resource.path);
-            newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
-            value = value.replace(oldCssUrl, newCssUrl);
-          }
-        }
-
-        declaration.value = value;
-      });
-    });
+    rewriteRules(ast.stylesheet.rules);
   }
+};
+
+var rewriteRules = function (rules) {
+  _.each(rules, function(rule, ruleIndex) {
+
+    // Recurse if there are sub-rules. An example:
+    //     @media (...) {
+    //         .rule { url(...); }
+    //     }
+    if (_.has(rule, 'rules')) {
+      rewriteRules(rule.rules);
+    }
+
+    var basePath = pathDirname(rule.position.source);
+
+    // Set the correct basePath based on how the linked asset will be served.
+    // XXX This is wrong. We are coupling the information about how files will
+    // be served by the web server to the information how they were stored
+    // originally on the filesystem in the project structure. Ideally, there
+    // should be some module that tells us precisely how each asset will be
+    // served but for now we are just assuming that everything that comes from
+    // a folder starting with "/packages/" is served on the same path as
+    // it was on the filesystem and everything else is served on root "/".
+    if (! basePath.match(/^\/?packages\//i))
+        basePath = "/";
+
+    _.each(rule.declarations, function(declaration, declarationIndex) {
+      var parts, resource, absolutePath, quotes, oldCssUrl, newCssUrl;
+      var value = declaration.value;
+
+      // Match css values containing some functional calls to `url(URI)` where
+      // URI is optionally quoted.
+      // Note that a css value can contains other elements, for instance:
+      //   background: top center url("background.png") black;
+      // or even multiple url(), for instance for multiple backgrounds.
+      var cssUrlRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
+      while (parts = cssUrlRegex.exec(value)) {
+        oldCssUrl = parts[0];
+        quotes = parts[1];
+        resource = url.parse(parts[2]);
+
+        // Rewrite relative paths to absolute paths.
+        // We don't rewrite urls starting with a protocol definition such as
+        // http, https, or data.
+        if (isRelative(resource.path) && resource.protocol === null) {
+          absolutePath = pathJoin(basePath, resource.path);
+          newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
+          value = value.replace(oldCssUrl, newCssUrl);
+        }
+      }
+
+      declaration.value = value;
+    });
+  });
+};
+
+var isRelative = function(path) {
+  return path && path.charAt(0) !== '/';
+};
+
+// These are duplicates of functions in tools/files.js, because we don't have
+// a good way of exporting them into packages.
+// XXX deduplicate files.js into a package at somepoint so that we can use it
+// in core
+var toOSPath = function (p) {
+  if (process.platform === 'win32')
+    return p.replace(/\//g, '\\');
+  return p;
+}
+
+var toStandardPath = function (p) {
+  if (process.platform === 'win32')
+    return p.replace(/\\/g, '/');
+  return p;
+};
+
+var pathJoin = function (a, b) {
+  return toStandardPath(path.join(
+    toOSPath(a),
+    toOSPath(b)));
+};
+
+var pathDirname = function (p) {
+  return toStandardPath(path.dirname(toOSPath(p)));
 };
 

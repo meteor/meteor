@@ -1,9 +1,9 @@
 Package.describe({
   summary: "Meteor Reactive Templating library",
-  version: '2.0.2-rc.0'
+  version: '2.1.2'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export(['Blaze', 'UI', 'Handlebars']);
   api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('tracker');
@@ -13,12 +13,12 @@ Package.on_use(function (api) {
   api.use('observe-sequence');
   api.use('reactive-var');
 
-  api.add_files([
+  api.addFiles([
     'preamble.js'
   ]);
 
   // client-only files
-  api.add_files([
+  api.addFiles([
     'dombackend.js',
     'domrange.js',
     'events.js',
@@ -27,7 +27,7 @@ Package.on_use(function (api) {
   ], 'client');
 
   // client and server
-  api.add_files([
+  api.addFiles([
     'exceptions.js',
     'view.js',
     'builtins.js',
@@ -37,7 +37,7 @@ Package.on_use(function (api) {
   ]);
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
   api.use('jquery'); // strong dependency, for testing jQuery backend
   api.use('blaze');
@@ -47,6 +47,6 @@ Package.on_test(function (api) {
   api.use('html-tools');
   api.use('reactive-var');
 
-  api.add_files('view_tests.js');
-  api.add_files('render_tests.js', 'client');
+  api.addFiles('view_tests.js');
+  api.addFiles('render_tests.js', 'client');
 });

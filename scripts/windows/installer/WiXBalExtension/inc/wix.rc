@@ -1,0 +1,140 @@
+//-------------------------------------------------------------------------------------------------
+// <copyright file="wix.rc" company="Outercurve Foundation">
+//   Copyright (c) 2004, Outercurve Foundation.
+//   This software is released under Microsoft Reciprocal License (MS-RL).
+//   The license and further copyright text can be found in the file
+//   LICENSE.TXT at the root directory of the distribution.
+// </copyright>
+// 
+// <summary>
+// Common resource file for any native wix resources.
+// </summary>
+// <remarks>
+// Usage:
+//   #define VER_APP (VER_DLL, VER_TYPELIB, none)
+//   #define VER_LANG_NEUTRAL (optional)
+//   #define VER_ORIGINAL_FILENAME "FooBar.Exe"
+//   #define VER_INTERNAL_NAME "FooBar"
+//   #define VER_PRODUCT_NAME
+//   #define VER_FILE_DESCRIPTION
+//   #include "wix.rc"
+//
+// Optional to add before the #include (must add as a group and VER_BLOCK must match to VER_LANG and VER_CP)
+// You should not have to do this except for some extreme cases.
+//   #define VER_LANG 0x0000
+//   #define VER_CP 0x04E4
+//   #define VER_BLOCK "000004E4"
+// </remarks>
+//-------------------------------------------------------------------------------------------------
+
+#include <winver.h>
+#include <windows.h>
+#include "wixver.h"
+#include "WixDistribution.h"
+
+#ifdef DEBUG
+    #define VER_DEBUG                VS_FF_DEBUG
+    #define VER_PRIVATE_BUILD        VS_FF_PRIVATEBUILD
+    #define VER_PRE_RELEASE          (VS_FF_PRERELEASE | VS_FF_SPECIALBUILD)
+#else
+    #define VER_DEBUG                0
+    #define VER_PRIVATE_BUILD        0
+    #define VER_PRE_RELEASE          0
+#endif
+
+#if defined(VER_APP)
+    #define VER_FILE_TYPE            VFT_APP
+#elif defined(VER_DLL)
+    #define VER_FILE_TYPE            VFT_DLL
+#elif defined(VER_TYPELIB)
+    #define VER_FILE_TYPE            VFT_UNKNOWN
+#else
+    #define VER_FILE_TYPE            VFT_UNKNOWN
+#endif
+
+#if defined(VER_LANG_NEUTRAL)
+    #ifndef VER_LANG
+    #define VER_LANG                 0x0000
+    #endif
+    #ifndef VER_CP
+    #define VER_CP                   0x04E4
+    #endif
+    #ifndef VER_BLOCK
+    #define VER_BLOCK                "000004E4"
+    #endif
+#else
+    #ifndef VER_LANG
+    #define VER_LANG                 0x0409
+    #endif
+    #ifndef VER_CP
+    #define VER_CP                   0x04E4
+    #endif
+    #ifndef VER_BLOCK
+    #define VER_BLOCK                "040904E4"
+    #endif
+#endif
+
+#define VER_FILE_VERSION             rmj, rmm, rbd, rev
+#define VER_PRODUCT_VERSION          rmj, rmm, rbd, rev
+#define VER_FILE_VERSION_STRING      szVerMajorMinorBuildRev
+#define VER_PRODUCT_VERSION_STRING   VER_FILE_VERSION_STRING
+#define VER_FILE_FLAGS_MASK          VS_FFI_FILEFLAGSMASK
+#define VER_FILE_FLAGS               (VER_DEBUG | VER_PRIVATE_BUILD | VER_PRE_RELEASE)
+
+#define VER_FILE_OS                  VOS__WINDOWS32
+
+#define VER_COMPANY_NAME             "Outercurve Foundation"
+#ifndef VER_PRODUCT_NAME
+    #define VER_PRODUCT_NAME         "Windows Installer XML (WiX)"
+#endif
+#ifndef VER_FILE_DESCRIPTION
+    #define VER_FILE_DESCRIPTION     "Windows Installer XML (WiX) component"
+#endif
+
+#if defined(VER_LEGAL_COPYRIGHT)
+    #error
+#endif
+#define VER_LEGAL_COPYRIGHT          "Copyright (c) Outercurve Foundation.\240 All rights reserved."
+
+#if !defined(VER_FILE_SUBTYPE)
+    #define VER_FILE_SUBTYPE 0
+#endif
+
+#ifdef RC_INVOKED
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     VER_FILE_VERSION
+PRODUCTVERSION  VER_PRODUCT_VERSION
+FILEFLAGSMASK   VER_FILE_FLAGS_MASK
+FILEFLAGS       VER_FILE_FLAGS
+FILEOS          VER_FILE_OS
+FILETYPE        VER_FILE_TYPE
+FILESUBTYPE     VER_FILE_SUBTYPE
+BEGIN
+BLOCK "StringFileInfo"
+    BEGIN
+    BLOCK VER_BLOCK
+        BEGIN
+        VALUE "CompanyName",       VER_COMPANY_NAME
+        VALUE "FileDescription",   VER_FILE_DESCRIPTION
+        VALUE "FileVersion",       VER_FILE_VERSION_STRING
+        VALUE "InternalName",      VER_INTERNAL_NAME
+        
+        VALUE "LegalCopyright",    VER_LEGAL_COPYRIGHT
+
+        VALUE "OriginalFilename",  VER_ORIGINAL_FILENAME
+        VALUE "ProductName",       VER_PRODUCT_NAME
+        VALUE "ProductVersion",    VER_FILE_VERSION_STRING
+#if defined(DEBUG)
+        VALUE "WiX Common Resource Format", "Debug Only"
+#endif
+        END
+    END
+
+BLOCK "VarFileInfo"
+    BEGIN
+    VALUE "Translation", VER_LANG, VER_CP
+    END
+END
+
+#endif

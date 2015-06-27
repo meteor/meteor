@@ -40,6 +40,9 @@ var logsOrMongoForApp = function (sandbox, command, appName, options) {
     // I suppose it's possible that we don't have any INFO messages in
     // the logs, but it seems unlikely. Every time we run a command we
     // hit /_GALAXY_ on the site.
+    // XXX This is no longer true now that we've removed legacy Galaxy
+    // prototype support, so if this causes test flakiness, it may
+    // need to be tweaked.
     matchString = 'INFO';
   } else {
     throw new Error('Command must be "logs" or "mongo"');

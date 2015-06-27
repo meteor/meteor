@@ -1,8 +1,12 @@
 {
     "releases": {
         "stable": {
-            "version": "0.9.2.2",
-            "banner": "=> Meteor 0.9.0: Introducing the official Meteor package system,\n   including Isobuild and the Meteor Package Server!\n\n   Starting in 0.9.0, you can publish your own packages and use any of\n   the over 1800 community packages in your app, without needing an\n   external tool such as Meteorite. Just use commands like 'meteor add\n   <packagename>', 'meteor publish', and 'meteor search <query>'.\n\n   This release is being downloaded in the background. It's a big\n   change! Once it's done downloading, then the next time you run\n   'meteor', your Meteor install will be automatically upgraded to the\n   new system. The upgrade will take a few minutes and as part of it\n   old versions of Meteor will be removed from your machine. These old\n   versions will be automatically redownloaded using the new system if\n   you work on apps that use them.\n"
+            "version": "1.0.1",
+            "banner": "=> Meteor 1.0 is out! Visit www.meteor.com for all the details.\n\n   Meteor 1.0 is being downloaded in the background. You can update to\n   it by running 'meteor update'."
         }
-    }
+    },
+    "version": "1.0.0",
+    "deb_version": "1.0.0-1",
+    "rpm_version": "1.0.0-1",
+    "urlbase": "https://d3sqy0vbqsdhku.cloudfront.net"
 }

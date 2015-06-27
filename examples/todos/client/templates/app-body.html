@@ -10,7 +10,7 @@
               {{else}}
               <span class="icon-arrow-down"></span>
             {{/if}}
-            {{email}}
+            {{emailLocalPart}}
           </a>
           {{#if userMenuOpen}}
             <a class="js-logout btn-secondary">Logout</a>
@@ -31,10 +31,10 @@
             {{#if userId}}
               <span class="icon-lock"></span>
             {{/if}}
-            {{name}}
             {{#if incompleteCount}}
               <span class="count-list">{{incompleteCount}}</span>
             {{/if}}
+            {{name}}
           </a>
         {{/each}}
 

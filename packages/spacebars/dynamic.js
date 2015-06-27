@@ -10,7 +10,9 @@
 
 Template.__dynamicWithDataContext.helpers({
   chooseTemplate: function (name) {
-    return Template[name] || null;
+    return Blaze._getTemplate(name, function () {
+      return Template.instance();
+    });
   }
 });
 

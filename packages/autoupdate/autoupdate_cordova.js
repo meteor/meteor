@@ -13,7 +13,7 @@ var MAX_RETRY_COUNT = 5;
 var autoupdateVersionCordova = __meteor_runtime_config__.autoupdateVersionCordova || "unknown";
 
 // The collection of acceptable client versions.
-ClientVersions = new Meteor.Collection("meteor_autoupdate_clientVersions");
+ClientVersions = new Mongo.Collection("meteor_autoupdate_clientVersions");
 
 Autoupdate = {};
 
@@ -86,91 +86,93 @@ var onNewVersion = function () {
     }
 
     updating = true;
-    ensureLocalPathPrefix();
+    ensureLocalPathPrefix(_.bind(downloadNewVersion, null, res.data));
+  });
+};
 
-    var program = res.data;
-    var manifest = _.clone(program.manifest);
-    var version = program.version;
-    var ft = new FileTransfer();
+var downloadNewVersion = function (program) {
+  var urlPrefix = Meteor.absoluteUrl() + '__cordova';
+  var manifest = _.clone(program.manifest);
+  var version = program.version;
+  var ft = new FileTransfer();
 
-    manifest.push({ url: '/index.html?' + Random.id() });
+  manifest.push({ url: '/index.html?' + Random.id() });
 
-    var versionPrefix = localPathPrefix + version;
+  var versionPrefix = localPathPrefix + version;
 
-    var queue = [];
-    _.each(manifest, function (item) {
-      if (! item.url) return;
+  var queue = [];
+  _.each(manifest, function (item) {
+    if (! item.url) return;
 
-      var url = item.url;
-      url = url.replace(/\?.+$/, '');
+    var url = item.url;
+    url = url.replace(/\?.+$/, '');
 
-      queue.push(url);
-    });
+    queue.push(url);
+  });
 
-    var afterAllFilesDownloaded = _.after(queue.length, function () {
-      var wroteManifest = function (err) {
+  var afterAllFilesDownloaded = _.after(queue.length, function () {
+    var wroteManifest = function (err) {
+      if (err) {
+        log("Failed to write manifest.json: " + err);
+        // XXX do something smarter?
+        return;
+      }
+
+      // success! downloaded all sources and saved the manifest
+      // save the version string for atomicity
+      writeFile(localPathPrefix, 'version', version, function (err) {
         if (err) {
-          log("Failed to write manifest.json: " + err);
-          // XXX do something smarter?
+          log("Failed to write version: " + err);
           return;
         }
 
-        // success! downloaded all sources and saved the manifest
-        // save the version string for atomicity
-        writeFile(localPathPrefix, 'version', version, function (err) {
-          if (err) {
-            log("Failed to write version: " + err);
-            return;
-          }
-
-          // don't call reload twice!
-          if (! hasCalledReload) {
-            var location = uriToPath(localPathPrefix + version);
-            restartServer(location);
-          }
-        });
-      };
-
-      writeFile(versionPrefix, 'manifest.json',
-                JSON.stringify(program, undefined, 2), wroteManifest);
-    });
-
-    var dowloadUrl = function (url) {
-      console.log(DEBUG_TAG + "start dowloading " + url);
-      // Add a cache buster to ensure that we don't cache an old asset.
-      var uri = encodeURI(urlPrefix + url + '?' + Random.id());
-
-      // Try to dowload the file a few times.
-      var tries = 0;
-      var tryDownload = function () {
-        ft.download(uri, versionPrefix + encodeURI(url), function (entry) {
-          if (entry) {
-            console.log(DEBUG_TAG + "done dowloading " + url);
-            // start downloading next queued url
-            if (queue.length)
-              dowloadUrl(queue.shift());
-            afterAllFilesDownloaded();
-          }
-        }, function (err) {
-          // It failed, try again if we have tried less than 5 times.
-          if (tries++ < MAX_RETRY_COUNT) {
-            log("Download error, will retry (#" + tries + "): " + uri);
-            tryDownload();
-          } else {
-            log('Download failed: ' + err + ", source=" + err.source + ", target=" + err.target);
-          }
-        });
-      };
-
-      tryDownload();
+        // don't call reload twice!
+        if (! hasCalledReload) {
+          var location = uriToPath(localPathPrefix + version);
+          restartServer(location);
+        }
+      });
     };
 
-    _.times(Math.min(MAX_NUM_CONCURRENT_DOWNLOADS, queue.length), function () {
-      var nextUrl = queue.shift();
-      // XXX defer the next download so iOS doesn't rate limit us on concurrent
-      // downloads
-      Meteor.setTimeout(dowloadUrl.bind(null, nextUrl), 50);
-    });
+    writeFile(versionPrefix, 'manifest.json',
+              JSON.stringify(program, undefined, 2), wroteManifest);
+  });
+
+  var downloadUrl = function (url) {
+    console.log(DEBUG_TAG + "start downloading " + url);
+    // Add a cache buster to ensure that we don't cache an old asset.
+    var uri = encodeURI(urlPrefix + url + '?' + Random.id());
+
+    // Try to download the file a few times.
+    var tries = 0;
+    var tryDownload = function () {
+      ft.download(uri, versionPrefix + encodeURI(url), function (entry) {
+        if (entry) {
+          console.log(DEBUG_TAG + "done downloading " + url);
+          // start downloading next queued url
+          if (queue.length)
+            downloadUrl(queue.shift());
+          afterAllFilesDownloaded();
+        }
+      }, function (err) {
+        // It failed, try again if we have tried less than 5 times.
+        if (tries++ < MAX_RETRY_COUNT) {
+          log("Download error, will retry (#" + tries + "): " + uri);
+          tryDownload();
+        } else {
+          log('Download failed: ' + JSON.stringify(err) + ", source=" + err.source + ", target=" + err.target);
+        }
+      });
+    };
+
+    tryDownload();
+  };
+
+  _.times(Math.min(MAX_NUM_CONCURRENT_DOWNLOADS, queue.length), function () {
+    var nextUrl = queue.shift();
+    // XXX defer the next download so iOS doesn't rate limit us on concurrent
+    // downloads
+    Meteor.setTimeout(downloadUrl.bind(null, nextUrl), 50);
   });
 };
 
@@ -223,35 +225,36 @@ Meteor.startup(Autoupdate._retrySubscription);
 
 // A helper that removes old directories left from previous autoupdates
 var clearAutoupdateCache = function (currentVersion) {
-  ensureLocalPathPrefix();
-  // Try to clean up our cache directory, make sure to scan the directory
-  // *before* loading the actual app. This ordering will prevent race
-  // conditions when the app code tries to download a new version before
-  // the old-cache removal has scanned the cache folder.
-  listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
-    // Couldn't get the list of dirs or risking to get into a race with an
-    // on-going update to disk.
-    if (err || updating) {
-      return;
-    }
-
-    _.each(names, function (name) {
-      // Skip the folder with the latest version
-      if (name === currentVersion)
+  ensureLocalPathPrefix(function () {
+    // Try to clean up our cache directory, make sure to scan the directory
+    // *before* loading the actual app. This ordering will prevent race
+    // conditions when the app code tries to download a new version before
+    // the old-cache removal has scanned the cache folder.
+    listDirectory(localPathPrefix, {dirsOnly: true}, function (err, names) {
+      // Couldn't get the list of dirs or risking to get into a race with an
+      // on-going update to disk.
+      if (err || updating) {
         return;
+      }
 
-      // remove everything else, as we don't want to keep too much cache
-      // around on disk
-      removeDirectory(localPathPrefix + name + '/', function (err) {
-        if (err) {
-          log('Failed to remove an old cache folder '
-              + name + ':' + err.message);
-        } else {
-          log('Successfully removed an old cache folder ' + name);
-        }
+      _.each(names, function (name) {
+        // Skip the folder with the latest version
+        if (name === currentVersion)
+          return;
+
+        // remove everything else, as we don't want to keep too much cache
+        // around on disk
+        removeDirectory(localPathPrefix + name + '/', function (err) {
+          if (err) {
+            log('Failed to remove an old cache folder '
+                + name + ':' + err.message);
+          } else {
+            log('Successfully removed an old cache folder ' + name);
+          }
+        });
       });
     });
-  });
+  })
 };
 
 // Cordova File plugin helpers
@@ -286,7 +289,22 @@ var uriToPath = function (uri) {
   return decodeURI(uri).replace(/^file:\/\//g, '');
 };
 
-var ensureLocalPathPrefix = function () {
-  localPathPrefix = localPathPrefix || cordova.file.dataDirectory + 'meteor/';
+var ensureLocalPathPrefix = function (cb) {
+  if (! localPathPrefix) {
+    if (! cordova.file.dataDirectory) {
+      // Since ensureLocalPathPrefix function is always called on
+      // Meteor.startup, all Cordova plugins should be ready.
+      // XXX Experiments have shown that it is not always the case, even when
+      // the cordova.file symbol is attached, properties like dataDirectory
+      // still can be null. Poll until we are sure the property is attached.
+      console.log(DEBUG_TAG + 'cordova.file.dataDirectory is null, retrying in 20ms');
+      Meteor.setTimeout(_.bind(ensureLocalPathPrefix, null, cb), 20);
+    } else {
+      localPathPrefix = cordova.file.dataDirectory + 'meteor/';
+      cb();
+    }
+  } else {
+    cb();
+  }
 };
 

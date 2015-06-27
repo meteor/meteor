@@ -36,10 +36,9 @@
 //   running in standalone mode (after setting appropriate environment
 //   variables as documented in README)
 //
-// /server/.bundle_version.txt: contains the dev_bundle version that
-//   legacy (read: current) Galaxy version read in order to set
-//   NODE_PATH to point to arch-specific builds of binary node modules
-//   (primarily this is for node-fibers)
+// /server/.bundle_version.txt: contains the dev_bundle version that the meteor
+//   deploy server reads in order to set NODE_PATH to point to arch-specific
+//   builds of binary node modules
 //
 // XXX in the future one program (which must be a server-type
 // architecture) will be designated as the 'init' program. The
@@ -149,31 +148,29 @@
 // somewhere (decoupling target type from architecture) but it can
 // wait until later.
 
-var path = require('path');
 var util = require('util');
-var files = require(path.join(__dirname, 'files.js'));
-var Builder = require(path.join(__dirname, 'builder.js'));
-var archinfo = require(path.join(__dirname, 'archinfo.js'));
+var files = require('./files.js');
+var Builder = require('./builder.js');
+var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
-var fs = require('fs');
 var _ = require('underscore');
-var project = require(path.join(__dirname, 'project.js'));
-var uniload = require(path.join(__dirname, 'uniload.js'));
+var isopackets = require("./isopackets.js");
 var watch = require('./watch.js');
 var release = require('./release.js');
 var Fiber = require('fibers');
-var Future = require(path.join('fibers', 'future'));
+var Future = require('fibers/future');
 var sourcemap = require('source-map');
 var runLog = require('./run-log.js');
 var PackageSource = require('./package-source.js');
+var Profile = require('./profile.js').Profile;
 var compiler = require('./compiler.js');
-var tropohouse = require('./tropohouse.js');
-var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
+var colonConverter = require('./colon-converter.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
-    /~$/, /^\.#/, /^#.*#$/,
+    /~$/, /^\.#/, /^#.*#$/,  // emacs swap files
+    /^\..*\.sw.$/,  // vim swap files
     /^\.DS_Store\/?$/, /^ehthumbs\.db$/, /^Icon.$/, /^Thumbs\.db$/,
     /^\.meteor\/$/, /* avoids scanning N^2 files when bundling all packages */
     /^\.git\/$/ /* often has too many files to watch */
@@ -185,9 +182,11 @@ var rejectBadPath = function (p) {
 };
 
 var stripLeadingSlash = function (p) {
-  if (p.charAt(0) !== '/')
-    throw new Error("bad path: " + p);
-  return p.slice(1);
+  if (p.charAt(0) === '/') {
+    return p.slice(1);
+  }
+
+  return p;
 };
 
 
@@ -221,6 +220,9 @@ var NodeModulesDirectory = function (options) {
   // The path (relative to the bundle root) where we would preferably
   // like the node_modules to be output (essentially cosmetic).
   self.preferredBundlePath = options.preferredBundlePath;
+
+  // Optionally, files to discard.
+  self.npmDiscards = options.npmDiscards;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -290,7 +292,7 @@ _.extend(File.prototype, {
   hash: function () {
     var self = this;
     if (! self._hash)
-      self._hash = Builder.sha1(self.contents());
+      self._hash = watch.sha1(self.contents());
     return self._hash;
   },
 
@@ -303,7 +305,7 @@ _.extend(File.prototype, {
         throw new Error("Have neither contents nor sourcePath for file");
       }
       else
-        self._contents = fs.readFileSync(self.sourcePath);
+        self._contents = files.readFile(self.sourcePath);
     }
 
     return encoding ? self._contents.toString(encoding) : self._contents;
@@ -356,7 +358,7 @@ _.extend(File.prototype, {
   // component separator.
   setUrlFromRelPath: function (relPath) {
     var self = this;
-    var url = relPath.split(path.sep).join('/');
+    var url = relPath;
 
     if (url.charAt(0) !== '/')
       url = '/' + url;
@@ -373,7 +375,7 @@ _.extend(File.prototype, {
     if (relPath.match(/^packages\//) || relPath.match(/^assets\//))
       self.targetPath = relPath;
     else
-      self.targetPath = path.join('app', relPath);
+      self.targetPath = files.pathJoin('app', relPath);
 
     // XXX same as in setUrlFromRelPath, we replace colons with a different
     // separator to avoid difficulties further. E.g.: on Windows it is not a
@@ -404,15 +406,17 @@ _.extend(File.prototype, {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options:
-// - packageLoader: PackageLoader to use for resolving package dependencies
+// - packageMap and isopackCache: for resolving package dependencies
 // - arch: the architecture to build
+// - cordovaPluginsFile: projectContextModule.CordovaPluginsFile object
+// - includeDebug: whether to include packages marked debugOnly in this target
 //
 // see subclasses for additional options
 var Target = function (options) {
   var self = this;
 
-  // PackageLoader to use for resolving package dependenices.
-  self.packageLoader = options.packageLoader;
+  self.packageMap = options.packageMap;
+  self.isopackCache = options.isopackCache;
 
   // Something like "web.browser" or "os" or "os.osx.x86_64"
   self.arch = options.arch;
@@ -428,8 +432,8 @@ var Target = function (options) {
   // On-disk dependencies of this target.
   self.watchSet = new watch.WatchSet();
 
-  // Map from package name to package directory of all packages used.
-  self.pluginProviderPackageDirs = {};
+  // List of all package names used in this target.
+  self.usedPackages = {};
 
   // node_modules directories that we need to copy into the target (or
   // otherwise make available at runtime). A map from an absolute path
@@ -445,8 +449,12 @@ var Target = function (options) {
   // For client targets, these are served over HTTP.
   self.asset = [];
 
+  // The project's cordova plugins file (which lists plugins used directly by
+  // the project).
+  self.cordovaPluginsFile = options.cordovaPluginsFile;
+
   // A mapping from Cordova plugin name to Cordova plugin version number.
-  self.cordovaDependencies = {};
+  self.cordovaDependencies = self.cordovaPluginsFile ? {} : null;
 
   // For the todos sample app:
   // false: 99.6 KB / 316 KB
@@ -456,6 +464,8 @@ var Target = function (options) {
   // METEOR_MINIFY_LEGACY is an undocumented safety-valve environment variable,
   //  in case people hit trouble
   self._minifyTogether = !!process.env.METEOR_MINIFY_LEGACY;
+
+  self.includeDebug = options.includeDebug;
 };
 
 _.extend(Target.prototype, {
@@ -472,7 +482,7 @@ _.extend(Target.prototype, {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make: function (options) {
+  make: Profile("Target#make", function (options) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -484,6 +494,10 @@ _.extend(Target.prototype, {
     // Link JavaScript and set up self.js, etc.
     self._emitResources();
 
+    // Add top-level Cordova dependencies, which override Cordova
+    // dependencies from packages.
+    self._addDirectCordovaDependencies();
+
     // Preprocess and concatenate CSS files for client targets.
     if (self instanceof ClientTarget) {
       self.mergeCss();
@@ -491,9 +505,7 @@ _.extend(Target.prototype, {
 
     // Minify, if requested
     if (options.minify) {
-      var minifiers = uniload.load({
-        packages: ['minifiers']
-      }).minifiers;
+      var minifiers = isopackets.load('minifiers').minifiers;
       self.minifyJs(minifiers);
 
       // CSS is minified only for client targets.
@@ -508,13 +520,10 @@ _.extend(Target.prototype, {
       self._addCacheBusters("js");
       self._addCacheBusters("css");
     }
-  },
+  }),
 
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
-  //
-  // (Note: this is also called directly by
-  // bundler.iterateOverAllUsedIsopacks, kinda hackily.)
   //
   // options include:
   // - packages: an array of packages (or, properly speaking, unibuilds)
@@ -524,104 +533,128 @@ _.extend(Target.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    var packageLoader = self.packageLoader;
+    var packageMap = self.packageMap;
+    var isopackCache = self.isopackCache;
 
-    // Find the roots
-    var rootUnibuilds = [];
-    _.each(options.packages, function (p) {
-      if (typeof p === "string") {
-        p = packageLoader.getPackage(p, { throwOnError: true });
-      }
-      if (p.debugOnly && !project.project.includeDebug) {
-        return;
-      }
-      rootUnibuilds.push(p.getUnibuildAtArch(self.arch));
-    });
+    buildmessage.enterJob("linking the program", function () {
+      // Find the roots
+      var rootUnibuilds = [];
+      _.each(options.packages, function (p) {
+        if (typeof p === "string") {
+          p = isopackCache.getIsopack(p);
+        }
+        if (p.debugOnly && ! self.includeDebug) {
+          return;
+        }
+        var unibuild = p.getUnibuildAtArch(self.arch);
+        unibuild && rootUnibuilds.push(unibuild);
+      });
 
-    // PHASE 1: Which unibuilds will be used?
-    //
-    // Figure out which unibuilds are going to be used in the target, regardless of
-    // order. We ignore weak dependencies here, because they don't actually
-    // create a "must-use" constraint, just an ordering constraint.
-
-    // What unibuilds will be used in the target? Built in Phase 1, read in
-    // Phase 2.
-    var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
-    var usedPackages = {};  // Map from package name to true;
-    var addToGetsUsed = function (unibuild) {
-      if (_.has(usedUnibuilds, unibuild.id))
-        return;
-      usedUnibuilds[unibuild.id] = unibuild;
-      usedPackages[unibuild.pkg.name] = true;
-      compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader, {
-          skipDebugOnly: !project.project.includeDebug
-        }, addToGetsUsed);
-    };
-    _.each(rootUnibuilds, addToGetsUsed);
-
-    // PHASE 2: In what order should we load the unibuilds?
-    //
-    // Set self.unibuilds to be all of the roots, plus all of their non-weak
-    // dependencies, in the correct load order. "Load order" means that if X
-    // depends on (uses) Y, and that relationship is not marked as unordered, Y
-    // appears before X in the ordering. Raises an exception iff there is no
-    // such ordering (due to circular dependency).
-    //
-    // XXX The topological sort code here is duplicated in catalog.js.
-
-    // What unibuilds have not yet been added to self.unibuilds?
-    var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
-    // Unibuilds that we are in the process of adding; used to detect circular
-    // ordered dependencies.
-    var onStack = {};  // Map from unibuild.id to true.
-
-    // This helper recursively adds unibuild's ordered dependencies to self.unibuilds,
-    // then adds unibuild itself.
-    var add = function (unibuild) {
-      // If this has already been added, there's nothing to do.
-      if (!_.has(needed, unibuild.id))
+      if (buildmessage.jobHasMessages())
         return;
 
-      // Process each ordered dependency. (If we have an unordered dependency
-      // `u`, then there's no reason to add it *now*, and for all we know, `u`
-      // will depend on `unibuild` and need to be added after it. So we ignore
-      // those edge. Because we did follow those edges in Phase 1, any unordered
-      // unibuilds were at some point in `needed` and will not be left out).
+      // PHASE 1: Which unibuilds will be used?
       //
-      // eachUsedUnibuild does follow weak edges (ie, they affect the ordering),
-      // but only if they point to a package in usedPackages (ie, a package that
-      // SOMETHING uses strongly).
-      compiler.eachUsedUnibuild(
-        unibuild.uses, self.arch, packageLoader,
-        { skipUnordered: true,
-          acceptableWeakPackages: usedPackages,
-          skipDebugOnly: !project.project.includeDebug
-        },
-        function (usedUnibuild) {
+      // Figure out which unibuilds are going to be used in the target,
+      // regardless of order. We ignore weak dependencies here, because they
+      // don't actually create a "must-use" constraint, just an ordering
+      // constraint.
+
+      // What unibuilds will be used in the target? Built in Phase 1, read in
+      // Phase 2.
+      var usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
+      self.usedPackages = {};  // Map from package name to true;
+      var addToGetsUsed = function (unibuild) {
+        if (_.has(usedUnibuilds, unibuild.id))
+          return;
+        usedUnibuilds[unibuild.id] = unibuild;
+        if (unibuild.kind === 'main') {
+          // Only track real packages, not plugin pseudo-packages.
+          self.usedPackages[unibuild.pkg.name] = true;
+        }
+        compiler.eachUsedUnibuild({
+          dependencies: unibuild.uses,
+          arch: self.arch,
+          isopackCache: isopackCache,
+          skipDebugOnly: ! self.includeDebug
+        }, addToGetsUsed);
+      };
+      _.each(rootUnibuilds, addToGetsUsed);
+
+      if (buildmessage.jobHasMessages())
+        return;
+
+      // PHASE 2: In what order should we load the unibuilds?
+      //
+      // Set self.unibuilds to be all of the roots, plus all of their non-weak
+      // dependencies, in the correct load order. "Load order" means that if X
+      // depends on (uses) Y, and that relationship is not marked as unordered,
+      // Y appears before X in the ordering. Raises an exception iff there is no
+      // such ordering (due to circular dependency).
+      //
+      // The topological sort code here is similar to code in isopack-cache.js,
+      // though they do serve slightly different purposes: that one determines
+      // build order dependencies and this one determines load order
+      // dependencies.
+
+      // What unibuilds have not yet been added to self.unibuilds?
+      var needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
+      // Unibuilds that we are in the process of adding; used to detect circular
+      // ordered dependencies.
+      var onStack = {};  // Map from unibuild.id to true.
+
+      // This helper recursively adds unibuild's ordered dependencies to
+      // self.unibuilds, then adds unibuild itself.
+      var add = function (unibuild) {
+        // If this has already been added, there's nothing to do.
+        if (!_.has(needed, unibuild.id))
+          return;
+
+        // Process each ordered dependency. (If we have an unordered dependency
+        // `u`, then there's no reason to add it *now*, and for all we know, `u`
+        // will depend on `unibuild` and need to be added after it. So we ignore
+        // those edge. Because we did follow those edges in Phase 1, any
+        // unordered unibuilds were at some point in `needed` and will not be
+        // left out).
+        //
+        // eachUsedUnibuild does follow weak edges (ie, they affect the
+        // ordering), but only if they point to a package in usedPackages (ie, a
+        // package that SOMETHING uses strongly).
+        var processUnibuild = function (usedUnibuild) {
           if (onStack[usedUnibuild.id]) {
-            buildmessage.error("circular dependency between packages " +
-                               unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
+            buildmessage.error(
+              "circular dependency between packages " +
+                unibuild.pkg.name + " and " + usedUnibuild.pkg.name);
             // recover by not enforcing one of the depedencies
             return;
           }
           onStack[usedUnibuild.id] = true;
           add(usedUnibuild);
           delete onStack[usedUnibuild.id];
-        });
-      self.unibuilds.push(unibuild);
-      delete needed[unibuild.id];
-    };
+        };
+        compiler.eachUsedUnibuild({
+          dependencies: unibuild.uses,
+          arch: self.arch,
+          isopackCache: isopackCache,
+          skipUnordered: true,
+          acceptableWeakPackages: self.usedPackages,
+          skipDebugOnly: ! self.includeDebug
+        }, processUnibuild);
+        self.unibuilds.push(unibuild);
+        delete needed[unibuild.id];
+      };
 
-    while (true) {
-      // Get an arbitrary unibuild from those that remain, or break if none remain.
-      var first = null;
-      for (first in needed) break;
-      if (! first)
-        break;
-      // Now add it, after its ordered dependencies.
-      add(needed[first]);
-    }
+      while (true) {
+        // Get an arbitrary unibuild from those that remain, or break if none
+        // remain.
+        var first = null;
+        for (first in needed) break;
+        if (! first)
+          break;
+        // Now add it, after its ordered dependencies.
+        add(needed[first]);
+      }
+    });
   },
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
@@ -634,21 +667,23 @@ _.extend(Target.prototype, {
 
     // Copy their resources into the bundle in order
     _.each(self.unibuilds, function (unibuild) {
-      _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
-        // XXX if the plugin dependency conflicts with an existing dependency,
-        // use the newer version
-        if (_.has(self.cordovaDependencies, name)) {
-          var existingVersion = self.cordovaDependencies[name];
-          version = packageVersionParser.
-            lessThan(existingVersion, version) ? version : existingVersion;
-        }
-        self.cordovaDependencies[name] = version;
-      });
+      if (self.cordovaDependencies) {
+        _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+          self._addCordovaDependency(
+            name,
+            version,
+            // use newer version if another version has already been added
+            false
+          );
+        });
+      }
 
       var isApp = ! unibuild.pkg.name;
 
       // Emit the resources
-      var resources = unibuild.getResources(self.arch, self.packageLoader);
+      var resources = unibuild.getResources(self.arch, {
+        isopackCache: self.isopackCache
+      });
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
@@ -665,7 +700,7 @@ _.extend(Target.prototype, {
         });
 
         var relPath = isOs
-              ? path.join("assets", resource.servePath)
+              ? files.pathJoin("assets", resource.servePath)
               : stripLeadingSlash(resource.servePath);
         f.setTargetPathFromRelPath(relPath);
 
@@ -716,8 +751,11 @@ _.extend(Target.prototype, {
                   // node_modules. Otherwise, if two modules in this package
                   // depend on each other, they won't be able to find each
                   // other!
-                  preferredBundlePath: path.join(
-                    'npm', unibuild.pkg.name, 'node_modules')
+                  preferredBundlePath: files.pathJoin(
+                    'npm',
+                    colonConverter.convert(unibuild.pkg.name),
+                    'node_modules'),
+                  npmDiscards: unibuild.pkg.npmDiscards
                 });
                 self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
               }
@@ -727,7 +765,12 @@ _.extend(Target.prototype, {
 
           // Both CSS and JS files can have source maps
           if (resource.sourceMap) {
-            f.setSourceMap(resource.sourceMap, path.dirname(relPath));
+            // XXX BBP we used to set sourceMapRoot to
+            // files.pathDirname(relPath) but it's unclear why.  With the
+            // currently generated source map file names, it works without it
+            // and doesn't work well with it... maybe?  we were getting
+            // 'packages/packages/foo/bar.js'
+            f.setSourceMap(resource.sourceMap, null);
           }
 
           self[resource.type].push(f);
@@ -751,13 +794,11 @@ _.extend(Target.prototype, {
       // that were used in these resources. Depend on them as well.
       // XXX assumes that this merges cleanly
        self.watchSet.merge(unibuild.pkg.pluginWatchSet);
-      _.extend(self.pluginProviderPackageDirs,
-               unibuild.pkg.pluginProviderPackageDirs);
     });
   },
 
   // Minify the JS in this target
-  minifyJs: function (minifiers) {
+  minifyJs: Profile("Target#minifyJs", function (minifiers) {
     var self = this;
 
     var allJs;
@@ -772,14 +813,14 @@ _.extend(Target.prototype, {
         return file.contents('utf8');
       });
 
-      buildmessage.enterJob({title: "Minifying"}, function () {
+      buildmessage.enterJob({title: "minifying"}, function () {
         allJs = _minify(minifiers.UglifyJS, '', sources, minifyOptions).code;
       });
     } else {
       minifyOptions.compress.unused = false;
       minifyOptions.compress.dead_code = false;
 
-      allJs = buildmessage.forkJoin({title: "Minifying" }, self.js, function (file) {
+      allJs = buildmessage.forkJoin({title: "minifying" }, self.js, function (file) {
         var source = file.contents('utf8');
         return _minify(minifiers.UglifyJS, file.info, source, minifyOptions).code;
       }).join("\n\n");
@@ -787,6 +828,44 @@ _.extend(Target.prototype, {
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
     self.js[0].setUrlToHash(".js");
+  }),
+
+  // Add a Cordova plugin dependency to the target. If the same plugin
+  // has already been added at a different version and `override` is
+  // false, use whichever version is newest. If `override` is true, then
+  // we always add the exact version specified, overriding any other
+  // version that has already been added.
+  _addCordovaDependency: function (name, version, override) {
+    var self = this;
+    if (! self.cordovaDependencies)
+      return;
+
+    if (override) {
+      self.cordovaDependencies[name] = version;
+    } else {
+      if (_.has(self.cordovaDependencies, name)) {
+        var existingVersion = self.cordovaDependencies[name];
+        self.cordovaDependencies[name] = packageVersionParser.
+          lessThan(existingVersion, version) ? version : existingVersion;
+      } else {
+        self.cordovaDependencies[name] = version;
+      }
+    }
+  },
+
+  // Add Cordova plugins that have been directly added to the project
+  // (i.e. are in .meteor/cordova-plugins).
+  // XXX The versions of these direct dependencies override any versions
+  // of the same plugins that packages are using.
+  _addDirectCordovaDependencies: function () {
+    var self = this;
+    if (! self.cordovaDependencies)
+      return;
+
+    _.each(self.cordovaPluginsFile.getPluginVersions(), function (version, name) {
+      self._addCordovaDependency(
+        name, version, true /* override any existing version */);
+    });
   },
 
   // For each resource of the given type, make it cacheable by adding
@@ -804,11 +883,6 @@ _.extend(Target.prototype, {
     return self.watchSet;
   },
 
-  getPluginProviderPackageDirs: function () {
-    var self = this;
-    return self.pluginProviderPackageDirs;
-  },
-
   // Return the most inclusive architecture with which this target is
   // compatible. For example, if we set out to build a
   // 'os.linux.x86_64' version of this target (by passing that as
@@ -821,8 +895,9 @@ _.extend(Target.prototype, {
   }
 });
 
-// This code should mirror the minify function in UglifyJs2,
-_minify = function(UglifyJS, key, files, options) {
+// This code is a copied-and-pasted version the minify function in UglifyJs2,
+// with our progress class inserted.
+var _minify = function (UglifyJS, key, files, options) {
   options = UglifyJS.defaults(options, {
     spidermonkey : false,
     outSourceMap : null,
@@ -858,10 +933,10 @@ _minify = function(UglifyJS, key, files, options) {
   } else {
     if (typeof files == "string")
       files = [ files ];
-    buildmessage.forkJoin({title: 'Minifying: parsing ' + key}, files, function (file) {
+    buildmessage.forkJoin({title: 'minifying: parsing ' + key}, files, function (file) {
       var code = options.fromString
         ? file
-        : fs.readFileSync(file, "utf8");
+        : files.readFile(file, "utf8");
       sourcesContent[file] = code;
       toplevel = UglifyJS.parse(code, {
         filename: options.fromString ? "?" : file,
@@ -875,12 +950,12 @@ _minify = function(UglifyJS, key, files, options) {
 
   // 2. compress
   var compress;
-  if (options.compress) buildmessage.enterJob({title: "Minify: compress 1 " + key}, function () {
+  if (options.compress) buildmessage.enterJob({title: "minify: compress 1 " + key}, function () {
     compress = { warnings: options.warnings };
     UglifyJS.merge(compress, options.compress);
     toplevel.figure_out_scope();
   });
-  if (options.compress) buildmessage.enterJob({title: "Minify: compress 2 " + key}, function () {
+  if (options.compress) buildmessage.enterJob({title: "minify: compress 2 " + key}, function () {
     var sq = UglifyJS.Compressor(compress);
     toplevel = toplevel.transform(sq);
 
@@ -889,7 +964,7 @@ _minify = function(UglifyJS, key, files, options) {
   });
 
   // 3. mangle
-  if (options.mangle) buildmessage.enterJob({title: "Minify: mangling " + key}, function () {
+  if (options.mangle) buildmessage.enterJob({title: "minify: mangling " + key}, function () {
     toplevel.figure_out_scope();
     toplevel.compute_char_frequency();
     toplevel.mangle_names(options.mangle);
@@ -902,7 +977,7 @@ _minify = function(UglifyJS, key, files, options) {
   var inMap = options.inSourceMap;
   var output = {};
   if (typeof options.inSourceMap == "string") {
-    inMap = fs.readFileSync(options.inSourceMap, "utf8");
+    inMap = files.readFile(options.inSourceMap, "utf8");
   }
   if (options.outSourceMap) {
     output.source_map = UglifyJS.SourceMap({
@@ -918,7 +993,7 @@ _minify = function(UglifyJS, key, files, options) {
       }
     }
   }
-  if (options.output) buildmessage.enterJob({title: "Minify: merging " + key}, function () {
+  if (options.output) buildmessage.enterJob({title: "minify: merging " + key}, function () {
     UglifyJS.merge(output, options.output);
 
     progress.current += totalFileSize;
@@ -927,7 +1002,7 @@ _minify = function(UglifyJS, key, files, options) {
 
 
   var stream;
-  buildmessage.enterJob({title: "Minify: printing " + key}, function () {
+  buildmessage.enterJob({title: "minify: printing " + key}, function () {
     stream = UglifyJS.OutputStream(output);
     toplevel.print(stream);
 
@@ -969,11 +1044,9 @@ _.extend(ClientTarget.prototype, {
   // Lints CSS files and merges them into one file, fixing up source maps and
   // pulling any @import directives up to the top since the CSS spec does not
   // allow them to appear in the middle of a file.
-  mergeCss: function () {
+  mergeCss: Profile("ClientTarget#mergeCss", function () {
     var self = this;
-    var minifiers = uniload.load({
-      packages: ['minifiers']
-    }).minifiers;
+    var minifiers = isopackets.load('minifiers').minifiers;
     var CssTools = minifiers.CssTools;
 
     // Filenames passed to AST manipulator mapped to their original files
@@ -1003,9 +1076,7 @@ _.extend(ClientTarget.prototype, {
     };
 
     // Other build phases might need this AST later
-    // For cordova, we do not want to rewrite relative paths in css.
-    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb,
-      self.arch === 'web.cordova');
+    self._cssAstCache = CssTools.mergeCssAsts(cssAsts, warnCb);
 
     // Overwrite the CSS files list with the new concatenated file
     var stringifiedCss = CssTools.stringifyCss(self._cssAstCache,
@@ -1043,9 +1114,9 @@ _.extend(ClientTarget.prototype, {
 
     self.css[0].setSourceMap(JSON.stringify(newMap));
     self.css[0].setUrlToHash(".css");
-  },
+  }),
   // Minify the CSS in this target
-  minifyCss: function (minifiers) {
+  minifyCss: Profile("ClientTarget#minifyCss", function (minifiers) {
     var self = this;
     var minifiedCss = '';
 
@@ -1064,13 +1135,16 @@ _.extend(ClientTarget.prototype, {
       self.css = [new File({ info: 'minified css', data: new Buffer(minifiedCss, 'utf8') })];
       self.css[0].setUrlToHash(".css", "?meteor_css_resource=true");
     }
-  },
+  }),
 
   // Output the finished target to disk
   //
-  // Returns the path (relative to 'builder') of the control file for
+  // Returns an object with the following keys:
+  // - controlFile: the path (relative to 'builder') of the control file for
   // the target
-  write: function (builder) {
+  // - nodePath: an array of paths required to be set in the NODE_PATH
+  // environment variable.
+  write: Profile("ClientTarget#write", function (builder) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1140,7 +1214,7 @@ _.extend(ClientTarget.prototype, {
           path: dataFile,
           where: 'internal',
           type: type,
-          hash: Builder.sha1(dataBuffer)
+          hash: watch.sha1(dataBuffer)
         });
       }
     });
@@ -1150,8 +1224,12 @@ _.extend(ClientTarget.prototype, {
       format: "web-program-pre1",
       manifest: manifest
     });
-    return "program.json";
-  }
+
+    return {
+      controlFile: "program.json",
+      nodePath: []
+    };
+  })
 });
 
 
@@ -1205,13 +1283,14 @@ _.extend(JsImage.prototype, {
   // XXX throw an error if the image includes any "app-style" code
   // that is built to put symbols in the global namespace rather than
   // in a compartment of Package
-  load: function (bindings) {
+  load: Profile("JsImage#load", function (bindings) {
     var self = this;
     var ret = {};
 
     // XXX This is mostly duplicated from server/boot.js, as is Npm.require
     // below. Some way to avoid this?
     var getAsset = function (assets, assetPath, encoding, callback) {
+      assetPath = files.convertToStandardPath(assetPath);
       var fut;
       if (! callback) {
         if (! Fiber.current)
@@ -1228,7 +1307,7 @@ _.extend(JsImage.prototype, {
       };
 
       if (!assets || !_.has(assets, assetPath)) {
-        _.callback(new Error("Unknown asset: " + assetPath));
+        _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var buffer = assets[assetPath];
         var result = encoding ? buffer.toString(encoding) : buffer;
@@ -1258,17 +1337,22 @@ _.extend(JsImage.prototype, {
             }
 
             var nodeModuleDir =
-              path.join(item.nodeModulesDirectory.sourcePath, name);
+              files.pathJoin(item.nodeModulesDirectory.sourcePath, name);
+            var nodeModuleTopDir =
+              files.pathJoin(item.nodeModulesDirectory.sourcePath,
+                             name.split("/")[0]);
 
-            if (fs.existsSync(nodeModuleDir)) {
-              return require(nodeModuleDir);
+            if (files.exists(nodeModuleTopDir)) {
+              return require(files.convertToOSPath(nodeModuleDir));
             }
+
             try {
               return require(name);
             } catch (e) {
-              throw new Error("Can't load npm module '" + name +
-                              "' while loading " + item.targetPath +
-                              ". Check your Npm.depends().'");
+              buildmessage.error(
+                "Can't load npm module '" + name + "' from " +
+                  item.targetPath + ". Check your Npm.depends().");
+              return undefined;
             }
           }
         },
@@ -1323,14 +1407,22 @@ _.extend(JsImage.prototype, {
     });
 
     return ret;
-  },
+  }),
 
   // Write this image out to disk
   //
-  // Returns the path (relative to 'builder') of the control file for
+  // options:
+  // - includeNodeModules: falsy or 'symlink' or 'reference-directly'.
+  //   Documented on exports.bundle.
+  //
+  // Returns an object with the following keys:
+  // - controlFile: the path (relative to 'builder') of the control file for
   // the image
-  write: function (builder) {
+  // - nodePath: an array of paths required to be set in the NODE_PATH
+  // environment variable.
+  write: Profile("JsImage#write", function (builder, options) {
     var self = this;
+    options = options || {};
 
     builder.reserve("program.json");
 
@@ -1342,12 +1434,30 @@ _.extend(JsImage.prototype, {
       // We do a little manipulation to make sure that generateFilename only
       // adds suffixes to parts of the path other than the final node_modules,
       // which needs to stay node_modules.
-      var dirname = path.dirname(nmd.preferredBundlePath);
-      var base = path.basename(nmd.preferredBundlePath);
+      var dirname = files.pathDirname(nmd.preferredBundlePath);
+      var base = files.pathBasename(nmd.preferredBundlePath);
       var generatedDir = builder.generateFilename(dirname, {directory: true});
+
+      // We need to find the actual file system location for the node modules
+      // this JS Image uses, so that we can add it to nodeModulesDirectories
+      var modulesPhysicalLocation;
+      if (! options.includeNodeModules ||
+          options.includeNodeModules === 'symlink') {
+        modulesPhysicalLocation = files.pathJoin(generatedDir, base);
+      } else if (options.includeNodeModules === 'reference-directly') {
+        modulesPhysicalLocation = nmd.sourcePath;
+      } else {
+        // This is some option we didn't expect - someone has added another case
+        // to the includeNodeModules option but didn't update this if block.
+        // Fail hard.
+        throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
+          "or 'reference-directly'. It was: " + options.includeNodeModules);
+      }
+
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
-        preferredBundlePath: path.join(generatedDir, base)
+        preferredBundlePath: modulesPhysicalLocation,
+        npmDiscards: nmd.npmDiscards
       }));
     });
 
@@ -1388,7 +1498,7 @@ _.extend(JsImage.prototype, {
           { data: new Buffer(item.sourceMap, 'utf8') }
         );
 
-        var sourceMapFileName = path.basename(loadItem.sourceMap);
+        var sourceMapFileName = files.pathBasename(loadItem.sourceMap);
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
         item.source = item.source.replace(
@@ -1408,22 +1518,22 @@ _.extend(JsImage.prototype, {
         // XXX same hack as setTargetPathFromRelPath
           var assetBundlePath;
         if (item.targetPath.match(/^packages\//)) {
-          var dir = path.dirname(item.targetPath);
-          var base = path.basename(item.targetPath, ".js");
-          assetBundlePath = path.join('assets', dir, base);
+          var dir = files.pathDirname(item.targetPath);
+          var base = files.pathBasename(item.targetPath, ".js");
+          assetBundlePath = files.pathJoin('assets', dir, base);
         } else {
-          assetBundlePath = path.join('assets', 'app');
+          assetBundlePath = files.pathJoin('assets', 'app');
         }
 
         loadItem.assets = {};
         _.each(item.assets, function (data, relPath) {
-          var sha = Builder.sha1(data);
+          var sha = watch.sha1(data);
           if (_.has(assetFilesBySha, sha)) {
             loadItem.assets[relPath] = assetFilesBySha[sha];
           } else {
             loadItem.assets[relPath] = assetFilesBySha[sha] =
               builder.writeToGeneratedFilename(
-                path.join(assetBundlePath, relPath), { data: data });
+                files.pathJoin(assetBundlePath, relPath), { data: data });
           }
         });
       }
@@ -1437,10 +1547,14 @@ _.extend(JsImage.prototype, {
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
-      builder.copyDirectory({
-        from: nmd.sourcePath,
-        to: nmd.preferredBundlePath
-      });
+      if (nmd.sourcePath !== nmd.preferredBundlePath) {
+        builder.copyDirectory({
+          from: nmd.sourcePath,
+          to: nmd.preferredBundlePath,
+          npmDiscards: nmd.npmDiscards,
+          symlink: (options.includeNodeModules === 'symlink')
+        });
+      }
     });
 
     // Control file
@@ -1449,17 +1563,21 @@ _.extend(JsImage.prototype, {
       arch: self.arch,
       load: load
     });
-    return "program.json";
-  }
+
+    return {
+      controlFile: "program.json",
+      nodePath: []
+    };
+  })
 });
 
 // Create a JsImage by loading a bundle of format
 // 'javascript-image-pre1' from disk (eg, previously written out with
 // write()). `dir` is the path to the control file.
-JsImage.readFromDisk = function (controlFilePath) {
+JsImage.readFromDisk = Profile("JsImage.readFromDisk", function (controlFilePath) {
   var ret = new JsImage;
-  var json = JSON.parse(fs.readFileSync(controlFilePath));
-  var dir = path.dirname(controlFilePath);
+  var json = JSON.parse(files.readFile(controlFilePath));
+  var dir = files.pathDirname(controlFilePath);
 
   if (json.format !== "javascript-image-pre1")
     throw new Error("Unsupported plugin format: " +
@@ -1473,12 +1591,14 @@ JsImage.readFromDisk = function (controlFilePath) {
     var nmd = undefined;
     if (item.node_modules) {
       rejectBadPath(item.node_modules);
-      var node_modules = path.join(dir, item.node_modules);
+      var node_modules = files.pathJoin(dir, item.node_modules);
       if (! (node_modules in ret.nodeModulesDirectories)) {
         ret.nodeModulesDirectories[node_modules] =
           new NodeModulesDirectory({
             sourcePath: node_modules,
             preferredBundlePath: item.node_modules
+            // No npmDiscards, because we should have already discarded things
+            // when writing the image to disk.
           });
       }
       nmd = ret.nodeModulesDirectories[node_modules];
@@ -1486,22 +1606,22 @@ JsImage.readFromDisk = function (controlFilePath) {
 
     var loadItem = {
       targetPath: item.path,
-      source: fs.readFileSync(path.join(dir, item.path), 'utf8'),
+      source: files.readFile(files.pathJoin(dir, item.path), 'utf8'),
       nodeModulesDirectory: nmd
     };
 
     if (item.sourceMap) {
       // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
-      loadItem.sourceMap = fs.readFileSync(
-        path.join(dir, item.sourceMap), 'utf8');
+      loadItem.sourceMap = files.readFile(
+        files.pathJoin(dir, item.sourceMap), 'utf8');
       loadItem.sourceMapRoot = item.sourceMapRoot;
     }
 
     if (!_.isEmpty(item.assets)) {
       loadItem.assets = {};
       _.each(item.assets, function (filename, relPath) {
-        loadItem.assets[relPath] = fs.readFileSync(path.join(dir, filename));
+        loadItem.assets[relPath] = files.readFile(files.pathJoin(dir, filename));
       });
     }
 
@@ -1509,7 +1629,7 @@ JsImage.readFromDisk = function (controlFilePath) {
   });
 
   return ret;
-};
+});
 
 var JsImageTarget = function (options) {
   var self = this;
@@ -1549,16 +1669,16 @@ _.extend(JsImageTarget.prototype, {
 
 //////////////////// ServerTarget ////////////////////
 
-// options:
+// options specific to this subclass:
 // - clientTarget: the ClientTarget to serve up over HTTP as our client
 // - releaseName: the Meteor release name (for retrieval at runtime)
-var ServerTarget = function (options) {
+var ServerTarget = function (options, ...args) {
   var self = this;
-  JsImageTarget.apply(this, arguments);
+
+  JsImageTarget.call(self, options, ...args);
 
   self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
-  self.packageLoader = options.packageLoader;
 
   if (! archinfo.matches(self.arch, "os"))
     throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1569,21 +1689,18 @@ util.inherits(ServerTarget, JsImageTarget);
 _.extend(ServerTarget.prototype, {
   // Output the finished target to disk
   // options:
-  // - includeNodeModulesSymlink: if true, add a node_modules symlink
+  // - includeNodeModules: falsy, 'symlink' or 'reference-directly',
+  //   documented in exports.bundle
   // - getRelativeTargetPath: a function that takes {forTarget:
   //   Target, relativeTo: Target} and return the path of one target
   //   in the bundle relative to another. hack to get the path of the
   //   client target.. we'll find a better solution here eventually
   //
   // Returns the path (relative to 'builder') of the control file for
-  // the plugin
-  write: function (builder, options) {
+  // the plugin and the required NODE_PATH.
+  write: Profile("ServerTarget#write", function (builder, options) {
     var self = this;
-
-    // Pick a start script name
-    // XXX base it on the name of the target
-    var scriptName = 'start.sh';
-    builder.reserve(scriptName);
+    var nodePath = [];
 
     // This is where the dev_bundle will be downloaded and unpacked
     builder.reserve('dependencies');
@@ -1593,7 +1710,7 @@ _.extend(ServerTarget.prototype, {
     var clientTargetPaths = {};
     if (self.clientTargets) {
       _.each(self.clientTargets, function (target) {
-        clientTargetPaths[target.arch] = path.join(options.getRelativeTargetPath({
+        clientTargetPaths[target.arch] = files.pathJoin(options.getRelativeTargetPath({
           forTarget: target, relativeTo: self}), 'program.json');
       });
     }
@@ -1608,63 +1725,79 @@ _.extend(ServerTarget.prototype, {
     // Write package.json and npm-shrinkwrap.json for the dependencies of
     // boot.js.
     builder.write('package.json', {
-      file: path.join(files.getDevBundle(), 'etc', 'package.json')
+      file: files.pathJoin(files.getDevBundle(), 'etc', 'package.json')
     });
     builder.write('npm-shrinkwrap.json', {
-      file: path.join(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
+      file: files.pathJoin(files.getDevBundle(), 'etc', 'npm-shrinkwrap.json')
     });
 
     // This is a hack to make 'meteor run' faster (so you don't have to run 'npm
     // install' using the above package.json and npm-shrinkwrap.json on every
     // rebuild).
-    if (options.includeNodeModulesSymlink) {
+    if (options.includeNodeModules === 'symlink') {
       builder.write('node_modules', {
-        symlink: path.join(files.getDevBundle(), 'lib', 'node_modules')
+        symlink: files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
       });
+    } else if (options.includeNodeModules === 'reference-directly') {
+      nodePath.push(
+        files.pathJoin(files.getDevBundle(), 'server-lib', 'node_modules')
+      );
+    } else if (options.includeNodeModules) {
+      // This is some option we didn't expect - someone has added another case
+      // to the includeNodeModules option but didn't update this if block. Fail
+      // hard.
+      throw new Error("Option includeNodeModules wasn't falsy, 'symlink', " +
+        "or 'reference-directly'.");
     }
 
     // Linked JavaScript image (including static assets, assuming that there are
     // any JS files at all)
-    var imageControlFile = self.toJsImage().write(builder);
+    var jsImage = self.toJsImage();
+    jsImage.write(builder, { includeNodeModules: options.includeNodeModules });
 
     // Server bootstrap
-    builder.write('boot.js',
-                  { file: path.join(__dirname, 'server', 'boot.js') });
+    _.each([
+      "boot.js",
+      "boot-utils.js",
+      "shell-server.js",
+      "mini-files.js",
+    ], function (filename) {
+      builder.write(filename, {
+        file: files.pathJoin(
+          files.convertToStandardPath(__dirname),
+          "server",
+          filename
+        )
+      });
+    });
 
     // Script that fetches the dev_bundle and runs the server bootstrap
+    // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
+    // anything anymore
     var archToPlatform = {
       'os.linux.x86_32': 'Linux_i686',
       'os.linux.x86_64': 'Linux_x86_64',
-      'os.osx.x86_64': 'Darwin_x86_64'
+      'os.osx.x86_64': 'Darwin_x86_64',
+      'os.windows.x86_32': 'Windows_x86_32'
     };
     var platform = archToPlatform[self.arch];
     if (! platform) {
-      buildmessage.error("MDG does not publish dev_bundles for arch: " +
+      throw new Error("MDG does not publish dev_bundles for arch: " +
                          self.arch);
-      // Recover by bailing out and leaving a partially built target
-      return;
     }
 
-    var devBundleVersion =
-      fs.readFileSync(
-        path.join(files.getDevBundle(), '.bundle_version.txt'), 'utf8');
-    devBundleVersion = devBundleVersion.split('\n')[0];
-
-    var script = uniload.load({
-      packages: ['dev-bundle-fetcher']
-    })["dev-bundle-fetcher"].DevBundleFetcher.script();
-    script = script.replace(/##PLATFORM##/g, platform);
-    script = script.replace(/##BUNDLE_VERSION##/g, devBundleVersion);
-    script = script.replace(/##IMAGE##/g, imageControlFile);
-    script = script.replace(/##RUN_FILE##/g, 'boot.js');
-    builder.write(scriptName, { data: new Buffer(script, 'utf8'),
-                                executable: true });
-
-    return scriptName;
-  }
+    // Nothing actually pays attention to the `path` field for a server program
+    // in star.json any more, so it might as well be boot.js. (It used to be
+    // start.sh, a script included for the legacy Galaxy prototype.)
+    var controlFilePath = 'boot.js';
+    return {
+      controlFile: controlFilePath,
+      nodePath: nodePath
+    };
+  })
 });
 
-var writeFile = function (file, builder) {
+var writeFile = Profile("bundler..writeFile", function (file, builder) {
   if (! file.targetPath)
     throw new Error("No targetPath?");
   var contents = file.contents();
@@ -1675,18 +1808,18 @@ var writeFile = function (file, builder) {
   // (rather than just serving all of the files in a certain
   // directories)
   builder.write(file.targetPath, { data: file.contents() });
-};
+});
 
 // Writes a target a path in 'programs'
-var writeTargetToPath = function (name, target, outputPath, options) {
+var writeTargetToPath = Profile(
+  "bundler..writeTargetToPath", function (name, target, outputPath, options) {
   var builder = new Builder({
-    outputPath: path.join(outputPath, 'programs', name),
-    symlink: options.includeNodeModulesSymlink
+    outputPath: files.pathJoin(outputPath, 'programs', name)
   });
 
-  var relControlFilePath =
+  var targetBuild =
     target.write(builder, {
-      includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      includeNodeModules: options.includeNodeModules,
       getRelativeTargetPath: options.getRelativeTargetPath });
 
   builder.complete();
@@ -1694,10 +1827,11 @@ var writeTargetToPath = function (name, target, outputPath, options) {
   return {
     name: name,
     arch: target.mostCompatibleArch(),
-    path: path.join('programs', name, relControlFilePath),
-    cordovaDependencies: target.cordovaDependencies
+    path: files.pathJoin('programs', name, targetBuild.controlFile),
+    nodePath: targetBuild.nodePath,
+    cordovaDependencies: target.cordovaDependencies || undefined
   };
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1711,56 +1845,54 @@ var writeTargetToPath = function (name, target, outputPath, options) {
 // Returns:
 
 // {
-//     watchSet: watch.WatchSet for all files and directories that ultimately went
+//     clientWatchSet: watch.WatchSet for all files and directories that
+//                     ultimately went into all client programs
+//     serverWatchSet: watch.WatchSet for all files and directories that
+//                     ultimately went into all server programs
 //     starManifest: the JSON manifest of the star
+//     nodePath: an array of paths required to be set in NODE_PATH. It's
+//               up to the called to determine what they should be.
 // }
-// into the bundle.
 //
 // options:
-// - includeNodeModulesSymlink: bool
+// - includeNodeModules: string or falsy, documented on exports.bundle
 // - builtBy: vanity identification string to write into metadata
-// - controlProgram: name of the control program (should be a target name)
 // - releaseName: The Meteor release version
-var writeSiteArchive = function (targets, outputPath, options) {
+// - getRelativeTargetPath: see doc at ServerTarget.write
+var writeSiteArchive = Profile(
+  "bundler..writeSiteArchive", function (targets, outputPath, options) {
   var builder = new Builder({
-    outputPath: outputPath,
-    // This is a bit of a hack, but it means that things like node_modules
-    // directories for packages end up as symlinks too.
-    symlink: options.includeNodeModulesSymlink
+    outputPath: outputPath
   });
-
-  if (options.controlProgram && ! (options.controlProgram in targets))
-    throw new Error("controlProgram '" + options.controlProgram +
-                    "' is not the name of a target?");
 
   try {
     var json = {
       format: "site-archive-pre1",
       builtBy: options.builtBy,
       programs: [],
-      control: options.controlProgram || undefined,
       meteorRelease: options.releaseName
     };
+    var nodePath = [];
 
-    // Tell Galaxy what version of the dependency kit we're using, so
-    // it can load the right modules. (Include this even if we copied
-    // or symlinked a node_modules, since that's probably enough for
-    // it to work in spite of the presence of node_modules for the
-    // wrong arch). The place we stash this is grody for temporary
-    // reasons of backwards compatibility.
-    builder.write(path.join('server', '.bundle_version.txt'), {
-      file: path.join(files.getDevBundle(), '.bundle_version.txt')
+    // Tell the deploy server what version of the dependency kit we're using, so
+    // it can load the right modules. (Include this even if we copied or
+    // symlinked a node_modules, since that's probably enough for it to work in
+    // spite of the presence of node_modules for the wrong arch). The place we
+    // stash this is grody for temporary reasons of backwards compatibility.
+    builder.write(files.pathJoin('server', '.bundle_version.txt'), {
+      file: files.pathJoin(files.getDevBundle(), '.bundle_version.txt')
     });
 
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
-      var stub = new Buffer(exports._mainJsContents, 'utf8');
-      builder.write('main.js', { data: stub });
+      builder.write('main.js', {
+        data: new Buffer(exports._mainJsContents, 'utf8')
+      });
 
       builder.write('README', { data: new Buffer(
 "This is a Meteor application bundle. It has only one external dependency:\n" +
-"Node.js 0.10.29 or newer. To run the application:\n" +
+"Node.js 0.10.36 or newer. To run the application:\n" +
 "\n" +
 "  $ (cd programs/server && npm install)\n" +
 "  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
@@ -1789,13 +1921,15 @@ var writeSiteArchive = function (targets, outputPath, options) {
     });
 
     _.each(targets, function (target, name) {
-      json.programs.push(writeTargetToPath(name, target, builder.buildPath, {
-        includeNodeModulesSymlink: options.includeNodeModulesSymlink,
+      var targetBuild = writeTargetToPath(name, target, builder.buildPath, {
+        includeNodeModules: options.includeNodeModules,
         builtBy: options.builtBy,
-        controlProgram: options.controlProgram,
         releaseName: options.releaseName,
         getRelativeTargetPath: options.getRelativeTargetPath
-      }));
+      });
+
+      json.programs.push(targetBuild);
+      nodePath = nodePath.concat(targetBuild.nodePath);
     });
 
     // Control file
@@ -1807,13 +1941,14 @@ var writeSiteArchive = function (targets, outputPath, options) {
     return {
       clientWatchSet: clientWatchSet,
       serverWatchSet: serverWatchSet,
-      starManifest: json
+      starManifest: json,
+      nodePath: nodePath
     };
   } catch (e) {
     builder.abort();
     throw e;
   }
-};
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Main
@@ -1823,25 +1958,38 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * Builds a Meteor app.
  *
  * options are:
-
- * - outputPath: Required. Path to the directory where the output (a
+ *
+ * - projectContext: Required. The project to build (ProjectContext object).
+ *
+ * - outputPath: Required. Path to the directory where the output (an
  *   untarred bundle) should go. This directory will be created if it
  *   doesn't exist, and removed first if it does exist.
  *
- * - includeNodeModulesSymlink: if set, we create a symlink from
- *   programs/server/node_modules to the dev bundle's lib/node_modules.
- *   This is a hack to make 'meteor run' faster. (We can't just set
- *   $NODE_PATH because then random node_modules directories above cwd
- *   take precedence.) To make it even hackier, this also means we
- *   make node_modules directories for packages symlinks instead of
- *   copies.
+ * - includeNodeModules: specifies how node_modules for program should be
+ *   included:
+ *   + false/null/undefined - don't include node_modules
+ *   + 'symlink' - we create a symlink from programs/server/node_modules to the
+ *   dev bundle's server-lib/node_modules.  This is a hack to make 'meteor run'
+ *   faster. (It is preferred on systems with symlinks as we can't just set
+ *   $NODE_PATH because then random node_modules directories above cwd take
+ *   precedence.) To make it even hackier, this also means we make node_modules
+ *   directories for packages symlinks instead of copies.
+ *   + 'reference-directly' - don't copy the files of node modules.
+ *   Instead, use paths directly to files we already have on the file-system: in
+ *   package catalog, isopacks folder or the dev_bundle folder.
+ *   return the NODE_PATH string with the resulting bundle that would be set as
+ *   the NODE_PATH environment variable when the node process is running. (The
+ *   fallback option for Windows). For isopacks (meteor packages), link to the
+ *   location of the locally stored isopack build (e.g.
+ *   ~/.meteor/packages/package/version/npm)
  *
  * - buildOptions: may include
  *   - minify: minify the CSS and JS assets (boolean, default false)
- *   - arch: the server architecture to target (defaults to archinfo.host())
- *   - serverArch: the server architecture to target
- *                   (defaults to archinfo.host())
- *   - webArchs: an array of web archs to target
+ *   - serverArch: the server architecture to target (string, default
+ *     archinfo.host())
+ *   - includeDebug: include packages marked debugOnly (boolean, default false)
+ *   - webArchs: array of 'web.*' options to build (defaults to
+ *     projectContext.platformList.getWebArchs())
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
@@ -1868,18 +2016,17 @@ var writeSiteArchive = function (targets, outputPath, options) {
  * you are testing!
  */
 exports.bundle = function (options) {
-  // bundler.bundle is never called by uniload, so it always uses
-  // the complete catalog.
-  var whichCatalog = catalog.complete;
+  var projectContext = options.projectContext;
 
   var outputPath = options.outputPath;
-  var includeNodeModulesSymlink = !!options.includeNodeModulesSymlink;
+  var includeNodeModules = options.includeNodeModules;
   var buildOptions = options.buildOptions || {};
 
-  var appDir = project.project.rootDir;
+  var appDir = projectContext.projectDir;
 
   var serverArch = buildOptions.serverArch || archinfo.host();
-  var webArchs = buildOptions.webArchs || [ "web.browser" ];
+  var webArchs = buildOptions.webArchs ||
+        projectContext.platformList.getWebArchs();
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -1891,30 +2038,23 @@ exports.bundle = function (options) {
   var clientWatchSet = new watch.WatchSet();
   var starResult = null;
   var targets = {};
+  var nodePath = [];
+
+  if (! release.usingRightReleaseForApp(projectContext))
+    throw new Error("running wrong release for app?");
 
   var messages = buildmessage.capture({
-    title: "Building the application"
+    title: "building the application"
   }, function () {
-    if (! release.usingRightReleaseForApp(appDir))
-      throw new Error("running wrong release for app?");
-
-    var packageLoader = project.project.getPackageLoader();
-    var downloaded = tropohouse.default.downloadMissingPackages(
-      project.project.dependencies, { serverArch: serverArch });
-
-    if (_.keys(downloaded).length !==
-        _.keys(project.project.dependencies).length) {
-      buildmessage.error("Unable to download package builds for this architecture.");
-      // Recover by returning.
-      return;
-    }
-
-    var controlProgram = null;
-
-    var makeClientTarget = function (app, webArch) {
+    var makeClientTarget = Profile(
+      "bundler.bundle..makeClientTarget", function (app, webArch) {
       var client = new ClientTarget({
-        packageLoader: packageLoader,
-        arch: webArch
+        packageMap: projectContext.packageMap,
+        isopackCache: projectContext.isopackCache,
+        arch: webArch,
+        cordovaPluginsFile: (webArch === 'web.cordova'
+                             ? projectContext.cordovaPluginsFile : null),
+        includeDebug: buildOptions.includeDebug
       });
 
       client.make({
@@ -1924,26 +2064,16 @@ exports.bundle = function (options) {
       });
 
       return client;
-    };
+    });
 
-    var makeBlankClientTarget = function () {
-      var client = new ClientTarget({
-        packageLoader: packageLoader,
-        arch: "web.browser"
-      });
-      client.make({
-        minify: buildOptions.minify,
-        addCacheBusters: true
-      });
-
-      return client;
-    };
-
-    var makeServerTarget = function (app, clientTargets) {
+    var makeServerTarget = Profile(
+      "bundler.bundle..makeServerTarget", function (app, clientTargets) {
       var targetOptions = {
-        packageLoader: packageLoader,
+        packageMap: projectContext.packageMap,
+        isopackCache: projectContext.isopackCache,
         arch: serverArch,
-        releaseName: releaseName
+        releaseName: releaseName,
+        includeDebug: buildOptions.includeDebug
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;
@@ -1956,185 +2086,32 @@ exports.bundle = function (options) {
       });
 
       return server;
-    };
+    });
 
-    // Include default targets, unless there's a no-default-targets file in the
-    // top level of the app. (This is a very hacky interface which will
-    // change. Note, eg, that .meteor/packages is confusingly ignored in this
-    // case.)
+    // Create a Isopack object that represents the app
+    // XXX should this be part of prepareProjectForBuild and get cached?
+    //     at the very least, would speed up deploy after build.
+    var packageSource = new PackageSource;
+    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+    var app = compiler.compile(packageSource, {
+      packageMap: projectContext.packageMap,
+      isopackCache: projectContext.isopackCache,
+      includeCordovaUnibuild: projectContext.platformList.usesCordova()
+    });
 
-    var includeDefaultTargets = watch.readAndWatchFile(
-      serverWatchSet, path.join(appDir, 'no-default-targets')) === null;
+    var clientTargets = [];
+    // Client
+    _.each(webArchs, function (arch) {
+      var client = makeClientTarget(app, arch);
+      clientTargets.push(client);
+      targets[arch] = client;
+    });
 
-    if (includeDefaultTargets) {
-      // Create a Isopack object that represents the app
-      var packageSource = new PackageSource(whichCatalog);
-      packageSource.initFromAppDir(appDir, exports.ignoreFiles);
-      var app = compiler.compile(packageSource).isopack;
-
-      var clientTargets = [];
-      // Client
-      _.each(webArchs, function (arch) {
-        var client = makeClientTarget(app, arch);
-        clientTargets.push(client);
-        targets[arch] = client;
-      });
-
-      // Server
-      if (! options.hasCachedBundle) {
-        var server = makeServerTarget(app, clientTargets);
-        targets.server = server;
-      }
+    // Server
+    if (! options.hasCachedBundle) {
+      var server = makeServerTarget(app, clientTargets);
+      targets.server = server;
     }
-
-    // Pick up any additional targets in /programs
-    // Step 1: scan for targets and make a list. We will reload if you create a
-    // new subdir in 'programs', or create 'programs' itself.
-    var programs = [];
-    var programsDir = project.project.getProgramsDirectory();
-    var programsSubdirs = project.project.getProgramsSubdirs({
-      watchSet: serverWatchSet
-    });
-
-    _.each(programsSubdirs, function (item) {
-      // Remove trailing slash.
-      item = item.substr(0, item.length - 1);
-
-      if (_.has(targets, item)) {
-        buildmessage.error("duplicate programs named '" + item + "'");
-        // Recover by ignoring this program
-        return;
-      }
-      // Programs must (for now) contain a `package.js` file. If not, then
-      // perhaps the directory we are seeing is left over from another git
-      // branch or something and we should ignore it.  We don't actually parse
-      // the package.js file here, though (but we do restart if it is later
-      // added or changed).
-      if (watch.readAndWatchFile(
-        serverWatchSet, path.join(programsDir, item, 'package.js')) === null) {
-        return;
-      }
-
-      targets[item] = true;  // will be overwritten with actual target later
-
-      // Read attributes.json, if it exists
-      var attrsJsonAbsPath = path.join(programsDir, item, 'attributes.json');
-      var attrsJsonRelPath = path.join('programs', item, 'attributes.json');
-      var attrsJsonContents = watch.readAndWatchFile(
-        serverWatchSet, attrsJsonAbsPath);
-
-      var attrsJson = {};
-      if (attrsJsonContents !== null) {
-        try {
-          attrsJson = JSON.parse(attrsJsonContents);
-        } catch (e) {
-          if (! (e instanceof SyntaxError))
-            throw e;
-          buildmessage.error(e.message, { file: attrsJsonRelPath });
-          // recover by ignoring attributes.json
-        }
-      }
-
-      var isControlProgram = !! attrsJson.isControlProgram;
-      if (isControlProgram) {
-        if (controlProgram !== null) {
-          buildmessage.error(
-              "there can be only one control program ('" + controlProgram +
-              "' is also marked as the control program)",
-            { file: attrsJsonRelPath });
-          // recover by ignoring that it wants to be the control
-          // program
-        } else {
-          controlProgram = item;
-        }
-      }
-
-      // Add to list
-      programs.push({
-        type: attrsJson.type || "server",
-        name: item,
-        path: path.join(programsDir, item),
-        client: attrsJson.client,
-        attrsJsonRelPath: attrsJsonRelPath
-      });
-    });
-
-    if (! controlProgram) {
-      if (_.has(targets, 'ctl')) {
-        buildmessage.error(
-          "A program named ctl exists but no program has isControlProgram set");
-        // recover by not making a control program
-      }  else {
-        var target = makeServerTarget("ctl");
-        targets["ctl"] = target;
-        controlProgram = "ctl";
-      }
-    }
-
-    // Step 2: sort the list so that client programs are built first (because
-    // when we build the servers we need to be able to reference the clients)
-    programs.sort(function (a, b) {
-      a = (a.type === "client") ? 0 : 1;
-      b = (b.type === "client") ? 0 : 1;
-      return a > b;
-    });
-
-    // Step 3: build the programs
-    var blankClientTarget = null;
-    _.each(programs, function (p) {
-      // Read this directory as a package and create a target from
-      // it
-      var pkg = whichCatalog.packageCache.loadPackageAtPath(p.name, p.path);
-      var target;
-      switch (p.type) {
-      case "server":
-        target = makeServerTarget(pkg);
-        break;
-      case "traditional":
-        var clientTarget;
-
-        if (! p.client) {
-          if (! blankClientTarget) {
-            clientTarget = blankClientTarget = targets._blank =
-              makeBlankClientTarget();
-          } else {
-            clientTarget = blankClientTarget;
-          }
-        } else {
-          clientTarget = targets[p.client];
-          if (! clientTarget) {
-            buildmessage.error("no such program '" + p.client + "'",
-                               { file: p.attrsJsonRelPath });
-            // recover by ignoring target
-            return;
-          }
-        }
-
-        // We don't check whether targets[p.client] is actually a
-        // ClientTarget. If you want to be clever, go ahead.
-
-        // XXX doesn't pass the cordova target, but right now Galaxy doesn't
-        // serve any Cordova supportted apps
-        target = makeServerTarget(pkg, [clientTarget]);
-        break;
-      case "client":
-        target = makeClientTarget(pkg, "web.browser");
-        break;
-      default:
-        buildmessage.error(
-          "type must be 'server', 'traditional', or 'client'",
-          { file: p.attrsJsonRelPath });
-        // recover by ignoring target
-        return;
-      };
-      targets[p.name] = target;
-    });
-
-    // If we omitted a target due to an error, we might not have a
-    // controlProgram anymore.
-    if (! (controlProgram in targets))
-      controlProgram = undefined;
-
 
     // Hack to let servers find relative paths to clients. Should find
     // another solution eventually (probably some kind of mount
@@ -2148,18 +2125,17 @@ exports.bundle = function (options) {
         });
         if (! name)
           throw new Error("missing target?");
-        return path.join('programs', name);
+        return files.pathJoin('programs', name);
       };
 
-      return path.relative(pathForTarget(options.relativeTo),
-                           pathForTarget(options.forTarget));
+      return files.pathRelative(pathForTarget(options.relativeTo),
+                                pathForTarget(options.forTarget));
     };
 
     // Write to disk
     var writeOptions = {
-      includeNodeModulesSymlink: includeNodeModulesSymlink,
+      includeNodeModules: includeNodeModules,
       builtBy: builtBy,
-      controlProgram: controlProgram,
       releaseName: releaseName,
       getRelativeTargetPath: getRelativeTargetPath
     };
@@ -2168,11 +2144,14 @@ exports.bundle = function (options) {
       // If we already have a cached bundle, just recreate the new targets.
       // XXX This might make the contents of "star.json" out of date.
       _.each(targets, function (target, name) {
-        writeTargetToPath(name, target, outputPath, writeOptions);
+        var targetBuild =
+          writeTargetToPath(name, target, outputPath, writeOptions);
+        nodePath = nodePath.concat(targetBuild.nodePath);
         clientWatchSet.merge(target.getWatchSet());
       });
     } else {
       starResult = writeSiteArchive(targets, outputPath, writeOptions);
+      nodePath = nodePath.concat(starResult.nodePath);
       serverWatchSet.merge(starResult.serverWatchSet);
       clientWatchSet.merge(starResult.clientWatchSet);
     }
@@ -2187,7 +2166,8 @@ exports.bundle = function (options) {
     errors: success ? false : messages,
     serverWatchSet: serverWatchSet,
     clientWatchSet: clientWatchSet,
-    starManifest: starResult && starResult.starManifest
+    starManifest: starResult && starResult.starManifest,
+    nodePath: nodePath
   };
 };
 
@@ -2199,13 +2179,16 @@ exports.bundle = function (options) {
 // Returns an object with keys:
 // - image: The created JsImage object.
 // - watchSet: Source file WatchSet (see bundle()).
+// - usedPackageNames: array of names of packages that are used
 //
 // XXX return an 'errors' key for symmetry with bundle(), rather than
 // letting exceptions escape?
 //
 // options:
-// - packageLoader: required. the PackageLoader for resolving
+// - packageMap: required. the PackageMap for resolving
 //   bundle-time dependencies
+// - isopackCache: required. IsopackCache with all dependent packages
+//   loaded
 // - name: required. a name for this image (cosmetic, but will appear
 //   in, eg, error messages) -- technically speaking, this is the name
 //   of the package created to contain the sources and package
@@ -2216,7 +2199,6 @@ exports.bundle = function (options) {
 //   interpreted. please set it to something reasonable so that any error
 //   messages will look pretty.
 // - npmDependencies: map from npm package name to required version
-// - cordovaDependencies: map from cordova plugin name to required version
 // - npmDir: where to keep the npm cache and npm version shrinkwrap
 //   info. required if npmDependencies present.
 //
@@ -2227,36 +2209,37 @@ exports.bundle = function (options) {
 // It would be nice to have a way to say "make this package anonymous"
 // without also saying "make its namespace the same as the global
 // namespace." It should be an easy refactor,
-exports.buildJsImage = function (options) {
+exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
   buildmessage.assertInCapture();
   if (options.npmDependencies && ! options.npmDir)
     throw new Error("Must indicate .npm directory to use");
   if (! options.name)
     throw new Error("Must provide a name");
-  if (! options.catalog)
-    throw new Error("Must provide a catalog");
 
-  var packageSource = new PackageSource(options.catalog);
+  var packageSource = new PackageSource;
 
   packageSource.initFromOptions(options.name, {
-    archName: "plugin",
+    kind: "plugin",
     use: options.use || [],
     sourceRoot: options.sourceRoot,
     sources: options.sources || [],
-    serveRoot: path.sep,
+    // it is correct to set slash and not files.pathSep because serverRoot is a
+    // url path and not a file system path
+    serveRoot: options.serveRoot || '/',
     npmDependencies: options.npmDependencies,
-    cordovaDependencies: options.cordovaDependencies,
-    npmDir: options.npmDir,
-    dependencyVersions: options.dependencyVersions,
-    noVersionFile: true
+    npmDir: options.npmDir
   });
 
   var isopack = compiler.compile(packageSource, {
-    ignoreProjectDeps: options.ignoreProjectDeps
-  }).isopack;
+    packageMap: options.packageMap,
+    isopackCache: options.isopackCache,
+    // There's no web.cordova unibuild here anyway, just os.
+    includeCordovaUnibuild: false
+  });
 
   var target = new JsImageTarget({
-    packageLoader: options.packageLoader,
+    packageMap: options.packageMap,
+    isopackCache: options.isopackCache,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only
@@ -2269,27 +2252,14 @@ exports.buildJsImage = function (options) {
   return {
     image: target.toJsImage(),
     watchSet: target.getWatchSet(),
-    pluginProviderPackageDirs: target.getPluginProviderPackageDirs()
+    usedPackageNames: _.keys(target.usedPackages)
   };
-};
+});
 
 // Load a JsImage from disk (that was previously written by calling
 // write() on a JsImage). `controlFilePath` is the path to the control
 // file (eg, program.json).
-exports.readJsImage = function (controlFilePath) {
+exports.readJsImage = Profile(
+  "bundler.readJsImage", function (controlFilePath) {
   return JsImage.readFromDisk(controlFilePath);
-};
-
-// Given an array of isopack names, invokes the callback with each
-// corresponding Isopack object, plus all of their transitive dependencies,
-// with a topological sort.
-exports.iterateOverAllUsedIsopacks =
-  function (loader, arch, packageNames, callback) {
-  buildmessage.assertInCapture();
-  var target = new Target({packageLoader: loader,
-                           arch: arch});
-  target._determineLoadOrder({packages: packageNames});
-  _.each(target.unibuilds, function (unibuild) {
-    callback(unibuild.pkg);
-  });
-};
+});

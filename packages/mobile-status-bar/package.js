@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Good defaults for the mobile status bar",
-  version: "1.0.1-rc.0"
+  version: "1.0.4"
 });
 
 Package.onUse(function(api) {
@@ -8,5 +8,5 @@ Package.onUse(function(api) {
 });
 
 Cordova.depends({
-  'org.apache.cordova.statusbar': '0.1.7'
+    'cordova-plugin-statusbar': '1.0.0'
 });

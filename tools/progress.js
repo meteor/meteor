@@ -6,10 +6,11 @@
 ///   current: number, the current progress value
 ///   end: number, optional, the value of current where we expect to be done
 ///
+/// If end is not set, we'll display a spinner instead of a progress bar
+///
 
 var _ = require('underscore');
 var Future = require('fibers/future');
-var console = require('./console.js');
 
 var Progress = function (options) {
   var self = this;
@@ -21,31 +22,26 @@ var Progress = function (options) {
   self._watchers = options.watchers || [];
 
   self._title = options.title;
+  if (self._title) {
+    // Capitalize job titles when displayed in the progress bar.
+    self._title = self._title[0].toUpperCase() + self._title.slice(1);
+  }
 
+  // XXX: Should we have a strict/mdg mode that enables this test?
   //if (!self._title && self._parent) {
   //  throw new Error("No title passed");
   //}
+
   self._forkJoin = options.forkJoin;
 
-  // XXX: Rationalize this; we probably don't need _completedChildren
-  // XXX: or _activeChildTasks (?)
-  self._completedChildren = { current: 0, end: 0};
-  self._activeChildTasks = [];
   self._allTasks = [];
 
-  self._selfState = { current: 0, end: 0, done: false };
-  if (options.estimate) {
-    self._selfState.end = options.estimate;
-  }
+  self._selfState = { current: 0, done: false };
   self._state = _.clone(self._selfState);
 
   self._isDone = false;
 
-  self._selfActive = false;
-
-  // If we're faking progress using the exponential trick, the counter
-  // stores the number of actual ticks
-  self._exponentialCounter = undefined;
+  self.startTime = +(new Date);
 };
 
 _.extend(Progress.prototype, {
@@ -59,36 +55,12 @@ _.extend(Progress.prototype, {
 
     var state = _.clone(self._selfState);
     state.done = true;
-    if (state.current === 0) {
-      state.current = 1;
+    if (state.end !== undefined) {
+      if (state.current > state.end) {
+        state.end = state.current;
+      }
+      state.current = state.end;
     }
-    if (!state.end || state.end < state.current) {
-      state.end = state.current;
-    }
-    self.reportProgress(state);
-  },
-
-  // For when we don't have a clear idea how long something will take,
-  // (i.e. no end estimate), just call nudge occasionally.  We'll build
-  // an exponential progress bar for the task.
-  nudge: function () {
-    var self = this;
-
-    var halfLife = 25;
-
-    var state = _.clone(self._selfState);
-
-    if (!self._exponentialCounter) {
-      self._exponentialCounter = 1;
-      // Arbitrary endpoint
-      state.end = 100;
-    } else {
-      self._exponentialCounter++;
-    }
-
-    var fractionLeft = Math.pow(0.5, self._exponentialCounter / halfLife);
-    state.current = state.end * (1 - fractionLeft);
-
     self.reportProgress(state);
   },
 
@@ -103,55 +75,44 @@ _.extend(Progress.prototype, {
     var isRoot = !self._parent;
 
     if (self._isDone) {
+      // A done task cannot be the active task
       return null;
     }
 
-    if (self._selfActive && !isRoot) {
+    if (!self._state.done && (self._state.current != 0) && self._state.end &&
+        !isRoot) {
+      // We are not done and we have interesting state to report
       return self;
     }
 
     if (self._forkJoin) {
-      // Don't descend into fork-join tasks
+      // Don't descend into fork-join tasks (by choice)
       return self;
     }
 
     if (self._allTasks.length) {
-      var active = _.map(self._allTasks, function (task) {
+      var candidates = _.map(self._allTasks, function (task) {
         return task.getCurrentProgress();
       });
-      active = _.filter(active, function (s) {
+      var active = _.filter(candidates, function (s) {
         return !!s;
       });
-      if (active.length == 1) {
-        return active[0];
+      if (active.length) {
+        // pick one to display, somewhat arbitrarily
+        return active[active.length - 1];
       }
+      // No single active task, return self
       return self;
     }
 
-    //if (self._activeChildTasks.length) {
-    //  var titles = _.map(self._activeChildTasks, function (task) {
-    //    return task.getCurrent();
-    //  });
-    //  titles = _.filter(titles, function (s) { return !!s; });
-    //  if (titles.length == 1) {
-    //    return titles[0];
-    //  }
-    //  //if (titles.length > 1) {
-    //  //  console.log("Multiple titles: " + titles);
-    //  //}
-    //  return self._title;
-    //}
-
-    return null;
+    return self;
   },
 
   // Creates a subtask that must be completed as part of this (bigger) task
   addChildTask: function (options) {
     var self = this;
-    options = options || {};
-    var options = _.extend({ parent: self }, options);
+    options = _.extend({ parent: self }, options || {});
     var child = new Progress(options);
-    self._activeChildTasks.push(child);
     self._allTasks.push(child);
     self._reportChildState(child, child._state);
     return child;
@@ -174,8 +135,7 @@ _.extend(Progress.prototype, {
       end = '?';
     }
     stream.write("Task [" + self._title + "] " + self._state.current + "/" + end
-      + (self._isDone ? " done" : "")
-      + (self._selfActive ? " active" : "") +"\n");
+      + (self._isDone ? " done" : "") +"\n");
     if (self._allTasks.length) {
       _.each(self._allTasks, function (child) {
         child.dump(stream, options, (prefix || '') + '  ');
@@ -188,11 +148,11 @@ _.extend(Progress.prototype, {
     var self = this;
 
     self._selfState = state;
-    self._selfActive = !state.done;
 
     self._updateTotalState();
 
-    console.Console.statusPollMaybe();
+    // Nudge the spinner/progress bar, but don't yield (might not be safe to yield)
+    require('./console.js').Console.nudge(false);
 
     self._notifyState();
   },
@@ -223,37 +183,6 @@ _.extend(Progress.prototype, {
   _updateTotalState: function () {
     var self = this;
 
-    var state = _.clone(self._selfState);
-
-    //state.current += self._completedChildren.current;
-    //if (state.end !== undefined) {
-    //  state.end += self._completedChildren.end;
-    //}
-
-    //var allChildrenDone = true;
-    //_.each(self._activeChildTasks, function (child) {
-    //  var childState = child._state;
-    //  state.current += childState.current;
-    //  if (!state.done) {
-    //    allChildrenDone = false;
-    //  }
-    //
-    //  if (state.done) {
-    //    if (state.end !== undefined) {
-    //      state.end += childState.current;
-    //    }
-    //  } else if (state.end !== undefined) {
-    //    if (childState.end !== undefined) {
-    //      state.end += childState.end;
-    //    } else {
-    //      state.end = undefined;
-    //    }
-    //  }
-    //});
-    //if (!allChildrenDone) {
-    //  state.done = false;
-    //}
-
     var allChildrenDone = true;
     var state = _.clone(self._selfState);
     _.each(self._allTasks, function (child) {
@@ -274,7 +203,7 @@ _.extend(Progress.prototype, {
         }
       }
     });
-    self._isDone = allChildrenDone && !self._selfActive;
+    self._isDone = allChildrenDone && !!self._selfState.done;
     if (!allChildrenDone) {
       state.done = false;
     }
@@ -291,15 +220,12 @@ _.extend(Progress.prototype, {
   _reportChildState: function (child, state) {
     var self = this;
 
-    if (state.done) {
-      self._activeChildTasks = _.without(self._activeChildTasks, child);
-      var weight = state.current;
-      self._completedChildren.current += weight;
-      self._completedChildren.end += weight;
-    }
-
     self._updateTotalState();
     self._notifyState();
+  },
+
+  getState: function() {
+    return this._state;
   }
 });
 

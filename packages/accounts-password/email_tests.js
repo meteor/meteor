@@ -33,11 +33,14 @@ testAsyncMulti("accounts emails - reset password flow", [
         test.equal(result.length, 2); // the first is the email verification
         var options = result[1];
 
-        var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)")
+        var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
         var match = options.text.match(re);
         test.isTrue(match);
         resetPasswordToken = match[1];
         test.isTrue(options.html.match(re));
+
+        test.equal(options.from, 'test@meteor.com');
+        test.equal(options.headers['My-Custom-Header'], 'Cool');
       }));
   },
   function (test, expect) {
@@ -79,6 +82,9 @@ var getVerifyEmailToken = function (email, test, expect) {
       test.isTrue(match);
       verifyEmailToken = match[1];
       test.isTrue(options.html.match(re));
+
+      test.equal(options.from, 'test@meteor.com');
+      test.equal(options.headers['My-Custom-Header'], 'Cool');
     }));
 };
 
@@ -173,6 +179,9 @@ var getEnrollAccountToken = function (email, test, expect) {
       test.isTrue(match);
       enrollAccountToken = match[1];
       test.isTrue(options.html.match(re));
+
+      test.equal(options.from, 'test@meteor.com');
+      test.equal(options.headers['My-Custom-Header'], 'Cool');
     }));
 };
 

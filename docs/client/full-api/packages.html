@@ -1,0 +1,33 @@
+<template name="packages">
+{{#markdown}}
+
+<h1 id="packages">Packages</h1>
+
+Meteor supports a variety of add-on packages and third party
+libraries. While you can build great applications using only the Meteor
+core functionality, optional packages can make development even faster
+and better.
+
+Packages can be added to a Meteor project with:
+
+    $ meteor add <package_name>
+
+and removed with:
+
+    $ meteor remove <package_name>
+
+Some of the packages that Meteor Development Group maintains include:
+{{> pkg_appcache}}
+{{> pkg_accounts_ui}}
+{{> pkg_audit_argument_checks}}
+{{> pkg_coffeescript}}
+{{> pkg_jquery}}
+{{> pkg_less}}
+{{> pkg_markdown}}
+{{> pkg_oauth_encryption}}
+{{> pkg_random}}
+{{> pkg_underscore}}
+{{> pkg_webapp}}
+
+{{/markdown}}
+</template>

@@ -1,6 +1,6 @@
 var Future = require("fibers/future");
 var _ = require("underscore");
-var uniload = require("./uniload.js");
+var isopackets = require("./isopackets.js");
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful
@@ -15,8 +15,6 @@ var uniload = require("./uniload.js");
 // protocol selected, they use just one underlying TCP connection, and fail
 // fast.
 //
-// - Package: a Package object as returned from uniload.load, containing
-//   the ddp and meteor packages
 // - endpointUrl: the url to connect to
 // - options:
 //   - headers: an object containing extra headers to use when opening the
@@ -24,8 +22,10 @@ var uniload = require("./uniload.js");
 //   - _dontPrintErrors: boolean
 //   ...and anything else you'd normally pass as options to DDP.connect
 //
-var ServiceConnection = function (Package, endpointUrl, options) {
+var ServiceConnection = function (endpointUrl, options) {
   var self = this;
+
+  var Package = isopackets.load('ddp');
 
   // ServiceConnection never should retry connections: just one TCP connection
   // is enough, and any errors on it should be detected promptly.
@@ -33,7 +33,12 @@ var ServiceConnection = function (Package, endpointUrl, options) {
     // We found that this was likely to time out with the DDP default of 10s,
     // especially if the CPU is churning on bundling (eg, for the stats
     // connection which we start in parallel with bundling).
-    connectTimeoutMs: 15000,
+    connectTimeoutMs: 30000,
+    // Disable client->server heartbeats for service connections.  Users with
+    // slow internet connections were seeing heartbeat timeouts because the
+    // heartbeats were buried behind large responses (eg
+    // https://github.com/meteor/meteor/issues/2777).
+    heartbeatInterval: 0,
     retry: false,
     onConnected: function () {
       self.connected = true;
@@ -46,7 +51,7 @@ var ServiceConnection = function (Package, endpointUrl, options) {
     }
   });
 
-  self.connection = Package.ddp.DDP.connect(endpointUrl, options);
+  self.connection = Package['ddp-client'].DDP.connect(endpointUrl, options);
 
   // Wait until we have some sort of initial connection or error (including the
   // 10-second timeout built into our DDP client).
@@ -63,10 +68,14 @@ var ServiceConnection = function (Package, endpointUrl, options) {
       // Otherwise, ignore this error. We're going to reconnect!
       return;
     }
+    // Are we waiting to connect or for the result of a method apply or a
+    // subscribeAndWait? If so, disconnecting is a problem.
     if (self.currentFuture) {
       var fut = self.currentFuture;
       self.currentFuture = null;
-      fut.throw(error || new Error("DDP disconnected"));
+      fut.throw(error ||
+                new Package['ddp-client'].DDP.ConnectionError(
+                  "DDP disconnected while connection in progress"));
     } else if (error) {
       // We got some sort of error with nobody listening for it; handle it.
       // XXX probably have a better way to handle it than this
@@ -77,21 +86,17 @@ var ServiceConnection = function (Package, endpointUrl, options) {
 };
 
 _.extend(ServiceConnection.prototype, {
-  call: function (/* arguments */) {
-    var self = this;
-    var args = _.toArray(arguments);
-    var name = args.shift();
-    return self.apply(name, args);
+  call: function (name, ...args) {
+    return this.apply(name, args);
   },
 
-  apply: function (/* arguments */) {
+  apply: function (...args) {
     var self = this;
 
     if (self.currentFuture)
       throw Error("Can't wait on two things at once!");
     self.currentFuture = new Future;
 
-    var args = _.toArray(arguments);
     args.push(function (err, result) {
       if (!self.currentFuture) {
         // We're not still waiting? That means we had a disconnect event. But
@@ -102,21 +107,21 @@ _.extend(ServiceConnection.prototype, {
       self.currentFuture = null;
       fut.resolver()(err, result);  // throw or return
     });
-    self.connection.apply.apply(self.connection, args);
+
+    self.connection.apply(...args);
 
     return self.currentFuture.wait();
   },
 
   // XXX derived from _subscribeAndWait in ddp_connection.js
   // -- but with a different signature..
-  subscribeAndWait: function (/* arguments */) {
+  subscribeAndWait: function (...args) {
     var self = this;
 
     if (self.currentFuture)
       throw Error("Can't wait on two things at once!");
     var subFuture = self.currentFuture = new Future;
 
-    var args = _.toArray(arguments);
     args.push({
       onReady: function () {
         if (!self.currentFuture) {
@@ -140,7 +145,7 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
-    var sub = self.connection.subscribe.apply(self.connection, args);
+    var sub = self.connection.subscribe(...args);
     subFuture.wait();
     return sub;
   },

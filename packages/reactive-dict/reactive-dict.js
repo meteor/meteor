@@ -11,6 +11,10 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
+var changed = function (v) {
+  v && v.changed();
+};
+
 // XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
 ReactiveDict = function (dictName) {
   // this.keys: key -> value
@@ -31,13 +35,26 @@ ReactiveDict = function (dictName) {
     this.keys = {};
   }
 
+  this.allDeps = new Tracker.Dependency;
   this.keyDeps = {}; // key -> Dependency
   this.keyValueDeps = {}; // key -> Dependency
 };
 
 _.extend(ReactiveDict.prototype, {
-  set: function (key, value) {
+  // set() began as a key/value method, but we are now overloading it
+  // to take an object of key/value pairs, similar to backbone
+  // http://backbonejs.org/#Model-set
+
+  set: function (keyOrObject, value) {
     var self = this;
+
+    if ((typeof keyOrObject === 'object') && (value === undefined)) {
+      self._setObject(keyOrObject);
+      return;
+    }
+    // the input isn't an object, so it must be a key
+    // and we resume with the rest of the function
+    var key = keyOrObject;
 
     value = stringify(value);
 
@@ -47,10 +64,7 @@ _.extend(ReactiveDict.prototype, {
       return;
     self.keys[key] = value;
 
-    var changed = function (v) {
-      v && v.changed();
-    };
-
+    self.allDeps.changed();
     changed(self.keyDeps[key]);
     if (self.keyValueDeps[key]) {
       changed(self.keyValueDeps[key][oldSerializedValue]);
@@ -123,6 +137,39 @@ _.extend(ReactiveDict.prototype, {
     var oldValue = undefined;
     if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
     return EJSON.equals(oldValue, value);
+  },
+  
+  all: function() {
+    this.allDeps.depend();
+    var ret = {};
+    _.each(this.keys, function(value, key) {
+      ret[key] = parse(value);
+    });
+    return ret;
+  },
+  
+  clear: function() {
+    var self = this;
+    
+    var oldKeys = self.keys;
+    self.keys = {};
+    
+    self.allDeps.changed();
+    
+    _.each(oldKeys, function(value, key) {
+      changed(self.keyDeps[key]);
+      changed(self.keyValueDeps[key][value]);
+      changed(self.keyValueDeps[key]['undefined']);
+    });
+    
+  },
+
+  _setObject: function (object) {
+    var self = this;
+
+    _.each(object, function (value, key){
+      self.set(key, value);
+    });
   },
 
   _ensureKey: function (key) {

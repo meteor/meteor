@@ -62,6 +62,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   // a block helper, say
   var isTemplate = (options && options.isTemplate);
   var isBody = (options && options.isBody);
+  var sourceName = (options && options.sourceName);
 
   var tree = parseTree;
 
@@ -71,6 +72,10 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     // in a TEXTAREA, say.
     tree = SpacebarsCompiler.optimize(tree);
   }
+
+  // throws an error if using `{{> React}}` with siblings
+  new ReactComponentSiblingForbidder({sourceName: sourceName})
+    .visit(tree);
 
   var codegen = new SpacebarsCompiler.CodeGen;
   tree = (new SpacebarsCompiler._TemplateTagReplacer(
@@ -91,13 +96,14 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
 
 SpacebarsCompiler._beautify = function (code) {
   if (Package.minifiers && Package.minifiers.UglifyJSMinify) {
-    var result = UglifyJSMinify(code,
-                                { fromString: true,
-                                  mangle: false,
-                                  compress: false,
-                                  output: { beautify: true,
-                                            indent_level: 2,
-                                            width: 80 } });
+    var result = Package.minifiers.UglifyJSMinify(
+      code,
+      { fromString: true,
+        mangle: false,
+        compress: false,
+        output: { beautify: true,
+                  indent_level: 2,
+                  width: 80 } });
     var output = result.code;
     // Uglify interprets our expression as a statement and may add a semicolon.
     // Strip trailing semicolon.

@@ -6,12 +6,14 @@ SpacebarsCompiler = {};
 //
 // - `"DOUBLE"` - `{{foo}}`
 // - `"TRIPLE"` - `{{{foo}}}`
+// - `"EXPR"` - `(foo)`
 // - `"COMMENT"` - `{{! foo}}`
 // - `"BLOCKCOMMENT" - `{{!-- foo--}}`
 // - `"INCLUSION"` - `{{> foo}}`
 // - `"BLOCKOPEN"` - `{{#foo}}`
 // - `"BLOCKCLOSE"` - `{{/foo}}`
 // - `"ELSE"` - `{{else}}`
+// - `"ESCAPE"` - `{{|`, `{{{|`, `{{{{|` and so on
 //
 // Besides `type`, the mandatory properties of a TemplateTag are:
 //
@@ -52,7 +54,11 @@ var makeStacheTagStartRegex = function (r) {
                     r.ignoreCase ? 'i' : '');
 };
 
+// "starts" regexes are used to see what type of template
+// tag the parser is looking at.  They must match a non-empty
+// result, but not the interesting part of the tag.
 var starts = {
+  ESCAPE: /^\{\{(?=\{*\|)/,
   ELSE: makeStacheTagStartRegex(/^\{\{\s*else(?=[\s}])/i),
   DOUBLE: makeStacheTagStartRegex(/^\{\{\s*(?!\s)/),
   TRIPLE: makeStacheTagStartRegex(/^\{\{\{\s*(?!\s)/),
@@ -65,7 +71,14 @@ var starts = {
 
 var ends = {
   DOUBLE: /^\s*\}\}/,
-  TRIPLE: /^\s*\}\}\}/
+  TRIPLE: /^\s*\}\}\}/,
+  EXPR: /^\s*\)/
+};
+
+var endsString = {
+  DOUBLE: '}}',
+  TRIPLE: '}}}',
+  EXPR: ')'
 };
 
 // Parse a tag from the provided scanner or string.  If the input
@@ -96,9 +109,10 @@ TemplateTag.parse = function (scannerOrString) {
   };
 
   var scanIdentifier = function (isFirstInPath) {
-    var id = BlazeTools.parseIdentifierName(scanner);
-    if (! id)
+    var id = BlazeTools.parseExtendedIdentifierName(scanner);
+    if (! id) {
       expected('IDENTIFIER');
+    }
     if (isFirstInPath &&
         (id === 'null' || id === 'true' || id === 'false'))
       scanner.fatal("Can't use null, true, or false, as an identifier at start of path");
@@ -205,7 +219,9 @@ TemplateTag.parse = function (scannerOrString) {
       return ['STRING', result.value];
     } else if (/^[\.\[]/.test(scanner.peek())) {
       return ['PATH', scanPath()];
-    } else if ((result = BlazeTools.parseIdentifierName(scanner))) {
+    } else if (run(/^\(/)) {
+      return ['EXPR', scanExpr('EXPR')];
+    } else if ((result = BlazeTools.parseExtendedIdentifierName(scanner))) {
       var id = result;
       if (id === 'null') {
         return ['NULL', null];
@@ -216,8 +232,42 @@ TemplateTag.parse = function (scannerOrString) {
         return ['PATH', scanPath()];
       }
     } else {
-      expected('identifier, number, string, boolean, or null');
+      expected('identifier, number, string, boolean, null, or a sub expression enclosed in "(", ")"');
     }
+  };
+
+  var scanExpr = function (type) {
+    var endType = type;
+    if (type === 'INCLUSION' || type === 'BLOCKOPEN')
+      endType = 'DOUBLE';
+
+    var tag = new TemplateTag;
+    tag.type = type;
+    tag.path = scanPath();
+    tag.args = [];
+    var foundKwArg = false;
+    while (true) {
+      run(/^\s*/);
+      if (run(ends[endType]))
+        break;
+      else if (/^[})]/.test(scanner.peek())) {
+        expected('`' + endsString[endType] + '`');
+      }
+      var newArg = scanArg();
+      if (newArg.length === 3) {
+        foundKwArg = true;
+      } else {
+        if (foundKwArg)
+          error("Can't have a non-keyword argument after a keyword argument");
+      }
+      tag.args.push(newArg);
+
+      // expect a whitespace or a closing ')' or '}'
+      if (run(/^(?=[\s})])/) !== '')
+        expected('space');
+    }
+
+    return tag;
   };
 
   var type;
@@ -230,9 +280,10 @@ TemplateTag.parse = function (scannerOrString) {
     error('Expected ' + what);
   };
 
-  // must do ELSE first; order of others doesn't matter
-
-  if (run(starts.ELSE)) type = 'ELSE';
+  // must do ESCAPE first, immediately followed by ELSE
+  // order of others doesn't matter
+  if (run(starts.ESCAPE)) type = 'ESCAPE';
+  else if (run(starts.ELSE)) type = 'ELSE';
   else if (run(starts.DOUBLE)) type = 'DOUBLE';
   else if (run(starts.TRIPLE)) type = 'TRIPLE';
   else if (run(starts.BLOCKCOMMENT)) type = 'BLOCKCOMMENT';
@@ -263,36 +314,12 @@ TemplateTag.parse = function (scannerOrString) {
   } else if (type === 'ELSE') {
     if (! run(ends.DOUBLE))
       expected('`}}`');
+  } else if (type === 'ESCAPE') {
+    var result = run(/^\{*\|/);
+    tag.value = '{{' + result.slice(0, -1);
   } else {
     // DOUBLE, TRIPLE, BLOCKOPEN, INCLUSION
-    tag.path = scanPath();
-    tag.args = [];
-    var foundKwArg = false;
-    while (true) {
-      run(/^\s*/);
-      if (type === 'TRIPLE') {
-        if (run(ends.TRIPLE))
-          break;
-        else if (scanner.peek() === '}')
-          expected('`}}}`');
-      } else {
-        if (run(ends.DOUBLE))
-          break;
-        else if (scanner.peek() === '}')
-          expected('`}}`');
-      }
-      var newArg = scanArg();
-      if (newArg.length === 3) {
-        foundKwArg = true;
-      } else {
-        if (foundKwArg)
-          error("Can't have a non-keyword argument after a keyword argument");
-      }
-      tag.args.push(newArg);
-
-      if (run(/^(?=[\s}])/) !== '')
-        expected('space');
-    }
+    tag = scanExpr(type);
   }
 
   return tag;
@@ -436,16 +463,24 @@ var validateTag = function (ttag, scanner) {
 
   if (ttag.type === 'INCLUSION' || ttag.type === 'BLOCKOPEN') {
     var args = ttag.args;
-    if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH') {
-      // we have a positional argument that is not a PATH followed by
-      // other arguments
-      scanner.fatal("First argument must be a function, to be called on the rest of the arguments; found " + args[0][0]);
+    if (ttag.path[0] === 'each' && args[1] && args[1][0] === 'PATH' &&
+        args[1][1][0] === 'in') {
+      // For slightly better error messages, we detect the each-in case
+      // here in order not to complain if the user writes `{{#each 3 in x}}`
+      // that "3 is not a function"
+    } else {
+      if (args.length > 1 && args[0].length === 2 && args[0][0] !== 'PATH') {
+        // we have a positional argument that is not a PATH followed by
+        // other arguments
+        scanner.fatal("First argument must be a function, to be called on " +
+                      "the rest of the arguments; found " + args[0][0]);
+      }
     }
   }
 
   var position = ttag.position || TEMPLATE_TAG_POSITION.ELEMENT;
   if (position === TEMPLATE_TAG_POSITION.IN_ATTRIBUTE) {
-    if (ttag.type === 'DOUBLE') {
+    if (ttag.type === 'DOUBLE' || ttag.type === 'ESCAPE') {
       return;
     } else if (ttag.type === 'BLOCKOPEN') {
       var path = ttag.path;

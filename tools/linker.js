@@ -1,10 +1,10 @@
-var fs = require('fs');
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage');
+var watch = require('./watch.js');
 
 var packageDot = function (name) {
-  if (/^[a-zA-Z0-9]*$/.exec(name))
+  if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name))
     return "Package." + name;
   else
     return "Package['" + name + "']";
@@ -32,6 +32,7 @@ var Module = function (options) {
   self.combinedServePath = options.combinedServePath;
   self.importStubServePath = options.importStubServePath;
   self.jsAnalyze = options.jsAnalyze;
+  self.noLineNumbers = options.noLineNumbers;
 };
 
 _.extend(Module.prototype, {
@@ -71,6 +72,14 @@ _.extend(Module.prototype, {
       return self.declaredExports;
     }
 
+    // The assigned variables in the app aren't actually used for anything:
+    // we're using the global namespace, so there's no header where we declare
+    // all of the assigned variables as vars.  So there's no use wasting time
+    // running static analysis on app code.
+    if (self.useGlobalNamespace) {
+      return [];
+    }
+
     // Find all global references in any files
     var assignedVariables = [];
     _.each(self.files, function (file) {
@@ -86,16 +95,6 @@ _.extend(Module.prototype, {
   // 'sourcePath'
   getPrelinkedFiles: function () {
     var self = this;
-
-    // If there are no files *and* we are a no-exports-at-all unibuild, then
-    // generate no prelink output.
-    //
-    // If there are no files, but we are a non-test package (and thus
-    // self.declaredExports is an actual, albeit potentially empty, list), we
-    // DON'T want to take this path: we want to return an empty prelink file, so
-    // that at link time we end up at least setting `Package.foo = {}`.
-    if (_.isEmpty(self.files) && !self.declaredExports)
-      return [];
 
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
@@ -134,7 +133,10 @@ _.extend(Module.prototype, {
     _.each(self.files, function (file) {
       if (!_.isEmpty(chunks))
         chunks.push("\n\n\n\n\n\n");
-      chunks.push(file.getPrelinkedOutput({ sourceWidth: sourceWidth }));
+      chunks.push(file.getPrelinkedOutput({
+        sourceWidth: sourceWidth,
+        noLineNumbers: self.noLineNumbers
+      }));
     });
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
@@ -211,6 +213,10 @@ var File = function (inputFile, module) {
   // source code for this file (a string)
   self.source = inputFile.source;
 
+  // hash of source (precalculated for *.js files, calculated here for files
+  // produced by plugins)
+  self.sourceHash = inputFile.sourceHash || watch.sha1(self.source);
+
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
 
@@ -228,6 +234,15 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
+// The JsAnalyze code is somewhat slow, and we often compute assigned variables
+// on the same file multiple times in one process (notably, a single file is
+// often processed for two or three different unibuilds, and is processed again
+// when rebuilding a package when another file has changed). We cache the
+// calculated variables under the source file's hash (calculating the source
+// file's hash is faster than running jsAnalyze, and in the case of *.js files
+// we have the hash already anyway).
+var ASSIGNED_GLOBALS_CACHE = {};
+
 _.extend(File.prototype, {
   // Return the globals in this file as an array of symbol names.  For
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
@@ -243,8 +258,13 @@ _.extend(File.prototype, {
     if (!jsAnalyze)
       return [];
 
+    if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
+      return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
+    }
+
     try {
-      return _.keys(jsAnalyze.findAssignedGlobals(self.source));
+      return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
+              _.keys(jsAnalyze.findAssignedGlobals(self.source)));
     } catch (e) {
       if (!e.$ParseError)
         throw e;
@@ -275,138 +295,179 @@ _.extend(File.prototype, {
     }
   },
 
-
-  // Relative path to use in source maps to indicate this file. No
-  // leading slash.
-  _pathForSourceMap: function () {
-    var self = this;
-
-    if (self.module.name)
-      return self.module.name + "/" + self.sourcePath;
-    else
-      return require('path').basename(self.sourcePath);
-  },
-
   // Options:
   // - preserveLineNumbers: if true, decorate minimally so that line
   //   numbers don't change between input and output. In this case,
   //   sourceWidth is ignored.
+  // - noLineNumbers: We still include the banners and such, but
+  //   no line number suffix.
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
   getPrelinkedOutput: function (options) {
     var self = this;
-
-    // The newline after the source closes a '//' comment.
-    if (options.preserveLineNumbers) {
-      // Ugly version
-      var mapNode;
-      if (self.sourceMap) {
-        mapNode = sourcemap.SourceNode.fromStringWithSourceMap(
-          self.source, new sourcemap.SourceMapConsumer(self.sourceMap));
-      } else {
-        // This is an app file that was always JS. The output file here is going
-        // to be the same name as the input file (because _pathForSourceMap in
-        // apps is the basename of the source file), and having a JS file
-        // pointing to a source map pointing to a JS file of the same name will
-        // (a) be confusing (b) be unnecessary since we aren't renumbering
-        // anything and (c) confuse at least Chrome.
-        mapNode = self.source;
-      }
-
-      return new sourcemap.SourceNode(null, null, null, [
-        self.bare ? "" : "(function(){",
-        mapNode,
-        (self.source.length && self.source[self.source.length - 1] !== '\n'
-         ? "\n" : ""),
-        self.bare ? "" : "\n})();\n"
-      ]);
-    }
-
-    // Pretty version
-    var chunks = [];
-
-    // Prologue
-    if (! self.bare)
-      chunks.push("(function () {\n\n");
-
-    // Banner
-    var bannerLines = [self.servePath.slice(1)];
-    if (self.bare) {
-      bannerLines.push(
-        "This file is in bare mode and is not in its own closure.");
-    }
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
-    var padding = bannerPadding(bannerWidth);
-    chunks.push(banner(bannerLines, bannerWidth));
-    var blankLine = new Array(width + 1).join(' ') + " //\n";
-    chunks.push(blankLine);
+    var result;
+    var lines;
 
-    // Code, with line numbers
-    // You might prefer your line numbers at the beginning of the
-    // line, with /* .. */. Well, that requires parsing the source for
-    // comments, because you have to do something different if you're
-    // already inside a comment.
-
-    var numberifyLines = function (f) {
-      var num = 1;
-      var lines = self.source.split('\n');
-      _.each(lines, function (line) {
-        var suffix = "\n";
-
-        if (line.length <= width && line[line.length - 1] !== "\\") {
-          suffix = padding.slice(line.length, width) + " // " + num + "\n";
-        }
-        f(line, suffix, num);
-        num++;
-      });
-    };
-
-    var lines = self.source.split('\n');
+    var noLineNumbers = options.noLineNumbers;
+    var preserveLineNumbers = options.preserveLineNumbers;
 
     if (self.sourceMap) {
-      var buf = "";
-      numberifyLines(function (line, suffix) {
-        buf += line;
-        buf += suffix;
-      });
-      // The existing source map is valid because all we're doing is adding
-      // things to the end of lines, which doesn't affect the source map.  (If
-      // we wanted to be picky, we could add some explicitly non-mapped regions
-      // to the source map to cover the suffixes, which would make this
-      // equivalent to the "no source map coming in" case, but this doesn't seem
-      // that important.)
-      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-        self.source,
-        new sourcemap.SourceMapConsumer(self.sourceMap)));
+      // If we have a source map, it is also important to annotate line
+      // numbers using that source map, since not all browsers support
+      // source maps.
+      noLineNumbers = false;
+
+      // Honoring options.preserveLineNumbers is likely impossible if we
+      // have a source map, since self.source has probably already been
+      // transformed in a way that does not preserve line numbers. That's
+      // ok, though, because we have a source map, and we also annotate
+      // line numbers using comments (see above), just in case source maps
+      // are not supported.
+      preserveLineNumbers = false;
+    } else if (preserveLineNumbers) {
+      // If we don't have a source map, and we're supposed to be preserving line
+      // numbers (ie, we are not linking multiple files into one file, because
+      // we're the app), then we can get away without annotating line numbers
+      // (or making a source map), because they won't add any helpful
+      // information.
+      noLineNumbers = true;
+    }
+
+    if (self.sourceMap) {
+      result = {
+        code: self.source,
+        map: self.sourceMap
+      };
+
+    } else if (noLineNumbers && preserveLineNumbers) {
+      // No need to generate a source map if we don't want line numbers.
+      result = {
+        code: self.source,
+        map: null
+      };
+
     } else {
-      // There are probably ways to make a more compact source map. For example,
-      // the only change we make is to append a comment, so we can probably emit
-      // one mapping for the whole file. For the moment, we'll do it by the book
-      // just to see how it goes.
-      numberifyLines(function (line, suffix, num) {
-        chunks.push(new sourcemap.SourceNode(num, 0, self._pathForSourceMap(),
-                                             line));
-        chunks.push(suffix);
+      // If we're planning to annotate the source with line number
+      // comments (e.g. because we're combining this file with others in a
+      // package), and we don't already have a source map, then we need to
+      // generate one, so that we don't have to write two different
+      // versions of the code for annotating line numbers, and also so
+      // that browsers that support source maps can display a prettier
+      // version of this file without the line number comments.
+      var smg = new sourcemap.SourceMapGenerator({
+        file: self.servePath
       });
+
+      lines = self.source.split("\n");
+
+      _.each(lines, function (line, i) {
+        var start = { line: i + 1, column: 0 };
+        smg.addMapping({
+          original: start,
+          generated: start,
+          source: self.servePath
+        });
+      });
+
+      smg.setSourceContent(self.servePath, self.source);
+
+      result = {
+        code: self.source,
+        map: smg.toJSON()
+      };
+    }
+
+    var smc = result.map &&
+      new sourcemap.SourceMapConsumer(result.map);
+
+    if (smc && ! noLineNumbers) {
+      var padding = bannerPadding(bannerWidth);
+
+      // We might have already done this split above.
+      lines = lines || result.code.split("\n");
+
+      // Use the SourceMapConsumer object to compute the original line
+      // number for each line of result.code.
+      _.each(lines, function (line, i) {
+        var len = line.length;
+        if (len < width &&
+            line[len - 1] !== "\\") {
+          var pos = smc.originalPositionFor({
+            line: i + 1,
+            column: 0
+          });
+
+          if (pos) {
+            lines[i] += padding.slice(len, width) + " //";
+            // Not all source maps define a mapping for every line in the
+            // output. This is perfectly normal.
+            if (typeof pos.line === "number") {
+              lines[i] += " " + pos.line;
+            }
+          }
+        }
+      });
+
+      result.code = lines.join("\n");
+    }
+
+    var chunks = [];
+    var pathNoSlash = self.servePath.replace(/^\//, "");
+
+    if (! self.bare) {
+      chunks.push(
+        "(function(){",
+        preserveLineNumbers ? "" : "\n\n"
+      );
+    }
+
+    if (! preserveLineNumbers) {
+      // Banner
+      var bannerLines = [pathNoSlash];
+
+      if (self.bare) {
+        bannerLines.push(
+          "This file is in bare mode and is not in its own closure.");
+      }
+
+      chunks.push(banner(bannerLines, bannerWidth));
+
+      var blankLine = new Array(width + 1).join(' ') + " //\n";
+      chunks.push(blankLine);
+    }
+
+    if (result.code) {
+      chunks.push(
+        // If we have a source map for result.code, push a SourceNode onto
+        // the chunks array that encapsulates that source map. If we don't
+        // have a source map, just push result.code.
+        smc ? sourcemap.SourceNode.fromStringWithSourceMap(result.code, smc)
+            : result.code
+      );
+
+      // It's important for the code to end with a newline, so that a
+      // trailing // comment can't snarf code appended after it.
+      if (result.code[result.code - 1] !== "\n") {
+        chunks.push("\n");
+      }
     }
 
     // Footer
-    if (! self.bare)
-      chunks.push(dividerLine(bannerWidth) + "\n}).call(this);\n");
+    if (! self.bare) {
+      if (preserveLineNumbers) {
+        chunks.push("}).call(this);\n");
+      } else {
+        chunks.push(
+          dividerLine(bannerWidth),
+          "\n}).call(this);\n"
+        );
+      }
+    }
 
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-
-    // If we're working directly from the original source here (and not from the
-    // output of a transformation that had a source map), include the original
-    // source in the source map. (If we are working on generated code, the
-    // source map we received should have already contained the original
-    // source.)
-    if (!self.sourceMap)
-      node.setSourceContent(self._pathForSourceMap(), self.source);
-
-    return node;
+    return new sourcemap.SourceNode(null, null, null, chunks);
   }
 });
 
@@ -494,7 +555,8 @@ var prelink = function (options) {
     useGlobalNamespace: options.useGlobalNamespace,
     importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
-    jsAnalyze: options.jsAnalyze
+    jsAnalyze: options.jsAnalyze,
+    noLineNumbers: options.noLineNumbers
   });
 
   _.each(options.inputFiles, function (inputFile) {

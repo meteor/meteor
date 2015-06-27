@@ -108,19 +108,6 @@ var updateVersions = function (shouldReloadClientProgram) {
     }});
   }
 
-  if (! ClientVersions.findOne({_id: "version-refreshable"})) {
-    ClientVersions.insert({
-      _id: "version-refreshable",
-      version: Autoupdate.autoupdateVersionRefreshable,
-      assets: WebAppInternals.refreshableAssets
-    });
-  } else {
-    ClientVersions.update("version-refreshable", { $set: {
-      version: Autoupdate.autoupdateVersionRefreshable,
-      assets: WebAppInternals.refreshableAssets
-      }});
-  }
-
   if (! ClientVersions.findOne({_id: "version-cordova"})) {
     ClientVersions.insert({
       _id: "version-cordova",
@@ -132,12 +119,33 @@ var updateVersions = function (shouldReloadClientProgram) {
       version: Autoupdate.autoupdateVersionCordova
     }});
   }
+
+  // Use `onListening` here because we need to use
+  // `WebAppInternals.refreshableAssets`, which is only set after
+  // `WebApp.generateBoilerplate` is called by `main` in webapp.
+  WebApp.onListening(function () {
+    if (! ClientVersions.findOne({_id: "version-refreshable"})) {
+      ClientVersions.insert({
+        _id: "version-refreshable",
+        version: Autoupdate.autoupdateVersionRefreshable,
+        assets: WebAppInternals.refreshableAssets
+      });
+    } else {
+      ClientVersions.update("version-refreshable", { $set: {
+        version: Autoupdate.autoupdateVersionRefreshable,
+        assets: WebAppInternals.refreshableAssets
+      }});
+    }
+  });
 };
 
 Meteor.publish(
   "meteor_autoupdate_clientVersions",
   function (appId) {
-    check(appId, Match.Optional(String));
+    // `null` happens when a client doesn't have an appId and passes
+    // `undefined` to `Meteor.subscribe`. `undefined` is translated to
+    // `null` as JSON doesn't have `undefined.
+    check(appId, Match.OneOf(String, undefined, null));
 
     // Don't notify clients using wrong appId such as mobile apps built with a
     // different server but pointing at the same local url
@@ -155,11 +163,11 @@ Meteor.startup(function () {
 
 var fut = new Future();
 
-// We only want SIGUSR2 to trigger 'updateVersions' AFTER onListen,
-// so we add a queued task that waits for onListen before SIGUSR2 can queue
+// We only want 'refresh' to trigger 'updateVersions' AFTER onListen,
+// so we add a queued task that waits for onListen before 'refresh' can queue
 // tasks. Note that the `onListening` callbacks do not fire until after
-// Meteor.startup, so there is no concern that the 'updateVersions' calls
-// from SIGUSR2 will overlap with the `updateVersions` call from Meteor.startup.
+// Meteor.startup, so there is no concern that the 'updateVersions' calls from
+// 'refresh' will overlap with the `updateVersions` call from Meteor.startup.
 
 syncQueue.queueTask(function () {
   fut.wait();
@@ -169,9 +177,22 @@ WebApp.onListening(function () {
   fut.return();
 });
 
-// Listen for SIGUSR2, which signals that a client asset has changed.
-process.on('SIGUSR2', Meteor.bindEnvironment(function () {
+var enqueueVersionsRefresh = function () {
   syncQueue.queueTask(function () {
     updateVersions(true);
   });
+};
+
+// Listen for the special {refresh: 'client'} message, which signals that a
+// client asset has changed.
+process.on('message', Meteor.bindEnvironment(function (m) {
+  if (m && m.refresh === 'client') {
+    enqueueVersionsRefresh();
+  }
 }));
+
+// Another way to tell the process to refresh: send SIGHUP signal
+process.on('SIGHUP', Meteor.bindEnvironment(function () {
+  enqueueVersionsRefresh();
+}));
+

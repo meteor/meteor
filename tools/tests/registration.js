@@ -6,7 +6,7 @@ var Sandbox = selftest.Sandbox;
 var httpHelpers = require('../http-helpers.js');
 var config = require('../config.js');
 
-var expectInvalidToken = function (token) {
+var expectInvalidToken = selftest.markStack(function (token) {
   // Same XXX as testUtils.registerWithToken: should be hardcoded to
   // https://www.meteor.com?
   var accountsConn = testUtils.ddpConnect(config.getAuthDDPUrl());
@@ -15,10 +15,10 @@ var expectInvalidToken = function (token) {
   // We should not be able to get a registration code for an invalid
   // token.
   if (registrationTokenInfo.valid || registrationTokenInfo.code) {
-    throw new Error('Expected invalid token is valid!');
+    selftest.fail('Expected invalid token is valid!');
   }
   accountsConn.close();
-};
+});
 
 // Polls a guerrillamail.com inbox every 3 seconds looking for an email
 // that matches the given subject and body regexes. This could fail if
@@ -115,7 +115,7 @@ selftest.define('deferred registration - email registration token', ['net', 'slo
   // registration.
   var token = testUtils.registrationUrlRegexp.exec(registrationEmail.bodyPage);
   if (! token || ! token[1]) {
-    throw new Error("No registration token in email");
+    selftest.fail("No registration token in email");
   }
   token = token[1];
 
@@ -213,7 +213,7 @@ selftest.define(
       registrationEmail.bodyPage
     );
     if (! emailToken || ! emailToken[1]) {
-      throw new Error('No registration token in email');
+      selftest.fail('No registration token in email');
     }
     expectInvalidToken(emailToken[1]);
 
@@ -256,7 +256,8 @@ selftest.define(
       registrationEmail.bodyPage
     );
     if (! token || ! token[1]) {
-      throw new Error('No registration token in email');
+      selftest.fail('No registration token in email:\n' +
+                    registrationEmail.bodyPage);
     }
 
     testUtils.registerWithToken(token[1], username, 'testtest', email);

@@ -1,0 +1,20 @@
+<template name="search">
+  {{#if searchOpen}}
+    <div class="search-overlay">
+      <div class="search-box">
+        <a href="#" class="close-search"><span class="hotkey">[esc]</span> &times;</a>
+        <h3>Search Documentation</h3>
+        <input type="text" class="search-query" />
+      </div>
+      <ul class="search-results">
+        {{#each searchResults}}
+          <li class="{{#if selected _id}}selected{{/if}}">
+            <strong>{{longname}}</strong>: {{#markdown}}{{summary}}{{/markdown}}
+          </li>
+        {{else}}
+          No search results found.
+        {{/each}}
+      </ul>
+    </div>
+  {{/if}}
+</template>

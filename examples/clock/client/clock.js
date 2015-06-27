@@ -2,7 +2,7 @@ Meteor.setInterval(function () {
   Session.set('time', new Date());
 }, 1000);
 
-UI.body.helpers({
+Template.body.helpers({
 
   hours: _.range(0, 12),
 

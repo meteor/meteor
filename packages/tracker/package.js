@@ -1,17 +1,18 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.0.3-rc.0'
+  version: '1.0.7'
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   api.export('Tracker');
   api.export('Deps');
-  api.add_files('tracker.js');
-  api.add_files('deprecated.js');
+  api.addFiles('tracker.js');
+  api.addFiles('deprecated.js');
 });
 
-Package.on_test(function (api) {
+Package.onTest(function (api) {
   api.use('tinytest');
+  api.use('test-helpers');
   api.use('tracker');
-  api.add_files('tracker_tests.js', 'client');
+  api.addFiles('tracker_tests.js', 'client');
 });

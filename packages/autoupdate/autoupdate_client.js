@@ -41,6 +41,7 @@ Autoupdate.newClientAvailable = function () {
                _id: "version-refreshable",
                version: {$ne: autoupdateVersionRefreshable} });
 };
+Autoupdate._ClientVersions = ClientVersions;  // Used by a self-test
 
 var knownToSupportCssOnLoad = false;
 
@@ -127,7 +128,7 @@ Autoupdate._retrySubscription = function () {
                 newLink.setAttribute("rel", "stylesheet");
                 newLink.setAttribute("type", "text/css");
                 newLink.setAttribute("class", "__meteor-css__");
-                newLink.setAttribute("href", css.url);
+                newLink.setAttribute("href", Meteor._relativeToSiteRootUrl(css.url));
                 attachStylesheetLink(newLink);
               });
             } else {

@@ -15,8 +15,9 @@ var urlParser = Npm.require('url');
 Spiderable.userAgentRegExps = [
     /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
 
-// how long to let phantomjs run before we kill it
-var REQUEST_TIMEOUT = 15*1000;
+// how long to let phantomjs run before we kill it (and send down the
+// regular page instead). Users may modify this number.
+Spiderable.requestTimeoutMs = 15*1000;
 // maximum size of result HTML. node's default is 200k which is too
 // small for our docs.
 var MAX_BUFFER = 5*1024*1024; // 5MB
@@ -26,6 +27,7 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
   // reassembling url without escaped fragment if exists
   var parsedUrl = urlParser.parse(requestUrl);
   var parsedQuery = querystring.parse(parsedUrl.query);
+  var escapedFragment = parsedQuery['_escaped_fragment_'];
   delete parsedQuery['_escaped_fragment_'];
 
   var parsedAbsoluteUrl = urlParser.parse(siteAbsoluteUrl);
@@ -42,6 +44,10 @@ Spiderable._urlForPhantom = function (siteAbsoluteUrl, requestUrl) {
   // `url.format` will only use `query` if `search` is absent
   parsedAbsoluteUrl.search = null;
 
+  if (escapedFragment !== undefined && escapedFragment !== null && escapedFragment.length > 0) {
+    parsedAbsoluteUrl.hash = '!' + decodeURIComponent(escapedFragment);
+  }
+
   return urlParser.format(parsedAbsoluteUrl);
 };
 
@@ -50,11 +56,6 @@ var PHANTOM_SCRIPT = Assets.getText("phantom_script.js");
 WebApp.connectHandlers.use(function (req, res, next) {
   // _escaped_fragment_ comes from Google's AJAX crawling spec:
   // https://developers.google.com/webmasters/ajax-crawling/docs/specification
-  // This spec was designed during the brief era where using "#!" URLs was
-  // common, so it mostly describes how to translate "#!" URLs into
-  // _escaped_fragment_ URLs. Since then, "#!" URLs have gone out of style, but
-  // the <meta name="fragment" content="!"> (see spiderable.html) approach also
-  // described in the spec is still common and used by several crawlers.
   if (/\?.*_escaped_fragment_=/.test(req.url) ||
       _.any(Spiderable.userAgentRegExps, function (re) {
         return re.test(req.headers['user-agent']); })) {
@@ -69,6 +70,26 @@ WebApp.connectHandlers.use(function (req, res, next) {
     // well.
     var phantomScript = "var url = " + JSON.stringify(url) + ";" +
           PHANTOM_SCRIPT;
+
+    // Allow override of phantomjs args via env var
+    // We use one env var to try to keep env-var explosion under control.
+    // We're not going to document this unless it is actually needed;
+    // (if you find yourself needing this please let us know the use case!)
+    var phantomJsArgs = process.env.METEOR_PKG_SPIDERABLE_PHANTOMJS_ARGS || '';
+
+    // Default image loading to off (we don't need images)
+    if (phantomJsArgs.indexOf("--load-images=") === -1) {
+      phantomJsArgs += " --load-images=no";
+    }
+
+    // POODLE means SSLv3 is being turned off everywhere.
+    // phantomjs currently defaults to SSLv3, and won't use TLS.
+    // Use --ssl-protocol to set the default to TLSv1
+    // (another option would be 'any', but really, we want to say >= TLSv1)
+    // More info: https://groups.google.com/forum/#!topic/meteor-core/uZhT3AHwpsI
+    if (phantomJsArgs.indexOf("--ssl-protocol=") === -1) {
+      phantomJsArgs += " --ssl-protocol=TLSv1";
+    }
 
     // Run phantomjs.
     //
@@ -85,9 +106,9 @@ WebApp.connectHandlers.use(function (req, res, next) {
     child_process.execFile(
       '/bin/bash',
       ['-c',
-       ("exec phantomjs --load-images=no /dev/stdin <<'END'\n" +
+       ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
-      {timeout: REQUEST_TIMEOUT, maxBuffer: MAX_BUFFER},
+      {timeout: Spiderable.requestTimeoutMs, maxBuffer: MAX_BUFFER},
       function (error, stdout, stderr) {
         if (!error && /<html/i.test(stdout)) {
           res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
@@ -98,7 +119,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
           if (error && error.code === 127)
             Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
           else
-            Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr);
+            Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr, "\nstdout:", stdout);
 
           next();
         }

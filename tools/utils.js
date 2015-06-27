@@ -2,13 +2,12 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var packageVersionParser = require('./package-version-parser.js');
 var semver = require('semver');
 var os = require('os');
-var fs = require('fs');
 var url = require('url');
-var child_process = require('child_process');
 
 var utils = exports;
 
@@ -53,9 +52,7 @@ var parseUrl = function (str, defaults) {
 };
 
 var ipAddress = function () {
-  var uniload = require("./uniload.js");
-  var netroute = uniload.load({ packages: ["netroute"] }).
-        netroute.NpmModuleNetroute;
+  var netroute = require('netroute');
   var info = netroute.getInfo();
   var defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
   if (! defaultRoute) {
@@ -96,38 +93,25 @@ exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-// Returns a pretty list suitable for showing to the user. Input is an
-// array of objects with keys 'name' and 'description'.
-exports.formatList = function (unsortedItems) {
-  var alphaSort = function (item) {
-    return item.name;
-  };
-  var items = _.sortBy(unsortedItems, alphaSort);
-  var longest = '';
-  _.each(items, function (item) {
-    if (item.name.length > longest.length)
-      longest = item.name;
-  });
+// XXX: Move to e.g. formatters.js?
+// Prints a package list in a nice format.
+// Input is an array of objects with keys 'name' and 'description'.
+exports.printPackageList = function (items, options) {
+  options = options || {};
 
-  var pad = longest.replace(/./g, ' ');
-  // it'd be nice to read the actual terminal width, but I tried
-  // several methods and none of them work (COLUMNS isn't set in
-  // node's environment; `tput cols` returns a constant 80). maybe
-  // node is doing something weird with ptys.
-  var width = 80;
-
-  var out = '';
-  _.each(items, function (item) {
-    var name = item.name + pad.substr(item.name.length);
+  var rows = _.map(items, function (item) {
+    var name = item.name;
     var description = item.description || 'No description';
-    var line = name + "  " + description;
-    if (line.length > width) {
-      line = line.substr(0, width - 3) + '...';
-    }
-    out += line + "\n";
+    return [name, description];
   });
 
-  return out;
+  var alphaSort = function (row) {
+    return row[0];
+  };
+  rows = _.sortBy(rows, alphaSort);
+
+  var Console = require('./console.js').Console;
+  return Console.printTwoColumns(rows, options);
 };
 
 // Determine a human-readable hostname for this computer. Prefer names
@@ -210,29 +194,67 @@ exports.randomPort = function () {
   return 20000 + Math.floor(Math.random() * 10000);
 };
 
-exports.parseVersionConstraint = packageVersionParser.parseVersionConstraint;
-exports.parseConstraint = packageVersionParser.parseConstraint;
-exports.validatePackageName = packageVersionParser.validatePackageName;
-
-// XXX should unify this with utils.parseConstraint
-exports.splitConstraint = function (constraint) {
-  var m = constraint.split("@");
-  var ret = { package: m[0] };
-  if (m.length > 1) {
-    ret.constraint = m[1];
-  } else {
-    ret.constraint = null;
+// Like packageVersionParser.parsePackageConstraint, but if called in a
+// buildmessage context uses buildmessage to raise errors.
+exports.parsePackageConstraint = function (constraintString, options) {
+  try {
+    return packageVersionParser.parsePackageConstraint(constraintString);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
   }
-  return ret;
 };
 
-
-// XXX should unify this with utils.parseConstraint
-exports.dealConstraint = function (constraint, pkg) {
-  return { package: pkg, constraint: constraint};
+exports.validatePackageName = function (name, options) {
+  try {
+    return packageVersionParser.validatePackageName(name, options);
+  } catch (e) {
+    if (! (e.versionParserError && options && options.useBuildmessage))
+      throw e;
+    buildmessage.error(e.message, { file: options.buildmessageFile });
+    return null;
+  }
 };
 
-
+// Parse a string of the form `package + " " + version` into an object
+// of the form {package, version}.  For backwards compatibility,
+// an "@" separator instead of a space is also accepted.
+//
+// Lines of `.meteor/versions` are parsed using this function, among
+// other uses.
+exports.parsePackageAndVersion = function (packageAtVersionString, options) {
+  var error = null;
+  var separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
+                              packageAtVersionString.lastIndexOf('@'));
+  if (separatorPos < 0) {
+    error = new Error("Malformed package version: " +
+                      JSON.stringify(packageAtVersionString));
+  } else {
+    var packageName = packageAtVersionString.slice(0, separatorPos);
+    var version = packageAtVersionString.slice(separatorPos+1);
+    try {
+      packageVersionParser.validatePackageName(packageName);
+      // validate the version, ignoring the parsed result:
+      packageVersionParser.parse(version);
+    } catch (e) {
+      if (! e.versionParserError) {
+        throw e;
+      }
+      error = e;
+    }
+    if (! error) {
+      return { package: packageName, version: version };
+    }
+  }
+  // `error` holds an Error
+  if (! (options && options.useBuildmessage)) {
+    throw error;
+  }
+  buildmessage.error(error.message, { file: options.buildmessageFile });
+  return null;
+};
 
 // Check for invalid package names. Currently package names can only contain
 // ASCII alphanumerics, dash, and dot, and must contain at least one letter. For
@@ -266,7 +288,8 @@ exports.validatePackageNameOrExit = function (packageName, options) {
   } catch (e) {
     if (!e.versionParserError)
       throw e;
-    process.stderr.write("Error: " + e.message + "\n");
+    var Console = require('./console.js').Console;
+    Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file
     var main = require('./main.js');
@@ -350,10 +373,11 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   return ret + '$';
 };
 
+// XXX should be in files.js
 exports.isDirectory = function (dir) {
   try {
     // use stat rather than lstat since symlink to dir is OK
-    var stats = fs.statSync(dir);
+    var stats = files.stat(dir);
   } catch (e) {
     return false;
   }
@@ -366,11 +390,33 @@ exports.startsWith = function(str, starts) {
     str.substring(0, starts.length) === starts;
 };
 
-exports.displayRelease = function (track, version) {
+// Options: noPrefix: do not display 'Meteor ' in front of the version number.
+exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
-  if (track === catalog.DEFAULT_TRACK)
-    return "Meteor " + version;
-  return track + '@' + version;
+  options = options || {};
+  var prefix = options.noPrefix ? "" : "Meteor ";
+
+  if (track === catalog.DEFAULT_TRACK) {
+    return prefix + version;
+  } else {
+    return track + '@' + version;
+  }
+};
+
+exports.splitReleaseName = function (releaseName) {
+  var parts = releaseName.split('@');
+  var track, version;
+  if (parts.length === 1) {
+    var catalog = require('./catalog.js');
+    track = catalog.DEFAULT_TRACK;
+    version = parts[0];
+  } else {
+    track = parts[0];
+    // Do we forbid '@' sign in release versions? I sure hope so, but let's
+    // be careful.
+    version = parts.slice(1).join("@");
+  }
+  return [track, version];
 };
 
 // Calls cb with each subset of the array "total", with non-decreasing size,
@@ -420,17 +466,25 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
+exports.isUrlWithFileScheme = function (x) {
+  return /^file:\/\/.+/.test(x);
+};
+
 exports.isUrlWithSha = function (x) {
   // For now, just support http/https, which is at least less restrictive than
   // the old "github only" rule.
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
 };
 
+exports.isPathRelative = function (x) {
+  return x.charAt(0) !== '/';
+};
+
 // If there is a version that isn't exact, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
-// This is talking about NPM versions specifically, not Meteor versions.
+// This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
 exports.ensureOnlyExactVersions = function (dependencies) {
   _.each(dependencies, function (version, name) {
@@ -438,12 +492,17 @@ exports.ensureOnlyExactVersions = function (dependencies) {
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (!semver.valid(version) && ! exports.isUrlWithSha(version))
+    if (! exports.isExactVersion(version)) {
       throw new Error(
-        "Must declare exact version of dependency: " +
-          name + '@' + version);
+        "Must declare exact version of dependency: " + name + '@' + version);
+    }
   });
 };
+exports.isExactVersion = function (version) {
+  return semver.valid(version) || exports.isUrlWithSha(version)
+    || exports.isUrlWithFileScheme(version);
+};
+
 
 exports.execFileSync = function (file, args, opts) {
   var future = new Future;
@@ -505,168 +564,59 @@ exports.execFileAsync = function (file, args, opts) {
   return p;
 };
 
-// Patience: a way to make slow operations a little more bearable.
-//
-// It's frustrating when you write code that takes a while, either because it
-// uses a lot of CPU or because it uses a lot of network/IO. There are two
-// issues:
-//   - It would be nice to apologize/explain to users that an operation is
-//     taking a while... but not to spam them with the message when the
-//     operation is fast. This is true no matter which kind of slowness we
-///    have.
-//   - In Node, consuming lots of CPU without yielding is especially bad.
-//     Other IO/network tasks will stall, and you can't even kill the process!
-//
-// Patience is a class to help alleviate the pain of long waits.  When you're
-// going to run a long operation, create a Patience object; when it's done (make
-// sure to use try/finally!), stop() it.
-//
-// Within any code that may burn CPU for too long, call
-// `utils.Patience.nudge()`.  (This is a singleton method, not a method on your
-// particular patience.)  If there are any active Patience objects and it's been
-// a while since your last yield, your Fiber will sleep momentarily.  (So the
-// caller has to be OK with yielding --- it has to be in a Fiber and it can't be
-// anything that depends for correctness on not yielding!)
-//
-// In addition, for each Patience, you can specify a message (a string to print
-// or a function to call) and a timeout for when that gets called.  We use two
-// strategies to try to call it: a standard JavaScript timeout, and as a backup
-// in case we're getting CPU-starved, we also check during each nudge.  The
-// message will not be printed after the Patience is stopped, which prevents you
-// from apologizing to users about operations that don't end up being slow.
-exports.Patience = function (options) {
-  var self = this;
-
-  self._id = nextPatienceId++;
-  ACTIVE_PATIENCES[self._id] = self;
-
-  self._whenMessage = null;
-  self._message = null;
-  self._messageTimeout = null;
-
-  var now = +(new Date);
-
-  if (options.messageAfterMs) {
-    if (!options.message)
-      throw Error("missing message!");
-    if (typeof(options.message) !== 'string' &&
-        typeof(options.message) !== 'function') {
-      throw Error("message must be string or function");
-    }
-    self._message = "\n" + options.message;
-    self._whenMessage = now + options.messageAfterMs;
-    self._messageTimeout = setTimeout(function () {
-      self._messageTimeout = null;
-      self._printMessage();
-    }, options.messageAfterMs);
-  }
-
-  // If this is the first patience we made, the next yield time is
-  // YIELD_EVERY_MS from now.
-  if (_.size(ACTIVE_PATIENCES) === 1) {
-    nextYield = now + YIELD_EVERY_MS;
-  }
-};
-
-var nextYield = null;
-var YIELD_EVERY_MS = 150;
-var ACTIVE_PATIENCES = {};
-var nextPatienceId = 1;
-
-exports.Patience.nudge = function () {
-  // Is it time to yield?
-  if (!_.isEmpty(ACTIVE_PATIENCES) &&
-      +(new Date) >= nextYield) {
-    nextYield = +(new Date) + YIELD_EVERY_MS;
-    utils.sleepMs(1);
-  }
-
-  // save a copy, in case it gets updated
-  var patienceIds = _.keys(ACTIVE_PATIENCES);
-  _.each(patienceIds, function (id) {
-    if (_.has(ACTIVE_PATIENCES, id)) {
-      ACTIVE_PATIENCES[id]._maybePrintMessage();
-    }
-  });
-};
-
-_.extend(exports.Patience.prototype, {
-  stop: function () {
-    var self = this;
-    delete ACTIVE_PATIENCES[self._id];
-    if (_.isEmpty(ACTIVE_PATIENCES)) {
-      nextYield = null;
-    }
-    self._clearMessageTimeout();
-  },
-
-  _maybePrintMessage: function () {
-    var self = this;
-    var now = +(new Date);
-
-    // Is it time to print a message?
-    if (self._whenMessage && +(new Date) >= self._whenMessage) {
-      self._printMessage();
-    }
-  },
-
-  _printMessage: function () {
-    var self = this;
-    // Did the timeout just fire, but we already printed the message due to a
-    // nudge while CPU-bound? We're done. (This shouldn't happen since we clear
-    // the timeout, but just in case...)
-    if (self._message === null)
-      return;
-    self._clearMessageTimeout();
-    // Pull out message, in case it's a function and it yields.
-    var message = self._message;
-    self._message = null;
-    if (typeof (message) === 'function') {
-      message();
-    } else {
-      console.log(message);
-    }
-  },
-
-  _clearMessageTimeout: function () {
-    var self = this;
-    if (self._messageTimeout) {
-      clearTimeout(self._messageTimeout);
-      self._messageTimeout = null;
-    }
-    self._whenMessage = null;
-  }
-});
-
-
-// This is a stripped down version of Patience, that just regulates the frequency of calling yield.
-// It should behave similarly to calling yield on every iteration of a loop,
-// except that it won't actually yield if there hasn't been a long enough time interval
-//
-// options:
-//   interval: minimum interval of time between yield calls
-//             (more frequent calls are simply dropped)
-//
-// XXX: Have Patience use ThrottledYield
-exports.ThrottledYield = function (options) {
+exports.Throttled = function (options) {
   var self = this;
 
   options = _.extend({ interval: 150 }, options || {});
   self.interval = options.interval;
   var now = +(new Date);
 
-  // The next yield time is interval from now.
-  self.nextYield = now + self.interval;
+  self.next = now;
+};
+
+_.extend(exports.Throttled.prototype, {
+  isAllowed: function () {
+    var self = this;
+    var now = +(new Date);
+
+    if (now < self.next) {
+      return false;
+    }
+
+    self.next = now + self.interval;
+    return true;
+  }
+});
+
+
+// ThrottledYield just regulates the frequency of calling yield.
+// It should behave similarly to calling yield on every iteration of a loop,
+// except that it won't actually yield if there hasn't been a long enough time interval
+//
+// options:
+//   interval: minimum interval of time between yield calls
+//             (more frequent calls are simply dropped)
+exports.ThrottledYield = function (options) {
+  var self = this;
+
+  self._throttle = new exports.Throttled(options);
 };
 
 _.extend(exports.ThrottledYield.prototype, {
   yield: function () {
     var self = this;
-    var now = +(new Date);
-
-    if (now >= self.nextYield) {
-      self.nextYield = now + self.interval;
-      utils.sleepMs(1);
+    if (self._throttle.isAllowed()) {
+      var f = new Future;
+      // setImmediate allows signals and IO to be processed but doesn't
+      // otherwise add time-based delays. It is better for yielding than
+      // process.nextTick (which doesn't allow signals or IO to be processed) or
+      // setTimeout 1 (which adds a minimum of 1 ms and often more in delays).
+      // XXX Actually, setImmediate is so fast that we might not even need
+      // to use the throttler at all?
+      setImmediate(function () {
+        f.return();
+      });
+      f.wait();
     }
   }
 });
@@ -733,12 +683,46 @@ exports.mobileServerForRun = function (options) {
     };
   }
 
-
   // we are running a simulator, use localhost:3000
-
   return {
     host: "localhost",
     port: parsedUrl.port,
     protocol: "http://"
   };
+};
+
+// Use this to convert dates into our preferred human-readable format.
+//
+// Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
+// date object and returns a long-form human-readable date (ex: December 9th,
+// 2014) or unknown for null.
+exports.longformDate = function (date) {
+  if (! date) return "Unknown";
+  var moment = require('moment');
+  var pubDate = moment(date).format('MMMM Do, YYYY');
+  return pubDate;
+};
+
+// Length of the longest possible string that could come out of longformDate
+// (September is the longest month name, so "September 24th, 2014" would be an
+// example).
+exports.maxDateLength = "September 24th, 2014".length;
+
+// If we have failed to update the catalog, informs the user and advises them to
+// go online for up to date inforation.
+exports.explainIfRefreshFailed = function () {
+  var Console = require("./console.js").Console;
+  var catalog = require('./catalog.js');
+  if (catalog.official.offline || catalog.refreshFailed) {
+    Console.info("Your package catalog may be out of date.\n" +
+      "Please connect to the internet and try again.");
+  }
+};
+
+// Returns a sha256 hash of a given string.
+exports.sha256 = function (contents) {
+  var crypto = require('crypto');
+  var hash = crypto.createHash('sha256');
+  hash.update(contents);
+  return hash.digest('base64');
 };

@@ -1,15 +1,12 @@
 var _ = require('underscore');
-var path = require('path');
-var fs = require('fs');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
 var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
-var packageLoader = require('./package-loader.js');
 var Future = require('fibers/future');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
 var util = require('util');
@@ -17,10 +14,10 @@ var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
 var catalogRemote = require('./catalog-remote.js');
-var Package = uniload.load({ packages: ["ejson"] });
 var Console = require('./console.js').Console;
-
-var toolPackageName = "meteor-tool";
+var tropohouseModule = require('./tropohouse.js');
+var packageMapModule = require('./package-map.js');
+var isopackCacheModule = require('./isopack-cache.js');
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -46,11 +43,25 @@ var fail = markStack(function (reason) {
 // with 'actual' being the value that the test got and 'expected'
 // being the expected value
 var expectEqual = markStack(function (actual, expected) {
+  var Package = isopackets.load('ejson');
   if (! Package.ejson.EJSON.equals(actual, expected)) {
     throw new TestFailure("not-equal", {
       expected: expected,
       actual: actual
     });
+  }
+});
+
+// Call from a test to assert that 'actual' is truthy.
+var expectTrue = markStack(function (actual) {
+  if (! actual) {
+    throw new TestFailure('not-true');
+  }
+});
+// Call from a test to assert that 'actual' is falsey.
+var expectFalse = markStack(function (actual) {
+  if (actual) {
+    throw new TestFailure('not-false');
   }
 });
 
@@ -65,20 +76,6 @@ var expectThrows = markStack(function (f) {
   if (! threw)
     throw new TestFailure("expected-exception");
 });
-
-var getToolsPackage = function () {
-  buildmessage.assertInCapture();
-  // Rebuild the tool package --- necessary because we don't actually
-  // rebuild the tool in the cached version every time.
-  if (catalog.complete.rebuildLocalPackages([toolPackageName]) !== 1) {
-    throw Error("didn't rebuild meteor-tool?");
-  }
-  var loader = new packageLoader.PackageLoader({
-    versions: null,
-    catalog: catalog.complete
-  });
-  return loader.getPackage(toolPackageName);
-};
 
 // Execute a command synchronously, discarding stderr.
 var execFileSync = function (binary, args, opts) {
@@ -98,6 +95,96 @@ var doOrThrow = function (f) {
   }
   return ret;
 };
+
+// Our current strategy for running tests that need warehouses is to build all
+// packages from the checkout into this temporary tropohouse directory, and for
+// each test that need a fake warehouse, copy the built packages into the
+// test-specific warehouse directory.  This isn't particularly fast, but it'll
+// do for now. We build the packages during the first test that needs them.
+var builtPackageTropohouseDir = null;
+var tropohouseLocalCatalog = null;
+var tropohouseIsopackCache = null;
+
+// Let's build a minimal set of packages that's enough to get self-test
+// working.  (And that doesn't need us to download any Atmosphere packages.)
+var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
+  // We need the tool in order to run from the fake warehouse at all.
+  "meteor-tool",
+  // We need the packages in the skeleton app in order to test 'meteor create'.
+  "meteor-platform", "autopublish", "insecure"
+];
+
+var setUpBuiltPackageTropohouse = function () {
+  if (builtPackageTropohouseDir)
+    return;
+  builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
+
+  if (config.getPackagesDirectoryName() !== 'packages')
+    throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
+
+  var tropohouse = new tropohouseModule.Tropohouse(builtPackageTropohouseDir);
+  tropohouseLocalCatalog = newSelfTestCatalog();
+  var versions = {};
+  _.each(
+    tropohouseLocalCatalog.getAllNonTestPackageNames(),
+    function (packageName) {
+      versions[packageName] =
+        tropohouseLocalCatalog.getLatestVersion(packageName).version;
+  });
+  var packageMap = new packageMapModule.PackageMap(versions, {
+    localCatalog: tropohouseLocalCatalog
+  });
+  // Make an isopack cache that doesn't automatically save isopacks to disk and
+  // has no access to versioned packages.
+  tropohouseIsopackCache = new isopackCacheModule.IsopackCache({
+    packageMap: packageMap,
+    includeCordovaUnibuild: true
+  });
+  doOrThrow(function () {
+    buildmessage.enterJob("building self-test packages", function () {
+      // Build the packages into the in-memory IsopackCache.
+      tropohouseIsopackCache.buildLocalPackages(
+        ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
+    });
+  });
+
+  // Save all the isopacks into builtPackageTropohouseDir/packages.  (Note that
+  // we are always putting them into the default 'packages' (assuming
+  // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
+  // though some tests will want them to be under
+  // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
+  tropohouseIsopackCache.eachBuiltIsopack(function (name, isopack) {
+    tropohouse._saveIsopack(isopack, name);
+  });
+};
+
+var newSelfTestCatalog = function () {
+  if (! files.inCheckout())
+    throw Error("Only can build packages from a checkout");
+
+  var catalogLocal = require('./catalog-local.js');
+  var selfTestCatalog = new catalogLocal.LocalCatalog;
+  var messages = buildmessage.capture(
+    { title: "scanning local core packages" },
+    function () {
+      // When building a fake warehouse from a checkout, we use local packages,
+      // but *ONLY THOSE FROM THE CHECKOUT*: not app packages or $PACKAGE_DIRS
+      // packages.  One side effect of this: we really really expect them to all
+      // build, and we're fine with dying if they don't (there's no worries
+      // about needing to springboard).
+      selfTestCatalog.initialize({
+        localPackageSearchDirs: [files.pathJoin(
+          files.getCurrentToolsDir(), 'packages')]
+      });
+    });
+  if (messages.hasMessages()) {
+    Console.arrowError("Errors while scanning core packages:");
+    Console.printMessages(messages);
+    throw new Error("scan failed?");
+  }
+  return selfTestCatalog;
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // Matcher
@@ -154,14 +241,13 @@ _.extend(Matcher.prototype, {
     var self = this;
     self.ended = true;
     self._tryMatch();
-    self.buf = '';
   },
 
   matchEmpty: function () {
     var self = this;
 
     if (self.buf.length > 0) {
-      console.log("Extra junk is ", self.buf);
+      Console.info("Extra junk is :", self.buf);
       throw new TestFailure('junk-at-end', { run: self.run });
     }
   },
@@ -182,7 +268,9 @@ _.extend(Matcher.prototype, {
           self.matchFuture = null;
           self.matchStrict = null;
           self.matchPattern = null;
-          f['throw'](new TestFailure('junk-before', { run: self.run }));
+          Console.info("Extra junk is: ", self.buf.substr(0, m.index));
+          f['throw'](new TestFailure(
+            'junk-before', { run: self.run, pattern: self.matchPattern }));
           return;
         }
         ret = m;
@@ -195,7 +283,9 @@ _.extend(Matcher.prototype, {
           self.matchFuture = null;
           self.matchStrict = null;
           self.matchPattern = null;
-          f['throw'](new TestFailure('junk-before', { run: self.run }));
+          Console.info("Extra junk is: ", self.buf.substr(0, i));
+          f['throw'](new TestFailure('junk-before',
+                                     { run: self.run, pattern: self.matchPattern }));
           return;
         }
         ret = self.matchPattern;
@@ -212,10 +302,12 @@ _.extend(Matcher.prototype, {
     }
 
     if (self.ended) {
+      var failure = new TestFailure('no-match', { run: self.run,
+                                                  pattern: self.matchPattern });
       self.matchFuture = null;
       self.matchStrict = null;
       self.matchPattern = null;
-      f['throw'](new TestFailure('no-match', { run: self.run }));
+      f['throw'](failure);
       return;
     }
   }
@@ -368,8 +460,8 @@ var Sandbox = function (options) {
   self.root = files.mkdtemp();
   self.warehouse = null;
 
-  self.home = path.join(self.root, 'home');
-  fs.mkdirSync(self.home, 0755);
+  self.home = files.pathJoin(self.root, 'home');
+  files.mkdir(self.home, 0o755);
   self.cwd = self.home;
   self.env = {};
   self.fakeMongo = options.fakeMongo;
@@ -381,13 +473,27 @@ var Sandbox = function (options) {
   // Note that this only affects subprocess meteor runs, not direct invocation
   // of packageClient!
   if (_.contains(runningTest.tags, 'test-package-server')) {
+    if (_.has(options, 'warehouse')) {
+      // test-package-server and warehouse are basically two different ways of
+      // sort of faking out the package system for tests.  test-package-server
+      // means "use a specific production test server"; warehouse means "use
+      // some fake files we put on disk and never sync" (see _makeEnv where the
+      // offline flag is set).  Combining them doesn't make sense: either you
+      // don't sync, in which case you don't see the stuff you published, or you
+      // do sync, and suddenly the mock catalog we built is overridden by
+      // test-package-server.
+      // XXX we should just run servers locally instead of either of these
+      //     strategies
+      throw Error("test-package-server and warehouse cannot be combined");
+    }
+
     self.set('METEOR_PACKAGE_SERVER_URL', exports.testPackageServerUrl);
   }
 
   if (_.has(options, 'warehouse')) {
     if (!files.inCheckout())
       throw Error("make only use a fake warehouse in a checkout");
-    self.warehouse = path.join(self.root, 'tropohouse');
+    self.warehouse = files.pathJoin(self.root, 'tropohouse');
     self._makeWarehouse(options.warehouse);
   }
 
@@ -420,21 +526,23 @@ var Sandbox = function (options) {
     });
   }
 
+  var meteorScript = process.platform === "win32" ? "meteor.bat" : "meteor";
+
   // Figure out the 'meteor' to run
   if (self.warehouse)
-    self.execPath = path.join(self.warehouse, 'meteor');
+    self.execPath = files.pathJoin(self.warehouse, meteorScript);
   else
-    self.execPath = path.join(files.getCurrentToolsDir(), 'meteor');
+    self.execPath = files.pathJoin(files.getCurrentToolsDir(), meteorScript);
 };
 
 _.extend(Sandbox.prototype, {
   // Create a new test run of the tool in this sandbox.
-  run: function (/* arguments */) {
+  run: function (...args) {
     var self = this;
 
     return new Run(self.execPath, {
       sandbox: self,
-      args: _.toArray(arguments),
+      args: args,
       cwd: self.cwd,
       env: self._makeEnv(),
       fakeMongo: self.fakeMongo
@@ -449,9 +557,9 @@ _.extend(Sandbox.prototype, {
   //   run.connectClient();
   //   // post-connection checks
   // });
-  testWithAllClients: function (f) {
+  testWithAllClients: function (f, ...args) {
     var self = this;
-    var argsArray = _.compact(_.toArray(arguments).slice(1));
+    args = _.compact(args);
 
     console.log("running test with " + self.clients.length + " client(s).");
 
@@ -459,7 +567,7 @@ _.extend(Sandbox.prototype, {
       console.log("testing with " + client.name + "...");
       var run = new Run(self.execPath, {
         sandbox: self,
-        args: argsArray,
+        args: args,
         cwd: self.cwd,
         env: self._makeEnv(),
         fakeMongo: self.fakeMongo,
@@ -480,27 +588,66 @@ _.extend(Sandbox.prototype, {
   // For example:
   //   s.createApp('myapp', 'empty');
   //   s.cd('myapp');
-  createApp: function (to, template) {
+  createApp: function (to, template, options) {
     var self = this;
-    files.cp_r(path.join(__dirname, 'tests', 'apps', template),
-               path.join(self.cwd, to),
+    options = options || {};
+    files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), 'tests',
+                 'apps', template),
+               files.pathJoin(self.cwd, to),
                { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
-    if (!self.warehouse && release.current.isProperRelease()) {
-      self.write(path.join(to, '.meteor/release'), release.current.name);
+    if (options.release) {
+      self.write(files.pathJoin(to, '.meteor/release'), options.release);
+    } else if (!self.warehouse && release.current.isProperRelease()) {
+      self.write(files.pathJoin(to, '.meteor/release'), release.current.name);
     }
+
+    if (options.dontPrepareApp)
+      return;
+
+    // Prepare the app (ie, build or download packages). We give this a nice
+    // long timeout, which allows the next command to not need a bloated
+    // timeout. (meteor create does this anyway.)
+    self.cd(to, function () {
+      var run = self.run("--prepare-app");
+      // XXX Can we cache the output of running this once somewhere, so that
+      // multiple calls to createApp with the same template get the same cache?
+      // This is a little tricky because isopack-buildinfo.json uses absolute
+      // paths.
+      run.waitSecs(20);
+      run.expectExit(0);
+    });
   },
 
   // Same as createApp, but with a package.
   //
+  // @param packageDir  {String} The directory in which to create the package
+  // @param packageName {String} The package name to create. This string will
+  //                             replace all appearances of ~package-name~
+  //                             in any package*.js files in the template
+  // @param template    {String} The package template to use. Found as a
+  //                             subdirectory in tests/packages/
+  //
   // For example:
-  //   s.createPackage('mypack', 'empty');
-  //   s.cd('mypack');
-  createPackage: function (to, template) {
+  //   s.createPackage('me_mypack', me:mypack', 'empty');
+  //   s.cd('me_mypack');
+  createPackage: function (packageDir, packageName, template) {
     var self = this;
-    files.cp_r(path.join(__dirname, 'tests', 'packages', template),
-               path.join(self.cwd, to));
+    var packagePath = files.pathJoin(self.cwd, packageDir);
+    var templatePackagePath = files.pathJoin(
+      files.convertToStandardPath(__dirname), 'tests', 'packages', template);
+    files.cp_r(templatePackagePath, packagePath);
+
+    _.each(files.readdir(packagePath), function (file) {
+      if (file.match(/^package.*\.js$/)) {
+        var packageJsFile = files.pathJoin(packagePath, file);
+        files.writeFile(
+          packageJsFile,
+          files.readFile(packageJsFile, "utf8")
+            .replace("~package-name~", packageName));
+      }
+    });
   },
 
   // Change the cwd to be used for subsequent runs. For example:
@@ -518,7 +665,7 @@ _.extend(Sandbox.prototype, {
   cd: function (relativePath, callback) {
     var self = this;
     var previous = self.cwd;
-    self.cwd = path.resolve(self.cwd, relativePath);
+    self.cwd = files.pathResolve(self.cwd, relativePath);
     if (callback) {
       callback();
       self.cwd = previous;
@@ -542,7 +689,7 @@ _.extend(Sandbox.prototype, {
   // cwd. 'contents' is a string (utf8 is assumed).
   write: function (filename, contents) {
     var self = this;
-    fs.writeFileSync(path.join(self.cwd, filename), contents, 'utf8');
+    files.writeFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
   },
 
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
@@ -550,11 +697,11 @@ _.extend(Sandbox.prototype, {
   // file does not exist.
   read: function (filename) {
     var self = this;
-    var file = path.join(self.cwd, filename);
-    if (!fs.existsSync(file))
+    var file = files.pathJoin(self.cwd, filename);
+    if (!files.exists(file))
       return null;
     else
-      return fs.readFileSync(path.join(self.cwd, filename), 'utf8');
+      return files.readFile(files.pathJoin(self.cwd, filename), 'utf8');
   },
 
   // Copy the contents of one file to another.  In these series of tests, we often
@@ -572,29 +719,29 @@ _.extend(Sandbox.prototype, {
   // Delete a file in the sandbox. 'filename' is as in write().
   unlink: function (filename) {
     var self = this;
-    fs.unlinkSync(path.join(self.cwd, filename));
+    files.unlink(files.pathJoin(self.cwd, filename));
   },
 
   // Make a directory in the sandbox. 'filename' is as in write().
   mkdir: function (dirname) {
     var self = this;
-    var dirPath = path.join(self.cwd, dirname);
-    if (! fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath);
+    var dirPath = files.pathJoin(self.cwd, dirname);
+    if (! files.exists(dirPath)) {
+      files.mkdir(dirPath);
     }
   },
 
   // Rename something in the sandbox. 'oldName' and 'newName' are as in write().
   rename: function (oldName, newName) {
     var self = this;
-    fs.renameSync(path.join(self.cwd, oldName),
-                  path.join(self.cwd, newName));
+    files.rename(files.pathJoin(self.cwd, oldName),
+                 files.pathJoin(self.cwd, newName));
   },
 
   // Return the current contents of .meteorsession in the sandbox.
   readSessionFile: function () {
     var self = this;
-    return fs.readFileSync(path.join(self.root, '.meteorsession'), 'utf8');
+    return files.readFile(files.pathJoin(self.root, '.meteorsession'), 'utf8');
   },
 
   // Overwrite .meteorsession in the sandbox with 'contents'. You
@@ -602,18 +749,20 @@ _.extend(Sandbox.prototype, {
   // restore authentication states.
   writeSessionFile: function (contents) {
     var self = this;
-    return fs.writeFileSync(path.join(self.root, '.meteorsession'),
-                            contents, 'utf8');
+    return files.writeFile(files.pathJoin(self.root, '.meteorsession'),
+                           contents, 'utf8');
   },
 
   _makeEnv: function () {
     var self = this;
     var env = _.clone(self.env);
-    env.METEOR_SESSION_FILE = path.join(self.root, '.meteorsession');
+    env.METEOR_SESSION_FILE = files.convertToOSPath(
+      files.pathJoin(self.root, '.meteorsession'));
 
     if (self.warehouse) {
       // Tell it where the warehouse lives.
-      env.METEOR_WAREHOUSE_DIR = self.warehouse;
+      env.METEOR_WAREHOUSE_DIR = files.convertToOSPath(self.warehouse);
+
       // Don't ever try to refresh the stub catalog we made.
       env.METEOR_OFFLINE_CATALOG = "t";
     }
@@ -636,12 +785,15 @@ _.extend(Sandbox.prototype, {
   // command you are running in this sandbox.
   _makeWarehouse: function (releases) {
     var self = this;
+
+    // Ensure we have a tropohouse to copy stuff out of.
+    setUpBuiltPackageTropohouse();
+
     var serverUrl = self.env.METEOR_PACKAGE_SERVER_URL;
     var packagesDirectoryName = config.getPackagesDirectoryName(serverUrl);
-    files.mkdir_p(path.join(self.warehouse, packagesDirectoryName), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1'), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v1.1'), 0755);
-    files.mkdir_p(path.join(self.warehouse, 'package-metadata', 'v2'), 0755);
+    files.cp_r(files.pathJoin(builtPackageTropohouseDir, 'packages'),
+               files.pathJoin(self.warehouse, packagesDirectoryName),
+               { preserveSymlinks: true });
 
     var stubCatalog = {
       syncToken: {},
@@ -655,48 +807,36 @@ _.extend(Sandbox.prototype, {
       }
     };
 
-    // Build all packages and symlink them into the warehouse. Remember
-    // their versions (which happen to contain build IDs).
-    // XXX Not sure where this comment comes from. We should presumably
-    // be building some packages besides meteor-tool (so that we can
-    // build apps that contain core packages).
+    var packageVersions = {};
+    var toolPackageVersion = null;
 
-    var toolPackage, toolPackageDirectory;
-    doOrThrow(function () {
-      toolPackage = getToolsPackage();
-      toolPackageDirectory = '.' + toolPackage.version + '.XXX++'
-        + toolPackage.buildArchitectures();
-      toolPackage.saveToPath(path.join(self.warehouse, packagesDirectoryName,
-                                       toolPackageName, toolPackageDirectory),
-                             { elideBuildInfo: true });
+    tropohouseIsopackCache.eachBuiltIsopack(function (packageName, isopack) {
+      var packageRec = tropohouseLocalCatalog.getPackage(packageName);
+      if (! packageRec)
+        throw Error("no package record for " + packageName);
+      stubCatalog.collections.packages.push(packageRec);
+
+      var versionRec = tropohouseLocalCatalog.getLatestVersion(packageName);
+      if (! versionRec)
+        throw Error("no version record for " + packageName);
+      stubCatalog.collections.versions.push(versionRec);
+
+      stubCatalog.collections.builds.push({
+        buildArchitectures: isopack.buildArchitectures(),
+        versionId: versionRec._id,
+        _id: utils.randomToken()
+      });
+
+      if (packageName === "meteor-tool") {
+        toolPackageVersion = versionRec.version;
+      } else {
+        packageVersions[packageName] = versionRec.version;
+      }
     });
 
-    fs.symlinkSync(toolPackageDirectory,
-                   path.join(self.warehouse, packagesDirectoryName,
-                             toolPackageName, toolPackage.version));
-    stubCatalog.collections.packages.push({
-      name: toolPackageName,
-      _id: utils.randomToken()
-    });
-    var toolVersionId = utils.randomToken();
-    stubCatalog.collections.versions.push({
-      packageName: toolPackageName,
-      version: toolPackage.version,
-      earliestCompatibleVersion: toolPackage.version,
-      containsPlugins: false,
-      description: toolPackage.metadata.summary,
-      dependencies: {},
-      compilerVersion: require('./compiler.js').BUILT_BY,
-      _id: toolVersionId
-    });
+    if (! toolPackageVersion)
+      throw Error("no meteor-tool?");
 
-    self.toolPackageVersion = toolPackage.version;
-
-    stubCatalog.collections.builds.push({
-      architecture: toolPackage.buildArchitectures(),
-      versionId: toolVersionId,
-      _id: utils.randomToken()
-    });
     stubCatalog.collections.releaseTracks.push({
       name: catalog.DEFAULT_TRACK,
       _id: utils.randomToken()
@@ -712,90 +852,27 @@ _.extend(Sandbox.prototype, {
         orderKey: releaseName,
         description: "test release " + releaseName,
         recommended: !!configuration.recommended,
-        // XXX support multiple tools packages for springboard tests
-        tool: toolPackageName + "@" + toolPackage.version,
-        packages: {}
+        tool: configuration.tool || "meteor-tool@" + toolPackageVersion,
+        packages: packageVersions
       });
     });
 
-    // XXX: This is an incremental hack to be able to create apps from the
-    // warehouse. We need the constraint solver that runs are create-time to be
-    // able to solve for the starting app packages (standrd-app-packages,
-    // insecure & autopublish). But the solution doesn't have to be
-    // accurate. Later, when we care about the solution making sense, we should
-    // consider actually importing real data.
-
-    // XXXX: HACK.  We are going to cheat and assume that these are already
-    // in the official catalog. Since we don't care about the contents, we
-    // should be OK.
-    var oldOffline = catalog.official.offline;
-    catalog.official.offline = true;
-    doOrThrow(function () {
-      catalog.official.refresh();
+    var dataFile = config.getPackageStorage({
+      root: self.warehouse,
+      serverUrl: serverUrl
     });
-    _.each(
-      ['autopublish', 'meteor-platform', 'insecure'],
-      function (name) {
-        var versionRec = doOrThrow(function () {
-          return catalog.official.getLatestMainlineVersion(name);
-        });
-        if (!versionRec) {
-          catalog.official.offline = false;
-          doOrThrow(function () {
-            catalog.official.refresh();
-          });
-          catalog.official.offline = true;
-          versionRec = doOrThrow(function () {
-            return catalog.official.getLatestMainlineVersion(name);
-          });
-          if (!versionRec) {
-            throw new Error(" hack fails for " + name);
-          }
-        }
-        var buildRec = doOrThrow(function () {
-          return catalog.official.getAllBuilds(name, versionRec.version)[0];
-        });
-
-        // Insert into packages.
-        stubCatalog.collections.packages.push({
-          name: name,
-          _id: utils.randomToken()
-        });
-
-        // Insert into versions. We are making up a lot of this data.
-        var versionId = utils.randomToken();
-        stubCatalog.collections.versions.push({
-          packageName: name,
-          version: versionRec.version,
-          earliestCompatibleVersion: versionRec.earliestCompatibleVersion,
-          containsPlugins: false,
-          description: "warehouse test",
-          dependencies: {},
-          compilerVersion: require('./compiler.js').BUILT_BY,
-          _id: versionRec._id
-        });
-
-        // Insert into builds. Assume the package is available for all
-        // architectures.
-        stubCatalog.collections.builds.push({
-          buildArchitectures: "web.browser+os",
-          versionId: versionRec._id,
-          build: buildRec.build,
-          _id: utils.randomToken()
-        });
+    self.warehouseOfficialCatalog = new catalogRemote.RemoteCatalog();
+    self.warehouseOfficialCatalog.initialize({
+      packageStorage: dataFile
     });
-    catalog.official.offline = oldOffline;
-
-    var dataFile = config.getLocalPackageCacheFilename(serverUrl);
-    var tmpCatalog = new catalogRemote.RemoteCatalog();
-    tmpCatalog.initialize({packageStorage: path.join(self.warehouse, 'package-metadata', 'v2', dataFile)});
-    tmpCatalog.insertData(stubCatalog);
+    self.warehouseOfficialCatalog.insertData(stubCatalog);
 
     // And a cherry on top
-    fs.symlinkSync(path.join(packagesDirectoryName,
-                             toolPackageName, toolPackage.version,
-                             'meteor-tool-' + archinfo.host(), 'meteor'),
-                   path.join(self.warehouse, 'meteor'));
+    // XXX this is hacky
+    files.linkToMeteorScript(
+      files.pathJoin(self.warehouse, packagesDirectoryName, "meteor-tool", toolPackageVersion,
+        'mt-' + archinfo.host(), 'meteor'),
+      files.pathJoin(self.warehouse, 'meteor'));
   }
 });
 
@@ -824,6 +901,8 @@ var PhantomClient = function (options) {
 
   self.name = "phantomjs";
   self.process = null;
+
+  self._logError = true;
 };
 
 util.inherits(PhantomClient, Client);
@@ -832,22 +911,23 @@ _.extend(PhantomClient.prototype, {
   connect: function () {
     var self = this;
 
-    var phantomScript = "require('webpage').create().open('" + self.url + "');";
     var phantomPath = phantomjs.path;
-    self.process = child_process.execFile(
-      '/bin/bash',
-      ['-c',
-       ("exec " + phantomPath + " --load-images=no /dev/stdin <<'END'\n" +
-        phantomScript + "\nEND\n")],
-      {}, function (exitCode, stdout, stderr) {
-        if (exitCode != 0) {
-          console.log("PhantomJS exited with exitCode ", exitCode, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
+
+    var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
+      "phantom", "open-url.js");
+    self.process = child_process.execFile(phantomPath, ["--load-images=no",
+      files.convertToOSPath(scriptPath), self.url],
+      {}, function (error, stdout, stderr) {
+        if (self._logError && error) {
+          console.log("PhantomJS exited with error ", error, "\nstdout:\n", stdout, "\nstderr:\n", stderr);
         }
       });
   },
 
   stop: function() {
     var self = this;
+    // Suppress the expected SIGTERM exit 'failure'
+    self._logError = false;
     self.process && self.process.kill();
     self.process = null;
   }
@@ -918,7 +998,7 @@ _.extend(BrowserStackClient.prototype, {
   },
 
   _getBrowserStackKey: function () {
-    var outputDir = path.join(files.mkdtemp(), "key");
+    var outputDir = files.pathJoin(files.mkdtemp(), "key");
 
     try {
       execFileSync("s3cmd", ["get",
@@ -926,7 +1006,7 @@ _.extend(BrowserStackClient.prototype, {
         outputDir
       ]);
 
-      return fs.readFileSync(outputDir, "utf8").trim();
+      return files.readFile(outputDir, "utf8").trim();
     } catch (e) {
       return null;
     }
@@ -935,8 +1015,8 @@ _.extend(BrowserStackClient.prototype, {
   _launchBrowserStackTunnel: function (callback) {
     var self = this;
     var browserStackPath =
-      path.join(files.getDevBundle(), 'bin', 'BrowserStackLocal');
-    fs.chmodSync(browserStackPath, 0755);
+      files.pathJoin(files.getDevBundle(), 'bin', 'BrowserStackLocal');
+    files.chmod(browserStackPath, 0o755);
 
     var args = [
       browserStackPath,
@@ -964,18 +1044,26 @@ _.extend(BrowserStackClient.prototype, {
 // Run
 ///////////////////////////////////////////////////////////////////////////////
 
-// Represents a test run of the tool. Typically created through the
+// Represents a test run of the tool (except we also use it in
+// tests/old.js to run Node scripts). Typically created through the
 // run() method on Sandbox, but can also be created directly, say if
 // you want to do something other than invoke the 'meteor' command in
 // a nice sandbox.
 //
 // Options: args, cwd, env
+//
+// The 'execPath' argument and the 'cwd' option are assumed to be standard
+// paths.
+//
+// Arguments in the 'args' option are not assumed to be standard paths, so
+// calling any of the 'files.*' methods on them is not safe.
 var Run = function (execPath, options) {
   var self = this;
 
   self.execPath = execPath;
-  self.cwd = options.cwd || process.cwd();
-  self.env = options.env || {};
+  self.cwd = options.cwd || files.convertToStandardPath(process.cwd());
+  // default env variables
+  self.env = _.extend({ SELFTEST: "t", METEOR_NO_WORDWRAP: "t" }, options.env);
   self._args = [];
   self.proc = null;
   self.baseTimeout = 20;
@@ -1012,13 +1100,13 @@ _.extend(Run.prototype, {
   // Pass as many arguments as you want. Non-object values will be
   // cast to string, and object values will be treated as maps from
   // option names to values.
-  args: function (/* arguments */) {
+  args: function (...args) {
     var self = this;
 
     if (self.proc)
       throw new Error("already started?");
 
-    _.each(_.toArray(arguments), function (a) {
+    _.each(args, function (a) {
       if (typeof a !== "object") {
         self._args.push('' + a);
       } else {
@@ -1067,13 +1155,18 @@ _.extend(Run.prototype, {
     var env = _.clone(process.env);
     _.extend(env, self.env);
 
-    var child_process = require('child_process');
-    self.proc = child_process.spawn(self.execPath, self._args, {
-      cwd: self.cwd,
-      env: env
-    });
+    self.proc = child_process.spawn(files.convertToOSPath(self.execPath),
+      self._args, {
+        cwd: files.convertToOSPath(self.cwd),
+        env: env
+      });
 
     self.proc.on('close', function (code, signal) {
+      if (self.exitStatus === undefined)
+        self._exited({ code: code, signal: signal });
+    });
+
+    self.proc.on('exit', function (code, signal) {
       if (self.exitStatus === undefined)
         self._exited({ code: code, signal: signal });
     });
@@ -1140,6 +1233,12 @@ _.extend(Run.prototype, {
   // partially read line. We could lift these restrictions easily, but
   // there may not be any benefit since the usual way to use this is
   // to call it after expectExit or expectEnd.
+  //
+  // Example:
+  // run = s.run("--help");
+  // run.expectExit(1);  // <<-- improtant to actually run the command
+  // run.forbidErr("unwanted string"); // <<-- important to run **after** the
+  //                                   // command ran the process.
   forbid: markStack(function (pattern) {
     this._ensureStarted();
     this.outputLog.forbid(pattern, 'stdout');
@@ -1230,7 +1329,7 @@ _.extend(Run.prototype, {
     if (self.exitStatus === undefined) {
       self._ensureStarted();
       self.client && self.client.stop();
-      self.proc.kill();
+      self._killProcess();
       self.expectExit();
     }
   }),
@@ -1240,7 +1339,21 @@ _.extend(Run.prototype, {
     var self = this;
     if (self.exitStatus === undefined && self.proc) {
       self.client && self.client.stop();
-      self.proc.kill();
+      self._killProcess();
+    }
+  },
+
+  // Kills the running process and it's child processes
+  _killProcess: function () {
+    if (!this.proc)
+      throw new Error("Unexpected: `this.proc` undefined when calling _killProcess");
+
+    if (process.platform === "win32") {
+      // looks like in Windows `self.proc.kill()` doesn't kill child
+      // processes.
+      utils.execFileSync("taskkill", ["/pid", this.proc.pid, '/f', '/t']);
+    } else {
+      this.proc.kill();
     }
   },
 
@@ -1262,7 +1375,7 @@ _.extend(Run.prototype, {
     self._ensureStarted();
 
     // If it's the first time we've called tellMongo on this sandbox,
-    // open a connection to fake-mongod. Wait up to 2 seconds for it
+    // open a connection to fake-mongod. Wait up to 10 seconds for it
     // to accept the connection, retrying every 100ms.
     //
     // XXX we never clean up this connection. Hopefully once
@@ -1274,7 +1387,7 @@ _.extend(Run.prototype, {
       var net = require('net');
 
       var lastStartTime = 0;
-      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 50;
+      for (var attempts = 0; ! self.fakeMongoConnection && attempts < 100;
            attempts ++) {
         // Throttle attempts to one every 100ms
         utils.sleepMs((lastStartTime + 100) - (+ new Date));
@@ -1359,22 +1472,22 @@ var getAllTests = function () {
 
   // Load all files in the 'tests' directory that end in .js. They
   // are supposed to then call define() to register their tests.
-  var testdir = path.join(__dirname, 'tests');
-  var filenames = fs.readdirSync(testdir);
+  var testdir = files.pathJoin(__dirname, 'tests');
+  var filenames = files.readdir(testdir);
   _.each(filenames, function (n) {
     if (! n.match(/^[^.].*\.js$/)) // ends in '.js', doesn't start with '.'
       return;
     try {
       if (fileBeingLoaded)
         throw new Error("called recursively?");
-      fileBeingLoaded = path.basename(n, '.js');
+      fileBeingLoaded = files.pathBasename(n, '.js');
 
-      var fullPath = path.join(testdir, n);
-      var contents = fs.readFileSync(fullPath, 'utf8');
+      var fullPath = files.pathJoin(testdir, n);
+      var contents = files.readFile(fullPath, 'utf8');
       fileBeingLoadedHash =
         require('crypto').createHash('sha1').update(contents).digest('hex');
 
-      require(path.join(testdir, n));
+      require(files.pathJoin(testdir, n));
     } finally {
       fileBeingLoaded = null;
       fileBeingLoadedHash = null;
@@ -1411,6 +1524,8 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
+  cordova: 'requires Cordova support in tool (eg not on Windows)',
+  windows: 'runs only on Windows',
   // these are pseudo-tags, assigned to tests when you specify
   // --changed, --file, or a pattern argument
   unchanged: 'unchanged since last pass',
@@ -1473,6 +1588,13 @@ var getFilteredTests = function (options) {
   }
   if (! options.includeSlowTests) {
     tagsToSkip.push('slow');
+  }
+
+  if (process.platform === "win32") {
+    tagsToSkip.push("cordova");
+    tagsToSkip.push("yet-unsolved-windows-failure");
+  } else {
+    tagsToSkip.push("windows");
   }
 
   return new TestList(allTests, tagsToSkip, testState);
@@ -1579,14 +1701,14 @@ TestList.prototype.generateSkipReport = function () {
 };
 
 var getTestStateFilePath = function () {
-  return path.join(process.env.HOME, '.meteortest');
+  return files.pathJoin(files.getHomeDir(), '.meteortest');
 };
 
 var readTestState = function () {
   var testStateFile = getTestStateFilePath();
   var testState;
-  if (fs.existsSync(testStateFile))
-    testState = JSON.parse(fs.readFileSync(testStateFile, 'utf8'));
+  if (files.exists(testStateFile))
+    testState = JSON.parse(files.readFile(testStateFile, 'utf8'));
   if (! testState || testState.version !== 1)
     testState = { version: 1, lastPassedHashes: {} };
   return testState;
@@ -1594,7 +1716,7 @@ var readTestState = function () {
 
 var writeTestState = function (testState) {
   var testStateFile = getTestStateFilePath();
-  fs.writeFileSync(testStateFile, JSON.stringify(testState), 'utf8');
+  files.writeFile(testStateFile, JSON.stringify(testState), 'utf8');
 };
 
 // Same options as getFilteredTests.  Writes to stdout and stderr.
@@ -1602,22 +1724,22 @@ var listTests = function (options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
-    Console.stderr.write("No tests defined.\n");
+    Console.error("No tests defined.\n");
     return;
   }
 
   _.each(_.groupBy(testList.filteredTests, 'file'), function (tests, file) {
-    Console.stdout.write(file + ':\n');
+    Console.rawInfo(file + ':\n');
     _.each(tests, function (test) {
-      Console.stdout.write('  - ' + test.name +
-                           (test.tags.length ? ' [' + test.tags.join(' ') + ']'
-                            : ''));
+      Console.rawInfo('  - ' + test.name +
+                      (test.tags.length ? ' [' + test.tags.join(' ') + ']'
+                      : '') + '\n');
     });
   });
 
-  Console.stderr.write('\n');
-  Console.stderr.write(testList.filteredTests.length + " tests listed.");
-  Console.stderr.write(testList.generateSkipReport());
+  Console.error();
+  Console.error(testList.filteredTests.length + " tests listed.");
+  Console.error(testList.generateSkipReport());
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1632,7 +1754,7 @@ var runTests = function (options) {
   var testList = getFilteredTests(options);
 
   if (! testList.allTests.length) {
-    Console.stderr.write("No tests defined.\n");
+    Console.error("No tests defined.");
     return 0;
   }
 
@@ -1641,101 +1763,106 @@ var runTests = function (options) {
 
   _.each(testList.filteredTests, function (test) {
     totalRun++;
-    Console.stderr.write(test.file + ": " + test.name + " ... ");
+    Console.error(test.file + ": " + test.name + " ... ");
 
     var failure = null;
     try {
       runningTest = test;
+      var startTime = +(new Date);
       test.f(options);
     } catch (e) {
-      if (e instanceof TestFailure) {
-        failure = e;
-      } else {
-        Console.stderr.write("exception\n\n");
-        throw e;
-      }
+      failure = e;
     } finally {
       runningTest = null;
       test.cleanup();
     }
 
     if (failure) {
-      Console.stderr.write("fail!\n");
+      Console.error("... fail!", Console.options({ indent: 2 }));
       failedTests.push(test);
       testList.notifyFailed(test);
 
-      var frames = parseStack.parse(failure);
-      var relpath = path.relative(files.getCurrentToolsDir(),
-                                  frames[0].file);
-      Console.stderr.write("  => " + failure.reason + " at " +
-                           relpath + ":" + frames[0].line + "\n");
-      if (failure.reason === 'no-match') {
-      }
-      if (failure.reason === "wrong-exit-code") {
-        var s = function (status) {
-          return status.signal || ('' + status.code) || "???";
-        };
-
-        Console.stderr.write("  => Expected: " + s(failure.details.expected) +
-                             "; actual: " + s(failure.details.actual) + "\n");
-      }
-      if (failure.reason === 'expected-exception') {
-      }
-      if (failure.reason === 'not-equal') {
-        Console.stderr.write(
-          "  => Expected: " + JSON.stringify(failure.details.expected) +
-            "; actual: " + JSON.stringify(failure.details.actual) + "\n");
-      }
-
-      if (failure.details.run) {
-        failure.details.run.outputLog.end();
-        var lines = failure.details.run.outputLog.get();
-        if (! lines.length) {
-          Console.stderr.write("  => No output\n");
-        } else {
-          var historyLines = options.historyLines || 100;
-
-          Console.stderr.write("  => Last " + historyLines + " lines:\n");
-          _.each(lines.slice(-historyLines), function (line) {
-            Console.stderr.write("  " +
-                                 (line.channel === "stderr" ? "2| " : "1| ") +
-                                 line.text +
-                                 (line.bare ? "%" : "") + "\n");
-          });
+      if (failure instanceof TestFailure) {
+        var frames = parseStack.parse(failure);
+        var relpath = files.pathRelative(files.getCurrentToolsDir(),
+                                         frames[0].file);
+        Console.rawError("  => " + failure.reason + " at " +
+                         relpath + ":" + frames[0].line + "\n");
+        if (failure.reason === 'no-match' || failure.reason === 'junk-before') {
+          Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
-      }
+        if (failure.reason === "wrong-exit-code") {
+          var s = function (status) {
+            return status.signal || ('' + status.code) || "???";
+          };
 
-      if (failure.details.messages) {
-        Console.stderr.write("  => Errors while building:\n");
-        Console.stderr.write(failure.details.messages.formatMessages());
+          Console.rawError(
+            "  => " + "Expected: " + s(failure.details.expected) +
+              "; actual: " + s(failure.details.actual) + "\n");
+        }
+        if (failure.reason === 'expected-exception') {
+        }
+        if (failure.reason === 'not-equal') {
+          Console.rawError(
+            "  => " + "Expected: " + JSON.stringify(failure.details.expected) +
+              "; actual: " + JSON.stringify(failure.details.actual) + "\n");
+        }
+
+        if (failure.details.run) {
+          failure.details.run.outputLog.end();
+          var lines = failure.details.run.outputLog.get();
+          if (! lines.length) {
+            Console.arrowError("No output", 2);
+          } else {
+            var historyLines = options.historyLines || 100;
+
+            Console.arrowError("Last " + historyLines + " lines:", 2);
+            _.each(lines.slice(-historyLines), function (line) {
+              Console.rawError("  " +
+                               (line.channel === "stderr" ? "2| " : "1| ") +
+                               line.text +
+                               (line.bare ? "%" : "") + "\n");
+            });
+          }
+        }
+
+        if (failure.details.messages) {
+          Console.arrowError("Errors while building:", 2);
+          Console.rawError(failure.details.messages.formatMessages() + "\n");
+        }
+      } else {
+        Console.rawError("  => Test threw exception: " + failure.stack + "\n");
       }
     } else {
-      Console.stderr.write("ok\n");
+      var durationMs = +(new Date) - startTime;
+      Console.error(
+        "... ok (" + durationMs + " ms)",
+        Console.options({ indent: 2 }));
     }
   });
 
   testList.saveTestState();
 
   if (totalRun > 0)
-    Console.stderr.write("\n");
+    Console.error();
 
-  Console.stderr.write(testList.generateSkipReport());
+  Console.error(testList.generateSkipReport());
 
   if (testList.filteredTests.length === 0) {
-    Console.stderr.write("No tests run.\n");
+    Console.error("No tests run.");
     return 0;
   } else if (failedTests.length === 0) {
     var disclaimers = '';
     if (testList.filteredTests.length < testList.allTests.length)
       disclaimers += " other";
-    Console.stderr.write("All" + disclaimers + " tests passed.\n");
+    Console.error("All" + disclaimers + " tests passed.");
     return 0;
   } else {
     var failureCount = failedTests.length;
-    Console.stderr.write(failureCount + " failure" +
-                         (failureCount > 1 ? "s" : "") + ":\n");
+    Console.error(failureCount + " failure" +
+                  (failureCount > 1 ? "s" : "") + ":");
     _.each(failedTests, function (test) {
-      Console.stderr.write("  - " + test.file + ": " + test.name);
+      Console.rawError("  - " + test.file + ": " + test.name + "\n");
     });
     return 1;
   }
@@ -1782,7 +1909,8 @@ _.extend(exports, {
   fail: fail,
   expectEqual: expectEqual,
   expectThrows: expectThrows,
-  getToolsPackage: getToolsPackage,
+  expectTrue: expectTrue,
+  expectFalse: expectFalse,
   execFileSync: execFileSync,
   doOrThrow: doOrThrow,
   testPackageServerUrl: config.getTestPackageServerUrl()

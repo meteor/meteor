@@ -1,5 +1,5 @@
 var Console = require('./console.js').Console;
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 
 var phantomjs = require('phantomjs');
 var child_process = require('child_process');
@@ -17,14 +17,23 @@ var _ = require('underscore');
 // 3. Open the app server with PhantomJS to run client side tests.
 // 4. Print the results and exit with the appropriate exit code.
 var runVelocity = function (url) {
-  var unipackages = uniload.load({
-    packages: [ 'ddp']
-  });
-  var DDP = unipackages.ddp.DDP;
+  var unipackages = isopackets.load('ddp');
+  var DDP = unipackages['ddp-client'].DDP;
 
   // XXX maybe a startup message so users know the tests are running.
 
+  // All running browser processes that visit the mirror pages
+  var browserProcesses = [];
+  // Maps mirror id to url
+  var mirrorUrls = {};
   var ddpConnection = DDP.connect(url);
+
+  var killBrowserProcesses = function () {
+    browserProcesses.forEach(function (browserProcess) {
+      browserProcess.kill('SIGINT');
+    });
+    browserProcesses = [];
+  };
 
   var interval = setInterval(function () {
     if (ddpConnection.status().status === "connected") {
@@ -32,8 +41,8 @@ var runVelocity = function (url) {
 
       ddpConnection.subscribe("VelocityTestReports", {
         onError: function () {
-          Console.stderr.write("failed to subscribe to VelocityTestReports "
-                               + "subscription");
+          Console.error("failed to subscribe to VelocityTestReports " +
+                        "subscription");
           // XXX tell user to add velocity:core
           // XXX these also fire if the user turns on autopublish
         }, onReady: function () {
@@ -67,8 +76,8 @@ var runVelocity = function (url) {
       var isFinished = false;
       ddpConnection.subscribe("VelocityAggregateReports", {
         onError: function () {
-          Console.stderr.write("failed to subscribe to " +
-                               "VelocityAggregateReports subscription");
+          Console.error("failed to subscribe to " +
+                        "VelocityAggregateReports subscription");
         }, onReady: function () {
           this.connection.registerStore("velocityAggregateReports", {
             update: function (msg) {
@@ -83,6 +92,7 @@ var runVelocity = function (url) {
                 if (report.name === "aggregateComplete" &&
                     report.result === "completed") {
                   setTimeout(function () {
+                    killBrowserProcesses();
                     if (aggregateResult === "passed") {
                       console.log("TESTS RAN SUCCESSFULLY");
                       // XXX XXX this is not great. We shouldn't be
@@ -106,27 +116,65 @@ var runVelocity = function (url) {
 
       function visitWithPhantom (url) {
         var phantomScript = "require('webpage').create().open('" + url + "');";
-        child_process.execFile(
+        var browserProcess = child_process.execFile(
           '/bin/bash',
           ['-c',
            ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
             phantomScript + "END\n")]);
+        browserProcesses.push(browserProcess);
       }
 
       ddpConnection.subscribe("VelocityMirrors", {
         onError: function (err) {
-          Console.stderr.write("failed to subscribe to VelocityMirrors " +
-                               "subscription", err);
+          Console.error("failed to subscribe to VelocityMirrors " +
+                        "subscription", err);
         }, onReady: function () {
           this.connection.registerStore("velocityMirrors", {
             update: function (msg) {
-              if (msg.msg === "added") {
-                visitWithPhantom(msg.fields.rootUrl);
+              if (isMirrorUrlMessage(msg)) {
+                mirrorUrls[msg.id] = generateMirrorUrl(
+                  msg.fields.rootUrl,
+                  msg.fields.rootUrlPath
+                );
+              }
+              if (isMirrorReadyMessage(msg)) {
+                var mirrorUrl = mirrorUrls[msg.id];
+                if (mirrorUrl) {
+                  visitWithPhantom(mirrorUrl);
+                } else {
+                  Console.error(
+                    "Could not find URL of mirror " +
+                    "with the MongoDB ID " + msg.id
+                  );
+                }
               }
             }
           });
         }
       });
+
+      function isUpdateMessage(msg) {
+        return msg.msg === "added" || msg.msg === "changed";
+      }
+
+      function isMirrorUrlMessage(msg) {
+        return isUpdateMessage(msg) && msg.fields.rootUrl;
+      }
+
+      function isMirrorReadyMessage(msg) {
+        return isUpdateMessage(msg) && msg.fields.state === "ready";
+      }
+
+      function generateMirrorUrl(rootUrl, rootUrlPath) {
+        var mirrorUrl = rootUrl;
+        // Handle the breaking change in velocity:core 0.5
+        // See: https://github.com/meteor-velocity/velocity/issues/260
+        if (rootUrlPath && mirrorUrl.indexOf(rootUrlPath) === -1) {
+          mirrorUrl += rootUrlPath;
+        }
+
+        return mirrorUrl;
+      }
     }
   }, 2000);
 };

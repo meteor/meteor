@@ -25,7 +25,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   Accounts.callLoginMethod({
     methodArguments: [{
       user: selector,
-      password: hashPassword(password)
+      password: Accounts._hashPassword(password)
     }],
     userCallback: function (error, result) {
       if (error && error.error === 400 &&
@@ -57,7 +57,7 @@ Meteor.loginWithPassword = function (selector, password, callback) {
   });
 };
 
-var hashPassword = function (password) {
+Accounts._hashPassword = function (password) {
   return {
     digest: SHA256(password),
     algorithm: "sha-256"
@@ -85,7 +85,7 @@ var srpUpgradePath = function (options, callback) {
       methodArguments: [{
         user: options.userSelector,
         srp: SHA256(details.identity + ":" + options.plaintextPassword),
-        password: hashPassword(options.plaintextPassword)
+        password: Accounts._hashPassword(options.plaintextPassword)
       }],
       userCallback: callback
     });
@@ -109,14 +109,14 @@ Accounts.createUser = function (options, callback) {
   options = _.clone(options); // we'll be modifying options
 
   if (typeof options.password !== 'string')
-    throw new Error("Must set options.password");
+    throw new Error("options.password must be a string");
   if (!options.password) {
     callback(new Meteor.Error(400, "Password may not be empty"));
     return;
   }
 
   // Replace password with the hashed password.
-  options.password = hashPassword(options.password);
+  options.password = Accounts._hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
@@ -156,7 +156,8 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
 
   Accounts.connection.apply(
     'changePassword',
-    [oldPassword ? hashPassword(oldPassword) : null, hashPassword(newPassword)],
+    [oldPassword ? Accounts._hashPassword(oldPassword) : null,
+     Accounts._hashPassword(newPassword)],
     function (error, result) {
       if (error || !result) {
         if (error && error.error === 400 &&
@@ -234,7 +235,7 @@ Accounts.resetPassword = function(token, newPassword, callback) {
 
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
-    methodArguments: [token, hashPassword(newPassword)],
+    methodArguments: [token, Accounts._hashPassword(newPassword)],
     userCallback: callback});
 };
 

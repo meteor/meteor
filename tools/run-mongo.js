@@ -1,21 +1,18 @@
-var fs = require("fs");
-var path = require("path");
-
 var files = require('./files.js');
 var utils = require('./utils.js');
-var release = require('./release.js');
 var mongoExitCodes = require('./mongo-exit-codes.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var runLog = require('./run-log.js');
+var child_process = require('child_process');
 
 var _ = require('underscore');
-var uniload = require('./uniload.js');
+var isopackets = require("./isopackets.js");
 var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal
 // on that database.
 var runMongoShell = function (url) {
-  var mongoPath = path.join(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
+  var mongoPath = files.pathJoin(files.getDevBundle(), 'mongodb', 'bin', 'mongo');
   // XXX mongo URLs are not real URLs (notably, the comma-separation for
   // multiple hosts). We've had a little better luck using the mongodb-uri npm
   // package.
@@ -29,64 +26,188 @@ var runMongoShell = function (url) {
   if (auth) args.push('-p', auth[1]);
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
-  var child_process = require('child_process');
-  var proc = child_process.spawn(mongoPath,
-                                 args,
-                                 { stdio: 'inherit' });
+  child_process.spawn(files.convertToOSPath(mongoPath),
+    args, { stdio: 'inherit' });
 };
 
+// Start mongod with a dummy replSet and wait for it to listen.
+var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
+  var child_process = require('child_process');
+
+  mongodPath = files.convertToOSPath(mongodPath);
+  dbPath = files.convertToOSPath(dbPath);
+
+  return child_process.spawn(mongodPath, [
+      // nb: cli-test.sh and findMongoPids make strong assumptions about the
+      // order of the arguments! Check them before changing any arguments.
+      '--bind_ip', '127.0.0.1',
+      '--smallfiles',
+      '--port', port,
+      '--dbpath', dbPath,
+      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
+      // initializes faster. (Not recommended for production!)
+      '--oplogSize', '8',
+      '--replSet', replSetName
+  ], {
+    // Apparently in some contexts, Mongo crashes if your locale isn't set up
+    // right. I wasn't able to reproduce it, but many people on #4019
+    // were. Let's default a couple environment variables to English UTF-8 if
+    // they aren't set already. If these few aren't good enough, we'll at least
+    // detect the locale error and print a link to #4019 (look for
+    // `detectedErrors.badLocale` below).
+    env: _.extend({
+      LANG: 'en_US.UTF-8',
+      LC_ALL: 'en_US.UTF-8'
+    }, process.env)
+  });
+};
 
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
 // appDir and port act as filters on the list of running mongos.
 //
 // Yields. Returns an array of objects with keys pid, port, appDir.
-var findMongoPids = function (appDir, port) {
-  var fut = new Future;
+var findMongoPids;
+if (process.platform === 'win32') {
+  // Windows doesn't have a ps equivalent that (reliably) includes the command
+  // line, so approximate using the combined output of tasklist and netstat.
+  findMongoPids = function (app_dir, port) {
+    var fut = new Future;
 
-  // 'ps ax' should be standard across all MacOS and Linux.
-  var child_process = require('child_process');
-  child_process.exec(
-    'ps ax',
-    // we don't want this to randomly fail just because you're running lots of
-    // processes. 10MB should be more than ps ax will ever spit out; the default
-    // is 200K, which at least one person hit (#2158).
-    {maxBuffer: 1024 * 1024 * 10},
-    function (error, stdout, stderr) {
-      if (error) {
-        fut['throw'](new Error("Couldn't run ps ax: " + JSON.stringify(error) +
-                               "; " + error.message));
-        return;
-      }
-
-      var ret = [];
-      _.each(stdout.split('\n'), function (line) {
-        // Matches mongos we start. Note that this matches
-        // 'fake-mongod' (our mongod stub for automated tests) as well
-        // as 'mongod'.
-        var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db/);
-        if (m && m.length === 4) {
-          var foundPid =  parseInt(m[1]);
-          var foundPort = parseInt(m[2]);
-          var foundPath = m[3];
-
-          if ( (! port || port === foundPort) &&
-               (! appDir || appDir === foundPath)) {
-            ret.push({
-              pid: foundPid,
-              port: foundPort,
-              appDir: foundPath
-            });
+    child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
+      function (error, stdout, stderr) {
+        if (error) {
+          var additionalInfo = JSON.stringify(error);
+          if (error.code === 'ENOENT') {
+            additionalInfo = "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
           }
+          fut['throw'](new Error("Couldn't run tasklist.exe: " +
+            additionalInfo));
+          return;
+        } else {
+          // Find the pids of all mongod processes
+          var mongo_pids = [];
+          _.each(stdout.split('\n'), function (line) {
+            var m = line.match(/^mongod.exe\s+(\d+) /);
+            if (m) {
+              mongo_pids[m[1]] = true;
+            }
+          });
+
+          // Now get the corresponding port numbers
+          child_process.exec(
+            'netstat -ano',
+            {maxBuffer: 1024 * 1024 * 10},
+            function (error, stdout, stderr) {
+            if (error) {
+              fut['throw'](new Error("Couldn't run netstat -ano: " +
+                JSON.stringify(error)));
+              return;
+            } else {
+              var pids = [];
+              _.each(stdout.split('\n'), function (line) {
+                var m = line.match(/^\s*TCP\s+\S+:(\d+)\s+\S+\s+LISTENING\s+(\d+)/);
+                if (m) {
+                  var found_pid =  parseInt(m[2], 10);
+                  var found_port = parseInt(m[1], 10);
+
+                  // We can't check the path app_dir so assume it always matches
+                  if (mongo_pids[found_pid] && (!port || port === found_port)) {
+                    // Note that if the mongo rest interface is enabled the
+                    // initial port + 1000 is also likely to be open.
+                    // So remove the pid so we only match it once.
+                    delete mongo_pids[found_pid];
+                    pids.push({
+                      pid: found_pid,
+                      port: found_port,
+                      app_dir: null});
+                  }
+                }
+              });
+
+              fut['return'](pids);
+            }
+          });
         }
       });
 
-      fut['return'](ret);
-    });
+    return fut.wait();
+  };
+} else {
+  findMongoPids = function (appDir, port) {
+    var fut = new Future;
 
-  return fut.wait();
-};
+    // 'ps ax' should be standard across all MacOS and Linux.
+    // However, ps on OS X corrupts some non-ASCII characters in arguments,
+    // such as т (CYRILLIC SMALL LETTER TE), leading to this function
+    // failing to properly match pathnames with those characters.  #3999
+    //
+    // pgrep appears to do a better job (and has output that is roughly
+    // similar; it lacks a few fields that we don't care about).  Plus,
+    // it can do some of the grepping for us.
+    //
+    // However, 'pgrep' only started shipping with OS X 10.8 (and may be less
+    // common on Linux too), so we check to see if it exists and fall back to
+    // 'ps' if we can't find it.
+    //
+    // We avoid using pgrep on Linux, because some versions of Linux pgrep
+    // require you to pass -a/--list-full to include the arguments in the
+    // output, and other versions fail if you pass that option. We have not
+    // observed the Unicode corruption on Linux, so using ps ax there is fine.
+    var psScript = 'ps ax';
+    if (process.platform === 'darwin') {
+      psScript =
+        'if type pgrep >/dev/null 2>&1; then ' +
+        // -lf means to display and match against full argument lists.
+        // pgrep exits 1 if no processes match the argument; we're OK
+        // considering this as a success, but we don't want other errors
+        // to be ignored.  Note that this is sh not bash, so we can't use
+        // [[.
+        'pgrep -lf mongod; test "$?" -eq 0 -o "$?" -eq 1;' +
+        'else ps ax; fi';
+    }
 
+    child_process.exec(
+      psScript,
+      // we don't want this to randomly fail just because you're running lots of
+      // processes. 10MB should be more than ps ax will ever spit out; the default
+      // is 200K, which at least one person hit (#2158).
+      {maxBuffer: 1024 * 1024 * 10},
+      function (error, stdout, stderr) {
+        if (error) {
+          fut['throw'](new Error("Couldn't run ps ax: " +
+            JSON.stringify(error) + "; " + error.message));
+          return;
+        }
+
+        var ret = [];
+        _.each(stdout.split('\n'), function (line) {
+          // Matches mongos we start. Note that this matches
+          // 'fake-mongod' (our mongod stub for automated tests) as well
+          // as 'mongod'.
+          var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db/);
+          if (m && m.length === 4) {
+            var foundPid =  parseInt(m[1], 10);
+            var foundPort = parseInt(m[2], 10);
+            var foundPath = m[3];
+
+            if ( (! port || port === foundPort) &&
+                 (! appDir || appDir === foundPath)) {
+              ret.push({
+                pid: foundPid,
+                port: foundPort,
+                appDir: foundPath
+              });
+            }
+          }
+        });
+
+        fut['return'](ret);
+      });
+
+    return fut.wait();
+  };
+}
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
@@ -107,20 +228,58 @@ var findMongoPort = function (appDir) {
   return pids[0].port;
 };
 
+// XXX actually -- the code below is probably more correct than the code we
+// have above for non-Windows platforms (since that code relies on
+// `findMongoPids`). But changing this a few days before the 1.1 release
+// seemed too bold. But if you're changing code around here, consider using
+// the implementation below on non-Windows platforms as well.
+if (process.platform === 'win32') {
+  // On Windows, finding the Mongo pid, checking it and extracting the port
+  // is often unreliable (XXX reliable in what specific way?). There is an
+  // easier way to find the port of running Mongo: look it up in a METEOR-
+  // PORT file that we generate when running. This may result into problems
+  // where we try to connect to a mongod that is not running, or a wrong
+  // mongod if our current app is not running but there is a left-over file
+  // lying around. This still can be better than always failing to connect.
+  findMongoPort = function (appDir) {
+    var mongoPort = null;
+
+    var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
+    if (files.exists(portFile)) {
+      mongoPort = files.readFile(portFile, 'utf8').replace(/\s/g, '');
+    }
+
+    // Now, check if there really is a Mongo server running on this port.
+    // (The METEOR-PORT file may point to an old Mongo server that's now
+    // stopped)
+    var net = require('net');
+    var mongoTestConnectFuture = new Future;
+    var client = net.connect({port: mongoPort}, function() {
+      // The server is running.
+      client.end();
+      mongoTestConnectFuture.return();
+    });
+    client.on('error', function () {
+      mongoPort = null;
+      mongoTestConnectFuture.return();
+    });
+    mongoTestConnectFuture.wait();
+
+    return mongoPort;
+  }
+}
+
 
 // Kill any mongos running on 'port'. Yields, and returns once they
 // are all dead. Throws an exception on failure.
 //
 // This is a big hammer for dealing with still running mongos, but
 // smaller hammers have failed before and it is getting tiresome.
-var findMongoAndKillItDead = function (port) {
+var findMongoAndKillItDead = function (port, dbPath) {
   var pids = findMongoPids(null, port);
 
-  if (! pids.length)
-    return; // nothing to kill
-
   // Go through the list serially. There really should only ever be
-  // one but we're not taking any chances.
+  // at most one but we're not taking any chances.
   _.each(pids, function (processInfo) {
     var pid = processInfo.pid;
 
@@ -150,6 +309,14 @@ var findMongoAndKillItDead = function (port) {
     // for the user.
     throw new Error("Can't kill running mongo (pid " + pid + ").");
   });
+
+  // If we had to kill mongod with SIGKILL, or on Windows where all calls to
+  // `process.kill` work like SIGKILL, mongod will not have the opportunity to
+  // close gracefully. Delete a lock file that may have been left over.
+  var mongodLockFile = files.pathJoin(dbPath, "mongod.lock");
+  if (files.exists(mongodLockFile)) {
+    files.unlink(mongodLockFile)
+  }
 };
 
 var StoppedDuringLaunch = function () {};
@@ -172,7 +339,7 @@ var launchMongo = function (options) {
   var onExit = options.onExit || function () {};
 
   var noOplog = false;
-  var mongod_path = path.join(
+  var mongod_path = files.pathJoin(
     files.getDevBundle(), 'mongodb', 'bin', 'mongod');
   var replSetName = 'meteor';
 
@@ -183,8 +350,11 @@ var launchMongo = function (options) {
     if (options.multiple)
       throw Error("Can't specify multiple with fake mongod");
 
-    mongod_path = path.join(files.getCurrentToolsDir(),
-                            'tools', 'tests', 'fake-mongod', 'fake-mongod');
+    var fakeMongodCommand =
+      process.platform === "win32" ? "fake-mongod.bat" : "fake-mongod";
+    mongod_path = files.pathJoin(
+      files.getCurrentToolsDir(), 'tools',
+      'tests', 'fake-mongod', fakeMongodCommand);
 
     // oplog support requires sending admin commands to mongod, so
     // it'd be hard to make fake-mongod support it.
@@ -192,20 +362,17 @@ var launchMongo = function (options) {
   }
 
   // add .gitignore if needed.
-  files.addToGitignore(path.join(options.appDir, '.meteor'), 'local');
+  files.addToGitignore(files.pathJoin(options.appDir, '.meteor'), 'local');
 
   var subHandles = [];
   var stopped = false;
   var stopFuture = new Future;
 
   // Like Future.wrap and _.bind in one.
-  var yieldingMethod = function (/* object, methodName, args */) {
-    var args = _.toArray(arguments);
-    var object = args.shift();
-    var methodName = args.shift();
+  var yieldingMethod = function (object, methodName, ...args) {
     var f = new Future;
     args.push(f.resolver());
-    object[methodName].apply(object, args);
+    object[methodName](...args);
     return fiberHelpers.waitForOne(stopFuture, f);
   };
 
@@ -224,23 +391,25 @@ var launchMongo = function (options) {
 
   var launchOneMongoAndWaitForReadyForInitiate = function (dbPath, port,
                                                            portFile) {
-    files.mkdir_p(dbPath, 0755);
+    files.mkdir_p(dbPath, 0o755);
 
     var proc = null;
     var procExitHandler;
 
-    findMongoAndKillItDead(port);
+    if (options.allowKilling) {
+      findMongoAndKillItDead(port, dbPath);
+    }
 
     if (options.multiple) {
       // This is only for testing, so we're OK with incurring the replset
       // setup on each startup.
       files.rm_recursive(dbPath);
-      files.mkdir_p(dbPath, 0755);
+      files.mkdir_p(dbPath, 0o755);
     } else if (portFile) {
       var portFileExists = false;
       var matchingPortFileExists = false;
       try {
-        matchingPortFileExists = +(fs.readFileSync(portFile)) === port;
+        matchingPortFileExists = +(files.readFile(portFile)) === port;
         portFileExists = true;
       } catch (e) {
         if (!e || e.code !== 'ENOENT')
@@ -260,43 +429,30 @@ var launchMongo = function (options) {
         // Delete the port file if it exists, so we don't mistakenly believe
         // that the DB is still configured.
         if (portFileExists)
-          fs.unlinkSync(portFile);
+          files.unlink(portFile);
 
         try {
-          var dbFiles = fs.readdirSync(dbPath);
+          var dbFiles = files.readdir(dbPath);
         } catch (e) {
           if (!e || e.code !== 'ENOENT')
             throw e;
         }
         _.each(dbFiles, function (dbFile) {
           if (/^local\./.test(dbFile)) {
-            fs.unlinkSync(path.join(dbPath, dbFile));
+            files.unlink(files.pathJoin(dbPath, dbFile));
           }
         });
       }
     }
-
-    // Start mongod with a dummy replSet and wait for it to listen.
-    var child_process = require('child_process');
 
     // Let's not actually start a process if we yielded (eg during
     // findMongoAndKillItDead) and we decided to stop in the middle (eg, because
     // we're in multiple mode and another process exited).
     if (stopped)
       return;
-    proc = child_process.spawn(mongod_path, [
-      // nb: cli-test.sh and findMongoPids make strong assumptions about the
-      // order of the arguments! Check them before changing any arguments.
-      '--bind_ip', '127.0.0.1',
-      '--smallfiles',
-      '--nohttpinterface',
-      '--port', port,
-      '--dbpath', dbPath,
-      // Use an 8MB oplog rather than 256MB. Uses less space on disk and
-      // initializes faster. (Not recommended for production!)
-      '--oplogSize', '8',
-      '--replSet', replSetName
-    ]);
+
+    proc = spawnMongod(mongod_path, port, dbPath, replSetName);
+
     subHandles.push({
       stop: function () {
         if (proc) {
@@ -317,7 +473,7 @@ var launchMongo = function (options) {
       handle.stop();
 
       // Invoke the outer onExit callback.
-      onExit(code, signal, stderrOutput);
+      onExit(code, signal, stderrOutput, detectedErrors);
     });
     proc.on('exit', procExitHandler);
 
@@ -336,6 +492,7 @@ var launchMongo = function (options) {
       }
     };
 
+    var detectedErrors = {};
     var stdoutOnData = fiberHelpers.bindEnvironment(function (data) {
       // note: don't use "else ifs" in this, because 'data' can have multiple
       // lines
@@ -352,6 +509,14 @@ var launchMongo = function (options) {
       if (/ \[rsMgr\] replSet (PRIMARY|SECONDARY)/.test(data)) {
         replSetReady = true;
         maybeReadyToTalk();
+      }
+
+      if (/Insufficient free space/.test(data)) {
+        detectedErrors.freeSpace = true;
+      }
+
+      if (/Invalid or no user locale set/.test(data)) {
+        detectedErrors.badLocale = true;
       }
     });
     proc.stdout.setEncoding('utf8');
@@ -370,9 +535,8 @@ var launchMongo = function (options) {
   var initiateReplSetAndWaitForReady = function () {
     try {
       // Load mongo so we'll be able to talk to it.
-      var mongoNpmModule = uniload.load({
-        packages: [ 'mongo' ]
-      })['mongo'].MongoInternals.NpmModule;
+      var mongoNpmModule =
+            isopackets.load('mongo')['npm-mongo'].NpmModuleMongodb;
 
       // Connect to the intended primary and start a replset.
       var db = new mongoNpmModule.Db(
@@ -474,27 +638,27 @@ var launchMongo = function (options) {
 
   try {
     if (options.multiple) {
-      var dbBasePath = path.join(options.appDir, '.meteor', 'local', 'dbs');
+      var dbBasePath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs');
       _.each(_.range(3), function (i) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
         if (stopped)
           return;
-        var dbPath = path.join(options.appDir, '.meteor', 'local', 'dbs', ''+i);
+        var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs', ''+i);
         launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
       });
       if (!stopped) {
         initiateReplSetAndWaitForReady();
       }
     } else {
-      var dbPath = path.join(options.appDir, '.meteor', 'local', 'db');
-      var portFile = !noOplog && path.join(dbPath, 'METEOR-PORT');
+      var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'db');
+      var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
         initiateReplSetAndWaitForReady();
         if (!stopped) {
           // Write down that we configured the database properly.
-          fs.writeFileSync(portFile, options.port);
+          files.writeFile(portFile, options.port);
         }
       }
     }
@@ -528,16 +692,19 @@ var MongoRunner = function (options) {
   self.errorCount = 0;
   self.errorTimer = null;
   self.restartTimer = null;
+  self.firstStart = true;
+  self.suppressExitMessage = false;
 };
 
-_.extend(MongoRunner.prototype, {
-  // Blocks (yields) until the server has started for the first time
-  // and is accepting connections. (It might subsequently die and be
-  // restarted; we won't tell you about that.) Returns true if we were
-  // able to get it to start at least once.
+var MRp = MongoRunner.prototype;
+
+_.extend(MRp, {
+  // Blocks (yields) until the server has started for the first time and
+  // is accepting connections. (It might subsequently die and be
+  // restarted; we won't tell you about that.)
   //
   // If the server fails to start for the first time (after a few
-  // restarts), we'll print a message and give up, returning false.
+  // restarts), we'll print a message and give up.
   start: function () {
     var self = this;
 
@@ -578,18 +745,32 @@ _.extend(MongoRunner.prototype, {
     if (self.handle)
       throw new Error("already running?");
 
+    var allowKilling = self.multiple || self.firstStart;
+    self.firstStart = false;
+    if (! allowKilling) {
+      // If we're not going to try to kill an existing mongod first, then we
+      // shouldn't annoy the user by telling it that we couldn't start up.
+      self.suppressExitMessage = true;
+    }
+
     self.handle = launchMongo({
       appDir: self.appDir,
       port: self.port,
       multiple: self.multiple,
+      allowKilling: allowKilling,
       onExit: _.bind(self._exited, self)
     });
+
+    // It has successfully started up, so if it exits after this point, that
+    // actually is an interesting fact and we shouldn't suppress it.
+    self.suppressExitMessage = false;
+
     if (self.handle) {
       self._allowStartupToReturn();
     }
   },
 
-  _exited: function (code, signal, stderr) {
+  _exited: function (code, signal, stderr, detectedErrors) {
     var self = this;
 
     self.handle = null;
@@ -600,11 +781,17 @@ _.extend(MongoRunner.prototype, {
     if (self.shuttingDown)
       return;
 
-    // Print the last 20 lines of stderr.
-    runLog.log(
-      stderr.split('\n').slice(-20).join('\n') +
-      "Unexpected mongo exit code " + code +
-        (self.multiple ? "." : ". Restarting."));
+    // Only print an error if we tried to kill Mongo and something went
+    // wrong. If we didn't try to kill Mongo, we'll do that on the next
+    // restart. Not killing it on the first try is important for speed,
+    // since findMongoAndKillItDead is a very slow operation.
+    if (! self.suppressExitMessage) {
+      // Print the last 20 lines of stderr.
+      runLog.log(
+        stderr.split('\n').slice(-20).join('\n') +
+          "Unexpected mongo exit code " + code +
+          (self.multiple ? "." : ". Restarting."));
+    }
 
     // If we're in multiple mode, we never try to restart. That's to keep the
     // test-only multiple code simple.
@@ -639,8 +826,13 @@ _.extend(MongoRunner.prototype, {
     var explanation = mongoExitCodes.Codes[code];
     var message = "Can't start Mongo server.";
 
-    if (explanation)
+    if (explanation && explanation.symbol === 'EXIT_UNCAUGHT' &&
+        detectedErrors.freeSpace) {
+      message += "\n\n" +
+        "Looks like you are out of free disk space under .meteor/local.";
+    } else if (explanation) {
       message += "\n" + explanation.longText;
+    }
 
     if (explanation === mongoExitCodes.EXIT_NET_ERROR) {
       message += "\n\n" +
@@ -653,6 +845,12 @@ _.extend(MongoRunner.prototype, {
 "Looks like you are trying to run Meteor on an old Linux distribution.\n" +
 "Meteor on Linux requires glibc version 2.9 or above. Try upgrading your\n" +
 "distribution to the latest version.";
+    }
+
+    if (detectedErrors.badLocale) {
+      message += "\n\n" +
+"Looks like MongoDB doesn't understand your locale settings. See\n" +
+"https://github.com/meteor/meteor/issues/4019 for more details.";
     }
 
     runLog.log(message);
@@ -719,3 +917,4 @@ _.extend(MongoRunner.prototype, {
 exports.runMongoShell = runMongoShell;
 exports.findMongoPort = findMongoPort;
 exports.MongoRunner = MongoRunner;
+exports.findMongoAndKillItDead = findMongoAndKillItDead;

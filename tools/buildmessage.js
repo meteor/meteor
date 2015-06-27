@@ -13,6 +13,14 @@ var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 // several jobs. Each job has an (absolute) path associated with
 // it. Filenames in messages within a job are to be interpreted
 // relative to that path.
+//
+// Jobs are used both for error handling (via buildmessage.capture) and to set
+// the progress bar title (via progress.js).
+//
+// Job titles should begin with a lower-case letter (unless they begin with a
+// proper noun), so that they look correct in error messages which say "While
+// jobbing the job".  The first letter will be capitalized automatically for the
+// progress bar.
 var Job = function (options) {
   var self = this;
   self.messages = [];
@@ -37,6 +45,13 @@ _.extend(Job.prototype, {
   hasMessages: function () {
     var self = this;
     return self.messages.length > 0;
+  },
+
+  hasMessageWithTag: function (tagName) {
+    var self = this;
+    return _.any(self.messages, function (message) {
+      return message.tags && _.has(message.tags, tagName);
+    });
   },
 
   // Returns a multi-line string suitable for displaying to the user
@@ -136,8 +151,15 @@ _.extend(MessageSet.prototype, {
 
   hasMessages: function () {
     var self = this;
-    return !! _.find(self.jobs, function (job) {
+    return _.any(self.jobs, function (job) {
       return job.hasMessages();
+    });
+  },
+
+  hasMessageWithTag: function (tagName) {
+    var self = this;
+    return _.any(self.jobs, function (job) {
+      return job.hasMessageWithTag(tagName);
     });
   },
 
@@ -195,13 +217,10 @@ var getCurrentProgressTracker = function () {
   return progress ? progress : rootProgress;
 };
 
-var nudge = function () {
-  getCurrentProgressTracker().nudge();
-};
-
 var addChildTracker = function (title) {
   var options = {};
-  options.title = title;
+  if (title !== undefined)
+    options.title = title;
   return getCurrentProgressTracker().addChildTask(options);
 };
 
@@ -218,19 +237,10 @@ var capture = function (options, f) {
   var messageSet = new MessageSet;
   var parentMessageSet = currentMessageSet.get();
 
-  {
-    var parentProgress = currentProgress.get();
-    if (!parentProgress) {
-      parentProgress = rootProgress;
-    }
-    var childOptions = {};
-    if (typeof options === "object") {
-      if (options.title) {
-        childOptions.title = options.title;
-      }
-    }
-    var progress = parentProgress.addChildTask(childOptions);
-  }
+  var title;
+  if (typeof options === "object" && options.title)
+    title = options.title;
+  var progress = addChildTracker(title);
 
   currentProgress.withValue(progress, function () {
     currentMessageSet.withValue(messageSet, function () {
@@ -285,12 +295,12 @@ var enterJob = function (options, f) {
     options = {};
   }
 
+  if (typeof options === "string") {
+    options = {title: options};
+  }
+
   var progress;
   {
-    var parentProgress = currentProgress.get();
-    if (!parentProgress) {
-      parentProgress = rootProgress;
-    }
     var progressOptions = {};
     // XXX: Just pass all the options?
     if (typeof options === "object") {
@@ -301,7 +311,7 @@ var enterJob = function (options, f) {
         progressOptions.forkJoin = options.forkJoin;
       }
     }
-    progress = parentProgress.addChildTask(progressOptions);
+    progress = getCurrentProgressTracker().addChildTask(progressOptions);
   }
 
   return currentProgress.withValue(progress, function () {
@@ -313,7 +323,9 @@ var enterJob = function (options, f) {
         console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
       }
       try {
-        return f();
+        return currentNestingLevel.withValue(nestingLevel + 1, function () {
+          return f();
+        });
       } finally {
         progress.reportProgressDone();
         if (debugBuild) {
@@ -334,7 +346,7 @@ var enterJob = function (options, f) {
         var start;
         if (debugBuild) {
           start = Date.now();
-          console.log("START", nestingLevel, options.title);
+          console.log(spaces(nestingLevel * 2), "START", nestingLevel, options.title);
         }
         try {
           return f();
@@ -342,7 +354,7 @@ var enterJob = function (options, f) {
           progress.reportProgressDone();
           if (debugBuild) {
             var end = Date.now();
-            console.log("DONE", nestingLevel, options.title, "took " + (end - start));
+            console.log(spaces(nestingLevel * 2), "DONE", nestingLevel, options.title, "took " + (end - start));
           }
         }
       });
@@ -396,6 +408,9 @@ var markBoundary = function (f) {
 //   errors in this job (the implication is that it's probably
 //   downstream of the other error, ie, a consequence of our attempt
 //   to continue past other errors)
+// - tags: object with other error-specific data; there is a method
+//   on MessageSet which can search for errors with a specific named
+//   tag.
 var error = function (message, options) {
   options = options || {};
 
@@ -415,9 +430,10 @@ var error = function (message, options) {
   if ('useMyCaller' in info) {
     if (info.useMyCaller) {
       info.stack = parseStack.parse(new Error()).slice(2);
-      var howManyToSkip = (
-        typeof info.useMyCaller === "number" ? info.useMyCaller : 0);
-      var caller = info.stack[howManyToSkip];
+      if (typeof info.useMyCaller === 'number') {
+        info.stack = info.stack.slice(info.useMyCaller);
+      }
+      var caller = info.stack[0];
       info.func = caller.func;
       info.file = caller.file;
       info.line = caller.line;
@@ -483,6 +499,19 @@ var assertInCapture = function () {
     throw new Error("Expected to be in a buildmessage capture");
 };
 
+var mergeMessagesIntoCurrentJob = function (innerMessages) {
+  var outerMessages = currentMessageSet.get();
+  if (! outerMessages)
+    throw new Error("Expected to be in a buildmessage capture");
+  var outerJob = currentJob.get();
+  if (! outerJob)
+    throw new Error("Expected to be in a buildmessage job");
+  _.each(innerMessages.jobs, function (j) {
+    outerJob.children.push(j);
+  });
+  outerMessages.merge(innerMessages);
+};
+
 // Like _.each, but runs each operation in a separate job
 var forkJoin = function (options, iterable, fn) {
   if (!_.isFunction(fn)) {
@@ -501,30 +530,23 @@ var forkJoin = function (options, iterable, fn) {
   options.forkJoin = true;
 
   enterJob(options, function () {
-    var job = currentJob.get();
-    var messageSet = currentMessageSet.get();
-    var progress = currentProgress.get();
-
     var parallel = (options.parallel !== undefined) ? options.parallel : true;
     if (parallel) {
-      _.each(iterable, function (/*arguments*/) {
-        var fut = new Future();
-        var fnArguments = arguments;
-        Fiber(function () {
-          currentProgress.withValue(progress, function () {
-            currentMessageSet.withValue(messageSet, function () {
-              currentJob.withValue(job, function () {
-                try {
-                  var result = enterJob({title: (options.title || '') + ' child' }, function () {
-                    return fn.apply(null, fnArguments);
-                  });
-                  fut['return'](result);
-                } catch (e) {
-                  fut['throw'](e);
-                }
-              });
-            });
+      var runOne = fiberHelpers.bindEnvironment(function (fut, fnArguments) {
+        try {
+          var result = enterJob({title: (options.title || '') + ' child'}, function () {
+            return fn.apply(null, fnArguments);
           });
+          fut['return'](result);
+        } catch (e) {
+          fut['throw'](e);
+        }
+      });
+
+      _.each(iterable, function (...args) {
+        var fut = new Future();
+        Fiber(function () {
+          runOne(fut, args);
         }).run();
         futures.push(fut);
       });
@@ -545,10 +567,9 @@ var forkJoin = function (options, iterable, fn) {
       });
     } else {
       // not parallel
-      _.each(iterable, function (/*arguments*/) {
-        var fnArguments = arguments;
+      _.each(iterable, function (...args) {
         try {
-          var result = fn.apply(null, fnArguments);
+          var result = fn(...args);
           results.push(result);
           errors.push(null);
         } catch (e) {
@@ -581,11 +602,11 @@ _.extend(exports, {
   jobHasMessages: jobHasMessages,
   assertInJob: assertInJob,
   assertInCapture: assertInCapture,
+  mergeMessagesIntoCurrentJob: mergeMessagesIntoCurrentJob,
   forkJoin: forkJoin,
   getRootProgress: getRootProgress,
   reportProgress: reportProgress,
   reportProgressDone: reportProgressDone,
   getCurrentProgressTracker: getCurrentProgressTracker,
-  addChildTracker: addChildTracker,
-  nudge: nudge
+  addChildTracker: addChildTracker
 });

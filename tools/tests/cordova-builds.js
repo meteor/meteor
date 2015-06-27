@@ -1,28 +1,20 @@
-var fs = require("fs");
-var path = require("path");
-var _ = require('underscore');
-
 var files = require('../files.js');
 var selftest = require('../selftest.js');
+var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
 
 var checkMobileServer = selftest.markStack(function (s, expected) {
   var output = s.read("android/project/assets/www/application/index.html");
-  if (! output.match(new RegExp(
-    '"DDP_DEFAULT_CONNECTION_URL":"' + expected + '"'))) {
-    selftest.fail(
-      "Wrong DDP_DEFAULT_CONNECTION_URL; expected " + expected + ".\n" +
-        "Application index.html:\n" +
-        output);
-  }
+  var mrc = testUtils.getMeteorRuntimeConfigFromHTML(output);
+  selftest.expectEqual(mrc.DDP_DEFAULT_CONNECTION_URL, expected);
 });
 
 var cleanUpBuild = function (s) {
-  files.rm_recursive(path.join(s.cwd, "android"));
-  fs.unlinkSync(path.join(s.cwd, "myapp.tar.gz"));
+  files.rm_recursive(files.pathJoin(s.cwd, "android"));
+  files.unlink(files.pathJoin(s.cwd, "myapp.tar.gz"));
 };
 
-selftest.define("cordova builds with server options", ["slow"], function () {
+selftest.define("cordova builds with server options", ["cordova", "slow"], function () {
   var s = new Sandbox();
   var run;
 
@@ -30,13 +22,13 @@ selftest.define("cordova builds with server options", ["slow"], function () {
   s.cd("myapp");
 
   run = s.run("install-sdk", "android");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.expectExit(0);
 
   run = s.run("add-platform", "android");
   run.match("Do you agree");
   run.write("Y\n");
-  run.extraTime = 90; // Huge download
+  run.waitSecs(90); // Huge download
   run.match("added");
   run.expectExit(0);
 
