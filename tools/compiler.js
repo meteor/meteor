@@ -236,6 +236,9 @@ var lintUnibuild = function (options) {
     });
   });
 
+  // bail out early if there is not much to run
+  if (! allLinters.length) { return; }
+
   var watchSet = new watch.WatchSet;
   var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
   var wrappedSourceItems = _.map(sourceItems, function (source) {

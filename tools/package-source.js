@@ -1173,7 +1173,7 @@ _.extend(PackageSource.prototype, {
       sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
-      sourceArch.getSourcesFunc = function (extensions, watchSet) {
+      sourceArch.getSourcesFunc = _.once(function (extensions, watchSet) {
         var sourceInclude = _.map(
           extensions,
           function (isTemplate, ext) {
@@ -1341,7 +1341,7 @@ _.extend(PackageSource.prototype, {
         }
 
         return sources;
-      };
+      });
     });
 
     if (! self._checkCrossUnibuildVersionConstraints()) {
