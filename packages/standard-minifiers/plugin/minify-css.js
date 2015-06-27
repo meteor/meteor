@@ -1,7 +1,7 @@
 var sourcemap = Npm.require('source-map');
 
 Plugin.registerMinifier({
-  extensions: ["css"],
+  extensions: ["css"]
 }, function () {
   var minifier = new CssToolsMinifier();
   return minifier;
@@ -9,7 +9,9 @@ Plugin.registerMinifier({
 
 function CssToolsMinifier () {};
 
-CssToolsMinifier.prototype.processFilesForTarget = function (files, mode) {
+CssToolsMinifier.prototype.processFilesForTarget = function (files, options) {
+  var mode = options.mode;
+
   if (! files.length) return;
 
   var merged = mergeCss(files);

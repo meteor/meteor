@@ -15,8 +15,9 @@ function JsHintLinter () {
   this.cachedErrors = {};
 };
 
-JsHintLinter.prototype.processFilesForTarget = function (files, globals) {
+JsHintLinter.prototype.processFilesForTarget = function (files, options) {
   var self = this;
+  var globals = options.globals;
 
   var conf = {
     undef: true,

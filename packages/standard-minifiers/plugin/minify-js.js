@@ -1,5 +1,5 @@
 Plugin.registerMinifier({
-  extensions: ["js"],
+  extensions: ["js"]
 }, function () {
   var minifier = new UglifyJSMinifier();
   return minifier;
@@ -7,7 +7,9 @@ Plugin.registerMinifier({
 
 function UglifyJSMinifier () {};
 
-UglifyJSMinifier.prototype.processFilesForTarget = function (files, mode) {
+UglifyJSMinifier.prototype.processFilesForTarget = function (files, options) {
+  var mode = options.mode;
+
   // don't minify anything for development
   if (mode === 'development') {
     files.forEach(function (file) {

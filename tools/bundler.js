@@ -831,7 +831,7 @@ _.extend(Target.prototype, {
     buildmessage.enterJob("minifying app code", function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, mode);
+        markedMinifier(sources, { mode: mode });
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -991,7 +991,7 @@ _.extend(ClientTarget.prototype, {
     buildmessage.enterJob("minifying app stylesheet", function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, mode);
+        markedMinifier(sources, { mode: mode });
       } catch (e) {
         buildmessage.exception(e);
       }

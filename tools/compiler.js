@@ -695,7 +695,7 @@ var runLinters = function (options) {
     }, function () {
       try {
         var markedLinter = buildmessage.markBoundary(linter.bind(linterDef.userPlugin));
-        markedLinter(sourcesToLint, globalImports);
+        markedLinter(sourcesToLint, { globals: globalImports });
       } catch (e) {
         buildmessage.exception(e);
       }
