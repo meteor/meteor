@@ -15,7 +15,8 @@ cd "$TOPDIR"
 
 files_to_lint="."
 if [ "$1" == "modified" ]; then
-  files_to_lint=$(git diff --cached --name-only --diff-filter=ACM)
+  files_to_lint=$(git diff --cached --name-only --diff-filter=ACM \
+                  | grep '\.js$')
 fi
 
 
