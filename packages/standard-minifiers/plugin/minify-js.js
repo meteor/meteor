@@ -14,7 +14,7 @@ UglifyJSMinifier.prototype.processFilesForTarget = function (files, mode) {
       file.addJavaScript({
         data: file.getContentsAsBuffer(),
         sourceMap: file.getSourceMap(),
-        path: file.getPathInPackage()
+        path: file.getPathInBundle()
       });
     });
     return;

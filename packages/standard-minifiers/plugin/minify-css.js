@@ -42,7 +42,7 @@ var mergeCss = function (css) {
   var originals = {};
 
   var cssAsts = css.map(function (file) {
-    var filename = file.getPathInPackage();
+    var filename = file.getPathInBundle();
     originals[filename] = file;
     try {
       var parseOptions = { source: filename, position: true };

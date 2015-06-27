@@ -1,86 +1,75 @@
-var buildPluginModule = require('./build-plugin.js');
-var util = require('util');
-var _ = require('underscore');
+import buildPluginModule from './build-plugin.js';
 
-var InputFile = exports.InputFile = function (source, options) {
-  buildPluginModule.InputFile.call(this);
+class InputFile extends buildPluginModule.InputFile {
+  constructor(source, options = {}) {
+    super();
 
-  var self = this;
-  options = options || {};
+    this._source = source;
+    this._arch = options.arch;
+    this._minifiedFiles = [];
+  }
 
-  self._source = source;
-  self._arch = options.arch;
-  self._minifiedFiles = [];
-};
-
-util.inherits(InputFile, buildPluginModule.InputFile);
-
-_.extend(InputFile.prototype, {
-  getContentsAsBuffer: function () {
+  getContentsAsBuffer() {
     return this._source.contents();
-  },
-  getPathInPackage: function () {
-    return this._source.targetPath;
-  },
-  getPackageName: function () {
+  }
+  getPathInPackage() {
     throw new Error("Compiled files don't belong to any package");
-  },
-  getSourceHash: function () {
+  }
+  getPackageName() {
+    throw new Error("Compiled files don't belong to any package");
+  }
+  getSourceHash() {
     return this._source.hash();
-  },
-  getArch: function () {
+  }
+  getArch() {
     return this._arch;
-  },
+  }
+
+  /**
+   * @summary Returns the path of the compiled file in the bundle.
+   * @memberof InputFile
+   * @returns {String}
+   */
+  getPathInBundle() {
+    return this._source.targetPath;
+  }
 
   /**
    * @summary Returns the source-map associated with the file.
    * @memberof InputFile
    * @returns {String}
    */
-  getSourceMap: function () {
+  getSourceMap() {
     return this._source.sourceMap;
   }
-});
+}
 
-var JsFile = exports.JsFile = function (source, options) {
-  InputFile.apply(this, arguments);
-};
-
-util.inherits(JsFile, InputFile);
-
-_.extend(JsFile.prototype, {
+export class JsFile extends InputFile {
   // - data
   // - sourceMap
   // - path
   // - hash?
-  addJavaScript: function (options) {
-    var self = this;
+  addJavaScript(options) {
+    const self = this;
     self._minifiedFiles.push({
       data: options.data,
       sourceMap: options.sourceMap,
       path: options.path
     });
   }
-});
+}
 
-var CssFile = exports.CssFile = function (source, options) {
-  InputFile.apply(this, arguments);
-};
-
-util.inherits(CssFile, InputFile);
-
-_.extend(CssFile.prototype, {
+export class CssFile extends InputFile {
   // - data
   // - sourceMap
   // - path
   // - hash?
-  addStylesheet: function (options) {
-    var self = this;
-    self._minifiedFiles.push({
+  addStylesheet(options) {
+    this._minifiedFiles.push({
       data: options.data,
       sourceMap: options.sourceMap,
       path: options.path
     });
   }
-});
+}
 
