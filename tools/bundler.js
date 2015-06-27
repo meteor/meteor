@@ -846,7 +846,13 @@ _.extend(Target.prototype, {
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
         }
-        newFile.setUrlToHash('.js');
+
+        if (file.path) {
+          newFile.setUrlFromRelPath(file.path);
+          newFile.targetPath = file.path;
+        } else {
+          newFile.setUrlToHash('.js');
+        }
 
         return newFile;
       });
@@ -998,7 +1004,13 @@ _.extend(ClientTarget.prototype, {
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
         }
-        newFile.setUrlToHash('.css', '?meteor_css_resource=true');
+
+        if (file.path) {
+          newFile.setUrlFromRelPath(file.path);
+          newFile.targetPath = file.path;
+        } else {
+          newFile.setUrlToHash('.css', '?meteor_css_resource=true');
+        }
 
         return newFile;
       });

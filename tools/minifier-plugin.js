@@ -51,12 +51,14 @@ util.inherits(JsFile, InputFile);
 _.extend(JsFile.prototype, {
   // - data
   // - sourceMap
+  // - path
   // - hash?
   addJavaScript: function (options) {
     var self = this;
     self._minifiedFiles.push({
       data: options.data,
-      sourceMap: options.sourceMap
+      sourceMap: options.sourceMap,
+      path: options.path
     });
   }
 });
@@ -70,12 +72,14 @@ util.inherits(CssFile, InputFile);
 _.extend(CssFile.prototype, {
   // - data
   // - sourceMap
+  // - path
   // - hash?
   addStylesheet: function (options) {
     var self = this;
     self._minifiedFiles.push({
       data: options.data,
-      sourceMap: options.sourceMap
+      sourceMap: options.sourceMap,
+      path: options.path
     });
   }
 });

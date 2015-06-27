@@ -15,7 +15,8 @@ CssToolsMinifier.prototype.processFilesForTarget = function (files, mode) {
   if (mode === 'development') {
     files[0].addStylesheet({
       data: merged.code,
-      sourceMap: merged.sourceMap
+      sourceMap: merged.sourceMap,
+      path: 'merged-stylesheets.css'
     });
     return;
   }
