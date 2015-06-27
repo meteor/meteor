@@ -11,6 +11,9 @@ Package.registerBuildPlugin({
     'minifier-plugin',
     'minifiers'
   ],
+  npmDependencies: {
+    "source-map": "0.4.2"
+  },
   sources: [
     'plugin/minify-js.js',
     'plugin/minify-css.js'

@@ -402,7 +402,7 @@ function doRunCommand (options) {
     settingsFile: options.settings,
     lint: ! options['no-lint'],
     buildOptions: {
-      minify: options.production,
+      minify: options.production ? 'production' : 'development',
       includeDebug: ! options.production
     },
     rootUrl: process.env.ROOT_URL,
@@ -898,7 +898,7 @@ var buildCommand = function (options) {
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
-      minify: ! options.debug,
+      minify: options.debug ? 'development' : 'production',
       // XXX is this a good idea, or should linux be the default since
       //     that's where most people are deploying
       //     default?  i guess the problem with using DEPLOY_ARCH as default
@@ -1203,7 +1203,7 @@ main.registerCommand({
   projectContext.packageMapDelta.displayOnConsole();
 
   var buildOptions = {
-    minify: ! options.debug,
+    minify: options.debug ? 'development' : 'production',
     includeDebug: options.debug,
     serverArch: buildArch
   };
@@ -1604,7 +1604,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
 
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
-    minify: options.production,
+    minify: options.production ? 'production' : 'development',
     includeDebug: ! options.production,
     lint: ! options['no-lint']
   };

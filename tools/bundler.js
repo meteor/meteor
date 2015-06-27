@@ -478,7 +478,7 @@ _.extend(Target.prototype, {
   // options
   // - packages: packages to include (Isopack or 'foo'), per
   //   _determineLoadOrder
-  // - minify: true to minify
+  // - minify: 'development'/'production'
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
@@ -501,30 +501,21 @@ _.extend(Target.prototype, {
       // dependencies from packages.
       self._addDirectCordovaDependencies();
 
-      // Preprocess and concatenate CSS files for client targets.
-      if (self instanceof ClientTarget) {
-        self.mergeCss();
-      }
-
-      // Minify, if requested
-      if (options.minify) {
-        var minifiersByExt = {};
-        var minifiers = options.minifiers;
-        ['js', 'css'].forEach(function (ext) {
-          minifiersByExt[ext] = _.find(minifiers, function (minifier) {
-            return minifier && _.contains(minifier.extensions, ext);
-          });
+      // Minify, with mode requested
+      var minifiersByExt = {};
+      var minifiers = options.minifiers;
+      ['js', 'css'].forEach(function (ext) {
+        minifiersByExt[ext] = _.find(minifiers, function (minifier) {
+          return minifier && _.contains(minifier.extensions, ext);
         });
-
-        if (minifiersByExt.js) {
-          self.minifyJs(minifiersByExt.js);
-        }
-
-        // CSS is minified only for client targets.
-        if (self instanceof ClientTarget) {
-          if (minifiersByExt.css) {
-            self.minifyCss(minifiersByExt.css);
-          }
+      });
+      if (minifiersByExt.js) {
+        self.minifyJs(minifiersByExt.js, options.minify);
+      }
+      // CSS is minified only for client targets.
+      if (self instanceof ClientTarget) {
+        if (minifiersByExt.css) {
+          self.minifyCss(minifiersByExt.css, options.minify);
         }
       }
 
@@ -826,7 +817,7 @@ _.extend(Target.prototype, {
   },
 
   // Minify the JS in this target
-  minifyJs: Profile("Target#minifyJs", function (minifierDef) {
+  minifyJs: Profile("Target#minifyJs", function (minifierDef, mode) {
     var self = this;
 
     var sources = _.map(self.js, function (file) {
@@ -840,7 +831,7 @@ _.extend(Target.prototype, {
     buildmessage.enterJob("minifying app code", function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources);
+        markedMinifier(sources, mode);
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -849,9 +840,12 @@ _.extend(Target.prototype, {
     self.js = _.flatten(_.map(sources, function (source) {
       return _.map(source._minifiedFiles, function (file) {
         var newFile = new File({
-          info: 'minified js',
+          info: mode === 'production' ? 'minified js' : '?',
           data: new Buffer(file.data, 'utf8')
         });
+        if (file.sourceMap) {
+          newFile.setSourceMap(file.sourceMap, '/');
+        }
         newFile.setUrlToHash('.js');
 
         return newFile;
@@ -974,81 +968,8 @@ var ClientTarget = function (options) {
 util.inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
-  // Lints CSS files and merges them into one file, fixing up source maps and
-  // pulling any @import directives up to the top since the CSS spec does not
-  // allow them to appear in the middle of a file.
-  mergeCss: Profile("ClientTarget#mergeCss", function () {
-    var self = this;
-    var minifiers = isopackets.load('minifiers').minifiers;
-    var CssTools = minifiers.CssTools;
-
-    // Filenames passed to AST manipulator mapped to their original files
-    var originals = {};
-
-    var cssAsts = _.map(self.css, function (file) {
-      var filename = file.url.replace(/^\//, '');
-      originals[filename] = file;
-      try {
-        var parseOptions = { source: filename, position: true };
-        var ast = CssTools.parseCss(file.contents('utf8'), parseOptions);
-        ast.filename = filename;
-      } catch (e) {
-        buildmessage.error(e.message, { file: filename });
-        return { type: "stylesheet", stylesheet: { rules: [] },
-                 filename: filename };
-      }
-
-      return ast;
-    });
-
-    var warnCb = function (filename, msg) {
-      // XXX make this a buildmessage.warning call rather than a random log.
-      //     this API would be like buildmessage.error, but wouldn't cause
-      //     the build to fail.
-      runLog.log(filename + ': warn: ' + msg);
-    };
-
-    var mergedCssAst = CssTools.mergeCssAsts(cssAsts, warnCb);
-
-    // Overwrite the CSS files list with the new concatenated file
-    var stringifiedCss = CssTools.stringifyCss(mergedCssAst,
-                                               { sourcemap: true });
-    if (! stringifiedCss.code)
-      return;
-
-    self.css = [new File({ info: 'combined css', data: new Buffer(stringifiedCss.code, 'utf8') })];
-
-    // Add the contents of the input files to the source map of the new file
-    stringifiedCss.map.sourcesContent =
-      _.map(stringifiedCss.map.sources, function (filename) {
-        return originals[filename].contents('utf8');
-      });
-
-    // If any input files had source maps, apply them.
-    // Ex.: less -> css source map should be composed with css -> css source map
-    var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
-      new sourcemap.SourceMapConsumer(stringifiedCss.map));
-
-    _.each(originals, function (file, name) {
-      if (! file.sourceMap)
-        return;
-      try {
-        newMap.applySourceMap(
-          new sourcemap.SourceMapConsumer(file.sourceMap), name);
-      } catch (err) {
-        // If we can't apply the source map, silently drop it.
-        //
-        // XXX This is here because there are some less files that
-        // produce source maps that throw when consumed. We should
-        // figure out exactly why and fix it, but this will do for now.
-      }
-    });
-
-    self.css[0].setSourceMap(JSON.stringify(newMap));
-    self.css[0].setUrlToHash(".css");
-  }),
   // Minify the CSS in this target
-  minifyCss: Profile("ClientTarget#minifyCss", function (minifierDef) {
+  minifyCss: Profile("ClientTarget#minifyCss", function (minifierDef, mode) {
     var self = this;
 
     var sources = _.map(self.css, function (file) {
@@ -1062,7 +983,7 @@ _.extend(ClientTarget.prototype, {
     buildmessage.enterJob("minifying app stylesheet", function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources);
+        markedMinifier(sources, mode);
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1071,9 +992,12 @@ _.extend(ClientTarget.prototype, {
     self.css = _.flatten(_.map(sources, function (source) {
       return _.map(source._minifiedFiles, function (file) {
         var newFile = new File({
-          info: 'minified css',
+          info: mode === 'production' ? 'minified css' : '?',
           data: new Buffer(file.data, 'utf8')
         });
+        if (file.sourceMap) {
+          newFile.setSourceMap(file.sourceMap, '/');
+        }
         newFile.setUrlToHash('.css', '?meteor_css_resource=true');
 
         return newFile;
@@ -1929,7 +1853,8 @@ var writeSiteArchive = Profile(
  * - lint: specifies if linting is required
  *
  * - buildOptions: may include
- *   - minify: minify the CSS and JS assets (boolean, default false)
+ *   - minify: string, type of minification for the CSS and JS assets
+ *     ('development'/'production', defaults to 'development')
  *   - serverArch: the server architecture to target (string, default
  *     archinfo.host())
  *   - includeDebug: include packages marked debugOnly (boolean, default false)
@@ -1968,6 +1893,7 @@ exports.bundle = function (options) {
   var outputPath = options.outputPath;
   var includeNodeModules = options.includeNodeModules;
   var buildOptions = options.buildOptions || {};
+  buildOptions.minify = buildOptions.minify || 'development';
   var shouldLint = options.lint || false;
 
   var appDir = projectContext.projectDir;
@@ -2033,7 +1959,7 @@ exports.bundle = function (options) {
 
       server.make({
         packages: [app],
-        minify: false
+        minify: 'development'
       });
 
       return server;
@@ -2055,12 +1981,13 @@ exports.bundle = function (options) {
     }
 
     var minifiers = null;
-    if (buildOptions.minify) {
-      minifiers = compiler.getMinifiers(packageSource, {
-        isopackCache: projectContext.isopackCache,
-        isopack: app
-      });
+    if (! _.contains(['development', 'production'], buildOptions.minify)) {
+        throw new Error('Unrecognized minfication mode: ' + buildOptions.minifiy);
     }
+    minifiers = compiler.getMinifiers(packageSource, {
+      isopackCache: projectContext.isopackCache,
+      isopack: app
+    });
 
     var clientTargets = [];
     // Client

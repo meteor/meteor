@@ -30,6 +30,15 @@ _.extend(InputFile.prototype, {
   },
   getArch: function () {
     return this._arch;
+  },
+
+  /**
+   * @summary Returns the source-map associated with the file.
+   * @memberof InputFile
+   * @returns {String}
+   */
+  getSourceMap: function () {
+    return this._source.sourceMap;
   }
 });
 
@@ -41,11 +50,13 @@ util.inherits(JsFile, InputFile);
 
 _.extend(JsFile.prototype, {
   // - data
+  // - sourceMap
   // - hash?
   addJavaScript: function (options) {
     var self = this;
     self._minifiedFiles.push({
-      data: options.data.toString('utf8')
+      data: options.data,
+      sourceMap: options.sourceMap
     });
   }
 });
@@ -58,11 +69,13 @@ util.inherits(CssFile, InputFile);
 
 _.extend(CssFile.prototype, {
   // - data
+  // - sourceMap
   // - hash?
   addStylesheet: function (options) {
     var self = this;
     self._minifiedFiles.push({
-      data: options.data.toString('utf8')
+      data: options.data,
+      sourceMap: options.sourceMap
     });
   }
 });

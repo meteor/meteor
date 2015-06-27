@@ -7,7 +7,18 @@ Plugin.registerMinifier({
 
 function UglifyJSMinifier () {};
 
-UglifyJSMinifier.prototype.processFilesForTarget = function (files) {
+UglifyJSMinifier.prototype.processFilesForTarget = function (files, mode) {
+  // don't minify anything for development
+  if (mode === 'development') {
+    files.forEach(function (file) {
+      file.addJavaScript({
+        data: file.getContentsAsBuffer(),
+        sourceMap: file.getSourceMap()
+      });
+    });
+    return;
+  }
+
   var minifyOptions = {
     fromString: true,
     compress: {
