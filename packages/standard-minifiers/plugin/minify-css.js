@@ -10,6 +10,8 @@ Plugin.registerMinifier({
 function CssToolsMinifier () {};
 
 CssToolsMinifier.prototype.processFilesForTarget = function (files, mode) {
+  if (! files.length) return;
+
   var merged = mergeCss(files);
 
   if (mode === 'development') {
@@ -71,7 +73,7 @@ var mergeCss = function (css) {
   var stringifiedCss = CssTools.stringifyCss(mergedCssAst,
                                              { sourcemap: true });
   if (! stringifiedCss.code) {
-    return null;
+    return { code: '' };
   }
 
   // Add the contents of the input files to the source map of the new file
