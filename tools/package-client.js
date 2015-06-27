@@ -48,22 +48,20 @@ var saveReadmeToTmp = function (readmeInfo) {
 // Given a connection, makes a call to the package server.  (Checks to see if
 // the connection is connected, and reconnects if needed -- a workaround for
 // the fact that connections in the tool do not reconnect)
-exports.callPackageServer = function (conn) {
+exports.callPackageServer = function (conn, ...args) {
   // XXX This is broken since it doesn't actually replace the conn in the
   // caller, so it'll happen on every subsequent call
   if (!conn.connected) {
     conn.close();
     conn = exports.loggedInPackagesConnection();
   }
-  var args = _.values(arguments)
-        .slice(1, arguments.length);
-  return conn.call.apply(conn, args);
+  return conn.call(...args);
 };
 
-var callPackageServerBM = exports.callPackageServerBM = function () {
+var callPackageServerBM = exports.callPackageServerBM = function (...args) {
   buildmessage.assertInJob();
   try {
-    return exports.callPackageServer.apply(null, arguments);
+    return exports.callPackageServer.apply(null, args);
   } catch (e) {
     buildmessage.error(e.reason || e.message);
     return null;

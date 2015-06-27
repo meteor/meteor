@@ -2063,7 +2063,7 @@ main.registerCommand({
   var tmpDir = files.mkdtemp('meteor-ssh-');
   var idpath = tmpDir + '/id';
   maybeLog("Writing ssh key to " + idpath);
-  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
+  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0o400});
 
   // Add the known host key to a custom known hosts file.
   var hostpath = tmpDir + '/host';
@@ -2207,4 +2207,19 @@ main.registerCommand({
     Console.info('url');
   if (options['delete'])
     Console.info('delete');
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// throw-error
+///////////////////////////////////////////////////////////////////////////////
+
+// Dummy test command. Used to test that stack traces work from an installed
+// Meteor tool.
+
+main.registerCommand({
+  name: 'throw-error',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function () {
+  throw new Error("testing stack traces!"); // #StackTraceTest this line is found in tests/source-maps.js
 });

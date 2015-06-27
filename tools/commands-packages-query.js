@@ -1199,9 +1199,9 @@ _.extend(ReleaseQuery.prototype, {
     Console.info();
     if (!_.isEmpty(data.packages)) {
       Console.info("Packages:");
-      _.each(data.packages, function (version, package) {
+      _.each(data.packages, function (version, packageName) {
           Console.info(
-            package + ": " + version,
+            packageName + ": " + version,
             Console.options({ indent: 2 }));
       });
       Console.info();

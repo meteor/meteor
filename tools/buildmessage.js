@@ -547,11 +547,10 @@ var forkJoin = function (options, iterable, fn) {
         }
       });
 
-      _.each(iterable, function (/*arguments*/) {
+      _.each(iterable, function (...args) {
         var fut = new Future();
-        var fnArguments = arguments;
         Fiber(function () {
-          runOne(fut, fnArguments);
+          runOne(fut, args);
         }).run();
         futures.push(fut);
       });
@@ -572,10 +571,9 @@ var forkJoin = function (options, iterable, fn) {
       });
     } else {
       // not parallel
-      _.each(iterable, function (/*arguments*/) {
-        var fnArguments = arguments;
+      _.each(iterable, function (...args) {
         try {
-          var result = fn.apply(null, fnArguments);
+          var result = fn(...args);
           results.push(result);
           errors.push(null);
         } catch (e) {

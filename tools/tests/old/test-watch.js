@@ -1,3 +1,5 @@
+require('meteor-babel/register');
+
 var _ = require('underscore');
 var assert = require('assert');
 var crypto = require('crypto');

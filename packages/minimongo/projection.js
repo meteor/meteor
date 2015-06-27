@@ -58,10 +58,15 @@ projectionDetails = function (fields) {
   // like 'foo' and 'foo.bar' can assume that 'foo' comes first.
   var fieldsKeys = _.keys(fields).sort();
 
-  // If there are other rules other than '_id', treat '_id' differently in a
-  // separate case. If '_id' is the only rule, use it to understand if it is
-  // including/excluding projection.
-  if (fieldsKeys.length > 0 && !(fieldsKeys.length === 1 && fieldsKeys[0] === '_id'))
+  // If _id is the only field in the projection, do not remove it, since it is
+  // required to determine if this is an exclusion or exclusion. Also keep an
+  // inclusive _id, since inclusive _id follows the normal rules about mixing
+  // inclusive and exclusive fields. If _id is not the only field in the
+  // projection and is exclusive, remove it so it can be handled later by a
+  // special case, since exclusive _id is always allowed.
+  if (fieldsKeys.length > 0 &&
+      !(fieldsKeys.length === 1 && fieldsKeys[0] === '_id') &&
+      !(_.contains(fieldsKeys, '_id') && fields['_id']))
     fieldsKeys = _.reject(fieldsKeys, function (key) { return key === '_id'; });
 
   var including = null; // Unknown
@@ -71,7 +76,7 @@ projectionDetails = function (fields) {
     if (including === null)
       including = rule;
     if (including !== rule)
-      // This error message is copies from MongoDB shell
+      // This error message is copied from MongoDB shell
       throw MinimongoError("You cannot currently mix including and excluding fields.");
   });
 
@@ -167,4 +172,3 @@ LocalCollection._checkSupportedProjection = function (fields) {
       throw MinimongoError("Projection values should be one of 1, 0, true, or false");
   });
 };
-

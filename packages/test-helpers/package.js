@@ -20,7 +20,7 @@ Package.onUse(function (api) {
     'pollUntil', 'try_all_permutations',
     'SeededRandom', 'clickElement', 'blurElement',
     'focusElement', 'simulateEvent', 'getStyleProperty', 'canonicalizeHtml',
-    'renderToDiv',
+    'renderToDiv', 'clickIt',
     'withCallbackLogger', 'testAsyncMulti', 'simplePoll',
     'makeTestConnection', 'DomUtils']);
 

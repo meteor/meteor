@@ -503,6 +503,10 @@ it checks the collection's `allow` rules. Meteor allows the write only
 if no `deny` rules return `true` and at least one `allow` rule returns
 `true`.
 
+{{> autoApiBox "Mongo.Collection#rawCollection"}}
+
+{{> autoApiBox "Mongo.Collection#rawDatabase"}}
+
 <h2 id="mongo_cursor"><span>Cursors</span></h2>
 
 To create a cursor, use [`find`](#find).  To access the documents in a

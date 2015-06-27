@@ -12,6 +12,11 @@ exports.Codes = {
         symbol: "EXIT_CLEAN",
         longText: "MongoDB exited cleanly"
       },
+  1 : { code: 1,
+        // No symbol in the source. This is in src/mongo/base/initializer.cpp.
+        symbol: "global-initialization",
+        longText: "MongoDB failed global initialization"
+      },
   2 : { code: 2,
         symbol: "EXIT_BADOPTIONS",
         longText: "MongoDB was started with erroneous or incompatible command line options"

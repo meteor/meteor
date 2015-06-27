@@ -5,7 +5,8 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('tracker');
-  api.use('minimongo');  // for idStringify
+  api.use('mongo-id');  // for idStringify
+  api.use('diff-sequence');
   api.use('underscore');
   api.use('random');
   api.export('ObserveSequence');

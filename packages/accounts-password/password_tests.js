@@ -1033,4 +1033,38 @@ if (Meteor.isServer) (function () {
       );
     }
   );
+
+  Tinytest.add(
+    'passwords - reset password doesn\t work if email changed after email sent',
+    function (test) {
+      var username = Random.id();
+      var email = username + '-intercept@example.com';
+
+      var userId = Accounts.createUser({
+        username: username,
+        email: email,
+        password: "old-password"
+      });
+
+      var user = Meteor.users.findOne(userId);
+
+      Accounts.sendResetPasswordEmail(userId, email);
+
+      var resetPasswordEmailOptions = Meteor.call("getInterceptedEmails", email)[0];
+
+      var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
+      var match = resetPasswordEmailOptions.text.match(re);
+      test.isTrue(match);
+      var resetPasswordToken = match[1];
+
+      var newEmail = Random.id() + '-new@example.com';
+      Meteor.users.update(userId, {$set: {"emails.0.address": newEmail}});
+
+      test.throws(function () {
+        Meteor.call("resetPassword", resetPasswordToken, "new-password");
+      }, /Token has invalid email address/);
+      test.throws(function () {
+        Meteor.call("login", {user: {username: username}, password: "new-password"});
+      }, /Incorrect password/);
+    });
 }) ();

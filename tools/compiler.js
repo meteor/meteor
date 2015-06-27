@@ -64,6 +64,9 @@ compiler.compile = function (packageSource, options) {
         use: info.use,
         sourceRoot: packageSource.sourceRoot,
         sources: info.sources,
+        // While we're not actually "serving" the file, the serveRoot is used to
+        // calculate file names in source maps.
+        serveRoot: 'packages/' + packageSource.name,
         npmDependencies: info.npmDependencies,
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm

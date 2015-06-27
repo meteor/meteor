@@ -24,9 +24,8 @@ AccountsClient = function AccountsClient(options) {
   this._initLocalStorage();
 };
 
-var Ap = AccountsClient.prototype =
-  Object.create(AccountsCommon.prototype);
-Ap.constructor = AccountsClient;
+Meteor._inherits(AccountsClient, AccountsCommon);
+var Ap = AccountsClient.prototype;
 
 ///
 /// CURRENT USER

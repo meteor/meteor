@@ -13,7 +13,14 @@ ${TOPDIR}/dev_bundle/bin/npm install
 
 cd "$TOPDIR"
 
+files_to_lint="."
+if [ "$1" == "modified" ]; then
+  files_to_lint=$(git diff --cached --name-only --diff-filter=ACM)
+fi
+
+
 "${TOPDIR}/dev_bundle/bin/node" \
   "${SCRIPTDIR}/node_modules/.bin/eslint" \
-  -c "${SCRIPTDIR}/config.json" \
-  "."
+  --quiet \
+  -c "${SCRIPTDIR}/.eslintrc" \
+  $files_to_lint

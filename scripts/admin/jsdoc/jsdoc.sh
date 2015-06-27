@@ -11,7 +11,7 @@ INFINITY=10000
 cd "$SCRIPTDIR"
 ${TOPDIR}/dev_bundle/bin/npm install
 
-cd "$ORIGDIR"
+cd "$TOPDIR"
 # Call git grep to find all js files with the appropriate comment tags,
 # and only then pass it to JSDoc which will parse the JS files.
 # This is a whole lot faster than calling JSDoc recursively.

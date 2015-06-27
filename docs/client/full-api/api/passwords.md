@@ -121,14 +121,14 @@ Override fields of the object by assigning to them:
    the application (eg: `awesome.meteor.com`).
 - `headers`: An `Object` for custom email headers as described in
     [`Email.send`](#email_send).
-- `resetPassword`: An `Object` with two fields:
- - `resetPassword.from`: A `Function` used to override the `from` address defined
+- `resetPassword`: An `Object` with the fields:
+ - `from`: A `Function` used to override the `from` address defined
    by the `emailTemplates.from` field.
- - `resetPassword.subject`: A `Function` that takes a user object and returns
+ - `subject`: A `Function` that takes a user object and returns
    a `String` for the subject line of a reset password email.
- - `resetPassword.text`: A `Function` that takes a user object and a url, and
+ - `text`: A `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
- - `resetPassword.html`: An optional `Function` that takes a user object and a
+ - `html`: An optional `Function` that takes a user object and a
    url, and returns the body html for a reset password email.
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
    new accounts.
