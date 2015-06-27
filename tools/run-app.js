@@ -354,6 +354,7 @@ var AppRunner = function (options) {
   self.mobileServerUrl = options.mobileServerUrl;
   self.settingsFile = options.settingsFile;
   self.debugPort = options.debugPort;
+  self.lint = options.lint;
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;

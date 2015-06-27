@@ -94,6 +94,7 @@ var Runner = function (options) {
     rootUrl: self.rootUrl,
     settingsFile: options.settingsFile,
     debugPort: options.debugPort,
+    lint: options.lint,
     proxy: self.proxy,
     onRunEnd: options.onRunEnd,
     watchForChanges: options.watchForChanges,
