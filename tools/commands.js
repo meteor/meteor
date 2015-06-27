@@ -520,11 +520,6 @@ main.registerCommand({
 
     var inYourApp = options.appDir ? " in your app" : "";
 
-    if (files.exists(packageDir)) {
-      Console.error(packageName + ": Already exists" + inYourApp);
-      return 1;
-    }
-
     var transform = function (x) {
       var xn =
         x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
@@ -624,51 +619,35 @@ main.registerCommand({
     throw new main.ShowUsage;
   var appPath = files.pathResolve(appPathAsEntered);
 
-  if (files.exists(appPath)) {
-    Console.error(appPath + ": Already exists");
-    return 1;
-  }
-
   if (files.findAppDir(appPath)) {
     Console.error(
       "You can't create a Meteor project inside another Meteor project.");
     return 1;
   }
 
-  var isCurrentDir = (appPath === '.' || appPath === ('.' + path.sep));
-  var appName = isCurrentDir ? path.basename(process.env.PWD)
-                             : path.basename(appPath);
+  var appName = files.pathBasename(options.appDir);
 
-  var ignoreWhiteList = ['.txt', '.md', '.json', '.sh'];
-  var shouldIgnoreFile = function (filePath) {
-    var isHidden = /^\./.test(filePath);
-    if (isHidden)
-      return true;
-
-    var stats = fs.statSync(path.join(appPath, filePath));
-    if (stats.isDirectory())
-      return false;
-
-    var ext = path.extname(filePath);
-    if (ext == '' || _.contains(ignoreWhiteList, ext))
-      return true;
-
-    return false;
+  if (files.isCurrentDir(appPathAsEntered))
+    appName = files.pathBasename(files.cwd());
 
   var transform = function (x) {
     return x.replace(/~name~/g, files.pathBasename(appPath));
   };
 
+  var ignoreWhiteList = ['.txt', '.md', '.json', '.sh'];
+
   var destinationEmpty = true;
-  if (fs.existsSync(appPath)) {
-    destinationEmpty = ! _.some(fs.readdirSync(appPath), function (filePath) {
-      return !shouldIgnoreFile(filePath);
+  if (files.exists(appPath)) {
+    destinationEmpty = !_.some(files.readdir(appPath), function (filePath) {
+      if (!filePath)
+        return false
+      return !files.isFileOfType(appPath, filePath, ignoreWhiteList);
     });
   }
 
   if (options.example) {
     if (! destinationEmpty) {
-      Console.stderr.write("Example destination directory may only contain " +
+      Console.error("Example destination directory may only contain " +
           "the following types of items: dot-files, extension-less files, or " +
           "files with these extensions: " + ignoreWhiteList.join(', ') + "\n");
       return 1;
@@ -694,7 +673,6 @@ main.registerCommand({
     if (!destinationEmpty) {
       toIgnore.push(/(\.html|\.js|\.css)/)
     }
-    Console.stdout.write("ToIgnore: " + toIgnore.length + "\n");
     files.cp_r(files.pathJoin(__dirnameConverted, 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
@@ -742,7 +720,7 @@ main.registerCommand({
   // in the template's versions file).
 
   {
-    var message = appPathAsEntered + ": created";
+    var message = appName + ": created";
     if (options.example && options.example !== appPathAsEntered)
       message += (" (from '" + options.example + "' template)");
     message += ".\n";
@@ -751,29 +729,6 @@ main.registerCommand({
 
 });
 
-///////////////////////////////////////////////////////////////////////////////
-// run-upgrader
-///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'run-upgrader',
-  hidden: true,
-  minArgs: 1,
-  maxArgs: 1,
-  requiresApp: true
-}, function (options) {
-  var upgrader = options.args[0];
-
-  Console.info("To run your new app:");
-
-  if (!isCurrentDir)
-    Console.info(
-      Console.command("cd " + appPathAsEntered), Console.options({ indent: 2 }));
-
-  Console.info(
-    Console.command("meteor"), Console.options({ indent: 2 }));
-
-});
 
 ///////////////////////////////////////////////////////////////////////////////
 // build
