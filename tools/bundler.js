@@ -2090,7 +2090,7 @@ function lintBundle (projectContext, isopack, packageSource) {
   });
 
   allMessages.merge(lintingMessages);
-  allMessages.merge(projectContext._getLintingMessagesForLocalPackages());
+  allMessages.merge(projectContext.getLintingMessagesForLocalPackages());
 
   if (! allMessages.hasMessages()) {
     return null;

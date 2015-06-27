@@ -378,6 +378,11 @@ _.extend(ProjectContext.prototype, {
     return watchSet;
   },
 
+  getLintingMessagesForLocalPackages: function () {
+    var self = this;
+    return self.isopackCache.getLintingMessagesForLocalPackages();
+  },
+
   _ensureAppIdentifier: function () {
     var self = this;
     var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
@@ -732,11 +737,6 @@ _.extend(ProjectContext.prototype, {
     }
 
     self._completedStage = STAGE.SAVE_CHANGED_METADATA;
-  },
-
-  _getLintingMessagesForLocalPackages: function () {
-    var self = this;
-    return self.isopackCache._getLintingMessagesForLocalPackages();
   }
 });
 

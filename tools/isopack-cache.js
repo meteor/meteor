@@ -400,7 +400,7 @@ _.extend(exports.IsopackCache.prototype, {
     self._previousIsopackCache = null;
   },
 
-  _getLintingMessagesForLocalPackages: function () {
+  getLintingMessagesForLocalPackages: function () {
     var self = this;
 
     var messages = new buildmessage._MessageSet();
