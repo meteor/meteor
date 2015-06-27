@@ -30,10 +30,16 @@ selftest.define("source maps from an app", ['checkout'], function () {
   });
 
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));
+  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));  // XXX why?
   run = s.run("run");
   run.waitSecs(10);
-  run.match(/at app\/throw.js:3/);
+  run.match(/at throw.js:3\b/);
+  run.stop();
+
+  s.set('THROW_FROM_PACKAGE', 't');
+  run = s.run('run');
+  run.waitSecs(10);
+  run.match(/packages\/throwing-package\/thrower\.js:2\b/);
   run.stop();
 });
 
