@@ -868,8 +868,10 @@ _.extend(Target.prototype, {
     function rewriteSourceMap (sm) {
       var smPlain = JSON.parse(sm);
       smPlain.sources = smPlain.sources.map(function (path) {
-        // This emoji makes sure the category is always last
-        return 'meteor://💻app' + (path[0] === '/' ? '' : '/') + path;
+        // This emoji makes sure the category is always last. The character
+        // is PERSONAL COMPUTER (yay ES6 unicode escapes):
+        // http://www.fileformat.info/info/unicode/char/1f4bb/index.htm
+        return 'meteor://\u{1f4bb}app' + (path[0] === '/' ? '' : '/') + path;
       });
       return JSON.stringify(smPlain);
     }
