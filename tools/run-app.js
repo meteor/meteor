@@ -705,7 +705,7 @@ _.extend(AppRunner.prototype, {
     if (self.lint) {
       var warnings = bundleResult.warnings;
 
-      if (warnings.hasMessages()) {
+      if (warnings && warnings.hasMessages()) {
         runLog.log(
           'Linting your app.\n\n' + warnings.formatMessages(),
           { arrow: true });
