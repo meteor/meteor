@@ -4,13 +4,15 @@ OAuth.registerService('github', 2, null, function(query) {
 
   var accessToken = getAccessToken(query);
   var identity = getIdentity(accessToken);
+  var emails = getEmails(accessToken);
 
   return {
     serviceData: {
       id: identity.id,
       accessToken: OAuth.sealSecret(accessToken),
       email: identity.email,
-      username: identity.login
+      username: identity.login,
+      emails: emails
     },
     options: {profile: {name: identity.name}}
   };
@@ -66,6 +68,18 @@ var getIdentity = function (accessToken) {
   }
 };
 
+var getEmails = function (accessToken) {
+  try {
+    return HTTP.get(
+      "https://api.github.com/user/emails", {
+        headers: {"User-Agent": userAgent}, // http://developer.github.com/v3/#user-agent-required
+        params: {access_token: accessToken}
+      }).data;
+  } catch (err) {
+    throw _.extend(new Error("Failed to fetch emails from Github. " + err.message),
+                   {response: err.response});
+  }
+};
 
 Github.retrieveCredential = function(credentialToken, credentialSecret) {
   return OAuth.retrieveCredential(credentialToken, credentialSecret);
