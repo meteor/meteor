@@ -584,7 +584,8 @@ _.extend(Session.prototype, {
         userId: self.userId,
         ipAddr: self.connectionHandle.clientAddress,
         type: msg.msg,
-        name: msg.name
+        name: msg.name,
+        sessionId: self.id
       };
 
       DDPRateLimiter._increment(rateLimiterInput);
@@ -666,10 +667,10 @@ _.extend(Session.prototype, {
           userId: self.userId,
           ipAddr: self.connectionHandle.clientAddress,
           type: msg.msg,
-          name: msg.method
+          name: msg.method,
+          sessionId: self.id
         };
         DDPRateLimiter._increment(rateLimiterInput);
-        console.log(rateLimiterInput);
         var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
         if (!rateLimitResult.allowed) {
           throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));

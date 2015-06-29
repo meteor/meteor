@@ -5,12 +5,13 @@ var Ap = AccountsCommon.prototype;
 // Stores the ruleId to provide option to remove the default rule.
 Ap._defaultRateLimiterRuleId = DDPRateLimiter.addRule({
   userId: null,
-  ipAddr: function (ipAddr) {
-    return true;
-  },
+  ipAddr: null,
   type: 'method',
   name: function(name) {
-		return _.has(['login', 'createUser', 'resetPassword']);
+		return _.contains(['login', 'createUser', 'resetPassword'], name);
+  },
+  sessionId: function(sessionId) {
+  	return true;
   }
 }, 5, 10000);
 
