@@ -7,7 +7,7 @@ var compiler = require('./compiler.js');
 var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
-
+var Profile = require('./profile.js').Profile;
 
 
 exports.CompilerPluginProcessor = function (options) {
@@ -441,7 +441,7 @@ _.extend(PackageSourceBatch.prototype, {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources: function () {
+  getResources: Profile("PackageSourceBatch#getResources", function () {
     var self = this;
     buildmessage.assertInJob();
 
@@ -452,9 +452,9 @@ _.extend(PackageSourceBatch.prototype, {
     var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
     Array.prototype.push.apply(resources, self._linkJS(jsResources));
     return resources;
-  },
+  }),
 
-  _linkJS: function (jsResources) {
+  _linkJS: Profile("PackageSourceBatch#_linkJS", function (jsResources) {
     var self = this;
     buildmessage.assertInJob();
 
@@ -523,6 +523,6 @@ _.extend(PackageSourceBatch.prototype, {
         // XXX BBP hash?
       };
     });
-  }
+  })
 });
 

@@ -665,7 +665,7 @@ _.extend(Target.prototype, {
     });
   },
 
-  _runCompilerPlugins: function () {
+  _runCompilerPlugins: Profile("Target#_runCompilerPlugins", function () {
     var self = this;
     var processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: self.unibuilds,
@@ -673,11 +673,11 @@ _.extend(Target.prototype, {
       isopackCache: self.isopackCache
     });
     self.sourceBatches = processor.runCompilerPlugins();
-  },
+  }),
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
-  _emitResources: function () {
+  _emitResources: Profile("Target#_emitResources", function () {
     var self = this;
     buildmessage.assertInJob();
 
@@ -814,7 +814,7 @@ _.extend(Target.prototype, {
       // XXX assumes that this merges cleanly
        self.watchSet.merge(unibuild.pkg.pluginWatchSet);
     });
-  },
+  }),
 
   // Minify the JS in this target
   minifyJs: Profile("Target#minifyJs", function (minifierDef, mode) {

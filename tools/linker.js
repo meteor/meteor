@@ -3,6 +3,7 @@ var sourcemap = require('source-map');
 var buildmessage = require('./buildmessage.js');
 var isopackets = require('./isopackets.js');
 var watch = require('./watch.js');
+var Profile = require('./profile.js').Profile;
 
 var packageDot = function (name) {
   if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name))
@@ -62,7 +63,7 @@ _.extend(Module.prototype, {
 
   // Figure out which vars need to be specifically put in the module
   // scope.
-  computeAssignedVariables: function () {
+  computeAssignedVariables: Profile("linker Module#computeAssignedVariables", function () {
     var self = this;
 
     if (!self.jsAnalyze) {
@@ -89,11 +90,11 @@ _.extend(Module.prototype, {
     assignedVariables = _.uniq(assignedVariables);
 
     return assignedVariables;
-  },
+  }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
   // 'sourcePath'
-  getPrelinkedFiles: function () {
+  getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", function () {
     var self = this;
 
     // If we don't want to create a separate scope for this module,
@@ -102,10 +103,14 @@ _.extend(Module.prototype, {
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
         var node = file.getPrelinkedOutput({ preserveLineNumbers: true });
-        var results = node.toStringWithSourceMap({
-          file: file.servePath
-        }); // results has 'code' and 'map' attributes
-
+        var results = Profile.time(
+          "getPrelinkedFiles toStringWithSourceMap (app)",
+          function () {
+            return node.toStringWithSourceMap({
+              file: file.servePath
+            }); // results has 'code' and 'map' attributes
+          }
+        );
         var sourceMap = JSON.stringify(results.map.toJSON());
 
         return {
@@ -136,15 +141,20 @@ _.extend(Module.prototype, {
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
-    var results = node.toStringWithSourceMap({
-      file: self.combinedServePath
-    }); // results has 'code' and 'map' attributes
+    var results = Profile.time(
+      'getPrelinkedFiles toStringWithSourceMap (packages)',
+      function () {
+        return node.toStringWithSourceMap({
+          file: self.combinedServePath
+        }); // results has 'code' and 'map' attributes
+      }
+    );
     return [{
       source: results.code,
       servePath: self.combinedServePath,
       sourceMap: results.map.toString()
     }];
-  }
+  })
 });
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
@@ -239,7 +249,7 @@ _.extend(File.prototype, {
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
   // referenced, then globalReferences would include ["Foo", "Quux"].
-  computeAssignedVariables: function () {
+  computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
     var jsAnalyze = self.module.jsAnalyze;
@@ -284,7 +294,7 @@ _.extend(File.prototype, {
       self.sourceMap = null;
       return [];
     }
-  },
+  }),
 
   // Options:
   // - preserveLineNumbers: if true, decorate minimally so that line
@@ -295,7 +305,7 @@ _.extend(File.prototype, {
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
-  getPrelinkedOutput: function (options) {
+  getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
     var self = this;
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
@@ -475,7 +485,7 @@ _.extend(File.prototype, {
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-  }
+  })
 });
 
 // Given a list of lines (not newline-terminated), returns a string placing them
@@ -550,7 +560,7 @@ var bannerPadding = function (bannerWidth) {
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
 // XXX BBP redoc
-var prelink = function (options) {
+var prelink = Profile("linker.prelink", function (options) {
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
   // default unibuild is not allowed to depend on anything!)
@@ -583,7 +593,7 @@ var prelink = function (options) {
     files: files,
     assignedVariables: assignedVariables
   };
-};
+});
 
 var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
   "This is a generated file. You can view the original",
@@ -660,7 +670,7 @@ var getFooter = function (options) {
 };
 
 // XXX BBP doc
-var fullLink = function (options) {
+var fullLink = Profile("linker.fullLink", function (options) {
   buildmessage.assertInJob();
 
   // Load jsAnalyze from the js-analyze package... unless we are the
@@ -748,7 +758,7 @@ var fullLink = function (options) {
       };
     }
   });
-};
+});
 
 var linker = module.exports = {
   prelink: prelink,
