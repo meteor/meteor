@@ -587,9 +587,9 @@ _.extend(Session.prototype, {
         name: msg.name
       };
 
-      DDPRateLimiter.rateLimiter.increment(rateLimiterInput);
-      var rateLimitResult = DDPRateLimiter.rateLimiter.check(rateLimiterInput)
-      if (!rateLimitResult.valid) {
+      DDPRateLimiter._increment(rateLimiterInput);
+      var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+      if (!rateLimitResult.allowed) {
         self.send({
           msg: 'nosub', id: msg.id,
           error: new Meteor.Error('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult))
@@ -668,9 +668,10 @@ _.extend(Session.prototype, {
           type: msg.msg,
           name: msg.method
         };
-        DDPRateLimiter.rateLimiter.increment(rateLimiterInput);
-        var rateLimitResult = DDPRateLimiter.rateLimiter.check(rateLimiterInput)
-        if (!rateLimitResult.valid) {
+        DDPRateLimiter._increment(rateLimiterInput);
+        console.log(rateLimiterInput);
+        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+        if (!rateLimitResult.allowed) {
           throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));
         }
 
