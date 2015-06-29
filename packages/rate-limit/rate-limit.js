@@ -170,9 +170,9 @@ _.extend(Rule.prototype, {
   // has exceeded the intervalTime.
   resetCounter: function () {
     var self = this;
-    _.each(self.counters, function (value, key) {
-      self.counters[key] = 0;
-    });
+
+    // Delete the old counters dictionary to allow for garbage collection
+    self.counters = {};
     self._lastResetTime = new Date().getTime();
   }
 });
