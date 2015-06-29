@@ -53,7 +53,8 @@ var toc = [
       ],
       "Meteor.Error",
       "Meteor.call",
-      "Meteor.apply"
+      "Meteor.apply",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"},
     ],
 
     {name: "Check", id: "check_package"}, [
