@@ -1,8 +1,8 @@
 var url = Npm.require('url');
-
 var stylus = Npm.require('stylus');
 var nib = Npm.require('nib');
 var Future = Npm.require('fibers/future');
+var LRU = Npm.require('lru-cache');
 
 Plugin.registerCompiler({
   extensions: ['styl'],
@@ -13,19 +13,28 @@ Plugin.registerCompiler({
 
 var APP_SYMBOL = '__app__';
 
-function StylusCompiler () {}
-StylusCompiler.prototype.processFilesForTarget = function (files) {
-  var filesByPackage = {};
-  files.forEach(function (inputFile) {
-    var packageName = inputFile.getPackageName() || APP_SYMBOL;
-    var filePath = '/' + inputFile.getPathInPackage();
-    filesByPackage[packageName] = filesByPackage[packageName] || {};
-    filesByPackage[packageName][filePath] = inputFile;
+var CACHE_SIZE = process.env.METEOR_STYLUS_CACHE_SIZE || 1024*1024*10;
+
+function StylusCompiler () {
+  var self = this;
+
+  self._cache = new LRU({
+    max: CACHE_SIZE,
+    // Cache is measured in bytes (not counting the hashes).
+    length: function (value) {
+      return value.css.length + value.sourceMap.length;
+    }
   });
+
+  self._diskCache = null;
+}
+
+StylusCompiler.prototype.processFilesForTarget = function (files) {
+  var self = this;
 
   var currentlyCompiledFile = null;
   var currentlyCompiledPackage = null;
-  var pathParser = function (filePath, importerPath) {
+  var parseImportPath = function (filePath, importerPath) {
     if (filePath === currentlyCompiledFile) {
       return {
         packageName: currentlyCompiledPackage,
@@ -34,7 +43,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
     }
     if (! filePath.match(/^\{.*\}\//)) {
       // relative path in the same package
-      var parsedImporter = pathParser(importerPath, null);
+      var parsedImporter = parseImportPath(importerPath, null);
       return {
         packageName: parsedImporter.packageName,
         pathInPackage: url.resolve(parsedImporter.pathInPackage, filePath)
@@ -54,28 +63,42 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
     return {packageName: packageName, pathInPackage: pathInPackage};
   };
+  var absoluteImportPath = function (parsed) {
+    return '{' + parsed.packageName + '}' + parsed.pathInPackage;
+  };
+
+  var filesByAbsoluteImportPath = {};
+  files.forEach(function (inputFile) {
+    var packageName = inputFile.getPackageName() || APP_SYMBOL;
+    var filePath = '/' + inputFile.getPathInPackage();
+    filesByAbsoluteImportPath[absoluteImportPath({
+      packageName: packageName,
+      pathInPackage: filePath
+    })] = inputFile;
+  });
+
+
   var importer = {
     find: function (importPath, paths, importerPath) {
-      var parsed = pathParser(importPath, importerPath);
+      var parsed = parseImportPath(importPath, importerPath);
 
       if (! parsed) { return null; }
 
-      var packageName = parsed.packageName;
-      var pathInPackage = parsed.pathInPackage;
+      var absolutePath = absoluteImportPath(parsed);
 
-      if (! filesByPackage[packageName] ||
-          ! filesByPackage[packageName][pathInPackage]) {
+      if (! filesByAbsoluteImportPath[absolutePath]) {
         return null;
       }
 
-      return ['{' + packageName + '}' + pathInPackage];
+      return [absolutePath];
     },
     readFile: function (filePath) {
-      var parsed = pathParser(filePath);
-      var packageName = parsed.packageName;
-      var pathInPackage = parsed.pathInPackage;
+      var parsed = parseImportPath(filePath);
+      var absolutePath = absoluteImportPath(parsed);
 
-      return filesByPackage[packageName][pathInPackage].getContentsAsString();
+      currentlyProcessedImports.push(absolutePath);
+
+      return filesByAbsoluteImportPath[absolutePath].getContentsAsString();
     }
   };
 
@@ -83,7 +106,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
     delete sourcemap.file;
     sourcemap.sourcesContent = sourcemap.sources.map(importer.readFile);
     sourcemap.sources = sourcemap.sources.map(function (filePath) {
-      var parsed = pathParser(filePath);
+      var parsed = parseImportPath(filePath);
       if (parsed.packageName === APP_SYMBOL)
         return parsed.pathInPackage.substr(1);
       return 'packages/' + parsed.packageName + parsed.pathInPackage;
@@ -99,32 +122,70 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
     currentlyCompiledFile = inputFile.getPathInPackage();
     currentlyCompiledPackage = inputFile.getPackageName() || APP_SYMBOL;
-    var f = new Future;
-    var style = stylus(inputFile.getContentsAsString())
-      .use(nib())
-      .set('filename', inputFile.getPathInPackage())
-      .set('sourcemap', { inline: false, comment: false })
-      .set('importer', importer);
+    currentlyProcessedImports = [];
 
-    style.render(f.resolver());
+    var absolutePath = absoluteImportPath({
+      packageName: currentlyCompiledPackage,
+      filePath: currentlyCompiledFile
+    });
 
-    try {
-      var css = f.wait();
-    } catch (e) {
-      inputFile.error({
-        message: "Stylus compiler error: " + e.message
+    var cacheEntry = self._cache.get(absolutePath);
+    if (! (cacheEntry && self._cacheEntryValid(cacheEntry, filesByAbsoluteImportPath))) {
+      // the entry in the cache doesn't represent the latest state
+
+      var f = new Future;
+      var style = stylus(inputFile.getContentsAsString())
+        .use(nib())
+        .set('filename', inputFile.getPathInPackage())
+        .set('sourcemap', { inline: false, comment: false })
+        .set('importer', importer);
+
+      style.render(f.resolver());
+
+      try {
+        var css = f.wait();
+      } catch (e) {
+        inputFile.error({
+          message: "Stylus compiler error: " + e.message
+        });
+        return;
+      }
+      var sourcemap = processSourcemap(style.sourcemap);
+
+      cacheEntry = {
+        hashes: {},
+        css: css,
+        sourceMap: JSON.stringify(sourcemap)
+      };
+      cacheEntry.hashes[absolutePath] = inputFile.getSourceHash();
+      currentlyProcessedImports.forEach(function (path) {
+        cacheEntry.hashes[path] =
+          filesByAbsoluteImportPath[path].getSourceHash();
       });
-      return;
-    }
 
-    var sourcemap = processSourcemap(style.sourcemap);
+      self._cache.set(absolutePath, cacheEntry);
+    }
 
     inputFile.addStylesheet({
       path: inputFile.getPathInPackage() + ".css",
-      data: css,
-      sourceMap: JSON.stringify(sourcemap)
+      data: cacheEntry.css,
+      sourceMap: cacheEntry.sourceMap
     });
+  });
+
+  // Rewrite the cache to disk.
+  // XXX BBP we should just write individual entries separately.
+  self._writeCache();
+};
+
+StylusCompiler.prototype._cacheEntryValid = function (cacheEntry, filesMap) {
+  return Object.keys(cacheEntry.hashes).every(function (path) {
+    var hash = cacheEntry.hashes[path];
+    return filesMap[path] && filesMap[path].getSourceHash() === hash;
   });
 };
 
+StylusCompiler.prototype._writeCache = function () {
+  // XXX BBP no on-disk caching yet
+};
 

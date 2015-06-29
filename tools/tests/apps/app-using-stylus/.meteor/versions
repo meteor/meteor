@@ -12,6 +12,7 @@ ddp-client@1.2.0
 ddp-common@1.2.0
 ddp-server@1.2.0
 deps@1.0.7
+diff-sequence@1.0.0
 ejson@1.0.6
 fastclick@1.0.6
 geojson-utils@1.0.3
@@ -30,6 +31,7 @@ minifiers@1.1.5
 minimongo@1.0.8
 mobile-status-bar@1.0.4
 mongo@1.1.0
+mongo-id@1.0.0
 my-package@0.0.0
 npm-mongo@1.4.32_1
 observe-sequence@1.0.6

@@ -11,7 +11,9 @@ Package.registerBuildPlugin({
   ],
   npmDependencies: {
     stylus: "https://github.com/meteor/stylus/tarball/ea5f990bb25aabbc2caf358b4922f176f626e085", // fork of 0.51.1
-    nib: "1.1.0" }
+    nib: "1.1.0",
+    "lru-cache": "2.6.4"
+  }
 });
 
 Package.onTest(function (api) {
