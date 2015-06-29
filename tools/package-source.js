@@ -14,6 +14,7 @@ var catalog = require('./catalog.js');
 var packageVersionParser = require('./package-version-parser.js');
 var compiler = require('./compiler.js');
 var packageAPIModule = require('./package-api.js');
+var Profile = require('./profile.js').Profile;
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -1129,7 +1130,7 @@ _.extend(PackageSource.prototype, {
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
-  initFromAppDir: function (projectContext, ignoreFiles) {
+  initFromAppDir: Profile("initFromAppDir", function (projectContext, ignoreFiles) {
     var self = this;
     var appDir = projectContext.projectDir;
     self.name = null;
@@ -1350,7 +1351,7 @@ _.extend(PackageSource.prototype, {
       // different constraints for different unibuilds
       throw new Error("conflicting constraints in a package?");
     }
-  },
+  }),
 
   // True if the package defines any plugins.
   containsPlugins: function () {

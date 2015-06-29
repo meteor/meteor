@@ -13,6 +13,7 @@ var files = require('./files.js');
 var colonConverter = require('./colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
+var Profile = require('./profile.js').Profile;
 
 var compiler = exports;
 
@@ -35,7 +36,9 @@ compiler.BUILT_BY = 'meteor/17';
 // is expanded into 'web.browser' and 'web.cordova')
 compiler.ALL_ARCHES = [ "os", "web.browser", "web.cordova" ];
 
-compiler.compile = function (packageSource, options) {
+compiler.compile = Profile(function (packageSource, options) {
+  return `compiler.compile(${ packageSource.name || 'the app' })`;
+}, function (packageSource, options) {
   buildmessage.assertInCapture();
 
   var packageMap = options.packageMap;
@@ -160,7 +163,7 @@ compiler.compile = function (packageSource, options) {
   }
 
   return isopk;
-};
+});
 
 // options:
 // - isopack
