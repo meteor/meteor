@@ -180,4 +180,13 @@ even if the method's writes are not available yet, you can specify an
 passed as an array rather than directly as arguments, and you can specify
 options about how the client executes the method.
 
+<h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
+
+A rate limiter added directly to DDP. The DDPRateLimiter allows you to add rules to limit calls by one or more of user IDs, IP addresses, method names and/or subscription names. The rate limiter is called on every method and subscription invocation. A default rule of limiting 'login' attempts to 5 calls every 10 seconds per IP address has been added to the [`Accounts base package`](#accounts_api). The rule can be removed by calling [`Accounts.removeDefaultRateLimit()`].
+
+{{> autoApiBox "DDPRateLimiter.addRule"}}
+{{> autoApiBox "DDPRateLimiter.removeRule"}}
+{{> autoApiBox "DDPRateLimiter.setErrorMessage"}}
 {{/template}}
+
+{{> auto}}
