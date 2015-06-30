@@ -2,7 +2,6 @@ var fs = Npm.require('fs');
 var path = Npm.require('path');
 var less = Npm.require('less');
 var util = Npm.require('util');
-var path = Npm.require('path');
 var Future = Npm.require('fibers/future');
 var LRU = Npm.require('lru-cache');
 
@@ -222,21 +221,24 @@ _.extend(MeteorImportLessFileManager.prototype, {
     }
     var currentPackagePrefix = packageMatch[1];
 
+    var resolvedFilename;
     if (filename[0] === '/') {
       // Map `/foo/bar.less` onto `{thispackage}/foo/bar.less`
-      filename = currentPackagePrefix + filename;
-    } else if (filename[0] !== '{') {
-      filename = path.join(currentDirectory, filename);
+      resolvedFilename = currentPackagePrefix + filename;
+    } else if (filename[0] === '{') {
+      resolvedFilename = filename;
+    } else {
+      resolvedFilename = path.join(currentDirectory, filename);
     }
-    if (! _.has(self.filesByAbsoluteImportPath, filename)) {
+    if (! _.has(self.filesByAbsoluteImportPath, resolvedFilename)) {
       // XXX BBP better error handling?
       cb({type: "File", message: "Unknown import: " + filename});
       return;
     }
     cb(null, {
-      contents: self.filesByAbsoluteImportPath[filename]
+      contents: self.filesByAbsoluteImportPath[resolvedFilename]
         .getContentsAsBuffer().toString('utf8'),
-      filename: filename
+      filename: resolvedFilename
     });
     return;
   }

@@ -7,3 +7,4 @@ meteor-platform
 coffeescript
 less
 local-pack
+standard-minifiers

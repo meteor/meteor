@@ -706,12 +706,12 @@ _.extend(Isopack.prototype, {
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
       _doNotCallThisDirectly_registerMinifier: function (options, factory) {
-        var badUsedExtenssion = _.find(options.extensions, function (ext) {
+        var badUsedExtension = _.find(options.extensions, function (ext) {
           return ! _.contains(['js', 'css'], ext);
         });
 
-        if (badUsedExtenssion !== undefined) {
-          buildmessage.error(badUsedExtenssion + ': Minifiers are only allowed to register "css" or "js" extensions.');
+        if (badUsedExtension !== undefined) {
+          buildmessage.error(badUsedExtension + ': Minifiers are only allowed to register "css" or "js" extensions.');
           return;
         }
 

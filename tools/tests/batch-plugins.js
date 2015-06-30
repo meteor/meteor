@@ -142,6 +142,11 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
   checkCSS(expectedBorderStyles);
 
+  s.write('bad-import.main.less', '@import "/foo/bad.less";\n');
+  run.match('Errors prevented startup');
+  run.match('bad-import.main.less:1: Unknown import: /foo/bad.less');
+  run.match('Waiting for file change');
+
   run.stop();
 });
 
