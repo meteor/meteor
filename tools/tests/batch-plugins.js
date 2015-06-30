@@ -7,6 +7,14 @@ var Sandbox = selftest.Sandbox;
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
+function startRun(sandbox) {
+  var run = sandbox.run();
+  run.match("myapp");
+  run.match("proxy");
+  run.tellMongo(MONGO_LISTENING);
+  run.match("MongoDB");
+  return run;
+};
 
 // Tests the actual cache logic used by coffeescript and less.
 selftest.define("compiler plugin caching - coffee/less", function () {
@@ -18,11 +26,7 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   // Ask them to print out when they build a file (instead of using it from the
   // cache) as well as when they load cache from disk.
   s.set("METEOR_TEST_PRINT_CACHE_DEBUG", "t");
-  var run = s.run();
-  run.match("myapp");
-  run.match("proxy");
-  run.tellMongo(MONGO_LISTENING);
-  run.match("MongoDB");
+  var run = startRun(s);
 
   // First program built (server or web.browser) compiles everything.
   run.match('Ran coffee.compile (#1) on: ' + JSON.stringify(
@@ -125,11 +129,7 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   s.write("f2.coffee", "share.Y = 'Y is edited'\n");
   s.write('packages/local-pack/p.less', '@el4-style: double;\n');
   expectedBorderStyles.el4 = 'double';
-  run = s.run();
-  run.match("myapp");
-  run.match("proxy");
-  run.tellMongo(MONGO_LISTENING);
-  run.match("MongoDB");
+  run = startRun(s);
 
   // This time there's a cache to load!
   run.match('Loaded coffeescript cache');
@@ -159,11 +159,7 @@ selftest.define("compiler plugin caching - local plugin", function () {
   s.createApp("myapp", "local-compiler-plugin");
   s.cd("myapp");
 
-  var run = s.run();
-  run.match("myapp");
-  run.match("proxy");
-  run.tellMongo(MONGO_LISTENING);
-  run.match("MongoDB");
+  var run = startRun(s);
 
   // The compiler gets used the first time...
   run.match("PrintmeCompiler invocation 1");
@@ -179,10 +175,20 @@ selftest.define("compiler plugin caching - local plugin", function () {
   run.match("PMC: Print out foo");
   run.match("PMC: And print out quux");
 
+  // Restart meteor; see that the disk cache gets used.
+  run.stop();
+  run = startRun(s);
+  // Disk cache gets us up to 3.
+  run.match("PrintmeCompiler invocation 3");
+  // And the right output prints out
+  run.match("PMC: Print out bar");
+  run.match("PMC: Print out foo");
+  run.match("PMC: And print out quux");
+
   // Edit the compiler itself.
   s.write('packages/local-plugin/plugin.js',
           s.read('packages/local-plugin/plugin.js').replace(/PMC/, 'pmc'));
-  // New PrintmeCompiler object.
+  // New PrintmeCompiler object, and empty disk cache dir.
   run.match("PrintmeCompiler invocation 1");
   // And the right output prints out (lower case now)
   run.match("pmc: Print out bar");
@@ -190,6 +196,4 @@ selftest.define("compiler plugin caching - local plugin", function () {
   run.match("pmc: And print out quux");
 
   run.stop();
-
-  // XXX BBP test that on-disk cache gets reused but deleted at the right time
 });
