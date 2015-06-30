@@ -1,5 +1,5 @@
-exports.getDefaults = function getDefaults() {
-  return {
+exports.getDefaults = function getDefaults(features) {
+  var options = {
     compact: false,
     sourceMap: "inline",
     externalHelpers: true,
@@ -9,7 +9,6 @@ exports.getDefaults = function getDefaults() {
     // Basically all the transformers that support "loose".
     // http://babeljs.io/docs/usage/loose/
     loose: ["all", "es6.modules"],
-    plugins: ["meteor-async-await"],
     whitelist: [
       "es3.propertyLiterals",
       "es3.memberExpressionLiterals",
@@ -27,8 +26,21 @@ exports.getDefaults = function getDefaults() {
       "es6.destructuring",
       "es6.modules",
       "es7.trailingFunctionCommas",
-      "es7.asyncFunctions",
       "flow"
     ]
   };
+
+  if (features) {
+    if (features.meteorAsyncAwait) {
+      var plugins = options.plugins || [];
+      plugins.push("meteor-async-await");
+      options.plugins = plugins;
+
+      if (options.whitelist.indexOf("es7.asyncFunctions") < 0) {
+        options.whitelist.push("es7.asyncFunctions");
+      }
+    }
+  }
+
+  return options;
 };

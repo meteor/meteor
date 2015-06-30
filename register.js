@@ -13,7 +13,9 @@ var config = {
       process.env.HOME || process.env.USERPROFILE || __dirname,
       ".babel-cache"
     ),
-  babelOptions: require("./options").getDefaults()
+  babelOptions: require("./options").getDefaults({
+    meteorAsyncAwait: true
+  })
 };
 
 // Reset to null in the reconfigure function below.
