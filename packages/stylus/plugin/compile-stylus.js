@@ -34,6 +34,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
   var currentlyCompiledFile = null;
   var currentlyCompiledPackage = null;
+  var currentlyProcessedImports = null;
   var parseImportPath = function (filePath, importerPath) {
     if (filePath === currentlyCompiledFile) {
       return {
