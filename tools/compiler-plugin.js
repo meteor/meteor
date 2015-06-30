@@ -47,6 +47,11 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
       return new PackageSourceBatch(unibuild, self);
     });
 
+    // If we failed to match sources with processors, we're done.
+    if (buildmessage.jobHasMessages()) {
+      return [];
+    }
+
     // Find out which files go with which CompilerPlugins.
     _.each(sourceBatches, function (sourceBatch) {
       _.each(sourceBatch.resourceSlots, function (resourceSlot) {
@@ -384,7 +389,8 @@ var PackageSourceBatch = function (unibuild, processor) {
   self.processor = processor;
   var sourceProcessorsByExtension =
         self._getSourceProcessorsByExtension();
-  self.resourceSlots = _.map(unibuild.resources, function (resource) {
+  self.resourceSlots = [];
+  unibuild.resources.forEach(function (resource) {
     var sourceProcessor = null;
     if (resource.type === "source") {
       var extension = resource.extension;
@@ -394,11 +400,15 @@ var PackageSourceBatch = function (unibuild, processor) {
       } else if (_.has(sourceProcessorsByExtension, extension)) {
         sourceProcessor = sourceProcessorsByExtension[extension];
       } else {
-        // XXX BBP better error handling
-        throw Error("no plugin found for " + JSON.stringify(resource));
+        buildmessage.error(
+          `no plugin found for ${ resource.path } in ` +
+          `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
+          `was active when it was published but none is now`);
+        return;
+        // recover by ignoring
       }
     }
-    return new ResourceSlot(resource, sourceProcessor, self);
+    self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
   });
 };
 _.extend(PackageSourceBatch.prototype, {

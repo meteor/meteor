@@ -216,3 +216,27 @@ selftest.define("compiler plugins - duplicate extension", () => {
 
   run.stop();
 });
+
+// Test error when a source file no longer has an active plugin.
+selftest.define("compiler plugins - inactive source", () => {
+  const s = new Sandbox({ fakeMongo: true });
+
+  // This app depends on the published package 'glasser:uses-sourcish', and
+  // contains a local package 'local-plugin'.
+  //
+  // glasser:uses-sourcish depends on local-plugin and contains a file
+  // 'foo.sourcish'. When glasser:uses-sourcish@0.0.1 was published, a local
+  // copy of 'local-plugin' had a plugin which called registerCompiler for the
+  // extension '*.sourcish', and so 'foo.sourcish' is in the published isopack
+  // as a source file. However, the copy of 'local-plugin' currently in the test
+  // app contains no plugins. So we hit this weird error.
+  s.createApp('myapp', 'uses-published-package-with-inactive-source');
+  s.cd('myapp');
+
+  let run = startRun(s);
+  run.match('Errors prevented startup');
+  run.match('no plugin found for foo.sourcish in glasser:use-sourcish');
+  run.match('none is now');
+
+  run.stop();
+});
