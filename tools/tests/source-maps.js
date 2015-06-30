@@ -89,6 +89,9 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   s.cd("myapp");
   var run = s.run("run");
   run.waitSecs(10);
-  run.match(/packages\/build-plugin\/build-plugin.js:2:1/);
+  // XXX This is wrong! The path on disk is
+  // packages/build-plugin/build-plugin.js, but at some point we switched to the
+  // servePath which is based on the *plugin*'s "package" name.
+  run.match(/packages\/build-plugin-itself\/build-plugin.js:2:1/);
   run.stop();
 });

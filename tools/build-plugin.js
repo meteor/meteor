@@ -27,11 +27,18 @@ _.extend(exports.SourceProcessor.prototype, {
     }
     // XXX BBP proper error handling --- this is running user-supplied plugin
     // code, and use markBoundary too
-    self.userPlugin = self.factoryFunction.call(null);
-    // If we have a disk cache directory and the plugin wants it, use it.
-    // XXX BBP proper error handling
-    if (self.isopack.pluginCacheDir && self.userPlugin.setDiskCacheDirectory) {
-      self.userPlugin.setDiskCacheDirectory(self.isopack.pluginCacheDir);
+    try {
+      self.userPlugin = buildmessage.markBoundary(self.factoryFunction).call(
+        null);
+      // If we have a disk cache directory and the plugin wants it, use it.
+      if (self.isopack.pluginCacheDir &&
+          self.userPlugin.setDiskCacheDirectory) {
+        const markedMethod = buildmessage.markBoundary(
+          self.userPlugin.setDiskCacheDirectory.bind(self.userPlugin));
+        markedMethod(self.isopack.pluginCacheDir);
+      }
+    } catch (e) {
+      buildmessage.exception(e);
     }
   },
   relevantForArch: function (arch) {
