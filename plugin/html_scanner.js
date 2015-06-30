@@ -10,6 +10,8 @@ html_scanner = {
   ParseError: function () {},
   BodyAttrsError: function () {},
 
+  // Note: source_name is only used for errors (so it's not part of the cache
+  // key in compile-templates.js).
   scan: function (contents, source_name) {
     var rest = contents;
     var index = 0;
