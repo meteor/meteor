@@ -5,12 +5,13 @@ OAuth.registerService('github', 2, null, function(query) {
   var accessToken = getAccessToken(query);
   var identity = getIdentity(accessToken);
   var emails = getEmails(accessToken);
+  var primaryEmail = _.findWhere(emails, {primary: true});
 
   return {
     serviceData: {
       id: identity.id,
       accessToken: OAuth.sealSecret(accessToken),
-      email: identity.email,
+      email: primaryEmail.email,
       username: identity.login,
       emails: emails
     },
