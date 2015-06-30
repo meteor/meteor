@@ -15,7 +15,7 @@ Package.onUse(function (api) {
 
   // common functionality
   api.use('ddp-common', 'server'); // heartbeat
-  api.use('ddp-rate-limiter');
+  api.use('ddp-rate-limiter', 'server', {weak: true});
   // Transport
   api.use('ddp-client', 'server');
   api.imply('ddp-client');

@@ -580,22 +580,26 @@ _.extend(Session.prototype, {
         // reconnect.
         return;
 
-      var rateLimiterInput = {
-        userId: self.userId,
-        ipAddr: self.connectionHandle.clientAddress,
-        type: msg.msg,
-        name: msg.name,
-        sessionId: self.id
-      };
+      if (Package['ddp-rate-limiter']) {
+        var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
+        var rateLimiterInput = {
+          userId: self.userId,
+          ipAddr: self.connectionHandle.clientAddress,
+          type: msg.msg,
+          name: msg.name,
+          sessionId: self.id
+        };
 
-      DDPRateLimiter._increment(rateLimiterInput);
-      var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
-      if (!rateLimitResult.allowed) {
-        self.send({
-          msg: 'nosub', id: msg.id,
-          error: new Meteor.Error('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult))
-        });
+        DDPRateLimiter._increment(rateLimiterInput);
+        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+        if (!rateLimitResult.allowed) {
+          self.send({
+            msg: 'nosub', id: msg.id,
+            error: new Meteor.Error('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult))
+          });
+        }
       }
+
       var handler = self.server.publish_handlers[msg.name];
 
       self._startSubscription(handler, msg.id, msg.params, msg.name);
@@ -663,17 +667,20 @@ _.extend(Session.prototype, {
       });
 
       try {
-        var rateLimiterInput = {
-          userId: self.userId,
-          ipAddr: self.connectionHandle.clientAddress,
-          type: msg.msg,
-          name: msg.method,
-          sessionId: self.id
-        };
-        DDPRateLimiter._increment(rateLimiterInput);
-        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
-        if (!rateLimitResult.allowed) {
-          throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));
+        if (Package['ddp-rate-limiter']) {
+          var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
+          var rateLimiterInput = {
+            userId: self.userId,
+            ipAddr: self.connectionHandle.clientAddress,
+            type: msg.msg,
+            name: msg.method,
+            sessionId: self.id
+          };
+          DDPRateLimiter._increment(rateLimiterInput);
+          var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+          if (!rateLimitResult.allowed) {
+            throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));
+            }
         }
 
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
