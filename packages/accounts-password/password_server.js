@@ -126,9 +126,9 @@ var findUserFromQuery = function (query) {
 // are slow, we construct a set of prefix selectors for all permutations of
 // the first 4 characters ourselves. We first attempt to matching against
 // these, and because 'prefix expression' regex queries do use indexes (see
-// http://docs.mongodb.org/v2.6/reference/operator/query/regex/), this has
-// been found to greatly improve performance (from 1200ms to 5ms in a test with
-// 1.000.000 users).
+// http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
+// this has been found to greatly improve performance (from 1200ms to 5ms in a
+// test with 1.000.000 users).
 var selectorForFastCaseInsensitiveLookup = function (fieldName, string) {
   // Performance seems to improve up to 4 prefix characters
   var prefix = string.substring(0, Math.min(string.length, 4));
