@@ -670,27 +670,26 @@ var getFooter = function (options) {
 };
 
 // XXX BBP doc
-var fullLink = Profile("linker.fullLink", function (options) {
+var fullLink = Profile("linker.fullLink", function (inputFiles, {
+    useGlobalNamespace, combinedServePath, name, declaredExports, imports,
+    importStubServePath, includeSourceMapInstructions
+  }) {
   buildmessage.assertInJob();
 
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
   // default unibuild is not allowed to depend on anything!)
   var jsAnalyze = null;
-  if (! _.isEmpty(options.inputFiles) && options.name !== "js-analyze") {
+  if (! _.isEmpty(inputFiles) && name !== "js-analyze") {
     jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
   }
 
   var module = new Module({
-    name: options.name,
-    declaredExports: options.declaredExports,
-    useGlobalNamespace: options.useGlobalNamespace,
-    combinedServePath: options.combinedServePath,
-    jsAnalyze: jsAnalyze,
-    noLineNumbers: options.noLineNumbers
+    name, declaredExports, useGlobalNamespace, combinedServePath, jsAnalyze,
+    noLineNumbers: false
   });
 
-  _.each(options.inputFiles, function (inputFile) {
+  _.each(inputFiles, function (inputFile) {
     module.addFile(inputFile);
   });
 
@@ -698,12 +697,12 @@ var fullLink = Profile("linker.fullLink", function (options) {
 
   // If we're in the app, then we just add the import code as its own file in
   // the front.
-  if (options.useGlobalNamespace) {
-    if (!_.isEmpty(options.imports)) {
+  if (useGlobalNamespace) {
+    if (!_.isEmpty(imports)) {
       prelinkedFiles.unshift({
-        source: getImportCode(options.imports,
+        source: getImportCode(imports,
                               "/* Imports for global scope */\n\n", true),
-        servePath: options.importStubServePath
+        servePath: importStubServePath
       });
     }
     return prelinkedFiles;
@@ -719,18 +718,18 @@ var fullLink = Profile("linker.fullLink", function (options) {
   // Otherwise we're making a package and we have to actually combine the files
   // into a single scope.
   var header = getHeader({
-    imports: options.imports,
-    packageVariables: _.union(assignedVariables, options.declaredExports)
+    imports,
+    packageVariables: _.union(assignedVariables, declaredExports)
   });
 
   var footer = getFooter({
-    exported: options.declaredExports,
-    name: options.name
+    exported: declaredExports,
+    name
   });
 
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
-      if (options.includeSourceMapInstructions)
+      if (includeSourceMapInstructions)
         header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
 
       // Bias the source map by the length of the header without
