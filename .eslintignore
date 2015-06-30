@@ -67,7 +67,6 @@ tools/safe-pathwatcher.js
 tools/selftest.js
 tools/service-connection.js
 tools/shell-client.js
-tools/source-map-retriever-stack.js
 tools/stats.js
 tools/test-utils.js
 tools/tropohouse.js

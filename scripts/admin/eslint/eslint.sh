@@ -19,9 +19,10 @@ if [ "$1" == "modified" ]; then
                   | grep '\.js$')
 fi
 
-
-"${TOPDIR}/dev_bundle/bin/node" \
-  "${SCRIPTDIR}/node_modules/.bin/eslint" \
-  --quiet \
-  -c "${SCRIPTDIR}/.eslintrc" \
-  $files_to_lint
+if [ -n "$files_to_lint" ]; then
+  "${TOPDIR}/dev_bundle/bin/node" \
+    "${SCRIPTDIR}/node_modules/.bin/eslint" \
+    --quiet \
+    -c "${SCRIPTDIR}/.eslintrc" \
+    $files_to_lint
+fi
