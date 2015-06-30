@@ -7,8 +7,13 @@ Package.onUse(function (api) {
   api.use(['underscore', 'tracker', 'ejson']);
   // If we are loading mongo-livedata, let you store ObjectIDs in it.
   api.use('mongo', {weak: true});
+
   api.export('ReactiveDict');
+  api.export('SerializingReactiveDict');
+
   api.addFiles('reactive-dict.js');
+  api.addFiles("serializing-reactive-dict.js");
+
   api.addFiles('migration.js');
 });
 
