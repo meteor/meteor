@@ -5,7 +5,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use(['tracker', 'service-configuration', 'accounts-base',
-           'underscore', 'templating', 'session'], 'client');
+           'underscore', 'templating', 'session', 'jquery'], 'client');
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);
 
