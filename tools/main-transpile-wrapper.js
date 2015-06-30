@@ -1,7 +1,18 @@
 // This file exists because it is the file in the tool that is not automatically
 // transpiled by Babel
 
-require('meteor-babel/register'); // #RemoveInProd this line is removed in isopack.js
+function babelRegister() {
+  require('meteor-babel/register')({
+    babelOptions: require('meteor-babel').getDefaultOptions({
+      // These feature flags must be kept in sync with the babelOptions
+      // used in tools/isopack.js.
+      modules: true,
+      meteorAsyncAwait: true
+    })
+  });
+}
+
+babelRegister(); // #RemoveInProd this line is removed in isopack.js
 
 // Install a global ES6-compliant Promise constructor that knows how to
 // run all its callbacks in Fibers.

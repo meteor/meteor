@@ -1144,12 +1144,21 @@ _.extend(Isopack.prototype, {
         inputFileContents = inputFileContents.replace(/.+#RemoveInProd.+/, "");
       }
 
-      var transpiled = babel.compile(inputFileContents, _.extend(babel.getDefaultOptions(), {
+      var babelOptions = babel.getDefaultOptions({
+        // These feature flags must be kept in sync with the babelOptions
+        // used in tools/main-transpile-wrapper.js.
+        modules: true,
+        meteorAsyncAwait: true
+      });
+
+      _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
         sourceMapName: path + ".map",
-        sourceMaps: true
-      }));
+        sourceMap: true
+      });
+
+      var transpiled = babel.compile(inputFileContents, babelOptions);
 
       var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
 
