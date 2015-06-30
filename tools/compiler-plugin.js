@@ -8,6 +8,25 @@ var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
 var Profile = require('./profile.js').Profile;
+import {sha1} from  './watch.js';
+import LRU from 'lru-cache';
+
+const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
+const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
+
+// Cache the (slightly post-processed) results of linker.fullLink.
+// XXX BBP implement an on-disk cache too to speed up initial build?
+const LINKER_CACHE = new LRU({
+  max: CACHE_SIZE,
+  // Cache is measured in bytes. We don't care about servePath.
+  // Key is JSONification of all options plus all hashes.
+  length: function (files) {
+    return files.reduce((soFar, current) => {
+      return soFar + current.data.length +
+        (current.sourceMap ? current.sourceMap.length : 0);
+    }, 0);
+  }
+});
 
 
 exports.CompilerPluginProcessor = function (options) {
@@ -59,21 +78,23 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
         " (for target ", self.arch, ")"
       ].join('');
 
-      buildmessage.enterJob({
-        title: jobTitle
-      }, function () {
-        var inputFiles = _.map(resourceSlots, function (resourceSlot) {
-          return new InputFile(resourceSlot);
-        });
+      Profile.time(jobTitle, () => {
+        buildmessage.enterJob({
+          title: jobTitle
+        }, function () {
+          var inputFiles = _.map(resourceSlots, function (resourceSlot) {
+            return new InputFile(resourceSlot);
+          });
 
-        var markedMethod = buildmessage.markBoundary(
-          sourceProcessor.userPlugin.processFilesForTarget.bind(
-            sourceProcessor.userPlugin));
-        try {
-          markedMethod(inputFiles);
-        } catch (e) {
-          buildmessage.exception(e);
-        }
+          var markedMethod = buildmessage.markBoundary(
+            sourceProcessor.userPlugin.processFilesForTarget.bind(
+              sourceProcessor.userPlugin));
+          try {
+            markedMethod(inputFiles);
+          } catch (e) {
+            buildmessage.exception(e);
+          }
+        });
       });
     });
 
@@ -285,17 +306,15 @@ _.extend(ResourceSlot.prototype, {
     if (! self.sourceProcessor && self.inputResource.extension !== "js")
       throw Error("addJavaScript on non-source ResourceSlot?");
 
+    var data = new Buffer(
+      files.convertToStandardLineEndings(options.data), 'utf8');
     self.jsOutputResources.push({
       type: "js",
-      data: new Buffer(
-        files.convertToStandardLineEndings(options.data), 'utf8'),
+      data: data,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
-      // XXX BBP this hash is from before the line ending conversion!  is that
-      // right?
-      // XXX BBP should we trust this if it comes from a user instead of from
-      // our own call in the ResourceSlot constructor?
-      hash: options.hash,
+      // XXX BBP should we allow users to be trusted and specify a hash?
+      hash: sha1(data),
       sourceMap: options.sourceMap,
       bare: options.bare
     });
@@ -493,9 +512,8 @@ _.extend(PackageSourceBatch.prototype, {
     }, addImportsForUnibuild);
 
     // Run the linker.
-    var isApp = ! self.unibuild.pkg.name;
-    var linkedFiles = linker.fullLink({
-      inputFiles: jsResources,
+    const isApp = ! self.unibuild.pkg.name;
+    const linkerOptions = {
       useGlobalNamespace: isApp,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
@@ -511,18 +529,48 @@ _.extend(PackageSourceBatch.prototype, {
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")
+    };
+
+    const cacheKey = JSON.stringify({
+      linkerOptions,
+      files: jsResources.map((inputFile) => {
+        // XXX BBP should this technically depend on inputFile.sourceMap too?
+        // that seems slow, or I guess we could hash it.
+        return {
+          servePath: inputFile.servePath,
+          hash: inputFile.hash,
+          bare: inputFile.bare
+        };
+      })
     });
 
+    const cached = LINKER_CACHE.get(cacheKey);
+    if (cached) {
+      if (CACHE_DEBUG) {
+        console.log('LINKER CACHE HIT:', linkerOptions.name, bundleArch);
+      }
+      return cached;
+    }
+
+    if (CACHE_DEBUG) {
+      console.log('LINKER CACHE MISS:', linkerOptions.name, bundleArch);
+    }
+
+    // nb: linkedFiles might be aliased to an entry in LINKER_CACHE, so don't
+    // mutate anything from it.
+    var linkedFiles = linker.fullLink(jsResources, linkerOptions);
+
     // Add each output as a resource
-    return _.map(linkedFiles, function (file) {
+    const ret = linkedFiles.map((file) => {
       return {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
         sourceMap: file.sourceMap
-        // XXX BBP hash?
+        // XXX BBP hash? needed for minifiers?
       };
     });
+    LINKER_CACHE.set(cacheKey, ret);
+    return ret;
   })
 });
-
