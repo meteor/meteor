@@ -8,7 +8,7 @@ exports.getDefaults = function getDefaults(features) {
     // classes, computed properties, modules, for-of, and template literals.
     // Basically all the transformers that support "loose".
     // http://babeljs.io/docs/usage/loose/
-    loose: ["all", "es6.modules"],
+    loose: ["all"],
     whitelist: [
       "es3.propertyLiterals",
       "es3.memberExpressionLiterals",
@@ -23,7 +23,6 @@ exports.getDefaults = function getDefaults(features) {
       "es6.spread",
       "es7.objectRestSpread",
       "es6.destructuring",
-      "es6.modules",
       "es7.trailingFunctionCommas",
       "flow"
     ]
@@ -34,10 +33,12 @@ exports.getDefaults = function getDefaults(features) {
       var plugins = options.plugins || [];
       plugins.push("meteor-async-await");
       options.plugins = plugins;
+      options.whitelist.push("es7.asyncFunctions");
+    }
 
-      if (options.whitelist.indexOf("es7.asyncFunctions") < 0) {
-        options.whitelist.push("es7.asyncFunctions");
-      }
+    if (features.modules) {
+      options.loose.push("es6.modules");
+      options.whitelist.push("es6.modules");
     }
   }
 

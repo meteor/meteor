@@ -14,6 +14,7 @@ var config = {
       ".babel-cache"
     ),
   babelOptions: require("./options").getDefaults({
+    modules: true,
     meteorAsyncAwait: true
   })
 };
