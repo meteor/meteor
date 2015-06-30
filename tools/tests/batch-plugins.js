@@ -155,7 +155,6 @@ selftest.define("compiler plugin caching - coffee/less", function () {
 selftest.define("compiler plugin caching - local plugin", function () {
   var s = new Sandbox({ fakeMongo: true });
 
-  // Create an app that uses coffeescript and less.
   s.createApp("myapp", "local-compiler-plugin");
   s.cd("myapp");
 
@@ -194,6 +193,26 @@ selftest.define("compiler plugin caching - local plugin", function () {
   run.match("pmc: Print out bar");
   run.match("pmc: Print out foo");
   run.match("pmc: And print out quux");
+
+  run.stop();
+});
+
+// Test error on duplicate compiler plugins.
+selftest.define("compiler plugins - duplicate extension", () => {
+  const s = new Sandbox({ fakeMongo: true });
+
+  s.createApp("myapp", "duplicate-compiler-extensions");
+  s.cd("myapp");
+
+  let run = startRun(s);
+  run.match('Errors prevented startup');
+  run.match('conflict: two packages');
+  run.match('trying to handle .myext');
+
+  // Fix it by changing one extension.
+  s.write('packages/local-plugin/plugin.js',
+          s.read('packages/local-plugin/plugin.js').replace('myext', 'xext'));
+  run.match('Modified -- restarting');
 
   run.stop();
 });

@@ -1990,6 +1990,14 @@ exports.bundle = function (options) {
       isopackCache: projectContext.isopackCache,
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
+    // If we failed to 'compile' the app (which mostly means something odd
+    // happened like clashing extension handlers, or a legacy source handler
+    // failed), restart on any relevant change, and be done.
+    if (buildmessage.jobHasMessages()) {
+      serverWatchSet.merge(projectContext.getProjectAndLocalPackagesWatchSet());
+      serverWatchSet.merge(app.getMergedWatchSet());
+      return;
+    }
 
     if (! buildmessage.jobHasMessages() && shouldLint) {
       lintingMessages = lintBundle(projectContext, app, packageSource);

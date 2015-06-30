@@ -444,11 +444,14 @@ _.extend(PackageSourceBatch.prototype, {
 
           _.each(sourceProcessor.extensions, function (ext) {
             if (_.has(sourceProcessorsByExtension, ext)) {
-              // XXX BBP use buildmessage
-              throw Error("duplicate extension " + JSON.stringify({
-                package: isopack.name,
-                ext: ext
-              }));
+              buildmessage.error(
+                `conflict: two packages included in ` +
+                `${ isopack.displayName() } ` +
+                `(${ sourceProcessor.isopack.displayName() } and ` +
+                `${ sourceProcessorsByExtension[ext].isopack.displayName() })` +
+                ` are both trying to handle .${ ext }`);
+              // recover by ignoring this one
+              return;
             }
             sourceProcessorsByExtension[ext] = sourceProcessor;
           });

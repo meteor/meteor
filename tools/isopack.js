@@ -1628,6 +1628,10 @@ _.extend(Isopack.prototype, {
         serveRoot,
         // XXX BBP should we decide in our API that everything is / ?
         files.convertToStandardPath(pathInPackage, true)));
+  },
+
+  displayName() {
+    return this.name === null ? 'the app' : this.name;
   }
 });
 

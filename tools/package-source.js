@@ -1626,6 +1626,10 @@ _.extend(PackageSource.prototype, {
     }
 
     return failed ? null : dependencies;
+  },
+
+  displayName() {
+    return this.name === null ? 'the app' : this.name;
   }
 });
 

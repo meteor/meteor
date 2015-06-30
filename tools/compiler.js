@@ -341,11 +341,10 @@ var compileUnibuild = function (options) {
       if (_.has(allHandlersWithPkgs, ext) &&
           allHandlersWithPkgs[ext].handler.toString() !== sourceHandler.handler.toString()) {
         buildmessage.error(
-          "conflict: two packages included in " +
-            (inputSourceArch.pkg.name || "the app") + ", " +
-            (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
-            (otherPkg.name || "the app") + ", " +
-            "are both trying to handle ." + ext);
+          `conflict: two packages included in ` +
+          `${ inputSourceArch.pkg.displayName() }, ` +
+          `${ allHandlersWithPkgs[ext].pkgName } and ` +
+          `${ otherPkg.displayName() }, are both trying to handle .${ ext }`);
         // Recover by just going with the first handler we saw
         return;
       }
@@ -356,7 +355,7 @@ var compileUnibuild = function (options) {
         return;
       }
       allHandlersWithPkgs[ext] = {
-        pkgName: otherPkg.name,
+        pkgName: otherPkg.displayName(),
         handler: sourceHandler.handler
       };
       sourceExtensions[ext] = !!sourceHandler.isTemplate;
@@ -365,14 +364,20 @@ var compileUnibuild = function (options) {
     // Iterate over the compiler plugins.
     _.each(otherPkg.sourceProcessors.compiler, function (sourceProcessor, id) {
       _.each(sourceProcessor.extensions, function (ext) {
-        if (_.has(allHandlersWithPkgs, ext) ||
-            _.has(compilerSourceProcessorsByPlugin, ext)) {
+        let conflictPackageName = undefined;
+        if (_.has(allHandlersWithPkgs, ext)) {
+          conflictPackageName = allHandlersWithPkgs[ext].pkgName;
+        } else if (_.has(compilerSourceProcessorsByPlugin, ext)) {
+          conflictPackageName =
+            compilerSourceProcessorsByPlugin[ext].isopack.displayName();
+        }
+
+        if (conflictPackageName !== undefined) {
           buildmessage.error(
-            "conflict: two packages included in " +
-              (inputSourceArch.pkg.name || "the app") + ", " +
-              (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
-              (otherPkg.name || "the app") + ", " +
-              "are both trying to handle ." + ext);
+            `conflict: two packages included in ` +
+            `${ inputSourceArch.pkg.displayName() }, ` +
+            `${ conflictPackageName } and ` +
+            `${ otherPkg.displayName() }, are both trying to handle .${ ext }`);
           // Recover by just going with the first one we found.
           return;
         }
