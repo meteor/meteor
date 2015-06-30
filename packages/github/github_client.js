@@ -20,7 +20,7 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
   }
   var credentialToken = Random.secret();
 
-  var scope = (options && options.requestPermissions) || [];
+  var scope = (options && options.requestPermissions) || ['user:email'];
   var flatScope = _.map(scope, encodeURIComponent).join('+');
 
   var loginStyle = OAuth._loginStyle('github', config, options);
