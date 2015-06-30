@@ -24,7 +24,10 @@ Package.registerBuildPlugin({
   sources: [
     'plugin/html_scanner.js',
     'plugin/compile-templates.js'
-  ]
+  ],
+  npmDependencies: {
+    "lru-cache": "2.6.4"
+  }
 });
 
 // This onUse describes the *runtime* implications of using this package.
