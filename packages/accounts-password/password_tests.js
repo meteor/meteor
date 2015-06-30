@@ -40,7 +40,7 @@ if (Meteor.isClient) (function () {
     // Hack because Tinytest does not clean the database between tests/runs
     this.randomSuffix = Random.id(10);
     this.username = 'AdaLovelace' + this.randomSuffix;
-    this.email =  "Ada@lovelace.com" + this.randomSuffix;
+    this.email =  "Ada-intercept@lovelace.com" + this.randomSuffix;
     this.password = 'password';
     Accounts.createUser(
       {username: this.username, email: this.email, password: this.password},
@@ -312,7 +312,7 @@ if (Meteor.isClient) (function () {
     // We should be able to log in with the email in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { email: "ada@lovelace.com" + this.randomSuffix },
+        { email: "ada-intercept@lovelace.com" + this.randomSuffix },
         this.password,
         loggedInAs(this.username, test, expect));
     }
@@ -347,7 +347,7 @@ if (Meteor.isClient) (function () {
     logoutStep,
     function (test, expect) {
       this.otherUserName = 'AdaLovelace' + Random.id(10);
-      this.otherEmail =  "ADA@lovelace.com" + this.randomSuffix;
+      this.otherEmail =  "ADA-intercept@lovelace.com" + this.randomSuffix;
       addSkipCaseInsensitiveChecksForTest(this.otherEmail, test, expect);
     },
     // Create another user with an email that only differs in case
@@ -365,7 +365,7 @@ if (Meteor.isClient) (function () {
     // We shouldn't be able to log in with the email in lower case
     function (test, expect) {
       Meteor.loginWithPassword(
-        { email: "ada@lovelace.com" + this.randomSuffix },
+        { email: "ada-intercept@lovelace.com" + this.randomSuffix },
         this.password,
         expectUserNotFound(test, expect));
     },
@@ -384,7 +384,7 @@ if (Meteor.isClient) (function () {
     // Attempting to create another user with an email that only differs in
     // case should fail
     function (test, expect) {
-      this.newEmail =  "ada@lovelace.com" + this.randomSuffix;
+      this.newEmail =  "ada-intercept@lovelace.com" + this.randomSuffix;
       Accounts.createUser(
         { email: this.newEmail, password: this.password },
         expectError(
