@@ -13,7 +13,7 @@
 ### Meteor Accounts
 
 * `loginWithPassword` now matches username or email in a case insensitive manner. If there are multiple users with a username or email only differing in case, a case sensitive match is required. #550
-* `loginWithGitHub` now requests `user:email` scope by default, and fetches the user's emails. This makes sure we get the primary email even if a public email has not been set. #4545
+* `loginWithGithub` now requests `user:email` scope by default, and attempts to fetch the user's emails. If no public email has been set, we use the primary email instead. We also store the complete list of emails. #4545
 
 
 ### DDP
