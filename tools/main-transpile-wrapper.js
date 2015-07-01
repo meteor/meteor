@@ -2,13 +2,10 @@
 // transpiled by Babel
 
 function babelRegister() {
-  require('meteor-babel/register')({
-    babelOptions: require('meteor-babel').getDefaultOptions({
-      // These feature flags must be kept in sync with the babelOptions
-      // used in tools/isopack.js.
-      modules: true,
-      meteorAsyncAwait: true
-    })
+  require("meteor-babel/register")({
+    babelOptions: require("meteor-babel").getDefaultOptions(
+      require("./babel-features.js")
+    )
   });
 }
 

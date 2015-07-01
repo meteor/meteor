@@ -1145,12 +1145,9 @@ _.extend(Isopack.prototype, {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
-      var babelOptions = babel.getDefaultOptions({
-        // These feature flags must be kept in sync with the babelOptions
-        // used in tools/main-transpile-wrapper.js.
-        modules: true,
-        meteorAsyncAwait: true
-      });
+      var babelOptions = babel.getDefaultOptions(
+        require("./babel-features.js")
+      );
 
       _.extend(babelOptions, {
         filename: path,
