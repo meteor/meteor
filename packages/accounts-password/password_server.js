@@ -739,7 +739,7 @@ Meteor.methods({verifyEmail: function (token) {
         {_id: user._id,
          'emails.address': tokenRecord.address},
         {$set: {'emails.$.verified': true},
-         $pull: {'services.email.verificationTokens': {token: token}}});
+         $pull: {'services.email.verificationTokens': {address: tokenRecord.address}}});
 
       return {userId: user._id};
     }
