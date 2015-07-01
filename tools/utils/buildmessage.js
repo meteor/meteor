@@ -1,4 +1,3 @@
-var Fiber = require('fibers');
 var _ = require('underscore');
 var files = require('../fs/files.js');
 var parseStack = require('./parse-stack.js');
@@ -555,35 +554,18 @@ var forkJoin = function (options, iterable, fn) {
 
   options.forkJoin = true;
 
-  return enterJob(options, function () {
-    var parallel = (options.parallel !== undefined) ? options.parallel : true;
-    var errors = [];
-    var results = _.map(iterable, function (...args) {
-      var runOne = fiberHelpers.bindEnvironment(function () {
-        return fn.apply(null, args);
-      });
+  const enterJobAsync = Promise.denodeify(enterJob);
+  const parallel = (options.parallel !== undefined) ? options.parallel : true;
 
-      var promise = new Promise(function (resolve, reject) {
-        function fiberFn() {
-          try {
-            resolve(enterJob({
-              title: (options.title || "") + " child"
-            }, runOne));
-          } catch (err) {
-            reject(err);
-          }
-        }
-
-        // If the jobs are intended to run in parallel, create a nested
-        // fiber for each one, so they don't get implicitly serialized.
-        parallel ? Fiber(fiberFn).run() : fiberFn();
-
-      }).catch(function (error) {
+  return enterJobAsync(options).then(() => {
+    const errors = [];
+    let results = _.map(iterable, (...args) => {
+      const promise = enterJobAsync({
+        title: (options.title || "") + " child"
+      }).then(() => fn(...args))
         // Collect any errors thrown (and later re-throw the first one),
         // but don't stop processing remaining jobs.
-        errors.push(error);
-        return null;
-      });
+        .catch(error => (errors.push(error), null));
 
       if (parallel) {
         // If the jobs are intended to run in parallel, return each
@@ -612,7 +594,7 @@ var forkJoin = function (options, iterable, fn) {
     }
 
     return results;
-  });
+  }).await();
 };
 
 
