@@ -2,19 +2,15 @@ var _ = require("underscore");
 var Fiber = require("fibers");
 
 exports.parallelEach = function (collection, callback, context) {
-  var errors = [];
+  const errors = [];
   context = context || null;
 
-  var results = Promise.all(_.map(collection, function (...args) {
-    return new Promise(function (resolve, reject) {
-      Fiber(function () {
-        try {
-          resolve(callback.apply(context, args));
-        } catch (err) {
-          reject(err);
-        }
-      }).run();
-    }).catch(function (error) {
+  const results = Promise.all(_.map(collection, (...args) => {
+    async function run() {
+      return callback.apply(context, args);
+    }
+
+    return run().catch(error => {
       // Collect the errors but do not propagate them so that we can
       // re-throw the first error after all iterations have completed.
       errors.push(error);
