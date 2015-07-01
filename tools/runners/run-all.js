@@ -1,5 +1,4 @@
 const _ = require('underscore');
-const Fiber = require('fibers');
 
 const files = require('../fs/files.js');
 const buildmessage = require('../utils/buildmessage.js');
@@ -120,7 +119,8 @@ class Runner {
       runLog.log("Started proxy.",  { arrow: true });
     }
 
-    self._startMongoAsync();
+    var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
+    self._startMongoAsync().then(unblockAppRunner);
 
     if (! self.stopped) {
       self.updater.start();
@@ -160,17 +160,12 @@ class Runner {
     // foo" and then print the error.
   }
 
-  _startMongoAsync() {
-    const self = this;
-    if (! self.stopped && self.mongoRunner) {
-      const resolve = self.appRunner.makeBeforeStartPromise();
-      Fiber(function () {
-        self.mongoRunner.start();
-        if (! self.stopped && ! self.quiet) {
-          runLog.log("Started MongoDB.",  { arrow: true });
-        }
-        resolve();
-      }).run();
+  async _startMongoAsync() {
+    if (! this.stopped && this.mongoRunner) {
+      this.mongoRunner.start();
+      if (! this.stopped && ! this.quiet) {
+        runLog.log("Started MongoDB.", { arrow: true });
+      }
     }
   }
 
