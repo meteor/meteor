@@ -31,7 +31,7 @@ exports.getDefaults = function getDefaults(features) {
   if (features) {
     if (features.meteorAsyncAwait) {
       var plugins = options.plugins || [];
-      plugins.push("meteor-async-await");
+      plugins.push(require.resolve("meteor-async-await"));
       options.plugins = plugins;
       options.whitelist.push("es7.asyncFunctions");
     }
