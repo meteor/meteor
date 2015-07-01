@@ -22,27 +22,20 @@ class Runner {
     appHost,
     appPort,
     banner,
-    buildOptions,
-    debugPort,
     disableOplog,
     extraRunners,
     httpProxyPort,
-    mobileServerUrl,
     mongoUrl,
-    omitPackageMapDeltaDisplayOnFirstRun,
     onFailure,
-    onRunEnd,
     oplogUrl,
     projectContext,
     proxyHost,
     proxyPort,
     quiet,
-    recordPackageUsage,
     rootUrl,
     selenium,
     seleniumBrowser,
-    settingsFile,
-    watchForChanges,
+    ...optionsForAppRunner
   }) {
     var self = this;
     self.projectContext = projectContext;
@@ -109,22 +102,15 @@ class Runner {
     self.updater = new Updater;
 
     self.appRunner = new AppRunner({
+      ...optionsForAppRunner,
       projectContext: self.projectContext,
       port: self.appPort,
       listenHost: appHost,
       mongoUrl,
       oplogUrl,
-      mobileServerUrl,
-      buildOptions,
       rootUrl: self.rootUrl,
-      settingsFile,
-      debugPort,
       proxy: self.proxy,
-      onRunEnd,
-      watchForChanges,
       noRestartBanner: self.quiet,
-      recordPackageUsage,
-      omitPackageMapDeltaDisplayOnFirstRun
     });
 
     self.selenium = null;
