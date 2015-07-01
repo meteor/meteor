@@ -21,6 +21,7 @@ exports.getDefaults = function getDefaults(features) {
       "es6.properties.computed",
       "es6.parameters",
       "es6.spread",
+      "es6.forOf",
       "es7.objectRestSpread",
       "es6.destructuring",
       "es7.trailingFunctionCommas",

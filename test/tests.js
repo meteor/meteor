@@ -145,6 +145,14 @@ val = "zxcv";`;
     assert.strictEqual(s.value, limit * (limit - 1) / 2);
   });
 
+  it("es6.forOf", () => {
+    let sum = 0;
+    for (let n of [1, 2, 3, 4, 5]) {
+      sum += n;
+    }
+    assert.strictEqual(sum, 15);
+  });
+
   it("es7.objectRestSpread", () => {
     let original = { a: 1, b: 2 };
 
