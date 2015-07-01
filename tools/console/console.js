@@ -56,7 +56,6 @@
 /// In addition to printing functions, the Console class provides progress bar
 /// support, that is mostly handled through buildmessage.js.
 var _ = require('underscore');
-var Fiber = require('fibers');
 var readline = require('readline');
 var util = require('util');
 var buildmessage = require('../utils/buildmessage.js');
@@ -432,18 +431,16 @@ _.extend(StatusPoller.prototype, {
   _startPoller: function () {
     var self = this;
 
-    if (self._pollFiber) {
+    if (self._pollPromise) {
       throw new Error("Already started");
     }
 
-    self._pollFiber = Fiber(function () {
+    self._pollPromise = (async() => {
       while (! self._stop) {
         utils.sleepMs(STATUS_INTERVAL_MS);
-
         self.statusPoll();
       }
-    });
-    self._pollFiber.run();
+    })();
   },
 
   stop: function () {
