@@ -17,104 +17,127 @@ var AppRunner = require('./run-app.js').AppRunner;
 var MongoRunner = require('./run-mongo.js').MongoRunner;
 var Updater = require('./run-updater.js').Updater;
 
-// options: projectContext, proxyPort, proxyHost, appPort, appHost,
-// buildOptions, settingsFile, banner, onRunEnd, onFailure,
-// watchForChanges, quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl,
-// disableOplog
-var Runner = function (options) {
-  var self = this;
-  self.projectContext = options.projectContext;
+class Runner {
+  constructor({
+    appHost,
+    appPort,
+    banner,
+    buildOptions,
+    debugPort,
+    disableOplog,
+    extraRunners,
+    httpProxyPort,
+    mobileServerUrl,
+    mongoUrl,
+    omitPackageMapDeltaDisplayOnFirstRun,
+    onFailure,
+    onRunEnd,
+    oplogUrl,
+    projectContext,
+    proxyHost,
+    proxyPort,
+    quiet,
+    recordPackageUsage,
+    rootUrl,
+    selenium,
+    seleniumBrowser,
+    settingsFile,
+    watchForChanges,
+  }) {
+    var self = this;
+    self.projectContext = projectContext;
 
-  if (! _.has(options, 'proxyPort'))
-    throw new Error("no proxyPort?");
+    if (typeof proxyPort === "undefined") {
+      throw new Error("no proxyPort?");
+    }
 
-  var listenPort = options.proxyPort;
-  var mongoPort = parseInt(listenPort) + 1;
-  self.specifiedAppPort = options.appPort;
-  self.regenerateAppPort();
+    var listenPort = proxyPort;
+    var mongoPort = parseInt(listenPort) + 1;
+    self.specifiedAppPort = appPort;
+    self.regenerateAppPort();
 
-  self.stopped = false;
-  self.quiet = options.quiet;
-  self.banner = options.banner ||
-    files.convertToOSPath(files.prettyPath(self.projectContext.projectDir));
-  if (options.rootUrl) {
-    self.rootUrl = options.rootUrl;
-  } else if (options.proxyHost) {
-    self.rootUrl = 'http://' + options.proxyHost + ':' + listenPort + '/';
-  } else {
-    self.rootUrl = 'http://localhost:' + listenPort + '/';
-  }
+    self.stopped = false;
+    self.quiet = quiet;
+    self.banner = banner || files.convertToOSPath(
+      files.prettyPath(self.projectContext.projectDir)
+    );
 
-  self.extraRunners = options.extraRunners;
+    if (rootUrl) {
+      self.rootUrl = rootUrl;
+    } else if (proxyHost) {
+      self.rootUrl = 'http://' + proxyHost + ':' + listenPort + '/';
+    } else {
+      self.rootUrl = 'http://localhost:' + listenPort + '/';
+    }
 
-  self.proxy = new Proxy({
-    listenPort: listenPort,
-    listenHost: options.proxyHost,
-    proxyToPort: self.appPort,
-    proxyToHost: options.appHost,
-    onFailure: options.onFailure
-  });
+    self.extraRunners = extraRunners;
 
-  self.httpProxy = null;
-  if (options.httpProxyPort) {
-    self.httpProxy = new HttpProxy({
-      listenPort: options.httpProxyPort
+    self.proxy = new Proxy({
+      listenPort,
+      listenHost: proxyHost,
+      proxyToPort: self.appPort,
+      proxyToHost: appHost,
+      onFailure
     });
-  }
 
-  self.mongoRunner = null;
-  var mongoUrl, oplogUrl;
-  if (options.mongoUrl) {
-    mongoUrl = options.mongoUrl;
-    oplogUrl = options.disableOplog ? null : options.oplogUrl;
-  } else {
-    self.mongoRunner = new MongoRunner({
-      appDir: self.projectContext.projectDir,
-      port: mongoPort,
-      onFailure: options.onFailure,
-      // For testing mongod failover, run with 3 mongod if the env var is
-      // set. Note that data is not preserved from one run to the next.
-      multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
+    self.httpProxy = null;
+    if (httpProxyPort) {
+      self.httpProxy = new HttpProxy({
+        listenPort: httpProxyPort
+      });
+    }
+
+    self.mongoRunner = null;
+    var mongoUrl, oplogUrl;
+    if (mongoUrl) {
+      mongoUrl = mongoUrl;
+      oplogUrl = disableOplog ? null : oplogUrl;
+    } else {
+      self.mongoRunner = new MongoRunner({
+        appDir: self.projectContext.projectDir,
+        port: mongoPort,
+        onFailure,
+        // For testing mongod failover, run with 3 mongod if the env var is
+        // set. Note that data is not preserved from one run to the next.
+        multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
+      });
+
+      mongoUrl = self.mongoRunner.mongoUrl();
+      oplogUrl = disableOplog ? null : self.mongoRunner.oplogUrl();
+    }
+
+    self.updater = new Updater;
+
+    self.appRunner = new AppRunner({
+      projectContext: self.projectContext,
+      port: self.appPort,
+      listenHost: appHost,
+      mongoUrl,
+      oplogUrl,
+      mobileServerUrl,
+      buildOptions,
+      rootUrl: self.rootUrl,
+      settingsFile,
+      debugPort,
+      proxy: self.proxy,
+      onRunEnd,
+      watchForChanges,
+      noRestartBanner: self.quiet,
+      recordPackageUsage,
+      omitPackageMapDeltaDisplayOnFirstRun
     });
 
-    mongoUrl = self.mongoRunner.mongoUrl();
-    oplogUrl = options.disableOplog ? null : self.mongoRunner.oplogUrl();
+    self.selenium = null;
+    if (selenium) {
+      self.selenium = new Selenium({
+        runner: self,
+        browser: seleniumBrowser
+      });
+    }
   }
 
-  self.updater = new Updater;
-
-  self.appRunner = new AppRunner({
-    projectContext: self.projectContext,
-    port: self.appPort,
-    listenHost: options.appHost,
-    mongoUrl: mongoUrl,
-    oplogUrl: oplogUrl,
-    mobileServerUrl: options.mobileServerUrl,
-    buildOptions: options.buildOptions,
-    rootUrl: self.rootUrl,
-    settingsFile: options.settingsFile,
-    debugPort: options.debugPort,
-    proxy: self.proxy,
-    onRunEnd: options.onRunEnd,
-    watchForChanges: options.watchForChanges,
-    noRestartBanner: self.quiet,
-    recordPackageUsage: options.recordPackageUsage,
-    omitPackageMapDeltaDisplayOnFirstRun: (
-      options.omitPackageMapDeltaDisplayOnFirstRun)
-  });
-
-  self.selenium = null;
-  if (options.selenium) {
-    self.selenium = new Selenium({
-      runner: self,
-      browser: options.seleniumBrowser
-    });
-  }
-};
-
-_.extend(Runner.prototype, {
   // XXX leave a pidfile and check if we are already running
-  start: function () {
+  start() {
     var self = this;
 
     // XXX: Include all runners, and merge parallel-launch patch
@@ -188,9 +211,9 @@ _.extend(Runner.prototype, {
     // now we overwrite the "starting foo..." message with the
     // error. It'd be better to overwrite it with "failed to start
     // foo" and then print the error.
-  },
+  }
 
-  _startMongoAsync: function () {
+  _startMongoAsync() {
     var self = this;
     if (! self.stopped && self.mongoRunner) {
       var future = new Future;
@@ -206,10 +229,10 @@ _.extend(Runner.prototype, {
         future.isResolved() || future.return();
       }).run();
     }
-  },
+  }
 
   // Idempotent
-  stop: function () {
+  stop() {
     var self = this;
     if (self.stopped)
       return;
@@ -227,14 +250,14 @@ _.extend(Runner.prototype, {
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();
-  },
+  }
 
   // Call this whenever you want to regenerate the app's port (if it is not
   // explicitly specified by the user).
   //
   // Rationale: if we randomly chose a port that's in use and the app failed to
   // listen on it, we should try a different port when we restart the app!
-  regenerateAppPort: function () {
+  regenerateAppPort() {
     var self = this;
     if (self.specifiedAppPort) {
       self.appPort = self.specifiedAppPort;
@@ -246,7 +269,7 @@ _.extend(Runner.prototype, {
     if (self.appRunner)
       self.appRunner.port = self.appPort;
   }
-});
+}
 
 // Run the app and all of its associated processes. Runs (and does not
 // return) until an unrecoverable failure happens. Logs to
