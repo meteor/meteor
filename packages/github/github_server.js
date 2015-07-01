@@ -11,7 +11,7 @@ OAuth.registerService('github', 2, null, function(query) {
     serviceData: {
       id: identity.id,
       accessToken: OAuth.sealSecret(accessToken),
-      email: identity.email || primaryEmail.email,
+      email: identity.email || (primaryEmail && primaryEmail.email) || '',
       username: identity.login,
       emails: emails
     },
