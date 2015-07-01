@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.4.40
+BUNDLE_VERSION=0.4.41
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
