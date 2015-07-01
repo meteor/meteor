@@ -1,21 +1,20 @@
-var _ = require('underscore');
-var Fiber = require('fibers');
-var Future = require('fibers/future');
+const _ = require('underscore');
+const Fiber = require('fibers');
+const Future = require('fibers/future');
 
-var files = require('./files.js');
-var release = require('./release.js');
-var buildmessage = require('./buildmessage.js');
-var fiberHelpers = require('./fiber-helpers.js');
-var runLog = require('./run-log.js');
+const files = require('./files.js');
+const release = require('./release.js');
+const buildmessage = require('./buildmessage.js');
+const runLog = require('./run-log.js');
 
-var Console = require('./console.js').Console;
+const Console = require('./console.js').Console;
 
-var Proxy = require('./run-proxy.js').Proxy;
-var Selenium = require('./run-selenium.js').Selenium;
-var HttpProxy = require('./run-httpproxy.js').HttpProxy;
-var AppRunner = require('./run-app.js').AppRunner;
-var MongoRunner = require('./run-mongo.js').MongoRunner;
-var Updater = require('./run-updater.js').Updater;
+const Proxy = require('./run-proxy.js').Proxy;
+const Selenium = require('./run-selenium.js').Selenium;
+const HttpProxy = require('./run-httpproxy.js').HttpProxy;
+const AppRunner = require('./run-app.js').AppRunner;
+const MongoRunner = require('./run-mongo.js').MongoRunner;
+const Updater = require('./run-updater.js').Updater;
 
 class Runner {
   constructor({
@@ -37,15 +36,15 @@ class Runner {
     seleniumBrowser,
     ...optionsForAppRunner
   }) {
-    var self = this;
+    const self = this;
     self.projectContext = projectContext;
 
-    if (typeof proxyPort === "undefined") {
-      throw new Error("no proxyPort?");
+    if (typeof proxyPort === 'undefined') {
+      throw new Error('no proxyPort?');
     }
 
-    var listenPort = proxyPort;
-    var mongoPort = parseInt(listenPort) + 1;
+    const listenPort = proxyPort;
+    const mongoPort = parseInt(listenPort, 10) + 1;
     self.specifiedAppPort = appPort;
     self.regenerateAppPort();
 
@@ -81,9 +80,7 @@ class Runner {
     }
 
     self.mongoRunner = null;
-    var mongoUrl, oplogUrl;
     if (mongoUrl) {
-      mongoUrl = mongoUrl;
       oplogUrl = disableOplog ? null : oplogUrl;
     } else {
       self.mongoRunner = new MongoRunner({
@@ -99,7 +96,7 @@ class Runner {
       oplogUrl = disableOplog ? null : self.mongoRunner.oplogUrl();
     }
 
-    self.updater = new Updater;
+    self.updater = new Updater();
 
     self.appRunner = new AppRunner({
       ...optionsForAppRunner,
@@ -124,11 +121,10 @@ class Runner {
 
   // XXX leave a pidfile and check if we are already running
   start() {
-    var self = this;
+    const self = this;
 
     // XXX: Include all runners, and merge parallel-launch patch
-    var allRunners = [ ] ;
-    allRunners = allRunners.concat(self.extraRunners);
+    const allRunners = self.extraRunners.slice(0);
     _.each(allRunners, function (runner) {
       if (!runner) return;
       runner.prestart && runner.prestart();
@@ -158,7 +154,7 @@ class Runner {
 
     _.forEach(self.extraRunners, function (extraRunner) {
       if (! self.stopped) {
-        var title = extraRunner.title;
+        const title = extraRunner.title;
         buildmessage.enterJob({ title: "starting " + title }, function () {
           extraRunner.start();
         });
@@ -200,9 +196,9 @@ class Runner {
   }
 
   _startMongoAsync() {
-    var self = this;
+    const self = this;
     if (! self.stopped && self.mongoRunner) {
-      var future = new Future;
+      const future = new Future;
       self.appRunner.awaitFutureBeforeStart(future);
       Fiber(function () {
         self.mongoRunner.start();
@@ -219,7 +215,7 @@ class Runner {
 
   // Idempotent
   stop() {
-    var self = this;
+    const self = this;
     if (self.stopped)
       return;
 
@@ -244,7 +240,7 @@ class Runner {
   // Rationale: if we randomly chose a port that's in use and the app failed to
   // listen on it, we should try a different port when we restart the app!
   regenerateAppPort() {
-    var self = this;
+    const self = this;
     if (self.specifiedAppPort) {
       self.appPort = self.specifiedAppPort;
     } else {
