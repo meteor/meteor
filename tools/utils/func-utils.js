@@ -2,7 +2,7 @@
 // milliseconds of each other, and prevents overlapping invocations of fn
 // by postponing the next invocation until after fn's fiber finishes.
 exports.coalesce = function(delayMs, callback, context) {
-  var pendingTimer = null;
+  var pending = false;
   var inProgress = 0;
 
   delayMs = delayMs || 100;
@@ -17,32 +17,32 @@ exports.coalesce = function(delayMs, callback, context) {
       return;
     }
 
-    if (pendingTimer !== null) {
+    if (pending) {
       // Defer to the already-pending timer.
       return;
     }
 
-    var fiberCallback = require('./fiber-helpers.js').inBareFiber(function() {
+    new Promise(
+      resolve => setTimeout(resolve, delayMs)
+    ).then(function thenCallback() {
       // Now that the timeout has fired, set inProgress to 1 so that
       // (until the callback is complete and we set inProgress to 0 again)
       // any calls to coalescingWrapper will increment inProgress to
       // indicate that at least one other caller wants fiberCallback to be
       // called again when the original callback is complete.
-      pendingTimer = null;
+      pending = false;
       inProgress = 1;
 
       try {
         callback.call(self);
       } finally {
         if (inProgress > 1) {
-          process.nextTick(fiberCallback);
-          pendingTimer = true;
+          Promise.resolve().then(thenCallback);
+          pending = true;
         }
         inProgress = 0;
       }
     });
-
-    pendingTimer = setTimeout(fiberCallback, delayMs);
   }
 
   return wrap(coalescingWrapper, callback);

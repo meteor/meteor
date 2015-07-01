@@ -21,15 +21,15 @@ _.extend(Updater.prototype, {
 
     // Check every 3 hours. (Should not share buildmessage state with
     // the main fiber.)
-    self.timer = setInterval(fiberHelpers.inBareFiber(function () {
+    async function check() {
       self._check();
-    }), 3 * 60 * 60 * 1000);
+    }
+
+    self.timer = setInterval(check, 3 * 60 * 60 * 1000);
 
     // Also start a check now, but don't block on it. (This should
     // not share buildmessage state with the main fiber.)
-    new Fiber(function () {
-      self._check();
-    }).run();
+    check();
   },
 
   _check: function () {

@@ -126,20 +126,6 @@ exports.bindEnvironment = function (func) {
   };
 };
 
-// An alternative to bindEnvironment for the rare case where you
-// want the callback you're passing to some Node function to start
-// a new fiber but *NOT* to inherit the current environment.
-// Eg, if you are trying to do the equivalent of start a background
-// thread.
-exports.inBareFiber = function (func) {
-  return function (...args) {
-    var self = this;
-    new Fiber(function () {
-      func.apply(self, args);
-    }).run();
-  };
-};
-
 // Returns a Promise that supports .resolve(result) and .reject(error).
 exports.makeFulfillablePromise = function () {
   var resolve, reject;

@@ -85,8 +85,12 @@ _.extend(AppProcess.prototype, {
     self.proc = self._spawn();
 
     // Send stdout and stderr to the runLog
-    var eachline = require('eachline');
-    eachline(self.proc.stdout, 'utf8', fiberHelpers.inBareFiber(function (line) {
+    var realEachline = require('eachline');
+    function eachline(stream, encoding, callback) {
+      realEachline(stream, encoding, (...args) => void(callback(...args)));
+    }
+
+    eachline(self.proc.stdout, 'utf8', async function (line) {
       if (line.match(/^LISTENING\s*$/)) {
         // This is the child process telling us that it's ready to receive
         // connections.  (It does this because we told it to with
@@ -96,9 +100,9 @@ _.extend(AppProcess.prototype, {
       } else {
         runLog.logAppOutput(line);
       }
-    }));
+    });
 
-    eachline(self.proc.stderr, 'utf8', fiberHelpers.inBareFiber(function (line) {
+    eachline(self.proc.stderr, 'utf8', async function (line) {
       if (self.debugPort &&
           line.indexOf("debugger listening on port ") >= 0) {
         Console.enableProgressDisplay(false);
@@ -106,15 +110,15 @@ _.extend(AppProcess.prototype, {
       }
 
       runLog.logAppOutput(line, true);
-    }));
+    });
 
     // Watch for exit and for stdio to be fully closed (so that we don't miss
     // log lines).
-    self.proc.on('close', fiberHelpers.inBareFiber(function (code, signal) {
+    self.proc.on('close', async function (code, signal) {
       self._maybeCallOnExit(code, signal);
-    }));
+    });
 
-    self.proc.on('error', fiberHelpers.inBareFiber(function (err) {
+    self.proc.on('error', async function (err) {
       // if the error is the result of .send command over ipc pipe, ignore it
       if (self._refreshing) {
         return;
@@ -126,7 +130,7 @@ _.extend(AppProcess.prototype, {
       // 'close' callback, so we use a guard to make sure we only call
       // onExit once.
       self._maybeCallOnExit();
-    }));
+    });
 
     // This happens sometimes when we write a keepalive after the app
     // is dead. If we don't register a handler, we get a top level
