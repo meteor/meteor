@@ -24,8 +24,8 @@ Tinytest.add(
       r.increment(methodInvc1);
       r.increment(methodInvc2);
     }
-    test.equal(r.check(methodInvc1).valid, false);
-    test.equal(r.check(methodInvc2).valid, true);
+    test.equal(r.check(methodInvc1).allowed, false);
+    test.equal(r.check(methodInvc2).allowed, true);
   });
 
 testAsyncMulti("Run multiple invocations and wait for one to return", [
@@ -48,8 +48,8 @@ testAsyncMulti("Run multiple invocations and wait for one to return", [
       self.r.increment(self.methodInvc1);
       self.r.increment(self.methodInvc2);
     }
-    test.equal(self.r.check(self.methodInvc1).valid, false);
-    test.equal(self.r.check(self.methodInvc2).valid, true);
+    test.equal(self.r.check(self.methodInvc1).allowed, false);
+    test.equal(self.r.check(self.methodInvc2).allowed, true);
     Meteor.setTimeout(expect(function () {}), 1000);
   },
   function (test, expect) {
@@ -58,8 +58,8 @@ testAsyncMulti("Run multiple invocations and wait for one to return", [
       self.r.increment(self.methodInvc2);
     }
 
-    test.equal(self.r.check(self.methodInvc1).valid, true);
-    test.equal(self.r.check(self.methodInvc2).valid, true);
+    test.equal(self.r.check(self.methodInvc1).allowed, true);
+    test.equal(self.r.check(self.methodInvc2).allowed, true);
   }
 ]);
 
@@ -95,15 +95,15 @@ Tinytest.add('Check two rules that affect same methodInvc still throw',
     };
 
     // After for loop runs, we only have 10 runs, so that's under the limit
-    test.equal(r.check(methodInvc1).valid, true);
+    test.equal(r.check(methodInvc1).allowed, true);
     // However, this triggers userId rule since this userId is even
-    test.equal(r.check(methodInvc2).valid, false);
-    test.equal(r.check(methodInvc2).valid, false);
+    test.equal(r.check(methodInvc2).allowed, false);
+    test.equal(r.check(methodInvc2).allowed, false);
 
     // Running one more test causes it to be false, since we're at 11 now.
     r.increment(methodInvc1);
-    test.equal(r.check(methodInvc1).valid, false);
-    test.equal(r.check(methodInvc3).valid, true);
+    test.equal(r.check(methodInvc1).allowed, false);
+    test.equal(r.check(methodInvc3).allowed, true);
 
   });
 
@@ -129,8 +129,8 @@ Tinytest.add('Check two rules that are affected by different invocations',
     }
     r.increment(methodInvc1);
 
-    test.equal(r.check(methodInvc1).valid, false);
-    test.equal(r.check(methodInvc2).valid, false);
+    test.equal(r.check(methodInvc1).allowed, false);
+    test.equal(r.check(methodInvc2).allowed, false);
   });
 
 Tinytest.add("add global rule", function (test) {
@@ -153,13 +153,13 @@ Tinytest.add("add global rule", function (test) {
     'user-accounts');
 
   r.increment(methodInvc2);
-  test.equal(r.check(methodInvc1).valid, true);
-  test.equal(r.check(methodInvc2).valid, true);
-  test.equal(r.check(methodInvc3).valid, true);
+  test.equal(r.check(methodInvc1).allowed, true);
+  test.equal(r.check(methodInvc2).allowed, true);
+  test.equal(r.check(methodInvc3).allowed, true);
   r.increment(methodInvc3);
-  test.equal(r.check(methodInvc1).valid, false);
-  test.equal(r.check(methodInvc2).valid, false);
-  test.equal(r.check(methodInvc3).valid, false);
+  test.equal(r.check(methodInvc1).allowed, false);
+  test.equal(r.check(methodInvc2).allowed, false);
+  test.equal(r.check(methodInvc3).allowed, false);
 });
 
 Tinytest.add('add fuzzy rule match doesnt trigger', function (test) {
@@ -179,7 +179,7 @@ Tinytest.add('add fuzzy rule match doesnt trigger', function (test) {
   for (var i = 0; i < 5; i++) {
     r.increment(input);
   }
-  test.equal(r.check(input).valid, true);
+  test.equal(r.check(input).allowed, true);
   var matchingInput = {
     a: 3,
     b: 5,
@@ -189,7 +189,7 @@ Tinytest.add('add fuzzy rule match doesnt trigger', function (test) {
   r.increment(matchingInput);
   r.increment(matchingInput);
   // Past limit so should be false
-  test.equal(r.check(matchingInput).valid, false);
+  test.equal(r.check(matchingInput).allowed, false);
 
 
   // Add secondary rule and check that longer time is returned when multiple rules limits are hit
