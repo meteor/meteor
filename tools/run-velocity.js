@@ -49,8 +49,11 @@ var runVelocity = function (url) {
           this.connection.registerStore("velocityTestReports", {
             update: function (msg) {
               if (msg.msg === "added") {
-                var testDesc = msg.fields.framework + " : " +
-                      msg.fields.ancestors.join(":") + " => " + msg.fields.name;
+                var testDesc = msg.fields.framework + " : ";
+                if (msg.fields.ancestors) {
+                  testDesc += msg.fields.ancestors.join(":") + " ";
+                }
+                testDesc += " => " + msg.fields.name;
                 if (msg.fields.result === "passed") {
                   console.log("PASSED", testDesc);
                 } else if (msg.fields.result === "failed") {
