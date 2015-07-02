@@ -8,7 +8,7 @@ Ap._defaultRateLimiterRuleId = DDPRateLimiter.addRule({
   ipAddr: null,
   type: 'method',
   name: function(name) {
-		return _.contains(['login', 'createUser', 'resetPassword'], name);
+		return _.contains(['login', 'createUser', 'resetPassword', 'forgotPassword'], name);
   },
   sessionId: function(sessionId) {
   	return true;
