@@ -207,15 +207,22 @@ ServiceConfiguration.configurations.upsert(
 ```
 
 Each external service has its own login provider package and login function. For
-example, to support GitHub login, run `$ meteor add accounts-github` and use the
-`Meteor.loginWithGithub` function:
+example, to support GitHub login, run in your terminal:
 
-    Meteor.loginWithGithub({
-      requestPermissions: ['user', 'public_repo']
-    }, function (err) {
-      if (err)
-        Session.set('errorMessage', err.reason || 'Unknown error');
-    });
+```bash
+meteor add accounts-github
+```
+
+and use the `Meteor.loginWithGithub` function:
+
+```javascript
+Meteor.loginWithGithub({
+  requestPermissions: ['user', 'public_repo']
+}, function (err) {
+  if (err)
+    Session.set('errorMessage', err.reason || 'Unknown error');
+});
+```
 
 Login service configuration is sent from the server to the client over DDP when
 your app starts up; you may not call the login function until the configuration

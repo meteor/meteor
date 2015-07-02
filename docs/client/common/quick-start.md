@@ -18,20 +18,20 @@ The Windows installer supports Windows 7, Windows 8.1, Windows Server
 Once you've installed Meteor, create a project:
 
 ```bash
-$ meteor create myapp
+meteor create myapp
 ```
 
 Run it locally:
 
 ```bash
-$ cd myapp
-$ meteor
+cd myapp
+meteor
 # Meteor server running on: http://localhost:3000/
 ```
 
 Then, open a new terminal tab and unleash it on the world (on a free server we provide):
 
 ```bash
-$ meteor deploy myapp.meteor.com
+meteor deploy myapp.meteor.com
 ```
 {{/template}}
