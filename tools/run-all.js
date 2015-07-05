@@ -62,7 +62,7 @@ class Runner {
       self.rootUrl = 'http://localhost:' + listenPort + '/';
     }
 
-    self.extraRunners = extraRunners;
+    self.extraRunners = extraRunners ? extraRunners.slice(0) : [];
 
     self.proxy = new Proxy({
       listenPort,
@@ -124,10 +124,8 @@ class Runner {
     const self = this;
 
     // XXX: Include all runners, and merge parallel-launch patch
-    const allRunners = self.extraRunners.slice(0);
-    _.each(allRunners, function (runner) {
-      if (!runner) return;
-      runner.prestart && runner.prestart();
+    _.each(self.extraRunners, function (runner) {
+      runner && runner.prestart && runner.prestart();
     });
 
     self.proxy.start();
