@@ -1689,31 +1689,36 @@ var writeFile = Profile("bundler..writeFile", function (file, builder) {
   // to wait until the server is actually driven by the manifest
   // (rather than just serving all of the files in a certain
   // directories)
-  builder.write(file.targetPath, { data: file.contents() });
+  builder.write(file.targetPath, { data: file.contents(), hash: file.hash() });
 });
 
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
-  "bundler..writeTargetToPath", function (name, target, outputPath, options) {
-  var builder = new Builder({
-    outputPath: files.pathJoin(outputPath, 'programs', name)
+  "bundler..writeTargetToPath",
+  function (name, target, outputPath, {
+    includeNodeModules,
+    getRelativeTargetPath,
+    previousBuilder
+  }) {
+    var builder = new Builder({
+      outputPath: files.pathJoin(outputPath, 'programs', name),
+      previousBuilder
+    });
+
+    var targetBuild =
+      target.write(builder, {includeNodeModules, getRelativeTargetPath});
+
+    builder.complete();
+
+    return {
+      name,
+      arch: target.mostCompatibleArch(),
+      path: files.pathJoin('programs', name, targetBuild.controlFile),
+      nodePath: targetBuild.nodePath,
+      cordovaDependencies: target.cordovaDependencies || undefined,
+      builder
+    };
   });
-
-  var targetBuild =
-    target.write(builder, {
-      includeNodeModules: options.includeNodeModules,
-      getRelativeTargetPath: options.getRelativeTargetPath });
-
-  builder.complete();
-
-  return {
-    name: name,
-    arch: target.mostCompatibleArch(),
-    path: files.pathJoin('programs', name, targetBuild.controlFile),
-    nodePath: targetBuild.nodePath,
-    cordovaDependencies: target.cordovaDependencies || undefined
-  };
-});
 
 ///////////////////////////////////////////////////////////////////////////////
 // writeSiteArchive
@@ -1741,18 +1746,26 @@ var writeTargetToPath = Profile(
 // - builtBy: vanity identification string to write into metadata
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
+// - previousBuilder: previous Builder object used in previous iteration
 var writeSiteArchive = Profile(
-  "bundler..writeSiteArchive", function (targets, outputPath, options) {
-  var builder = new Builder({
-    outputPath: outputPath
-  });
+  "bundler..writeSiteArchive",
+  function (targets, outputPath, {
+    includeNodeModules,
+    builtBy,
+    releaseName,
+    getRelativeTargetPath,
+    previousBuilders
+  }) {
+
+  const builders = {};
+  const builder = new Builder({outputPath});
 
   try {
     var json = {
       format: "site-archive-pre1",
-      builtBy: options.builtBy,
+      builtBy,
       programs: [],
-      meteorRelease: options.releaseName
+      meteorRelease: releaseName
     };
     var nodePath = [];
 
@@ -1773,28 +1786,29 @@ var writeSiteArchive = Profile(
       });
 
       builder.write('README', { data: new Buffer(
-"This is a Meteor application bundle. It has only one external dependency:\n" +
-"Node.js 0.10.36 or newer. To run the application:\n" +
-"\n" +
-"  $ (cd programs/server && npm install)\n" +
-"  $ export MONGO_URL='mongodb://user:password@host:port/databasename'\n" +
-"  $ export ROOT_URL='http://example.com'\n" +
-"  $ export MAIL_URL='smtp://user:password@mailhost:port/'\n" +
-"  $ node main.js\n" +
-"\n" +
-"Use the PORT environment variable to set the port where the\n" +
-"application will listen. The default is 80, but that will require\n" +
-"root on most systems.\n" +
-"\n" +
-"Find out more about Meteor at meteor.com.\n",
+`This is a Meteor application bundle. It has only one external dependency:
+Node.js 0.10.36 or newer. To run the application:
+
+  $ (cd programs/server && npm install)
+  $ export MONGO_URL='mongodb://user:password@host:port/databasename'
+  $ export ROOT_URL='http://example.com'
+  $ export MAIL_URL='smtp://user:password@mailhost:port/'
+  $ node main.js
+
+Use the PORT environment variable to set the port where the
+application will listen. The default is 80, but that will require
+root on most systems.
+
+Find out more about Meteor at meteor.com.
+`,
       'utf8')});
     }
 
     // Merge the WatchSet of everything that went into the bundle.
-    var clientWatchSet = new watch.WatchSet();
-    var serverWatchSet = new watch.WatchSet();
-    var dependencySources = [builder].concat(_.values(targets));
-    _.each(dependencySources, function (s) {
+    const clientWatchSet = new watch.WatchSet();
+    const serverWatchSet = new watch.WatchSet();
+    const dependencySources = [builder].concat(_.values(targets));
+    dependencySources.forEach(s => {
       if (s instanceof ClientTarget) {
         clientWatchSet.merge(s.getWatchSet());
       } else {
@@ -1802,16 +1816,29 @@ var writeSiteArchive = Profile(
       }
     });
 
-    _.each(targets, function (target, name) {
-      var targetBuild = writeTargetToPath(name, target, builder.buildPath, {
-        includeNodeModules: options.includeNodeModules,
-        builtBy: options.builtBy,
-        releaseName: options.releaseName,
-        getRelativeTargetPath: options.getRelativeTargetPath
+    Object.keys(targets).forEach(name => {
+      const target = targets[name];
+      const previousBuilder = previousBuilders[name];
+      const {
+        arch, path, cordovaDependencies,
+        nodePath: targetNP,
+        builder: targetBuilder
+      } =
+        writeTargetToPath(name, target, builder.buildPath, {
+          includeNodeModules,
+          builtBy,
+          releaseName,
+          getRelativeTargetPath,
+          previousBuilder
+        });
+
+      builders[name] = targetBuilder;
+
+      json.programs.push({
+        name, arch, path, cordovaDependencies
       });
 
-      json.programs.push(targetBuild);
-      nodePath = nodePath.concat(targetBuild.nodePath);
+      nodePath = nodePath.concat(targetNP);
     });
 
     // Control file
@@ -1820,11 +1847,19 @@ var writeSiteArchive = Profile(
     // We did it!
     builder.complete();
 
+    // now, go and "fix up" the outputPath properties of the sub-builders
+    Object.keys(builders).forEach(name => {
+      const subBuilder = builders[name];
+      subBuilder.outputPath = builder.outputPath + subBuilder.outputPath.substring(builder.buildPath.length);
+      console.log("fix up: ", subBuilder.outputPath);
+    });
+
     return {
-      clientWatchSet: clientWatchSet,
-      serverWatchSet: serverWatchSet,
+      clientWatchSet,
+      serverWatchSet,
       starManifest: json,
-      nodePath: nodePath
+      nodePath,
+      builders
     };
   } catch (e) {
     builder.abort();
@@ -1902,14 +1937,17 @@ var writeSiteArchive = Profile(
  * will point somewhere else -- into the app (if any) whose packages
  * you are testing!
  */
-exports.bundle = function (options) {
-  var projectContext = options.projectContext;
-
-  var outputPath = options.outputPath;
-  var includeNodeModules = options.includeNodeModules;
-  var buildOptions = options.buildOptions || {};
-  buildOptions.minify = buildOptions.minify || 'development';
-  var shouldLint = options.lint || false;
+exports.bundle = function ({
+  projectContext,
+  outputPath,
+  includeNodeModules,
+  buildOptions,
+  lint: shouldLint,
+  previousBuilders,
+  hasCachedBundle
+}) {
+  buildOptions = buildOptions || {};
+  shouldLint = shouldLint || false;
 
   var appDir = projectContext.projectDir;
 
@@ -1929,6 +1967,7 @@ exports.bundle = function (options) {
   var targets = {};
   var nodePath = [];
   var lintingMessages = null;
+  var builders = {};
 
   if (! release.usingRightReleaseForApp(projectContext))
     throw new Error("running wrong release for app?");
@@ -2023,7 +2062,7 @@ exports.bundle = function (options) {
     });
 
     // Server
-    if (! options.hasCachedBundle) {
+    if (! hasCachedBundle) {
       var server = makeServerTarget(app, clientTargets);
       targets.server = server;
     }
@@ -2049,27 +2088,36 @@ exports.bundle = function (options) {
 
     // Write to disk
     var writeOptions = {
-      includeNodeModules: includeNodeModules,
-      builtBy: builtBy,
-      releaseName: releaseName,
-      getRelativeTargetPath: getRelativeTargetPath
+      includeNodeModules,
+      builtBy,
+      releaseName,
+      getRelativeTargetPath
     };
 
     if (outputPath !== null) {
-      if (options.hasCachedBundle) {
+      if (hasCachedBundle) {
         // If we already have a cached bundle, just recreate the new targets.
         // XXX This might make the contents of "star.json" out of date.
+        builders = _.clone(previousBuilders);
         _.each(targets, function (target, name) {
+          const previousBuilder = previousBuilders[name];
+          console.log('previous builder for ', name, previousBuilder.outputPath);
           var targetBuild =
-            writeTargetToPath(name, target, outputPath, writeOptions);
+            writeTargetToPath(name, target, outputPath, _.extend(writeOptions, {previousBuilder}));
           nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
+          builders[name] = targetBuild.builder;
         });
       } else {
-        starResult = writeSiteArchive(targets, outputPath, writeOptions);
+        starResult = writeSiteArchive(
+          targets,
+          outputPath,
+          _.extend(writeOptions, {previousBuilders}));
+
         nodePath = nodePath.concat(starResult.nodePath);
         serverWatchSet.merge(starResult.serverWatchSet);
         clientWatchSet.merge(starResult.clientWatchSet);
+        builders = starResult.builders;
       }
     }
 
@@ -2082,10 +2130,11 @@ exports.bundle = function (options) {
   return {
     errors: success ? false : messages,
     warnings: lintingMessages,
-    serverWatchSet: serverWatchSet,
-    clientWatchSet: clientWatchSet,
+    serverWatchSet,
+    clientWatchSet,
     starManifest: starResult && starResult.starManifest,
-    nodePath: nodePath
+    nodePath,
+    builders
   };
 };
 

@@ -465,6 +465,9 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
 
+    // Builders saved from previous iterations
+    var builders = {};
+
     var bundleApp = function () {
       if (! firstRun) {
         // If the build fails in a way that could be fixed by a refresh, allow
@@ -553,14 +556,20 @@ _.extend(AppRunner.prototype, {
           includeNodeModules = 'reference-directly';
         }
 
-        return bundler.bundle({
+        var bundleResult = bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          lint: self.lint
+          lint: self.lint,
+          previousBuilders: builders
         });
+
+        // save new builders with their caches
+        ({builders} = bundleResult);
+
+        return bundleResult;
       });
 
       // Keep the server watch set from the initial bundle, because subsequent
@@ -763,10 +772,10 @@ _.extend(AppRunner.prototype, {
         if (bundleResultOrRunResult.runResult)
           return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
-        if (bundleResult.warnings) {
+        if (self.lint && bundleResult.warnings) {
           runLog.log(
             'Linting your app.\n\n' +
-              bundleResult.warnings.formatMessages(), { arrow: true })
+              bundleResult.warnings.formatMessages(), { arrow: true });
         }
 
         var oldFuture = self.runFuture = new Future;
