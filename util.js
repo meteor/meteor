@@ -23,7 +23,7 @@ exports.mkdirp = function mkdirp(dir) {
 
 // Borrowed from another MIT-licensed project that I wrote:
 // https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
-exports.deepHash = function deepHash(val) {
+function deepHash(val) {
   var hash = createHash("sha1");
   var type = typeof val;
 
@@ -62,4 +62,18 @@ exports.deepHash = function deepHash(val) {
   }
 
   return hash.digest("hex");
+}
+
+exports.deepHash = function (val) {
+  var argc = arguments.length;
+  if (argc === 1) {
+    return deepHash(val);
+  }
+
+  var args = new Array(argc);
+  for (var i = 0; i < argc; ++i) {
+    args[i] = arguments[i];
+  }
+
+  return deepHash(args);
 };
