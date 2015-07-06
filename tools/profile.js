@@ -165,6 +165,7 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 
 var enabled = !! process.env['METEOR_PROFILE'];
+var filter = ~~process.env['METEOR_PROFILE'] || 100; // ms
 
 var bucketTimes = {};
 
@@ -279,6 +280,7 @@ var isLeaf = function (entry) {
 };
 
 var reportOnLeaf = function (level, entry) {
+  if (entryTime(entry) < filter) return;
   print(
     level,
     _.last(entry) + ": " + entryTime(entry).toFixed(1));
@@ -301,6 +303,7 @@ var injectOtherTime = function (entry) {
 };
 
 var reportOnParent = function (level, entry) {
+  if (entryTime(entry) < filter) return;
   print(level, entryName(entry) + ": " + entryTime(entry).toFixed(1));
   _.each(children(entry), function (child) {
     reportOn(level + 1, child);
@@ -347,6 +350,7 @@ var reportTotals = function () {
   });
   var grandTotal = 0;
   _.each(totals, function (total) {
+    if (total.time < filter) return;
     print(0, total.name + ": " + total.time.toFixed(1));
     grandTotal += total.time;
   });
