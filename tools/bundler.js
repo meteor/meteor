@@ -293,8 +293,9 @@ _.extend(File.prototype, {
 
   hash: function () {
     var self = this;
-    if (! self._hash)
+    if (! self._hash) {
       self._hash = watch.sha1(self.contents());
+    }
     return self._hash;
   },
 
@@ -1026,7 +1027,7 @@ _.extend(ClientTarget.prototype, {
   // the target
   // - nodePath: an array of paths required to be set in the NODE_PATH
   // environment variable.
-  write: Profile("ClientTarget#write", function (builder) {
+  write: Profile("ClientTarget#write", function (builder, {mode}) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1059,7 +1060,7 @@ _.extend(ClientTarget.prototype, {
         url: file.url
       };
 
-      if (file.sourceMap) {
+      const antiXSSIPrepend = Profile("anti-XSSI header for source-maps", function (sourceMap) {
         // Add anti-XSSI header to this file which will be served over
         // HTTP. Note that the Mozilla and WebKit implementations differ as to
         // what they strip: Mozilla looks for the four punctuation characters
@@ -1067,7 +1068,19 @@ _.extend(ClientTarget.prototype, {
         // three characters (not the single quote) and then strips everything up
         // to a newline.
         // https://groups.google.com/forum/#!topic/mozilla.dev.js-sourcemap/3QBr4FBng5g
-        var mapData = new Buffer(")]}'\n" + file.sourceMap, 'utf8');
+        return new Buffer(")]}'\n" + sourceMap, 'utf8');
+      });
+
+      if (file.sourceMap) {
+        let mapData = file.sourceMap;
+
+        // don't need to do this in devel mode
+        if (mode === 'production') {
+          mapData = antiXSSIPrepend(file.sourceMap);
+        } else {
+          mapData = new Buffer(file.sourceMap, 'utf8');
+        }
+
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
           file.targetPath + '.map', {data: mapData});
 
@@ -1698,7 +1711,8 @@ var writeTargetToPath = Profile(
   function (name, target, outputPath, {
     includeNodeModules,
     getRelativeTargetPath,
-    previousBuilder
+    previousBuilder,
+    mode
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
@@ -1706,7 +1720,7 @@ var writeTargetToPath = Profile(
     });
 
     var targetBuild =
-      target.write(builder, {includeNodeModules, getRelativeTargetPath});
+      target.write(builder, {includeNodeModules, getRelativeTargetPath, mode});
 
     builder.complete();
 
@@ -1754,7 +1768,8 @@ var writeSiteArchive = Profile(
     builtBy,
     releaseName,
     getRelativeTargetPath,
-    previousBuilders
+    previousBuilders,
+    mode
   }) {
 
   const builders = {};
@@ -1829,7 +1844,8 @@ Find out more about Meteor at meteor.com.
           builtBy,
           releaseName,
           getRelativeTargetPath,
-          previousBuilder
+          previousBuilder,
+          mode
         });
 
       builders[name] = targetBuilder;
@@ -2090,7 +2106,8 @@ exports.bundle = function ({
       includeNodeModules,
       builtBy,
       releaseName,
-      getRelativeTargetPath
+      getRelativeTargetPath,
+      mode: buildOptions.minify
     };
 
     if (outputPath !== null) {
