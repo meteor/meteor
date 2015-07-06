@@ -4,6 +4,20 @@ var buildmessage = require('./buildmessage.js');
 var isopackets = require('./isopackets.js');
 var watch = require('./watch.js');
 var Profile = require('./profile.js').Profile;
+import LRU from 'lru-cache';
+
+// A rather small cache size, assuming only one module is being linked
+// most of the time.
+const CACHE_SIZE = process.env.METEOR_LINKER_PRELINK_CACHE_SIZE || 1024*1024*20;
+
+// Cache individual files prelinked
+const LINKER_PRELINK_CACHE = new LRU({
+  max: CACHE_SIZE,
+  length: function (prelinked) {
+    return prelinked.source.length +
+           prelinked.sourceMap ? prelinked.sourceMap.length : 0;
+  }
+});
 
 var packageDot = function (name) {
   if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name))
@@ -102,22 +116,31 @@ _.extend(Module.prototype, {
     // preserving the line numbers.
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
-        var node = file.getPrelinkedOutput({ preserveLineNumbers: true });
-        var results = Profile.time(
-          "getPrelinkedFiles toStringWithSourceMap (app)",
-          function () {
+        const cacheKey = JSON.stringify([
+          file.sourceHash, file.bare, file.servePath]);
+
+        if (LINKER_PRELINK_CACHE.has(cacheKey)) {
+          return LINKER_PRELINK_CACHE.get(cacheKey);
+        }
+
+        const node = file.getPrelinkedOutput({ preserveLineNumbers: true });
+        const results = Profile.time(
+          "getPrelinkedFiles toStringWithSourceMap (app)", () => {
             return node.toStringWithSourceMap({
               file: file.servePath
             }); // results has 'code' and 'map' attributes
           }
         );
-        var sourceMap = JSON.stringify(results.map.toJSON());
+        const sourceMap = JSON.stringify(results.map.toJSON());
 
-        return {
+        const prelinked = {
           source: results.code,
           servePath: file.servePath,
           sourceMap: sourceMap
         };
+
+        LINKER_PRELINK_CACHE.set(cacheKey, prelinked);
+        return prelinked;
       });
     }
 
