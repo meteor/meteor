@@ -1,4 +1,7 @@
-var getDefaultOptions = require("./options").getDefaults;
+var assert = require("assert");
+var getDefaultOptions = require("./options.js").getDefaults;
+var Cache = require("./cache.js");
+var compileCache; // Lazily initialized.
 
 // Options passed to compile will completely replace the default options,
 // so if you only want to modify the default options, call this function
@@ -11,8 +14,19 @@ exports.parse = function parse(source, options) {
 
 exports.compile = function compile(source, options) {
   options = options || getDefaultOptions();
-  return require("babel-core").transform(source, options);
+  if (! compileCache) {
+    setCacheDir();
+  }
+  return compileCache.get(source, options);
 };
+
+function setCacheDir(cacheDir) {
+  var babel = require("babel-core");
+  compileCache = new Cache(function (source, options) {
+    return babel.transform(source, options);
+  }, cacheDir);
+}
+exports.setCacheDir = setCacheDir;
 
 exports.runtime = // Legacy name; prefer installRuntime.
 exports.installRuntime = function installRuntime() {
