@@ -3,6 +3,7 @@ import _ from "underscore";
 import pathwatcher from "./safe-pathwatcher.js";
 import {createHash} from "crypto";
 import {coalesce} from "./func-utils.js";
+import {Profile} from "./profile.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -250,9 +251,11 @@ var readFile = function (absPath) {
 };
 
 export function sha1(contents) {
-  var hash = createHash('sha1');
-  hash.update(contents);
-  return hash.digest('hex');
+  return Profile("sha1", function () {
+    var hash = createHash('sha1');
+    hash.update(contents);
+    return hash.digest('hex');
+  })();
 }
 
 export function readDirectory(options) {
