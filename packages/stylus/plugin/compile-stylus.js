@@ -22,7 +22,7 @@ function StylusCompiler () {
     max: CACHE_SIZE,
     // Cache is measured in bytes (not counting the hashes).
     length: function (value) {
-      return value.css.length + value.sourceMap.length;
+      return value.css.length + sourceMapLength(value.sourceMap);
     }
   });
 
@@ -156,7 +156,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       cacheEntry = {
         hashes: {},
         css: css,
-        sourceMap: JSON.stringify(sourcemap)
+        sourceMap: sourcemap
       };
       cacheEntry.hashes[absolutePath] = inputFile.getSourceHash();
       currentlyProcessedImports.forEach(function (path) {
@@ -190,3 +190,12 @@ StylusCompiler.prototype._writeCache = function () {
   // XXX BBP no on-disk caching yet
 };
 
+function sourceMapLength(sm) {
+  if (! sm) return 0;
+  // sum the length of sources and the mappings, the size of
+  // metadata is ignored, but it is not a big deal
+  return sm.mappings.length
+       + (sm.sourcesContent || []).reduce(function (soFar, current) {
+         return soFar + (current ? current.length : 0);
+       }, 0);
+};

@@ -84,8 +84,6 @@ var stripExportedVars = function (source, exports) {
 };
 
 var addSharedHeader = function (source, sourceMap) {
-  var sourceMapJSON = JSON.parse(sourceMap);
-
   // We want the symbol "share" to be visible to all CoffeeScript files in the
   // package (and shared between them), but not visible to JavaScript
   // files. (That's because we don't want to introduce two competing ways to
@@ -114,13 +112,13 @@ var addSharedHeader = function (source, sourceMap) {
       // There's no use strict, so we can just add the header at the very
       // beginning. This adds a line to the file, so we update the source map to
       // add a single un-annotated line to the beginning.
-      sourceMapJSON.mappings = ";" + sourceMapJSON.mappings;
+      sourceMap.mappings = ";" + sourceMap.mappings;
       return header;
     }
   });
   return {
     source: source,
-    sourceMap: JSON.stringify(sourceMapJSON)
+    sourceMap: sourceMap
   };
 };
 
@@ -134,7 +132,7 @@ var CoffeeCompiler = function () {
     max: CACHE_SIZE,
     // Cache is measured in bytes.
     length: function (value) {
-      return value.source.length + value.sourceMap.length;
+      return value.source.length + sourceMapLength(value.sourceMap);
     }
   });
   self._diskCache = null;
@@ -188,6 +186,7 @@ _.extend(CoffeeCompiler.prototype, {
         var stripped = stripExportedVars(
           output.js,
           _.pluck(inputFile.getDeclaredExports(), 'name'));
+        console.log('>>>> ', typeof output.sourceMap, typeof output.v3SourceMap);
         sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
         self._cache.set(cacheKey, sourceWithMap);
       }
@@ -257,3 +256,12 @@ Plugin.registerCompiler({
   return new CoffeeCompiler();
 });
 
+function sourceMapLength(sm) {
+  if (! sm) return 0;
+  // sum the length of sources and the mappings, the size of
+  // metadata is ignored, but it is not a big deal
+  return sm.mappings.length
+       + (sm.sourcesContent || []).reduce(function (soFar, current) {
+         return soFar + (current ? current.length : 0);
+       }, 0);
+};

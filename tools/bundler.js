@@ -235,7 +235,8 @@ var NodeModulesDirectory = function (options) {
 // - sourcePath: path to file on disk that will provide our contents
 // - data: contents of the file as a Buffer
 // - hash: optional, sha1 hash of the file contents, if known
-// - sourceMap: if 'data' is given, can be given instead of sourcePath. a string
+// - sourceMap: if 'data' is given, can be given instead of
+//   sourcePath. a string or a JS Object. Will be stored as Object.
 // - cacheable
 var File = function (options) {
   var self = this;
@@ -390,8 +391,14 @@ _.extend(File.prototype, {
   setSourceMap: function (sourceMap, root) {
     var self = this;
 
-    if (typeof sourceMap !== "string")
-      throw new Error("sourceMap must be given as a string");
+    if (sourceMap === null || ['object', 'string'].indexOf(typeof sourceMap) === -1) {
+      throw new Error("sourceMap must be given as a string or an object");
+    }
+
+    if (typeof sourceMap === 'string') {
+      sourceMap = JSON.parse(sourceMap);
+    }
+
     self.sourceMap = sourceMap;
     self.sourceMapRoot = root;
   },
@@ -863,18 +870,20 @@ _.extend(Target.prototype, {
   // For every source file we process, sets the domain name to
   // 'meteor://[emoji]app/', so there is a separate category in Chrome DevTools
   // with the original sources.
-  rewriteSourceMaps: function () {
+  rewriteSourceMaps: Profile("Target#rewriteSourceMaps", function () {
     var self = this;
 
     function rewriteSourceMap (sm) {
-      var smPlain = JSON.parse(sm);
-      smPlain.sources = smPlain.sources.map(function (path) {
+      sm.sources = sm.sources.map(function (path) {
+        const prefix =  'meteor://\u{1f4bb}app';
+
+        if (path.slice(0, prefix.length) === prefix) return path;
         // This emoji makes sure the category is always last. The character
         // is PERSONAL COMPUTER (yay ES6 unicode escapes):
         // http://www.fileformat.info/info/unicode/char/1f4bb/index.htm
-        return 'meteor://\u{1f4bb}app' + (path[0] === '/' ? '' : '/') + path;
+        return prefix + (path[0] === '/' ? '' : '/') + path;
       });
-      return JSON.stringify(smPlain);
+      return sm;
     }
 
     if (self.js) {
@@ -890,7 +899,7 @@ _.extend(Target.prototype, {
           css.sourceMap = rewriteSourceMap(css.sourceMap);
       });
     }
-  },
+  }),
 
   // Add a Cordova plugin dependency to the target. If the same plugin
   // has already been added at a different version and `override` is
@@ -1072,13 +1081,13 @@ _.extend(ClientTarget.prototype, {
       });
 
       if (file.sourceMap) {
-        let mapData = file.sourceMap;
+        let mapData = null;
 
         // don't need to do this in devel mode
         if (mode === 'production') {
-          mapData = antiXSSIPrepend(file.sourceMap);
+          mapData = antiXSSIPrepend(JSON.stringify(file.sourceMap));
         } else {
-          mapData = new Buffer(file.sourceMap, 'utf8');
+          mapData = new Buffer(JSON.stringify(file.sourceMap), 'utf8');
         }
 
         manifestItem.sourceMap = builder.writeToGeneratedFilename(
@@ -1390,7 +1399,7 @@ _.extend(JsImage.prototype, {
         // Write the source map.
         loadItem.sourceMap = builder.writeToGeneratedFilename(
           sourceMapBaseName,
-          { data: new Buffer(item.sourceMap, 'utf8') }
+          { data: new Buffer(JSON.stringify(item.sourceMap), 'utf8') }
         );
 
         var sourceMapFileName = files.pathBasename(loadItem.sourceMap);

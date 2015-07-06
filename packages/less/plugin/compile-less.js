@@ -25,7 +25,7 @@ var LessCompiler = function () {
     max: CACHE_SIZE,
     // Cache is measured in bytes (not counting the hashes).
     length: function (value) {
-      return value.css.length + value.sourceMap.length;
+      return value.css.length + sourceMapLength(value.sourceMap);
     }
   });
   self._diskCache = null;
@@ -100,7 +100,7 @@ _.extend(LessCompiler.prototype, {
         if (output.map) {
           var map = JSON.parse(output.map);
           map.sources = map.sources.map(decodeFilePath);
-          output.map = JSON.stringify(map);
+          output.map = map;
         }
         cacheEntry = {
           hashes: {},
@@ -244,3 +244,12 @@ _.extend(MeteorImportLessFileManager.prototype, {
   }
 });
 
+function sourceMapLength(sm) {
+  if (! sm) return 0;
+  // sum the length of sources and the mappings, the size of
+  // metadata is ignored, but it is not a big deal
+  return sm.mappings.length
+       + (sm.sourcesContent || []).reduce(function (soFar, current) {
+         return soFar + (current ? current.length : 0);
+       }, 0);
+};

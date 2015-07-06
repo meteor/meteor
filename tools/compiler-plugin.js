@@ -10,6 +10,7 @@ var _ = require('underscore');
 var Profile = require('./profile.js').Profile;
 import {sha1} from  './watch.js';
 import LRU from 'lru-cache';
+import {sourceMapLength} from './utils.js';
 
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
@@ -22,8 +23,7 @@ const LINKER_CACHE = new LRU({
   // Key is JSONification of all options plus all hashes.
   length: function (files) {
     return files.reduce((soFar, current) => {
-      return soFar + current.data.length +
-        (current.sourceMap ? current.sourceMap.length : 0);
+      return soFar + current.data.length + sourceMapLength(current.sourceMap);
     }, 0);
   }
 });
@@ -175,14 +175,19 @@ _.extend(InputFile.prototype, {
    * be satisfied if there are path conflicts.
    * @param {String} options.data The content of the stylesheet that should be
    * added.
-   * @param {String} options.sourceMap A stringified JSON sourcemap, in case the
-   * stylesheet was generated from a different file.
+   * @param {String|Object} options.sourceMap A stringified JSON
+   * sourcemap, in case the stylesheet was generated from a different
+   * file.
    * @memberOf InputFile
    * @instance
    */
   addStylesheet: function (options) {
     var self = this;
     // XXX BBP validate input!!
+    if (options.sourceMap && typeof options.sourceMap === 'string') {
+      // XXX remove an anti-XSSI header? ")]}'\n"
+      options.sourceMap = JSON.parse(options.sourceMap);
+    }
     self._resourceSlot.addStylesheet(options);
   },
   /**
@@ -195,13 +200,18 @@ _.extend(InputFile.prototype, {
    * @param {String} options.path The path at which the JavaScript file
    * should be inserted, may not be honored in case of path conflicts.
    * @param {String} options.data The code to be added.
-   * @param {String} options.sourceMap A stringified JSON sourcemap, in case the
-   * JavaScript file was generated from a different file.
+   * @param {String|Object} options.sourceMap A stringified JSON
+   * sourcemap, in case the JavaScript file was generated from a
+   * different file.
    * @memberOf InputFile
    * @instance
    */
   addJavaScript: function (options) {
     var self = this;
+    if (options.sourceMap && typeof options.sourceMap === 'string') {
+      // XXX remove an anti-XSSI header? ")]}'\n"
+      options.sourceMap = JSON.parse(options.sourceMap);
+    }
     self._resourceSlot.addJavaScript(options);
   },
   /**
@@ -578,11 +588,13 @@ _.extend(PackageSourceBatch.prototype, {
 
     // Add each output as a resource
     const ret = linkedFiles.map((file) => {
+      const sm = (typeof file.sourceMap === 'string')
+        ? JSON.parse(file.sourceMap) : file.sourceMap;
       return {
         type: "js",
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
-        sourceMap: file.sourceMap
+        sourceMap: sm
         // XXX BBP hash? needed for minifiers?
       };
     });
