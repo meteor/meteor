@@ -7,15 +7,16 @@ Ap._defaultRateLimiterRuleId = DDPRateLimiter.addRule({
   userId: null,
   ipAddr: null,
   type: 'method',
-  name: function(name) {
-		return _.contains(['login', 'createUser', 'resetPassword', 'forgotPassword'], name);
+  name: function (name) {
+    return _.contains(['login', 'createUser', 'resetPassword',
+      'forgotPassword'], name);
   },
-  sessionId: function(sessionId) {
-  	return true;
+  sessionId: function (sessionId) {
+    return true;
   }
 }, 5, 10000);
 
 // Removes default rate limiting rule
 Ap.removeDefaultRateLimit = function () {
-	return DDPRateLimiter.removeRule(Ap._defaultRateLimiterRuleId);
+  return DDPRateLimiter.removeRule(Ap._defaultRateLimiterRuleId);
 }

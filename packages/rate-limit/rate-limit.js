@@ -3,82 +3,11 @@
 //  * RateLimiter - a general rate limiter that stores rules and determines
 //  whether inputs are allowed
 //
-//  ** Rules **
-//  Rules are composed of the following fields:
-//    - id Random id generated and used to key the rule in the rate limiter
-//    - options Object that contains the intervalTime after which the rule is reset, and the
-//              number of calls that are allowed in the specified interval time
-//    - matchers Dictionary of keys that are searched for in the input provided to match
-//               with values that define the set of values that match this rule. Values can be
-//               objects or they can be functions that return a boolean of whether the provided
-//               input matches. For example, if we only want to match all even ids, plus any other fields
-//               , we could have a rule that included a key value pair as follows:
-//               {
-//               ...
-//               id: function (id) {
-//                return id % 2 === 0;
-//               },
-//               ...
-//               }
-//               A rule is only said to apply to a given input if every key in the matcher
-//               matches to the input values.
-//    - _lastResetTime Last time this rule's counters were reset. Last reset time is used to
-//                     keep track if the interval time has passed
-//    - counters Dictionary that stores the current state of inputs and number times they've
-//               been passed to the rate limiter. Unique keys are made per input per rule that
-//               create a concatenated string of all keys in the rule with the values from the
-//               input
-//
-//               For example, if we had a rule with matchers as such:
-//               {
-//               userId: function(userId)  {
-//                  return true;
-//                },
-//               methodName: 'hello'
-//               }
-//               and we were passed an input as follows:
-//               {
-//                userId: 'meteor'
-//                methodName: 'hello'
-//               }
-//
-//               The key generated would be 'userIdmeteormethodNamehello'.
-//
-//               These counters are checked on every invocation to determine whether a rate limit
-//               has been reached.
-//
-// The methods provided are as follows:
-//    * match(input) : Checks whether the rule applies to the provided input by comparing every
-//                     field in the matcher to the provided input. Order of input doesn't matter,
-//                     they just must contain the appropriate keys and the values must be allowed by
-//                     the matcher
-//    * _generateKeyString(input) : generates a key string by concatenating all the keys in the matcher
-//                                  with the corresponding values in the input
-//    * apply(input) : applies the provided input and returns the key string, the time since last
-//                     reset and time to next reset
-//    * resetCounter() : resets the counters for this rule and sets _lastResetTime to be the current time
-//
-//  ** Rate Limiter **
-//  A rate limiter stores a dictionary of rules keyed by their rule Id. It provides the following methods:
-//
-//    * addRule(rule, numRequests, intervalTime) : adds a Rule to dictionary of rules and returns the user
-//                                                 the rule Id
-//    * removeRule(id) : removes a rule from the dictionary and returns boolean detailing success
-//    * check(input) : checks all rules that apply to this input to see if any rate limits have been exceeded
-//                     Returns an object as follows:
-//                     {
-//                      allowed: boolean - is this input allowed
-//                      timeToReset: integer - returns time to reset in milliseconds
-//                      numInvocationsLeft: integer - returns number of calls left before limit is reached
-//                     }
-//                     If multiple rules match, the least number of invocations left is returned. If the rate limit
-//                     has been reached, the longest timeToReset is returned.
-//
-//    * increment(input) : increments counters in all rules that apply to this input.
-//    * _findAllMatchingRules(input) : returns an array of all rules that apply to provided input
-//
-
-
+//  Rate limiters analyze a series of "inputs" (which are POJOs) by running
+//  them against a set of "rules". Rules specify which inputs they match by
+//  running configurable "matcher" functions on keys in the event object). A
+//  `check` method returns whether this input should be allowed, the time
+//  until next reset and the number of calls for this input left.
 
 // Default time interval (in milliseconds) to reset rate limit counters
 var DEFAULT_INTERVAL_TIME_IN_MILLISECONDS = 1000;
@@ -107,7 +36,9 @@ var Rule = function (options, matchers) {
 _.extend(Rule.prototype, {
   // Determine if this rule applies to the given input by comparing all
   // rule.matchers. If the match fails, search short circuits instead of
-  // iterating through all matchers.
+  // iterating through all matchers. The order of the input doesn't matter,
+  // it just must contain the appropriate keys and their respective values
+  // must be allowed by the matcher.
   match: function (input) {
     var self = this;
     var ruleMatches = true;
@@ -134,7 +65,8 @@ _.extend(Rule.prototype, {
     return ruleMatches;
   },
 
-  // Generates unique key string for provided input
+  // Generates unique key string for provided input by concatenating all the
+  // keys in the matcher with the corresponding values in the input.
   // Only called if rule matches input.
   _generateKeyString: function (input) {
     var self = this;
@@ -153,8 +85,8 @@ _.extend(Rule.prototype, {
     return returnString;
   },
 
-  // Generates the key, timeSinceLastReset and timeToNextReset once the rule
-  // is applied
+  // Applies the provided input and returns the key string, time since last
+  // reset and time to next reset.
   apply: function (input) {
     var self = this;
     var keyString = self._generateKeyString(input);
@@ -166,8 +98,9 @@ _.extend(Rule.prototype, {
       timeToNextReset: timeToNextReset
     };
   },
-  // Reset all keys for this specific rule. Called once the timeSinceLastReset
-  // has exceeded the intervalTime.
+  // Reset counter dictionary for this specific rule. Called once the
+  // timeSinceLastReset has exceeded the intervalTime. _lastResetTime is
+  // set to be the current time in milliseconds.
   resetCounter: function () {
     var self = this;
 
@@ -189,9 +122,16 @@ RateLimiter = function () {
 
 /**
  * Checks if this input has exceeded any rate limits.
- * @param  {object} input dictionary containing key-value pairs of attributes that match to rules
- * @return {object} Returns object of whether input is allowed, time
- * to next reset and number invocations left
+ * @param  {object} input dictionary containing key-value pairs of attributes
+ * that match to rules
+ * @return {object} Returns object of following structure
+ * { 'allowed': boolean - is this input allowed
+ *   'timeToReset': integer - returns time to reset in milliseconds
+ *   'numInvocationsLeft': integer - returns number of calls left before limit
+ *    is reached
+ * }
+ * If multiple rules match, the least number of invocations left is returned.
+ * If the rate limit has been reached, the longest timeToReset is returned.
  */
 RateLimiter.prototype.check = function (input) {
   var self = this;
@@ -225,10 +165,10 @@ RateLimiter.prototype.check = function (input) {
       reply.allowed = false;
       reply.numInvocationsLeft = 0;
     } else {
-      // If this is an allowed attempt and we haven't failed on any of the other rules that
-      // match, update the reply field.
-      if (rule.options.numRequestsAllowed - numInvocations < reply.numInvocationsLeft &&
-        reply.allowed) {
+      // If this is an allowed attempt and we haven't failed on any of the
+      // other rules that match, update the reply field.
+      if (rule.options.numRequestsAllowed - numInvocations <
+        reply.numInvocationsLeft && reply.allowed) {
         reply.allowed = true;
         reply.timeToReset = ruleResult.timeToNextReset < 0 ?
           rule.options.intervalTime :
@@ -241,17 +181,58 @@ RateLimiter.prototype.check = function (input) {
   return reply;
 }
 
+// Each rule is composed of an `id`, an options object that contains the
+// `intervalTime` after which the rule is reset, and `numRequestsAllowed` in
+// the specified interval time, a dictionary of `matchers` whose keys are
+// searched for in the input provided to determine if there is a match. If the
+// values match, then the rules counters are incremented. Values can be objects
+// or they can be functions that return a boolean of whether the provided input
+// matches. For example, if we only want to match all even ids, plusany other
+// fields, we could have a rule that included a key-value pair as follows:
+//  {
+//  ...
+//  id: function (id) {
+//   return id % 2 === 0;
+//  },
+//  ...
+//  }
+// A rule is only said to apply to a given input if every key in the matcher
+// matchesto the input values. There is also a dictionary of `counters` that
+// store the current state of inputs and number of times they've been passed
+// to the rate limiter. Unique keys are made per input per rule that create
+// a concatenated string of all keys in the rule with the values from the
+// input. For example, if we had a rule with matchers as such:
+// {
+//  userId: function(userId)  {
+//  return true;
+//  },
+//  methodName: 'hello'
+// }
+// and we were passed an input as follows:
+// {
+//  userId: 'meteor'
+//  methodName: 'hello'
+// }
+// The key generated would be 'userIdmeteormethodNamehello'.
+// These counters are checked on every invocation to determine whether a rate
+// limit has been reached.
+
 /**
- * Adds a rule to dictionary of rules that are checked against on every call. Only inputs that
- * pass all of the rules will be allowed and order doesn't matter.
- * @param {object} rule    Input dictionary defining certain attributes and rules associated with them.
- * Each attribute's value can either be a value, a function or null. All functions must return a boolean
- * of whether the input is matched by that attribute's rule or not
+ * Adds a rule to dictionary of rules that are checked against on every call.
+ * Only inputs that pass all of the rules will be allowed and order doesn't
+ * matter. Returns unique rule id that can be passed to 'removeRule'.
+ * @param {object} rule    Input dictionary defining certain attributes and
+ * rules associated with them.
+ * Each attribute's value can either be a value, a function or null. All
+ * functions must return a boolean of whether the input is matched by that
+ * attribute's rule or not
  * @param {integer} numRequestsAllowed Number of requests allowed per interval
- * @param {integer} intervalTime       Number of milliseconds before interval is reset
- * @return {string} Returns the randomly generated rule id
+ * @param {integer} intervalTime       Number of milliseconds before interval
+ * is reset
+ * @return {string} Returns unique rule id
  */
-RateLimiter.prototype.addRule = function (rule, numRequestsAllowed, intervalTime) {
+RateLimiter.prototype.addRule = function (rule, numRequestsAllowed,
+  intervalTime) {
   var self = this;
 
   var options = {
@@ -266,8 +247,8 @@ RateLimiter.prototype.addRule = function (rule, numRequestsAllowed, intervalTime
 
 /**
  * Increment counters in every rule that match to this input
- * @param  {object} input Dictionary object containing attributes that may match to
- * rules
+ * @param  {object} input Dictionary object containing attributes that may
+ * match to rules
  */
 RateLimiter.prototype.increment = function (input) {
   var self = this;
@@ -291,6 +272,7 @@ RateLimiter.prototype.increment = function (input) {
   });
 }
 
+// Returns an array of all rules that apply to provided input
 RateLimiter.prototype._findAllMatchingRules = function (input) {
   var self = this;
 
@@ -302,7 +284,8 @@ RateLimiter.prototype._findAllMatchingRules = function (input) {
   return matchingRules;
 }
 /**
- * Provides a mechanism to remove rules from the rate limiter
+ * Provides a mechanism to remove rules from the rate limiter. Returns boolean
+ * about success.
  * @param  {string} id Rule id returned from #addRule
  * @return {boolean}    Returns true if rule was found and deleted, else false.
  */
