@@ -1,6 +1,14 @@
 // 'url' is assigned to in a statement before this.
 var page = require('webpage').create();
 
+// don't fetch css assets
+page.onResourceRequested = function(requestData, networkRequest) {
+  var match = requestData.url.match(/\.css/g);
+  if (match != null) {
+    networkRequest.cancel();
+  }
+};
+
 var isReady = function () {
   return page.evaluate(function () {
     if (typeof Meteor === 'undefined'
