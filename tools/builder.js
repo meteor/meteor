@@ -208,14 +208,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       hash = hash || sha1(getData());
 
       if (this.previousWrittenHashes[relPath] !== hash) {
-        if (files.exists(absPath)) {
-          // XXX what if it is a directory?
-          files.unlink(absPath);
-        }
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
         // expecting the results to "stick".
-        files.writeFile(absPath, getData(), {
+        atomicallyRewriteFile(absPath, getData(), {
           mode: executable ? 0o555 : 0o444
         });
       }
@@ -238,12 +234,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     this._ensureDirectory(files.pathDirname(relPath));
     const absPath = files.pathJoin(this.buildPath, relPath);
 
-    if (files.exists(absPath)) {
-      // XXX what if it is a directory?
-      files.unlink(absPath);
-    }
-
-    files.writeFile(
+    atomicallyRewriteFile(
       absPath,
       new Buffer(JSON.stringify(data, null, 2), 'utf8'),
       {mode: 0o444});
@@ -532,6 +523,29 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   }
 }
 
+function atomicallyRewriteFile(path, data, options) {
+  let stat = null;
+  try {
+    stat = files.stat(path);
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      throw e;
+    }
+  }
+
+  if (! stat) {
+    files.writeFile(path, data, options);
+  } else if (stat.isDirectory()) {
+    files.rm_recursive(path);
+  } else {
+    // create a different file with a random name and then rename over atomically
+    const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
+    const rpath = files.pathJoin(files.pathDirname(path), rname);
+    files.writeFile(rpath, data, options);
+    files.rename(rpath, path);
+  }
+}
+
 // Wrap slow methods into Profiler calls
 const slowBuilderMethods = [
   '_ensureDirectory', 'write', 'enter', 'copyDirectory', 'enter', 'complete'
@@ -541,3 +555,4 @@ slowBuilderMethods.forEach(method => {
   Builder.prototype[method] =
     Profile(`Builder#${method}`, Builder.prototype[method]);
 });
+
