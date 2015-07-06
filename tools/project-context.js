@@ -198,6 +198,13 @@ _.extend(ProjectContext.prototype, {
     self.isopackCache = null;
 
     self._completedStage = STAGE.INITIAL;
+
+    // The resolverResultCache is used by the constraint solver; to
+    // us it's just an opaque object.  If we pass it into repeated
+    // calls to the constraint solver, the constraint solver can be
+    // more efficient by caching or memoizing its work.  We choose not
+    // to reset this when reset() is called more than once.
+    self._resolverResultCache = (self._resolverResultCache || {});
   },
 
   readProjectMetadata: function () {
@@ -669,7 +676,8 @@ _.extend(ProjectContext.prototype, {
               nudge: function () {
                 Console.nudge(true);
               },
-              Profile: Profile
+              Profile: Profile,
+              resultCache: self._resolverResultCache
             });
     return resolver;
   },
