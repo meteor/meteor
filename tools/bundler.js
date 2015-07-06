@@ -1851,7 +1851,6 @@ Find out more about Meteor at meteor.com.
     Object.keys(builders).forEach(name => {
       const subBuilder = builders[name];
       subBuilder.outputPath = builder.outputPath + subBuilder.outputPath.substring(builder.buildPath.length);
-      console.log("fix up: ", subBuilder.outputPath);
     });
 
     return {
@@ -2101,7 +2100,6 @@ exports.bundle = function ({
         builders = _.clone(previousBuilders);
         _.each(targets, function (target, name) {
           const previousBuilder = previousBuilders[name];
-          console.log('previous builder for ', name, previousBuilder.outputPath);
           var targetBuild =
             writeTargetToPath(name, target, outputPath, _.extend(writeOptions, {previousBuilder}));
           nodePath = nodePath.concat(targetBuild.nodePath);

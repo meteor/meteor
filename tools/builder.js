@@ -54,8 +54,6 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
-      } else {
-        console.log('XXX the previous build doesnt exist', previousBuilder.outputPath);
       }
     } else {
       files.mkdir_p(this.buildPath, 0o755);
