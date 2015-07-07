@@ -197,6 +197,8 @@
 
 ### Other bug fixes and improvements
 
+* The `spiderable` package now reports the URL it's trying to fetch on failure.
+
 * Upgraded dependencies:
 
   - uglify-js: 2.4.20 (from 2.4.17)
