@@ -9,7 +9,7 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'json', 'underscore', 'tracker',
+  api.use(['random', 'ejson', 'json', 'underscore', 'tracker',
            'logging', 'retry', 'id-map'],
           ['client', 'server']);
 
