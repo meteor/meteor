@@ -59,7 +59,8 @@ _.extend(LessCompiler.prototype, {
             ? ('{}/' + pathInPackage)
             : ('{' + packageName + '}/' + pathInPackage);
       filesByAbsoluteImportPath[absoluteImportPath] = inputFile;
-      if (pathInPackage.match(/\.main\.less$/)) {
+      // Match files named `main.less` or with a `.main.less` extension
+      if (pathInPackage.match(/(^|\/|\.)main\.less$/)) {
         mains.push({inputFile: inputFile,
                     absoluteImportPath: absoluteImportPath});
       }
