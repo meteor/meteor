@@ -117,11 +117,13 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
   }
 
   files.forEach(function (inputFile) {
-    if (! inputFile.getPathInPackage().match(/\.main\.styl$/)) {
+    var pathInPackage = inputFile.getPathInPackage();
+    // Match files named `main.styl` or with a `.main.styl` extension
+    if (! pathInPackage.match(/(^|\/|\.)main\.styl$/)) {
       return;
     }
 
-    currentlyCompiledFile = inputFile.getPathInPackage();
+    currentlyCompiledFile = pathInPackage;
     currentlyCompiledPackage = inputFile.getPackageName() || APP_SYMBOL;
     currentlyProcessedImports = [];
 
