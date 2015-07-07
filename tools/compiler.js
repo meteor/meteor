@@ -458,16 +458,7 @@ var compileUnibuild = function (options) {
     Console.nudge(true);
 
     if (contents === null) {
-      // It really sucks to put this check here, since this isn't publish
-      // code...
-      if (source.relPath.match(/:/)) {
-        buildmessage.error(
-          "Couldn't build this package on Windows due to the following file " +
-          "with a colon -- " + source.relPath + ". Please rename and " +
-          "and re-publish the package.");
-      } else {
-        buildmessage.error("File not found: " + source.relPath);
-      }
+      buildmessage.error("File not found: " + source.relPath);
 
       // recover by ignoring (but still watching the file)
       watchSet.merge(fileWatchSet);
@@ -530,7 +521,8 @@ var compileUnibuild = function (options) {
 
     if (! handler) {
       // If we don't have an extension handler, serve this file as a
-      // static resource on the client, or ignore it on the server.
+      // static resource on the client, and keep it as private asset
+      // on the server
       //
       // XXX This is pretty confusing, especially if you've
       // accidentally forgotten a plugin -- revisit?
