@@ -12,6 +12,7 @@ DDPServer._WriteFence = function () {
   self.fired = false;
   self.retired = false;
   self.outstanding_writes = 0;
+  self.before_fire_callbacks = [];
   self.completion_callbacks = [];
 };
 
@@ -59,6 +60,17 @@ _.extend(DDPServer._WriteFence.prototype, {
     self._maybeFire();
   },
 
+  // Register a function to be called once before firing the fence.
+  // Callback function can add new writes to the fence, in which case
+  // it won't fire until those writes are done as well.
+  onBeforeFire: function (func) {
+    var self = this;
+    if (self.fired)
+      throw new Error("fence has already activated -- too late to " +
+                      "add a callback");
+    self.before_fire_callbacks.push(func);
+  },
+
   // Register a function to be called when the fence fires.
   onAllCommitted: function (func) {
     var self = this;
@@ -84,9 +96,28 @@ _.extend(DDPServer._WriteFence.prototype, {
     if (self.fired)
       throw new Error("write fence already activated?");
     if (self.armed && !self.outstanding_writes) {
-      self.fired = true;
-      _.each(self.completion_callbacks, function (f) {f(self);});
-      self.completion_callbacks = [];
+      function invokeCallback (func) {
+        try {
+          func(self);
+        } catch (err) {
+          Meteor._debug("exception in write fence callback:", err);
+        }
+      }
+
+      self.outstanding_writes++;
+      while (self.before_fire_callbacks.length > 0) {
+        var callbacks = self.before_fire_callbacks;
+        self.before_fire_callbacks = [];
+        _.each(callbacks, invokeCallback);
+      }
+      self.outstanding_writes--;
+
+      if (!self.outstanding_writes) {
+        self.fired = true;
+        var callbacks = self.completion_callbacks;
+        self.completion_callbacks = [];
+        _.each(callbacks, invokeCallback);
+      }
     }
   },
 
