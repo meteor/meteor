@@ -279,7 +279,7 @@ var File = function (options) {
   self.nodeModulesDirectory = null;
 
   // For server JS only. Assets associated with this slice; map from the path
-  // that is the argument to Assets.getBinary, to a Buffer that is its contents.
+  // that is the argument to Assets.getBinary, to the absolute path on disk.
   self.assets = null;
 
   self._contents = options.data || null; // contents, if known, as a Buffer
@@ -719,11 +719,11 @@ _.extend(Target.prototype, {
         if (resource.type !== "asset")
           return;
 
+        // assets are not stored in memory for efficiency
         var f = new File({
           info: 'unbuild ' + resource,
-          data: resource.data,
           cacheable: false,
-          hash: resource.hash
+          sourcePath: files.pathJoin(resource.path)
         });
 
         var relPath = isOs
@@ -734,7 +734,7 @@ _.extend(Target.prototype, {
         if (isWeb)
           f.setUrlFromRelPath(resource.servePath);
         else {
-          unibuildAssets[resource.path] = resource.data;
+          unibuildAssets[resource.path] = files.pathJoin(resource.path);
         }
 
         self.asset.push(f);
@@ -1213,7 +1213,7 @@ _.extend(JsImage.prototype, {
       if (!assets || !_.has(assets, assetPath)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
-        var buffer = assets[assetPath];
+        var buffer = files.readFile(assets[assetPath]);
         var result = encoding ? buffer.toString(encoding) : buffer;
         _callback(null, result);
       }
@@ -1365,10 +1365,6 @@ _.extend(JsImage.prototype, {
       }));
     });
 
-    // If multiple load files share the same asset, only write one copy of
-    // each. (eg, for app assets).
-    var assetFilesBySha = {};
-
     // JavaScript sources
     var load = [];
     _.each(self.jsToLoad, function (item) {
@@ -1420,7 +1416,7 @@ _.extend(JsImage.prototype, {
         // assets/packages specific to this package. Application assets (e.g. those
         // inside private/) go in assets/app/.
         // XXX same hack as setTargetPathFromRelPath
-          var assetBundlePath;
+        var assetBundlePath;
         if (item.targetPath.match(/^packages\//)) {
           var dir = files.pathDirname(item.targetPath);
           var base = files.pathBasename(item.targetPath, ".js");
@@ -1430,15 +1426,13 @@ _.extend(JsImage.prototype, {
         }
 
         loadItem.assets = {};
-        _.each(item.assets, function (data, relPath) {
-          var sha = watch.sha1(data);
-          if (_.has(assetFilesBySha, sha)) {
-            loadItem.assets[relPath] = assetFilesBySha[sha];
-          } else {
-            loadItem.assets[relPath] = assetFilesBySha[sha] =
-              builder.writeToGeneratedFilename(
-                files.pathJoin(assetBundlePath, relPath), { data: data });
-          }
+        _.each(item.assets, function (absPath, relPath) {
+          loadItem.assets[relPath] = builder.copyToGeneratedFilename(
+            absPath,
+            files.pathJoin(assetBundlePath, relPath), {
+              // XCXC so far dead option
+              link: false
+            });
         });
       }
 
@@ -1525,7 +1519,7 @@ JsImage.readFromDisk = Profile("JsImage.readFromDisk", function (controlFilePath
     if (!_.isEmpty(item.assets)) {
       loadItem.assets = {};
       _.each(item.assets, function (filename, relPath) {
-        loadItem.assets[relPath] = files.readFile(files.pathJoin(dir, filename));
+        loadItem.assets[relPath] = files.pathJoin(dir, filename);
       });
     }
 
@@ -2008,7 +2002,8 @@ exports.bundle = function ({
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
-        includeDebug: buildOptions.includeDebug
+        includeDebug: buildOptions.includeDebug,
+        sourceDir: appDir
       });
 
       client.make({
@@ -2028,7 +2023,8 @@ exports.bundle = function ({
         isopackCache: projectContext.isopackCache,
         arch: serverArch,
         releaseName: releaseName,
-        includeDebug: buildOptions.includeDebug
+        includeDebug: buildOptions.includeDebug,
+        sourceDir: appDir
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;
@@ -2257,7 +2253,8 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     // cross-bundling, not cross-package-building, and this function is only
     // used to build plugins (during package build) and for isopack.load
     // (which always wants to build for the current host).
-    arch: archinfo.host()
+    arch: archinfo.host(),
+    sourceDir: XCXC
   });
   target.make({ packages: [isopack] });
 

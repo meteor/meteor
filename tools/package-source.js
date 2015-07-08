@@ -1131,11 +1131,10 @@ _.extend(PackageSource.prototype, {
 
   // Initialize a package from an application directory (has .meteor/packages).
   initFromAppDir: Profile("initFromAppDir", function (projectContext, ignoreFiles) {
-    var self = this;
     var appDir = projectContext.projectDir;
-    self.name = null;
-    self.sourceRoot = appDir;
-    self.serveRoot = '/';
+    this.name = null;
+    this.sourceRoot = appDir;
+    this.serveRoot = '/';
 
     // special files those are excluded from app's top-level sources
     var controlFiles = ['mobile-config.js'];
@@ -1150,7 +1149,7 @@ _.extend(PackageSource.prototype, {
 
     var projectWatchSet = projectContext.getProjectWatchSet();
 
-    _.each(compiler.ALL_ARCHES, function (arch) {
+    _.each(compiler.ALL_ARCHES, arch => {
       // We don't need to build a Cordova SourceArch if there are no Cordova
       // platforms.
       if (arch === 'web.cordova' &&
@@ -1162,19 +1161,19 @@ _.extend(PackageSource.prototype, {
       // be for specific client targets.
 
       // Create unibuild
-      var sourceArch = new SourceArch(self, {
+      var sourceArch = new SourceArch(this, {
         kind: 'app',
         arch: arch,
         uses: uses
       });
-      self.architectures.push(sourceArch);
+      this.architectures.push(sourceArch);
 
       // sourceArch's WatchSet should include all the project metadata files
       // read by the ProjectContext.
       sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
-      sourceArch.getSourcesFunc = _.once(function (extensions, watchSet) {
+      sourceArch.getSourcesFunc = _.once((extensions, watchSet) => {
         var sourceInclude = _.map(
           extensions,
           function (isTemplate, ext) {
@@ -1185,17 +1184,17 @@ _.extend(PackageSource.prototype, {
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
         // sourceRoot-relative directories.
-        var readAndWatchDirectory = function (relDir, filters) {
-          filters = filters || {};
-          var absPath = files.pathJoin(self.sourceRoot, relDir);
-          var contents = watch.readAndWatchDirectory(watchSet, {
-            absPath: absPath,
-            include: filters.include,
-            exclude: filters.exclude
+        const readAndWatchDirectory = (relDir, filters) => {
+          const {include, exclude} = filters || {};
+          const absPath = files.pathJoin(this.sourceRoot, relDir);
+
+          const contents = watch.readAndWatchDirectory(watchSet, {
+            absPath,
+            include,
+            exclude
           });
-          return _.map(contents, function (x) {
-            return files.pathJoin(relDir, x);
-          });
+
+          return contents.map(x => files.pathJoin(relDir, x));
         };
 
         // Read top-level source files.
@@ -1214,8 +1213,8 @@ _.extend(PackageSource.prototype, {
         var seenPaths = {};
         // Used internally by files.realpath as an optimization.
         var realpathCache = {};
-        var checkForInfiniteRecursion = function (relDir) {
-          var absPath = files.pathJoin(self.sourceRoot, relDir);
+        var checkForInfiniteRecursion = relDir => {
+          var absPath = files.pathJoin(this.sourceRoot, relDir);
           try {
             var realpath = files.realpath(absPath, realpathCache);
           } catch (e) {
@@ -1345,7 +1344,7 @@ _.extend(PackageSource.prototype, {
       });
     });
 
-    if (! self._checkCrossUnibuildVersionConstraints()) {
+    if (! this._checkCrossUnibuildVersionConstraints()) {
       // should never happen since we created the unibuilds from
       // .meteor/packages, which doesn't have a way to express
       // different constraints for different unibuilds

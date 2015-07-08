@@ -1316,6 +1316,7 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   var fsFuncSync = fs[fsFuncName + "Sync"];
 
   function wrapper(...args) {
+    if (fsFuncName === 'readFile' && args[0].indexOf('favicon.png') !== -1) console.trace();
     for (var j = pathArgIndices.length - 1; j >= 0; --j) {
       i = pathArgIndices[j];
       args[i] = files.convertToOSPath(args[i]);

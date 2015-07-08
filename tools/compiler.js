@@ -445,24 +445,33 @@ var compileUnibuild = function (options) {
     var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = files.pathBasename(relPath);
     var fileWatchSet = new watch.WatchSet;
+
+    let file = null;
+    let contents = null;
+    let hash = null;
+
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
     // transforms from the tools/files.js part).
     // We don't put this into the unibuild's watchSet immediately since we want
     // to avoid putting it there if it turns out not to be relevant to our
     // arch.
-    var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
-    var hash = file.hash;
-    var contents = file.contents;
+    if (! fileOptions.isAsset) {
+      file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
+      hash = file.hash;
+      contents = file.contents;
 
-    Console.nudge(true);
+      Console.nudge(true);
 
-    if (contents === null) {
-      buildmessage.error("File not found: " + source.relPath);
+      if (contents === null) {
+        buildmessage.error("File not found: " + source.relPath);
 
-      // recover by ignoring (but still watching the file)
-      watchSet.merge(fileWatchSet);
-      return;
+        // recover by ignoring (but still watching the file)
+        watchSet.merge(fileWatchSet);
+        return;
+      }
+    } else {
+      watch.watchFilesPresence(fileWatchSet, absPath);
     }
 
     // Find the handler for source files with this extension.
@@ -526,7 +535,7 @@ var compileUnibuild = function (options) {
       //
       // XXX This is pretty confusing, especially if you've
       // accidentally forgotten a plugin -- revisit?
-      addAsset(contents, relPath, hash);
+      addAsset(null, relPath, null);
       return;
     }
 

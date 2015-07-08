@@ -328,6 +328,18 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return generated;
   }
 
+  copyToGeneratedFilename(sourcePath, relPath, {link}) {
+    const generated = this.generateFilename(relPath);
+    const absPath = files.pathJoin(this.buildPath, relPath);
+
+    if (! link) {
+      files.copyFile(sourcePath, absPath);
+    } else {
+      files.link(sourcePath, absPath);
+    }
+    return generated;
+  }
+
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
   // constructor, then make a symlink instead, if possible.

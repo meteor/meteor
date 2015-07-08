@@ -55,7 +55,12 @@ import {Profile} from "./profile.js";
 // they point to (ie, as a directory if they point to a directory, as
 // nonexistent if they point to something nonexist, etc). Not sure if this is
 // correct.
+//
+// To avoid loading big assets into memory, a new function `watchFilesPresence`
+// was introduced. It doesn't read the file contents or take its hash, so it
+// only cares about the file's availability.
 
+const ANY_CONTENT = '__ANY_CONTENT__';
 export class WatchSet {
   constructor() {
     var self = this;
@@ -65,7 +70,9 @@ export class WatchSet {
     self.alwaysFire = false;
 
     // Map from the absolute path to a file, to a sha1 hash, or null if the file
-    // should not exist. A Watcher created from this set fires when the file
+    // should not exist, or ANY_CONTENT to indicate that the watcher doesn't care
+    // about the file's contents, but only of its presence on disk.
+    // A Watcher created from this set fires when the file
     // changes from that sha, or is deleted (if non-null) or created (if null).
     //
     // Note that Isopack.getSourceFilesUnderSourceRoot() depends on this field
@@ -113,24 +120,23 @@ export class WatchSet {
 
   // Takes options absPath, include, exclude, and contents, as described
   // above. contents does not need to be pre-sorted.
-  addDirectory(options) {
-    var self = this;
-    if (self.alwaysFire) {
+  addDirectory({absPath, include, exclude, contents}) {
+    if (this.alwaysFire) {
       return;
     }
-    if (_.isEmpty(options.include)) {
+    if (_.isEmpty(include)) {
       return;
     }
-    var contents = _.clone(options.contents);
+    contents = _.clone(contents);
     if (contents) {
       contents.sort();
     }
 
-    self.directories.push({
-      absPath: options.absPath,
-      include: options.include,
-      exclude: options.exclude,
-      contents: contents
+    this.directories.push({
+      absPath,
+      include,
+      exclude,
+      contents
     });
   }
 
@@ -360,7 +366,30 @@ export class Watcher {
       throw new Error("Checking unknown file " + absPath);
     }
 
-    var contents = readFile(absPath);
+    let contents;
+    let newHash;
+
+    // check if we care about the contents of the file
+    if (oldHash === ANY_CONTENT) {
+      let isFile = false;
+      try {
+        const stat = files.stat(absPath);
+        isFile = ! stat.isDirectory();
+      } catch (err) {
+        isFile = false;
+        if (err.code !== "ENOENT") {
+          throw err;
+        }
+      }
+
+      if (isFile) {
+        contents = newHash = ANY_CONTENT;
+      } else {
+        contents = null;
+      }
+    }
+
+    contents = readFile(absPath);
 
     if (contents === null) {
       // File does not exist (or is a directory).
@@ -379,7 +408,9 @@ export class Watcher {
       return true;
     }
 
-    var newHash = sha1(contents);
+    if (contents) {
+      newHash = sha1(contents);
+    }
 
     // Unchanged?
     if (newHash === oldHash) {
@@ -729,6 +760,13 @@ export function readAndWatchFileWithHash(watchSet, absPath) {
     watchSet.addFile(absPath, hash);
   }
   return {contents: contents, hash: hash};
+}
+
+export function watchFilesPresence(watchSet, absPath) {
+  if (watchSet) {
+    // Since we don't care about the contents, set the hash to the special const
+    watchSet.addFile(absPath, ANY_CONTENT);
+  }
 }
 
 export function readAndWatchFile(watchSet, absPath) {
