@@ -999,6 +999,9 @@ main.registerCommand({
     projectContext: projectContext,
     outputPath: null,
     lint: true,
+    buildOptions: {
+      minify: 'development'
+    }
   });
 
   if (bundle.errors) {

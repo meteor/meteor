@@ -125,9 +125,9 @@ var addSharedHeader = function (source, sourceMap) {
 var CoffeeCompiler = function () {
   var self = this;
   // Maps from a cache key (encoding the source hash, exports, and the other
-  // options passed to coffee.compile) to a {source,sourceMap} object (both
-  // strings).  Note that this is the result of both coffee.compile and the
-  // post-processing that we do.
+  // options passed to coffee.compile) to a {source,sourceMap} object.  Note
+  // that this is the result of both coffee.compile and the post-processing that
+  // we do.
   self._cache = new LRU({
     max: CACHE_SIZE,
     // Cache is measured in bytes.
@@ -186,7 +186,8 @@ _.extend(CoffeeCompiler.prototype, {
         var stripped = stripExportedVars(
           output.js,
           _.pluck(inputFile.getDeclaredExports(), 'name'));
-        sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
+        sourceWithMap = addSharedHeader(
+          stripped, JSON.parse(output.v3SourceMap));
         self._cache.set(cacheKey, sourceWithMap);
       }
 

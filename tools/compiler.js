@@ -14,6 +14,7 @@ var colonConverter = require('./colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('./profile.js').Profile;
+import { SourceProcessorSet } from './build-plugin.js';
 
 var compiler = exports;
 
@@ -196,8 +197,8 @@ compiler.getMinifiers = function (packageSource, options) {
     _.each(activePluginPackages, function (otherPkg) {
       otherPkg.ensurePluginsInitialized();
 
-      _.each(otherPkg.sourceProcessors.minifier, function (minifierPlugin, id) {
-        minifiers.push(minifierPlugin);
+      _.each(otherPkg.sourceProcessors.minifier.allSourceProcessors, (sp) => {
+        minifiers.push(sp);
       });
     });
   });
@@ -218,38 +219,30 @@ compiler.getMinifiers = function (packageSource, options) {
   return minifiers;
 };
 
-var lintUnibuild = function (options) {
-  var isopack = options.isopack;
-  var isopackCache = options.isopackCache;
-  var inputSourceArch = options.sourceArch;
+var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
   var activePluginPackages = getActivePluginPackages(
-    isopack,
-    // pass sourceArch and isopackCache
-    options);
+    isopack, {sourceArch, isopackCache});
 
-  var allLinters = [];
-  var sourceExtensions = {}; // maps source extension to isTemplate
+  const sourceProcessorSet = new SourceProcessorSet(
+    isopack.displayName, { allowConflicts: true });
 
   _.each(activePluginPackages, function (otherPkg) {
     otherPkg.ensurePluginsInitialized();
 
-    _.each(otherPkg.sourceProcessors.linter, function (linterPlugin, id) {
-      allLinters.push(linterPlugin);
-      // memorize all used extensions
-      _.each(linterPlugin.extensions, function (ext) {
-        sourceExtensions[ext] = linterPlugin.isTemplate;
-      });
-    });
+    if (isopack.name === null)
+    sourceProcessorSet.merge(otherPkg.sourceProcessors.linter);
   });
 
   // bail out early if there is not much to run
-  if (! allLinters.length) { return; }
+  if (sourceProcessorSet.isEmpty()) {
+    return;
+  }
 
   var watchSet = new watch.WatchSet;
-  var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
+  var sourceItems = sourceArch.getSourcesFunc(sourceProcessorSet, watchSet);
   var wrappedSourceItems = _.map(sourceItems, function (source) {
     var relPath = source.relPath;
-    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
+    var absPath = files.pathResolve(sourceArch.pkg.sourceRoot, relPath);
     var fileWatchSet = new watch.WatchSet;
     var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
     var hash = file.hash;
@@ -259,15 +252,15 @@ var lintUnibuild = function (options) {
       contents: contents,
       'package': isopack.name,
       hash: hash,
-      arch: inputSourceArch.arch
+      arch: sourceArch.arch
     };
   });
 
   runLinters({
-    inputSourceArch: inputSourceArch,
-    isopackCache: isopackCache,
-    wrappedSourceItems: wrappedSourceItems,
-    linters: allLinters
+    inputSourceArch: sourceArch,
+    isopackCache,
+    wrappedSourceItems,
+    sourceProcessorSet
   });
 };
 
@@ -321,80 +314,14 @@ var compileUnibuild = function (options) {
 
   // *** Assemble the list of source file handlers from the plugins
   // XXX BBP redoc
-  var allHandlersWithPkgs = {};
-  var compilerSourceProcessorsByPlugin = {};
-  var sourceExtensions = {};  // maps source extensions to isTemplate
+  var sourceProcessorSet = new SourceProcessorSet(
+    isopk.displayName(), { hardcodeJs: true});
 
-  // We specially handle 'js' in the build tool, because you can't provide a
-  // plugin to handle 'js' files, because the plugin would need to be built with
-  // JavaScript itself!  Places that hardcode JS are tagged with #HardcodeJs.
-  // This line means to look for 'js' files in the project directory, and they
-  // are not templates.
-  sourceExtensions['js'] = false;
-
-  _.each(activePluginPackages, function (otherPkg) {
+  activePluginPackages.forEach((otherPkg) => {
     otherPkg.ensurePluginsInitialized();
 
-    // Iterate over the legacy source handlers.
-    _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
-      // XXX comparing function text here seems wrong.
-      if (_.has(allHandlersWithPkgs, ext) &&
-          allHandlersWithPkgs[ext].handler.toString() !== sourceHandler.handler.toString()) {
-        buildmessage.error(
-          `conflict: two packages included in ` +
-          `${ inputSourceArch.pkg.displayName() }, ` +
-          `${ allHandlersWithPkgs[ext].pkgName } and ` +
-          `${ otherPkg.displayName() }, are both trying to handle .${ ext }`);
-        // Recover by just going with the first handler we saw
-        return;
-      }
-      // Is this handler only registered for, say, "web", and we're building,
-      // say, "os"?
-      if (sourceHandler.archMatching &&
-          !archinfo.matches(inputSourceArch.arch, sourceHandler.archMatching)) {
-        return;
-      }
-      allHandlersWithPkgs[ext] = {
-        pkgName: otherPkg.displayName(),
-        handler: sourceHandler.handler
-      };
-      sourceExtensions[ext] = !!sourceHandler.isTemplate;
-    });
-
-    // Iterate over the compiler plugins.
-    _.each(otherPkg.sourceProcessors.compiler, function (sourceProcessor, id) {
-      _.each(sourceProcessor.extensions, function (ext) {
-        let conflictPackageName = undefined;
-        if (_.has(allHandlersWithPkgs, ext)) {
-          conflictPackageName = allHandlersWithPkgs[ext].pkgName;
-        } else if (_.has(compilerSourceProcessorsByPlugin, ext)) {
-          conflictPackageName =
-            compilerSourceProcessorsByPlugin[ext].isopack.displayName();
-        }
-
-        if (conflictPackageName !== undefined) {
-          buildmessage.error(
-            `conflict: two packages included in ` +
-            `${ inputSourceArch.pkg.displayName() }, ` +
-            `${ conflictPackageName } and ` +
-            `${ otherPkg.displayName() }, are both trying to handle .${ ext }`);
-          // Recover by just going with the first one we found.
-          return;
-        }
-        // If this sourceProcessor is relevant to the arch we're building,
-        // search for files with that extension in the app.  Even if it's not
-        // relevant, store it in compilerSourceProcessorsByPlugin so that we
-        // know to ignore matching files in the "wrong" arch instead of adding
-        // them as static assets.  (ie, if you write `api.use('foo.less')`
-        // instead of `api.use('foo.less', 'client')` by mistake, we should just
-        // ignore `foo.less` on the server program rather than including it as a
-        // static asset there.)
-        compilerSourceProcessorsByPlugin[ext] = sourceProcessor;
-        if (sourceProcessor.relevantForArch(inputSourceArch.arch)) {
-          sourceExtensions[ext] = sourceProcessor.isTemplate;
-        }
-      });
-    });
+    // Note that this may log a buildmessage if there are conflicts.
+    sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler);
   });
 
   // *** Determine source files
@@ -404,7 +331,8 @@ var compileUnibuild = function (options) {
   // things that the getSourcesFunc consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
+  var sourceItems = inputSourceArch.getSourcesFunc(
+    sourceProcessorSet, watchSet);
 
   if (nodeModulesPath) {
     // If this slice has node modules, we should consider the shrinkwrap file
@@ -444,14 +372,25 @@ var compileUnibuild = function (options) {
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = files.pathBasename(relPath);
-    var fileWatchSet = new watch.WatchSet;
+
+    // Find the handler for source files with this extension (unless explicitly
+    // tagged as a static asset).
+    const classification = fileOptions.isAsset
+          ? { type: 'unmatched' }
+          : sourceProcessorSet.classifyFilename(filename, inputSourceArch.arch);
+
+    if (classification.type === 'wrong-arch') {
+      // This file is for a compiler plugin but not for this arch. Skip it,
+      // and don't even watch it.  (eg, skip CSS preprocessor files on the
+      // server.)  This `return` goes on to the next `_.each(sourceItems`
+      // iteration.
+      return;
+    }
+
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
     // transforms from the tools/files.js part).
-    // We don't put this into the unibuild's watchSet immediately since we want
-    // to avoid putting it there if it turns out not to be relevant to our
-    // arch.
-    var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
+    var file = watch.readAndWatchFileWithHash(watchSet, absPath);
     var hash = file.hash;
     var contents = file.contents;
 
@@ -460,6 +399,9 @@ var compileUnibuild = function (options) {
     if (contents === null) {
       // It really sucks to put this check here, since this isn't publish
       // code...
+      // XXX We think this code can probably be deleted at this point because
+      // people probably aren't trying to use files with colons in them any
+      // more.
       if (source.relPath.match(/:/)) {
         buildmessage.error(
           "Couldn't build this package on Windows due to the following file " +
@@ -470,56 +412,25 @@ var compileUnibuild = function (options) {
       }
 
       // recover by ignoring (but still watching the file)
-      watchSet.merge(fileWatchSet);
       return;
     }
 
-    // Find the handler for source files with this extension.
-    var handler = null;
-    var buildPluginExtension = null;
-    if (! fileOptions.isAsset) {
-      var parts = filename.split('.');
-      // don't use iteration functions, so we can return/break
-      for (var i = 1; i < parts.length; i++) {
-        var extension = parts.slice(i).join('.');
-        // Hardcode 'js' handler (which doesn't actually have a compiler plugin
-        // object). #HardcodeJs
-        if (extension === 'js') {
-          buildPluginExtension = 'js';
-          break;
-        }
-        if (_.has(compilerSourceProcessorsByPlugin, extension)) {
-          var sourceProcessor = compilerSourceProcessorsByPlugin[extension];
-          if (! sourceProcessor.relevantForArch(inputSourceArch.arch)) {
-            // This file is for a compiler plugin but not for this arch. Skip
-            // it, and don't even watch it.  (eg, skip CSS preprocessor files on
-            // the server.)  This `return` goes on to the next
-            // `_.each(sourceItems` iteration.
-            // Note that this is DIFFERENT behavior from how archMatching works
-            // in legacy compiler plugins, where we'd end up treating the source
-            // file as a static asset in the other arches (which was almost
-            // certainly unintended behavior).
-            return;
-          }
-          buildPluginExtension = extension;
-          break;
-        }
-        if (_.has(allHandlersWithPkgs, extension)) {
-          handler = allHandlersWithPkgs[extension].handler;
-          break;
-        }
-      }
+    if (classification.type === 'unmatched') {
+      // This is a static asset (either because it was explicitly requested via
+      // isAsset, or because we have no compiler or legacy handler for it.
+      //
+      // XXX This is pretty confusing, especially if you've
+      // accidentally forgotten a plugin -- revisit?
+      addAsset(contents, relPath, hash);
+      return;
     }
 
-    // OK, this is relevant to this arch, so watch it.
-    watchSet.merge(fileWatchSet);
-
-    if (buildPluginExtension !== null) {
+    if (classification.type !== 'legacyHandler') {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
       resources.push({
         type: "source",
-        extension: buildPluginExtension,
+        extension: classification.extension,  // possibly null
         data: contents,
         path: relPath,
         hash: hash,
@@ -528,23 +439,15 @@ var compileUnibuild = function (options) {
       return;
     }
 
-    if (! handler) {
-      // If we don't have an extension handler, serve this file as a
-      // static resource on the client, or ignore it on the server.
-      //
-      // XXX This is pretty confusing, especially if you've
-      // accidentally forgotten a plugin -- revisit?
-      addAsset(contents, relPath, hash);
-      return;
-    }
-
-    var compileStep = compileStepModule.makeCompileStep(source, file, inputSourceArch, {
-      resources: resources,
-      addAsset: addAsset
-    });
+    // OK, time to handle legacy handlers.
+    var compileStep = compileStepModule.makeCompileStep(
+      source, file, inputSourceArch, {
+        resources: resources,
+        addAsset: addAsset
+      });
 
     try {
-      (buildmessage.markBoundary(handler))(compileStep);
+      (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
       buildmessage.exception(e);
@@ -587,14 +490,11 @@ var compileUnibuild = function (options) {
   };
 };
 
-var runLinters = function (options) {
-  var inputSourceArch = options.inputSourceArch;
-  var isopackCache = options.isopackCache;
-  var wrappedSourceItems = options.wrappedSourceItems;
-  var linters = options.linters;
-
-  if (_.isEmpty(linters))
+function runLinters({inputSourceArch, isopackCache, wrappedSourceItems,
+                     sourceProcessorSet}) {
+  if (sourceProcessorSet.isEmpty()) {
     return;
+  }
 
   // XXX BBP comment explaining at the very least that the imports might be
   // different when you actually bundle it!
@@ -611,15 +511,15 @@ var runLinters = function (options) {
   // exists instead of failing because a dependency does not have an 'os'
   // unibuild.
   // XXX BBP make sure that comment is comprehensible
-  var whichArch = inputSourceArch.arch === 'os'
-        ? archinfo.host() : inputSourceArch.arch;
+  const whichArch = inputSourceArch.arch === 'os'
+          ? archinfo.host() : inputSourceArch.arch;
 
   // For linters, figure out what are the global imports from other packages
   // that we use directly, or are implied.
-  var globalImports = ['Package'];
+  const globalImports = ['Package'];
 
   if (archinfo.matches(inputSourceArch.arch, "os")) {
-    globalImports = globalImports.concat(['Npm', 'Assets']);
+    globalImports.push('Npm', 'Assets');
   }
 
   compiler.eachUsedUnibuild({
@@ -628,64 +528,51 @@ var runLinters = function (options) {
     isopackCache: isopackCache,
     skipUnordered: true,
     skipDebugOnly: true
-  }, function (unibuild) {
+  }, (unibuild) => {
     if (unibuild.pkg.name === inputSourceArch.pkg.name)
       return;
-    _.each(unibuild.declaredExports, function (symbol) {
+    _.each(unibuild.declaredExports, (symbol) => {
       if (! symbol.testOnly || inputSourceArch.isTest) {
         globalImports.push(symbol.name);
       }
     });
   });
 
-  var linterPluginsByExtension = {};
-  _.each(linters, function (linterPlugin) {
-    _.each(linterPlugin.extensions, function (ext) {
-      linterPluginsByExtension[ext] = linterPluginsByExtension[ext] || [];
-      linterPluginsByExtension[ext].push(linterPlugin);
-    });
-  });
-
-  // For each file choose the longest extension handled by linters.
-  var longestMatchingExt = {};
-  _.each(wrappedSourceItems, function (wrappedSource) {
-    var filename = files.pathBasename(wrappedSource.relPath);
-    var parts = filename.split('.');
-    for (var i = 1; i < parts.length; i++) {
-      var extension = parts.slice(i).join('.');
-      if (_.has(linterPluginsByExtension, extension)) {
-        longestMatchingExt[wrappedSource.relPath] = extension;
-        break;
-      }
+  // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
+  const sourceItemsForLinter = {};
+  wrappedSourceItems.forEach((wrappedSource) => {
+    const classification = sourceProcessorSet.classifyFilename(
+      files.pathBasename(wrappedSource.relPath), inputSourceArch.arch);
+    if (classification.type === 'wrong-arch' ||
+        classification.type === 'unmatched')
+      return;
+    // We shouldn't ever add a legacy handler and we're not hardcoding JS for
+    // linters, so we should always have SourceProcessor if anything matches.
+    if (! classification.sourceProcessors) {
+      throw Error(`Unexpected classification for ${wrappedSource.relPath}: ` +
+                  JSON.stringify(classification));
     }
+    // There can be multiple linters on a file.
+    classification.sourceProcessors.forEach((sourceProcessor) => {
+      if (! sourceItemsForLinter.hasOwnProperty(sourceProcessor.id)) {
+        sourceItemsForLinter[sourceProcessor.id] = {
+          sourceProcessor,
+          sources: []
+        };
+      }
+      sourceItemsForLinter[sourceProcessor.id].sources.push(wrappedSource);
+    });
   });
 
-  // Run linters on files.
-  _.each(linters, function (linterDef) {
-    // skip linters not relevant to the arch we are compiling for
-    if (! linterDef.relevantForArch(inputSourceArch.arch))
-      return;
+  // Run linters on files. This skips linters that don't have any files.
+  _.each(sourceItemsForLinter, ({sourceProcessor, sources}) => {
+    const sourcesToLint = sources.map(
+      wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
+    );
 
-    var sourcesToLint = [];
-    _.each(wrappedSourceItems, function (wrappedSource) {
-      var relPath = wrappedSource.relPath;
-      var hash = wrappedSource.hash;
-      var fileWatchSet = wrappedSource.watchset;
-      var source = wrappedSource.source;
+    const linter = sourceProcessor.userPlugin.processFilesForTarget;
 
-      // only run linters matching the longest handled extension
-      if (! _.contains(linterDef.extensions, longestMatchingExt[relPath]))
-        return;
-
-      sourcesToLint.push(new linterPluginModule.LintingFile(wrappedSource));
-    });
-
-    if (! sourcesToLint.length)
-      return;
-
-    var linter = linterDef.userPlugin.processFilesForTarget;
-
-    var archToString = function (arch) {
+    function archToString(arch) {
       if (arch.match(/web\.cordova/))
         return "Cordova";
       if (arch.match(/web\..*/))
@@ -693,16 +580,18 @@ var runLinters = function (options) {
       if (arch.match(/os.*/))
         return "Server";
       throw new Error("Don't know how to display the arch: " + arch);
-    };
+    }
+
     buildmessage.enterJob({
       title: "linting files with " +
-        linterDef.isopack.name +
-        " for target: " +
-        (inputSourceArch.pkg.name || "app") +
+        sourceProcessor.isopack.name +
+        " for " +
+        inputSourceArch.pkg.displayName() +
         " (" + archToString(inputSourceArch.arch) + ")"
-    }, function () {
+    }, () => {
       try {
-        var markedLinter = buildmessage.markBoundary(linter.bind(linterDef.userPlugin));
+        var markedLinter = buildmessage.markBoundary(linter.bind(
+          sourceProcessor.userPlugin));
         markedLinter(sourcesToLint, { globals: globalImports });
       } catch (e) {
         buildmessage.exception(e);
@@ -717,11 +606,11 @@ var getActivePluginPackages = function (isopk, options) {
   var inputSourceArch = options.sourceArch;
   var isopackCache = options.isopackCache;
 
-  // XXX we used to include our own extensions only if we were the
+  // XXX we used to include our own plugins only if we were the
   // "use" role. now we include them everywhere because we don't have
   // a special "use" role anymore. it's not totally clear to me what
   // the correct behavior should be -- we need to resolve whether we
-  // think about extensions as being global to a package or particular
+  // think about plugins as being global to a package or particular
   // to a unibuild.
 
   // (there's also some weirdness here with handling implies, because

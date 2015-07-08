@@ -140,6 +140,7 @@ _.extend(InputFile.prototype, {
   getSourceHash: function () {
     return this._resourceSlot.inputResource.hash;
   },
+  // XXX BBP make sure that if it was matched by filename, this is null
   getExtension: function () {
     return this._resourceSlot.inputResource.extension;
   },
@@ -397,32 +398,43 @@ var PackageSourceBatch = function (unibuild, processor) {
   var self = this;
   self.unibuild = unibuild;
   self.processor = processor;
-  var sourceProcessorsByExtension =
-        self._getSourceProcessorsByExtension();
+  var sourceProcessorSet = self._getSourceProcessorSet();
   self.resourceSlots = [];
   unibuild.resources.forEach(function (resource) {
-    var sourceProcessor = null;
+    let sourceProcessor = null;
     if (resource.type === "source") {
       var extension = resource.extension;
       if (extension === 'js') {
         // #HardcodeJs In this case, we just leave buildPlugin null; it is
         // specially handled by ResourceSlot too.
-      } else if (_.has(sourceProcessorsByExtension, extension)) {
-        sourceProcessor = sourceProcessorsByExtension[extension];
+      } else if (extension === null) {
+        const filename = files.pathBasename(resource.path);
+        sourceProcessor = sourceProcessorSet.getByFilename(filename);
+        if (! sourceProcessor) {
+          buildmessage.error(
+            `no plugin found for ${ resource.path } in ` +
+              `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
+              `was active when it was published but none is now`);
+          return;
+          // recover by ignoring
+        }
       } else {
-        buildmessage.error(
-          `no plugin found for ${ resource.path } in ` +
-          `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
-          `was active when it was published but none is now`);
-        return;
-        // recover by ignoring
+        sourceProcessor = sourceProcessorSet.getByExtension(extension);
+        if (! sourceProcessor) {
+          buildmessage.error(
+            `no plugin found for ${ resource.path } in ` +
+            `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
+            `was active when it was published but none is now`);
+          return;
+          // recover by ignoring
+        }
       }
     }
     self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
   });
 };
 _.extend(PackageSourceBatch.prototype, {
-  _getSourceProcessorsByExtension: function () {
+  _getSourceProcessorSet: function () {
     var self = this;
     var isopack = self.unibuild.pkg;
     // Packages always get plugins from themselves.
@@ -453,33 +465,17 @@ _.extend(PackageSourceBatch.prototype, {
 
     activePluginPackages = _.uniq(activePluginPackages);
 
-    var sourceProcessorsByExtension = {};
-    _.each(activePluginPackages, function (otherPkg) {
-      _.each(
-        otherPkg.sourceProcessors.compiler,
-        function (sourceProcessor, id) {
-          if (! sourceProcessor.relevantForArch(self.processor.arch)) {
-            return;
-          }
+    const sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
+      isopack.displayName(), { hardcodeJs: true });
 
-          _.each(sourceProcessor.extensions, function (ext) {
-            if (_.has(sourceProcessorsByExtension, ext)) {
-              buildmessage.error(
-                `conflict: two packages included in ` +
-                `${ isopack.displayName() } ` +
-                `(${ sourceProcessor.isopack.displayName() } and ` +
-                `${ sourceProcessorsByExtension[ext].isopack.displayName() })` +
-                ` are both trying to handle .${ ext }`);
-              // recover by ignoring this one
-              return;
-            }
-            sourceProcessorsByExtension[ext] = sourceProcessor;
-          });
-        }
-      );
+    _.each(activePluginPackages, function (otherPkg) {
+      otherPkg.ensurePluginsInitialized();
+
+      sourceProcessorSet.merge(
+        otherPkg.sourceProcessors.compiler, {arch: self.processor.arch});
     });
 
-    return sourceProcessorsByExtension;
+    return sourceProcessorSet;
   },
 
   // Called by bundler's Target._emitResources.  It returns the actual resources

@@ -207,7 +207,7 @@ selftest.define("compiler plugins - duplicate extension", () => {
   let run = startRun(s);
   run.match('Errors prevented startup');
   run.match('conflict: two packages');
-  run.match('trying to handle .myext');
+  run.match('trying to handle *.myext');
 
   // Fix it by changing one extension.
   s.write('packages/local-plugin/plugin.js',

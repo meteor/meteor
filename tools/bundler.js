@@ -167,7 +167,6 @@ var compiler = require('./compiler.js');
 var packageVersionParser = require('./package-version-parser.js');
 var colonConverter = require('./colon-converter.js');
 var compilerPluginModule = require('./compiler-plugin.js');
-var minifierPluginModule = require('./minifier-plugin.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [
@@ -828,6 +827,9 @@ _.extend(Target.prototype, {
   minifyJs: Profile("Target#minifyJs", function (minifierDef, mode) {
     var self = this;
 
+    // Avoid circular deps from top-level import.
+    const minifierPluginModule = require('./minifier-plugin.js');
+
     var sources = _.map(self.js, function (file) {
       return new minifierPluginModule.JsFile(file, {
         arch: self.arch
@@ -989,6 +991,9 @@ _.extend(ClientTarget.prototype, {
   // Minify the CSS in this target
   minifyCss: Profile("ClientTarget#minifyCss", function (minifierDef, mode) {
     var self = this;
+
+    // Avoid circular deps from top-level import.
+    const minifierPluginModule = require('./minifier-plugin.js');
 
     var sources = _.map(self.css, function (file) {
       return new minifierPluginModule.CssFile(file, {
@@ -2068,7 +2073,7 @@ exports.bundle = function ({
 
     var minifiers = null;
     if (! _.contains(['development', 'production'], buildOptions.minify)) {
-        throw new Error('Unrecognized minfication mode: ' + buildOptions.minifiy);
+        throw new Error('Unrecognized minification mode: ' + buildOptions.minify);
     }
     minifiers = compiler.getMinifiers(packageSource, {
       isopackCache: projectContext.isopackCache,

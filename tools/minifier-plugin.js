@@ -1,4 +1,4 @@
-import buildPluginModule from './build-plugin.js';
+const buildPluginModule = require('./build-plugin.js');
 
 class InputFile extends buildPluginModule.InputFile {
   constructor(source, options = {}) {

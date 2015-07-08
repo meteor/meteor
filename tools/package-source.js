@@ -29,12 +29,31 @@ var genTestName = function (name) {
 };
 
 // Returns a sort comparator to order files into load order.
-// templateExtensions should be a list of extensions like 'html'
-// which should be loaded before other extensions.
-var loadOrderSort = function (templateExtensions) {
-  var templateExtnames = {};
-  _.each(templateExtensions, function (extension) {
-    templateExtnames['.' + extension] = true;
+var loadOrderSort = function (sourceProcessorSet, arch) {
+  const isTemplate = _.memoize((filename) => {
+    const classification = sourceProcessorSet.classifyFilename(filename, arch);
+    switch (classification.type) {
+    case 'extension':
+    case 'filename':
+      if (! classification.sourceProcessors) {
+        // This is *.js, not a template. #HardcodeJs
+        return false;
+      }
+      if (classification.sourceProcessors.length > 1) {
+        throw Error("conflicts in compiler?");
+      }
+      return classification.sourceProcessors[0].isTemplate;
+
+    case 'legacyHandler':
+      return classification.legacyIsTemplate;
+
+    case 'wrong-arch':
+    case 'unmatched':
+      return false;
+
+    default:
+      throw Error(`surprising type ${classification.type} for ${filename}`);
+    }
   });
 
   return function (a, b) {
@@ -46,8 +65,8 @@ var loadOrderSort = function (templateExtensions) {
     // before the corresponding .html file.
     //
     // maybe all of the templates should go in one file?
-    var isTemplate_a = _.has(templateExtnames, files.pathExtname(a));
-    var isTemplate_b = _.has(templateExtnames, files.pathExtname(b));
+    var isTemplate_a = isTemplate(files.pathBasename(a));
+    var isTemplate_b = isTemplate(files.pathBasename(b));
     if (isTemplate_a !== isTemplate_b) {
       return (isTemplate_a ? -1 : 1);
     }
@@ -477,7 +496,7 @@ _.extend(PackageSource.prototype, {
 
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
-    // which could change a file from being handled by extension vs treated as
+    // which could change a file from being handled by plugin vs treated as
     // an asset.
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
@@ -1174,13 +1193,8 @@ _.extend(PackageSource.prototype, {
       sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
-      sourceArch.getSourcesFunc = _.once(function (extensions, watchSet) {
-        var sourceInclude = _.map(
-          extensions,
-          function (isTemplate, ext) {
-            return new RegExp('\\.' + utils.quotemeta(ext) + '$');
-          }
-        );
+      sourceArch.getSourcesFunc = _.once((sourceProcessorSet, watchSet) => {
+        var sourceInclude = sourceProcessorSet.matchingRegExps(arch);
         var sourceExclude = [/^\./].concat(ignoreFiles);
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
@@ -1276,11 +1290,7 @@ _.extend(PackageSource.prototype, {
         }
 
         // We've found all the source files. Sort them!
-        var templateExtensions = [];
-        _.each(extensions, function (isTemplate, ext) {
-          isTemplate && templateExtensions.push(ext);
-        });
-        sources.sort(loadOrderSort(templateExtensions));
+        sources.sort(loadOrderSort(sourceProcessorSet, arch));
 
         // Convert into relPath/fileOptions objects.
         sources = _.map(sources, function (relPath) {

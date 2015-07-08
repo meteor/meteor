@@ -4,7 +4,8 @@ var path = Npm.require('path');
 var jshint = Npm.require('jshint').JSHINT;
 
 Plugin.registerLinter({
-  extensions: ["jshintrc", "js"],
+  extensions: ["js"],
+  filenames: [".jshintrc"]
 }, function () {
   var linter = new JsHintLinter();
   return linter;
@@ -35,11 +36,6 @@ JsHintLinter.prototype.processFilesForTarget = function (files, options) {
       } catch (err) {
         file.error({ message: "Failed to parse .jshint file, not a valid JSON: " + err.message });
       }
-      return;
-    }
-    // require configuration file to be called '.jshintrc'
-    if (path.extname(file.getBasename()) !== '.js') {
-      file.error({ message: "Unrecognized configuration file name. Configuration file should be called .jshintrc" });
       return;
     }
   });

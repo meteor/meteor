@@ -2,15 +2,19 @@ var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
 var _ = require('underscore');
+import utils from './utils.js';
+
+let nextId = 1;
 
 exports.SourceProcessor = function (options) {
   var self = this;
-  self.id = options.id;
   self.isopack = options.isopack;
-  self.extensions = options.extensions.slice();
+  self.extensions = (options.extensions || []).slice();
+  self.filenames = (options.filenames || []).slice();
   self.archMatching = options.archMatching;
   self.isTemplate = !! options.isTemplate;
   self.factoryFunction = options.factoryFunction;
+  self.id = `${ options.isopack.displayName() }#${ nextId++ }`;
   self.userPlugin = null;
 };
 _.extend(exports.SourceProcessor.prototype, {
@@ -46,6 +50,244 @@ _.extend(exports.SourceProcessor.prototype, {
     return ! self.archMatching || archinfo.matches(arch, self.archMatching);
   }
 });
+
+// Represents a set of SourceProcessors available in a given package. They may
+// not have conflicting extensions or filenames.
+export class SourceProcessorSet {
+  constructor(myPackageDisplayName,
+              { hardcodeJs, singlePackage, allowConflicts }) {
+    // For error messages only.
+    this._myPackageDisplayName = myPackageDisplayName;
+    // If this represents the SourceProcessors *registered* by a single package
+    // (vs those *available* to a package), use different error messages.
+    this._singlePackage = singlePackage;
+    // If this is being used for *compilers*, we hardcode *.js. If it is being
+    // used for linters, we don't.
+    this._hardcodeJs = !! hardcodeJs;
+    // Multiple linters may be registered on the same extension or filename, but
+    // not compilers.
+    this._allowConflicts = !! allowConflicts;
+
+    // Map from extension -> [SourceProcessor]
+    this._byExtension = {};
+    // Map from basename -> [SourceProcessor]
+    this._byFilename = {};
+    // This is just an duplicate-free list of all SourceProcessors in
+    // byExtension or byFilename.
+    this.allSourceProcessors = [];
+    // extension -> { handler, packageDisplayName, isTemplate, archMatching }
+    this._legacyHandlers = {};
+  }
+
+  _conflictError(package1, package2, conflict) {
+    if (this._singlePackage) {
+      buildmessage.error(
+        `plugins in package ${ this._myPackageDisplayName } define multiple ` +
+          `handlers for ${ conflict }`);
+    } else {
+      buildmessage.error(
+        `conflict: two packages included in ${ this._myPackageDisplayName } ` +
+          `(${ package1 } and ${ package2 }) are both trying to handle ` +
+          conflict);
+    }
+  }
+
+  addSourceProcessor(sp) {
+    buildmessage.assertInJob();
+    this._addSourceProcessorHelper(sp, sp.extensions, this._byExtension, '*.');
+    this._addSourceProcessorHelper(sp, sp.filenames, this._byFilename, '');
+    // If everything conflicted, then the SourceProcessors will be in
+    // allSourceProcessors but not any of the data structures, but in that case
+    // the caller should be checking for errors anyway.
+    this.allSourceProcessors.push(sp);
+  }
+  _addSourceProcessorHelper(sp, things, byThing, errorPrefix) {
+    buildmessage.assertInJob();
+
+    things.forEach((thing) => {
+      if (byThing.hasOwnProperty(thing)) {
+        if (this._allowConflicts) {
+          byThing[thing].push(sp);
+        } else {
+          this._conflictError(sp.isopack.displayName(),
+                              byThing[thing][0].isopack.displayName(),
+                              errorPrefix + thing);
+          // recover by ignoring this one
+        }
+      } else {
+        byThing[thing] = [sp];
+      }
+    });
+  }
+
+  addLegacyHandler({ extension, handler, packageDisplayName, isTemplate,
+                     archMatching }) {
+    if (this._allowConflicts)
+      throw Error("linters have no legacy handlers");
+
+    if (this._byExtension.hasOwnProperty(extension)) {
+      this._conflictError(packageDisplayName,
+                          this._byExtension[extension].isopack.displayName(),
+                          '*.' + extension);
+      // recover by ignoring
+      return;
+    }
+    if (this._legacyHandlers.hasOwnProperty(extension)) {
+      this._conflictError(packageDisplayName,
+                          this._legacyHandlers[extension].packageDisplayName,
+                          '*.' + extension);
+      // recover by ignoring
+      return;
+    }
+    this._legacyHandlers[extension] =
+      {handler, packageDisplayName, isTemplate, archMatching};
+  }
+
+  // Adds all the source processors (and legacy handlers) from the other set to
+  // this one. Logs buildmessage errors on conflict.  Ignores packageDisplayName
+  // and singlePackage.  If arch is set, skips SourceProcessors that
+  // don't match it.
+  merge(otherSet, options = {}) {
+    const { arch } = options;
+    buildmessage.assertInJob();
+    otherSet.allSourceProcessors.forEach((sourceProcessor) => {
+      if (! arch || sourceProcessor.relevantForArch(arch)) {
+        this.addSourceProcessor(sourceProcessor);
+      }
+    });
+    _.each(otherSet.legacyHandlers, (info, extension) => {
+      const { handler, packageDisplayName, isTemplate, archMatching } = info;
+      this.addLegacyHandler(
+        {extension, handler, packageDisplayName, isTemplate, archMatching});
+    });
+  }
+
+  // Note: Only returns SourceProcessors, not legacy handlers.
+  getByExtension(extension) {
+    if (this._allowConflicts)
+      throw Error("Can't call getByExtension for linters");
+
+    if (this._byExtension.hasOwnProperty(extension)) {
+      return this._byExtension[extension][0];
+    }
+    return null;
+  }
+
+  // Note: Only returns SourceProcessors, not legacy handlers.
+  getByFilename(filename) {
+    if (this._allowConflicts)
+      throw Error("Can't call getByFilename for linters");
+
+    if (this._byFilename.hasOwnProperty(filename)) {
+      return this._byFilename[filename][0];
+    }
+    return null;
+  }
+
+  // filename, arch -> {
+  //    type: "extension"/"filename"/"legacyHandler"/"wrong-arch"/"unmatched",
+  //    legacyHandler, extension, sourceProcessors, legacyIsTemplate }
+  classifyFilename(filename, arch) {
+    // First check to see if a plugin registered for this exact filename.
+    if (this._byFilename.hasOwnProperty(filename)) {
+      return maybeWrongArch({
+        type: 'filename',
+        sourceProcessors: this._byFilename[filename].slice()
+      });
+    }
+
+    // Now check to see if a plugin registered for an extension. We prefer
+    // longer extensions.
+    const parts = filename.split('.');
+    // don't use iteration functions, so we can return (and start at #1)
+    for (let i = 1; i < parts.length; i++) {
+      const extension = parts.slice(i).join('.');
+      // We specially handle 'js' in the build tool, because you can't provide a
+      // plugin to handle 'js' files, because the plugin would need to be built
+      // with JavaScript itself!  Places that hardcode JS are tagged with
+      // #HardcodeJs.
+      if (this._hardcodeJs && extension === 'js') {
+        return {
+          type: 'extension',
+          extension: 'js'
+        };
+      }
+
+      if (this._byExtension.hasOwnProperty(extension)) {
+        return maybeWrongArch({
+          type: 'extension',
+          extension,
+          sourceProcessors: this._byExtension[extension]
+        });
+      }
+
+      if (this._legacyHandlers.hasOwnProperty(extension)) {
+        const legacy = this._legacyHandlers[extension];
+        if (legacy.archMatching &&
+            ! archinfo.matches(arch, legacy.archMatching)) {
+          return { type: 'wrong-arch' };
+        }
+        return {
+          type: 'legacyHandler',
+          extension,
+          legacyHandler: legacy.handler,
+          legacyIsTemplate: legacy.isTempate
+        };
+      }
+    }
+
+    // Nothing matches; it must be a static asset (or a non-linted file).
+    return { type: 'unmatched' };
+
+    // If there's a SourceProcessor (or legacy handler) registered for this file
+    // but not for this arch, we want to ignore it instead of processing it or
+    // treating it as a static asset. (Note that prior to the batch-plugins
+    // project, files added in a package with `api.addFiles('foo.bar')` where
+    // *.bar is a web-specific legacy handler (eg) would end up adding 'foo.bar'
+    // as a static asset on non-web programs, which was unintended. This didn't
+    // happen in apps because initFromAppDir's getSourcesFunc never added them.)
+    function maybeWrongArch(classification) {
+      classification.sourceProcessors = classification.sourceProcessors.filter(
+        (sourceProcessor) => sourceProcessor.relevantForArch(arch)
+      );
+      return classification.sourceProcessors.length
+        ? classification : { type: 'wrong-arch' };
+    }
+  }
+
+  isEmpty() {
+    return _.isEmpty(this._byFilename) && _.isEmpty(this._byExtension) &&
+      _.isEmpty(this._legacyHandlers);
+  }
+
+  // Returns an array of RegExps. A file is handled by something in this set if
+  // its basename matches one of the RegExps, and if its processor/handler
+  // is active for the giving arch.
+  matchingRegExps(arch) {
+    if (this._allowConflicts)
+      throw Error("matchingRegExps not supported for linters");
+
+    const regExps = [];
+
+    function addExtension(ext) {
+      regExps.push(new RegExp('\\.' + utils.quotemeta(ext) + '$'));
+    }
+    _.each(this._byExtension, ([sourceProcessor], ext) => {
+      if (sourceProcessor.relevantForArch(arch)) {
+        addExtension(ext);
+      }
+    });
+    Object.keys(this._legacyHandlers).forEach(addExtension);
+    this._hardcodeJs && addExtension('js');
+
+    _.each(this._byFilename, ([sourceProcessor], filename) => {
+      if (sourceProcessor.relevantForArch(arch)) {
+        regExps.push(new RegExp('^' + utils.quotemeta(filename) + '$'));
+      }
+    });
+    return regExps;
+  }
+}
 
 // This is the base class of the object presented to the user's plugin code.
 exports.InputFile = function (resourceSlot) {
@@ -146,4 +388,3 @@ _.extend(exports.InputFile.prototype, {
     });
   }
 });
-

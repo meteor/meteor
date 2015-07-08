@@ -153,16 +153,14 @@ var Isopack = function () {
   // been called)
   self._pluginsInitialized = false;
 
-  // Source file handlers registered by plugins. Map from extension
-  // (without a dot) to a handler function that takes a
-  // CompileStep. Valid only when _pluginsInitialized is true.
-  // XXX BBP redoc
-  self.sourceHandlers = null;
-
-  // XXX linter, minifier, etc
-  // XXX BBP doc (map id -> CompilerPlugin)
+  // The SourceProcessors registered by plugins defined by this package.  Each
+  // value is a SourceProcessorSet. sourceProcessors.compiler includes the
+  // legacy source handlers as well.
+  // Valid when self._pluginsInitialized is true.
   self.sourceProcessors = {
-    compiler: null
+    compiler: null,
+    linter: null,
+    minifier: null
   };
 
   // See description in PackageSource. If this is set, then we include a copy of
@@ -434,16 +432,6 @@ _.extend(Isopack.prototype, {
     return _.findWhere(self.unibuilds, { arch: chosenArch });
   }),
 
-  // Load this package's plugins into memory, if they haven't already
-  // been loaded, and return the list of source file handlers
-  // registered by the plugins: a map from extension (without a dot)
-  // to a handler function that takes a CompileStep.
-  getSourceHandlers: function () {
-    var self = this;
-    self._checkPluginsInitialized();
-    return self.sourceHandlers;
-  },
-
   _checkPluginsInitialized: function () {
     var self = this;
     if (self._pluginsInitialized)
@@ -453,21 +441,18 @@ _.extend(Isopack.prototype, {
 
   // If this package has plugins, initialize them (run the startup
   // code in them so that they register their extensions). Idempotent.
-  ensurePluginsInitialized: Profile(
-    "Isopack#ensurePluginsInitialized", function () {
+  ensurePluginsInitialized: Profile("Isopack#ensurePluginsInitialized", function () {
     var self = this;
 
     if (self._pluginsInitialized)
       return;
 
-    // Used to ensure that a given extension is used by at most one
-    // registerSourceHandler and registerCompiler call per package. We don't
-    // need to persist it past loading plugins, but we do need to share it
-    // across multiple plugins in the package.
-    var pluginSourceExtensions = {};
-
-    self.sourceHandlers = {};
-    self.sourceProcessors.compiler = {};
+    self.sourceProcessors.compiler = new buildPluginModule.SourceProcessorSet(
+      self.displayName(), { hardcodeJs: true, singlePackage: true });
+    self.sourceProcessors.linter = new buildPluginModule.SourceProcessorSet(
+      self.displayName(), { singlePackage: true, allowConflicts: true });
+    self.sourceProcessors.minifier = new buildPluginModule.SourceProcessorSet(
+      self.displayName(), { singlePackage: true });
 
     _.each(self.plugins, function (pluginsByArch, name) {
       var arch = archinfo.mostSpecificMatch(
@@ -492,7 +477,7 @@ _.extend(Isopack.prototype, {
         // Make a new Plugin API object for this plugin; each plugin needs its
         // own object so that it can be mutated by packages like
         // compiler-plugin.
-        var Plugin = self._makePluginApi(pluginSourceExtensions);
+        var Plugin = self._makePluginApi();
         plugin.load({ Plugin: Plugin });
       });
     });
@@ -503,8 +488,9 @@ _.extend(Isopack.prototype, {
     //   Plugin.registerCompiler({...}, function () { return new C; });
     //   var C = function () {...}
     // and so we want to wait for C to be defined.
-    _.each(self.sourceProcessors, function (sourceProcessors, type) {
-      _.each(sourceProcessors, function (sourceProcessor, id) {
+
+    _.each(self.sourceProcessors, (sourceProcessorSet) => {
+      _.each(sourceProcessorSet.allSourceProcessors, (sourceProcessor) => {
         sourceProcessor.instantiatePlugin();
       });
     });
@@ -512,7 +498,7 @@ _.extend(Isopack.prototype, {
     self._pluginsInitialized = true;
   }),
 
-  _makePluginApi: function (pluginSourceExtensions) {
+  _makePluginApi: function () {
     var isopack = this;
 
     /**
@@ -551,104 +537,48 @@ _.extend(Isopack.prototype, {
           options = {};
         }
 
-        if (_.has(isopack.sourceHandlers, extension)) {
-          buildmessage.error(
-            "duplicate handler for '*." +
-              extension + "'; may only have one per plugin-providing package",
-            { useMyCaller: true });
-          // recover by ignoring all but the first
-          return;
-        }
-
-        pluginSourceExtensions.compiler = pluginSourceExtensions.compiler || {};
-        if (_.has(pluginSourceExtensions.compiler, extension)) {
-          buildmessage.error(
-            "duplicate handler for '*." +
-              extension + "'; may not use the same extension with " +
-              "registerSourceHandler and registerCompiler in the " +
-              "same per plugin-providing package",
-            { useMyCaller: true });
-          // recover by ignoring all but the first
-          return;
-        }
-
-        isopack.sourceHandlers[extension] = {
-          handler: handler,
+        isopack.sourceProcessors.compiler.addLegacyHandler({
+          extension,
+          handler,
+          packageDisplayName: isopack.displayName(),
           isTemplate: !!options.isTemplate,
           archMatching: options.archMatching
-        };
+        });
       },
 
-      _registerSourceProcessor: function (options, factory, additionalOptions) {
-        if (! (options && options.extensions &&
-               options.extensions instanceof Array &&
-               options.extensions.length > 0)) {
-          buildmessage.error(additionalOptions.methodName + " call must "
-                             + "specify a non-empty array of extensions",
+      _registerSourceProcessor: function (options, factory,
+                                          {sourceProcessorSet, methodName}) {
+        const hasExtensions = (options && options.extensions &&
+                               options.extensions instanceof Array &&
+                               options.extensions.length > 0);
+        const hasFilenames = (options && options.filenames &&
+                              options.filenames instanceof Array &&
+                              options.filenames.length > 0);
+        if (! (hasExtensions || hasFilenames)) {
+          buildmessage.error("Plugin." + methodName + " must specify a " +
+                             "non-empty array of extensions or filenames",
                              { useMyCaller: 3 });
           // recover by ignoring
           return;
         }
         if (typeof factory !== 'function') {
-          buildmessage.error(additionalOptions.methodName + " call must "
+          buildmessage.error(methodName + " call must "
                              + "specify a factory function",
                              { useMyCaller: 3 });
           // recover by ignoring
           return;
         }
 
-        var type = additionalOptions.type;
-        pluginSourceExtensions[type] = pluginSourceExtensions[type] || {};
-
-        if (! additionalOptions.skipUniqExtCheck) {
-          _.each(options.extensions, function (ext) {
-            // Check to see if a legacy handler uses this extension.
-            if (_.has(isopack.sourceHandlers, ext)) {
-              buildmessage.error(
-                "duplicate handler for '*." +
-                  ext + "'; may not use the same extension with " +
-                  "registerSourceHandler and registerCompiler in the " +
-                  "same per plugin-providing package",
-                { useMyCaller: 4 });
-              // recover by ignoring
-              return;
-            }
-
-            // Check to see if another source processor uses this extension.
-            if (_.has(pluginSourceExtensions[type], ext)) {
-              buildmessage.error(
-                "duplicate handler for '*." +
-                  ext + "in same plugin-providing package",
-                { useMyCaller: 4 });
-              // recover by ignoring;
-              return;
-            }
-          });
-        }
-
-        isopack.sourceProcessors[type] = isopack.sourceProcessors[type] || {};
-        // Unique ID within a given bundler call.  Used internally in
-        // compiler-plugin.js and others, and human-readable for debugging
-        // purposes.
-        var processorPluginId = JSON.stringify([isopack.name, options.extensions]);
-        if (_.has(isopack.sourceProcessors[type], processorPluginId)) {
-          throw Error("duplicate plugin ID " + processorPluginId);
-        }
-
-        // We're finally done validating!  Save the processor plugin, and mark
-        // all its extensions as used.
-        isopack.sourceProcessors[type][processorPluginId] =
-          new buildPluginModule.SourceProcessor({
-            id: processorPluginId,
-            isopack: isopack,
-            extensions: options.extensions,
-            archMatching: options.archMatching,
-            isTemplate: options.isTemplate,
-            factoryFunction: factory
-          });
-        _.each(options.extensions, function (ext) {
-          pluginSourceExtensions[type][ext] = true;
+        const sp = new buildPluginModule.SourceProcessor({
+          isopack: isopack,
+          extensions: options.extensions,
+          filenames: options.filenames,
+          archMatching: options.archMatching,
+          isTemplate: options.isTemplate,
+          factoryFunction: factory
         });
+        // This logs a buildmessage on conflicts.
+        sourceProcessorSet.addSourceProcessor(sp);
       },
 
       // XXX BBP doc
@@ -665,9 +595,8 @@ _.extend(Isopack.prototype, {
       // and it mysteriously doesn't work. So don't do that.
       _doNotCallThisDirectly_registerCompiler: function (options, factory) {
         Plugin._registerSourceProcessor(options, factory, {
-          type: "compiler",
-          methodName: "registerCompiler",
-          skipUniqExtCheck: false
+          sourceProcessorSet: isopack.sourceProcessors.compiler,
+          methodName: "registerCompiler"
         });
       },
 
@@ -683,11 +612,8 @@ _.extend(Isopack.prototype, {
       // XXX BBP doc
       _doNotCallThisDirectly_registerLinter: function (options, factory) {
         Plugin._registerSourceProcessor(options, factory, {
-          type: "linter",
-          methodName: "registerLinter",
-          buildPluginClass: linterPluginModule.LinterPlugin,
-          // Several linters can handle the same extension
-          skipUniqExtCheck: true
+          sourceProcessorSet: isopack.sourceProcessors.linter,
+          methodName: "registerLinter"
         });
       },
 
@@ -715,8 +641,13 @@ _.extend(Isopack.prototype, {
           return;
         }
 
+        if (options.filenames) {
+          buildmessage.error("Plugin.registerMinifier does not accept `filenames`");
+          return;
+        }
+
         Plugin._registerSourceProcessor(options, factory, {
-          type: "minifier",
+          sourceProcessorSet: isopack.sourceProcessors.minifier,
           methodName: "registerMinifier"
         });
       },
@@ -1181,7 +1112,7 @@ _.extend(Isopack.prototype, {
 
           // If we're going to write a legacy prelink file later, track the
           // original form of the resource object (with the source in a Buffer,
-          // etc) instead of the later version.
+          // etc) instead of the later version.  #HardcodeJs
           if (writeLegacyBuilds && resource.type === "source" &&
               resource.extension == "js") {
             jsResourcesForLegacyPrelink.push({
@@ -1199,7 +1130,7 @@ _.extend(Isopack.prototype, {
 
           unibuildJson.resources.push({
             type: resource.type,
-            extension: resource.extension || undefined,
+            extension: resource.extension,
             file: builder.writeToGeneratedFilename(
               files.pathJoin(unibuildDir,
                              resource.servePath || resource.path),
