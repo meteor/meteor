@@ -2126,8 +2126,10 @@ exports.bundle = function ({
         builders = _.clone(previousBuilders);
         _.each(targets, function (target, name) {
           const previousBuilder = previousBuilders[name];
-          var targetBuild =
-            writeTargetToPath(name, target, outputPath, _.extend(writeOptions, {previousBuilder}));
+          var targetBuild = writeTargetToPath(name, target, outputPath, {
+            ...writeOptions,
+            previousBuilder
+          });
           nodePath = nodePath.concat(targetBuild.nodePath);
           clientWatchSet.merge(target.getWatchSet());
           builders[name] = targetBuild.builder;
@@ -2135,8 +2137,11 @@ exports.bundle = function ({
       } else {
         starResult = writeSiteArchive(
           targets,
-          outputPath,
-          _.extend(writeOptions, {previousBuilders}));
+          outputPath, {
+            ...writeOptions,
+            previousBuilders
+          }
+        );
 
         nodePath = nodePath.concat(starResult.nodePath);
         serverWatchSet.merge(starResult.serverWatchSet);
