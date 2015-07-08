@@ -9,10 +9,10 @@ import {sourceMapLength} from './utils.js';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
-const CACHE_SIZE = process.env.METEOR_LINKER_PRELINK_CACHE_SIZE || 1024*1024*20;
+const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
 
 // Cache individual files prelinked
-const LINKER_PRELINK_CACHE = new LRU({
+const APP_PRELINK_CACHE = new LRU({
   max: CACHE_SIZE,
   length: function (prelinked) {
     return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
@@ -119,8 +119,8 @@ _.extend(Module.prototype, {
         const cacheKey = JSON.stringify([
           file.sourceHash, file.bare, file.servePath]);
 
-        if (LINKER_PRELINK_CACHE.has(cacheKey)) {
-          return LINKER_PRELINK_CACHE.get(cacheKey);
+        if (APP_PRELINK_CACHE.has(cacheKey)) {
+          return APP_PRELINK_CACHE.get(cacheKey);
         }
 
         const node = file.getPrelinkedOutput({ preserveLineNumbers: true });
@@ -139,7 +139,7 @@ _.extend(Module.prototype, {
           sourceMap: sourceMap
         };
 
-        LINKER_PRELINK_CACHE.set(cacheKey, prelinked);
+        APP_PRELINK_CACHE.set(cacheKey, prelinked);
         return prelinked;
       });
     }
