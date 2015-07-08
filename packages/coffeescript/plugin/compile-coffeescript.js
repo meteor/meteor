@@ -186,7 +186,6 @@ _.extend(CoffeeCompiler.prototype, {
         var stripped = stripExportedVars(
           output.js,
           _.pluck(inputFile.getDeclaredExports(), 'name'));
-        console.log('>>>> ', typeof output.sourceMap, typeof output.v3SourceMap);
         sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
         self._cache.set(cacheKey, sourceWithMap);
       }
