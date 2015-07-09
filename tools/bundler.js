@@ -1929,7 +1929,6 @@ Find out more about Meteor at meteor.com.
  *   fallback option for Windows). For isopacks (meteor packages), link to the
  *   location of the locally stored isopack build (e.g.
  *   ~/.meteor/packages/package/version/npm)
- * - lint: specifies if linting is required
  *
  * - buildOptions: may include
  *   - minify: string, type of minification for the CSS and JS assets
@@ -1971,12 +1970,11 @@ exports.bundle = function ({
   outputPath,
   includeNodeModules,
   buildOptions,
-  lint: shouldLint,
   previousBuilders,
   hasCachedBundle
 }) {
   buildOptions = buildOptions || {};
-  shouldLint = shouldLint || false;
+  const shouldLint = !!projectContext.lintAppAndLocalPackages;
 
   var appDir = projectContext.projectDir;
 

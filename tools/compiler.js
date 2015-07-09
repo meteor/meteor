@@ -175,8 +175,8 @@ compiler.lint = function (packageSource, options) {
     // skip Cordova if not required
     if (! options.includeCordovaUnibuild
         && architecture.arch === 'web.cordova') {
-          return;
-        }
+      return;
+    }
 
     lintUnibuild({
       isopack: options.isopack,
@@ -246,14 +246,20 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
     return;
   }
 
-  var watchSet = new watch.WatchSet;
-  var sourceItems = sourceArch.getSourcesFunc(sourceProcessorSet, watchSet);
+  const unibuild = _.findWhere(isopack.unibuilds, {arch: sourceArch.arch});
+  if (! unibuild) {
+    throw Error(`No ${ sourceArch.arch } unibuild for ${ isopack.name }!`);
+  }
+
+  var sourceItems = sourceArch.getSourcesFunc(
+    sourceProcessorSet, unibuild.watchSet);
 
   runLinters({
-    inputSourceArch: sourceArch,
     isopackCache,
     sourceItems,
-    sourceProcessorSet
+    sourceProcessorSet,
+    inputSourceArch: sourceArch,
+    watchSet: unibuild.watchSet
   });
 };
 
@@ -525,7 +531,7 @@ var compileUnibuild = function (options) {
 };
 
 function runLinters({inputSourceArch, isopackCache, sourceItems,
-                     sourceProcessorSet}) {
+                     sourceProcessorSet, watchSet}) {
   if (sourceProcessorSet.isEmpty()) {
     return;
   }
@@ -591,7 +597,6 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
     }
 
     // Read the file and add it to the WatchSet.
-    // XXX BBP there is no watchSet yet!!!!!!!
     const {hash, contents} = watch.readAndWatchFileWithHash(
       watchSet,
       files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath));

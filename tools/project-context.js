@@ -159,6 +159,11 @@ _.extend(ProjectContext.prototype, {
     // them or change their major version).
     self._allowIncompatibleUpdate = options.allowIncompatibleUpdate;
 
+    // If set, we run the linter on the app and local packages.  Set by 'meteor
+    // lint', and the runner commands (run/test-packages/debug) when --no-lint
+    // is not passed.
+    self.lintAppAndLocalPackages = options.lintAppAndLocalPackages;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -711,7 +716,8 @@ _.extend(ProjectContext.prototype, {
       cacheDir: self.getProjectLocalDirectory('isopacks'),
       pluginCacheDirRoot: self.getProjectLocalDirectory('plugin-cache'),
       tropohouse: self.tropohouse,
-      previousIsopackCache: self._previousIsopackCache
+      previousIsopackCache: self._previousIsopackCache,
+      lintLocalPackages: self.lintAppAndLocalPackages
     });
 
     if (self._forceRebuildPackages) {

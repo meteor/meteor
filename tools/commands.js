@@ -275,7 +275,8 @@ function doRunCommand (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    allowIncompatibleUpdate: options['allow-incompatible-update']
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -400,7 +401,6 @@ function doRunCommand (options) {
     appHost: appHost,
     debugPort: options['debug-port'],
     settingsFile: options.settings,
-    lint: ! options['no-lint'],
     buildOptions: {
       minify: options.production ? 'production' : 'development',
       includeDebug: ! options.production
@@ -983,7 +983,8 @@ main.registerCommand({
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     serverArchitectures: [archinfo.host()],
-    allowIncompatibleUpdate: options['allow-incompatible-update']
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: true
   });
   var messages = buildmessage.capture(function () {
     projectContext.prepareProjectForBuild();
@@ -998,7 +999,6 @@ main.registerCommand({
   var bundle = bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
-    lint: true,
     buildOptions: {
       minify: 'development'
     }
@@ -1445,7 +1445,8 @@ main.registerCommand({
     projectDirForLocalPackages: options.appDir,
     explicitlyAddedLocalPackageDirs: packagesByPath,
     serverArchitectures: serverArchitectures,
-    allowIncompatibleUpdate: options['allow-incompatible-update']
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint']
   });
 
   main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1608,8 +1609,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
     minify: options.production ? 'production' : 'development',
-    includeDebug: ! options.production,
-    lint: ! options['no-lint']
+    includeDebug: ! options.production
   };
 
   if (options.deploy) {

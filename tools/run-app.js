@@ -70,7 +70,6 @@ var AppProcess = function (options) {
   self.proc = null;
   self.madeExitCallback = false;
   self.ipcPipe = options.ipcPipe;
-  self.lint = options.lint;
 };
 
 _.extend(AppProcess.prototype, {
@@ -354,7 +353,6 @@ var AppRunner = function (options) {
   self.mobileServerUrl = options.mobileServerUrl;
   self.settingsFile = options.settingsFile;
   self.debugPort = options.debugPort;
-  self.lint = options.lint;
   self.proxy = options.proxy;
   self.watchForChanges =
     options.watchForChanges === undefined ? true : options.watchForChanges;
@@ -562,7 +560,6 @@ _.extend(AppRunner.prototype, {
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          lint: self.lint,
           previousBuilders: builders
         });
 
@@ -711,7 +708,7 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
-    if (self.lint) {
+    if (self.projectContext.lintAppAndLocalPackages) {
       var warnings = bundleResult.warnings;
 
       if (warnings && warnings.hasMessages()) {
@@ -772,7 +769,8 @@ _.extend(AppRunner.prototype, {
         if (bundleResultOrRunResult.runResult)
           return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
-        if (self.lint && bundleResult.warnings) {
+        if (self.projectContext.lintAppAndLocalPackages &&
+            bundleResult.warnings) {
           runLog.log(
             'Linting your app.\n\n' +
               bundleResult.warnings.formatMessages(), { arrow: true });

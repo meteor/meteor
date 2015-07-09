@@ -50,6 +50,8 @@ exports.IsopackCache = function (options) {
 
   self._noLineNumbers = !! options.noLineNumbers;
 
+  self._lintLocalPackages = !! options.lintLocalPackages;
+
   self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
 };
 
@@ -226,6 +228,8 @@ _.extend(exports.IsopackCache.prototype, {
       var isopack;
       if (previousIsopack && self._checkUpToDatePreloaded(previousIsopack)) {
         isopack = previousIsopack;
+        // We don't need to call self._lintLocalPackage here, because
+        // lintingMessages is saved on the isopack.
       } else {
         var pluginCacheDir;
         if (self._pluginCacheDirRoot) {
@@ -241,8 +245,7 @@ _.extend(exports.IsopackCache.prototype, {
           // Reuse existing plugin cache dir
           pluginCacheDir && files.mkdir_p(pluginCacheDir);
 
-          var Isopack = isopackModule.Isopack;
-          isopack = new Isopack();
+          isopack = new isopackModule.Isopack();
           isopack.initFromPath(name, self._isopackDir(name), {
             isopackBuildInfoJson: isopackBuildInfoJson,
             pluginCacheDir: pluginCacheDir
@@ -255,6 +258,10 @@ _.extend(exports.IsopackCache.prototype, {
           isopack.setPluginProviderPackageMap(
             self._packageMap.makeSubsetMap(
               _.keys(isopackBuildInfoJson.pluginProviderPackageMap)));
+          // Because we don't save linter messages to disk, we have to relint
+          // this package.
+          // XXX save linter messages to disk?
+          self._lintLocalPackage(packageInfo.packageSource, isopack);
         } else {
           // Nope! Compile it again. Give it a fresh plugin cache.
           if (pluginCacheDir) {
@@ -272,37 +279,45 @@ _.extend(exports.IsopackCache.prototype, {
           // Accept the compiler's result, even if there were errors (since it
           // at least will have a useful WatchSet and will allow us to keep
           // going and compile other packages that depend on this one). However,
-          // only save it to disk if there were no errors.
-          if (self.cacheDir && ! buildmessage.jobHasMessages()) {
-            // Save to disk, for next time!
-            isopack.saveToPath(self._isopackDir(name), {
-              includeIsopackBuildInfo: true
-            });
+          // only lint it and save it to disk if there were no errors.
+          if (! buildmessage.jobHasMessages()) {
+            // Lint the package. We do this before saving so that the linter can
+            // augment the saved-to-disk WatchSet with linter-specific files.
+            self._lintLocalPackage(packageInfo.packageSource, isopack);
+            if (self.cacheDir) {
+              // Save to disk, for next time!
+              isopack.saveToPath(self._isopackDir(name), {
+                includeIsopackBuildInfo: true
+              });
+            }
           }
         }
       }
 
       self.allLoadedLocalPackagesWatchSet.merge(isopack.getMergedWatchSet());
       self._isopacks[name] = isopack;
-
-      // lint isopack if compilation succeeded or if we loaded it from cache
-      if (! buildmessage.jobHasMessages()) {
-        var lintingMessages = buildmessage.capture({
-          title: "linting isopack " + name
-        }, function () {
-          compiler.lint(packageInfo.packageSource, {
-            isopackCache: self,
-            isopack: isopack,
-            includeCordovaUnibuild: self._includeCordovaUnibuild
-          });
-        });
-        if (! lintingMessages.hasMessages()) {
-          lintingMessages = null;
-        }
-
-        isopack.lintingMessages = lintingMessages;
-      }
     });
+  },
+
+  // Runs appropriate linters on a package. It also augments their unibuilds'
+  // WatchSets with files used by the linter.
+  _lintLocalPackage(packageSource, isopack) {
+    const self = this;
+    if (! self._lintLocalPackages)
+      return;
+
+    const lintingMessages = buildmessage.capture({
+      title: "linting isopack " + isopack.name
+    }, function () {
+      compiler.lint(packageSource, {
+        isopackCache: self,
+        isopack: isopack,
+        includeCordovaUnibuild: self._includeCordovaUnibuild
+      });
+    });
+    if (lintingMessages.hasMessages()) {
+      isopack.lintingMessages = lintingMessages;
+    }
   },
 
   _checkUpToDate: function (isopackBuildInfoJson) {
@@ -405,7 +420,6 @@ _.extend(exports.IsopackCache.prototype, {
 
     var messages = new buildmessage._MessageSet();
     self._packageMap.eachPackage(function (name, packageInfo) {
-      var packageInfo = self._packageMap.getInfo(name);
       var isopack = self._isopacks[name];
       if (packageInfo.kind === 'local') {
         var isopackMessages = isopack.lintingMessages;
