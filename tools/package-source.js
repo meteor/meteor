@@ -1193,7 +1193,7 @@ _.extend(PackageSource.prototype, {
       sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
-      sourceArch.getSourcesFunc = _.once((sourceProcessorSet, watchSet) => {
+      sourceArch.getSourcesFunc = (sourceProcessorSet, watchSet) => {
         var sourceInclude = sourceProcessorSet.matchingRegExps(arch);
         var sourceExclude = [/^\./].concat(ignoreFiles);
 
@@ -1352,7 +1352,7 @@ _.extend(PackageSource.prototype, {
         }
 
         return sources;
-      });
+      };
     });
 
     if (! self._checkCrossUnibuildVersionConstraints()) {
