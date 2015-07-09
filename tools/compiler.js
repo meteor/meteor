@@ -240,26 +240,11 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 
   var watchSet = new watch.WatchSet;
   var sourceItems = sourceArch.getSourcesFunc(sourceProcessorSet, watchSet);
-  var wrappedSourceItems = _.map(sourceItems, function (source) {
-    var relPath = source.relPath;
-    var absPath = files.pathResolve(sourceArch.pkg.sourceRoot, relPath);
-    var fileWatchSet = new watch.WatchSet;
-    var file = watch.readAndWatchFileWithHash(fileWatchSet, absPath);
-    var hash = file.hash;
-    var contents = file.contents;
-    return {
-      relPath: relPath,
-      contents: contents,
-      'package': isopack.name,
-      hash: hash,
-      arch: sourceArch.arch
-    };
-  });
 
   runLinters({
     inputSourceArch: sourceArch,
     isopackCache,
-    wrappedSourceItems,
+    sourceItems,
     sourceProcessorSet
   });
 };
@@ -490,7 +475,7 @@ var compileUnibuild = function (options) {
   };
 };
 
-function runLinters({inputSourceArch, isopackCache, wrappedSourceItems,
+function runLinters({inputSourceArch, isopackCache, sourceItems,
                      sourceProcessorSet}) {
   if (sourceProcessorSet.isEmpty()) {
     return;
@@ -540,18 +525,33 @@ function runLinters({inputSourceArch, isopackCache, wrappedSourceItems,
 
   // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
   const sourceItemsForLinter = {};
-  wrappedSourceItems.forEach((wrappedSource) => {
+  sourceItems.forEach((sourceItem) => {
+    const { relPath } = sourceItem;
     const classification = sourceProcessorSet.classifyFilename(
-      files.pathBasename(wrappedSource.relPath), inputSourceArch.arch);
+      files.pathBasename(relPath), inputSourceArch.arch);
+    // If we don't have a linter for this file (or we do but it's only on
+    // another arch), skip without even reading the file into a WatchSet.
     if (classification.type === 'wrong-arch' ||
         classification.type === 'unmatched')
       return;
     // We shouldn't ever add a legacy handler and we're not hardcoding JS for
     // linters, so we should always have SourceProcessor if anything matches.
     if (! classification.sourceProcessors) {
-      throw Error(`Unexpected classification for ${wrappedSource.relPath}: ` +
+      throw Error(`Unexpected classification for ${ relPath }: ` +
                   JSON.stringify(classification));
     }
+
+    // Read the file and add it to the WatchSet.
+    // XXX BBP there is no watchSet yet!!!!!!!
+    const {hash, contents} = watch.readAndWatchFileWithHash(
+      watchSet,
+      files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath));
+    const wrappedSource = {
+      relPath, contents, hash,
+      arch: inputSourceArch.arch,
+      'package': inputSourceArch.pkg.name
+    };
+
     // There can be multiple linters on a file.
     classification.sourceProcessors.forEach((sourceProcessor) => {
       if (! sourceItemsForLinter.hasOwnProperty(sourceProcessor.id)) {
