@@ -25,7 +25,7 @@
 
 * Improved server performance by reducing overhead of processing oplog after
   database writes. Improvements are most noticeable in case when a method is
-  doing a lot of writes on collections with plenty of active observers.
+  doing a lot of writes on collections with plenty of active observers.  #4694
 
 
 ## in progress: v.1.1.1
