@@ -37,20 +37,21 @@ function wrapCallSite(unwrappedFrame) {
   const frame = sourceMapSupport.wrapCallSite(unwrappedFrame);
   function wrapGetter(name) {
     const origGetter = frame[name];
-    frame[name] = function (arg) {
+    frame[name] = function(arg) {
       // replace a custom location domain that we set for better UX in Chrome
       // DevTools (separate domain group) in source maps.
       const source = origGetter(arg);
-      if (! source)
+      if (!source) {
         return source;
+      }
       return source.replace(/(^|\()meteor:\/\/..app\//, '$1');
     };
-  };
+  }
   wrapGetter('getScriptNameOrSourceURL');
   wrapGetter('getEvalOrigin');
 
   return frame;
-};
+}
 
 
 sourceMapSupport.install({
