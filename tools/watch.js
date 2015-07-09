@@ -23,7 +23,8 @@ import {Profile} from "./profile.js";
 //
 // In a directory watch, you provide an absolute path to a directory,
 // two lists of regular expressions specifying the entries to
-// include and exclude, and an array of which entries to expect.
+// include and exclude, a list of specific names to include (which ignores
+// the exclude regexp list) and an array of which entries to expect.
 //
 // For directory watches, the regular expressions work as follows. You provide
 // two arrays of regular expressions, an include list and an exclude list. An
@@ -33,7 +34,11 @@ import {Profile} from "./profile.js";
 // '/' if the entry is directory. There is NO IMPLICIT RECURSION here: a
 // directory watch ONLY watches the immediate children of the directory! If you
 // want a recursive watch, you need to do the recursive walk while building the
-// WatchSet and add a bunch of separate directory watches.
+// WatchSet and add a bunch of separate directory watches.  In addition, you
+// can provide a list of specific names to expect; these are not filtered
+// by the exclude list.  (For example, you might want to see all "*.js" files
+// but ignore files starting with dots (which are often temporary files), but
+// explicitly ask for ".jshintrc".)
 //
 // There can be multiple directory watches on the same directory. There is no
 // relationship between the files found in directory watches and the files
@@ -76,6 +81,7 @@ export class WatchSet {
     // - 'absPath': absolute path to a directory
     // - 'include': array of RegExps
     // - 'exclude': array of RegExps
+    // - 'names': array of strings
     // - 'contents': array of strings, or null if the directory should not exist
     //
     // This represents the assertion that 'absPath' is a directory and that
@@ -84,7 +90,7 @@ export class WatchSet {
     // directory names end with '/'. 'contents' is sorted. An entry is in
     // 'contents' if its value (including the slash, for directories) matches at
     // least one regular expression in 'include' and no regular expressions in
-    // 'exclude'.
+    // 'exclude'... or if it is in 'names'.
     //
     // There is no recursion here: files contained in subdirectories never appear.
     //
@@ -111,27 +117,20 @@ export class WatchSet {
     self.files[filePath] = hash;
   }
 
-  // Takes options absPath, include, exclude, and contents, as described
-  // above. contents does not need to be pre-sorted.
-  addDirectory(options) {
+  addDirectory({absPath, include, exclude, names, contents: unsortedContents}) {
     var self = this;
     if (self.alwaysFire) {
       return;
     }
-    if (_.isEmpty(options.include)) {
+    if (_.isEmpty(include) && _.isEmpty(names)) {
       return;
     }
-    var contents = _.clone(options.contents);
+    const contents = _.clone(unsortedContents);
     if (contents) {
       contents.sort();
     }
 
-    self.directories.push({
-      absPath: options.absPath,
-      include: options.include,
-      exclude: options.exclude,
-      contents: contents
-    });
+    self.directories.push({absPath, include, exclude, names, contents});
   }
 
   // Merges another WatchSet into this one. This one will now fire if either
@@ -196,6 +195,7 @@ export class WatchSet {
         absPath: d.absPath,
         include: _.map(d.include, reToJSON),
         exclude: _.map(d.exclude, reToJSON),
+        names: d.names,
         contents: d.contents
       };
     });
@@ -229,6 +229,7 @@ export class WatchSet {
         absPath: d.absPath,
         include: _.map(d.include, reFromJSON),
         exclude: _.map(d.exclude, reFromJSON),
+        names: d.names,
         contents: d.contents
       };
     });
@@ -258,10 +259,10 @@ export function sha1(contents) {
   })();
 }
 
-export function readDirectory(options) {
+export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
-    var contents = files.readdir(options.absPath);
+    var contents = files.readdir(absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
     if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
@@ -277,7 +278,7 @@ export function readDirectory(options) {
       // We do stat instead of lstat here, so that we treat symlinks to
       // directories just like directories themselves.
       // XXX Does the treatment of symlinks make sense?
-      var stats = files.stat(files.pathJoin(options.absPath, entry));
+      var stats = files.stat(files.pathJoin(absPath, entry));
     } catch (e) {
       if (e && (e.code === 'ENOENT')) {
         // Disappeared after the readdir (or a dangling symlink)? Eh,
@@ -293,12 +294,20 @@ export function readDirectory(options) {
   });
 
   // Filter based on regexps.
-  var filtered = _.filter(contentsWithSlashes, function (entry) {
-    return _.any(options.include, function (re) {
-      return re.test(entry);
-    }) && ! _.any(options.exclude, function (re) {
-      return re.test(entry);
-    });
+  var filtered = contentsWithSlashes.filter((entry) => {
+    // Is it one of the names we explicitly requested?
+    if (names && names.indexOf(entry) !== -1) {
+      return true;
+    }
+    // Is it ruled out by an exclude rule?
+    if (exclude && exclude.some((re) => re.test(entry))) {
+      return false;
+    }
+    // Is it ruled in by an include rule?
+    if (include && include.some((re) => re.test(entry))) {
+      return true;
+    }
+    return false;
   });
 
   // Sort it!
@@ -400,7 +409,8 @@ export class Watcher {
     var newContents = readDirectory({
       absPath: info.absPath,
       include: info.include,
-      exclude: info.exclude
+      exclude: info.exclude,
+      names: info.names
     });
 
     // If the directory has changed (including being deleted or created).
@@ -704,7 +714,7 @@ export function isUpToDate(watchSet) {
   return upToDate;
 }
 
-// Options should have absPath/include/exclude.
+// Options should have absPath/include/exclude/names.
 export function readAndWatchDirectory(watchSet, options) {
   var contents = readDirectory(options);
   watchSet.addDirectory(_.extend({contents: contents}, options));
