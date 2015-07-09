@@ -437,34 +437,10 @@ _.extend(PackageSourceBatch.prototype, {
   _getSourceProcessorSet: function () {
     var self = this;
     var isopack = self.unibuild.pkg;
-    // Packages always get plugins from themselves.
-    var activePluginPackages = [isopack];
-
-    // We don't use plugins from weak dependencies, because the ability to build
-    // a certain type of file shouldn't depend on whether or not some unrelated
-    // package in the target has a dependency. And we skip unordered
-    // dependencies, because it's not going to work to have circular build-time
-    // dependencies.
-    //
-    // eachUsedUnibuild takes care of pulling in implied dependencies for us
-    // (eg, templating from standard-app-packages).
-    //
-    // We pass archinfo.host here, not self.arch, because it may be more
-    // specific, and because plugins always have to run on the host
-    // architecture.
-    compiler.eachUsedUnibuild({
-      dependencies: self.unibuild.uses,
-      arch: archinfo.host(),
-      isopackCache: self.processor.isopackCache,
-      skipUnordered: true
-    }, function (otherUnibuild) {
-      if (! _.isEmpty(otherUnibuild.pkg.plugins)) {
-        activePluginPackages.push(otherUnibuild.pkg);
-      }
+    const activePluginPackages = compiler.getActivePluginPackages(isopack, {
+      uses: self.unibuild.uses,
+      isopackCache: self.processor.isopackCache
     });
-
-    activePluginPackages = _.uniq(activePluginPackages);
-
     const sourceProcessorSet = new buildPluginModule.SourceProcessorSet(
       isopack.displayName(), { hardcodeJs: true });
 

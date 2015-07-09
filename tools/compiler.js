@@ -191,7 +191,7 @@ compiler.getMinifiers = function (packageSource, options) {
   _.each(packageSource.architectures, function (architecture) {
     var activePluginPackages = getActivePluginPackages(options.isopack, {
       isopackCache: options.isopackCache,
-      sourceArch: architecture
+      uses: architecture.uses
     });
 
     _.each(activePluginPackages, function (otherPkg) {
@@ -221,7 +221,10 @@ compiler.getMinifiers = function (packageSource, options) {
 
 var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
   var activePluginPackages = getActivePluginPackages(
-    isopack, {sourceArch, isopackCache});
+    isopack, {
+      isopackCache,
+      uses: sourceArch.uses
+    });
 
   const sourceProcessorSet = new SourceProcessorSet(
     isopack.displayName, { allowConflicts: true });
@@ -229,7 +232,6 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
   _.each(activePluginPackages, function (otherPkg) {
     otherPkg.ensurePluginsInitialized();
 
-    if (isopack.name === null)
     sourceProcessorSet.merge(otherPkg.sourceProcessors.linter);
   });
 
@@ -267,34 +269,17 @@ var compileUnibuild = function (options) {
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
   var pluginProviderPackageNames = {};
-  // The current package always is a plugin provider. (This also means we no
-  // longer need a buildOfPath entry in buildinfo.json.)
-  pluginProviderPackageNames[isopk.name] = true;
   var watchSet = inputSourceArch.watchSet.clone();
-
-  compiler.eachUsedUnibuild({
-    dependencies: inputSourceArch.uses,
-    arch: archinfo.host(),
-    isopackCache: isopackCache,
-    skipUnordered: true
-    // implicitly skip weak deps by not specifying acceptableWeakPackages option
-  }, function (unibuild) {
-    if (unibuild.pkg.name === isopk.name)
-      return;
-    pluginProviderPackageNames[unibuild.pkg.name] = true;
-    // If other package is built from source, then we need to rebuild this
-    // package if any file in the other package that could define a plugin
-    // changes.
-    watchSet.merge(unibuild.pkg.pluginWatchSet);
-
-    if (_.isEmpty(unibuild.pkg.plugins))
-      return;
-  });
 
   // *** Determine and load active plugins
   var activePluginPackages = getActivePluginPackages(isopk, {
-    sourceArch: inputSourceArch,
-    isopackCache: isopackCache
+    uses: inputSourceArch.uses,
+    isopackCache: isopackCache,
+    // If other package is built from source, then we need to rebuild this
+    // package if any file in the other package that could define a plugin
+    // changes.  getActivePluginPackages will add entries to this WatchSet.
+    pluginProviderWatchSet: watchSet,
+    pluginProviderPackageNames
   });
 
   // *** Assemble the list of source file handlers from the plugins
@@ -602,10 +587,12 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
 
 // takes an isopack and returns a list of packages isopack depends on,
 // containing at least one plugin
-var getActivePluginPackages = function (isopk, options) {
-  var inputSourceArch = options.sourceArch;
-  var isopackCache = options.isopackCache;
-
+export function getActivePluginPackages(isopk, {
+  uses,
+  isopackCache,
+  pluginProviderPackageNames,
+  pluginProviderWatchSet
+}) {
   // XXX we used to include our own plugins only if we were the
   // "use" role. now we include them everywhere because we don't have
   // a special "use" role anymore. it's not totally clear to me what
@@ -617,6 +604,8 @@ var getActivePluginPackages = function (isopk, options) {
   // the implies field is on the target unibuild, but we really only care
   // about packages.)
   var activePluginPackages = [isopk];
+  if (pluginProviderPackageNames)
+    pluginProviderPackageNames[isopk.name] = true;
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
@@ -630,7 +619,7 @@ var getActivePluginPackages = function (isopk, options) {
   // We pass archinfo.host here, not self.arch, because it may be more specific,
   // and because plugins always have to run on the host architecture.
   compiler.eachUsedUnibuild({
-    dependencies: inputSourceArch.uses,
+    dependencies: uses,
     arch: archinfo.host(),
     isopackCache: isopackCache,
     skipUnordered: true
@@ -638,6 +627,12 @@ var getActivePluginPackages = function (isopk, options) {
   }, function (unibuild) {
     if (unibuild.pkg.name === isopk.name)
       return;
+    if (pluginProviderPackageNames) {
+      pluginProviderPackageNames[unibuild.pkg.name] = true;
+    }
+    if (pluginProviderWatchSet) {
+      pluginProviderWatchSet.merge(unibuild.pkg.pluginWatchSet);
+    }
     if (_.isEmpty(unibuild.pkg.plugins))
       return;
     activePluginPackages.push(unibuild.pkg);
@@ -645,7 +640,7 @@ var getActivePluginPackages = function (isopk, options) {
 
   activePluginPackages = _.uniq(activePluginPackages);
   return activePluginPackages;
-};
+}
 
 // Iterates over each in options.dependencies as well as unibuilds implied by
 // them. The packages in question need to already be built and in
