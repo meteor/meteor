@@ -14,29 +14,6 @@ source "$(dirname $0)/build-dev-bundle-common.sh"
 echo CHECKOUT DIR IS "$CHECKOUT_DIR"
 echo BUILDING DEV BUNDLE "$BUNDLE_VERSION" IN "$DIR"
 
-# ios-sim is used to run iPhone simulator from the command-line. Doesn't make
-# sense to build it for linux.
-if [ "$OS" == "osx" ]; then
-    # the build from source is not going to work on old OS X versions, until we
-    # upgrade our Mac OS X Jenkins machine, download the precompiled tarball
-
-    # which rake # rake is required to build ios-sim
-    # git clone https://github.com/phonegap/ios-sim.git
-    # cd ios-sim
-    # git checkout 2.0.1
-    # rake build
-    # which build/Release/ios-sim # check that we have in fact got the binary
-    # mkdir -p "$DIR/lib/ios-sim"
-    # cp -r build/Release/* "$DIR/lib/ios-sim/"
-
-    # Download the precompiled tarball
-    # See docs on building the new ios_sim: https://mdg.hackpad.com/Building-ios-sim-tarball-9aHVf0rGcwE
-    IOS_SIM_URL="http://android-bundle.s3.amazonaws.com/ios-sim.mavericks.xcode6.tgz"
-    curl "$IOS_SIM_URL" | tar xfz -
-    mkdir -p "$DIR/lib/ios-sim"
-    cp -r ios-sim/ios-sim "$DIR/lib/ios-sim"
-fi
-
 cd "$DIR"
 
 S3_HOST="s3.amazonaws.com/com.meteor.jenkins"

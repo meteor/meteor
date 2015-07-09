@@ -33,8 +33,8 @@ ANDROID_BUNDLE="$BUNDLE_ROOT_DIR/android_bundle"
 # Devbundle is still stored in meteor-tool
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
 
-# Put ios-sim and ios-deploy binaries' paths into path
-export PATH="${DEV_BUNDLE}/lib/ios-sim:${DEV_BUNDLE}/lib/ios-deploy:${PATH}"
+# Put ios-sim binary into path
+export PATH="${DEV_BUNDLE}/lib/node_modules/ios-sim/bin:${PATH}"
 
 if [ -z "$USE_GLOBAL_ADK" ] ; then
   # Put Android build tool-chain into path
@@ -55,4 +55,3 @@ fi
 # add node
 export PATH="${DEV_BUNDLE}/bin:${PATH}"
 export NODE_PATH="${DEV_BUNDLE}/lib/node_modules"
-
