@@ -10,6 +10,24 @@
   JSON too.  #4595
 
 
+### Meteor Accounts
+
+* `loginWithPassword` now matches username or email in a case insensitive manner. If there are multiple users with a username or email only differing in case, a case sensitive match is required. #550
+* `loginWithGithub` now requests `user:email` scope by default, and attempts to fetch the user's emails. If no public email has been set, we use the primary email instead. We also store the complete list of emails. #4545
+
+
+### DDP
+
+* `sub.ready()` should return true inside that subscription's `onReady`
+  callback.  #4614
+
+### Livequery
+
+* Improved server performance by reducing overhead of processing oplog after
+  database writes. Improvements are most noticeable in case when a method is
+  doing a lot of writes on collections with plenty of active observers.  #4694
+
+
 ## in progress: v.1.1.1
 
 ### Blaze
@@ -184,6 +202,8 @@
   use with tooling such as TestFlight.) #4048
 
 ### Other bug fixes and improvements
+
+* The `spiderable` package now reports the URL it's trying to fetch on failure.
 
 * Upgraded dependencies:
 

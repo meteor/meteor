@@ -752,7 +752,9 @@ In addition to the packages in the official Meteor release being used by your
 app, `meteor list` and `meteor add` also search the `packages` directory at the
 top of your app. You can also use the `packages` directory to break your app
 into subpackages for your convenience, or to test packages that you might want
-to publish. See [Writing Packages](#writingpackages).
+to publish. See [Writing Packages](#writingpackages). If you wish to add
+packages outside of your app's folder structure, set the environment variable
+`PACKAGE_DIRS` to a colon-delimited list of paths.
 
 {{/markdown}}
 </template>

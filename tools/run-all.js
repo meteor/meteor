@@ -1,129 +1,131 @@
-var _ = require('underscore');
-var Fiber = require('fibers');
-var Future = require('fibers/future');
+const _ = require('underscore');
+const Fiber = require('fibers');
+const Future = require('fibers/future');
 
-var files = require('./files.js');
-var release = require('./release.js');
-var buildmessage = require('./buildmessage.js');
-var fiberHelpers = require('./fiber-helpers.js');
-var runLog = require('./run-log.js');
+const files = require('./files.js');
+const release = require('./release.js');
+const buildmessage = require('./buildmessage.js');
+const runLog = require('./run-log.js');
 
-var Console = require('./console.js').Console;
+const Console = require('./console.js').Console;
 
-var Proxy = require('./run-proxy.js').Proxy;
-var Selenium = require('./run-selenium.js').Selenium;
-var HttpProxy = require('./run-httpproxy.js').HttpProxy;
-var AppRunner = require('./run-app.js').AppRunner;
-var MongoRunner = require('./run-mongo.js').MongoRunner;
-var Updater = require('./run-updater.js').Updater;
+const Proxy = require('./run-proxy.js').Proxy;
+const Selenium = require('./run-selenium.js').Selenium;
+const HttpProxy = require('./run-httpproxy.js').HttpProxy;
+const AppRunner = require('./run-app.js').AppRunner;
+const MongoRunner = require('./run-mongo.js').MongoRunner;
+const Updater = require('./run-updater.js').Updater;
 
-// options: projectContext, proxyPort, proxyHost, appPort, appHost,
-// buildOptions, settingsFile, banner, onRunEnd, onFailure,
-// watchForChanges, quiet, rootUrl, mongoUrl, oplogUrl, mobileServerUrl,
-// disableOplog
-var Runner = function (options) {
-  var self = this;
-  self.projectContext = options.projectContext;
+class Runner {
+  constructor({
+    appHost,
+    appPort,
+    banner,
+    disableOplog,
+    extraRunners,
+    httpProxyPort,
+    mongoUrl,
+    onFailure,
+    oplogUrl,
+    projectContext,
+    proxyHost,
+    proxyPort,
+    quiet,
+    rootUrl,
+    selenium,
+    seleniumBrowser,
+    ...optionsForAppRunner
+  }) {
+    const self = this;
+    self.projectContext = projectContext;
 
-  if (! _.has(options, 'proxyPort'))
-    throw new Error("no proxyPort?");
+    if (typeof proxyPort === 'undefined') {
+      throw new Error('no proxyPort?');
+    }
 
-  var listenPort = options.proxyPort;
-  var mongoPort = parseInt(listenPort) + 1;
-  self.specifiedAppPort = options.appPort;
-  self.regenerateAppPort();
+    const listenPort = proxyPort;
+    const mongoPort = parseInt(listenPort, 10) + 1;
+    self.specifiedAppPort = appPort;
+    self.regenerateAppPort();
 
-  self.stopped = false;
-  self.quiet = options.quiet;
-  self.banner = options.banner ||
-    files.convertToOSPath(files.prettyPath(self.projectContext.projectDir));
-  if (options.rootUrl) {
-    self.rootUrl = options.rootUrl;
-  } else if (options.proxyHost) {
-    self.rootUrl = 'http://' + options.proxyHost + ':' + listenPort + '/';
-  } else {
-    self.rootUrl = 'http://localhost:' + listenPort + '/';
-  }
+    self.stopped = false;
+    self.quiet = quiet;
+    self.banner = banner || files.convertToOSPath(
+      files.prettyPath(self.projectContext.projectDir)
+    );
 
-  self.extraRunners = options.extraRunners;
+    if (rootUrl) {
+      self.rootUrl = rootUrl;
+    } else if (proxyHost) {
+      self.rootUrl = 'http://' + proxyHost + ':' + listenPort + '/';
+    } else {
+      self.rootUrl = 'http://localhost:' + listenPort + '/';
+    }
 
-  self.proxy = new Proxy({
-    listenPort: listenPort,
-    listenHost: options.proxyHost,
-    proxyToPort: self.appPort,
-    proxyToHost: options.appHost,
-    onFailure: options.onFailure
-  });
+    self.extraRunners = extraRunners ? extraRunners.slice(0) : [];
 
-  self.httpProxy = null;
-  if (options.httpProxyPort) {
-    self.httpProxy = new HttpProxy({
-      listenPort: options.httpProxyPort
-    });
-  }
-
-  self.mongoRunner = null;
-  var mongoUrl, oplogUrl;
-  if (options.mongoUrl) {
-    mongoUrl = options.mongoUrl;
-    oplogUrl = options.disableOplog ? null : options.oplogUrl;
-  } else {
-    self.mongoRunner = new MongoRunner({
-      appDir: self.projectContext.projectDir,
-      port: mongoPort,
-      onFailure: options.onFailure,
-      // For testing mongod failover, run with 3 mongod if the env var is
-      // set. Note that data is not preserved from one run to the next.
-      multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
+    self.proxy = new Proxy({
+      listenPort,
+      listenHost: proxyHost,
+      proxyToPort: self.appPort,
+      proxyToHost: appHost,
+      onFailure
     });
 
-    mongoUrl = self.mongoRunner.mongoUrl();
-    oplogUrl = options.disableOplog ? null : self.mongoRunner.oplogUrl();
-  }
+    self.httpProxy = null;
+    if (httpProxyPort) {
+      self.httpProxy = new HttpProxy({
+        listenPort: httpProxyPort
+      });
+    }
 
-  self.updater = new Updater;
+    self.mongoRunner = null;
+    if (mongoUrl) {
+      oplogUrl = disableOplog ? null : oplogUrl;
+    } else {
+      self.mongoRunner = new MongoRunner({
+        appDir: self.projectContext.projectDir,
+        port: mongoPort,
+        onFailure,
+        // For testing mongod failover, run with 3 mongod if the env var is
+        // set. Note that data is not preserved from one run to the next.
+        multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
+      });
 
-  self.appRunner = new AppRunner({
-    projectContext: self.projectContext,
-    port: self.appPort,
-    listenHost: options.appHost,
-    mongoUrl: mongoUrl,
-    oplogUrl: oplogUrl,
-    mobileServerUrl: options.mobileServerUrl,
-    buildOptions: options.buildOptions,
-    rootUrl: self.rootUrl,
-    settingsFile: options.settingsFile,
-    debugPort: options.debugPort,
-    lint: options.lint,
-    proxy: self.proxy,
-    onRunEnd: options.onRunEnd,
-    watchForChanges: options.watchForChanges,
-    noRestartBanner: self.quiet,
-    recordPackageUsage: options.recordPackageUsage,
-    omitPackageMapDeltaDisplayOnFirstRun: (
-      options.omitPackageMapDeltaDisplayOnFirstRun)
-  });
+      mongoUrl = self.mongoRunner.mongoUrl();
+      oplogUrl = disableOplog ? null : self.mongoRunner.oplogUrl();
+    }
 
-  self.selenium = null;
-  if (options.selenium) {
-    self.selenium = new Selenium({
-      runner: self,
-      browser: options.seleniumBrowser
+    self.updater = new Updater();
+
+    self.appRunner = new AppRunner({
+      ...optionsForAppRunner,
+      projectContext: self.projectContext,
+      port: self.appPort,
+      listenHost: appHost,
+      mongoUrl,
+      oplogUrl,
+      rootUrl: self.rootUrl,
+      proxy: self.proxy,
+      noRestartBanner: self.quiet,
     });
-  }
-};
 
-_.extend(Runner.prototype, {
+    self.selenium = null;
+    if (selenium) {
+      self.selenium = new Selenium({
+        runner: self,
+        browser: seleniumBrowser
+      });
+    }
+  }
+
   // XXX leave a pidfile and check if we are already running
-  start: function () {
-    var self = this;
+  start() {
+    const self = this;
 
     // XXX: Include all runners, and merge parallel-launch patch
-    var allRunners = [ ] ;
-    allRunners = allRunners.concat(self.extraRunners);
-    _.each(allRunners, function (runner) {
-      if (!runner) return;
-      runner.prestart && runner.prestart();
+    _.each(self.extraRunners, function (runner) {
+      runner && runner.prestart && runner.prestart();
     });
 
     self.proxy.start();
@@ -150,7 +152,7 @@ _.extend(Runner.prototype, {
 
     _.forEach(self.extraRunners, function (extraRunner) {
       if (! self.stopped) {
-        var title = extraRunner.title;
+        const title = extraRunner.title;
         buildmessage.enterJob({ title: "starting " + title }, function () {
           extraRunner.start();
         });
@@ -189,12 +191,12 @@ _.extend(Runner.prototype, {
     // now we overwrite the "starting foo..." message with the
     // error. It'd be better to overwrite it with "failed to start
     // foo" and then print the error.
-  },
+  }
 
-  _startMongoAsync: function () {
-    var self = this;
+  _startMongoAsync() {
+    const self = this;
     if (! self.stopped && self.mongoRunner) {
-      var future = new Future;
+      const future = new Future;
       self.appRunner.awaitFutureBeforeStart(future);
       Fiber(function () {
         self.mongoRunner.start();
@@ -207,11 +209,11 @@ _.extend(Runner.prototype, {
         future.isResolved() || future.return();
       }).run();
     }
-  },
+  }
 
   // Idempotent
-  stop: function () {
-    var self = this;
+  stop() {
+    const self = this;
     if (self.stopped)
       return;
 
@@ -228,15 +230,15 @@ _.extend(Runner.prototype, {
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();
-  },
+  }
 
   // Call this whenever you want to regenerate the app's port (if it is not
   // explicitly specified by the user).
   //
   // Rationale: if we randomly chose a port that's in use and the app failed to
   // listen on it, we should try a different port when we restart the app!
-  regenerateAppPort: function () {
-    var self = this;
+  regenerateAppPort() {
+    const self = this;
     if (self.specifiedAppPort) {
       self.appPort = self.specifiedAppPort;
     } else {
@@ -247,7 +249,7 @@ _.extend(Runner.prototype, {
     if (self.appRunner)
       self.appRunner.port = self.appPort;
   }
-});
+}
 
 // Run the app and all of its associated processes. Runs (and does not
 // return) until an unrecoverable failure happens. Logs to

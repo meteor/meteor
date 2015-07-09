@@ -119,7 +119,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
           if (error && error.code === 127)
             Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
           else
-            Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr, "\nstdout:", stdout);
+            Meteor._debug("spiderable: phantomjs failed at " + url + ":", error, "\nstderr:", stderr, "\nstdout:", stdout);
 
           next();
         }

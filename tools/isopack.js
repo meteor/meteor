@@ -1427,16 +1427,23 @@ _.extend(Isopack.prototype, {
       // We don't actually want to load the babel auto-transpiler when we are
       // in a Meteor installation where everything is already transpiled for us.
       // Therefore, strip out that line in main.js
-      if (path === "tools/main-transpile-wrapper.js" || path === "tools/source-map-retriever-stack.js") {
-        inputFileContents = inputFileContents.replace(/.+#RemoveInProd.+/, "");
+      if (path === "tools/main-transpile-wrapper.js" ||
+          path === "tools/source-map-retriever-stack.js") {
+        inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
-      var transpiled = babel.compile(inputFileContents, _.extend(babel.getDefaultOptions(), {
+      var babelOptions = babel.getDefaultOptions(
+        require("./babel-features.js")
+      );
+
+      _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
         sourceMapName: path + ".map",
-        sourceMaps: true
-      }));
+        sourceMap: true
+      });
+
+      var transpiled = babel.compile(inputFileContents, babelOptions);
 
       var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
 

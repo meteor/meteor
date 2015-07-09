@@ -555,4 +555,3 @@ slowBuilderMethods.forEach(method => {
   Builder.prototype[method] =
     Profile(`Builder#${method}`, Builder.prototype[method]);
 });
-
