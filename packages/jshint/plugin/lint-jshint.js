@@ -12,33 +12,69 @@ Plugin.registerLinter({
 });
 
 function JsHintLinter () {
-  this.hashDict = {};
-  this.cachedErrors = {};
+  // packageName -> { config (json),
+  //                  files: { [pathInPackage,arch] -> { hash, errors }}}
+  this._cacheByPackage = {};
 };
+
+var DEFAULT_CONFIG = JSON.stringify({
+  undef: true,
+  unused: true,
+  node: true,
+  browser: true
+});
 
 JsHintLinter.prototype.processFilesForTarget = function (files, options) {
   var self = this;
   var globals = options.globals;
 
-  var conf = {
-    undef: true,
-    unused: true,
-    node: true,
-    browser: true
-  };
+  // Assumes that this method gets called once per package.
+  var packageName = files[0].getPackageName();
+  if (! self._cacheByPackage.hasOwnProperty(packageName)) {
+    self._cacheByPackage[packageName] = {
+      configString: DEFAULT_CONFIG,
+      files: {}
+    };
+  }
+  var cache = self._cacheByPackage[packageName];
 
-  files.forEach(function (file) {
-    // find the config file
-    if (file.getBasename() === '.jshintrc') {
-      var confStr = file.getContentsAsString();
-      try {
-        conf = JSON.parse(confStr);
-      } catch (err) {
-        file.error({ message: "Failed to parse .jshint file, not a valid JSON: " + err.message });
-      }
-      return;
-    }
+  var configs = files.filter(function (file) {
+    return file.getBasename() === '.jshintrc';
   });
+  if (configs.length > 1) {
+    configs[0].error({
+      message: "Found multiple .jshintrc files in package " + packageName +
+        ": " +
+        configs.map(function (c) { return c.getPathInPackage(); }).join(', ')
+    });
+    return;
+  }
+
+  if (configs.length) {
+    var newConfigString = configs[0].getContentsAsString();
+    if (cache.configString !== newConfigString) {
+      // Reset cache.
+      cache.files = {};
+      cache.configString = newConfigString;
+    }
+  } else {
+    if (cache.configString !== DEFAULT_CONFIG) {
+      // Reset cache.
+      cache.files = {};
+      cache.configString = DEFAULT_CONFIG;
+    }
+  }
+
+  try {
+    var config = JSON.parse(cache.configString);
+  } catch (err) {
+    // This should really not happen for DEFAULT_CONFIG :)
+    configs[0].error({
+      message: "Failed to parse " + configs[0].getPathInPackage() +
+        ": not valid JSON: " + err.message
+    });
+    return;
+  }
 
   // JSHint has a particular format for defining globals. `false` means that the
   // global is not allowed to be redefined. `true` means it is allowed to be
@@ -54,24 +90,19 @@ JsHintLinter.prototype.processFilesForTarget = function (files, options) {
       return;
 
     // skip files we already linted
-    var hashKey = JSON.stringify([
-      file.getPackageName(), file.getPathInPackage(), file.getArch()]);
-
-    // XXX a memory leak for removed files? A cached errors object would be
-    // stored for it indefinitely
-    if (self.hashDict[hashKey] === file.getSourceHash()) {
-      reportErrors(file, self.cachedErrors[hashKey]);
+    var cacheKey = JSON.stringify([file.getPathInPackage(), file.getArch()]);
+    if (cache.files.hasOwnProperty(cacheKey) &&
+        cache.files[cacheKey].hash === file.getSourceHash()) {
+      reportErrors(file, cache.files[cacheKey].errors);
       return;
     }
 
-    self.hashDict[hashKey] = file.getSourceHash();
-
-    if (! jshint(file.getContentsAsString(), conf, predefinedGlobals)) {
-      reportErrors(file, jshint.errors);
-      self.cachedErrors[hashKey] = jshint.errors;
-    } else {
-      self.cachedErrors[hashKey] = [];
+    var errors = [];
+    if (! jshint(file.getContentsAsString(), config, predefinedGlobals)) {
+      errors = jshint.errors;
+      reportErrors(file, errors);
     }
+    cache[cacheKey] = { hash: file.getSourceHash(), errors: errors };
   });
 
   function reportErrors(file, errors) {
