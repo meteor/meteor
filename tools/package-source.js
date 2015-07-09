@@ -1194,29 +1194,25 @@ _.extend(PackageSource.prototype, {
 
       // Determine source files
       sourceArch.getSourcesFunc = (sourceProcessorSet, watchSet) => {
-        var sourceInclude = sourceProcessorSet.matchingRegExps(arch);
-        var sourceExclude = [/^\./].concat(ignoreFiles);
+        const sourceReadOptions =
+                sourceProcessorSet.appReadDirectoryOptions(arch);
+        // Ignore files starting with dot (unless they are explicitly in
+        // 'names').
+        sourceReadOptions.exclude.push(/^\./);
+        // Ignore the usual ignorable files.
+        sourceReadOptions.exclude.push(...ignoreFiles);
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
         // sourceRoot-relative directories.
-        var readAndWatchDirectory = function (relDir, filters) {
-          filters = filters || {};
+        var readAndWatchDirectory = (relDir, {include, exclude, names}) => {
           var absPath = files.pathJoin(self.sourceRoot, relDir);
-          var contents = watch.readAndWatchDirectory(watchSet, {
-            absPath: absPath,
-            include: filters.include,
-            exclude: filters.exclude
-          });
-          return _.map(contents, function (x) {
-            return files.pathJoin(relDir, x);
-          });
+          var contents = watch.readAndWatchDirectory(
+            watchSet, {absPath, include, exclude, names});
+          return contents.map(x => files.pathJoin(relDir, x));
         };
 
         // Read top-level source files.
-        var sources = readAndWatchDirectory('', {
-          include: sourceInclude,
-          exclude: sourceExclude
-        });
+        var sources = readAndWatchDirectory('', sourceReadOptions);
 
         // don't include watched but not included control files
         sources = _.difference(sources, controlFiles);
@@ -1262,7 +1258,7 @@ _.extend(PackageSource.prototype, {
                     /^node_modules\/$/,
                     /^public\/$/, /^private\/$/,
                     /^cordova-build-override\/$/,
-                    otherUnibuildRegExp].concat(sourceExclude)
+                    otherUnibuildRegExp].concat(sourceReadOptions.exclude)
         });
         checkForInfiniteRecursion('');
 
@@ -1276,16 +1272,14 @@ _.extend(PackageSource.prototype, {
             return [];  // pretend we found no files
 
           // Find source files in this directory.
-          Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
-            include: sourceInclude,
-            exclude: sourceExclude
-          }));
+          sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
 
           // Find sub-sourceDirectories. Note that we DON'T need to ignore the
           // directory names that are only special at the top level.
-          Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
+          sourceDirectories.push(...readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(sourceExclude)
+            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
+              sourceReadOptions.exclude)
           }));
         }
 
@@ -1310,13 +1304,11 @@ _.extend(PackageSource.prototype, {
         });
 
         // Now look for assets for this unibuild.
-        var assetDir = archinfo.matches(arch, "web") ? "public" : "private";
-        var assetDirs = readAndWatchDirectory('', {
-          include: [new RegExp('^' + assetDir + '/$')]
-        });
+        const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
+        var assetDirs = readAndWatchDirectory('', {names: [assetDir]});
 
         if (!_.isEmpty(assetDirs)) {
-          if (!_.isEqual(assetDirs, [assetDir + '/']))
+          if (!_.isEqual(assetDirs, [assetDir]))
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
 
           while (!_.isEmpty(assetDirs)) {

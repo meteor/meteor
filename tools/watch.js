@@ -300,11 +300,11 @@ export function readDirectory({absPath, include, exclude, names}) {
       return true;
     }
     // Is it ruled out by an exclude rule?
-    if (exclude && exclude.some((re) => re.test(entry))) {
+    if (exclude && exclude.some(re => re.test(entry))) {
       return false;
     }
     // Is it ruled in by an include rule?
-    if (include && include.some((re) => re.test(entry))) {
+    if (include && include.some(re => re.test(entry))) {
       return true;
     }
     return false;

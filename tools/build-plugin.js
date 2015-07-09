@@ -260,32 +260,30 @@ export class SourceProcessorSet {
       _.isEmpty(this._legacyHandlers);
   }
 
-  // Returns an array of RegExps. A file is handled by something in this set if
-  // its basename matches one of the RegExps, and if its processor/handler
-  // is active for the giving arch.
-  matchingRegExps(arch) {
-    if (this._allowConflicts)
-      throw Error("matchingRegExps not supported for linters");
-
-    const regExps = [];
+  // Returns an options object suitable for passing to
+  // `watch.readAndWatchDirectory` to find source files processed by this
+  // SourceProcessorSet.
+  appReadDirectoryOptions(arch) {
+    const include = [];
+    const names = [];
 
     function addExtension(ext) {
-      regExps.push(new RegExp('\\.' + utils.quotemeta(ext) + '$'));
+      include.push(new RegExp('\\.' + utils.quotemeta(ext) + '$'));
     }
-    _.each(this._byExtension, ([sourceProcessor], ext) => {
-      if (sourceProcessor.relevantForArch(arch)) {
+    _.each(this._byExtension, (sourceProcessors, ext) => {
+      if (sourceProcessors.some(sp => sp.relevantForArch(arch))) {
         addExtension(ext);
       }
     });
     Object.keys(this._legacyHandlers).forEach(addExtension);
     this._hardcodeJs && addExtension('js');
 
-    _.each(this._byFilename, ([sourceProcessor], filename) => {
-      if (sourceProcessor.relevantForArch(arch)) {
-        regExps.push(new RegExp('^' + utils.quotemeta(filename) + '$'));
+    _.each(this._byFilename, (sourceProcessors, filename) => {
+      if (sourceProcessors.some(sp => sp.relevantForArch(arch))) {
+        names.push(filename);
       }
     });
-    return regExps;
+    return {include, names, exclude: []};
   }
 }
 
