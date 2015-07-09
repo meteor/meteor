@@ -1,3 +1,9 @@
+## batch-plugins
+
+Backwards-incompatible change: static assets in package.js files must be
+explicitly declared with `{isAsset: true}`.
+
+
 ## v.NEXT
 
 

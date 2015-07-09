@@ -219,13 +219,7 @@ compiler.getMinifiers = function (packageSource, options) {
   return minifiers;
 };
 
-var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
-  var activePluginPackages = getActivePluginPackages(
-    isopack, {
-      isopackCache,
-      uses: sourceArch.uses
-    });
-
+function getLinterSourceProcessorSet({isopack, activePluginPackages}) {
   const sourceProcessorSet = new SourceProcessorSet(
     isopack.displayName, { allowConflicts: true });
 
@@ -235,6 +229,18 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
     sourceProcessorSet.merge(otherPkg.sourceProcessors.linter);
   });
 
+  return sourceProcessorSet;
+}
+
+var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
+  var activePluginPackages = getActivePluginPackages(
+    isopack, {
+      isopackCache,
+      uses: sourceArch.uses
+    });
+
+  const sourceProcessorSet =
+          getLinterSourceProcessorSet({isopack, activePluginPackages});
   // bail out early if there is not much to run
   if (sourceProcessorSet.isEmpty()) {
     return;
@@ -294,6 +300,12 @@ var compileUnibuild = function (options) {
     sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler);
   });
 
+  // Used to excuse functions from the "undeclared static asset" check.
+  const linterSourceProcessorSet = getLinterSourceProcessorSet({
+    activePluginPackages,
+    isopack: isopk
+  });
+
   // *** Determine source files
   // Note: sourceExtensions does not include leading dots
   // Note: the getSourcesFunc function isn't expected to add its
@@ -345,16 +357,67 @@ var compileUnibuild = function (options) {
 
     // Find the handler for source files with this extension (unless explicitly
     // tagged as a static asset).
-    const classification = fileOptions.isAsset
-          ? { type: 'unmatched' }
-          : sourceProcessorSet.classifyFilename(filename, inputSourceArch.arch);
+    let classification = null;
+    if (! fileOptions.isAsset) {
+      classification = sourceProcessorSet.classifyFilename(
+        filename, inputSourceArch.arch);
 
-    if (classification.type === 'wrong-arch') {
-      // This file is for a compiler plugin but not for this arch. Skip it,
-      // and don't even watch it.  (eg, skip CSS preprocessor files on the
-      // server.)  This `return` goes on to the next `_.each(sourceItems`
-      // iteration.
-      return;
+      if (classification.type === 'wrong-arch') {
+        // This file is for a compiler plugin but not for this arch. Skip it,
+        // and don't even watch it.  (eg, skip CSS preprocessor files on the
+        // server.)  This `return` goes on to the next `_.each(sourceItems`
+        // iteration.
+        return;
+      }
+
+      if (classification.type === 'unmatched') {
+        // This is not matched by any compiler plugin or legacy source handler,
+        // and it wasn't explicitly tagged as a static asset (with {isAsset:
+        // true} in packages, or by being in private/public in apps).
+        //
+        // Prior to the batch-plugins project, these would be implicitly treated
+        // as static assets. Now we consider this to be an error; you need to
+        // explicitly tell that you want something to be a static asset by
+        // including the isAsset flag in packages, or by putting it in
+        // public/private in an app.
+        //
+        // This is a backwards-incompatible change, but it doesn't affect
+        // previously-published packages (because the check is occuring in the
+        // compiler), and it doesn't affect apps (where random files outside of
+        // private/public never end up in the source list anyway).
+        //
+        // As one special case, if a file is unmatched by the compiler
+        // SourceProcessorSet but is matched by the linker SourceProcessorSet
+        // (ie, a linter config file), we don't report an error; this is so that
+        // you can run `api.addFiles('.jshintrc')` and have it work and not also
+        // add the file as a static asset.  (This is only relevant for
+        // packages.)  We don't put these files in the WatchSet, though; that
+        // happens via compiler.lint.
+
+        if (isApp) {
+          // This shouldn't happen, because initFromAppDir's getSourcesFunc
+          // should only return sources that have isAsset set or which match
+          // sourceProcessorSet.
+          throw Error("app contains non-asset files without plugin? " +
+                      relPath);
+        }
+
+        const linterClassification = linterSourceProcessorSet.classifyFilename(
+          filename, inputSourceArch.arch);
+        if (linterClassification.type !== 'unmatched') {
+          // The linter knows about this, so we'll just ignore it instead of
+          // throwing an error.
+          return;
+        }
+
+        buildmessage.error(
+          `No plugin known to handle file '${ relPath }'. If you want this ` +
+          `file to be a static asset, pass the {isAsset: true} option ` +
+            `to api.addFiles; eg, api.addFiles('${relPath}', 'client', ` +
+            `{isAsset: true}).`);
+        // recover by ignoring
+        return;
+      }
     }
 
     // readAndWatchFileWithHash returns an object carrying a buffer with the
@@ -385,17 +448,14 @@ var compileUnibuild = function (options) {
       return;
     }
 
-    if (classification.type === 'unmatched') {
-      // This is a static asset (either because it was explicitly requested via
-      // isAsset, or because we have no compiler or legacy handler for it.
-      //
-      // XXX This is pretty confusing, especially if you've
-      // accidentally forgotten a plugin -- revisit?
+    // Add static assets.
+    if (fileOptions.isAsset) {
       addAsset(contents, relPath, hash);
       return;
     }
 
-    if (classification.type !== 'legacyHandler') {
+    if (classification.type === 'extension' ||
+        classification.type === 'filename') {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
       resources.push({
@@ -407,6 +467,10 @@ var compileUnibuild = function (options) {
         fileOptions: fileOptions
       });
       return;
+    }
+
+    if (classification.type !== 'legacyHandler') {
+      throw Error("unhandled type: " + classification.type);
     }
 
     // OK, time to handle legacy handlers.
