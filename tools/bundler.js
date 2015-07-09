@@ -2171,7 +2171,6 @@ exports.bundle = function ({
 };
 
 function lintBundle (projectContext, isopack, packageSource) {
-  var allMessages = new buildmessage._MessageSet();
   var lintingMessages = buildmessage.capture({
     title: "linting the application"
   }, function () {
@@ -2181,14 +2180,13 @@ function lintBundle (projectContext, isopack, packageSource) {
     });
   });
 
-  allMessages.merge(lintingMessages);
-  allMessages.merge(projectContext.getLintingMessagesForLocalPackages());
+  lintingMessages.merge(projectContext.getLintingMessagesForLocalPackages());
 
-  if (! allMessages.hasMessages()) {
+  if (! lintingMessages.hasMessages()) {
     return null;
   }
 
-  return allMessages;
+  return lintingMessages;
 }
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript
