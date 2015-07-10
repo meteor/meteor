@@ -23,7 +23,7 @@ var buildmessage = require('./buildmessage.js');
 var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var colonConverter = require("./colon-converter.js");
-var Console = require("./console.js");
+var Console = require("./console.js").Console;
 
 var miniFiles = require("./server/mini-files.js");
 
