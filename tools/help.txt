@@ -163,7 +163,7 @@ internal functionality of Meteor.
 
 >>> add
 Add a package to this project.
-Usage: meteor add <package> [package..]       
+Usage: meteor add <package> [package..]
 
 Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
