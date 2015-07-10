@@ -19,6 +19,12 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 //  - outputPath: Required. Path to the directory that will hold the
 //    bundle when building is complete. It should not exist. Its
 //    parents will be created if necessary.
+// - previousBuilder: Optional. An in-memory instance of Builder left
+// from the previous iteration. It is assumed that the previous builder
+// has completed its job successfully and its files are stored on the
+// file system in the exact layout as described in its usedAsFile data
+// structure; and the hashes of the contents correspond to the
+// writtenHashes data strcture.
 export default class Builder {
   constructor({outputPath, previousBuilder}) {
     this.outputPath = outputPath;
@@ -40,6 +46,9 @@ export default class Builder {
                                     '.build' + nonce + "." +
                                     files.pathBasename(this.outputPath));
 
+    // If we have a previous builder and we are allowed to re-use it,
+    // let's keep all the older files on the file-system and replace
+    // only outdated ones + write the new files in the same path
     if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
