@@ -1006,12 +1006,12 @@ main.registerCommand({
 
   if (bundle.errors) {
     Console.error("Errors building your app:\n\n" + bundle.errors.formatMessages());
-    throw new main.ExitWithCode(-1);
+    return 1;
   }
 
   if (bundle.warnings) {
     Console.warn(bundle.warnings.formatMessages());
-    throw new main.ExitWithCode(-1);
+    return 1;
   }
 
   return 0;
