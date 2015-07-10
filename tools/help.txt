@@ -163,11 +163,21 @@ internal functionality of Meteor.
 
 >>> add
 Add a package to this project.
-Usage: meteor add <package> [package..]
+Usage: meteor add <package> [package..]       
 
 Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
 the meteor search command.
+
+Optional version constraints can be added. Running meteor add package@1.1.0 
+will add the package at version 1.1.0 or higher (but not 2.0.0 or higher). 
+If you want to use version 1.1.0 exactly, use meteor add package@=1.1.0. 
+You can also 'or' constraints together: meteor add 'package@=1.0.0 || =2.0.1' 
+means either 1.0.0 (exactly) or 2.0.1 (exactly).
+
+To remove a version constraint for a specific package, run meteor add again 
+without specifying a version. For example above, to stop using version 1.1.0 
+exactly, run meteor add package.
 
 Options:
   --allow-incompatible-update   Allow packages in your project to be upgraded or
