@@ -46,6 +46,8 @@ export default class Builder {
                                     '.build' + nonce + "." +
                                     files.pathBasename(this.outputPath));
 
+    let resetBuildPath = true;
+
     // If we have a previous builder and we are allowed to re-use it,
     // let's keep all the older files on the file-system and replace
     // only outdated ones + write the new files in the same path
@@ -63,8 +65,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
+
+        resetBuildPath = false;
+      } else {
+        resetBuildPath = true;
       }
-    } else {
+    }
+
+    // Build the output from scratch
+    if (resetBuildPath) {
       files.rm_recursive(this.buildPath);
       files.mkdir_p(this.buildPath, 0o755);
     }
