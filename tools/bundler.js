@@ -1877,7 +1877,10 @@ Find out more about Meteor at meteor.com.
     // We did it!
     builder.complete();
 
-    // now, go and "fix up" the outputPath properties of the sub-builders
+    // Now, go and "fix up" the outputPath properties of the sub-builders.
+    // Since the sub-builders originally were targetted at a temporary
+    // buildPath of the main builder, their outputPath properties need to
+    // be adjusted so we can later pass them as previousBuilder's
     Object.keys(builders).forEach(name => {
       const subBuilder = builders[name];
       subBuilder.outputPath = builder.outputPath + subBuilder.outputPath.substring(builder.buildPath.length);
