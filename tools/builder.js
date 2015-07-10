@@ -3,6 +3,9 @@ import files from './files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from './profile.js';
 
+const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
+  ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
+
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
@@ -37,9 +40,7 @@ export default class Builder {
                                     '.build' + nonce + "." +
                                     files.pathBasename(this.outputPath));
 
-    files.rm_recursive(this.buildPath);
-
-    if (previousBuilder) {
+    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
       if (previousBuilder.outputPath !== outputPath) {
         throw new Error(
           `previousBuilder option can only be set to a builder with the same output path.
@@ -48,14 +49,14 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       }
 
       if (files.exists(previousBuilder.outputPath)) {
-        files.renameDirAlmostAtomically(
-          previousBuilder.outputPath,
-          this.buildPath);
+        // write files in-place in the output directory of the previous builder
+        this.buildPath = previousBuilder.outputPath;
 
         this.previousWrittenHashes = previousBuilder.writtenHashes;
         this.previousUsedAsFile = previousBuilder.usedAsFile;
       }
     } else {
+      files.rm_recursive(this.buildPath);
       files.mkdir_p(this.buildPath, 0o755);
     }
 
@@ -504,11 +505,46 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
   // Move the completed bundle into its final location (outputPath)
   complete() {
+    if (this.previousUsedAsFile) {
+      // delete files and folders left-over from previous runs and not
+      // re-used in this run
+      const removed = {};
+      const paths = Object.keys(this.previousUsedAsFile);
+      paths.forEach((path) => {
+        // if the same path was re-used, leave it
+        if (this.usedAsFile.hasOwnProperty(path)) { return; }
+
+        // otherwise, remove it as it is no longer needed
+
+        // skip if already deleted
+        if (removed.hasOwnProperty(path)) { return; }
+
+        const absPath = files.pathJoin(this.buildPath, path);
+        if (this.previousUsedAsFile[path]) {
+          // file
+          files.unlink(absPath);
+          removed[path] = true;
+        } else {
+          // directory
+          files.rm_recursive(absPath);
+
+          // mark all sub-paths as removed, too
+          paths.forEach((anotherPath) => {
+            if (anotherPath.indexOf(path + '/') === 0) {
+              removed[anotherPath] = true;
+            }
+          });
+        }
+      });
+    }
+    
     // XXX Alternatively, we could just keep buildPath around, and make
     // outputPath be a symlink pointing to it. This doesn't work for the NPM use
     // case of renameDirAlmostAtomically since that one is constructing files to
     // be checked in to version control, but here we could get away with it.
-    files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+    if (this.buildPath !== this.outputPath) {
+      files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+    }
   }
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
