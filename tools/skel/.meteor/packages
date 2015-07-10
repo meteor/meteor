@@ -8,3 +8,4 @@ meteor-platform
 standard-minifiers # JS/CSS minifiers run for production mode
 autopublish # publishes all data to the clients for prototyping
 insecure # allows all DB writes from clients for prototyping
+ecmascript # allows ECMAScript2015+ syntax by default
