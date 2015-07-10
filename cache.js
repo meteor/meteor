@@ -55,11 +55,8 @@ Cp.loadCacheFromDisk = function () {
 };
 
 Cp.get = function (source, options) {
-  var cacheFile = util.deepHash(
-    meteorBabelVersion,
-    source,
-    options
-  ) + ".json";
+  var cacheHash = util.deepHash(meteorBabelVersion, source, options);
+  var cacheFile = cacheHash + ".json";
   var fullCacheFile = path.join(this.dir, cacheFile);
   var result;
 
@@ -85,9 +82,13 @@ Cp.get = function (source, options) {
     }
   }
 
-  if (typeof result !== "object") {
+  if (typeof result === "object") {
+    result.hash = cacheHash;
+  } else {
     result = this.cache[cacheFile] =
       this.fillFn.call(null, source, options);
+
+    result.hash = cacheHash;
 
     // Use the asynchronous version of fs.writeFile so that we don't slow
     // down require by waiting for cache files to be written.
