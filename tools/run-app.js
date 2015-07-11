@@ -712,8 +712,9 @@ _.extend(AppRunner.prototype, {
       var warnings = bundleResult.warnings;
 
       if (warnings && warnings.hasMessages()) {
+        runLog.logTemporary('Linting your app.');
         runLog.log(
-          'Linting your app.\n\n' + warnings.formatMessages(),
+          'Linted your app.\n\n' + warnings.formatMessages(),
           { arrow: true });
       }
     }
@@ -769,11 +770,21 @@ _.extend(AppRunner.prototype, {
         if (bundleResultOrRunResult.runResult)
           return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
-        if (self.projectContext.lintAppAndLocalPackages &&
-            bundleResult.warnings) {
-          runLog.log(
-            'Linting your app.\n\n' +
-              bundleResult.warnings.formatMessages(), { arrow: true });
+
+        const canAndShouldLint =
+          self.projectContext.lintAppAndLocalPackages && bundleResult.warnings;
+
+        if (canAndShouldLint) {
+          runLog.logTemporary('Linting your app.');
+
+          const formattedMessages = bundleResult.warnings.formatMessages();
+          if (formattedMessages) {
+            runLog.log(
+              `Linted your app.\n\n${ formattedMessages }`,
+              { arrow: true });
+          } else {
+            runLog.log('Linted your app. No linting errors.');
+          }
         }
 
         var oldFuture = self.runFuture = new Future;

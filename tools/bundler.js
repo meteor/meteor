@@ -1941,8 +1941,8 @@ Find out more about Meteor at meteor.com.
  *   - includeDebug: include packages marked debugOnly (boolean, default false)
  *   - webArchs: array of 'web.*' options to build (defaults to
  *     projectContext.platformList.getWebArchs())
- *   - warnings: a MessageSet of linting messages or null if there were no
- *     messages or linting wasn't perfored.
+ *   - warnings: a MessageSet of linting messages or null if linting
+ *     wasn't performed at all (either disabled or lack of linters).
  *
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
@@ -2174,7 +2174,9 @@ exports.bundle = function ({
 };
 
 function lintBundle (projectContext, isopack, packageSource) {
-  var lintingMessages = buildmessage.capture({
+  const lintingMessages = new buildmessage._MessageSet();
+
+  const appMessages = buildmessage.capture({
     title: "linting the application"
   }, function () {
     compiler.lint(packageSource, {
@@ -2182,10 +2184,20 @@ function lintBundle (projectContext, isopack, packageSource) {
       isopack: isopack
     });
   });
+  if (appMessages) {
+    lintingMessages.merge(appMessages);
+  }
 
-  lintingMessages.merge(projectContext.getLintingMessagesForLocalPackages());
+  const localPackagesMessages =
+    projectContext.getLintingMessagesForLocalPackages();
+  if (localPackagesMessages) {
+    lintingMessages.merge(localPackagesMessages);
+  }
 
-  if (! lintingMessages.hasMessages()) {
+  // if there was no linting performed since there are no applicable
+  // linters for neither app nor packages, just return null
+  const appLinters = isopack.sourceProcessors.linter;
+  if (_.isEmpty(appLinters) && ! localPackagesMessages) {
     return null;
   }
 

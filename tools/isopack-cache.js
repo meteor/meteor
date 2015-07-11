@@ -416,18 +416,23 @@ _.extend(exports.IsopackCache.prototype, {
   },
 
   getLintingMessagesForLocalPackages: function () {
-    var self = this;
+    const messages = new buildmessage._MessageSet();
+    let anyLinters = false;
 
-    var messages = new buildmessage._MessageSet();
-    self._packageMap.eachPackage(function (name, packageInfo) {
-      var isopack = self._isopacks[name];
+    this._packageMap.eachPackage((name, packageInfo) => {
+      const isopack = this._isopacks[name];
       if (packageInfo.kind === 'local') {
-        var isopackMessages = isopack.lintingMessages;
+        anyLinters = anyLinters || ! _.isEmpty(isopack.sourceProcessors.linter);
+
+        const isopackMessages = isopack.lintingMessages;
         if (isopackMessages) {
           messages.merge(isopackMessages);
         }
       }
     });
+
+    // return null if no linters were ever run
+    if (! anyLinters) { return null; }
 
     return messages;
   }
