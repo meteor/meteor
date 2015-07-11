@@ -6,8 +6,8 @@ var Sandbox = selftest.Sandbox;
 var MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
-function startRun(sandbox, args) {
-  var run = sandbox.run(args);
+function startRun(sandbox, ...args) {
+  var run = sandbox.run(...args);
   run.match('myapp');
   run.match('proxy');
   run.tellMongo(MONGO_LISTENING);
