@@ -1847,7 +1847,7 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder = previousBuilders[name];
+      const previousBuilder = previousBuilders && previousBuilders[name];
       const {
         arch, path, cordovaDependencies,
         nodePath: targetNP,
@@ -2131,7 +2131,7 @@ exports.bundle = function ({
         // XXX This might make the contents of "star.json" out of date.
         builders = _.clone(previousBuilders);
         _.each(targets, function (target, name) {
-          const previousBuilder = previousBuilders[name];
+          const previousBuilder = previousBuilders && previousBuilders[name];
           var targetBuild = writeTargetToPath(name, target, outputPath, {
             ...writeOptions,
             previousBuilder
