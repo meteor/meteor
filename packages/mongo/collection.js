@@ -136,7 +136,7 @@ Mongo.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = LocalCollection._idParse(msg.id);
+        var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -638,6 +638,10 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
   self._collection._createCappedCollection(byteSize, maxDocuments);
 };
 
+/**
+ * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @locus Server
+ */
 Mongo.Collection.prototype.rawCollection = function () {
   var self = this;
   if (! self._collection.rawCollection) {
@@ -646,6 +650,10 @@ Mongo.Collection.prototype.rawCollection = function () {
   return self._collection.rawCollection();
 };
 
+/**
+ * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @locus Server
+ */
 Mongo.Collection.prototype.rawDatabase = function () {
   var self = this;
   if (! (self._driver.mongo && self._driver.mongo.db)) {
@@ -661,7 +669,7 @@ Mongo.Collection.prototype.rawDatabase = function () {
  * @class
  * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.ObjectID = LocalCollection._ObjectID;
+Mongo.ObjectID = MongoID.ObjectID;
 
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.

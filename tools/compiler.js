@@ -11,6 +11,7 @@ var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var colonConverter = require('./colon-converter.js');
+var Profile = require('./profile.js').Profile;
 
 var compiler = exports;
 
@@ -33,7 +34,9 @@ compiler.BUILT_BY = 'meteor/16';
 // is expanded into 'web.browser' and 'web.cordova')
 compiler.ALL_ARCHES = [ "os", "web.browser", "web.cordova" ];
 
-compiler.compile = function (packageSource, options) {
+compiler.compile = Profile(function (packageSource, options) {
+  return `compiler.compile(${ packageSource.name || 'the app' })`;
+}, function (packageSource, options) {
   buildmessage.assertInCapture();
 
   var packageMap = options.packageMap;
@@ -62,6 +65,9 @@ compiler.compile = function (packageSource, options) {
         use: info.use,
         sourceRoot: packageSource.sourceRoot,
         sources: info.sources,
+        // While we're not actually "serving" the file, the serveRoot is used to
+        // calculate file names in source maps.
+        serveRoot: 'packages/' + packageSource.name,
         npmDependencies: info.npmDependencies,
         // Plugins have their own npm dependencies separate from the
         // rest of the package, so they need their own separate npm
@@ -154,7 +160,7 @@ compiler.compile = function (packageSource, options) {
   }
 
   return isopk;
-};
+});
 
 // options.sourceArch is a SourceArch to compile.  Process all source files
 // through the appropriate handlers and run the prelink phase on any resulting

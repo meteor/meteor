@@ -1,8 +1,8 @@
-var watch = require('./watch.js');
-var files = require('./files.js');
-var NpmDiscards = require('./npm-discards.js');
-var Profile = require('./profile.js').Profile;
-var _ = require('underscore');
+import {WatchSet, readAndWatchFile} from './watch.js';
+import files from './files.js';
+import NpmDiscards from './npm-discards.js';
+import {Profile} from './profile.js';
+
 
 // Builder encapsulates much of the file-handling logic need to create
 // "bundles" (directory trees such as site archives, programs, or
@@ -16,100 +16,95 @@ var _ = require('underscore');
 //  - outputPath: Required. Path to the directory that will hold the
 //    bundle when building is complete. It should not exist. Its
 //    parents will be created if necessary.
-var Builder = function (options) {
-  var self = this;
-  options = options || {};
+export default class Builder {
+  constructor({outputPath, previousBuilder}) {
+    this.outputPath = outputPath;
 
-  self.outputPath = options.outputPath;
+    // Paths already written to. Map from canonicalized relPath (no
+    // trailing slash) to true for a file, or false for a directory.
+    this.usedAsFile = { '': false, '.': false };
 
-  // Paths already written to. Map from canonicalized relPath (no
-  // trailing slash) to true for a file, or false for a directory.
-  self.usedAsFile = { '': false, '.': false };
+    this.writtenHashes = {};
 
-  // foo/bar => foo/.build1234.bar
-  // Should we include a random number? The advantage is that multiple
-  // builds can run in parallel. The disadvantage is that stale build
-  // files hang around forever. For now, go with the former.
-  var nonce = Math.floor(Math.random() * 999999);
-  self.buildPath = files.pathJoin(files.pathDirname(self.outputPath),
-                                  '.build' + nonce + "." +
-                                    files.pathBasename(self.outputPath));
-  files.rm_recursive(self.buildPath);
-  files.mkdir_p(self.buildPath, 0755);
+    // foo/bar => foo/.build1234.bar
+    // Should we include a random number? The advantage is that multiple
+    // builds can run in parallel. The disadvantage is that stale build
+    // files hang around forever. For now, go with the former.
+    const nonce = Math.floor(Math.random() * 999999);
+    this.buildPath = files.pathJoin(files.pathDirname(this.outputPath),
+                                    '.build' + nonce + "." +
+                                    files.pathBasename(this.outputPath));
+    files.rm_recursive(this.buildPath);
 
-  self.watchSet = new watch.WatchSet();
+    files.mkdir_p(this.buildPath, 0o755);
 
-  // XXX cleaner error handling. don't make the humans read an
-  // exception (and, make suitable for use in automated systems)
-};
+    this.watchSet = new WatchSet();
 
-_.extend(Builder.prototype, {
+    // XXX cleaner error handling. don't make the humans read an
+    // exception (and, make suitable for use in automated systems)
+  }
+
   // Like mkdir_p, but records in self.usedAsFile that we have created
   // the directories, and takes a path relative to the bundle
   // root. Throws an exception on failure.
-  _ensureDirectory: Profile("Builder#_ensureDirectory", function (relPath) {
-    var self = this;
-
-    var parts = files.pathNormalize(relPath).split(files.pathSep);
+  _ensureDirectory(relPath) {
+    const parts = files.pathNormalize(relPath).split(files.pathSep);
     if (parts.length > 1 && parts[parts.length - 1] === '')
       parts.pop(); // remove trailing slash
 
-    var partsSoFar = [];
-    _.each(parts, function (part) {
+    const partsSoFar = [];
+    parts.forEach(part => {
       partsSoFar.push(part);
-      var partial = partsSoFar.join(files.pathSep);
-      if (! (partial in self.usedAsFile)) {
+      const partial = partsSoFar.join(files.pathSep);
+      if (! (partial in this.usedAsFile)) {
         // It's new -- create it
-        files.mkdir(files.pathJoin(self.buildPath, partial), 0755);
-        self.usedAsFile[partial] = false;
-      } else if (self.usedAsFile[partial]) {
+        files.mkdir(files.pathJoin(this.buildPath, partial), 0o755);
+        this.usedAsFile[partial] = false;
+      } else if (this.usedAsFile[partial]) {
         // Already exists and is a file. Oops.
-        throw new Error("tried to make " + relPath + " a directory but " +
-                        partial + " is already a file");
+        throw new Error(`tried to make ${relPath} a directory but ${partial} is already a file`);
       } else {
         // Already exists and is a directory
       }
     });
-  }),
+  }
 
   // isDirectory defaults to false
-  _sanitize: Profile("Builder#_sanitize", function (relPath, isDirectory) {
-    var self = this;
-
-    var parts = relPath.split(files.pathSep);
-    var partsOut = [];
-    for (var i = 0; i < parts.length; i++) {
-      var part = parts[i];
-      var shouldBeFile = (i === parts.length - 1) && ! isDirectory;
-      var mustBeUnique = (i === parts.length - 1);
+  _sanitize(relPath, isDirectory) {
+    const parts = relPath.split(files.pathSep);
+    const partsOut = [];
+    for (let i = 0; i < parts.length; i++) {
+      let part = parts[i];
+      const shouldBeFile = (i === parts.length - 1) && ! isDirectory;
+      const mustBeUnique = (i === parts.length - 1);
 
       // Basic sanitization
       if (part.match(/^\.+$/))
-        throw new Error("Path contains forbidden segment '" + part + "'");
+        throw new Error(`Path contains forbidden segment '${part}'`);
 
       part = part.replace(/[^a-zA-Z0-9._\:-]/g, '');
 
       // If at last component, pull extension (if any) off of part
-      var ext = '';
+      let ext = '';
       if (shouldBeFile) {
-        var split = part.split('.');
+        const split = part.split('.');
         if (split.length > 1)
           ext = "." + split.pop();
         part = split.join('.');
       }
 
       // Make sure it's sufficiently unique
-      var suffix = '';
+      let suffix = '';
       while (true) {
-        var candidate = files.pathJoin(partsOut.join(files.pathSep), part + suffix + ext);
+        const candidate = files.pathJoin(partsOut.join(files.pathSep), part + suffix + ext);
         if (candidate.length) {
           // If we've never heard of this, then it's unique enough.
-          if (!_.has(self.usedAsFile, candidate))
+          if (!(candidate in this.usedAsFile))
             break;
           // If we want this bit to be a directory, and we don't need it to be
           // unique (ie, it isn't the very last bit), and it's currently a
           // directory, then that's OK.
-          if (!(mustBeUnique || self.usedAsFile[candidate]))
+          if (!(mustBeUnique || this.usedAsFile[candidate]))
             break;
           // OK, either we want it to be unique and it already exists; or it is
           // currently a file (and we want it to be either a different file or a
@@ -123,7 +118,7 @@ _.extend(Builder.prototype, {
     }
 
     return partsOut.join(files.pathSep);
-  }),
+  }
 
   // Write either a buffer or the contents of a file to `relPath` (a
   // path to a file relative to the bundle root), creating it (and any
@@ -144,65 +139,57 @@ _.extend(Builder.prototype, {
   // Returns the final canonicalize relPath that was written to.
   //
   // If `file` is used then it will be added to the builder's WatchSet.
-  write: Profile("Builder#write", function (relPath, options) {
-    var self = this;
-    options = options || {};
-
+  write(relPath, {data, file, sanitize, executable, symlink}) {
     // Ensure no trailing slash
     if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
 
     // In sanitize mode, ensure path does not contain segments like
     // '..', does not contain forbidden characters, and is unique.
-    if (options.sanitize)
-      relPath = self._sanitize(relPath);
+    if (sanitize)
+      relPath = this._sanitize(relPath);
 
-    var data;
-    if (options.data) {
-      if (! (options.data instanceof Buffer))
+    if (data) {
+      if (! (data instanceof Buffer))
         throw new Error("data must be a Buffer");
-      if (options.file)
+      if (file)
         throw new Error("May only pass one of data and file, not both");
-      data = options.data;
-    } else if (options.file) {
+    } else if (file) {
       data =
-        watch.readAndWatchFile(self.watchSet, files.pathResolve(options.file));
+        readAndWatchFile(this.watchSet, files.pathResolve(file));
     }
 
-    self._ensureDirectory(files.pathDirname(relPath));
-    var absPath = files.pathJoin(self.buildPath, relPath);
+    this._ensureDirectory(files.pathDirname(relPath));
+    const absPath = files.pathJoin(this.buildPath, relPath);
 
-    if (options.symlink) {
-      files.symlink(options.symlink, absPath);
+    if (symlink) {
+      files.symlink(symlink, absPath);
     } else {
       // Builder is used to create build products, which should be read-only;
       // users shouldn't be manually editing automatically generated files and
       // expecting the results to "stick".
-      files.writeFile(absPath, data,
-                       { mode: options.executable ? 0555 : 0444 });
+      files.writeFile(absPath, data, { mode: executable ? 0o555 : 0o444 });
     }
-    self.usedAsFile[relPath] = true;
+    this.usedAsFile[relPath] = true;
 
     return relPath;
-  }),
+  }
 
   // Serialize `data` as JSON and write it to `relPath` (a path to a
   // file relative to the bundle root), creating parent directories as
   // necessary. Throw an exception if the file already exists.
-  writeJson: Profile("Builder#writeJson", function (relPath, data) {
-    var self = this;
-
+  writeJson(relPath, data) {
     // Ensure no trailing slash
     if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
 
-    self._ensureDirectory(files.pathDirname(relPath));
-    files.writeFile(files.pathJoin(self.buildPath, relPath),
+    this._ensureDirectory(files.pathDirname(relPath));
+    files.writeFile(files.pathJoin(this.buildPath, relPath),
                      new Buffer(JSON.stringify(data, null, 2), 'utf8'),
-                     {mode: 0444});
+                     {mode: 0o444});
 
-    self.usedAsFile[relPath] = true;
-  }),
+    this.usedAsFile[relPath] = true;
+  }
 
   // Add relPath to the list of "already taken" paths in the
   // bundle. This will cause write, when in sanitize mode, to never
@@ -218,37 +205,34 @@ _.extend(Builder.prototype, {
   // options:
   // - directory: set to true to reserve this relPath to be a
   //   directory rather than a file.
-  reserve: Profile("Builder#reserve", function (relPath, options) {
-    var self = this;
-    options = options || {};
-
+  reserve(relPath, {directory} = {}) {
     // Ensure no trailing slash
     if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
 
-    var parts = relPath.split(files.pathSep);
-    var partsSoFar = [];
-    for (var i = 0; i < parts.length; i ++) {
-      var part = parts[i];
+    const parts = relPath.split(files.pathSep);
+    const partsSoFar = [];
+    for (let i = 0; i < parts.length; i ++) {
+      const part = parts[i];
       partsSoFar.push(part);
-      var soFar = partsSoFar.join(files.pathSep);
-      if (self.usedAsFile[soFar])
+      const soFar = partsSoFar.join(files.pathSep);
+      if (this.usedAsFile[soFar])
         throw new Error("Path reservation conflict: " + relPath);
 
-      var shouldBeDirectory = (i < parts.length - 1) || options.directory;
+      const shouldBeDirectory = (i < parts.length - 1) || directory;
       if (shouldBeDirectory) {
-        if (! (soFar in self.usedAsFile)) {
-          files.mkdir(files.pathJoin(self.buildPath, soFar), 0755);
-          self.usedAsFile[soFar] = false;
+        if (! (soFar in this.usedAsFile)) {
+          files.mkdir(files.pathJoin(this.buildPath, soFar), 0o755);
+          this.usedAsFile[soFar] = false;
         }
       } else {
-        self.usedAsFile[soFar] = true;
+        this.usedAsFile[soFar] = true;
       }
     }
 
     // Return the path we reserved.
-    return files.pathJoin(self.buildPath, relPath);
-  }),
+    return files.pathJoin(this.buildPath, relPath);
+  }
 
   // Generate and reserve a unique name for a file based on `relPath`,
   // and return it. If `relPath` is available (there is no file with
@@ -265,15 +249,11 @@ _.extend(Builder.prototype, {
   //
   // - directory: generate (and reserve) a name for a directory,
   //   rather than a file.
-  generateFilename: Profile(
-    "Builder#generateFilename", function (relPath, options) {
-    var self = this;
-    options = options || {};
-
-    relPath = self._sanitize(relPath, options.directory);
-    self.reserve(relPath, { directory: options.directory });
+  generateFilename(relPath, {directory} = {}) {
+    relPath = this._sanitize(relPath, directory);
+    this.reserve(relPath, { directory });
     return relPath;
-  }),
+  }
 
   // Convenience wrapper around generateFilename and write.
   //
@@ -281,13 +261,11 @@ _.extend(Builder.prototype, {
   // is patched through directly rather than rewriting its inputs and
   // outputs. This is only valid because it does nothing with its inputs
   // and outputs other than send pass them to other methods.)
-  writeToGeneratedFilename: Profile(
-    "Builder#writeToGeneratedFilename", function (relPath, writeOptions) {
-    var self = this;
-    var generated = self.generateFilename(relPath);
-    self.write(generated, writeOptions);
+  writeToGeneratedFilename(relPath, writeOptions) {
+    const generated = this.generateFilename(relPath);
+    this.write(generated, writeOptions);
     return generated;
-  }),
+  }
 
   // Recursively copy a directory and all of its contents into the
   // bundle. But if the symlink option was passed to the Builder
@@ -307,31 +285,27 @@ _.extend(Builder.prototype, {
   //   entries that end with a slash if it's a directory.
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
-  copyDirectory: Profile("Builder#copyDirectory", function (options) {
-    var self = this;
-    options = options || {};
+  copyDirectory({from, to, ignore, specificFiles, symlink, npmDiscards}) {
+    if (to.slice(-1) === files.pathSep)
+      to = to.slice(0, -1);
 
-    var normOptionsTo = options.to;
-    if (normOptionsTo.slice(-1) === files.pathSep)
-      normOptionsTo = normOptionsTo.slice(0, -1);
-
-    var absPathTo = files.pathJoin(self.buildPath, normOptionsTo);
-    if (options.symlink) {
-      if (options.specificFiles) {
+    const absPathTo = files.pathJoin(this.buildPath, to);
+    if (symlink) {
+      if (specificFiles) {
         throw new Error("can't copy only specific paths with a single symlink");
       }
 
-      if (self.usedAsFile[normOptionsTo]) {
-        throw new Error("tried to copy a directory onto " + normOptionsTo +
+      if (this.usedAsFile[to]) {
+        throw new Error("tried to copy a directory onto " + to +
                         " but it is is already a file");
       }
 
-      var canSymlink = true;
+      let canSymlink = true;
       // Symlinks don't work exactly the same way on Windows, and furthermore
       // they request Admin permissions to set.
       if (process.platform === 'win32') {
         canSymlink = false;
-      } else if (normOptionsTo in self.usedAsFile) {
+      } else if (to in this.usedAsFile) {
         // It's already here and is a directory, maybe because of a call to
         // reserve with {directory: true}. If it's an empty directory, this is
         // salvageable. The directory should exist, because all code paths which
@@ -340,8 +314,8 @@ _.extend(Builder.prototype, {
         // XXX This is somewhat broken: what if the reason we're in
         // self.usedAsFile is because an immediate child of ours was reserved as
         // a file but not actually written yet?
-        var children = files.readdir(absPathTo);
-        if (_.isEmpty(children)) {
+        const children = files.readdir(absPathTo);
+        if (Object.keys(children).length === 0) {
           files.rmdir(absPathTo);
         } else {
           canSymlink = false;
@@ -349,49 +323,48 @@ _.extend(Builder.prototype, {
       }
 
       if (canSymlink) {
-        self._ensureDirectory(files.pathDirname(normOptionsTo));
-        files.symlink(files.pathResolve(options.from), absPathTo);
+        this._ensureDirectory(files.pathDirname(to));
+        files.symlink(files.pathResolve(from), absPathTo);
         return;
       }
     }
 
-    var ignore = options.ignore || [];
-    var specificPaths = null;
-    if (options.specificFiles) {
+    ignore = ignore || [];
+    let specificPaths = null;
+    if (specificFiles) {
       specificPaths = {};
-      _.each(options.specificFiles, function (f) {
+      specificFiles.forEach(f => {
         while (f !== '.') {
-          specificPaths[files.pathJoin(normOptionsTo, f)] = true;
+          specificPaths[files.pathJoin(to, f)] = true;
           f = files.pathDirname(f);
         }
       });
     }
 
-    var walk = function (absFrom, relTo) {
-      self._ensureDirectory(relTo);
+    let walk = (absFrom, relTo) => {
+      this._ensureDirectory(relTo);
 
-      _.each(files.readdir(absFrom), function (item) {
-        var thisAbsFrom = files.pathResolve(absFrom, item);
-        var thisRelTo = files.pathJoin(relTo, item);
+      files.readdir(absFrom).forEach(item => {
+        const thisAbsFrom = files.pathResolve(absFrom, item);
+        const thisRelTo = files.pathJoin(relTo, item);
 
-        if (specificPaths && !_.has(specificPaths, thisRelTo)) {
+        if (specificPaths && !(thisRelTo in specificPaths)) {
           return;
         }
 
-        var fileStatus = files.lstat(thisAbsFrom);
+        const fileStatus = files.lstat(thisAbsFrom);
 
-        var itemForMatch = item;
-        var isDirectory = fileStatus.isDirectory();
+        let itemForMatch = item;
+        const isDirectory = fileStatus.isDirectory();
         if (isDirectory) {
           itemForMatch += '/';
         }
 
-        if (_.any(ignore, function (pattern) {
-          return itemForMatch.match(pattern);
-        })) return; // skip excluded files
+        // skip excluded files
+        if (ignore.some(pattern => itemForMatch.match(pattern))) return;
 
-        if (options.npmDiscards instanceof NpmDiscards &&
-            options.npmDiscards.shouldDiscard(thisAbsFrom, isDirectory)) {
+        if (npmDiscards instanceof NpmDiscards &&
+            npmDiscards.shouldDiscard(thisAbsFrom, isDirectory)) {
           return;
         }
 
@@ -399,21 +372,21 @@ _.extend(Builder.prototype, {
           walk(thisAbsFrom, thisRelTo);
         } else if (fileStatus.isSymbolicLink()) {
           files.symlink(files.readlink(thisAbsFrom),
-                         files.pathResolve(self.buildPath, thisRelTo));
+                         files.pathResolve(this.buildPath, thisRelTo));
           // A symlink counts as a file, as far as "can you put something under
           // it" goes.
-          self.usedAsFile[thisRelTo] = true;
+          this.usedAsFile[thisRelTo] = true;
         } else {
           files.copyFile(thisAbsFrom,
-                         files.pathResolve(self.buildPath, thisRelTo),
+                         files.pathResolve(this.buildPath, thisRelTo),
                          fileStatus.mode);
-          self.usedAsFile[thisRelTo] = true;
+          this.usedAsFile[thisRelTo] = true;
         }
       });
     };
 
-    walk(options.from, normOptionsTo);
-  }),
+    walk(from, to);
+  }
 
   // Returns a new Builder-compatible object that works just like a
   // Builder, but interprets all paths relative to 'relPath', a path
@@ -422,29 +395,24 @@ _.extend(Builder.prototype, {
   // The sub-builder returned does not have all Builder methods (for
   // example, complete() wouldn't make sense) and you should not rely
   // on it being instanceof Builder.
-  enter: Profile("Builder#enter", function (relPath) {
-    var self = this;
-    var methods = ["write", "writeJson", "reserve", "generateFilename",
+  enter(relPath) {
+    const methods = ["write", "writeJson", "reserve", "generateFilename",
                    "copyDirectory", "enter"];
-    var subBuilder = {};
-    var relPathWithSep = relPath + files.pathSep;
+    const subBuilder = {};
+    const relPathWithSep = relPath + files.pathSep;
 
-    _.each(methods, function (method) {
-      subBuilder[method] = function (/* arguments */) {
-        var args = _.toArray(arguments);
-
+    methods.forEach(method => {
+      subBuilder[method] = (...args) => {
         if (method !== "copyDirectory") {
           // Normal method (relPath as first argument)
-          args = _.clone(args);
           args[0] = files.pathJoin(relPath, args[0]);
         } else {
           // with copyDirectory the path we have to fix up is inside
           // an options hash
-          args[0] = _.clone(args[0]);
           args[0].to = files.pathJoin(relPath, args[0].to);
         }
 
-        var ret = self[method].apply(self, args);
+        let ret = this[method](...args);
 
         if (method === "generateFilename") {
           // fix up the returned path to be relative to the
@@ -463,37 +431,41 @@ _.extend(Builder.prototype, {
 
     // Methods that don't have to fix up arguments or return values, because
     // they are implemented purely in terms of other methods which do.
-    var passThroughMethods = ["writeToGeneratedFilename"];
-    _.each(passThroughMethods, function (method) {
-      subBuilder[method] = self[method];
+    const passThroughMethods = ["writeToGeneratedFilename"];
+    passThroughMethods.forEach(method => {
+      subBuilder[method] = this[method];
     });
 
     return subBuilder;
-  }),
+  }
 
   // Move the completed bundle into its final location (outputPath)
-  complete: Profile("Builder#complete", function () {
-    var self = this;
-
+  complete() {
     // XXX Alternatively, we could just keep buildPath around, and make
     // outputPath be a symlink pointing to it. This doesn't work for the NPM use
     // case of renameDirAlmostAtomically since that one is constructing files to
     // be checked in to version control, but here we could get away with it.
-    files.renameDirAlmostAtomically(self.buildPath, self.outputPath);
-  }),
+    files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+  }
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
-  abort: Profile("Builder#abort", function () {
-    var self = this;
-    files.rm_recursive(self.buildPath);
-  }),
+  abort() {
+    files.rm_recursive(this.buildPath);
+  }
 
   // Returns a WatchSet representing all files that were read from disk by the
   // builder.
-  getWatchSet: function () {
-    var self = this;
-    return self.watchSet;
+  getWatchSet() {
+    return this.watchSet;
   }
-});
+}
 
-module.exports = Builder;
+// Wrap slow methods into Profiler calls
+const slowBuilderMethods = [
+  '_ensureDirectory', 'write', 'enter', 'copyDirectory', 'enter', 'complete'
+];
+
+slowBuilderMethods.forEach(method => {
+  Builder.prototype[method] =
+    Profile(`Builder#${method}`, Builder.prototype[method]);
+});

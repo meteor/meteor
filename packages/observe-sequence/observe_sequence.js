@@ -9,8 +9,8 @@ var warn = function () {
   }
 };
 
-var idStringify = LocalCollection._idStringify;
-var idParse = LocalCollection._idParse;
+var idStringify = MongoID.idStringify;
+var idParse = MongoID.idParse;
 
 ObserveSequence = {
   _suppressWarnings: 0,
@@ -150,7 +150,7 @@ var isStoreCursor = function (cursor) {
 // `seqArray` and calls appropriate functions from `callbacks`.
 // Reuses Minimongo's diff algorithm implementation.
 var diffArray = function (lastSeqArray, seqArray, callbacks) {
-  var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
+  var diffFn = Package['diff-sequence'].DiffSequence.diffQueryOrderedChanges;
   var oldIdObjects = [];
   var newIdObjects = [];
   var posOld = {}; // maps from idStringify'd ids

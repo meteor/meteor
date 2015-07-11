@@ -11,7 +11,7 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "meteor-deque": "2.1.0"
 });
 
 Package.onUse(function (api) {
@@ -31,6 +31,7 @@ Package.onUse(function (api) {
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
+  api.addFiles('string_utils.js', ['client', 'server']);
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?

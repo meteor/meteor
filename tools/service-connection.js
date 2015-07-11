@@ -86,21 +86,17 @@ var ServiceConnection = function (endpointUrl, options) {
 };
 
 _.extend(ServiceConnection.prototype, {
-  call: function (/* arguments */) {
-    var self = this;
-    var args = _.toArray(arguments);
-    var name = args.shift();
-    return self.apply(name, args);
+  call: function (name, ...args) {
+    return this.apply(name, args);
   },
 
-  apply: function (/* arguments */) {
+  apply: function (...args) {
     var self = this;
 
     if (self.currentFuture)
       throw Error("Can't wait on two things at once!");
     self.currentFuture = new Future;
 
-    var args = _.toArray(arguments);
     args.push(function (err, result) {
       if (!self.currentFuture) {
         // We're not still waiting? That means we had a disconnect event. But
@@ -111,21 +107,21 @@ _.extend(ServiceConnection.prototype, {
       self.currentFuture = null;
       fut.resolver()(err, result);  // throw or return
     });
-    self.connection.apply.apply(self.connection, args);
+
+    self.connection.apply(...args);
 
     return self.currentFuture.wait();
   },
 
   // XXX derived from _subscribeAndWait in ddp_connection.js
   // -- but with a different signature..
-  subscribeAndWait: function (/* arguments */) {
+  subscribeAndWait: function (...args) {
     var self = this;
 
     if (self.currentFuture)
       throw Error("Can't wait on two things at once!");
     var subFuture = self.currentFuture = new Future;
 
-    var args = _.toArray(arguments);
     args.push({
       onReady: function () {
         if (!self.currentFuture) {
@@ -149,7 +145,7 @@ _.extend(ServiceConnection.prototype, {
       }
     });
 
-    var sub = self.connection.subscribe.apply(self.connection, args);
+    var sub = self.connection.subscribe(...args);
     subFuture.wait();
     return sub;
   },

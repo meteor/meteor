@@ -29,7 +29,6 @@ static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCH_HIDDEN      = L"LaunchHidden";
 static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCHAFTERINSTALL_TARGET_PATH = L"LaunchAfterInstallTarget";
 static const LPCWSTR WIXSTDBA_VARIABLE_LAUNCHAFTERINSTALL_ARGUMENTS   = L"LaunchAfterInstallArguments";
 
-static const LPCWSTR WIXSTDBA_VARIABLE_VERSION = L"MeteorVersion";
 static const LPCWSTR WIXSTDBA_VARIABLE_PROGRESS_HEADER = L"varProgressHeader";
 static const LPCWSTR WIXSTDBA_VARIABLE_PROGRESS_INFO   = L"varProgressInfo";
 static const LPCWSTR WIXSTDBA_VARIABLE_SUCCESS_HEADER  = L"varSuccessHeader";
@@ -184,6 +183,8 @@ enum WIXSTDBA_CONTROL
 	WIXSTDBA_CONTROL_OVERALL_CALCULATED_PROGRESS_BAR,
 	WIXSTDBA_CONTROL_OVERALL_PROGRESS_TEXT,
 
+	WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER,	
+
 	WIXSTDBA_CONTROL_PROGRESS_CANCEL_BUTTON,
 
 	// Success page
@@ -200,6 +201,7 @@ enum WIXSTDBA_CONTROL
 	WIXSTDBA_CONTROL_FAILURE_RESTART_TEXT,
 	WIXSTDBA_CONTROL_FAILURE_RESTART_BUTTON,
 	WIXSTDBA_CONTROL_FAILURE_CANCEL_BUTTON,
+
 };
 
 static THEME_ASSIGN_CONTROL_ID vrgInitControls[] = {
@@ -257,6 +259,7 @@ static THEME_ASSIGN_CONTROL_ID vrgInitControls[] = {
 	{ WIXSTDBA_CONTROL_OVERALL_CALCULATED_PROGRESS_BAR, L"OverallCalculatedProgressbar" },
 	{ WIXSTDBA_CONTROL_OVERALL_PROGRESS_TEXT, L"OverallProgressText" },
 	{ WIXSTDBA_CONTROL_PROGRESS_CANCEL_BUTTON, L"ProgressCancelButton" },
+	{ WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"InstallingHeader" },
 
 	{ WIXSTDBA_CONTROL_LAUNCH_BUTTON, L"LaunchButton" },
 	{ WIXSTDBA_CONTROL_SUCCESS_RESTART_TEXT, L"SuccessRestartText" },
@@ -743,6 +746,7 @@ LExit:
 			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_EXECUTE_PROGRESS_ACTIONDATA_TEXT, wzActionProgressText);
 		}
 
+
 		return __super::OnExecuteMsiMessage(wzPackageId, mt, uiFlags, wzMessage, cData, rgwzData, nRecommendation);
 	}
 
@@ -773,6 +777,12 @@ LExit:
 		__in BOOL fExecute
 		)
 	{
+		if (m_fIsUninstall) {
+			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"Uninstalling Meteor,\nThe JavaScript App Platform");
+		} else {
+			ThemeSetTextControl(m_pTheme, WIXSTDBA_CONTROL_PROGRESS_INSTALLING_HEADER, L"Installing Meteor,\nThe JavaScript App Platform");			
+		}
+
 		LPWSTR sczFormattedString = NULL;
 
 		m_fStartedExecution = TRUE;
@@ -3757,12 +3767,9 @@ BOOL REST_SignInOrRegister(
   DWORD aiHostSize = BUF_LEN;
   GetComputerNameW(aiHostW, &aiHostSize);
 
-  LPWSTR aiAgentVersion = NULL;
-  BalGetStringVariable(WIXSTDBA_VARIABLE_VERSION, &aiAgentVersion);
-
   wchar_t wzAgentInfo[BUF_LEN] = L"";
   StringCchPrintfW(wzAgentInfo, BUF_LEN, L"agentInfo[host]=%s&agentInfo[agent]=%s&agentInfo[agentVersion]=%s&agentInfo[arch]=%s",
-      aiHostW, L"Windows Installer", aiAgentVersion, L"os.windows.x64_32");
+      aiHostW, L"Windows Installer", L"0.0", L"os.windows.x64_32");
   StringCchCatW(wzFormData, BUF_LEN, L"&");
   StringCchCatW(wzFormData, BUF_LEN, wzAgentInfo);
 

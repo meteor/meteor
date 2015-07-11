@@ -125,7 +125,7 @@ _.extend(SessionCollectionView.prototype, {
 
   diff: function (previous) {
     var self = this;
-    LocalCollection._diffObjects(previous.documents, self.documents, {
+    DiffSequence.diffObjects(previous.documents, self.documents, {
       both: _.bind(self.diffDocument, self),
 
       rightOnly: function (id, nowDV) {
@@ -141,7 +141,7 @@ _.extend(SessionCollectionView.prototype, {
   diffDocument: function (id, prevDV, nowDV) {
     var self = this;
     var fields = {};
-    LocalCollection._diffObjects(prevDV.getFields(), nowDV.getFields(), {
+    DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
       both: function (key, prev, now) {
         if (!EJSON.equals(prev, now))
           fields[key] = now;
@@ -503,20 +503,22 @@ _.extend(Session.prototype, {
     // needs a Fiber. We could actually use regular setTimeout and avoid
     // these new fibers, but it is easier to just make everything use
     // Meteor.setTimeout and not think too hard.
+    //
+    // Any message counts as receiving a pong, as it demonstrates that
+    // the client is still alive.
+    if (self.heartbeat) {
+      Fiber(function () {
+        self.heartbeat.messageReceived();
+      }).run();
+    }
+
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
         self.send({msg: "pong", id: msg_in.id});
-      if (self.heartbeat)
-        Fiber(function () {
-          self.heartbeat.pingReceived();
-        }).run();
       return;
     }
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
-      if (self.heartbeat)
-        Fiber(function () {
-          self.heartbeat.pongReceived();
-        }).run();
+      // Since everything is a pong, nothing to do
       return;
     }
 
@@ -675,7 +677,7 @@ _.extend(Session.prototype, {
 
   _diffCollectionViews: function (beforeCVs) {
     var self = this;
-    LocalCollection._diffObjects(beforeCVs, self.collectionViews, {
+    DiffSequence.diffObjects(beforeCVs, self.collectionViews, {
       both: function (collectionName, leftValue, rightValue) {
         rightValue.diff(leftValue);
       },
@@ -919,7 +921,7 @@ var Subscription = function (
   self.userId = session.userId;
 
   // For now, the id filter is going to default to
-  // the to/from DDP methods on LocalCollection, to
+  // the to/from DDP methods on MongoID, to
   // specifically deal with mongo/minimongo ObjectIds.
 
   // Later, you will be able to make this be "raw"
@@ -928,8 +930,8 @@ var Subscription = function (
   // a ddp consumer that isn't minimongo
 
   self._idFilter = {
-    idStringify: LocalCollection._idStringify,
-    idParse: LocalCollection._idParse
+    idStringify: MongoID.idStringify,
+    idParse: MongoID.idParse
   };
 
   Package.facts && Package.facts.Facts.incrementServerFact(
@@ -1224,7 +1226,7 @@ Server = function (options) {
   // Note: Troposphere depends on the ability to mutate
   // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
   self.options = _.defaults(options || {}, {
-    heartbeatInterval: 30000,
+    heartbeatInterval: 15000,
     heartbeatTimeout: 15000,
     // For testing, allow responding to pings to be disabled.
     respondToPings: true
@@ -1457,6 +1459,8 @@ _.extend(Server.prototype, {
   methods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
+      if (typeof func !== 'function')
+        throw new Error("Method '" + name + "' must be a function");
       if (self.method_handlers[name])
         throw new Error("A method named '" + name + "' is already defined");
       self.method_handlers[name] = func;

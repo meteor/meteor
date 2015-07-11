@@ -668,7 +668,8 @@ main.registerCommand({
 
   main.captureAndExit(
     "=> Errors while publishing build:",
-    "publishing package " + name,
+    ("publishing package " + name + " for architecture "
+     + isopk.buildArchitectures()),
     function () {
       packageClient.createAndPublishBuiltPackage(conn, isopk);
     }
@@ -1626,8 +1627,8 @@ main.registerCommand({
     var nonlatestIndirectDeps = [];
     projectContext.packageMap.eachPackage(function (name, info) {
       var selectedVersion = info.version;
-      var latestVersion = projectContext.projectCatalog.getLatestVersion(
-        name).version;
+      var catalog = projectContext.projectCatalog;
+      var latestVersion = catalog.getLatestMainlineVersion(name).version;
       if (selectedVersion !== latestVersion) {
         var rec = { name: name, selectedVersion: selectedVersion,
                     latestVersion: latestVersion };
@@ -1640,7 +1641,7 @@ main.registerCommand({
     });
     var printItem = function (rec) {
       Console.info(" * " + rec.name + " " + rec.selectedVersion +
-                   " - " + rec.latestVersion + " is available");
+                   " (" + rec.latestVersion + " is available)");
     };
     if (nonlatestDirectDeps.length) {
       Console.info("\nThe following top-level dependencies were not updated " +
@@ -2010,17 +2011,17 @@ main.registerCommand({
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
   var packagesToRemove = [];
-  _.each(args, function (package) {
-    if (/@/.test(package)) {
-      Console.error(package + ": do not specify version constraints.");
+  _.each(args, function (packageName) {
+    if (/@/.test(packageName)) {
+      Console.error(packageName + ": do not specify version constraints.");
       exitCode = 1;
-    } else if (! projectContext.projectConstraintsFile.getConstraint(package)) {
+    } else if (! projectContext.projectConstraintsFile.getConstraint(packageName)) {
       // Check that we are using the package. We don't check if the package
       // exists. You should be able to remove non-existent packages.
-      Console.error(package  + " is not in this project.");
+      Console.error(packageName  + " is not in this project.");
       exitCode = 1;
     } else {
-      packagesToRemove.push(package);
+      packagesToRemove.push(packageName);
     }
   });
   if (! packagesToRemove.length)

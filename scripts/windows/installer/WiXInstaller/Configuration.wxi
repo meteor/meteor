@@ -5,7 +5,6 @@
     <?define BUNDLE_UpgradeCode  = "{D6F8653E-2F27-4FDD-9C92-66D7B4B21D79}" ?>
 
 
-    <?define METEOR_Version      = "__METEOR_RELEASE_SEMVER__" ?>
     <?define METEOR_Manufacturer = "Meteor Development Group " ?>
     <?define METEOR_ProductUrl   = "https://www.meteor.com/" ?>
     <?define METEOR_UpgradeUrl   = "https://www.meteor.com/" ?>
@@ -23,6 +22,5 @@
     
     
     <?define METEOR_PkgFileName    = "meteor-bootstrap-os.windows.x86_32.tar.gz"?>
-    <?define METEOR_PkgDwnUrl      = "http://d3sqy0vbqsdhku.cloudfront.net/packages-bootstrap/__METEOR_RELEASE__/meteor-bootstrap-os.windows.x86_32.tar.gz"?>
                                        
 </Include>

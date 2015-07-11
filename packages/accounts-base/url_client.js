@@ -28,8 +28,8 @@ function attemptToMatchHash(accounts, hash, success) {
   _.each(accountsPaths, function (urlPart) {
     var token;
 
-    tokenRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)$");
-    match = hash.match(tokenRegex);
+    var tokenRegex = new RegExp("^\\#\\/" + urlPart + "\\/(.*)$");
+    var match = hash.match(tokenRegex);
 
     if (match) {
       token = match[1];

@@ -40,7 +40,7 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
     loginUrl: loginUrl,
     credentialRequestCompleteCallback: credentialRequestCompleteCallback,
     credentialToken: credentialToken,
-    popupOptions: {width: 470, height: 420}
+    popupOptions: {width: 470, height: 490}
   });
 };
 

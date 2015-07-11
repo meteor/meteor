@@ -6,7 +6,8 @@
 
 When you write a template as `<{{! }}template name="foo"> ... <{{!
 }}/template>` in an HTML file in your app, Meteor generates a
-"template object" named `Template.foo`.
+"template object" named `Template.foo`. Note that template name cannot
+contain hyphens and other special characters.
 
 The same template may occur many times on a page, and these
 occurrences are called template instances.  Template instances have a
@@ -110,7 +111,7 @@ Template.myPictures.onRendered(function () {
 
 {{> autoApiBox "Template#onCreated"}}
 
-Callbacks added with this method called before your template's logic is
+Callbacks added with this method are called before your template's logic is
 evaluated for the first time. Inside a callback, `this` is the new [template
 instance](#template_inst) object. Properties you set on this object will be
 visible from the callbacks added with `onRendered` and `onDestroyed` methods and
@@ -274,6 +275,24 @@ Template.comments.onCreated(function () {
 {{dstache}}#with post}}
   {{dstache}}> comments postId=_id}}
 {{dstache}}/with}}
+```
+
+Another example where you want to initialize a plugin when the subscription is
+done:
+
+```js
+Template.listing.onRendered(function () {
+  var template = this;
+
+  template.subscribe('listOfThings', function () {
+    // Wait for the data to load using the callback
+    Tracker.afterFlush(function () {
+      // Use Tracker.afterFlush to wait for the UI to re-render
+      // then use highlight.js to highlight a code snippet
+      highlightBlock(template.find('.code'));
+    });
+  });
+});
 ```
 
 {{> autoApiBox "Blaze.TemplateInstance#view"}}

@@ -26,7 +26,7 @@ id.
 
 On the client, you must pass `password` and at least one of `username` or
 `email` &mdash; enough information for the user to be able to log in again
-later. On the server, you do not need to specify `password`, but the user will
+later. If there are existing users with a username or email only differing in case, `createUser` will fail. On the server, you do not need to specify `password`, but the user will
 not be able to log in until it has a password (eg, set with
 [`Accounts.setPassword`](#accounts_setpassword)).
 
@@ -121,14 +121,14 @@ Override fields of the object by assigning to them:
    the application (eg: `awesome.meteor.com`).
 - `headers`: An `Object` for custom email headers as described in
     [`Email.send`](#email_send).
-- `resetPassword`: An `Object` with two fields:
- - `resetPassword.from`: A `Function` used to override the `from` address defined
+- `resetPassword`: An `Object` with the fields:
+ - `from`: A `Function` used to override the `from` address defined
    by the `emailTemplates.from` field.
- - `resetPassword.subject`: A `Function` that takes a user object and returns
+ - `subject`: A `Function` that takes a user object and returns
    a `String` for the subject line of a reset password email.
- - `resetPassword.text`: A `Function` that takes a user object and a url, and
+ - `text`: A `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
- - `resetPassword.html`: An optional `Function` that takes a user object and a
+ - `html`: An optional `Function` that takes a user object and a
    url, and returns the body html for a reset password email.
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
    new accounts.

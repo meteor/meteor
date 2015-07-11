@@ -617,6 +617,9 @@ _.extend(Isopack.prototype, {
     dir = files.realpath(dir);
 
     var mainJson = Isopack.readMetadataFromDirectory(dir);
+    if (! mainJson) {
+      throw new Error("No metadata files found for isopack at: " + dir);
+    }
 
     // isopacks didn't used to know their name, but they should.
     if (_.has(mainJson, 'name') && name !== mainJson.name) {
@@ -1100,18 +1103,80 @@ _.extend(Isopack.prototype, {
         !f.match(/^examples\/unfinished/);
     });
 
-    var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
+    // Regexes matching paths to transpile using babel
+    var transpileRegexes = [
+      /^tools\/[^\/]+\.js$/, // General tools files
+      // We don't support running self-test from an install anymore
+    ];
 
+    // Split pathsToCopy into two arrays - one of files that should be copied
+    // directly, and one of files that should be transpiled with Babel
+    var pathsToTranspile = [];
+    var pathsToCopyStraight = [];
+    pathsToCopy.forEach((path) => {
+      var shouldTranspile =
+        _.some(transpileRegexes, (regex) => path.match(regex));
 
+      if (shouldTranspile) {
+        pathsToTranspile.push(path);
+      } else {
+        pathsToCopyStraight.push(path);
+      }
+    });
+
+    // Set up builder to write to the correct directory
     var toolPath = 'mt-' + archinfo.host();
     builder = builder.enter(toolPath);
+
+    // Transpile the files we selected
+    var babel = require("meteor-babel");
+    pathsToTranspile.forEach((path) => {
+      var fullPath = files.convertToOSPath(
+        files.pathJoin(files.getCurrentToolsDir(), path));
+
+      var inputFileContents = files.readFile(fullPath, "utf-8");
+
+      // #RemoveInProd
+      // We don't actually want to load the babel auto-transpiler when we are
+      // in a Meteor installation where everything is already transpiled for us.
+      // Therefore, strip out that line in main.js
+      if (path === "tools/main-transpile-wrapper.js" ||
+          path === "tools/source-map-retriever-stack.js") {
+        inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
+      }
+
+      var babelOptions = babel.getDefaultOptions(
+        require("./babel-features.js")
+      );
+
+      _.extend(babelOptions, {
+        filename: path,
+        sourceFileName: "/" + path,
+        sourceMapName: path + ".map",
+        sourceMap: true
+      });
+
+      var transpiled = babel.compile(inputFileContents, babelOptions);
+
+      var sourceMapUrlComment = "//# sourceMappingURL=" + files.pathBasename(path + ".map");
+
+      builder.write(path, {
+        data: new Buffer(transpiled.code + "\n" + sourceMapUrlComment, 'utf8')
+      });
+
+      builder.write(path + ".map", {
+        data: new Buffer(JSON.stringify(transpiled.map), 'utf8')
+      });
+    });
+
+    var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
     builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 
     builder.copyDirectory({
       from: files.getCurrentToolsDir(),
       to: '',
-      specificFiles: pathsToCopy,
+      specificFiles: pathsToCopyStraight,
       symlink: false
     });
 

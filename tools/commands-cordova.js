@@ -1,6 +1,7 @@
 var main = require('./main.js');
 var _ = require('underscore');
 var util = require('util');
+var path = require('path');
 var chalk = require('chalk');
 var files = require('./files.js');
 var buildmessage = require('./buildmessage.js');
@@ -191,9 +192,9 @@ var verboseness = false;
 var setVerboseness = cordova.setVerboseness = function (v) {
   verboseness = !!v;
 };
-var verboseLog = cordova.verboseLog = function (/* args */) {
+var verboseLog = cordova.verboseLog = function (...args) {
   if (verboseness)
-    Console.rawError('%% ' + util.format.apply(null, arguments) + "\n");
+    Console.rawError('%% ' + util.format.apply(null, args) + "\n");
 };
 
 
@@ -396,12 +397,10 @@ var ensureCordovaProject = function (projectContext, appName) {
 
 // --- Cordova platforms ---
 
-// Ensures that the Cordova platforms are synchronized with the app-level
-// platforms.
-var ensureCordovaPlatforms = function (projectContext) {
-  verboseLog('Ensuring that platforms in cordova build project are in sync');
+// Get the currently installed platforms from cordova build
+var getCordovaInstalledPlatforms = function(projectContext) {
   var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
-  var platforms = projectContext.platformList.getCordovaPlatforms();
+
   var platformsList = execFileSyncOrThrow(
     localCordova, ['platform', 'list'], { cwd: cordovaPath, env: buildCordovaEnv() });
 
@@ -415,9 +414,18 @@ var ensureCordovaPlatforms = function (projectContext) {
     throw new Error('Failed to parse the output of `cordova platform list`: ' +
                      platformsList.stdout);
 
-  var installedPlatforms = _.map(platformsStrings.split(', '), function (s) {
+  return installedPlatforms = _.map(platformsStrings.split(', '), function (s) {
     return s.split(' ')[0];
   });
+}
+
+// Ensures that the Cordova platforms are synchronized with the app-level
+// platforms.
+var ensureCordovaPlatforms = function (projectContext) {
+  verboseLog('Ensuring that platforms in cordova build project are in sync');
+  var cordovaPath = projectContext.getProjectLocalDirectory('cordova-build');
+  var platforms = projectContext.platformList.getCordovaPlatforms();
+  var installedPlatforms = getCordovaInstalledPlatforms(projectContext);
 
   _.each(platforms, function (platform) {
     if (_.contains(installedPlatforms, platform))
@@ -461,11 +469,19 @@ var targetsToPlatforms = cordova.targetsToPlatforms = function (targets) {
 
 // --- Cordova plugins ---
 
-var installPlugin = function (cordovaPath, name, version, conf) {
+var installPlugin = function (cordovaPath, name, version, conf, projectDir) {
   verboseLog('Installing a plugin', name, version);
 
+  var pluginInstallCommand;
+
+  if (utils.isUrlWithFileScheme(version)) {
+    // Strip file:// and compute the relative path from plugin to corodova-build
+    pluginInstallCommand = getCordovaLocalPluginPath(version, cordovaPath, projectDir);
+  } else {
+    pluginInstallCommand = version ? name + '@' + version : name;
+  }
+
   // XXX do something different for plugins fetched from a url.
-  var pluginInstallCommand = version ? name + '@' + version : name;
   var localPluginsPath = localPluginsPathFromCordovaPath(cordovaPath);
 
   if (version && utils.isUrlWithSha(version)) {
@@ -520,6 +536,15 @@ var uninstallPlugin = function (cordovaPath, name, isFromTarballUrl) {
   }
 };
 
+// Strips the file:// from the path and if a relative path was used, it translates it to a relative path to the
+// cordova-build directory instead of meteor project directory.
+var getCordovaLocalPluginPath = function (pluginPath, cordovaPath, projectDir) {
+    pluginPath = pluginPath.substr("file://".length);
+    if (utils.isPathRelative(pluginPath))
+        return path.relative(cordovaPath, path.resolve(projectDir, pluginPath));
+    return pluginPath;
+}
+
 var getTarballPluginsLock = function (cordovaPath) {
   verboseLog('Will check for cordova-tarball-plugins.json' +
              ' for tarball-url-based plugins previously installed.');
@@ -559,7 +584,7 @@ var writeTarballPluginsLock = function (cordovaPath, tarballPluginsLock) {
 
 // Returns the list of installed plugins as a hash from plugin name to version.
 var getInstalledPlugins = function (cordovaPath) {
-  verboseLog('Getting installed plugins for project');
+  verboseLog('Getting installed plugins for project in ' + cordovaPath);
   var installedPlugins = {};
 
   var pluginsOutput = execFileSyncOrThrow(localCordova, ['plugin', 'list'],
@@ -614,17 +639,27 @@ var ensureCordovaPlugins = function (projectContext, options) {
   // Due to the dependency structure of Cordova plugins, it is impossible to
   // upgrade the version on an individual Cordova plugin. Instead, whenever a
   // new Cordova plugin is added or removed, or its version is changed,
-  // we just reinstall all of the plugins.
+  // we just reinstall all of the plugins. Additionally if there are any plugins
+  // added from the local path, we will reinstall them just to be sure they
+  // are up to date since we do not track changes in their sources.
 
-  var shouldReinstallPlugins = false;
+  var shouldReinstallPlugins = false,
+    pluginsFromLocalPath = {},
+    pluginFromLocalPath;
 
-  // Iterate through all of the plugin and find if any of them have a new
-  // version.
+  // Iterate through all of the plugins and find if any of them have a new
+  // version. Additionally check if we have plugins installed from local path.
   _.each(plugins, function (version, name) {
+    // Check if plugin is installed from local path
+    pluginFromLocalPath = utils.isUrlWithFileScheme(version);
+    if (pluginFromLocalPath)
+      pluginsFromLocalPath[name] = version;
+
     // XXX there is a hack here that never updates a package if you are
     // trying to install it from a URL, because we can't determine if
     // it's the right version or not
-    if (! _.has(installedPlugins, name) || installedPlugins[name] !== version) {
+    if (! _.has(installedPlugins, name) ||
+      (installedPlugins[name] !== version && !pluginFromLocalPath)) {
       // The version of the plugin has changed, or we do not contain a plugin.
       shouldReinstallPlugins = true;
     }
@@ -638,38 +673,64 @@ var ensureCordovaPlugins = function (projectContext, options) {
     }
   });
 
-  if (shouldReinstallPlugins) {
+  if (! _.isEmpty(pluginsFromLocalPath))
+    verboseLog('Reinstalling cordova plugins added from the local path');
+
+  if (shouldReinstallPlugins || ! _.isEmpty(pluginsFromLocalPath)) {
     // Loop through all of the current plugins and remove them one by one until
-    // we have no plugins. It's necessary to loop because we might have
-    // dependencies between plugins.
-    var uninstallAllPlugins = function () {
+    // we have deleted proper amount of plugins. It's necessary to loop because
+    // we might have dependencies between plugins.
+    var uninstallPlugins = function (pluginsToUninstall, clearPluginsDirectory) {
       installedPlugins = getInstalledPlugins(cordovaPath);
-      while (_.size(installedPlugins)) {
-        _.each(installedPlugins, function (version, name) {
-          uninstallPlugin(cordovaPath, name, utils.isUrlWithSha(version));
+      var uninstalled = 1;
+      // Detect if we couldn't delete any more plugins just to avoid
+      // hanging forever
+      while (uninstalled.length !== 0 && _.size(pluginsToUninstall)) {
+        _.each(pluginsToUninstall, function (version, name) {
+            uninstallPlugin(cordovaPath, name, utils.isUrlWithSha(version));
         });
         installedPlugins = getInstalledPlugins(cordovaPath);
+
+        uninstalled = _.difference(
+          Object.keys(pluginsToUninstall), Object.keys(installedPlugins)
+        );
+        pluginsToUninstall = _.omit(pluginsToUninstall, uninstalled);
       }
       // XXX HACK, because Cordova doesn't properly clear its plugins on `rm`.
       // This will completely destroy the project state. We should work with
       // Cordova to fix the bug in their system, because it doesn't seem
       // like there's a way around this.
-      files.rm_recursive(files.pathJoin(cordovaPath, 'platforms'));
+      if (clearPluginsDirectory)
+        files.rm_recursive(files.pathJoin(cordovaPath, 'platforms'));
+
       ensureCordovaPlatforms(projectContext);
     };
 
     buildmessage.enterJob({ title: "installing Cordova plugins"}, function () {
-      uninstallAllPlugins();
+      installedPlugins = getInstalledPlugins(cordovaPath);
+      if (shouldReinstallPlugins)
+        uninstallPlugins(installedPlugins, true);
+      else
+        uninstallPlugins(pluginsFromLocalPath, false);
 
-      // Now install all of the plugins.
+      // Now install necessary plugins.
       try {
         // XXX: forkJoin with parallel false?
-        var pluginsInstalled = 0;
+        var pluginsInstalled, pluginsToInstall;
+
+        if (shouldReinstallPlugins) {
+          pluginsInstalled = 0;
+          pluginsToInstall = plugins;
+        } else {
+          pluginsInstalled = _.size(installedPlugins);
+          pluginsToInstall = pluginsFromLocalPath;
+        }
 
         var pluginsCount = _.size(plugins);
+
         buildmessage.reportProgress({ current: 0, end: pluginsCount });
-        _.each(plugins, function (version, name) {
-          installPlugin(cordovaPath, name, version, pluginsConfiguration[name]);
+        _.each(pluginsToInstall, function (version, name) {
+          installPlugin(cordovaPath, name, version, pluginsConfiguration[name], projectContext.projectDir);
 
           buildmessage.reportProgress({
             current: ++pluginsInstalled,
@@ -680,7 +741,7 @@ var ensureCordovaPlugins = function (projectContext, options) {
         // If a plugin fails to install, then remove all plugins and throw the
         // error. Cordova doesn't remove the plugin by default for some reason.
         // XXX don't throw and improve this error message.
-        uninstallAllPlugins();
+        uninstallPlugins(getInstalledPlugins(cordovaPath), true);
         throw err;
       }
     });
@@ -865,11 +926,12 @@ var buildCordova = function (projectContext, platforms, options) {
         // XXX a hack to reset the debuggable mode
         var manifest = files.readFile(manifestPath, 'utf8');
         manifest = manifest.replace(/android:debuggable=.(true|false)./g, '');
-        manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
+        if (options.debug)
+          manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
         files.writeFile(manifestPath, manifest, 'utf8');
 
         // XXX workaround the problem of cached apk invalidation
-        files.rm_recursive(files.pathJoin(androidBuildPath, 'ant-build'));
+        files.rm_recursive(files.pathJoin(androidBuildPath, 'build'));
       }
 
       if (!options.debug) {
@@ -1430,9 +1492,11 @@ var consumeControlFile = function (
     code = files.readFile(controlFilePath, 'utf8');
   }
 
+  var defaultBuildNumber = (Date.now() % 1000000).toString();
   var metadata = {
     id: 'com.id' + projectContext.appIdentifier,
     version: '0.0.1',
+    buildNumber: defaultBuildNumber,
     name: appName,
     description: 'New Meteor Mobile App',
     author: 'A Meteor Developer',
@@ -1686,6 +1750,8 @@ var consumeControlFile = function (
   _.each({
     id: metadata.id,
     version: metadata.version,
+    'android-versionCode': metadata.buildNumber,
+    'ios-CFBundleVersion': metadata.buildNumber,
     xmlns: 'http://www.w3.org/ns/widgets',
     'xmlns:cdv': 'http://cordova.apache.org/ns/1.0'
   }, function (val, key) {
@@ -2407,8 +2473,31 @@ _.extend(Android.prototype, {
         avdPath = files.pathJoin(androidBundlePath, avd + '_avd');
       }
 
+      // Need to figure out which target has the ABI we need.
+      var stdout = self.runAndroidTool(['list', 'targets']);
+      var lastId = null;
+      var haveSeenTarget = false;
+      var idRe = /^id: ([0-9]+)/;
+      var tagRe = new RegExp("^\\s*Tag/ABIs\\s*:.*" + abi + ".*");
+      _.each(stdout.split('\n'), function (line) {
+        if (haveSeenTarget)
+          return;
+        var match = line.match(idRe);
+        if (match) {
+          lastId = match[1];
+        }
+        if (line.match(tagRe))
+          haveSeenTarget = true;
+      });
+
+      if (!haveSeenTarget || lastId === null) {
+        Console.error("Cannot create an android virtual device with ABI '"
+                     + abi + "'; no valid targets");
+        throw new Error("No valid targets for: " + abi);
+      }
+
       var args = ['create', 'avd',
-        '--target', '1',
+        '--target', lastId,
         '--name', avd,
         '--abi', abi,
         '--path', avdPath];
@@ -2844,17 +2933,17 @@ _.extend(Android.prototype, {
         }
       }
 
-      if (self.isPlatformInstalled('android-19')) {
-        log && Console.success("Found Android 19 API");
+      if (self.isPlatformInstalled('android-22')) {
+        log && Console.success("Found Android 22 API");
       } else {
         if (fixSilent) {
-          log && Console.info("Installing Android 19 API");
-          self.installTarget('android-19', function () {
-            return self.isPlatformInstalled('android-19');
+          log && Console.info("Installing Android 22 API");
+          self.installTarget('android-22', function () {
+            return self.isPlatformInstalled('android-22');
           });
-          log && Console.success("Installed Android 19 API");
+          log && Console.success("Installed Android 22 API");
         } else {
-          log && Console.failInfo("Android API 19 not found");
+          log && Console.failInfo("Android API 22 not found");
 
           result.missing.push("android-api");
           result.acceptable = false;
@@ -2862,8 +2951,8 @@ _.extend(Android.prototype, {
       }
 
       // (We could alternatively check for
-      // {SDK}/system-images/android-19/default/x86/build.prop)
-      if (self.hasTarget('19', 'default/x86')) {
+      // {SDK}/system-images/android-22/default/x86/build.prop)
+      if (self.hasTarget('22', 'default/x86')) {
         log && Console.success("Found suitable Android x86 image");
       } else {
         if (fixSilent) {
@@ -2877,8 +2966,8 @@ _.extend(Android.prototype, {
           });
 
           log && Console.info("Installing Android x86 image");
-          self.installTarget('sys-img-x86-android-19', function () {
-            return self.hasTarget('19', 'default/x86');
+          self.installTarget('sys-img-x86-android-22', function () {
+            return self.hasTarget('22', 'default/x86');
           });
           log && Console.success("Installed Android x86 image");
         } else {

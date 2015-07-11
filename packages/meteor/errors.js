@@ -60,7 +60,7 @@ Meteor.makeErrorType = function (name, constructor) {
  * // on the client
  * Meteor.call("methodName", function (error) {
  *   // identify the error
- *   if (error.error === "logged-out") {
+ *   if (error && error.error === "logged-out") {
  *     // show a nice error message
  *     Session.set("errorMessage", "Please log in to post a comment.");
  *   }

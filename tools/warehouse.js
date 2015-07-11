@@ -188,7 +188,7 @@ _.extend(warehouse, {
   _populateWarehouseForRelease: function (releaseVersion, showInstalling) {
     var future = new Future;
     var releasesDir = files.pathJoin(warehouse.getWarehouseDir(), 'releases');
-    files.mkdir_p(releasesDir, 0755);
+    files.mkdir_p(releasesDir, 0o755);
     var releaseManifestPath = files.pathJoin(releasesDir,
                                              releaseVersion + '.release.json');
 

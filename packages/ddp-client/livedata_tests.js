@@ -64,6 +64,16 @@ Tinytest.add("livedata - methods with colliding names", function (test) {
   });
 });
 
+Tinytest.add("livedata - non-function method", function (test) {
+  var x = Random.id();
+  var m = {};
+  m[x] = 'kitten';
+
+  test.throws(function () {
+    Meteor.methods(m);
+  });
+});
+
 var echoTest = function (item) {
   return function (test, expect) {
     if (Meteor.isServer) {
@@ -705,8 +715,9 @@ if (Meteor.isClient) {
 
   testAsyncMulti("livedata - publish multiple cursors", [
     function (test, expect) {
-      Meteor.subscribe("multiPublish", {normal: 1}, {
+      var sub = Meteor.subscribe("multiPublish", {normal: 1}, {
         onReady: expect(function () {
+          test.isTrue(sub.ready());
           test.equal(One.find().count(), 2);
           test.equal(Two.find().count(), 3);
         }),

@@ -74,12 +74,12 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
     var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
 
     if (files.exists(isopackJsonPath)) {
-      files.chmod(isopackJsonPath, 0777);
+      files.chmod(isopackJsonPath, 0o777);
     }
 
     files.writeFile(isopackJsonPath,
       new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
-      {mode: 0444});
+      {mode: 0o444});
 
     // Step 3. Clean up old unipackage.json file if it exists
     files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
@@ -99,10 +99,10 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
 
       var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
 
-      files.chmod(unibuildJsonPath, 0777);
+      files.chmod(unibuildJsonPath, 0o777);
       files.writeFile(unibuildJsonPath,
         new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
-        {mode: 0444});
+        {mode: 0o444});
       // Result: Now we are in a state where the unibuild file paths are
       // consistent with the paths in the downloaded tarball.
     });
@@ -119,10 +119,10 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
 
       var convertedPlugin = colonConverter.convertJSImage(programJson);
 
-      files.chmod(programJsonPath, 0777);
+      files.chmod(programJsonPath, 0o777);
       files.writeFile(programJsonPath,
         new Buffer(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
-        {mode: 0444});
+        {mode: 0o444});
       // Result: Now we are in a state where the build plugin file paths are
       // consistent with the paths in the downloaded tarball.
     });

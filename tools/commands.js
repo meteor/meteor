@@ -947,11 +947,11 @@ var buildCommand = function (options) {
         "utf8");
     } else if (platformName === 'android') {
       files.cp_r(buildPath, files.pathJoin(platformPath, 'project'));
-      var apkPath = findApkPath(files.pathJoin(buildPath, 'ant-build'));
-      files.copyFile(apkPath, files.pathJoin(platformPath, 'unaligned.apk'));
+      var apkPath = findApkPath(files.pathJoin(buildPath, 'build'), options.debug);
+      files.copyFile(apkPath, files.pathJoin(platformPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
       files.writeFile(
         files.pathJoin(platformPath, 'README'),
-        "This is an auto-generated Ant project for your Android application.\n\n" +
+        "This is an auto-generated Gradle project for your Android application.\n\n" +
         "Instructions for publishing your Android app to Play Store can be found at:\n" +
           "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
         "utf8");
@@ -961,14 +961,8 @@ var buildCommand = function (options) {
   files.rm_recursive(buildDir);
 };
 
-var findApkPath = function (dirPath) {
-  var apkPath = _.find(files.readdir(dirPath), function (filePath) {
-    return files.pathExtname(filePath) === '.apk';
-  });
-
-  if (! apkPath)
-    throw new Error('The APK file for the Android build was not found.');
-  return files.pathJoin(dirPath, apkPath);
+var findApkPath = function (dirPath, debug) {
+  return files.pathJoin(dirPath, 'outputs', 'apk', debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2016,7 +2010,7 @@ main.registerCommand({
   var tmpDir = files.mkdtemp('meteor-ssh-');
   var idpath = tmpDir + '/id';
   maybeLog("Writing ssh key to " + idpath);
-  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0400});
+  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0o400});
 
   // Add the known host key to a custom known hosts file.
   var hostpath = tmpDir + '/host';
@@ -2160,4 +2154,19 @@ main.registerCommand({
     Console.info('url');
   if (options['delete'])
     Console.info('delete');
+});
+
+///////////////////////////////////////////////////////////////////////////////
+// throw-error
+///////////////////////////////////////////////////////////////////////////////
+
+// Dummy test command. Used to test that stack traces work from an installed
+// Meteor tool.
+
+main.registerCommand({
+  name: 'throw-error',
+  hidden: true,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function () {
+  throw new Error("testing stack traces!"); // #StackTraceTest this line is found in tests/source-maps.js
 });

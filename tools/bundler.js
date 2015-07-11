@@ -765,7 +765,12 @@ _.extend(Target.prototype, {
 
           // Both CSS and JS files can have source maps
           if (resource.sourceMap) {
-            f.setSourceMap(resource.sourceMap, files.pathDirname(relPath));
+            // XXX BBP we used to set sourceMapRoot to
+            // files.pathDirname(relPath) but it's unclear why.  With the
+            // currently generated source map file names, it works without it
+            // and doesn't work well with it... maybe?  we were getting
+            // 'packages/packages/foo/bar.js'
+            f.setSourceMap(resource.sourceMap, null);
           }
 
           self[resource.type].push(f);
@@ -1667,9 +1672,10 @@ _.extend(JsImageTarget.prototype, {
 // options specific to this subclass:
 // - clientTarget: the ClientTarget to serve up over HTTP as our client
 // - releaseName: the Meteor release name (for retrieval at runtime)
-var ServerTarget = function (options) {
+var ServerTarget = function (options, ...args) {
   var self = this;
-  JsImageTarget.apply(this, arguments);
+
+  JsImageTarget.call(self, options, ...args);
 
   self.clientTargets = options.clientTargets;
   self.releaseName = options.releaseName;
@@ -2219,7 +2225,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
     sources: options.sources || [],
     // it is correct to set slash and not files.pathSep because serverRoot is a
     // url path and not a file system path
-    serveRoot: '/',
+    serveRoot: options.serveRoot || '/',
     npmDependencies: options.npmDependencies,
     npmDir: options.npmDir
   });

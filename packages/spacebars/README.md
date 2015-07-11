@@ -404,8 +404,8 @@ data context, another variable) with a short-hand within the template:
 
 ```handlebars
 {{#let name=person.bio.firstName color=generateColor}}
-  <div>{{name}} get a {{color}} card!</div>
-{{/each}}
+  <div>{{name}} gets a {{color}} card!</div>
+{{/let}}
 ```
 
 Variables introduced this way take precedence over names of templates, global
@@ -494,6 +494,25 @@ We can write {{foo}} and it doesn't matter.
 ```
 
 Comment tags can be used wherever other template tags are allowed.
+
+## Nested sub-expressions
+
+Sometimes an argument to a helper call is best expressed as a return value of
+some other expression. For this and other cases, one can use parentheses to
+express the evaluation order of nested expressions.
+
+```handlebars
+{{capitalize (getSummary post)}}
+```
+
+In this example, the result of the `getSummary` helper call will be passed to
+the `capitalize` helper.
+
+Sub-expressions can be used to calculate key-word arguments, too:
+
+```handlebars
+{{> tmpl arg=(helper post)}}
+```
 
 ## HTML Dialect
 

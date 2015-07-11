@@ -147,10 +147,11 @@ _.extend(PackageAPI.prototype, {
    * off version names for core packages. You may also specify constraints,
    * such as `my:forms@=1.0.0` (this package demands `my:forms` at `1.0.0` exactly),
    * or `my:forms@1.0.0 || =2.0.1` (`my:forms` at `1.x.y`, or exactly `2.0.1`).
-   * @param {String} [architecture] If you only use the package on the
+   * @param {String|String[]} [architecture] If you only use the package on the
    * server (or the client), you can pass in the second argument (e.g.,
    * `'server'`, `'client'`, `'web.browser'`, `'web.cordova'`) to specify
-   * what architecture the package is used with.
+   * what architecture the package is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    * @param {Object} [options]
    * @param {Boolean} options.weak Establish a weak dependency on a
    * package. If package A has a weak dependency on package B, it means
@@ -221,11 +222,21 @@ _.extend(PackageAPI.prototype, {
   // using them to also get symbols or plugins from their components.
 
   /**
+   *
    * @memberOf PackageAPI
-   * @summary Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]
+   * @summary Give users of this package access to another package (by passing
+   * in the string `packagename`) or a collection of packages (by passing in
+   * an array of strings [`packagename1`, `packagename2`]
    * @locus package.js
    * @instance
-   * @param {String|String[]} packageSpecs Name of a package, or array of package names, with an optional @version component for each.
+   * @param {String|String[]} packageNames Name of a package, or array of
+   * package names, with an optional @version component for each.
+   * @param {String|String[]} [architecture] If you only use the package on
+   * the server (or the client), you can pass in the second argument (e.g.,
+   * `'server'`, `'client'`, `'web.browser'`, `'web.cordova'`) to specify what
+   * architecture the package is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova',
+   * 'os.linux']`.
    */
   imply: function (names, arch) {
     var self = this;
@@ -277,11 +288,16 @@ _.extend(PackageAPI.prototype, {
    * @instance
    * @summary Specify the source code for your package.
    * @locus package.js
-   * @param {String|String[]} filename Name of the source file, or array of strings of source file names.
-   * @param {String} [architecture] If you only want to export the file
+   * @param {String|String[]} filename Name of the source file, or array of
+   * strings of source file names.
+   * @param {String|String[]} [architecture] If you only want to export the file
    * on the server (or the client), you can pass in the second argument
    * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
-   * what architecture the file is used with.
+   * what architecture the file is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
+   * @param {Object} [fileOptions] Options that will be passed to build
+   * plugins. For example, for JavaScript files, you can pass `{bare: true}`
+   * to not wrap the individual file in its own closure.
    */
   addFiles: function (paths, arch, fileOptions) {
     var self = this;
@@ -330,9 +346,22 @@ _.extend(PackageAPI.prototype, {
   /**
    * @memberOf PackageAPI
    * @instance
-   * @summary Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorRelease`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you can write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you later write `api.use('jquery')`, it will be equivalent to `api.use('jquery@1.0.0')`. You may specify an array of multiple releases, in which case the default value for constraints will be the "or" of the versions from each release: `api.versionsFrom(['METEOR@0.9.0', 'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as `api.use('jquery@1.0.0 || 2.0.0')`.
+   * @summary Use versions of core packages from a release. Unless provided,
+   * all packages will default to the versions released along with
+   * `meteorRelease`. This will save you from having to figure out the exact
+   * versions of the core packages you want to use. For example, if the newest
+   * release of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you
+   * can write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you
+   * later write `api.use('jquery')`, it will be equivalent to
+   * `api.use('jquery@1.0.0')`. You may specify an array of multiple releases,
+   * in which case the default value for constraints will be the "or" of the
+   * versions from each release: `api.versionsFrom(['METEOR@0.9.0',
+   * 'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as
+   * `api.use('jquery@1.0.0 || 2.0.0')`.
    * @locus package.js
-   * @param {String | String[]} meteorRelease Specification of a release: track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the default release track `METEOR`.
+   * @param {String | String[]} meteorRelease Specification of a release:
+   * track@version. Just 'version' (e.g. `"0.9.0"`) is sufficient if using the
+   * default release track `METEOR`. Can be an array of specifications.
    */
   versionsFrom: function (releases) {
     var self = this;
@@ -388,15 +417,24 @@ _.extend(PackageAPI.prototype, {
   // @param options 'testOnly', boolean.
 
   /**
+   *
    * @memberOf PackageAPI
    * @instance
-   * @summary Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package.
+   * @summary Export package-level variables in your package. The specified
+   * variables (declared without `var` in the source code) will be available
+   * to packages that use this package.
    * @locus package.js
-   * @param {String} exportedObject Name of the object.
-   * @param {String} [architecture] If you only want to export the object
-   * on the server (or the client), you can pass in the second argument
-   * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
-   * what architecture the export is used with.
+   * @param {String|String[]} exportedObjects Name of the object to export, or
+   * an array of object names.
+   * @param {String|String[]} [architecture] If you only want to export the
+   * object on the server (or the client), you can pass in the second argument
+   * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify what
+   * architecture the export is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova',
+   * 'os.linux']`.
+   * @param {Object} [exportOptions]
+   * @param {Boolean} exportOptions.testOnly If true, this symbol will only be
+   * exported when running tests for this package.
    */
   export: function (symbols, arch, options) {
     var self = this;

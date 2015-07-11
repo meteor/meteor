@@ -232,10 +232,10 @@ exports.parsePackageAndVersion = function (packageAtVersionString, options) {
     error = new Error("Malformed package version: " +
                       JSON.stringify(packageAtVersionString));
   } else {
-    var package = packageAtVersionString.slice(0, separatorPos);
+    var packageName = packageAtVersionString.slice(0, separatorPos);
     var version = packageAtVersionString.slice(separatorPos+1);
     try {
-      packageVersionParser.validatePackageName(package);
+      packageVersionParser.validatePackageName(packageName);
       // validate the version, ignoring the parsed result:
       packageVersionParser.parse(version);
     } catch (e) {
@@ -245,7 +245,7 @@ exports.parsePackageAndVersion = function (packageAtVersionString, options) {
       error = e;
     }
     if (! error) {
-      return { package: package, version: version };
+      return { package: packageName, version: version };
     }
   }
   // `error` holds an Error
@@ -466,10 +466,18 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   }
 };
 
+exports.isUrlWithFileScheme = function (x) {
+  return /^file:\/\/.+/.test(x);
+};
+
 exports.isUrlWithSha = function (x) {
   // For now, just support http/https, which is at least less restrictive than
   // the old "github only" rule.
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+};
+
+exports.isPathRelative = function (x) {
+  return x.charAt(0) !== '/';
 };
 
 // If there is a version that isn't exact, throws an Error with a
@@ -491,7 +499,8 @@ exports.ensureOnlyExactVersions = function (dependencies) {
   });
 };
 exports.isExactVersion = function (version) {
-  return semver.valid(version) || exports.isUrlWithSha(version);
+  return semver.valid(version) || exports.isUrlWithSha(version)
+    || exports.isUrlWithFileScheme(version);
 };
 
 
