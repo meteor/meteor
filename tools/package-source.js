@@ -225,6 +225,11 @@ var SourceArch = function (pkg, options) {
   // In most places, instead of using 'uses' directly, you want to use
   // something like compiler.eachUsedUnibuild so you also take into
   // account implied packages.
+  //
+  // Note that if `package` starts with 'isobuild:', it actually represents a
+  // dependency on a feature of the Isobuild build tool, not a real package. You
+  // need to be aware of this when processing a `uses` array, which is another
+  // reason to use eachUsedUnibuild instead.
   self.uses = options.uses || [];
 
   // Packages which are "implied" by using this package. If a unibuild X
@@ -1364,6 +1369,8 @@ _.extend(PackageSource.prototype, {
   // Return dependency metadata for all unibuilds, in the format needed
   // by the package catalog.
   //
+  // This *DOES* include isobuild:* pseudo-packages!
+  //
   // Options:
   // - logError: if true, if something goes wrong, log a buildmessage
   //   and return null rather than throwing an exception.
@@ -1390,6 +1397,17 @@ _.extend(PackageSource.prototype, {
   // need to load those dependencies (including implied dependencies) which we
   // know contain plugins first, plus the transitive closure of all the packages
   // we depend on which contain a plugin. This seems good enough, though.)
+  //
+  // Note that this method filters out isobuild:* pseudo-packages, so it is NOT
+  // to be used to create input to Version Solver (see
+  // _computeDependencyMetadata for that).
+  //
+  // Note also that "load" here specifically means "load into the IsopackCache
+  // at build time", not "load into a running Meteor app at run
+  // time". Specifically, weak constraints do create a run-time load order
+  // dependency (if the package is in the app at all) but they do not create a
+  // build-time IsopackCache load order dependency (because weak dependencies do
+  // not provide plugins).
   getPackagesToLoadFirst: function (packageMap) {
     var self = this;
     var packages = {};
@@ -1398,8 +1416,12 @@ _.extend(PackageSource.prototype, {
       // contribute to a plugin).
       if (use.weak || use.unordered)
         return;
-      var packageInfo = packageMap.getInfo(use.package);
+      // Only include real packages, not isobuild:* pseudo-packages.
+      if (compiler.isIsobuildFeaturePackage(use.package)) {
+        return;
+      }
 
+      var packageInfo = packageMap.getInfo(use.package);
       if (! packageInfo)
         throw Error("Depending on unknown package " + use.package);
       packages[use.package] = true;
@@ -1419,7 +1441,9 @@ _.extend(PackageSource.prototype, {
       // no way to specify weak/unordered. Much like an app.
       _.each(info.use, function (spec) {
         var parsedSpec = splitConstraint(spec);
-        packages[parsedSpec.package] = true;
+        if (! compiler.isIsobuildFeaturePackage(parsedSpec.package)) {
+          packages[parsedSpec.package] = true;
+        }
       });
     });
     return _.keys(packages);
@@ -1531,6 +1555,8 @@ _.extend(PackageSource.prototype, {
   // null if there is a dependency that doesn't have the same
   // constraint across all unibuilds (and, if logError is true, log a
   // buildmessage error).
+  //
+  // This *DOES* include isobuild:* pseudo-packages!
   //
   // For options, see getDependencyMetadata.
   _computeDependencyMetadata: function (options) {

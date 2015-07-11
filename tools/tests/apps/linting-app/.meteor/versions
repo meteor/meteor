@@ -6,7 +6,6 @@ blaze-tools@1.0.3
 boilerplate-generator@1.0.3
 callback-hook@1.0.3
 check@1.0.5
-compiler-plugin@1.0.0
 ddp@1.2.0
 ddp-client@1.2.0
 ddp-common@1.2.0
@@ -24,7 +23,6 @@ jquery@1.11.3_2
 jshint@0.0.1
 json@1.0.3
 launch-screen@1.0.3
-linter-plugin@1.0.0
 livedata@1.0.13
 logging@1.0.8
 meteor@1.1.6

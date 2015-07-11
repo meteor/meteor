@@ -7,9 +7,6 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "lintJshint",
-  use: [
-    'linter-plugin'
-  ],
   sources: [
     'plugin/lint-jshint.js'
   ],
@@ -19,6 +16,7 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function(api) {
+  api.use('isobuild:linter-plugin@1.0.0');
 });
 
 Package.onTest(function(api) {

@@ -18,8 +18,7 @@ Package.registerBuildPlugin({
   // weak dependency.
   use: [
     'minifiers',
-    'spacebars-compiler',
-    'compiler-plugin'
+    'spacebars-compiler'
   ],
   sources: [
     'plugin/html_scanner.js',
@@ -39,6 +38,8 @@ Package.onUse(function (api) {
   api.export('Template', 'client');
 
   api.use('underscore'); // only the subset in packages/blaze/microscore.js
+
+  api.use('isobuild:compiler-plugin@1.0.0');
 
   // html_scanner.js emits client code that calls Meteor.startup and
   // Blaze, so anybody using templating (eg apps) need to implicitly use

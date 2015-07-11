@@ -5,7 +5,6 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: 'compileStylusBatch',
-  use: ['compiler-plugin'],
   sources: [
     'plugin/compile-stylus.js'
   ],
@@ -14,6 +13,10 @@ Package.registerBuildPlugin({
     nib: "1.1.0",
     "lru-cache": "2.6.4"
   }
+});
+
+Package.onUse(function (api) {
+  api.use('isobuild:compiler-plugin@1.0.0');
 });
 
 Package.onTest(function (api) {

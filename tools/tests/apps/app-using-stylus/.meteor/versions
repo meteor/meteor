@@ -6,7 +6,6 @@ blaze-tools@1.0.3
 boilerplate-generator@1.0.3
 callback-hook@1.0.3
 check@1.0.5
-compiler-plugin@1.0.0
 ddp@1.2.0
 ddp-client@1.2.0
 ddp-common@1.2.0

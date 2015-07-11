@@ -125,12 +125,14 @@ var Isopack = function () {
 
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
   // Plugins are package-supplied classes and functions that can change the
-  // build process: introduce a new file processor (compiler, minifier, linter)
-  // or a new command.
-  // XXX (right now only file processors are supported)
+  // build process: introduce a new source processor (compiler, minifier,
+  // linter)
   self.plugins = {};
 
   self.cordovaDependencies = {};
+
+  // isobuild:* pseudo-packages which this package depends on.
+  self.isobuildFeatures = [];
 
   // -- Information for up-to-date checks --
   // Data in this section is only set if the Isopack was directly created by
@@ -317,6 +319,7 @@ _.extend(Isopack.prototype, {
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
     self.pluginCacheDir = options.pluginCacheDir || null;
+    self.isobuildFeatures = options.isobuildFeatures;
   },
 
   // Programmatically add a unibuild to this Isopack. Should only be
@@ -478,9 +481,7 @@ _.extend(Isopack.prototype, {
         // the important case for debugging. it'd be nice to get this
         // case right.)
       }, function () {
-        // Make a new Plugin API object for this plugin; each plugin needs its
-        // own object so that it can be mutated by packages like
-        // compiler-plugin.
+        // Make a new Plugin API object for this plugin.
         var Plugin = self._makePluginApi();
         plugin.load({ Plugin: Plugin });
       });
@@ -551,7 +552,17 @@ _.extend(Isopack.prototype, {
       },
 
       _registerSourceProcessor: function (options, factory,
-                                          {sourceProcessorSet, methodName}) {
+                                          {sourceProcessorSet, methodName,
+                                           featurePackage}) {
+        if (!isopack.featureEnabled(featurePackage)) {
+          // This error is OK because we only define 1.0.0 for each of these
+          // feature packages (in compiler.KNOWN_ISOBUILD_FEATURE_PACKAGES).
+          buildmessage.error(
+            `your package must \`api.use('${ featurePackage }@1.0.0')\` in ` +
+              `order for its plugins to call Plugin.${ methodName }`);
+          return;
+        }
+
         const hasExtensions = (options && options.extensions &&
                                options.extensions instanceof Array &&
                                options.extensions.length > 0);
@@ -588,46 +599,24 @@ _.extend(Isopack.prototype, {
       // XXX BBP doc
       //
       // Note: It's important to ensure that all plugins that want to call
-      // plugin compiler use the compiler-plugin module (which itself will rely
-      // on a version of meteor that requires this tool to exist), so that
+      // plugin compiler use the isobuild:compiler-plugin fake package, so that
       // Version Solver will not let you use registerCompiler plugins with old
-      // versions of the tool.  We implement that by making compiler-plugin
-      // define Plugin.registerCompiler.  If you call
-      // Plugin._doNotCallThisDirectly_registerCompiler directly in your plugin,
-      // you'll be routing around this logic and you may end up with situations
-      // where people with older versions of Meteor end up using your package
-      // and it mysteriously doesn't work. So don't do that.
-      _doNotCallThisDirectly_registerCompiler: function (options, factory) {
+      // versions of the tool.
+      registerCompiler: function (options, factory) {
         Plugin._registerSourceProcessor(options, factory, {
           sourceProcessorSet: isopack.sourceProcessors.compiler,
-          methodName: "registerCompiler"
+          methodName: "registerCompiler",
+          featurePackage: "isobuild:compiler-plugin"
         });
-      },
-
-      // This function gets overridden in your plugin when it uses
-      // compiler-plugin.
-      registerCompiler: function () {
-        buildmessage.error(
-          "your plugin must `use: ['compiler-plugin']` in order to call "
-            + "Plugin.registerCompiler"
-        );
       },
 
       // XXX BBP doc
-      _doNotCallThisDirectly_registerLinter: function (options, factory) {
+      registerLinter: function (options, factory) {
         Plugin._registerSourceProcessor(options, factory, {
           sourceProcessorSet: isopack.sourceProcessors.linter,
-          methodName: "registerLinter"
+          methodName: "registerLinter",
+          featurePackage: "isobuild:linter-plugin"
         });
-      },
-
-      // This function gets overridden in your plugin when it uses
-      // linter-plugin.
-      registerLinter: function () {
-        buildmessage.error(
-          "your plugin must `use: ['linter-plugin']` in order to call "
-            + "Plugin.registerLinter"
-        );
       },
 
       // The minifier plugins can fill into 2 types of minifiers: CSS or JS.
@@ -635,7 +624,7 @@ _.extend(Isopack.prototype, {
       // compress the app code and each package's code separately.
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
-      _doNotCallThisDirectly_registerMinifier: function (options, factory) {
+      registerMinifier: function (options, factory) {
         var badUsedExtension = _.find(options.extensions, function (ext) {
           return ! _.contains(['js', 'css'], ext);
         });
@@ -652,17 +641,9 @@ _.extend(Isopack.prototype, {
 
         Plugin._registerSourceProcessor(options, factory, {
           sourceProcessorSet: isopack.sourceProcessors.minifier,
-          methodName: "registerMinifier"
+          methodName: "registerMinifier",
+          featurePackage: "isobuild:minifier-plugin"
         });
-      },
-
-      // This function gets overridden in your plugin when it uses
-      // minifier-plugin.
-      registerMinifier: function () {
-        buildmessage.error(
-          "your plugin must `use: ['minifier-plugin']` in order to call "
-            + "Plugin.registerMinifier"
-        );
       },
 
       nudge: function () {
@@ -879,6 +860,13 @@ _.extend(Isopack.prototype, {
         declaredExports = unibuildJson.declaredExports || [];
       }
 
+      unibuildJson.uses && unibuildJson.uses.forEach((use) => {
+        if (!use.weak && compiler.isIsobuildFeaturePackage(use.package) &&
+            self.isobuildFeatures.indexOf(use.package) === -1) {
+          self.isobuildFeatures.push(use.package);
+        }
+      });
+
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -917,13 +905,13 @@ _.extend(Isopack.prototype, {
   // - includePreCompilerPluginIsopackVersions: By default, saveToPath only
   //   creates an isopack of format 'isopack-2', with unibuilds of format
   //   'isopack-2-unibuild'.  These isopacks may contain "source" resources,
-  //   which are processed at *bundle* time by compiler plugins.  They cannot
-  //   be properly processed by older tools.  If this flag is set, saveToPath
-  //   also tries to save data for older formats (isopack-1 and
-  //   unipackage-pre2), converting JS and CSS "source" resources into "prelink"
-  //   and "css" resources.  This is not possible if there are "source"
-  //   resources other than JS or CSS; however, such packages must indirectly
-  //   depend on the "compiler-plugin" package which is not compatible with
+  //   which are processed at *bundle* time by compiler plugins.  They cannot be
+  //   properly processed by older tools.  If this flag is set, saveToPath also
+  //   tries to save data for older formats (isopack-1 and unipackage-pre2),
+  //   converting JS and CSS "source" resources into "prelink" and "css"
+  //   resources.  This is not possible if there are "source" resources other
+  //   than JS or CSS; however, such packages must indirectly depend on the
+  //   "isobuild:compiler-plugin" pseudo-package which is not compatible with
   //   older releases.  For packages that can't be converted to the older
   //   format, this function silently only saves the newer format.  (The point
   //   of this flag is allow us to optimize cases that never need to write the
@@ -1538,7 +1526,13 @@ _.extend(Isopack.prototype, {
     return watchSet;
   }),
 
-  // Similar to PackageSource.getPackagesToLoadFirst.
+  // Similar to PackageSource.getPackagesToLoadFirst, but doesn't include
+  // packages used by plugins, because plugin dependencies are already
+  // statically included in this built Isopack. Used by
+  // IsopackCache._ensurePackageLoaded.
+  //
+  // Like getPackagesToLoadFirst, it filters out isobuild:* pseudo-packages and
+  // should not be used to create input to Version Solver.
   getStrongOrderedUsedAndImpliedPackages: Profile(
     "Isopack#getStrongOrderedUsedAndImpliedPackages", function () {
     var self = this;
@@ -1546,6 +1540,10 @@ _.extend(Isopack.prototype, {
     var processUse = function (use) {
       if (use.weak || use.unordered)
         return;
+      // Only include real packages, not isobuild:* pseudo-packages.
+      if (compiler.isIsobuildFeaturePackage(use.package)) {
+        return;
+      }
       packages[use.package] = true;
     };
 
@@ -1555,6 +1553,10 @@ _.extend(Isopack.prototype, {
     });
     return _.keys(packages);
   }),
+
+  featureEnabled(featurePackageName) {
+    return this.isobuildFeatures.indexOf(featurePackageName) !== -1;
+  },
 
   _getServePath: function (pathInPackage) {
     var self = this;

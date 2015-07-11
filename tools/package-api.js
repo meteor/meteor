@@ -268,6 +268,17 @@ _.extend(PackageAPI.prototype, {
         continue;
       }
 
+      // api.imply('isobuild:compiler-plugin') doesn't really make any sense. If
+      // we change our mind and think it makes sense, we can always implement it
+      // later...
+      if (compiler.isIsobuildFeaturePackage(parsed.package)) {
+        buildmessage.error(
+          `to declare that your package requires the build tool feature ` +
+            `'{parsed.package}', use 'api.use', not 'api.imply'`);
+        // recover by ignoring
+        continue;
+      }
+
       forAllMatchingArchs(arch, function (a) {
         // We don't allow weak or unordered implies, since the main
         // purpose of imply is to provide imports and plugins.

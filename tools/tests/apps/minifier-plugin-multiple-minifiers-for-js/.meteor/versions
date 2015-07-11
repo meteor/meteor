@@ -27,7 +27,6 @@ local-plugin-2@0.0.0
 logging@1.0.8
 meteor@1.1.6
 meteor-platform@1.2.2
-minifier-plugin@1.0.0
 minifiers@1.1.5
 minimongo@1.0.8
 mobile-status-bar@1.0.4

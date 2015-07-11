@@ -15,6 +15,7 @@ var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('./profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
+import { startsWith } from './utils.js';
 
 var compiler = exports;
 
@@ -127,6 +128,17 @@ compiler.compile = Profile(function (packageSource, options) {
     }
   }
 
+  var isobuildFeatures = [];
+  packageSource.architectures.forEach((sourceArch) => {
+    sourceArch.uses.forEach((use) => {
+      if (!use.weak && isIsobuildFeaturePackage(use.package) &&
+          isobuildFeatures.indexOf(use.package) === -1) {
+        isobuildFeatures.push(use.package);
+      }
+    });
+  });
+  isobuildFeatures = _.uniq(isobuildFeatures);
+
   var isopk = new isopack.Isopack;
   isopk.initFromOptions({
     name: packageSource.name,
@@ -139,7 +151,8 @@ compiler.compile = Profile(function (packageSource, options) {
     npmDiscards: packageSource.npmDiscards,
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly,
-    pluginCacheDir: options.pluginCacheDir
+    pluginCacheDir: options.pluginCacheDir,
+    isobuildFeatures
   });
 
   _.each(packageSource.architectures, function (architecture) {
@@ -714,6 +727,8 @@ export function getActivePluginPackages(isopk, {
 // Iterates over each in options.dependencies as well as unibuilds implied by
 // them. The packages in question need to already be built and in
 // options.isopackCache.
+//
+// Skips isobuild:* pseudo-packages.
 compiler.eachUsedUnibuild = function (
   options, callback) {
   buildmessage.assertInCapture();
@@ -735,6 +750,10 @@ compiler.eachUsedUnibuild = function (
 
   while (! _.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
+
+    // We only care about real packages, not isobuild:* psuedo-packages.
+    if (isIsobuildFeaturePackage(use.package))
+      continue;
 
     var usedPackage = isopackCache.getIsopack(use.package);
 
@@ -763,4 +782,15 @@ compiler.eachUsedUnibuild = function (
       usesToProcess.push(implied);
     });
   }
+};
+
+// Note: this code is duplicated in packages/constraint-solver/solver.js
+export function isIsobuildFeaturePackage(packageName) {
+  return startsWith(packageName, 'isobuild:');
+}
+
+export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
+  'isobuild:compiler-plugin': ['1.0.0'],
+  'isobuild:minifier-plugin': ['1.0.0'],
+  'isobuild:linter-plugin': ['1.0.0']
 };

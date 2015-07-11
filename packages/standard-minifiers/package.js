@@ -8,7 +8,6 @@ Package.describe({
 Package.registerBuildPlugin({
   name: "minifyStd",
   use: [
-    'minifier-plugin',
     'minifiers'
   ],
   npmDependencies: {
@@ -21,6 +20,7 @@ Package.registerBuildPlugin({
 });
 
 Package.onUse(function(api) {
+  api.use('isobuild:minifier-plugin@1.0.0');
 });
 
 Package.onTest(function(api) {
