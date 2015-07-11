@@ -974,19 +974,41 @@ var findApkPath = function (dirPath, debug) {
 main.registerCommand({
   name: 'lint',
   maxArgs: 0,
-  requiresApp: true,
+  requiresAppOrPackage: true,
   options: {
     'allow-incompatible-updates': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: options.appDir,
-    serverArchitectures: [archinfo.host()],
-    allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: true
-  });
-  var messages = buildmessage.capture(function () {
+  let projectContext = null;
+
+  // if the goal is to lint the package, don't include the whole app
+  if (options.packageDir) {
+    // similar to `meteor publish`, create a fake project
+    const tempProjectDir = files.mkdtemp('meteor-package-build');
+    projectContext = new projectContextModule.ProjectContext({
+      projectDir: tempProjectDir,
+      explicitlyAddedLocalPackageDirs: [options.packageDir],
+      packageMapFilename: files.pathJoin(options.packageDir, '.versions'),
+      alwaysWritePackageMap: true,
+      forceIncludeCordovaUnibuild: true,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: true
+    });
+  }
+
+  // linting the app
+  if (! projectContext && options.appDir) {
+    projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir,
+      serverArchitectures: [archinfo.host()],
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: true
+    });
+  }
+
+
+  const messages = buildmessage.capture(() => {
     projectContext.prepareProjectForBuild();
   });
   if (messages.hasMessages()) {
@@ -994,9 +1016,9 @@ main.registerCommand({
     throw main.ExitWithCode(2);
   }
 
-  var bundlePath = projectContext.getProjectLocalDirectory('build');
-  var bundler = require('./bundler.js');
-  var bundle = bundler.bundle({
+  const bundlePath = projectContext.getProjectLocalDirectory('build');
+  const bundler = require('./bundler.js');
+  const bundle = bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
     buildOptions: {
@@ -1004,8 +1026,9 @@ main.registerCommand({
     }
   });
 
+  const displayName = options.packageDir ? 'package' : 'app';
   if (bundle.errors) {
-    Console.error("Errors building your app:\n\n" + bundle.errors.formatMessages());
+    Console.error("Errors building your ${displayName}:\n\n" + bundle.errors.formatMessages());
     return 1;
   }
 
