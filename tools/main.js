@@ -46,6 +46,8 @@ function Command(options) {
     minArgs: 0,
     options: {},
     requiresApp: false,
+    requiresPackage: false,
+    requiresAppOrPackage: false,
     requiresRelease: true,
     hidden: false,
     pretty: true,
@@ -185,6 +187,8 @@ function SpringboardToSpecificRelease(fullReleaseName, msg) {
 //     these, set requiresApp to a function that takes 'options' (same as
 //     would be received by the actual command function) and returns
 //     true or false.
+// - requiresPackage: defaults to false.
+// - requiresAppOrPackage: a combination of two options above, true/false.
 // - requiresRelease: defaults to true. Set to false if this command
 //   doesn't need a functioning Meteor release to be available (that
 //   is, if the command does not need the ability to resolve
@@ -1299,6 +1303,9 @@ Fiber(function () {
   // You can't specify this on a Refresh.Never command.
   var requiresPackage = command.evaluateOption('requiresPackage', options);
 
+  var requiresAppOrPackage =
+    command.evaluateOption('requiresAppOrPackage', options);
+
   // Some commands have different results when run from a package dir, but don't
   // strictly require it. These commands should use 'usesPackage' instead of
   // requiresPackage. (We want to avoid searching up the directory tree for
@@ -1306,7 +1313,7 @@ Fiber(function () {
   // allow us better control in the future).
   var usesPackage = command.usesPackage;
 
-  if (requiresPackage || usesPackage) {
+  if (requiresPackage || usesPackage || requiresAppOrPackage) {
     var packageDir = files.findPackageDir();
     if (packageDir)
       packageDir = files.pathResolve(packageDir);
@@ -1319,6 +1326,13 @@ Fiber(function () {
     Console.error(
       Console.command(commandName) +
         ": You're not in a Meteor package directory.");
+    process.exit(1);
+  }
+
+  if (requiresAppOrPackage && ! options.packageDir && ! options.appDir) {
+    Console.error(
+      Console.command(commandName) +
+        ": You're not in a Meteor app directory or a Meteor package directory.");
     process.exit(1);
   }
 
