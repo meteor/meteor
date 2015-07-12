@@ -155,7 +155,7 @@ export class SourceProcessorSet {
         this.addSourceProcessor(sourceProcessor);
       }
     });
-    _.each(otherSet.legacyHandlers, (info, extension) => {
+    _.each(otherSet._legacyHandlers, (info, extension) => {
       const { handler, packageDisplayName, isTemplate, archMatching } = info;
       this.addLegacyHandler(
         {extension, handler, packageDisplayName, isTemplate, archMatching});
