@@ -51,8 +51,13 @@ var mergeCss = function (css) {
       var ast = CssTools.parseCss(file.getContentsAsString(), parseOptions);
       ast.filename = filename;
     } catch (e) {
+      // XCXC regexp is incorrect
+      var match = e.message.match(/^(.*):(\d+):(\d+): (.*)$/gi);
+
       file.error({
-        message: e.message
+        message: match[1],
+        line: match[2],
+        column: match[3]
       });
 
       return { type: "stylesheet", stylesheet: { rules: [] },

@@ -375,6 +375,7 @@ _.extend(warehouse, {
                                          dontWriteFreshFile) {
     fiberHelpers.parallelEach(
       packagesToDownload, function (version, name) {
+        console.log(typeof name, typeof version)
         var packageDir = files.pathJoin(
           warehouseDirectory, 'packages', name, version);
         var packageUrl = WAREHOUSE_URLBASE + "/packages/" + name +

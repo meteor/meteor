@@ -1,3 +1,4 @@
+import buildmessage from './buildmessage.js';
 const buildPluginModule = require('./build-plugin.js');
 
 class InputFile extends buildPluginModule.InputFile {
@@ -23,6 +24,16 @@ class InputFile extends buildPluginModule.InputFile {
   }
   getArch() {
     return this._arch;
+  }
+
+  error({message, sourcePath, line, column, func}) {
+    const relPath = this.getPathInBundle();
+    buildmessage.error(message || ('error minifying ' + relPath), {
+      file: sourcePath || relPath,
+      line: line ? line : undefined,
+      column: column ? column : undefined,
+      func: func ? func : undefined
+    });
   }
 
   /**
