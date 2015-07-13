@@ -83,7 +83,7 @@ var runTest = function () {
       if (item.type !== 'js')
         return;
       // Just a hash, and no "packages/".
-      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path));
+      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path), item.path);
     });
   });
 
