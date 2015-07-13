@@ -60,8 +60,11 @@ _.extend(exports.SourceProcessor.prototype, {
 // Represents a set of SourceProcessors available in a given package. They may
 // not have conflicting extensions or filenames.
 export class SourceProcessorSet {
-  constructor(myPackageDisplayName,
-              { hardcodeJs, singlePackage, allowConflicts }) {
+  constructor(myPackageDisplayName, {
+    hardcodeJs,
+    singlePackage,
+    allowConflicts,
+  } = {}) {
     // For error messages only.
     this._myPackageDisplayName = myPackageDisplayName;
     // If this represents the SourceProcessors *registered* by a single package
@@ -206,13 +209,6 @@ export class SourceProcessorSet {
     // don't use iteration functions, so we can return (and start at #1)
     for (let i = 1; i < parts.length; i++) {
       const extension = parts.slice(i).join('.');
-      // We specially handle 'js' in the build tool, because you can't provide a
-      // plugin to handle 'js' files, because the plugin would need to be built
-      // with JavaScript itself!  Places that hardcode JS are tagged with
-      // #HardcodeJs.
-      if (this._hardcodeJs && extension === 'js') {
-        return new SourceClassification('extension', {extension});
-      }
 
       if (this._byExtension.hasOwnProperty(extension)) {
         return new SourceClassification('extension', {
@@ -220,6 +216,13 @@ export class SourceProcessorSet {
           extension,
           sourceProcessors: this._byExtension[extension]
         });
+      }
+
+      if (this._hardcodeJs && extension === 'js') {
+        // If there is no special sourceProcessor for handling a .js file,
+        // we can still classify it as extension/js, only without any
+        // source processors. #HardcodeJs
+        return new SourceClassification('extension', {extension});
       }
 
       if (this._legacyHandlers.hasOwnProperty(extension)) {
@@ -251,17 +254,28 @@ export class SourceProcessorSet {
   appReadDirectoryOptions(arch) {
     const include = [];
     const names = [];
+    let addedJs = false;
 
     function addExtension(ext) {
       include.push(new RegExp('\\.' + utils.quotemeta(ext) + '$'));
+      if (ext === 'js') {
+        addedJs = true;
+      }
     }
+
     _.each(this._byExtension, (sourceProcessors, ext) => {
       if (sourceProcessors.some(sp => sp.relevantForArch(arch))) {
         addExtension(ext);
       }
     });
     Object.keys(this._legacyHandlers).forEach(addExtension);
-    this._hardcodeJs && addExtension('js');
+
+    if (this._hardcodeJs && ! addedJs) {
+      // If there is no sourceProcessor for handling .js files, we still
+      // want to make sure they get picked up when we're reading the
+      // contents of app directories. #HardcodeJs
+      addExtension('js');
+    }
 
     _.each(this._byFilename, (sourceProcessors, filename) => {
       if (sourceProcessors.some(sp => sp.relevantForArch(arch))) {
