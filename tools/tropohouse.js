@@ -74,9 +74,10 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
         originalVersion === 'isopack-1') {
       var convertedMetadata = colonConverter.convertIsopack(metadata);
 
-      // Step 2. Write the isopack.json file
+      // Step 2. Write the isopack.json file.  Keep it as isopack-1;
+      // _saveIsopack later will upgrade to isopack-2.
       var isopackFileData = {};
-      isopackFileData['isopack-2'] = convertedMetadata;
+      isopackFileData['isopack-1'] = convertedMetadata;
 
       var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
 
