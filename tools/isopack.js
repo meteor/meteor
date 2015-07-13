@@ -1149,7 +1149,8 @@ _.extend(Isopack.prototype, {
           // If we're going to write a legacy prelink file later, track the
           // original form of the resource object (with the source in a Buffer,
           // etc) instead of the later version.  #HardcodeJs
-          if (writeLegacyBuilds && resource.type === "source" &&
+          if (writeLegacyBuilds &&
+              resource.type === "source" &&
               resource.extension == "js") {
             jsResourcesForLegacyPrelink.push({
               data: resource.data,
