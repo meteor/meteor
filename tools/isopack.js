@@ -246,7 +246,8 @@ Isopack.convertIsopackFormat = Profile(
 // of the isopack metadata. Returns null if there is no package here.
 Isopack.readMetadataFromDirectory =
   Profile("Isopack.readMetadataFromDirectory", function (isopackDirectory) {
-  var metadata;
+  var metadata = null;
+  let originalVersion = null;
 
   // deal with different versions of "isopack.json", backwards compatible
   var isopackJsonPath = files.pathJoin(isopackDirectory, "isopack.json");
@@ -257,9 +258,11 @@ Isopack.readMetadataFromDirectory =
 
     if (isopackJson['isopack-2']) {
       metadata = isopackJson['isopack-2'];
+      originalVersion = 'isopack-2';
     } else if (isopackJson['isopack-1']) {
       metadata = Isopack.convertIsopackFormat(
         isopackJson['isopack-1'], 'isopack-1', 'isopack-2');
+      originalVersion = 'isopack-1';
     } else {
       // This file is from the future and no longer supports this version
       throw new Error("Could not find isopack data supported any supported format (isopack-1 or isopack-2).\n" +
@@ -273,6 +276,7 @@ Isopack.readMetadataFromDirectory =
 
       metadata = Isopack.convertIsopackFormat(metadata,
         "unipackage-pre2", "isopack-2");
+      originalVersion = 'unipackage-pre2';
     }
 
     if (metadata.format !== "unipackage-pre2") {
@@ -287,7 +291,7 @@ Isopack.readMetadataFromDirectory =
     }
   }
 
-  return metadata;
+  return {metadata, originalVersion};
 });
 
 _.extend(Isopack.prototype, {
@@ -696,7 +700,7 @@ _.extend(Isopack.prototype, {
     // realpath'ing dir.
     dir = files.realpath(dir);
 
-    var mainJson = Isopack.readMetadataFromDirectory(dir);
+    var {metadata: mainJson} = Isopack.readMetadataFromDirectory(dir);
     if (! mainJson) {
       throw new Error("No metadata files found for isopack at: " + dir);
     }

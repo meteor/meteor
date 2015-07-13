@@ -64,70 +64,80 @@ exports._extractAndConvert = function (packageTarball, forceConvert) {
     // Step 1. Load the metadata from isopack.json and convert colons in the
     // file paths. We have already converted the colons in the actual files
     // while untarring.
-    var metadata = Isopack.readMetadataFromDirectory(targetDirectory);
-    var convertedMetadata = colonConverter.convertIsopack(metadata);
+    var {metadata, originalVersion} =
+          Isopack.readMetadataFromDirectory(targetDirectory);
 
-    // Step 2. Write the isopack.json file
-    // XXX BBP we only need this for pre-1.1 packages, and this will corrupt BBP
-    // packages, so detect the BBP case and don't do this.
-    var isopackFileData = {};
-    isopackFileData['isopack-2'] = convertedMetadata;
+    // By the time that isopack-2 came out (around Meteor 1.2) nobody should be
+    // making colon packages anyway, so let's not waste effort converting (and
+    // moreover, not bother to make sure the code below works for isopack-2).
+    if (originalVersion === 'unipackage-pre2' ||
+        originalVersion === 'isopack-1') {
+      var convertedMetadata = colonConverter.convertIsopack(metadata);
 
-    var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
+      // Step 2. Write the isopack.json file
+      var isopackFileData = {};
+      isopackFileData['isopack-2'] = convertedMetadata;
 
-    if (files.exists(isopackJsonPath)) {
-      files.chmod(isopackJsonPath, 0o777);
+      var isopackJsonPath = files.pathJoin(targetDirectory, "isopack.json");
+
+      if (files.exists(isopackJsonPath)) {
+        files.chmod(isopackJsonPath, 0o777);
+      }
+
+      files.writeFile(
+        isopackJsonPath,
+        new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
+        {mode: 0o444});
+
+      // Step 3. Clean up old unipackage.json file if it exists
+      files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
+
+      // Result: Now we are in a state where the isopack.json file paths are
+      // consistent with the paths in the downloaded tarball.
+
+      // Now, we have to convert the unibuild files in the same way.
+      _.each(convertedMetadata.builds, function (unibuildMeta) {
+        var unibuildJsonPath = files.pathJoin(targetDirectory,
+                                              unibuildMeta.path);
+        var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
+
+        if (unibuildJson.format !== "unipackage-unibuild-pre1") {
+          throw new Error("Unsupported isopack unibuild format: " +
+                          JSON.stringify(unibuildJson.format));
+        }
+
+        var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
+
+        files.chmod(unibuildJsonPath, 0o777);
+        files.writeFile(
+          unibuildJsonPath,
+          new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
+          {mode: 0o444});
+        // Result: Now we are in a state where the unibuild file paths are
+        // consistent with the paths in the downloaded tarball.
+      });
+
+      // Lastly, convert the build plugins, which are in the JSImage format
+      _.each(convertedMetadata.plugins, function (pluginMeta) {
+        var programJsonPath = files.pathJoin(targetDirectory, pluginMeta.path);
+        var programJson = JSON.parse(files.readFile(programJsonPath));
+
+        if (programJson.format !== "javascript-image-pre1") {
+          throw new Error("Unsupported plugin format: " +
+                          JSON.stringify(programJson.format));
+        }
+
+        var convertedPlugin = colonConverter.convertJSImage(programJson);
+
+        files.chmod(programJsonPath, 0o777);
+        files.writeFile(
+          programJsonPath,
+          new Buffer(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
+          {mode: 0o444});
+        // Result: Now we are in a state where the build plugin file paths are
+        // consistent with the paths in the downloaded tarball.
+      });
     }
-
-    files.writeFile(isopackJsonPath,
-      new Buffer(JSON.stringify(isopackFileData, null, 2), 'utf8'),
-      {mode: 0o444});
-
-    // Step 3. Clean up old unipackage.json file if it exists
-    files.unlink(files.pathJoin(targetDirectory, "unipackage.json"));
-
-    // Result: Now we are in a state where the isopack.json file paths are
-    // consistent with the paths in the downloaded tarball.
-
-    // Now, we have to convert the unibuild files in the same way.
-    _.each(convertedMetadata.builds, function (unibuildMeta) {
-      var unibuildJsonPath = files.pathJoin(targetDirectory, unibuildMeta.path);
-      var unibuildJson = JSON.parse(files.readFile(unibuildJsonPath));
-
-      if (unibuildJson.format !== "unipackage-unibuild-pre1") {
-        throw new Error("Unsupported isopack unibuild format: " +
-          JSON.stringify(unibuildJson.format));
-      }
-
-      var convertedUnibuild = colonConverter.convertUnibuild(unibuildJson);
-
-      files.chmod(unibuildJsonPath, 0o777);
-      files.writeFile(unibuildJsonPath,
-        new Buffer(JSON.stringify(convertedUnibuild, null, 2), 'utf8'),
-        {mode: 0o444});
-      // Result: Now we are in a state where the unibuild file paths are
-      // consistent with the paths in the downloaded tarball.
-    });
-
-    // Lastly, convert the build plugins, which are in the JSImage format
-    _.each(convertedMetadata.plugins, function (pluginMeta) {
-      var programJsonPath = files.pathJoin(targetDirectory, pluginMeta.path);
-      var programJson = JSON.parse(files.readFile(programJsonPath));
-
-      if (programJson.format !== "javascript-image-pre1") {
-        throw new Error("Unsupported plugin format: " +
-          JSON.stringify(programJson.format));
-      }
-
-      var convertedPlugin = colonConverter.convertJSImage(programJson);
-
-      files.chmod(programJsonPath, 0o777);
-      files.writeFile(programJsonPath,
-        new Buffer(JSON.stringify(convertedPlugin, null, 2), 'utf8'),
-        {mode: 0o444});
-      // Result: Now we are in a state where the build plugin file paths are
-      // consistent with the paths in the downloaded tarball.
-    });
   }
 
   return targetDirectory;
@@ -318,7 +328,8 @@ _.extend(exports.Tropohouse.prototype, {
     var downloadedArches = [];
 
     // Find out which arches we have by reading the isopack metadata
-    var packageMetadata = Isopack.readMetadataFromDirectory(packagePath);
+    var {metadata: packageMetadata} =
+          Isopack.readMetadataFromDirectory(packagePath);
 
     // packageMetadata is null if there is no package at packagePath
     if (packageMetadata) {
