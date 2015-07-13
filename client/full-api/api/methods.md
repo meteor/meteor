@@ -182,7 +182,22 @@ options about how the client executes the method.
 
 <h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
 
-A rate limiter added directly to DDP. The DDPRateLimiter allows you to add rules to limit calls by one or more of user IDs, IP addresses, method names and/or subscription names. The rate limiter is called on every method and subscription invocation. A default rule of limiting 'login' attempts to 5 calls every 10 seconds per IP address has been added to the [`Accounts base package`](#accounts_api). The rule can be removed by calling [`Accounts.removeDefaultRateLimit()`].
+The DDPRateLimiter allows users to add rules to limit calls to Meteor methods
+and subscriptions by one or more of user IDs, IP addresses, sessions, and
+method & subscription names. The rate limiter is called on every method and
+subscription invocation. A default rule of limiting login, password reset and
+new user creation  attempts to 5 calls every 10 seconds per session has been
+added to the [`accounts package`](#accounts_api). The rule can be removed by
+calling `Accounts.removeDefaultRateLimit()`.
+
+The DDPRateLimiter is configured with a set of rules. Each rule is a set of
+keys to be inspected with filters on those keys to specify all DDP messages
+that satisfy the rule. Each of these possible messages that satisfy the rule
+is given a bucket by creating a unique string composed of all the keys in the
+rule and the values from the message. After each rule's specified time
+interval, all the buckets are deleted. A rate limit is said to have been hit
+when a bucket has reached the rule's capacity, at which point errors will be
+returned for that input until the buckets are reset.
 
 {{> autoApiBox "DDPRateLimiter.addRule"}}
 {{> autoApiBox "DDPRateLimiter.removeRule"}}

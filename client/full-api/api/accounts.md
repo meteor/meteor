@@ -401,14 +401,14 @@ client, no arguments are passed.
 
 <h3 id="accounts_rate_limit"><span>Rate Limiting</span></h3>
 
-By default, there are rules added to the [`DDPRateLimiter`](#DDPRateLimiter)
+By default, there are rules added to the [`DDPRateLimiter`](#ddpratelimiter)
 that rate limit logins, new user registration and password reset calls to a
-limit of 5 requests per 10 seconds per IP address. These are a basic solution
+limit of 5 requests per 10 seconds per session. These are a basic solution
 to dictionary attacks where a malicious user attempts to guess the passwords
 of legitimate users by attempting all possible passwords.
 
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
-[`DDPRateLimiter`](#DDPRateLimiter) docs for more information.
+[`DDPRateLimiter`](#ddpratelimiter) docs for more information.
 
 {{/template}}
