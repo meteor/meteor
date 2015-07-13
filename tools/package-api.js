@@ -297,7 +297,10 @@ _.extend(PackageAPI.prototype, {
    * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    * @param {Object} [fileOptions] Options that will be passed to build
    * plugins. For example, for JavaScript files, you can pass `{bare: true}`
-   * to not wrap the individual file in its own closure.
+   * to not wrap the individual file in its own closure. To add a static asset,
+   * pass `{isAsset: true}`; use the `architecture` parameter to determine
+   * if this is a client-side asset served by the HTTP server or a server-side
+   * asset accessible to the `Assets` APIs.
    */
   addFiles: function (paths, arch, fileOptions) {
     var self = this;
