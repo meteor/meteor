@@ -8,7 +8,7 @@ Plugin.registerMinifier({
 function UglifyJSMinifier () {};
 
 UglifyJSMinifier.prototype.processFilesForTarget = function (files, options) {
-  var mode = options.mode;
+  var mode = options.minifyMode;
 
   // don't minify anything for development
   if (mode === 'development') {

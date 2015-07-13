@@ -485,7 +485,7 @@ _.extend(Target.prototype, {
   // options
   // - packages: packages to include (Isopack or 'foo'), per
   //   _determineLoadOrder
-  // - minify: 'development'/'production'
+  // - minifyMode: 'development'/'production'
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
@@ -517,12 +517,12 @@ _.extend(Target.prototype, {
         });
       });
       if (minifiersByExt.js) {
-        self.minifyJs(minifiersByExt.js, options.minify);
+        self.minifyJs(minifiersByExt.js, options.minifyMode);
       }
       // CSS is minified only for client targets.
       if (self instanceof ClientTarget) {
         if (minifiersByExt.css) {
-          self.minifyCss(minifiersByExt.css, options.minify);
+          self.minifyCss(minifiersByExt.css, options.minifyMode);
         }
       }
 
@@ -824,7 +824,7 @@ _.extend(Target.prototype, {
   }),
 
   // Minify the JS in this target
-  minifyJs: Profile("Target#minifyJs", function (minifierDef, mode) {
+  minifyJs: Profile("Target#minifyJs", function (minifierDef, minifyMode) {
     var self = this;
 
     // Avoid circular deps from top-level import.
@@ -841,7 +841,7 @@ _.extend(Target.prototype, {
     buildmessage.enterJob("minifying app code", function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, { mode: mode });
+        markedMinifier(sources, { minifyMode });
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -850,7 +850,8 @@ _.extend(Target.prototype, {
     self.js = _.flatten(_.map(sources, function (source) {
       return _.map(source._minifiedFiles, function (file) {
         var newFile = new File({
-          info: mode === 'production' ? 'minified js' : '?',
+          // XXX BBP what is this ? here?
+          info: minifyMode === 'production' ? 'minified js' : '?',
           data: new Buffer(file.data, 'utf8')
         });
         if (file.sourceMap) {
@@ -989,7 +990,7 @@ util.inherits(ClientTarget, Target);
 
 _.extend(ClientTarget.prototype, {
   // Minify the CSS in this target
-  minifyCss: Profile("ClientTarget#minifyCss", function (minifierDef, mode) {
+  minifyCss: Profile("ClientTarget#minifyCss", function (minifierDef, minifyMode) {
     var self = this;
 
     // Avoid circular deps from top-level import.
@@ -1006,7 +1007,7 @@ _.extend(ClientTarget.prototype, {
     buildmessage.enterJob("minifying app stylesheet", function () {
       try {
         var markedMinifier = buildmessage.markBoundary(minifier);
-        markedMinifier(sources, { mode: mode });
+        markedMinifier(sources, { minifyMode });
       } catch (e) {
         buildmessage.exception(e);
       }
@@ -1015,7 +1016,8 @@ _.extend(ClientTarget.prototype, {
     self.css = _.flatten(_.map(sources, function (source) {
       return _.map(source._minifiedFiles, function (file) {
         var newFile = new File({
-          info: mode === 'production' ? 'minified css' : '?',
+          // XXX BBP what is this ? ?
+          info: minifyMode === 'production' ? 'minified css' : '?',
           data: new Buffer(file.data, 'utf8')
         });
         if (file.sourceMap) {
@@ -1041,7 +1043,7 @@ _.extend(ClientTarget.prototype, {
   // the target
   // - nodePath: an array of paths required to be set in the NODE_PATH
   // environment variable.
-  write: Profile("ClientTarget#write", function (builder, {mode}) {
+  write: Profile("ClientTarget#write", function (builder, {minifyMode}) {
     var self = this;
 
     builder.reserve("program.json");
@@ -1089,7 +1091,7 @@ _.extend(ClientTarget.prototype, {
         let mapData = null;
 
         // don't need to do this in devel mode
-        if (mode === 'production') {
+        if (minifyMode === 'production') {
           mapData = antiXSSIPrepend(JSON.stringify(file.sourceMap));
         } else {
           mapData = new Buffer(JSON.stringify(file.sourceMap), 'utf8');
@@ -1726,15 +1728,15 @@ var writeTargetToPath = Profile(
     includeNodeModules,
     getRelativeTargetPath,
     previousBuilder,
-    mode
+    minifyMode
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
       previousBuilder
     });
 
-    var targetBuild =
-      target.write(builder, {includeNodeModules, getRelativeTargetPath, mode});
+    var targetBuild = target.write(
+      builder, {includeNodeModules, getRelativeTargetPath, minifyMode});
 
     builder.complete();
 
@@ -1783,7 +1785,7 @@ var writeSiteArchive = Profile(
     releaseName,
     getRelativeTargetPath,
     previousBuilders,
-    mode
+    minifyMode
   }) {
 
   const builders = {};
@@ -1859,7 +1861,7 @@ Find out more about Meteor at meteor.com.
           releaseName,
           getRelativeTargetPath,
           previousBuilder,
-          mode
+          minifyMode
         });
 
       builders[name] = targetBuilder;
@@ -1934,7 +1936,7 @@ Find out more about Meteor at meteor.com.
  *   ~/.meteor/packages/package/version/npm)
  *
  * - buildOptions: may include
- *   - minify: string, type of minification for the CSS and JS assets
+ *   - minifyMode: string, type of minification for the CSS and JS assets
  *     ('development'/'production', defaults to 'development')
  *   - serverArch: the server architecture to target (string, default
  *     archinfo.host())
@@ -1984,6 +1986,7 @@ exports.bundle = function ({
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs = buildOptions.webArchs ||
         projectContext.platformList.getWebArchs();
+  const minifyMode = buildOptions.minifyMode || 'development';
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -2019,7 +2022,7 @@ exports.bundle = function ({
 
       client.make({
         packages: [app],
-        minify: buildOptions.minify,
+        minifyMode: minifyMode,
         minifiers: options.minifiers || [],
         addCacheBusters: true
       });
@@ -2043,7 +2046,9 @@ exports.bundle = function ({
 
       server.make({
         packages: [app],
-        minify: 'development'
+        // Never minify on the server.
+        // XXX BBP This is weird. Why not leave this up to the minifier plugin?
+        minifyMode: 'development'
       });
 
       return server;
@@ -2073,8 +2078,8 @@ exports.bundle = function ({
     }
 
     var minifiers = null;
-    if (! _.contains(['development', 'production'], buildOptions.minify)) {
-        throw new Error('Unrecognized minification mode: ' + buildOptions.minify);
+    if (! _.contains(['development', 'production'], minifyMode)) {
+      throw new Error('Unrecognized minification mode: ' + minifyMode);
     }
     minifiers = compiler.getMinifiers(packageSource, {
       isopackCache: projectContext.isopackCache,
@@ -2122,7 +2127,7 @@ exports.bundle = function ({
       builtBy,
       releaseName,
       getRelativeTargetPath,
-      mode: buildOptions.minify
+      minifyMode: minifyMode
     };
 
     if (outputPath !== null) {

@@ -403,7 +403,7 @@ function doRunCommand (options) {
     debugPort: options['debug-port'],
     settingsFile: options.settings,
     buildOptions: {
-      minify: options.production ? 'production' : 'development',
+      minifyMode: options.production ? 'production' : 'development',
       includeDebug: ! options.production
     },
     rootUrl: process.env.ROOT_URL,
@@ -899,7 +899,7 @@ var buildCommand = function (options) {
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
-      minify: options.debug ? 'development' : 'production',
+      minifyMode: options.debug ? 'development' : 'production',
       // XXX is this a good idea, or should linux be the default since
       //     that's where most people are deploying
       //     default?  i guess the problem with using DEPLOY_ARCH as default
@@ -1007,7 +1007,6 @@ main.registerCommand({
       }, () => packageSource.initFromPackageDir(packageDir));
     });
 
-        
     main.captureAndExit("=> Errors while setting up package:", () =>
       // Read metadata and initialize catalog.
       projectContext.initializeCatalog()
@@ -1040,7 +1039,7 @@ main.registerCommand({
     projectContext: projectContext,
     outputPath: null,
     buildOptions: {
-      minify: 'development'
+      minifyMode: 'development'
     }
   });
 
@@ -1249,7 +1248,7 @@ main.registerCommand({
   projectContext.packageMapDelta.displayOnConsole();
 
   var buildOptions = {
-    minify: options.debug ? 'development' : 'production',
+    minifyMode: options.debug ? 'development' : 'production',
     includeDebug: options.debug,
     serverArch: buildArch
   };
@@ -1651,7 +1650,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
 
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
-    minify: options.production ? 'production' : 'development',
+    minifyMode: options.production ? 'production' : 'development',
     includeDebug: ! options.production
   };
 

@@ -61,7 +61,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: true }
+      buildOptions: { minifyMode: 'production' }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -93,7 +93,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: false }
+      buildOptions: { minifyMode: 'development' }
     });
     assert.strictEqual(result.errors, false);
 

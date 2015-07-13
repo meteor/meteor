@@ -10,7 +10,7 @@ Plugin.registerMinifier({
 function CssToolsMinifier () {};
 
 CssToolsMinifier.prototype.processFilesForTarget = function (files, options) {
-  var mode = options.mode;
+  var mode = options.minifyMode;
 
   if (! files.length) return;
 
