@@ -166,6 +166,24 @@ _.extend(ReactiveDict.prototype, {
 
   },
 
+  delete: function(key) {
+    var self    = this;
+    var oldKeys = self.keys;
+
+    _.each(oldKeys, function(value, oldKey) {
+      if (key == oldKey){
+        changed(self.keyDeps[oldKey]);
+        changed(self.keyValueDeps[oldKey][value]);
+        changed(self.keyValueDeps[oldKey]['undefined']);
+        delete self.keys[oldKey]; // clean up
+      }
+    });
+
+    // trigger a change regardless if any matching key found...
+    self.allDeps.changed();
+
+  },
+
   _setObject: function (object) {
     var self = this;
 
