@@ -167,8 +167,9 @@ _.extend(ReactiveDict.prototype, {
   },
 
   delete: function(key) {
-    var self    = this;
-    var oldKeys = self.keys;
+    var self      = this;
+    var oldKeys   = self.keys;
+    var didRemove = false;
 
     _.each(oldKeys, function(value, oldKey) {
       if (key == oldKey){
@@ -176,12 +177,12 @@ _.extend(ReactiveDict.prototype, {
         changed(self.keyValueDeps[oldKey][value]);
         changed(self.keyValueDeps[oldKey]['undefined']);
         delete self.keys[oldKey]; // clean up
+        self.allDeps.changed();
+        didRemove = true;
       }
     });
 
-    // trigger a change regardless if any matching key found...
-    self.allDeps.changed();
-
+    return didRemove;
   },
 
   _setObject: function (object) {

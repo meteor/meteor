@@ -88,7 +88,9 @@ Tinytest.add('ReactiveDict - delete(key) works', function (test) {
   test.equal(equalsUndefined, false);
   test.equal(all, {foo: 'bar', bar: 'foo'});
 
-  dict.delete('foo');
+  var didRemove = dict.delete('foo');
+  test.equal(didRemove, true);
+
   Tracker.flush();
 
   test.isUndefined(val);
@@ -96,4 +98,6 @@ Tinytest.add('ReactiveDict - delete(key) works', function (test) {
   test.equal(equalsUndefined, true);
   test.equal(all, {bar: 'foo'});
 
+  didRemove = dict.delete('barfoobar');
+  test.equal(didRemove, false);
 });
