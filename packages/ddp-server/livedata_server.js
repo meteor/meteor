@@ -580,12 +580,17 @@ _.extend(Session.prototype, {
         // reconnect.
         return;
 
+      // XXX It'd be much better if we had generic hooks where any package can
+      // hook into subscription handling, but in the mean while we special case
+      // ddp-rate-limiter package. This is also done for weak requirements to
+      // add the ddp-rate-limiter package in case we don't have Accounts. A
+      // user trying to use the ddp-rate-limiter must explicitly require it.
       if (Package['ddp-rate-limiter']) {
         var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
         var rateLimiterInput = {
           userId: self.userId,
           ipAddr: self.connectionHandle.clientAddress,
-          type: msg.msg,
+          type: "sub",
           name: msg.name,
           sessionId: self.id
         };
@@ -667,12 +672,16 @@ _.extend(Session.prototype, {
       });
 
       try {
+        // XXX It'd be better if we could hook into method handlers better but
+        // for now, we need to check if the ddp-rate-limiter exists since we
+        // have a weak requirement for the ddp-rate-limiter package to be added
+        // to our application.
         if (Package['ddp-rate-limiter']) {
           var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
           var rateLimiterInput = {
             userId: self.userId,
             ipAddr: self.connectionHandle.clientAddress,
-            type: msg.msg,
+            type: "method",
             name: msg.method,
             sessionId: self.id
           };
