@@ -23,6 +23,7 @@ var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
 var colonConverter = require('./colon-converter.js');
+var PackageSource = require('./package-source.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -980,27 +981,48 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
+  const {packageDir, appDir} = options;
+
   let projectContext = null;
 
   // if the goal is to lint the package, don't include the whole app
-  if (options.packageDir) {
+  if (packageDir) {
     // similar to `meteor publish`, create a fake project
     const tempProjectDir = files.mkdtemp('meteor-package-build');
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,
-      explicitlyAddedLocalPackageDirs: [options.packageDir],
-      packageMapFilename: files.pathJoin(options.packageDir, '.versions'),
+      explicitlyAddedLocalPackageDirs: [packageDir],
+      packageMapFilename: files.pathJoin(packageDir, '.versions'),
       alwaysWritePackageMap: true,
       forceIncludeCordovaUnibuild: true,
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
     });
+
+    const packageSource = new PackageSource();
+    main.captureAndExit(`Errors parsing the package:`, () => {
+      buildmessage.enterJob({
+        title: "reading package from `" + packageDir + "`",
+        rootPath: packageDir
+      }, () => packageSource.initFromPackageDir(packageDir));
+    });
+
+        
+    main.captureAndExit("=> Errors while setting up package:", () =>
+      // Read metadata and initialize catalog.
+      projectContext.initializeCatalog()
+    );
+
+    const constraint = utils.parsePackageConstraint(packageSource.name);
+
+    projectContext.projectConstraintsFile.removeAllPackages();
+    projectContext.projectConstraintsFile.addConstraints([constraint]);
   }
 
   // linting the app
-  if (! projectContext && options.appDir) {
+  if (! projectContext && appDir) {
     projectContext = new projectContextModule.ProjectContext({
-      projectDir: options.appDir,
+      projectDir: appDir,
       serverArchitectures: [archinfo.host()],
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: true
@@ -1008,13 +1030,9 @@ main.registerCommand({
   }
 
 
-  const messages = buildmessage.capture(() => {
+  main.captureAndExit("=> Errors prevented the build:", () => {
     projectContext.prepareProjectForBuild();
   });
-  if (messages.hasMessages()) {
-    Console.error("Errors prevented the build:\n\n" + messages.formatMessages());
-    throw main.ExitWithCode(2);
-  }
 
   const bundlePath = projectContext.getProjectLocalDirectory('build');
   const bundler = require('./bundler.js');
@@ -1028,8 +1046,10 @@ main.registerCommand({
 
   const displayName = options.packageDir ? 'package' : 'app';
   if (bundle.errors) {
-    Console.error("Errors building your ${displayName}:\n\n" + bundle.errors.formatMessages());
-    return 1;
+    Console.error(
+      `=> Errors building your ${displayName}:\n\n${bundle.errors.formatMessages()}`
+    );
+    throw main.ExitWithCode(2);
   }
 
   if (bundle.warnings) {

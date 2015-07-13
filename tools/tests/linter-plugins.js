@@ -115,6 +115,8 @@ selftest.define('linter plugins - linting package with `meteor lint`', () => {
     /package-server\.js:1:1: 'PackageGlobalVar'/,
     /package-server\.js:2:1: 'PermittedGlobal'/,
     /While linting files .* my-package .*Client/,
+    /package-client\.js:1:1: 'PackageGlobalVar'/,
+    /While linting files .* my-package .*Cordova/,
     /package-client\.js:1:1: 'PackageGlobalVar'/
   ];
 
