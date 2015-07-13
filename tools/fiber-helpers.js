@@ -2,9 +2,8 @@ var _ = require("underscore");
 var Fiber = require("fibers");
 var Future = require("fibers/future");
 
-exports.parallelEach = function (...args) {
-  var [collection, callback, context] = args;
-  var futures = _.map(collection, function () {
+exports.parallelEach = function (collection, callback, context) {
+  var futures = _.map(collection, function (...args) {
     return function () {
       return callback.apply(context, args);
     }.future()();
