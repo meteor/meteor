@@ -869,6 +869,8 @@ _.extend(Isopack.prototype, {
           resources.push({
             type: "source",
             extension: resource.extension,
+            usesDefaultSourceProcessor:
+              !! resource.usesDefaultSourceProcessor,
             data: data,
             path: resource.path,
             hash: resource.hash,
@@ -943,6 +945,33 @@ _.extend(Isopack.prototype, {
     });
   },
 
+  _canWriteLegacyBuilds(options) {
+    if (! options.includePreCompilerPluginIsopackVersions) {
+      return false;
+    }
+
+    function isResourceUnsafeForLegacyBuilds(resource) {
+      if (resource.type === "source") {
+        // This package cannot be represented as an isopack-1 Isopack if
+        // it uses a file implemented by registerCompiler other than the
+        // very basic JS and CSS types.
+        if (resource.extension === "js") {
+          // If this JS resource uses hard-coded support for plain old
+          // ES5, then it is safe to write as part of a legacy Isopack.
+          return ! resource.usesDefaultSourceProcessor;
+        }
+
+        return resource.extension !== "css";
+      }
+
+      return false;
+    }
+
+    return ! this.unibuilds.some(
+      unibuild => unibuild.resources.some(isResourceUnsafeForLegacyBuilds)
+    );
+  },
+
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
@@ -983,13 +1012,7 @@ _.extend(Isopack.prototype, {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
 
-      var writeLegacyBuilds = false;
-      if (options.includePreCompilerPluginIsopackVersions) {
-        // We will reset this to false if at any point later we determine that
-        // this package cannot be saved in the legacy format (because it uses a
-        // compiler plugin other than JS or CSS).
-        writeLegacyBuilds = true;
-      }
+      const writeLegacyBuilds = self._canWriteLegacyBuilds(options);
 
       var isopackBuildInfoJson = null;
       if (options.includeIsopackBuildInfo) {
@@ -1058,17 +1081,6 @@ _.extend(Isopack.prototype, {
         });
 
         var jsResourcesForLegacyPrelink = [];
-        if (writeLegacyBuilds) {
-          if (_.any(unibuild.resources, function (resource) {
-            return resource.type === "source" && resource.extension !== "js"
-              && resource.extension !== "css";
-          })) {
-            // This package cannot be represented as an isopack-1 Isopack
-            // because it uses a file implemented by registerCompiler other than
-            // the very basic JS and CSS types.
-            writeLegacyBuilds = false;
-          }
-        }
 
         // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
@@ -1174,6 +1186,8 @@ _.extend(Isopack.prototype, {
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
+            usesDefaultSourceProcessor:
+              resource.usesDefaultSourceProcessor || undefined,
             servePath: resource.servePath || undefined,
             path: resource.path || undefined,
             hash: resource.hash || undefined,

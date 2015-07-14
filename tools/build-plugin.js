@@ -222,7 +222,10 @@ export class SourceProcessorSet {
         // If there is no special sourceProcessor for handling a .js file,
         // we can still classify it as extension/js, only without any
         // source processors. #HardcodeJs
-        return new SourceClassification('extension', {extension});
+        return new SourceClassification('extension', {
+          extension,
+          usesDefaultSourceProcessor: true
+        });
       }
 
       if (this._legacyHandlers.hasOwnProperty(extension)) {
@@ -287,8 +290,14 @@ export class SourceProcessorSet {
 }
 
 class SourceClassification {
-  constructor(type, {legacyHandler, extension, sourceProcessors,
-                     legacyIsTemplate, arch} = {}) {
+  constructor(type, {
+    legacyHandler,
+    extension,
+    sourceProcessors,
+    usesDefaultSourceProcessor,
+    legacyIsTemplate,
+    arch,
+  } = {}) {
     const knownTypes = ['extension', 'filename', 'legacy-handler', 'wrong-arch',
                         'unmatched'];
     if (knownTypes.indexOf(type) === -1) {
@@ -346,6 +355,20 @@ class SourceClassification {
         throw Error('extension SourceClassification needs extension!');
       }
       this.extension = extension;
+    }
+
+    if (usesDefaultSourceProcessor) {
+      if (this.extension !== 'js' &&
+          this.extension !== 'css') {
+        // We only currently hard-code support for processing .js files
+        // when no source processor is registered (#HardcodeJs). Default
+        // support could conceivably be extended to .css files too, but
+        // anything else is almost certainly a mistake.
+        throw Error('non-JS/CSS file relying on default source processor?');
+      }
+      this.usesDefaultSourceProcessor = true;
+    } else {
+      this.usesDefaultSourceProcessor = false;
     }
   }
 
