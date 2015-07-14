@@ -7,17 +7,19 @@ OAuth.registerService('facebook', 2, null, function(query) {
 
   var response = getTokenResponse(query);
   var accessToken = response.accessToken;
-  var identity = getIdentity(accessToken);
+
+  // include all fields from facebook
+  // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
+  var whitelisted = ['id', 'email', 'name', 'first_name',
+      'last_name', 'link', 'gender', 'locale', 'age_range'];
+
+  var identity = getIdentity(accessToken, whitelisted);
 
   var serviceData = {
     accessToken: accessToken,
     expiresAt: (+new Date) + (1000 * response.expiresIn)
   };
 
-  // include all fields from facebook
-  // http://developers.facebook.com/docs/reference/login/public-profile-and-friend-list/
-  var whitelisted = ['id', 'email', 'name', 'first_name',
-      'last_name', 'link', 'username', 'gender', 'locale', 'age_range'];
 
   var fields = _.pick(identity, whitelisted);
   _.extend(serviceData, fields);
@@ -85,10 +87,14 @@ var getTokenResponse = function (query) {
   };
 };
 
-var getIdentity = function (accessToken) {
+var getIdentity = function (accessToken, fields) {
   try {
-    return HTTP.get("https://graph.facebook.com/v2.2/me", {
-      params: {access_token: accessToken}}).data;
+    return HTTP.get("https://graph.facebook.com/v2.4/me", {
+      params: {
+        access_token: accessToken,
+        fields: fields
+      }
+    }).data;
   } catch (err) {
     throw _.extend(new Error("Failed to fetch identity from Facebook. " + err.message),
                    {response: err.response});
