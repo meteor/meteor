@@ -1415,7 +1415,8 @@ _.extend(JsImage.prototype, {
         item.source = item.source.replace(
             /\n\/\/# sourceMappingURL=.+\n?$/g, '');
         item.source += "\n//# sourceMappingURL=" + sourceMapFileName + "\n";
-        loadItem.sourceMapRoot = item.sourceMapRoot;
+        if (item.sourceMapRoot)
+          loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
       loadItem.path = builder.writeToGeneratedFilename(
