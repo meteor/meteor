@@ -1,76 +1,29 @@
-// This file contains two classes:
-//  * Rule - the general structure of rate limiter rules
-//  * RateLimiter - a general rate limiter that stores rules and determines
-//  whether inputs are allowed
-//
-//  Rate limiters analyze a series of "inputs" (which are POJOs) by running
-//  them against a set of "rules". Rules specify which inputs they match by
-//  running configurable "matcher" functions on keys in the event object). A
-//  `check` method returns whether this input should be allowed, the time
-//  until the rate limit is reset and the number of calls remaining for this
-//  input. The number of calls that have currently occurred are kept in a
-//  dictionary of counters stored inside of each rule, keyed by the call that
-//  triggered the rule.
-
 // Default time interval (in milliseconds) to reset rate limit counters
 var DEFAULT_INTERVAL_TIME_IN_MILLISECONDS = 1000;
 // Default number of events allowed per time interval
 var DEFAULT_REQUESTS_PER_INTERVAL = 10;
 
-
-// Each rule is composed of an `id`, an options object that contains the
-// `intervalTime` in milliseconds after which the rule is reset, and
-// `numRequestsAllowed` in the specified interval time, a dictionary of
-// `matchers` whose keys are searched for in the input provided to determine
-// if there is a match. If the values match, then the rules counters are
-// incremented. Values can be objects or they can be functions that return
-// a boolean of whether the provided input matches. For example, if we only
-// want to match all even ids, plus any other fields, we could have a rule
-// that included a key-value pair as follows:
-//  {
-//  ...
-//  id: function (id) {
-//   return id % 2 === 0;
-//  },
-//  ...
-//  }
-// A rule is only said to apply to a given input if every key in the matcher
-// matches to the input values. There is also a dictionary of `counters` that
-// store the current state of inputs and number of times they've been passed
-// to the rate limiter. We want to rate limit specific values for specific keys
-// in the input objects we inspect. Say a rule inspects a methodName property.
-// We want to count how many times each different method was called. So we
-// generate a unique string key (to be used as keys in a counters object) to
-// represent each specific methodName. But since a rule can inspect multiple
-// properties, we need to concatenate the differnet input key names with their
-// values. For example, if we had a rule with matchers as such:
-// {
-//  userId: function(userId)  {
-//  return true;
-//  },
-//  methodName: 'hello'
-// }
-// and we were passed an input as follows:
-// {
-//  userId: 'meteor'
-//  methodName: 'hello'
-// }
-// The key generated would be 'userIdmeteormethodNamehello'.
-// These counters are checked on every invocation to determine whether a rate
-// limit has been reached.
+// A rule is defined by an options object that contains two fields,
+// `numRequestsAllowed` which is the number of events allowed per interval, and
+// an `intervalTime` which is the amount of time in milliseconds before the
+// rate limit restarts its internal counters, and by a matchers object. A
+// matchers object is a POJO that contains a set of keys with values that
+// define the entire set of inputs that match for each key. The values can
+// either be null (optional), a primitive or a function that returns a boolean
+// of whether the provided input's value matches for this key.
+//
+// Rules are uniquely assigned an `id` and they store a dictionary of counters,
+// which are records used to keep track of inputs that match the rule. If a
+// counter reaches the `numRequestsAllowed` within a given `intervalTime`, a
+// rate limit is reached and future inputs that map to that counter will
+// result in errors being returned to the client.
 var Rule = function (options, matchers) {
   var self = this;
 
   self.id = Random.id();
-  // Options contains the numRequestsAllowed and intervalTime
-  // - numRequestsAllowed - number of requests allowed per interval
-  // - intervalTime - time before rate limit counters are reset in milliseconds
+
   self.options = options;
 
-  // Dictionary of keys and all values that match for each key
-  // The values can either be null (optional), a primitive or a function
-  // that returns boolean of whether the provided input's value matches for
-  // this key
   self._matchers = matchers;
 
   self._lastResetTime = new Date().getTime();
@@ -226,8 +179,8 @@ RateLimiter.prototype.check = function (input) {
 
 /**
  * Adds a rule to dictionary of rules that are checked against on every call.
- * Only inputs that pass all of the rules will be allowed and order doesn't
- * matter. Returns unique rule id that can be passed to 'removeRule'.
+ * Only inputs that pass all of the rules will be allowed. Returns unique rule
+ * id that can be passed to `removeRule`.
  * @param {object} rule    Input dictionary defining certain attributes and
  * rules associated with them.
  * Each attribute's value can either be a value, a function or null. All
@@ -292,7 +245,7 @@ RateLimiter.prototype._findAllMatchingRules = function (input) {
  * Provides a mechanism to remove rules from the rate limiter. Returns boolean
  * about success.
  * @param  {string} id Rule id returned from #addRule
- * @return {boolean}    Returns true if rule was found and deleted, else false.
+ * @return {boolean} Returns true if rule was found and deleted, else false.
  */
 RateLimiter.prototype.removeRule = function (id) {
   var self = this;

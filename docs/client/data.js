@@ -2379,7 +2379,7 @@ DocsData = {
   "DDPRateLimiter.addRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 39,
+    "lineno": 40,
     "longname": "DDPRateLimiter.addRule",
     "memberof": "DDPRateLimiter",
     "name": "addRule",
@@ -2424,12 +2424,12 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Adds a rule with a number of requests allowed per time interval."
+    "summary": "Adds a rule with a number of requests allowed per time interval.\nReturns a `ruleId` string that is used as the input to `removeRule()`."
   },
   "DDPRateLimiter.removeRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 48,
+    "lineno": 49,
     "longname": "DDPRateLimiter.removeRule",
     "memberof": "DDPRateLimiter",
     "name": "removeRule",

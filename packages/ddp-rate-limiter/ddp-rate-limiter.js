@@ -1,4 +1,5 @@
-// Rate Limiter built into DDP with a default error message.
+// Rate Limiter built into DDP with a default error message. See README or
+// online documentation for more details.
 DDPRateLimiter = {
   errorMessage : function (rateLimitResult) {
     return "Error, too many requests. Please slow down. You must wait " +
@@ -15,7 +16,7 @@ DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
     return this.errorMessage;
 }
 /**
- * @summary Update the error message returned when call is rate limited.
+ * @summary Update the error message returned when a call is rate limited.
  * @param {string|function} message Function that takes an object with a
  * timeToReset field that specifies the first time a method or subscription
  * call is allowed.
@@ -26,6 +27,7 @@ DDPRateLimiter.setErrorMessage = function (message) {
 
 /**
  * @summary Adds a rule with a number of requests allowed per time interval.
+ * Returns a `ruleId` string that is used as the input to `removeRule()`.
  * @param {object}  rule Rule should be an object where the keys are one or
  * more of `['userId', 'ipAddr', 'type', 'name', 'sessionId'] ` and the values
  * are either `null`, a primitive, or a function that returns true if the rule

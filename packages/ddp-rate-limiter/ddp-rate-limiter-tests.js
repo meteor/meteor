@@ -1,3 +1,4 @@
+// Test that we do hit the default login rate limit.
 testAsyncMulti("passwords - basic login with password", [
   function (test, expect) {
     var self = this;
@@ -47,8 +48,10 @@ testAsyncMulti("passwords - basic login with password", [
       }));
   }
 ]);
-
-testAsyncMulti("test removing rule with rateLimited client lets them send new queries", [
+// When we have a rate limited client and we remove the rate limit rule,
+// all requests should be allowed immediately afterwards.
+testAsyncMulti("test removing rule with rateLimited client lets them send new
+  queries", [
   function(test, expect) {
     var self = this;
     // Setup the rate limiter rules
@@ -91,9 +94,11 @@ testAsyncMulti("test removing rule with rateLimited client lets them send new qu
       function (error) {
         test.equal(error.error, 'too-many-requests');
       }));
-    // By removing the rule from the DDP rate limiter, we no longer restrict them even though they were rate limited
-    Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId, expect(function(error, result) {
-      test.equal(result,true);
+    // By removing the rule from the DDP rate limiter, we no longer restrict
+    // them even though they were rate limited
+    Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId,
+      expect(function(error, result) {
+        test.equal(result,true);
     }));
     //
     for (var i = 0; i < 10; i++) {
