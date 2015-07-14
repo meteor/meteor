@@ -171,16 +171,14 @@ _.extend(ReactiveDict.prototype, {
     var oldKeys   = self.keys;
     var didRemove = false;
 
-    _.each(oldKeys, function(value, oldKey) {
-      if (key == oldKey){
-        changed(self.keyDeps[oldKey]);
-        changed(self.keyValueDeps[oldKey][value]);
-        changed(self.keyValueDeps[oldKey]['undefined']);
-        delete self.keys[oldKey]; // clean up
-        self.allDeps.changed();
-        didRemove = true;
-      }
-    });
+    if (_.has(oldKeys, key)) {
+      changed(self.keyDeps[key]);
+      changed(self.keyValueDeps[key][oldKeys[key]]);
+      changed(self.keyValueDeps[key]['undefined']);
+      delete self.keys[key]; // clean up
+      self.allDeps.changed();
+      didRemove = true;
+    }
 
     return didRemove;
   },
