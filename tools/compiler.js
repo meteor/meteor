@@ -533,6 +533,8 @@ var compileUnibuild = function (options) {
       resources.push({
         type: "source",
         extension: classification.extension || null,
+        usesDefaultSourceProcessor:
+          !! classification.usesDefaultSourceProcessor,
         data: contents,
         path: relPath,
         hash: hash,
