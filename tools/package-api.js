@@ -193,6 +193,28 @@ _.extend(PackageAPI.prototype, {
       return;
     }
 
+    // We don't allow weak or unordered implies, since the main
+    // purpose of imply is to provide imports and plugins.
+    if (options.imply && (options.unordered || options.weak)) {
+      buildmessage.error(
+        "We don't allow weak or unordered implies.",
+        { useMyCaller: true });
+      // recover by ignoring
+      return;
+    }
+
+    // We currently disallow build plugins in debugOnly packages; but if
+    // you could use imply in a debugOnly package, you could pull in the
+    // build plugin from an implied package, which would have the same
+    // problem as allowing build plugins directly in the package. So no
+    // imply either!
+    if (options.imply && self.debugOnly) {
+      buildmessage.error("can't use imply in debugOnly packages",
+      { useMyCaller: true });
+      // recover by ignoring
+      return;
+    }
+
     // using for loop rather than underscore to help with useMyCaller
     for (var i = 0; i < names.length; ++i) {
       var name = names[i];
@@ -213,6 +235,14 @@ _.extend(PackageAPI.prototype, {
           unordered: options.unordered || false,
           weak: options.weak || false
         });
+        // If option imply is set then we directly imply that element.
+        // All validation checks if this imply is valid are done already
+        if (options.imply) {
+          self.implies[a].push({
+            package: parsed.package,
+            constraint: parsed.constraintString
+          });
+        }
       });
     }
   },
