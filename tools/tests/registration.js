@@ -20,10 +20,39 @@ var expectInvalidToken = selftest.markStack(function (token) {
   accountsConn.close();
 });
 
+const GUERRILLA_API_URL = 'https://www.guerrillamail.com/ajax.php';
+
+function getGuerrillaAddress() {
+  // Generate an email address and session ID. Note that the Meteor Developer
+  // Accounts server assumes that selftest-user-[a-z]+@guerrillamail[block].com
+  // is a temporary user and cleans it up automatically.
+  const username = 'selftest-user-' + testUtils.randomString(15);
+  var setEmailResult = httpHelpers.request({
+    url: GUERRILLA_API_URL,
+    qs: {
+      f: 'set_email_user',
+      email_user: username,
+      domain: 'guerrillamail.com'
+    }
+  });
+  const setEmailBody = JSON.parse(setEmailResult.body);
+  // Strangely, when you ask for a guerrillamail.com address, you get a
+  // guerrillamailblock.com address, and when you ask for a
+  // guerrillamailblock.com address you get an error. This regexp matches one in
+  // the Meteor Developer Accounts server.
+  if (! setEmailBody.email_addr.match(
+      /selftest-user-[a-z]+@guerrillamail(?:block)?\.com$/)) {
+    throw Error(`bad email_addr: ${setEmailBody.email_addr}`);
+  }
+
+  return { email: setEmailBody.email_addr,
+           guerrillaToken: setEmailBody.sid_token };
+}
+
 // Polls a guerrillamail.com inbox every 3 seconds looking for an email
 // that matches the given subject and body regexes. This could fail if
 // there is someone else polling this same inbox, so use a random email
-// address.
+// address. The token comes from getGuerrillaAddress.
 //
 // If a matching email is found before the timeout elapses, this
 // function returns an object with keys:
@@ -32,8 +61,8 @@ var expectInvalidToken = selftest.markStack(function (token) {
 //    the email
 // Throws an exception if no matching email is found before the timeout
 // elapses.
-var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
-                             bodyRegExp, timeoutSecs) {
+var waitForEmail = selftest.markStack(function (guerrillaToken, subjectRegExp,
+                                                bodyRegExp, timeoutSecs) {
   var timedOut = false;
   if (timeoutSecs) {
     var timeout = setTimeout(function () {
@@ -41,47 +70,40 @@ var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
     }, timeoutSecs * 1000);
   }
 
-  // Get a session cookie for this inbox.
-  var setEmailUrl = 'https://www.guerrillamail.com/ajax.php?f=set_email_user';
-  var setEmailData = {
-    email_user: inbox.split('@')[0],
-    domain: 'guerrillamail.com'
-  };
-  var setEmailResult = httpHelpers.request({
-    method: 'POST',
-    url: setEmailUrl,
-    form: setEmailData
-  });
-
-  var sessionCookie = JSON.parse(setEmailResult.body).sid_token;
-
-  var cookieHeader = "PHPSESSID=" + sessionCookie + ";";
-
   var match;
   while (! match) {
-    var checkInboxUrl = 'https://www.guerrillamail.com/ajax.php?' +
-          'f=check_email&seq=1&domain=guerrillamail.com&_=' +
-          (+ new Date());
     var checkInboxResult = httpHelpers.request({
       method: 'GET',
-      url: checkInboxUrl,
-      headers: { Cookie: cookieHeader }
+      url: GUERRILLA_API_URL,
+      qs: {
+        f: 'get_email_list',
+        sid_token: guerrillaToken,
+        offset: '0',
+        domain: 'guerrillamail.com',
+        _: (+ new Date()) + ""  // fight caching? i dunno
+      }
     });
 
     var body = JSON.parse(checkInboxResult.body);
+    console.log("GOT EMAILS", body)
     _.each(body.list, function (email) {
       var emailId = email.mail_id;
       var subject = email.mail_subject;
       if (subjectRegExp.test(subject)) {
         // Subject matches, so now check the body.
-        var bodyResult = httpHelpers.request({
-          url: 'https://www.guerrillamail.com/inbox?mail_id=' + emailId,
-          headers: { Cookie: cookieHeader }
+        const bodyResult = httpHelpers.request({
+          url: GUERRILLA_API_URL,
+          qs: {
+            f: 'fetch_email',
+            sid_token: guerrillaToken,
+            email_id: emailId
+          }
         });
-        if (bodyRegExp.test(bodyResult.body)) {
+        const parsedMail = JSON.parse(bodyResult.body);
+        if (bodyRegExp.test(parsedMail.mail_body)) {
           match = {
             subject: email.mail_subject,
-            bodyPage: bodyResult.body
+            bodyPage: parsedMail.mail_body
           };
         }
       }
@@ -90,7 +112,7 @@ var waitForEmail = selftest.markStack(function (inbox, subjectRegExp,
     if (! match) {
       utils.sleepMs(3000);
       if (timedOut) {
-        selftest.fail('Waiting for email to ' + inbox + ' timed out.');
+        selftest.fail('Waiting for email timed out.');
       }
     }
   }
@@ -226,7 +248,8 @@ selftest.define(
   ['net', 'slow'],
   function () {
     var s = new Sandbox;
-    var email = testUtils.randomUserEmail();
+    const { email, guerrillaToken } = getGuerrillaAddress();
+    console.log("GOT",email,guerrillaToken)
     var username = testUtils.randomString(10);
     var appName = testUtils.randomAppName();
     var token = testUtils.deployWithNewEmail(s, email, appName);
@@ -247,7 +270,7 @@ selftest.define(
     run.matchErr('Waiting for you to register on the web...');
 
     var registrationEmail = waitForEmail(
-      email,
+      guerrillaToken,
       /Set a password/,
       /You previously created a Meteor developer account/,
       60
