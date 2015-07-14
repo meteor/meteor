@@ -232,7 +232,6 @@ _.extend(MeteorImportLessFileManager.prototype, {
       resolvedFilename = path.join(currentDirectory, filename);
     }
     if (! _.has(self.filesByAbsoluteImportPath, resolvedFilename)) {
-      // XXX BBP better error handling?
       cb({type: "File", message: "Unknown import: " + filename});
       return;
     }
