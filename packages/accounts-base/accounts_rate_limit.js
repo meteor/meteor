@@ -1,8 +1,8 @@
 // Adds a default rate limiting rule to DDPRateLimiter and provides methods to remove it
 var Ap = AccountsCommon.prototype;
 // Add a default rule of limiting logins, creating new users and password reset
-// to 5 times per 10 seconds by IP address.
-// Stores the ruleId to provide option to remove the default rule.
+// to 5 times per 10 seconds by session.
+// Stores the ruleId to provide options to remove the default rule.
 Ap._defaultRateLimiterRuleId = DDPRateLimiter.addRule({
   userId: null,
   ipAddr: null,
