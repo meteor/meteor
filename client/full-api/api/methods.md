@@ -199,6 +199,21 @@ interval, all the buckets are deleted. A rate limit is said to have been hit
 when a bucket has reached the rule's capacity, at which point errors will be
 returned for that input until the buckets are reset.
 
+Here's example of defining a rule and adding it into the `DDPRateLimiter`:
+```javascript
+// Add a rule that limits all users except Admins to have 5 login attempts per second
+var loginRule = {
+    userId: function (userId) {
+        return Meteor.users.findOne(userId).type !== 'Admin';
+    },
+    type: 'method',
+    method: 'login'
+}
+// Add the rule, setting the number of messages allowed at 5 with a time
+// interval of 1000 milliseconds.
+DDPRateLimiter.addRule(loginRule, 5, 1000);
+```
+
 {{> autoApiBox "DDPRateLimiter.addRule"}}
 {{> autoApiBox "DDPRateLimiter.removeRule"}}
 {{> autoApiBox "DDPRateLimiter.setErrorMessage"}}
