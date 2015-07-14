@@ -257,11 +257,11 @@ if (process.platform === 'win32') {
     var client = net.connect({port: mongoPort}, function() {
       // The server is running.
       client.end();
-      mongoTestConnectFuture.return();
+      mongoTestConnectFuture.isResolved() || mongoTestConnectFuture.return();
     });
     client.on('error', function () {
       mongoPort = null;
-      mongoTestConnectFuture.return();
+      mongoTestConnectFuture.isResolved() || mongoTestConnectFuture.return();
     });
     mongoTestConnectFuture.wait();
 
