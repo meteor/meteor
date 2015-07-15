@@ -65,10 +65,6 @@ var packageJson = {
 };
 
 if (process.platform === 'win32') {
-  // Cordova is not supported on Windows
-  delete packageJson.dependencies.cordova;
-  // netroute is only needed for Cordova support
-  delete packageJson.dependencies.netroute;
   // kexec doesn't work on Windows
   delete packageJson.dependencies.kexec;
 }
