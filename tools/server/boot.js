@@ -186,9 +186,9 @@ Fiber(function () {
         callback = fut.resolver();
       }
       // This assumes that we've already loaded the meteor package, so meteor
-      // itself (and weird special cases like js-analyze) can't call
-      // Assets.get*. (We could change this function so that it doesn't call
-      // bindEnvironment if you don't pass a callback if we need to.)
+      // itself can't call Assets.get*. (We could change this function so that
+      // it doesn't call bindEnvironment if you don't pass a callback if we need
+      // to.)
       var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
         if (result && ! encoding)
           // Sadly, this copies in Node 0.10.

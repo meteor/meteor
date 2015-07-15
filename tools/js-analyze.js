@@ -1,10 +1,8 @@
-var esprima = Npm.require('esprima');
-var escope = Npm.require('escope');
-
-JSAnalyze = {};
+import esprima from 'esprima';
+import escope from 'escope';
 
 // Like esprima.parse, but annotates any thrown error with $ParseError = true.
-var esprimaParse = function (source) {
+function esprimaParse(source) {
   try {
     return esprima.parse(source);
   } catch (e) {
@@ -14,7 +12,7 @@ var esprimaParse = function (source) {
     }
     throw e;
   }
-};
+}
 
 // Analyze the JavaScript source code `source` and return a dictionary of all
 // globals which are assigned to in the package. The values in the dictionary
@@ -26,12 +24,12 @@ var esprimaParse = function (source) {
 //
 // It only cares about assignments to variables; an assignment to a field on an
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
-JSAnalyze.findAssignedGlobals = function (source) {
+export function findAssignedGlobals(source) {
   // escope's analyzer treats vars in the top-level "Program" node as globals.
   // The newline is necessary in case source ends with a comment.
-  source = '(function () {' + source + '\n})';
+  const wrappedSource = '(function () {' + source + '\n})';
 
-  var parseTree = esprimaParse(source);
+  const parseTree = esprimaParse(wrappedSource);
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
   // This is because an eval can pull references inward:
@@ -46,14 +44,14 @@ JSAnalyze.findAssignedGlobals = function (source) {
   //
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
-  var scoper = escope.analyze(parseTree, {ignoreEval: true});
-  var globalScope = scoper.scopes[0];
+  const scoper = escope.analyze(parseTree, {ignoreEval: true});
+  const globalScope = scoper.scopes[0];
 
-  var assignedGlobals = {};
+  const assignedGlobals = {};
   // Underscore is not available in this package.
-  globalScope.implicit.variables.forEach(function (variable) {
+  globalScope.implicit.variables.forEach((variable) => {
     assignedGlobals[variable.name] = true;
   });
 
   return assignedGlobals;
-};
+}

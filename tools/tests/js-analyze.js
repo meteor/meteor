@@ -1,7 +1,9 @@
-Tinytest.add("js-analyze - findAssignedGlobals", function (test) {
+import selftest from '../selftest.js';
+import { findAssignedGlobals } from '../js-analyze.js';
 
-  var run = function (source, expected) {
-    test.equal(JSAnalyze.findAssignedGlobals(source), expected);
+selftest.define('findAssignedGlobals', () => {
+  function run(source, expected) {
+    selftest.expectEqual(findAssignedGlobals(source), expected);
   };
 
   run('x', {});
@@ -41,7 +43,12 @@ Tinytest.add("js-analyze - findAssignedGlobals", function (test) {
   // Without ignoreEval, this thinks J is global.
   run('function x(){var J;J=3;eval("foo");}', {});
 
-  test.throws(function (){JSAnalyze.findAssignedGlobals("x = ");},
-              function (e) { return e.$ParseError; });
+  let threw = true;
+  try {
+    findAssignedGlobals("x = ");
+    threw = false;
+  } catch (e) {
+    selftest.expectTrue(e.$ParseError);
+  }
+  selftest.expectTrue(threw);
 });
-

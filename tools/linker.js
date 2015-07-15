@@ -6,6 +6,7 @@ var watch = require('./watch.js');
 var Profile = require('./profile.js').Profile;
 import LRU from 'lru-cache';
 import {sourceMapLength} from './utils.js';
+import {findAssignedGlobals} from './js-analyze.js';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -43,10 +44,8 @@ var Module = function (options) {
   self.files = [];
 
   // options
-  self.declaredExports = options.declaredExports;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
-  self.jsAnalyze = options.jsAnalyze;
   self.noLineNumbers = options.noLineNumbers;
 };
 
@@ -79,13 +78,6 @@ _.extend(Module.prototype, {
   // scope.
   computeAssignedVariables: Profile("linker Module#computeAssignedVariables", function () {
     var self = this;
-
-    if (!self.jsAnalyze) {
-      // We don't have access to static analysis, probably because we *are* the
-      // js-analyze package.  Let's do a stupid heuristic: the exports are
-      // the only module scope vars. (This works for js-analyze.JSAnalyze...)
-      return self.declaredExports;
-    }
 
     // The assigned variables in the app aren't actually used for anything:
     // we're using the global namespace, so there's no header where we declare
@@ -259,13 +251,13 @@ var File = function (inputFile, module) {
   self.module = module;
 };
 
-// The JsAnalyze code is somewhat slow, and we often compute assigned variables
+// findAssignedGlobals is somewhat slow, and we often compute assigned variables
 // on the same file multiple times in one process (notably, a single file is
 // often processed for two or three different unibuilds, and is processed again
 // when rebuilding a package when another file has changed). We cache the
 // calculated variables under the source file's hash (calculating the source
-// file's hash is faster than running jsAnalyze, and in the case of *.js files
-// we have the hash already anyway).
+// file's hash is faster than running findAssignedGlobals, and in the case of
+// *.js files we have the hash already anyway).
 var ASSIGNED_GLOBALS_CACHE = {};
 
 _.extend(File.prototype, {
@@ -276,20 +268,13 @@ _.extend(File.prototype, {
   computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
 
-    var jsAnalyze = self.module.jsAnalyze;
-    // If we don't have a JSAnalyze object, we probably are the js-analyze
-    // package itself. Assume we have no global references. At the module level,
-    // we'll assume that exports are global references.
-    if (!jsAnalyze)
-      return [];
-
     if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
       return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
     }
 
     try {
       return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-              _.keys(jsAnalyze.findAssignedGlobals(self.source)));
+              _.keys(findAssignedGlobals(self.source)));
     } catch (e) {
       if (!e.$ParseError)
         throw e;
@@ -572,15 +557,8 @@ var bannerPadding = function (bannerWidth) {
 //    look good)
 //  - sourceMap: an optional source map (as string) for the input file
 //
-// declaredExports: an array of symbols that the module exports. Symbols are
-// {name,testOnly} pairs.
-//
 // combinedServePath: if we end up combining all of the files into
 // one, use this as the servePath.
-//
-// jsAnalyze: if possible, the JSAnalyze object from the js-analyze
-// package. (This is not possible if we are currently linking the main unibuild of
-// the js-analyze package!)
 //
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
@@ -589,19 +567,9 @@ var bannerPadding = function (bannerWidth) {
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
 var prelink = Profile("linker.prelink", function (options) {
-  // Load jsAnalyze from the js-analyze package... unless we are the
-  // js-analyze package, in which case never mind. (The js-analyze package's
-  // default unibuild is not allowed to depend on anything!)
-  var jsAnalyze = null;
-  if (! _.isEmpty(options.inputFiles) && options.name !== "js-analyze") {
-    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
-  }
-
   var module = new Module({
     name: options.name,
-    declaredExports: options.declaredExports,
     combinedServePath: options.combinedServePath,
-    jsAnalyze: jsAnalyze,
     noLineNumbers: options.noLineNumbers
   });
 
@@ -744,16 +712,8 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
   }) {
   buildmessage.assertInJob();
 
-  // Load jsAnalyze from the js-analyze package... unless we are the
-  // js-analyze package, in which case never mind. (The js-analyze package's
-  // default unibuild is not allowed to depend on anything!)
-  var jsAnalyze = null;
-  if (! _.isEmpty(inputFiles) && name !== "js-analyze") {
-    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
-  }
-
   var module = new Module({
-    name, declaredExports, useGlobalNamespace, combinedServePath, jsAnalyze,
+    name, useGlobalNamespace, combinedServePath,
     noLineNumbers: false
   });
 

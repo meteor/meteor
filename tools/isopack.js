@@ -1299,12 +1299,7 @@ _.extend(Isopack.prototype, {
                     unibuild.pkg.name +
                       (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
                       ".js")),
-                name: unibuild.pkg.name,
-                // XXX Note that this is barely used in this particular call
-                // (it's only used on the js-analyze package!)  It could
-                // probably be dropped. js-analyze could be pretty easily
-                // rolled into the tool, actually.
-                declaredExports: _.pluck(unibuild.declaredExports, 'name')
+                name: unibuild.pkg.name
               });
               if (results.files.length !== 1) {
                 throw Error("prelink should return 1 file, not " +
