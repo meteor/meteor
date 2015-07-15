@@ -23,6 +23,8 @@ var packageJson = {
     fibers: fibersVersion,
     "meteor-babel": "0.3.4",
     "meteor-promise": "0.2.4",
+    // For Map and Set polyfills.
+    "core-js": "0.9.18",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
