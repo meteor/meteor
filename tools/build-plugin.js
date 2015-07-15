@@ -184,14 +184,12 @@ export class SourceProcessorSet {
     return null;
   }
 
-  // filename, arch -> {
-  //    type: "extension"/"filename"/"legacyHandler"/"wrong-arch"/"unmatched",
-  //    legacyHandler, extension, sourceProcessors, legacyIsTemplate }
+  // filename, arch -> SourceClassification
   classifyFilename(filename, arch) {
     // First check to see if a plugin registered for this exact filename.
     if (this._byFilename.hasOwnProperty(filename)) {
-      return maybeWrongArch({
-        type: 'filename',
+      return new SourceClassification('filename', {
+        arch,
         sourceProcessors: this._byFilename[filename].slice()
       });
     }
@@ -207,15 +205,12 @@ export class SourceProcessorSet {
       // with JavaScript itself!  Places that hardcode JS are tagged with
       // #HardcodeJs.
       if (this._hardcodeJs && extension === 'js') {
-        return {
-          type: 'extension',
-          extension: 'js'
-        };
+        return new SourceClassification('extension', {extension});
       }
 
       if (this._byExtension.hasOwnProperty(extension)) {
-        return maybeWrongArch({
-          type: 'extension',
+        return new SourceClassification('extension', {
+          arch,
           extension,
           sourceProcessors: this._byExtension[extension]
         });
@@ -225,34 +220,18 @@ export class SourceProcessorSet {
         const legacy = this._legacyHandlers[extension];
         if (legacy.archMatching &&
             ! archinfo.matches(arch, legacy.archMatching)) {
-          return { type: 'wrong-arch' };
+          return new SourceClassification('wrong-arch');
         }
-        return {
-          type: 'legacyHandler',
+        return new SourceClassification('legacy-handler', {
           extension,
           legacyHandler: legacy.handler,
-          legacyIsTemplate: legacy.isTempate
-        };
+          legacyIsTemplate: legacy.isTemplate
+        });
       }
     }
 
     // Nothing matches; it must be a static asset (or a non-linted file).
-    return { type: 'unmatched' };
-
-    // If there's a SourceProcessor (or legacy handler) registered for this file
-    // but not for this arch, we want to ignore it instead of processing it or
-    // treating it as a static asset. (Note that prior to the batch-plugins
-    // project, files added in a package with `api.addFiles('foo.bar')` where
-    // *.bar is a web-specific legacy handler (eg) would end up adding 'foo.bar'
-    // as a static asset on non-web programs, which was unintended. This didn't
-    // happen in apps because initFromAppDir's getSourcesFunc never added them.)
-    function maybeWrongArch(classification) {
-      classification.sourceProcessors = classification.sourceProcessors.filter(
-        (sourceProcessor) => sourceProcessor.relevantForArch(arch)
-      );
-      return classification.sourceProcessors.length
-        ? classification : { type: 'wrong-arch' };
-    }
+    return new SourceClassification('unmatched');
   }
 
   isEmpty() {
@@ -286,6 +265,76 @@ export class SourceProcessorSet {
     return {include, names, exclude: []};
   }
 }
+
+class SourceClassification {
+  constructor(type, {legacyHandler, extension, sourceProcessors,
+                     legacyIsTemplate, arch}) {
+    const knownTypes = ['extension', 'filename', 'legacy-handler', 'wrong-arch',
+                        'unmatched'];
+    if (knownTypes.indexOf(type) === -1) {
+      throw Error(`Unknown SourceClassification type ${ type }`);
+    }
+    // This is the only thing we can write to `this` before checking for
+    // wrong-arch.
+    this.type = type;
+
+    if (type === 'extension' || type === 'filename') {
+      if (sourceProcessors) {
+        if (! arch) {
+          throw Error("need to filter based on arch!");
+        }
+
+        // If there's a SourceProcessor (or legacy handler) registered for this
+        // file but not for this arch, we want to ignore it instead of
+        // processing it or treating it as a static asset. (Note that prior to
+        // the batch-plugins project, files added in a package with
+        // `api.addFiles('foo.bar')` where *.bar is a web-specific legacy
+        // handler (eg) would end up adding 'foo.bar' as a static asset on
+        // non-web programs, which was unintended. This didn't happen in apps
+        // because initFromAppDir's getSourcesFunc never added them.)
+        const filteredSourceProcessors = sourceProcessors.filter(
+          (sourceProcessor) => sourceProcessor.relevantForArch(arch)
+        );
+        if (! filteredSourceProcessors.length) {
+          // Wrong architecture! Rewrite this.type and return.  (Note that we
+          // haven't written anything else to `this` so far.)
+          this.type = 'wrong-arch';
+          return;
+        }
+
+        this.sourceProcessors = filteredSourceProcessors;
+      } else if (!(type === 'extension' && extension === 'js')) {
+        // 'extension' and 'filename' classifications need to have at least one
+        // SourceProcessor, unless it's the #HardcodeJs special case.
+        throw Error(`missing sourceProcessors for ${ type }!`);
+      }
+    }
+
+    if (type === 'legacy-handler') {
+      if (! legacyHandler) {
+        throw Error('SourceClassification needs legacyHandler!');
+      }
+      if (legacyIsTemplate === undefined) {
+        throw Error('SourceClassification needs legacyIsTemplate!');
+      }
+      this.legacyHandler = legacyHandler;
+      this.legacyIsTemplate = legacyIsTemplate;
+    }
+
+    if (type === 'extension' || type === 'legacy-handler') {
+      if (! extension) {
+        throw Error('extension SourceClassification needs extension!');
+      }
+      this.extension = extension;
+    }
+  }
+
+  isNonLegacySource() {
+    return this.type === 'extension' || this.type === 'filename';
+  }
+}
+
+
 
 // This is the base class of the object presented to the user's plugin code.
 exports.InputFile = function (resourceSlot) {

@@ -44,7 +44,7 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
       }
       return classification.sourceProcessors[0].isTemplate;
 
-    case 'legacyHandler':
+    case 'legacy-handler':
       return classification.legacyIsTemplate;
 
     case 'wrong-arch':

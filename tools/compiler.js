@@ -473,13 +473,12 @@ var compileUnibuild = function (options) {
       return;
     }
 
-    if (classification.type === 'extension' ||
-        classification.type === 'filename') {
+    if (classification.isNonLegacySource()) {
       // This is source used by a new-style compiler plugin; it will be fully
       // processed later in the bundler.
       resources.push({
         type: "source",
-        extension: classification.extension,  // possibly null
+        extension: classification.extension || null,
         data: contents,
         path: relPath,
         hash: hash,
@@ -488,7 +487,7 @@ var compileUnibuild = function (options) {
       return;
     }
 
-    if (classification.type !== 'legacyHandler') {
+    if (classification.type !== 'legacy-handler') {
       throw Error("unhandled type: " + classification.type);
     }
 
@@ -605,8 +604,8 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
     // We shouldn't ever add a legacy handler and we're not hardcoding JS for
     // linters, so we should always have SourceProcessor if anything matches.
     if (! classification.sourceProcessors) {
-      throw Error(`Unexpected classification for ${ relPath }: ` +
-                  JSON.stringify(classification));
+      throw Error(
+        `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
     // Read the file and add it to the WatchSet.
