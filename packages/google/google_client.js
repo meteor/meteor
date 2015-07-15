@@ -61,7 +61,7 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     "client_id":  config.clientId,
     "scope": scope.join(' '), // space delimited
     "redirect_uri": OAuth._redirectUri('google', config),
-    "state": OAuth._stateParam(loginStyle, credentialToken)
+    "state": OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl)
   });
   var loginUrl = 'https://accounts.google.com/o/oauth2/auth?' +
     _.map(loginUrlParameters, function(value, param){
