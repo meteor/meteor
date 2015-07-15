@@ -351,27 +351,13 @@ _.extend(ResourceSlot.prototype, {
       }
     }
 
-    // XXX BBP this is partially duplicated in isopack.js
-    var outputPath = files.convertToStandardPath(options.path, true);
-    var unibuild = self.packageSourceBatch.unibuild;
-    var serveRoot;
-    if (unibuild.pkg.name) {
-      serveRoot = files.pathJoin('/packages/', unibuild.pkg.name);
-    } else {
-      serveRoot = '/';
-    }
-    if (! unibuild.name) {
-      // XXX hack for app's special folders
-      outputPath = outputPath.replace(/^(private|public)\//, '');
-    }
-    throw Error("assets are apparently broken")  // XXX BBP
-    resources.push({
+    self.outputResources.push({
       type: 'asset',
       data: options.data,
-      path: outputPath,
-      servePath: colonConverter.convert(
-        files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
-      hash: options.hash
+      path: options.path,
+      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
+        options.path),
+      hash: sha1(options.data)
     });
   },
   addHtml: function (options) {

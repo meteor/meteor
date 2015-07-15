@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
 var files = require('../files.js');
+import { getUrl } from '../http-helpers.js';
 
 var Sandbox = selftest.Sandbox;
 
@@ -258,4 +259,22 @@ selftest.define("compiler plugins - compiler throws", () => {
   run.matchErr('packages/compilePrintme/plugin.js:5:1: Error in my ' +
                'registerCompiler callback!');
   run.expectExit(1);
+});
+
+// Test that compiler plugins can add static assets.
+selftest.define("compiler plugins - compiler addAsset", () => {
+  const s = new Sandbox({ fakeMongo: true });
+
+  s.createApp('myapp', 'compiler-plugin-add-asset');
+  s.cd('myapp');
+
+  const run = startRun(s);
+  // Test server-side asset.
+  run.match("Asset says Print out foo");
+
+  // Test client-side asset.
+  const body = getUrl('http://localhost:3000/foo.printme');
+  selftest.expectEqual(body, 'Print out foo\n');
+
+  run.stop();
 });
