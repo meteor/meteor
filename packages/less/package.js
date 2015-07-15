@@ -1,11 +1,9 @@
 Package.describe({
   name: 'less',
-  version: '2.5.0_1',  // XXX BBP is this the right version number?
-  summary: 'less???',  // XXX BBP do this
-  documentation: null  // XXX BBP readme!
+  version: '2.5.0_1',
+  summary: 'Leaner CSS language',
+  documentation: null  // XXX #BBPDocs
 });
-
-// XXX BBP remove from core?
 
 Package.registerBuildPlugin({
   name: "compileLessBatch",

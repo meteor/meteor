@@ -539,13 +539,22 @@ var bannerPadding = function (bannerWidth) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Top-level entry point
+// Top-level entry points
 ///////////////////////////////////////////////////////////////////////////////
 
-// This does the first phase of linking. It does not require knowledge
-// of your imports. It returns the module's exports, plus a set of
-// partially linked files which you must pass to link() along with
-// your import list to get your final linked files.
+// Prior to the "batch-plugins" project, linker.prelink was the first phase of
+// linking. It got performed at package compile time, to be followed up with a
+// function that used to exist called linker.link at app bundle time. We now do
+// far less processing at package compile time and simply run linker.fullLink at
+// app bundle time, which is effectively the old prelink+link combined. However,
+// we keep linker.prelink around now in order to allow new published packages
+// that don't use the new build plugin APIs to be used by older Isobuilds.
+// It only gets called on packages, not on apps.
+//
+// This does about half of the of the linking process. It does not require
+// knowledge of your imports. It returns the module's exports, plus a set of
+// partially linked files which you must pass to link() along with your import
+// list to get your final linked files.
 //
 // options include:
 //
@@ -566,10 +575,6 @@ var bannerPadding = function (bannerWidth) {
 // declaredExports: an array of symbols that the module exports. Symbols are
 // {name,testOnly} pairs.
 //
-// useGlobalNamespace: make the top level namespace be the same as the
-// global namespace, so that symbols are accessible from the
-// console. typically used when linking apps (as opposed to packages).
-//
 // combinedServePath: if we end up combining all of the files into
 // one, use this as the servePath.
 //
@@ -583,7 +588,6 @@ var bannerPadding = function (bannerWidth) {
 //     sourceMap (a string) (XXX)
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
-// XXX BBP redoc
 var prelink = Profile("linker.prelink", function (options) {
   // Load jsAnalyze from the js-analyze package... unless we are the
   // js-analyze package, in which case never mind. (The js-analyze package's
@@ -596,8 +600,6 @@ var prelink = Profile("linker.prelink", function (options) {
   var module = new Module({
     name: options.name,
     declaredExports: options.declaredExports,
-    // XXX BBP we never pass this any more
-    useGlobalNamespace: options.useGlobalNamespace,
     combinedServePath: options.combinedServePath,
     jsAnalyze: jsAnalyze,
     noLineNumbers: options.noLineNumbers
@@ -693,7 +695,49 @@ var getFooter = function (options) {
   return chunks.join('');
 };
 
-// XXX BBP doc
+// This is the real entry point that's still used to produce Meteor apps.  It
+// takes in information about the files in the package including imports and
+// exports, and returns an array of linked source files.
+//
+// inputFiles: an array of objects representing input files.
+//  - source: the source code
+//  - hash: the hash of the source code (optional, will be calculated
+//    if not given)
+//  - servePath: the path where it would prefer to be served if
+//    possible. still allowed on non-browser targets, where it
+//    represent as hint as to what the file should be named on disk in
+//    the bundle (this will only be seen by someone looking at the
+//    bundle, not in error messages, but it's still nice to make it
+//    look good)
+//  - bare: if true, don't wrap this file in a closure
+//  - sourceMap: an optional source map (as object) for the input file
+//
+// useGlobalNamespace: make the top level namespace be the same as the global
+// namespace, so that symbols are accessible from the console, and don't
+// actually combine files into a single file. used when linking apps (as opposed
+// to packages).
+//
+// combinedServePath: if we end up combining all of the files into
+// one, use this as the servePath.
+//
+// name: the name of this module (for stashing exports to be later
+// read by the imports of other modules); null if the module has no
+// name (in that case exports will not work properly)
+//
+// declaredExports: an array of symbols that the module exports. Symbols are
+// {name,testOnly} pairs.
+//
+// imports: a map from imported symbol to the name of the package that it is
+// imported from
+//
+// importStubServePath: if useGlobalNamespace is set, this is the name of the
+// file to create with imports into the global namespace
+//
+// includeSourceMapInstructions: true if JS files with source maps should
+// have a comment explaining how to use them in a browser.
+//
+// Output is an array of output files: objects with keys source, servePath,
+// sourceMap.
 var fullLink = Profile("linker.fullLink", function (inputFiles, {
     useGlobalNamespace, combinedServePath, name, declaredExports, imports,
     importStubServePath, includeSourceMapInstructions

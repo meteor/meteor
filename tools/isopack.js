@@ -70,7 +70,8 @@ var Unibuild = function (isopack, options) {
   // other than JavaScript that still needs to be fed through the
   // final link stage. A list of objects with these keys:
   //
-  // type: "js", "css", "head", "body", "asset"
+  // type: "source", "head", "body", "asset". (resources produced by
+  // legacy source handlers can also be "js" or "css".
   //
   // data: The contents of this resource, as a Buffer. For example,
   // for "head", the data to insert in <head>; for "js", the
@@ -85,7 +86,11 @@ var Unibuild = function (isopack, options) {
   //
   // sourceMap: Allowed only for "js". If present, a string.
   //
-  // XXX BBP redoc. now can have type "source"
+  // fileOptions: for "source", the options passed to `api.addFiles`.
+  // plugin-specific.
+  //
+  // extension: for "source", the file extension that this matched
+  // against at build time. null if matched against a specific filename.
   self.resources = options.resources;
 
   // Absolute path to the node_modules directory to use at runtime to
@@ -190,9 +195,17 @@ var Isopack = function () {
   self.lintingMessages = null;
 };
 
-// XXX BBP we're not really using the convert functions as much any more; make
-// sure tey still make sense
 Isopack.knownFormats = ["unipackage-pre2", "isopack-1", "isopack-2"];
+
+// These functions are designed to convert isopack metadata between
+// versions. They were designed to convert between unipackage-pre2 and
+// isopack-1. The differences between these formats are essentially syntactical,
+// not semantic, and occur entirely in the isopack.json file, not in the
+// individual unibuild json files. These functions are written assuming those
+// constraints, and were not actually useful in the isopack-1/isopack-2
+// transition,where most of the changes are in the unibuild level, and there's
+// actual semantic changes involved. So they are not actually used as much as
+// they were before.
 Isopack.convertOneStepForward = function (data, fromFormat) {
   var convertedData = _.clone(data);
   // XXX COMPAT WITH 0.9.3
@@ -616,7 +629,7 @@ _.extend(Isopack.prototype, {
         sourceProcessorSet.addSourceProcessor(sp);
       },
 
-      // XXX BBP doc
+      // XXX #BBPDocs
       //
       // Note: It's important to ensure that all plugins that want to call
       // plugin compiler use the isobuild:compiler-plugin fake package, so that
@@ -630,7 +643,7 @@ _.extend(Isopack.prototype, {
         });
       },
 
-      // XXX BBP doc
+      // XXX #BBPDocs
       registerLinter: function (options, factory) {
         Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.linter,
@@ -644,6 +657,7 @@ _.extend(Isopack.prototype, {
       // compress the app code and each package's code separately.
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
+      // XXX #BBPDocs
       registerMinifier: function (options, factory) {
         var badUsedExtension = _.find(options.extensions, function (ext) {
           return ! _.contains(['js', 'css'], ext);
@@ -1267,9 +1281,9 @@ _.extend(Isopack.prototype, {
               // place! So this source file is already the output of prelink,
               // and we don't need to reprocess it.
               prelinkFile = jsResourcesForLegacyPrelink[0];
-              // XXX BBP super weird that the type of object going in and
-              // out of linker.prelink is different (so that this prelinkData
-              // assignment differs from that below), *sigh*
+              // XXX It's weird that the type of object going in and out of
+              // linker.prelink is different (so that this prelinkData
+              // assignment differs from that below), ah well.
               prelinkData = prelinkFile.data;
               packageVariables =
                 jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
@@ -1286,7 +1300,10 @@ _.extend(Isopack.prototype, {
                       (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
                       ".js")),
                 name: unibuild.pkg.name,
-                // XXX BBP this is barely used
+                // XXX Note that this is barely used in this particular call
+                // (it's only used on the js-analyze package!)  It could
+                // probably be dropped. js-analyze could be pretty easily
+                // rolled into the tool, actually.
                 declaredExports: _.pluck(unibuild.declaredExports, 'name')
               });
               if (results.files.length !== 1) {
@@ -1590,7 +1607,7 @@ _.extend(Isopack.prototype, {
     return colonConverter.convert(
       files.pathJoin(
         serveRoot,
-        // XXX BBP should we decide in our API that everything is / ?
+        // XXX or should everything in this API use slash already?
         files.convertToStandardPath(pathInPackage, true)));
   },
 

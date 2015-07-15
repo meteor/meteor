@@ -12,11 +12,14 @@ import {sha1} from  './watch.js';
 import LRU from 'lru-cache';
 import {sourceMapLength} from './utils.js';
 
+// XXX #BBPDocs Add basic documentation of the data structures used in this
+// file.
+
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
 
 // Cache the (slightly post-processed) results of linker.fullLink.
-// XXX BBP implement an on-disk cache too to speed up initial build?
+// XXX #BBPBetterCache implement an on-disk cache too to speed up initial build?
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -182,7 +185,6 @@ _.extend(InputFile.prototype, {
    */
   addStylesheet: function (options) {
     var self = this;
-    // XXX BBP validate input!!
     if (options.sourceMap && typeof options.sourceMap === 'string') {
       // XXX remove an anti-XSSI header? ")]}'\n"
       options.sourceMap = JSON.parse(options.sourceMap);
@@ -248,12 +250,13 @@ _.extend(InputFile.prototype, {
   }
 });
 
-// XXX BBP doc
+// XXX #BBPDocs
 var ResourceSlot = function (unibuildResourceInfo,
                              sourceProcessor,
                              packageSourceBatch) {
   var self = this;
-  self.inputResource = unibuildResourceInfo;  // XXX BBP prototype?
+  // XXX ideally this should be an classy object, but it's not.
+  self.inputResource = unibuildResourceInfo;
   // Everything but JS.
   self.outputResources = [];
   // JS, which gets linked together at the end.
@@ -300,20 +303,19 @@ var ResourceSlot = function (unibuildResourceInfo,
   }
 };
 _.extend(ResourceSlot.prototype, {
-  // XXX BBP check args
   addStylesheet: function (options) {
     var self = this;
     if (! self.sourceProcessor)
       throw Error("addStylesheet on non-source ResourceSlot?");
 
-    // XXX BBP prototype?
     self.outputResources.push({
       type: "css",
       refreshable: true,
       data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
-      // XXX BBP convertSourceMapPaths ???
+      // XXX do we need to call convertSourceMapPaths here like we did
+      //     in legacy handlers?
       sourceMap: options.sourceMap
     });
   },
@@ -330,8 +332,10 @@ _.extend(ResourceSlot.prototype, {
       data: data,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
-      // XXX BBP should we allow users to be trusted and specify a hash?
+      // XXX should we allow users to be trusted and specify a hash?
       hash: sha1(data),
+      // XXX do we need to call convertSourceMapPaths here like we did
+      //     in legacy handlers?
       sourceMap: options.sourceMap,
       bare: options.bare
     });
@@ -377,7 +381,8 @@ _.extend(ResourceSlot.prototype, {
   }
 });
 
-// XXX BBP ???
+// XXX #BBPDocs document this data structure (or allude to potential top-of-file
+// docstring)
 var PackageSourceBatch = function (unibuild, processor) {
   var self = this;
   buildmessage.assertInJob();
@@ -521,8 +526,9 @@ _.extend(PackageSourceBatch.prototype, {
     const cacheKey = JSON.stringify({
       linkerOptions,
       files: jsResources.map((inputFile) => {
-        // XXX BBP should this technically depend on inputFile.sourceMap too?
-        // that seems slow, or I guess we could hash it.
+        // Note that we don't use inputFile.sourceMap in this cache key. Maybe
+        // this isn't technically accurate? Is it likely that the source map
+        // will change but the file won't?
         return {
           servePath: inputFile.servePath,
           hash: inputFile.hash,
@@ -556,7 +562,6 @@ _.extend(PackageSourceBatch.prototype, {
         data: new Buffer(file.source, 'utf8'), // XXX encoding
         servePath: file.servePath,
         sourceMap: sm
-        // XXX BBP hash? needed for minifiers?
       };
     });
     LINKER_CACHE.set(cacheKey, ret);

@@ -134,6 +134,8 @@ var upgradersByName = {
     projectContext.projectConstraintsFile.writeIfModified();
   }
 
+  // XXX #BBPLessUpgrader Write an upgrader explaining the changes to less.
+
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
   // examples for 0.9.0 and 0.9.1 above. Specifically, formatting

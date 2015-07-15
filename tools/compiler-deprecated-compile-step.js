@@ -350,7 +350,6 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
     addJavaScript: function (options) {
       if (typeof options.data !== "string")
         throw new Error("'data' option to addJavaScript must be a string");
-      // XXX BBP sourcePath vs path?
       if (typeof options.sourcePath !== "string")
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
 

@@ -201,7 +201,7 @@ _.extend(CoffeeCompiler.prototype, {
     });
 
     // Rewrite the cache to disk.
-    // XXX BBP we should just write individual entries separately.
+    // XXX #BBPBetterCache we should just write individual entries separately.
     self._writeCache();
 
     if (CACHE_DEBUG) {
@@ -217,10 +217,10 @@ _.extend(CoffeeCompiler.prototype, {
     self._diskCache = diskCache;
     self._readCache();
   },
-  // XXX BBP this is an inefficiently designed cache that will cause quadratic
-  // behavior due to writing the whole cache on each write, and has no error
-  // handling, and uses sync, and has an exists/read race condition, and might
-  // not work on Windows
+  // XXX #BBPBetterCache this is an inefficiently designed cache that will cause
+  // quadratic behavior due to writing the whole cache on each write, and has no
+  // error handling, and uses sync, and has an exists/read race condition, and
+  // might not work on Windows
   _cacheFile: function () {
     var self = this;
     return path.join(self._diskCache, 'cache.json');

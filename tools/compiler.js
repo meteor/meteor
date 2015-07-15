@@ -346,8 +346,16 @@ var compileUnibuild = function (options) {
     pluginProviderPackageNames
   });
 
-  // *** Assemble the list of source file handlers from the plugins
-  // XXX BBP redoc
+  // *** Assemble the SourceProcessorSet from the plugins. This data
+  // structure lets us decide what to do with each file: which plugin
+  // should process it in what method.
+  //
+  // We also build a SourceProcessorSet for this package's linters even
+  // though we're not linting right now. This is so we can tell the
+  // difference between an file added to a package as a linter config
+  // file (not handled by any compiler), and a file that's truly not
+  // handled by anything (which is an error unless explicitly declared
+  // as a static asset).
   let sourceProcessorSet, linterSourceProcessorSet;
   buildmessage.enterJob("determining active plugins", () => {
     sourceProcessorSet = new SourceProcessorSet(
@@ -599,8 +607,15 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
     return;
   }
 
-  // XXX BBP comment explaining at the very least that the imports might be
-  // different when you actually bundle it!
+  // First we calculate the symbols imported into the current package by
+  // packages we depend on. This is because most JS linters are going to want to
+  // warn about the use of unknown global variables, and the linker import
+  // system works by doing something that looks a whole lot like using
+  // undeclared globals!  That said, we don't actually know the imports that
+  // will be active when an app is built if the versions of the imported
+  // packages differ from those available at package lint time. But it's a good
+  // heuristic, at least. (If we transition from linker to ES2015 modules, we
+  // won't have the issue any more.)
 
   // We want to look at the arch of the used packages that matches the arch
   // we're compiling.  Normally when we call compiler.eachUsedUnibuild, we're
@@ -613,7 +628,6 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
   // unibuild.  In that case, we should look for imports in the host arch if it
   // exists instead of failing because a dependency does not have an 'os'
   // unibuild.
-  // XXX BBP make sure that comment is comprehensible
   const whichArch = inputSourceArch.arch === 'os'
           ? archinfo.host() : inputSourceArch.arch;
 

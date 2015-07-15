@@ -177,7 +177,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
   });
 
   // Rewrite the cache to disk.
-  // XXX BBP we should just write individual entries separately.
+  // XXX #BBPBetterCache we should just write individual entries separately.
   self._writeCache();
 };
 
@@ -189,7 +189,7 @@ StylusCompiler.prototype._cacheEntryValid = function (cacheEntry, filesMap) {
 };
 
 StylusCompiler.prototype._writeCache = function () {
-  // XXX BBP no on-disk caching yet
+  // XXX #BBPBetterCache no on-disk caching yet
 };
 
 function sourceMapLength(sm) {
