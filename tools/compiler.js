@@ -128,6 +128,19 @@ compiler.compile = Profile(function (packageSource, options) {
     }
   }
 
+  // Find all the isobuild:* pseudo-packages that this package depends on. Why
+  // do we need to do this? Well, we actually load the plugins in this package
+  // before we've fully compiled the package --- plugins are loaded before the
+  // compiler builds the unibuilds in this package (because plugins are allowed
+  // to act on the package itself). But when we load plugins, we need to know if
+  // the package depends on (eg) isobuild:compiler-plugin, to know if the plugin
+  // is allowed to call Plugin.registerCompiler. At this point, the Isopack
+  // object doesn't yet have any unibuilds... but isopack.js doesn't have access
+  // to the PackageSource either (because it needs to work with both
+  // compiled-from-source and loaded-from-disk packages). So we need to make
+  // sure here that the Isopack has *some* reference to the isobuild features
+  // which the unibuilds depend on, so we do it here (and also in
+  // Isopack#initFromPath).
   var isobuildFeatures = [];
   packageSource.architectures.forEach((sourceArch) => {
     sourceArch.uses.forEach((use) => {
