@@ -14,6 +14,7 @@ exports.SourceProcessor = function (options) {
   self.archMatching = options.archMatching;
   self.isTemplate = !! options.isTemplate;
   self.factoryFunction = options.factoryFunction;
+  self.methodName = options.methodName;
   self.id = `${ options.isopack.displayName() }#${ nextId++ }`;
   self.userPlugin = null;
 };
@@ -26,24 +27,29 @@ _.extend(exports.SourceProcessor.prototype, {
   // defined later in the file).
   instantiatePlugin: function () {
     var self = this;
+    buildmessage.assertInCapture();
     if (self.userPlugin) {
       throw Error("Called instantiatePlugin twice?");
     }
-    // XXX BBP proper error handling --- this is running user-supplied plugin
-    // code, and use markBoundary too
-    try {
-      self.userPlugin = buildmessage.markBoundary(self.factoryFunction).call(
-        null);
-      // If we have a disk cache directory and the plugin wants it, use it.
-      if (self.isopack.pluginCacheDir &&
-          self.userPlugin.setDiskCacheDirectory) {
-        const markedMethod = buildmessage.markBoundary(
-          self.userPlugin.setDiskCacheDirectory.bind(self.userPlugin));
-        markedMethod(self.isopack.pluginCacheDir);
+    buildmessage.enterJob(
+      `running ${self.methodName} callback in package ` +
+        self.isopack.displayName(),
+      () => {
+        try {
+          self.userPlugin = buildmessage.markBoundary(self.factoryFunction)
+            .call(null);
+          // If we have a disk cache directory and the plugin wants it, use it.
+          if (self.isopack.pluginCacheDir &&
+              self.userPlugin.setDiskCacheDirectory) {
+            const markedMethod = buildmessage.markBoundary(
+              self.userPlugin.setDiskCacheDirectory.bind(self.userPlugin));
+            markedMethod(self.isopack.pluginCacheDir);
+          }
+        } catch (e) {
+          buildmessage.exception(e);
+        }
       }
-    } catch (e) {
-      buildmessage.exception(e);
-    }
+    );
   },
   relevantForArch: function (arch) {
     var self = this;

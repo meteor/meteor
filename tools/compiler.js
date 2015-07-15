@@ -197,6 +197,14 @@ compiler.compile = Profile(function (packageSource, options) {
 // - isopackCache
 // - includeCordovaUnibuild
 compiler.lint = function (packageSource, options) {
+  // Note: the buildmessage context of compiler.lint and lintUnibuild is a
+  // normal error message context (eg, there might be errors from initializing
+  // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
+  // our return value.
+  buildmessage.assertInJob();
+
+  const warnings = new buildmessage._MessageSet;
+
   _.each(packageSource.architectures, function (architecture) {
     // skip Cordova if not required
     if (! options.includeCordovaUnibuild
@@ -204,15 +212,21 @@ compiler.lint = function (packageSource, options) {
       return;
     }
 
-    lintUnibuild({
+    const unibuildWarnings = lintUnibuild({
       isopack: options.isopack,
       isopackCache: options.isopackCache,
       sourceArch: architecture
     });
+    if (unibuildWarnings) {
+      warnings.merge(unibuildWarnings);
+    }
   });
+  return warnings.hasMessages() ? warnings : null;
 };
 
 compiler.getMinifiers = function (packageSource, options) {
+  buildmessage.assertInJob();
+
   var minifiers = [];
   _.each(packageSource.architectures, function (architecture) {
     var activePluginPackages = getActivePluginPackages(options.isopack, {
@@ -246,6 +260,8 @@ compiler.getMinifiers = function (packageSource, options) {
 };
 
 function getLinterSourceProcessorSet({isopack, activePluginPackages}) {
+  buildmessage.assertInJob();
+
   const sourceProcessorSet = new SourceProcessorSet(
     isopack.displayName, { allowConflicts: true });
 
@@ -259,6 +275,12 @@ function getLinterSourceProcessorSet({isopack, activePluginPackages}) {
 }
 
 var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
+  // Note: the buildmessage context of compiler.lint and lintUnibuild is a
+  // normal error message context (eg, there might be errors from initializing
+  // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
+  // our return value.
+  buildmessage.assertInJob();
+
   var activePluginPackages = getActivePluginPackages(
     isopack, {
       isopackCache,
@@ -267,9 +289,10 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 
   const sourceProcessorSet =
           getLinterSourceProcessorSet({isopack, activePluginPackages});
-  // bail out early if there is not much to run
-  if (sourceProcessorSet.isEmpty()) {
-    return;
+  // bail out early if we had trouble loading plugins or if we're not
+  // going to lint anything
+  if (buildmessage.jobHasMessages() || sourceProcessorSet.isEmpty()) {
+    return null;
   }
 
   const unibuild = _.findWhere(isopack.unibuilds, {arch: sourceArch.arch});
@@ -280,13 +303,16 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
   var sourceItems = sourceArch.getSourcesFunc(
     sourceProcessorSet, unibuild.watchSet);
 
-  runLinters({
-    isopackCache,
-    sourceItems,
-    sourceProcessorSet,
-    inputSourceArch: sourceArch,
-    watchSet: unibuild.watchSet
+  const linterMessages = buildmessage.capture(() => {
+    runLinters({
+      isopackCache,
+      sourceItems,
+      sourceProcessorSet,
+      inputSourceArch: sourceArch,
+      watchSet: unibuild.watchSet
+    });
   });
+  return linterMessages;
 };
 
 // options.sourceArch is a SourceArch to compile.  Process all source files
@@ -322,31 +348,39 @@ var compileUnibuild = function (options) {
 
   // *** Assemble the list of source file handlers from the plugins
   // XXX BBP redoc
-  var sourceProcessorSet = new SourceProcessorSet(
-    isopk.displayName(), { hardcodeJs: true});
+  let sourceProcessorSet, linterSourceProcessorSet;
+  buildmessage.enterJob("determining active plugins", () => {
+    sourceProcessorSet = new SourceProcessorSet(
+      isopk.displayName(), { hardcodeJs: true});
 
-  activePluginPackages.forEach((otherPkg) => {
-    otherPkg.ensurePluginsInitialized();
+    activePluginPackages.forEach((otherPkg) => {
+      otherPkg.ensurePluginsInitialized();
 
-    // Note that this may log a buildmessage if there are conflicts.
-    sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler);
-  });
+      // Note that this may log a buildmessage if there are conflicts.
+      sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler);
+    });
 
-  // Used to excuse functions from the "undeclared static asset" check.
-  const linterSourceProcessorSet = getLinterSourceProcessorSet({
-    activePluginPackages,
-    isopack: isopk
+    // Used to excuse functions from the "undeclared static asset" check.
+    linterSourceProcessorSet = getLinterSourceProcessorSet({
+      activePluginPackages,
+      isopack: isopk
+    });
+    if (buildmessage.jobHasMessages()) {
+      // Recover by not calling getSourcesFunc and pretending there are no
+      // items.
+      sourceProcessorSet = null;
+    }
   });
 
   // *** Determine source files
-  // Note: sourceExtensions does not include leading dots
   // Note: the getSourcesFunc function isn't expected to add its
   // source files to watchSet; rather, the watchSet is for other
   // things that the getSourcesFunc consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  var sourceItems = inputSourceArch.getSourcesFunc(
-    sourceProcessorSet, watchSet);
+  const sourceItems = sourceProcessorSet
+          ? inputSourceArch.getSourcesFunc(sourceProcessorSet, watchSet)
+          : [];
 
   if (nodeModulesPath) {
     // If this slice has node modules, we should consider the shrinkwrap file
@@ -557,6 +591,10 @@ var compileUnibuild = function (options) {
 
 function runLinters({inputSourceArch, isopackCache, sourceItems,
                      sourceProcessorSet, watchSet}) {
+  // The buildmessage context here is for linter warnings only! runLinters
+  // should not do anything that can have a real build failure.
+  buildmessage.assertInCapture();
+
   if (sourceProcessorSet.isEmpty()) {
     return;
   }

@@ -303,19 +303,16 @@ _.extend(exports.IsopackCache.prototype, {
   // WatchSets with files used by the linter.
   _lintLocalPackage(packageSource, isopack) {
     const self = this;
+    buildmessage.assertInJob();
     if (! self._lintLocalPackages)
       return;
 
-    const lintingMessages = buildmessage.capture({
-      title: "linting isopack " + isopack.name
-    }, function () {
-      compiler.lint(packageSource, {
-        isopackCache: self,
-        isopack: isopack,
-        includeCordovaUnibuild: self._includeCordovaUnibuild
-      });
+    const lintingMessages = compiler.lint(packageSource, {
+      isopackCache: self,
+      isopack: isopack,
+      includeCordovaUnibuild: self._includeCordovaUnibuild
     });
-    if (lintingMessages.hasMessages()) {
+    if (lintingMessages && lintingMessages.hasMessages()) {
       isopack.lintingMessages = lintingMessages;
     }
   },

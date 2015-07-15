@@ -396,6 +396,8 @@ _.extend(ResourceSlot.prototype, {
 // XXX BBP ???
 var PackageSourceBatch = function (unibuild, processor) {
   var self = this;
+  buildmessage.assertInJob();
+
   self.unibuild = unibuild;
   self.processor = processor;
   var sourceProcessorSet = self._getSourceProcessorSet();
@@ -436,6 +438,9 @@ var PackageSourceBatch = function (unibuild, processor) {
 _.extend(PackageSourceBatch.prototype, {
   _getSourceProcessorSet: function () {
     var self = this;
+
+    buildmessage.assertInJob();
+
     var isopack = self.unibuild.pkg;
     const activePluginPackages = compiler.getActivePluginPackages(isopack, {
       uses: self.unibuild.uses,

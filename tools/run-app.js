@@ -708,16 +708,22 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
-    if (self.projectContext.lintAppAndLocalPackages) {
-      var warnings = bundleResult.warnings;
-
-      if (warnings && warnings.hasMessages()) {
-        runLog.logTemporary('Linting your app.');
+    function maybePrintLintWarnings(bundleResult) {
+      if (! (self.projectContext.lintAppAndLocalPackages &&
+             bundleResult.warnings)) {
+        return;
+      }
+      if (bundleResult.warnings.hasMessages()) {
+        const formattedMessages = bundleResult.warnings.formatMessages();
         runLog.log(
-          'Linted your app.\n\n' + warnings.formatMessages(),
+          `Linted your app.\n\n${ formattedMessages }`,
           { arrow: true });
+      } else {
+        runLog.log('Linted your app. No linting errors.',
+                   { arrow: true });
       }
     }
+    maybePrintLintWarnings(bundleResult);
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the
@@ -771,21 +777,7 @@ _.extend(AppRunner.prototype, {
           return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
 
-        const canAndShouldLint =
-          self.projectContext.lintAppAndLocalPackages && bundleResult.warnings;
-
-        if (canAndShouldLint) {
-          runLog.logTemporary('Linting your app.');
-
-          const formattedMessages = bundleResult.warnings.formatMessages();
-          if (formattedMessages) {
-            runLog.log(
-              `Linted your app.\n\n${ formattedMessages }`,
-              { arrow: true });
-          } else {
-            runLog.log('Linted your app. No linting errors.');
-          }
-        }
+        maybePrintLintWarnings(bundleResult);
 
         var oldFuture = self.runFuture = new Future;
 

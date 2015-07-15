@@ -687,6 +687,7 @@ _.extend(Target.prototype, {
 
   _runCompilerPlugins: Profile("Target#_runCompilerPlugins", function () {
     var self = this;
+    buildmessage.assertInJob();
     var processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: self.unibuilds,
       arch: self.arch,
@@ -2087,6 +2088,14 @@ exports.bundle = function ({
     if (! buildmessage.jobHasMessages() && shouldLint) {
       lintingMessages = lintBundle(projectContext, app, packageSource);
     }
+    // If while trying to lint, we got a compilation error (eg, an issue loading
+    // plugins in one of the linter packages), restart on any relevant change,
+    // and be done.
+    if (buildmessage.jobHasMessages()) {
+      serverWatchSet.merge(projectContext.getProjectAndLocalPackagesWatchSet());
+      serverWatchSet.merge(app.getMergedWatchSet());
+      return;
+    }
 
     var minifiers = null;
     if (! _.contains(['development', 'production'], minifyMode)) {
@@ -2096,6 +2105,13 @@ exports.bundle = function ({
       isopackCache: projectContext.isopackCache,
       isopack: app
     });
+    // If figuring out what the minifiers are failed (eg, clashing extension
+    // handlers), restart on any relevant change, and be done.
+    if (buildmessage.jobHasMessages()) {
+      serverWatchSet.merge(projectContext.getProjectAndLocalPackagesWatchSet());
+      serverWatchSet.merge(app.getMergedWatchSet());
+      return;
+    }
 
     var clientTargets = [];
     // Client
@@ -2187,16 +2203,17 @@ exports.bundle = function ({
   };
 };
 
+// Returns null if there are no lint warnings and the app has no linters
+// defined. Returns an empty MessageSet if the app has a linter defined but
+// there are no lint warnings (on app or packages).
 function lintBundle (projectContext, isopack, packageSource) {
+  buildmessage.assertInJob();
+
   const lintingMessages = new buildmessage._MessageSet();
 
-  const appMessages = buildmessage.capture({
-    title: "linting the application"
-  }, function () {
-    compiler.lint(packageSource, {
-      isopackCache: projectContext.isopackCache,
-      isopack: isopack
-    });
+  const appMessages = compiler.lint(packageSource, {
+    isopack,
+    isopackCache: projectContext.isopackCache
   });
   if (appMessages) {
     lintingMessages.merge(appMessages);
@@ -2211,7 +2228,7 @@ function lintBundle (projectContext, isopack, packageSource) {
   // if there was no linting performed since there are no applicable
   // linters for neither app nor packages, just return null
   const appLinters = isopack.sourceProcessors.linter;
-  if (_.isEmpty(appLinters) && ! localPackagesMessages) {
+  if (appLinters.isEmpty() && ! localPackagesMessages) {
     return null;
   }
 

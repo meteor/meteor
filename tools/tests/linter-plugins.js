@@ -16,7 +16,7 @@ function startRun(sandbox, ...args) {
 };
 
 function matchLintingMessages(run, messages, initial) {
-  run.match('Linting your app.');
+  run.match('Linted your app.');
   messages.forEach(message => run.match(message));
   if (initial) {
     run.match('Started your app.');

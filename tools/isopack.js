@@ -452,6 +452,8 @@ _.extend(Isopack.prototype, {
   ensurePluginsInitialized: Profile("Isopack#ensurePluginsInitialized", function () {
     var self = this;
 
+    buildmessage.assertInJob();
+
     if (self._pluginsInitialized)
       return;
 
@@ -494,7 +496,6 @@ _.extend(Isopack.prototype, {
     //   Plugin.registerCompiler({...}, function () { return new C; });
     //   var C = function () {...}
     // and so we want to wait for C to be defined.
-
     _.each(self.sourceProcessors, (sourceProcessorSet) => {
       _.each(sourceProcessorSet.allSourceProcessors, (sourceProcessor) => {
         sourceProcessor.instantiatePlugin();
@@ -608,7 +609,8 @@ _.extend(Isopack.prototype, {
           filenames: filenames,
           archMatching: archMatching,
           isTemplate: isTemplate,
-          factoryFunction: factory
+          factoryFunction: factory,
+          methodName: methodName
         });
         // This logs a buildmessage on conflicts.
         sourceProcessorSet.addSourceProcessor(sp);

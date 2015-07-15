@@ -250,7 +250,8 @@ selftest.define("compiler plugins - compiler throws", () => {
 
   const run = s.run('add', 'local-plugin');
   run.matchErr('Errors while adding packages');
-  run.matchErr('While building package local-plugin');
+  run.matchErr(
+    'While running registerCompiler callback in package local-plugin');
   // XXX This is wrong! The path on disk is packages/local-plugin/plugin.js, but
   // at some point we switched to the servePath which is based on the *plugin*'s
   // "package" name.
