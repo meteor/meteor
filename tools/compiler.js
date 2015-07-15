@@ -649,7 +649,7 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
       wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
     );
 
-    const linter = sourceProcessor.userPlugin.processFilesForTarget;
+    const linter = sourceProcessor.userPlugin.processFilesForPackage;
 
     function archToString(arch) {
       if (arch.match(/web\.cordova/))

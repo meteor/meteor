@@ -24,7 +24,7 @@ var DEFAULT_CONFIG = JSON.stringify({
   browser: true
 });
 
-JsHintLinter.prototype.processFilesForTarget = function (files, options) {
+JsHintLinter.prototype.processFilesForPackage = function (files, options) {
   var self = this;
   var globals = options.globals;
 
