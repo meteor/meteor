@@ -268,7 +268,7 @@ export class SourceProcessorSet {
 
 class SourceClassification {
   constructor(type, {legacyHandler, extension, sourceProcessors,
-                     legacyIsTemplate, arch}) {
+                     legacyIsTemplate, arch} = {}) {
     const knownTypes = ['extension', 'filename', 'legacy-handler', 'wrong-arch',
                         'unmatched'];
     if (knownTypes.indexOf(type) === -1) {
