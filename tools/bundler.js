@@ -508,19 +508,32 @@ _.extend(Target.prototype, {
       // dependencies from packages.
       self._addDirectCordovaDependencies();
 
-      // Minify, with mode requested
-      var minifiersByExt = {};
-      var minifiers = options.minifiers;
-      ['js', 'css'].forEach(function (ext) {
-        minifiersByExt[ext] = _.find(minifiers, function (minifier) {
-          return minifier && _.contains(minifier.extensions, ext);
-        });
-      });
-      if (minifiersByExt.js) {
-        self.minifyJs(minifiersByExt.js, options.minifyMode);
-      }
-      // CSS is minified only for client targets.
+      // Minify, with mode requested.
+      // Why do we only minify in client targets?
+      // (a) CSS only exists in client targets, so we definitely shouldn't
+      //     minify CSS in server targets.
+      // (b) We don't know of a use case for standard minification on server
+      //     targets (though we could imagine wanting to do other
+      //     post-processing using this API).
+      // (c) On the server, JS files have extra metadata associated like
+      //     static assets and npm modules. We'd have to support merging
+      //     the npm modules from multiple js resources (generally 1 per
+      //     package) together. This isn't impossible, but not worth
+      //     the implementation complexity without a use case.
+      // We can always extend registerMinifier to allow server targets
+      // later!
       if (self instanceof ClientTarget) {
+        var minifiersByExt = {};
+        var minifiers = options.minifiers;
+        ['js', 'css'].forEach(function (ext) {
+          minifiersByExt[ext] = _.find(minifiers, function (minifier) {
+            return minifier && _.contains(minifier.extensions, ext);
+          });
+        });
+
+        if (minifiersByExt.js) {
+          self.minifyJs(minifiersByExt.js, options.minifyMode);
+        }
         if (minifiersByExt.css) {
           self.minifyCss(minifiersByExt.css, options.minifyMode);
         }
@@ -2046,10 +2059,7 @@ exports.bundle = function ({
       var server = new ServerTarget(targetOptions);
 
       server.make({
-        packages: [app],
-        // Never minify on the server.
-        // XXX BBP This is weird. Why not leave this up to the minifier plugin?
-        minifyMode: 'development'
+        packages: [app]
       });
 
       return server;
@@ -2090,9 +2100,7 @@ exports.bundle = function ({
     var clientTargets = [];
     // Client
     _.each(webArchs, function (arch) {
-      var client = makeClientTarget(app, arch, {
-        minifiers: minifiers
-      });
+      var client = makeClientTarget(app, arch, {minifiers});
       clientTargets.push(client);
       targets[arch] = client;
     });
