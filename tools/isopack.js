@@ -13,6 +13,7 @@ var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
+import { endsWith } from './utils.js';
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -551,9 +552,10 @@ _.extend(Isopack.prototype, {
         });
       },
 
-      _registerSourceProcessor: function (options, factory,
-                                          {sourceProcessorSet, methodName,
-                                           featurePackage}) {
+      _registerSourceProcessor: function (
+        {extensions, filenames, archMatching, isTemplate},
+        factory,
+        {sourceProcessorSet, methodName, featurePackage}) {
         if (!isopack.featureEnabled(featurePackage)) {
           // This error is OK because we only define 1.0.0 for each of these
           // feature packages (in compiler.KNOWN_ISOBUILD_FEATURE_PACKAGES).
@@ -563,12 +565,12 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        const hasExtensions = (options && options.extensions &&
-                               options.extensions instanceof Array &&
-                               options.extensions.length > 0);
-        const hasFilenames = (options && options.filenames &&
-                              options.filenames instanceof Array &&
-                              options.filenames.length > 0);
+        const hasExtensions = (extensions &&
+                               extensions instanceof Array &&
+                               extensions.length > 0);
+        const hasFilenames = (filenames &&
+                              filenames instanceof Array &&
+                              filenames.length > 0);
         if (! (hasExtensions || hasFilenames)) {
           buildmessage.error("Plugin." + methodName + " must specify a " +
                              "non-empty array of extensions or filenames",
@@ -576,6 +578,22 @@ _.extend(Isopack.prototype, {
           // recover by ignoring
           return;
         }
+
+        // Don't let extensions or filenames try to look for directories (in the
+        // way that WatchSet expresses them).
+        if (extensions && extensions.some(e => endsWith(e, '/'))) {
+          buildmessage.error(
+            `Plugin.${methodName}: extensions may not end in /`);
+          // recover by ignoring
+          return;
+        }
+        if (filenames && filenames.some(f => endsWith(f, '/'))) {
+          buildmessage.error(
+            `Plugin.${methodName}: filenames may not end in /`);
+          // recover by ignoring
+          return;
+        }
+
         if (typeof factory !== 'function') {
           buildmessage.error(methodName + " call must "
                              + "specify a factory function",
@@ -586,10 +604,10 @@ _.extend(Isopack.prototype, {
 
         const sp = new buildPluginModule.SourceProcessor({
           isopack: isopack,
-          extensions: options.extensions,
-          filenames: options.filenames,
-          archMatching: options.archMatching,
-          isTemplate: options.isTemplate,
+          extensions: extensions,
+          filenames: filenames,
+          archMatching: archMatching,
+          isTemplate: isTemplate,
           factoryFunction: factory
         });
         // This logs a buildmessage on conflicts.
@@ -603,7 +621,7 @@ _.extend(Isopack.prototype, {
       // Version Solver will not let you use registerCompiler plugins with old
       // versions of the tool.
       registerCompiler: function (options, factory) {
-        Plugin._registerSourceProcessor(options, factory, {
+        Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.compiler,
           methodName: "registerCompiler",
           featurePackage: "isobuild:compiler-plugin"
@@ -612,7 +630,7 @@ _.extend(Isopack.prototype, {
 
       // XXX BBP doc
       registerLinter: function (options, factory) {
-        Plugin._registerSourceProcessor(options, factory, {
+        Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.linter,
           methodName: "registerLinter",
           featurePackage: "isobuild:linter-plugin"
@@ -639,7 +657,7 @@ _.extend(Isopack.prototype, {
           return;
         }
 
-        Plugin._registerSourceProcessor(options, factory, {
+        Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.minifier,
           methodName: "registerMinifier",
           featurePackage: "isobuild:minifier-plugin"

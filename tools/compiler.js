@@ -431,7 +431,7 @@ var compileUnibuild = function (options) {
           // should only return sources that have isAsset set or which match
           // sourceProcessorSet.
           throw Error("app contains non-asset files without plugin? " +
-                      relPath);
+                      relPath + " - " + filename);
         }
 
         const linterClassification = linterSourceProcessorSet.classifyFilename(

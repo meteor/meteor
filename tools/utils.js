@@ -390,6 +390,11 @@ exports.startsWith = function(str, starts) {
     str.substring(0, starts.length) === starts;
 };
 
+exports.endsWith = function(str, ends) {
+  return str.length >= ends.length &&
+    str.substring(str.length - ends.length) === ends;
+};
+
 // Options: noPrefix: do not display 'Meteor ' in front of the version number.
 exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
