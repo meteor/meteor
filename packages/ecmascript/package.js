@@ -29,3 +29,8 @@ Package.onUse(function (api) {
   );
   api.export("Promise");
 });
+
+Package.onTest(function (api) {
+  api.use(["ecmascript", "tinytest"]);
+  api.addFiles("ecmascript-tests.js");
+});
