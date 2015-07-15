@@ -366,8 +366,10 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       resources.push({
         type: "js",
         data: data,
-        // XXX BBP what about options.sourcePath?  (which is the name
-        //     of the file in the preprocessing language probably)
+        // XXX Weirdly, we now ignore sourcePath even though we required
+        //     it before. We used to use it as the source path in source map
+        //     generated in linker. We now use the servePath for that, as of
+        //     b556e622. Not sure this is actually correct...
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,

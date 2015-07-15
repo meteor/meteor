@@ -250,6 +250,8 @@ var File = function (options) {
   // disk).
   self.sourcePath = options.sourcePath;
 
+  // info is just for help with debugging the tool; it isn't written to disk or
+  // anything.
   self.info = options.info || '?';
 
   // If this file was generated, a sourceMap (as a string) with debugging
@@ -433,8 +435,6 @@ var Target = function (options) {
   // All of the Unibuilds that are to go into this target, in the order
   // that they are to be loaded.
   self.unibuilds = [];
-  // XXX BBP ???
-  self.sourceBatches = null;
 
   // JavaScript files. List of File. They will be loaded at startup in
   // the order given.
@@ -499,10 +499,10 @@ _.extend(Target.prototype, {
         packages: options.packages || []
       });
 
-      self._runCompilerPlugins();
+      const sourceBatches = self._runCompilerPlugins();
 
       // Link JavaScript and set up self.js, etc.
-      self._emitResources();
+      self._emitResources(sourceBatches);
 
       // Add top-level Cordova dependencies, which override Cordova
       // dependencies from packages.
@@ -685,6 +685,8 @@ _.extend(Target.prototype, {
     });
   },
 
+  // Run all the compiler plugins on all source files in the project. Returns an
+  // array of PackageSourceBatches which contain the results of this processing.
   _runCompilerPlugins: Profile("Target#_runCompilerPlugins", function () {
     var self = this;
     buildmessage.assertInJob();
@@ -693,12 +695,12 @@ _.extend(Target.prototype, {
       arch: self.arch,
       isopackCache: self.isopackCache
     });
-    self.sourceBatches = processor.runCompilerPlugins();
+    return processor.runCompilerPlugins();
   }),
 
   // Process all of the sorted unibuilds (which includes running the JavaScript
   // linker).
-  _emitResources: Profile("Target#_emitResources", function () {
+  _emitResources: Profile("Target#_emitResources", function (sourceBatches) {
     var self = this;
     buildmessage.assertInJob();
 
@@ -706,7 +708,7 @@ _.extend(Target.prototype, {
     var isOs = archinfo.matches(self.arch, "os");
 
     // Copy their resources into the bundle in order
-    _.each(self.sourceBatches, function (sourceBatch) {
+    _.each(sourceBatches, function (sourceBatch) {
       var unibuild = sourceBatch.unibuild;
 
       if (self.cordovaDependencies) {
@@ -805,7 +807,7 @@ _.extend(Target.prototype, {
 
           // Both CSS and JS files can have source maps
           if (resource.sourceMap) {
-            // XXX BBP we used to set sourceMapRoot to
+            // XXX we used to set sourceMapRoot to
             // files.pathDirname(relPath) but it's unclear why.  With the
             // currently generated source map file names, it works without it
             // and doesn't work well with it... maybe?  we were getting
@@ -864,8 +866,7 @@ _.extend(Target.prototype, {
     self.js = _.flatten(_.map(sources, function (source) {
       return _.map(source._minifiedFiles, function (file) {
         var newFile = new File({
-          // XXX BBP what is this ? here?
-          info: minifyMode === 'production' ? 'minified js' : '?',
+          info: 'minified js',
           data: new Buffer(file.data, 'utf8')
         });
         if (file.sourceMap) {
@@ -1030,8 +1031,7 @@ _.extend(ClientTarget.prototype, {
     self.css = _.flatten(_.map(sources, function (source) {
       return _.map(source._minifiedFiles, function (file) {
         var newFile = new File({
-          // XXX BBP what is this ? ?
-          info: minifyMode === 'production' ? 'minified css' : '?',
+          info: 'minified css',
           data: new Buffer(file.data, 'utf8')
         });
         if (file.sourceMap) {

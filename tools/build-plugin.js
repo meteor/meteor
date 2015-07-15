@@ -382,9 +382,8 @@ _.extend(exports.InputFile.prototype, {
     throw new Error("Not Implemented");
   },
   /**
-   * @summary Returns a string symbol representing the architecture that is
-   * targetted by processing this file. Can be used to implement caching.
-   * XXX BBP is this doc string good?
+   * @summary Returns the architecture that is targeted while processing this
+   * file.
    * @memberof InputFile
    * @returns {String}
    */
