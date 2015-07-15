@@ -261,7 +261,8 @@ selftest.define("compiler plugins - compiler throws", () => {
   run.expectExit(1);
 });
 
-// Test that compiler plugins can add static assets.
+// Test that compiler plugins can add static assets. Also tests `filenames`
+// option to registerCompiler.
 selftest.define("compiler plugins - compiler addAsset", () => {
   const s = new Sandbox({ fakeMongo: true });
 
@@ -270,6 +271,7 @@ selftest.define("compiler plugins - compiler addAsset", () => {
 
   const run = startRun(s);
   // Test server-side asset.
+  run.match("extension is null");  // test getExtension -> null
   run.match("Asset says Print out foo");
 
   // Test client-side asset.

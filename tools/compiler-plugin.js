@@ -139,7 +139,6 @@ _.extend(InputFile.prototype, {
   getSourceHash: function () {
     return this._resourceSlot.inputResource.hash;
   },
-  // XXX BBP make sure that if it was matched by filename, this is null
   getExtension: function () {
     return this._resourceSlot.inputResource.extension;
   },
