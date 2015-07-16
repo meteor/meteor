@@ -419,7 +419,7 @@ _.extend(exports.IsopackCache.prototype, {
     this._packageMap.eachPackage((name, packageInfo) => {
       const isopack = this._isopacks[name];
       if (packageInfo.kind === 'local') {
-        anyLinters = anyLinters || ! _.isEmpty(isopack.sourceProcessors.linter);
+        anyLinters = anyLinters || ! isopack.sourceProcessors.linter.isEmpty();
 
         const isopackMessages = isopack.lintingMessages;
         if (isopackMessages) {
