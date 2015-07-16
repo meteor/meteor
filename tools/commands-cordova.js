@@ -348,7 +348,7 @@ var getBundle = function (projectContext, bundlePath, options) {
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
-      minify: ! options.debug,
+      minifyMode: options.debug ? 'development' : 'production',
       // XXX can we ask it not to create the server arch?
       serverArch: archinfo.host(),
       webArchs: [WEB_ARCH_NAME],

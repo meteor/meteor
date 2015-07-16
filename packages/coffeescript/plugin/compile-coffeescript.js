@@ -2,6 +2,7 @@ var fs = Npm.require('fs');
 var path = Npm.require('path');
 var _ = Npm.require('underscore');
 var sourcemap = Npm.require('source-map');
+var LRU = Npm.require('lru-cache');
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -10,6 +11,9 @@ var sourcemap = Npm.require('source-map');
 var prepareStackTrace = Error.prepareStackTrace;
 var coffee = Npm.require('coffee-script');
 Error.prepareStackTrace = prepareStackTrace;
+
+var CACHE_SIZE = process.env.METEOR_COFFEESCRIPT_CACHE_SIZE || 1024*1024*10;
+var CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_CACHE_DEBUG;
 
 var stripExportedVars = function (source, exports) {
   if (!exports || _.isEmpty(exports))
@@ -80,8 +84,6 @@ var stripExportedVars = function (source, exports) {
 };
 
 var addSharedHeader = function (source, sourceMap) {
-  var sourceMapJSON = JSON.parse(sourceMap);
-
   // We want the symbol "share" to be visible to all CoffeeScript files in the
   // package (and shared between them), but not visible to JavaScript
   // files. (That's because we don't want to introduce two competing ways to
@@ -110,61 +112,156 @@ var addSharedHeader = function (source, sourceMap) {
       // There's no use strict, so we can just add the header at the very
       // beginning. This adds a line to the file, so we update the source map to
       // add a single un-annotated line to the beginning.
-      sourceMapJSON.mappings = ";" + sourceMapJSON.mappings;
+      sourceMap.mappings = ";" + sourceMap.mappings;
       return header;
     }
   });
   return {
     source: source,
-    sourceMap: JSON.stringify(sourceMapJSON)
+    sourceMap: sourceMap
   };
 };
 
-var handler = function (compileStep, isLiterate) {
-  var source = compileStep.read().toString('utf8');
-  var outputFile = compileStep.inputPath + ".js";
-
-  var options = {
-    bare: true,
-    filename: compileStep.inputPath,
-    literate: !!isLiterate,
-    // Return a source map.
-    sourceMap: true,
-    // Include the original source in the source map (sourcesContent field).
-    inline: true,
-    // This becomes the "file" field of the source map.
-    generatedFile: "/" + outputFile,
-    // This becomes the "sources" field of the source map.
-    sourceFiles: [compileStep.pathForSourceMap]
-  };
-
-  try {
-    var output = coffee.compile(source, options);
-  } catch (e) {
-    // XXX better error handling, once the Plugin interface support it
-    throw new Error(
-      compileStep.inputPath + ':' +
-      (e.location ? (e.location.first_line + ': ') : ' ') +
-      e.message
-    );
-  }
-
-  var stripped = stripExportedVars(output.js, compileStep.declaredExports);
-  var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
-
-  compileStep.addJavaScript({
-    path: outputFile,
-    sourcePath: compileStep.inputPath,
-    data: sourceWithMap.source,
-    sourceMap: sourceWithMap.sourceMap,
-    bare: compileStep.fileOptions.bare
+var CoffeeCompiler = function () {
+  var self = this;
+  // Maps from a cache key (encoding the source hash, exports, and the other
+  // options passed to coffee.compile) to a {source,sourceMap} object.  Note
+  // that this is the result of both coffee.compile and the post-processing that
+  // we do.
+  self._cache = new LRU({
+    max: CACHE_SIZE,
+    // Cache is measured in bytes.
+    length: function (value) {
+      return value.source.length + sourceMapLength(value.sourceMap);
+    }
   });
+  self._diskCache = null;
+  // For testing.
+  self._callCount = 0;
 };
 
-var literateHandler = function (compileStep) {
-  return handler(compileStep, true);
-};
+_.extend(CoffeeCompiler.prototype, {
+  processFilesForTarget: function (inputFiles) {
+    var self = this;
+    var cacheMisses = [];
 
-Plugin.registerSourceHandler("coffee", handler);
-Plugin.registerSourceHandler("litcoffee", literateHandler);
-Plugin.registerSourceHandler("coffee.md", literateHandler);
+    inputFiles.forEach(function (inputFile) {
+      var source = inputFile.getContentsAsString();
+      var outputFilePath = inputFile.getPathInPackage() + ".js";
+      var extension = inputFile.getExtension();
+      var literate = extension !== 'coffee';
+
+      var options = {
+        bare: true,
+        filename: inputFile.getPathInPackage(),
+        literate: literate,
+        // Return a source map.
+        sourceMap: true,
+        // Include the original source in the source map (sourcesContent field).
+        inline: true,
+        // This becomes the "file" field of the source map.
+        generatedFile: "/" + outputFilePath,
+        // This becomes the "sources" field of the source map.
+        sourceFiles: [inputFile.getDisplayPath()]
+      };
+
+      var cacheKey = JSON.stringify([inputFile.getSourceHash(),
+                                     inputFile.getDeclaredExports(),
+                                     options]);
+      var sourceWithMap = self._cache.get(cacheKey);
+      if (! sourceWithMap) {
+        cacheMisses.push(inputFile.getDisplayPath());
+        try {
+          var output = coffee.compile(source, options);
+        } catch (e) {
+          inputFile.error({
+            message: e.message,
+            line: e.location && (e.location.first_line + 1),
+            column: e.location && (e.location.first_column + 1)
+          });
+
+          return;
+        }
+
+        var stripped = stripExportedVars(
+          output.js,
+          _.pluck(inputFile.getDeclaredExports(), 'name'));
+        sourceWithMap = addSharedHeader(
+          stripped, JSON.parse(output.v3SourceMap));
+        self._cache.set(cacheKey, sourceWithMap);
+      }
+
+      inputFile.addJavaScript({
+        path: outputFilePath,
+        sourcePath: inputFile.getPathInPackage(),
+        data: sourceWithMap.source,
+        sourceMap: sourceWithMap.sourceMap,
+        bare: inputFile.getFileOptions().bare
+      });
+    });
+
+    // Rewrite the cache to disk.
+    // XXX #BBPBetterCache we should just write individual entries separately.
+    self._writeCache();
+
+    if (CACHE_DEBUG) {
+      cacheMisses.sort();
+      console.log("Ran coffee.compile (#%s) on: %s",
+                  ++self._callCount, JSON.stringify(cacheMisses));
+    }
+  },
+  setDiskCacheDirectory: function (diskCache) {
+    var self = this;
+    if (self._diskCache)
+      throw Error("setDiskCacheDirectory called twice?");
+    self._diskCache = diskCache;
+    self._readCache();
+  },
+  // XXX #BBPBetterCache this is an inefficiently designed cache that will cause
+  // quadratic behavior due to writing the whole cache on each write, and has no
+  // error handling, and uses sync, and has an exists/read race condition, and
+  // might not work on Windows
+  _cacheFile: function () {
+    var self = this;
+    return path.join(self._diskCache, 'cache.json');
+  },
+  _readCache: function () {
+    var self = this;
+    var cacheFile = self._cacheFile();
+    if (! fs.existsSync(cacheFile))
+      return;
+    var cacheJSON = JSON.parse(fs.readFileSync(cacheFile));
+    _.each(cacheJSON, function (value, cacheKey) {
+      self._cache.set(cacheKey, value);
+    });
+    if (CACHE_DEBUG) {
+      console.log("Loaded coffeescript cache");
+    }
+  },
+  _writeCache: function () {
+    var self = this;
+    if (! self._diskCache)
+      return;
+    var cacheJSON = {};
+    self._cache.forEach(function (value, cacheKey) {
+      cacheJSON[cacheKey] = value;
+    });
+    fs.writeFileSync(self._cacheFile(), JSON.stringify(cacheJSON));
+  }
+});
+
+Plugin.registerCompiler({
+  extensions: ['coffee', 'litcoffee', 'coffee.md']
+}, function () {
+  return new CoffeeCompiler();
+});
+
+function sourceMapLength(sm) {
+  if (! sm) return 0;
+  // sum the length of sources and the mappings, the size of
+  // metadata is ignored, but it is not a big deal
+  return sm.mappings.length
+       + (sm.sourcesContent || []).reduce(function (soFar, current) {
+         return soFar + (current ? current.length : 0);
+       }, 0);
+};

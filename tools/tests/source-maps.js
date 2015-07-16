@@ -30,10 +30,16 @@ selftest.define("source maps from an app", ['checkout'], function () {
   });
 
   s.cd("myapp");
-  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));
+  s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));  // XXX why?
   run = s.run("run");
   run.waitSecs(10);
-  run.match(/at app\/throw.js:3/);
+  run.match(/at throw.js:3\b/);
+  run.stop();
+
+  s.set('THROW_FROM_PACKAGE', 't');
+  run = s.run('run');
+  run.waitSecs(10);
+  run.match(/packages\/throwing-package\/thrower\.js:2\b/);
   run.stop();
 });
 
@@ -83,6 +89,9 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   s.cd("myapp");
   var run = s.run("run");
   run.waitSecs(10);
-  run.match(/packages\/build-plugin\/build-plugin.js:2:1/);
+  // XXX This is wrong! The path on disk is
+  // packages/build-plugin/build-plugin.js, but at some point we switched to the
+  // servePath which is based on the *plugin*'s "package" name.
+  run.match(/packages\/build-plugin-itself\/build-plugin.js:2:1/);
   run.stop();
 });

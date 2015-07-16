@@ -111,7 +111,7 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   // We need the tool in order to run from the fake warehouse at all.
   "meteor-tool",
   // We need the packages in the skeleton app in order to test 'meteor create'.
-  "meteor-platform", "autopublish", "insecure"
+  "meteor-platform", "autopublish", "insecure", "standard-minifiers"
 ];
 
 var setUpBuiltPackageTropohouse = function () {
@@ -222,10 +222,12 @@ _.extend(Matcher.prototype, {
     var timer = null;
     if (timeout) {
       timer = setTimeout(function () {
+        var pattern = self.matchPattern;
         self.matchPattern = null;
         self.matchStrict = null;
         self.matchFuture = null;
-        f['throw'](new TestFailure('match-timeout', { run: self.run }));
+        f['throw'](new TestFailure('match-timeout', { run: self.run,
+                                                      pattern: pattern }));
       }, timeout * 1000);
     }
 
@@ -690,6 +692,12 @@ _.extend(Sandbox.prototype, {
   write: function (filename, contents) {
     var self = this;
     files.writeFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
+  },
+
+  // Like writeFile, but appends rather than writes.
+  append: function (filename, contents) {
+    var self = this;
+    files.appendFile(files.pathJoin(self.cwd, filename), contents, 'utf8');
   },
 
   // Reads a file in the sandbox as a utf8 string. 'filename' is a
@@ -1788,7 +1796,8 @@ var runTests = function (options) {
                                          frames[0].file);
         Console.rawError("  => " + failure.reason + " at " +
                          relpath + ":" + frames[0].line + "\n");
-        if (failure.reason === 'no-match' || failure.reason === 'junk-before') {
+        if (failure.reason === 'no-match' || failure.reason === 'junk-before' ||
+            failure.reason === 'match-timeout') {
           Console.arrowError("Pattern: " + failure.details.pattern, 2);
         }
         if (failure.reason === "wrong-exit-code") {

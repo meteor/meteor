@@ -33,12 +33,34 @@ function tryAllSourceMapRetrievers(filename) {
   return null;
 }
 
+function wrapCallSite(unwrappedFrame) {
+  const frame = sourceMapSupport.wrapCallSite(unwrappedFrame);
+  function wrapGetter(name) {
+    const origGetter = frame[name];
+    frame[name] = function(arg) {
+      // replace a custom location domain that we set for better UX in Chrome
+      // DevTools (separate domain group) in source maps.
+      const source = origGetter(arg);
+      if (!source) {
+        return source;
+      }
+      return source.replace(/(^|\()meteor:\/\/..app\//, '$1');
+    };
+  }
+  wrapGetter('getScriptNameOrSourceURL');
+  wrapGetter('getEvalOrigin');
+
+  return frame;
+}
+
+
 sourceMapSupport.install({
   retrieveSourceMap: tryAllSourceMapRetrievers,
   // For now, don't fix the source line in uncaught exceptions, because we
   // haven't fixed handleUncaughtExceptions in source-map-support to properly
   // locate the source files.
-  handleUncaughtExceptions: false
+  handleUncaughtExceptions: false,
+  wrapCallSite
 });
 
 // Default retrievers

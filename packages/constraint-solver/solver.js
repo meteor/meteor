@@ -131,7 +131,16 @@ CS.Solver.prototype.analyze = function () {
     // throw if there are unknown packages in root deps
     if (analysis.unknownRootDeps.length) {
       _.each(analysis.unknownRootDeps, function (p) {
-        self.errors.push('unknown package in top-level dependencies: ' + p);
+        if (isIsobuildFeaturePackage(p)) {
+          self.errors.push(
+            'unsupported Isobuild feature "' + p +
+            '" in top-level dependencies; see ' +
+            'https://github.com/meteor/meteor/wiki/Isobuild-Feature-Packages ' +
+            'for a list of features and the minimum Meteor release required'
+          );
+        } else {
+          self.errors.push('unknown package in top-level dependencies: ' + p);
+        }
       });
       self.throwAnyErrors();
     }
@@ -845,7 +854,14 @@ CS.Solver.prototype._getAnswer = function (options) {
         var requirers = _.filter(analysis.unknownPackages[p], function (pv) {
           return self.solution.evaluate(pv);
         });
-        var errorStr = 'unknown package: ' + p;
+        var errorStr;
+        if (isIsobuildFeaturePackage(p)) {
+          errorStr = 'unsupported Isobuild feature "' + p + '"; see ' +
+            'https://github.com/meteor/meteor/wiki/Isobuild-Feature-Packages ' +
+            'for a list of features and the minimum Meteor release required';
+        } else {
+          errorStr = 'unknown package: ' + p;
+        }
         _.each(requirers, function (pv) {
           errorStr += '\nRequired by: ' + pv;
         });
@@ -1089,3 +1105,8 @@ CS.Solver.Constraint = function (fromVar, toPackage, vConstraint, conflictVar) {
   check(this.vConstraint, PV.VersionConstraint);
   check(this.conflictVar, String);
 };
+
+// This function is duplicated in tools/compiler.js.
+function isIsobuildFeaturePackage(packageName) {
+  return /^isobuild:/.test(packageName);
+}

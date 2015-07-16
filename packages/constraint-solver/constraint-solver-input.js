@@ -139,6 +139,18 @@ CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
   catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
 };
 
+CS.Input.prototype.isEqual = function (otherInput) {
+  var a = this;
+  var b = otherInput;
+
+  // It would be more efficient to compare the fields directly,
+  // but converting to JSON is much easier to implement.
+  // This equality test is also overly sensitive to order,
+  // missing opportunities to declare two inputs equal when only
+  // the order has changed.
+  return _.isEqual(a.toJSONable(), b.toJSONable());
+};
+
 CS.Input.prototype.toJSONable = function () {
   var self = this;
   var obj = {

@@ -128,9 +128,13 @@ _.extend(Job.prototype, {
 
 // A MessageSet contains a set of jobs, which in turn each contain a
 // set of messages.
-var MessageSet = function () {
+var MessageSet = function (messageSet) {
   var self = this;
   self.jobs = [];
+
+  if (messageSet) {
+    self.jobs = _.clone(messageSet.jobs);
+  }
 };
 
 _.extend(MessageSet.prototype, {
@@ -608,5 +612,6 @@ _.extend(exports, {
   reportProgress: reportProgress,
   reportProgressDone: reportProgressDone,
   getCurrentProgressTracker: getCurrentProgressTracker,
-  addChildTracker: addChildTracker
+  addChildTracker: addChildTracker,
+  _MessageSet: MessageSet
 });

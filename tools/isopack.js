@@ -8,10 +8,9 @@ var bundler = require('./bundler.js');
 var watch = require('./watch.js');
 var files = require('./files.js');
 var isopackets = require("./isopackets.js");
-var isopackCacheModule = require('./isopack-cache.js');
-var packageMapModule = require('./package-map.js');
 var colonConverter = require('./colon-converter.js');
-var Future = require('fibers/future');
+var linterPluginModule = require('./linter-plugin.js');
+var buildPluginModule = require('./build-plugin.js');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
 
@@ -31,8 +30,7 @@ var rejectBadPath = function (p) {
 // - implies
 // - watchSet
 // - nodeModulesPath
-// - prelinkFiles
-// - packageVariables
+// - declaredExports
 // - resources
 
 var nextBuildId = 1;
@@ -62,28 +60,17 @@ var Unibuild = function (isopack, options) {
   self.id = self.pkg.name + "." + self.kind + "@" + self.arch + "#" +
     (nextBuildId ++);
 
-  // Prelink output.
-  //
-  // 'prelinkFiles' is the partially linked JavaScript code (an
-  // array of objects with keys 'source' and 'servePath', both strings -- see
-  // prelink() in linker.js)
-  //
-  // 'packageVariables' are variables that are syntactically globals
-  // in our input files and which we capture with a package-scope
-  // closure. A list of objects with keys 'name' (required) and
-  // 'export' (true, 'tests', or falsy).
-  //
-  // Both of these are saved into unibuilds on disk, and are inputs into the final
-  // link phase, which inserts the final JavaScript resources into
-  // 'resources'.
-  self.prelinkFiles = options.prelinkFiles;
-  self.packageVariables = options.packageVariables;
+  // 'declaredExports' are the variables which are exported from this package.
+  // A list of objects with keys 'name' (required) and 'testOnly' (boolean,
+  // defaults to false).
+  self.declaredExports = options.declaredExports;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
   // final link stage. A list of objects with these keys:
   //
-  // type: "js", "css", "head", "body", "asset"
+  // type: "source", "head", "body", "asset". (resources produced by
+  // legacy source handlers can also be "js" or "css".
   //
   // data: The contents of this resource, as a Buffer. For example,
   // for "head", the data to insert in <head>; for "js", the
@@ -97,6 +84,12 @@ var Unibuild = function (isopack, options) {
   // honored for CSS but ignored if we are concatenating.
   //
   // sourceMap: Allowed only for "js". If present, a string.
+  //
+  // fileOptions: for "source", the options passed to `api.addFiles`.
+  // plugin-specific.
+  //
+  // extension: for "source", the file extension that this matched
+  // against at build time. null if matched against a specific filename.
   self.resources = options.resources;
 
   // Absolute path to the node_modules directory to use at runtime to
@@ -104,84 +97,6 @@ var Unibuild = function (isopack, options) {
   // does not have a node_modules.
   self.nodeModulesPath = options.nodeModulesPath;
 };
-
-_.extend(Unibuild.prototype, {
-  // Get the resources that this function contributes to a bundle, in
-  // the same format as self.resources as documented above. This
-  // includes static assets and fully linked JavaScript.
-  //
-  // @param bundleArch The architecture targeted by the bundle. Might
-  // be more specific than self.arch.
-  //
-  // It is when you call this function that we read our dependent
-  // packages and commit to whatever versions of them we currently
-  // have in the library -- at least for the purpose of imports, which
-  // is resolved at bundle time. (On the other hand, when it comes to
-  // the extension handlers we'll use, we previously commited to those
-  // versions at package build ('compile') time.)
-  getResources: Profile(
-    "Unibuild#getResources", function (bundleArch, options) {
-    var self = this;
-    var isopackCache = options.isopackCache;
-    if (! isopackCache)
-      throw Error("no isopackCache?");
-
-    if (! archinfo.matches(bundleArch, self.arch))
-      throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
-                      bundleArch + "'?");
-
-    // Compute imports by merging the exports of all of the packages
-    // we use. Note that in the case of conflicting symbols, later
-    // packages get precedence.
-    //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak/debugOnly dependencies (because the meaning of
-    // a name shouldn't be affected by the non-local decision of whether or not
-    // an unrelated package in the target depends on something).
-    var imports = {}; // map from symbol to supplying package name
-
-    var addImportsForUnibuild = function (depUnibuild) {
-      _.each(depUnibuild.packageVariables, function (symbol) {
-        // Slightly hacky implementation of test-only exports.
-        if (symbol.export === true ||
-            (symbol.export === "tests" && self.pkg.isTest))
-          imports[symbol.name] = depUnibuild.pkg.name;
-      });
-    };
-    compiler.eachUsedUnibuild({
-      dependencies: self.uses,
-      arch: bundleArch,
-      isopackCache: isopackCache,
-      skipUnordered: true,
-      skipDebugOnly: true
-    }, addImportsForUnibuild);
-
-    // Phase 2 link
-    var isApp = ! self.pkg.name;
-    var files = linker.link({
-      imports: imports,
-      useGlobalNamespace: isApp,
-      // XXX report an error if there is a package called global-imports
-      importStubServePath: isApp && '/packages/global-imports.js',
-      prelinkFiles: self.prelinkFiles,
-      packageVariables: self.packageVariables,
-      includeSourceMapInstructions: archinfo.matches(self.arch, "web"),
-      name: self.pkg.name || null
-    });
-
-    // Add each output as a resource
-    var jsResources = _.map(files, function (file) {
-      return {
-        type: "js",
-        data: new Buffer(file.source, 'utf8'), // XXX encoding
-        servePath: file.servePath,
-        sourceMap: file.sourceMap
-      };
-    });
-
-    return _.union(self.resources, jsResources); // union preserves order
-  })
-});
 
 ///////////////////////////////////////////////////////////////////////////////
 // Isopack
@@ -214,9 +129,15 @@ var Isopack = function () {
   self.unibuilds = [];
 
   // Plugins in this package. Map from plugin name to {arch -> JsImage}.
+  // Plugins are package-supplied classes and functions that can change the
+  // build process: introduce a new source processor (compiler, minifier,
+  // linter)
   self.plugins = {};
 
   self.cordovaDependencies = {};
+
+  // isobuild:* pseudo-packages which this package depends on.
+  self.isobuildFeatures = [];
 
   // -- Information for up-to-date checks --
   // Data in this section is only set if the Isopack was directly created by
@@ -235,14 +156,19 @@ var Isopack = function () {
 
   // -- Loaded plugin state --
 
-  // True if plugins have been initialized (if _ensurePluginsInitialized has
+  // True if plugins have been initialized (if ensurePluginsInitialized has
   // been called)
   self._pluginsInitialized = false;
 
-  // Source file handlers registered by plugins. Map from extension
-  // (without a dot) to a handler function that takes a
-  // CompileStep. Valid only when _pluginsInitialized is true.
-  self.sourceHandlers = null;
+  // The SourceProcessors registered by plugins defined by this package.  Each
+  // value is a SourceProcessorSet. sourceProcessors.compiler includes the
+  // legacy source handlers as well.
+  // Valid when self._pluginsInitialized is true.
+  self.sourceProcessors = {
+    compiler: null,
+    linter: null,
+    minifier: null
+  };
 
   // See description in PackageSource. If this is set, then we include a copy of
   // our own source, in addition to any other tools that were originally in the
@@ -253,19 +179,42 @@ var Isopack = function () {
   // isopack-merge code in tropohouse.
   self.toolsOnDisk = [];
 
-  // XXX doc
+  // A map of package dependencies that can provide a plugin for this isopack.
+  // In practice, it is every direct dependency and implied packages.
   self.pluginProviderPackageMap = null;
+
+  // A directory on disk that plugins can use for caching. Should be created
+  // by the code that initializes the Isopack. If not provided, plugins don't
+  // get a disk cache.
+  self.pluginCacheDir = null;
+
+  // An in-memory only buildmessage.MessageSet object that is printed by the
+  // build tool when the app is linted. Is also printed when a package
+  // represented by Isopack is published.
+  self.lintingMessages = null;
 };
 
-Isopack.currentFormat = "isopack-1";
+Isopack.knownFormats = ["unipackage-pre2", "isopack-1", "isopack-2"];
 
-Isopack.knownFormats = ["unipackage-pre2", "isopack-1"];
+// These functions are designed to convert isopack metadata between
+// versions. They were designed to convert between unipackage-pre2 and
+// isopack-1. The differences between these formats are essentially syntactical,
+// not semantic, and occur entirely in the isopack.json file, not in the
+// individual unibuild json files. These functions are written assuming those
+// constraints, and were not actually useful in the isopack-1/isopack-2
+// transition,where most of the changes are in the unibuild level, and there's
+// actual semantic changes involved. So they are not actually used as much as
+// they were before.
 Isopack.convertOneStepForward = function (data, fromFormat) {
   var convertedData = _.clone(data);
   // XXX COMPAT WITH 0.9.3
   if (fromFormat === "unipackage-pre2") {
     convertedData.builds = convertedData.unibuilds;
     delete convertedData.unibuilds;
+    return convertedData;
+  }
+  if (fromFormat === "isopack-1") {
+    // For now, there's no difference in this direction at the isopack level.
     return convertedData;
   }
 };
@@ -276,6 +225,11 @@ Isopack.convertOneStepBackward = function (data, fromFormat) {
     convertedData.format = "unipackage-pre2";
     delete convertedData.builds;
     return convertedData;
+  }
+  if (fromFormat === "isopack-2") {
+    // The conversion from isopack-2 requires converting the nested
+    // unibuild data as well.  This shouldn't happen.
+    throw Error("Can't automatically convert backwards from isopack-2");
   }
 };
 Isopack.convertIsopackFormat = Profile(
@@ -307,7 +261,8 @@ Isopack.convertIsopackFormat = Profile(
 // of the isopack metadata. Returns null if there is no package here.
 Isopack.readMetadataFromDirectory =
   Profile("Isopack.readMetadataFromDirectory", function (isopackDirectory) {
-  var metadata;
+  var metadata = null;
+  let originalVersion = null;
 
   // deal with different versions of "isopack.json", backwards compatible
   var isopackJsonPath = files.pathJoin(isopackDirectory, "isopack.json");
@@ -316,11 +271,16 @@ Isopack.readMetadataFromDirectory =
   if (files.exists(isopackJsonPath)) {
     var isopackJson = JSON.parse(files.readFile(isopackJsonPath));
 
-    if (isopackJson[Isopack.currentFormat]) {
-      metadata = isopackJson[Isopack.currentFormat];
+    if (isopackJson['isopack-2']) {
+      metadata = isopackJson['isopack-2'];
+      originalVersion = 'isopack-2';
+    } else if (isopackJson['isopack-1']) {
+      metadata = Isopack.convertIsopackFormat(
+        isopackJson['isopack-1'], 'isopack-1', 'isopack-2');
+      originalVersion = 'isopack-1';
     } else {
       // This file is from the future and no longer supports this version
-      throw new Error("Could not find isopack data with format " + Isopack.currentFormat + ".\n" +
+      throw new Error("Could not find isopack data supported any supported format (isopack-1 or isopack-2).\n" +
         "This isopack was likely built with a much newer version of Meteor.");
     }
   } else if (files.exists(unipackageJsonPath)) {
@@ -329,12 +289,9 @@ Isopack.readMetadataFromDirectory =
     if (files.exists(unipackageJsonPath)) {
       metadata = JSON.parse(files.readFile(unipackageJsonPath));
 
-      // in the old format, builds were called unibuilds
-      // use string to make sure this doesn't get caught in a find/replace
-      metadata.builds = metadata["unibuilds"];
-
       metadata = Isopack.convertIsopackFormat(metadata,
-        "unipackage-pre2", Isopack.currentFormat);
+        "unipackage-pre2", "isopack-2");
+      originalVersion = 'unipackage-pre2';
     }
 
     if (metadata.format !== "unipackage-pre2") {
@@ -349,7 +306,7 @@ Isopack.readMetadataFromDirectory =
     }
   }
 
-  return metadata;
+  return {metadata, originalVersion};
 });
 
 _.extend(Isopack.prototype, {
@@ -374,6 +331,8 @@ _.extend(Isopack.prototype, {
     self.npmDiscards = options.npmDiscards;
     self.includeTool = options.includeTool;
     self.debugOnly = options.debugOnly;
+    self.pluginCacheDir = options.pluginCacheDir || null;
+    self.isobuildFeatures = options.isobuildFeatures;
   },
 
   // Programmatically add a unibuild to this Isopack. Should only be
@@ -493,24 +452,73 @@ _.extend(Isopack.prototype, {
     return _.findWhere(self.unibuilds, { arch: chosenArch });
   }),
 
-  // Load this package's plugins into memory, if they haven't already
-  // been loaded, and return the list of source file handlers
-  // registered by the plugins: a map from extension (without a dot)
-  // to a handler function that takes a CompileStep.
-  getSourceHandlers: function () {
+  _checkPluginsInitialized: function () {
     var self = this;
-    self._ensurePluginsInitialized();
-    return self.sourceHandlers;
+    if (self._pluginsInitialized)
+      return;
+    throw Error("plugins not yet initialized?");
   },
 
   // If this package has plugins, initialize them (run the startup
   // code in them so that they register their extensions). Idempotent.
-  _ensurePluginsInitialized: Profile(
-    "Isopack#_ensurePluginsInitialized", function () {
+  ensurePluginsInitialized: Profile("Isopack#ensurePluginsInitialized", function () {
     var self = this;
+
+    buildmessage.assertInJob();
 
     if (self._pluginsInitialized)
       return;
+
+    self.sourceProcessors.compiler = new buildPluginModule.SourceProcessorSet(
+      self.displayName(), { hardcodeJs: true, singlePackage: true });
+    self.sourceProcessors.linter = new buildPluginModule.SourceProcessorSet(
+      self.displayName(), { singlePackage: true, allowConflicts: true });
+    self.sourceProcessors.minifier = new buildPluginModule.SourceProcessorSet(
+      self.displayName(), { singlePackage: true });
+
+    _.each(self.plugins, function (pluginsByArch, name) {
+      var arch = archinfo.mostSpecificMatch(
+        archinfo.host(), _.keys(pluginsByArch));
+      if (! arch) {
+        buildmessage.error("package `" + name + "` is built for incompatible " +
+                           "architecture");
+        // Recover by ignoring plugin
+        // XXX does this recovery work?
+        return;
+      }
+
+      var plugin = pluginsByArch[arch];
+      buildmessage.enterJob({
+        title: "loading plugin `" + name +
+          "` from package `" + self.name + "`"
+        // don't necessarily have rootPath anymore
+        // (XXX we do, if the isopack was locally built, which is
+        // the important case for debugging. it'd be nice to get this
+        // case right.)
+      }, function () {
+        // Make a new Plugin API object for this plugin.
+        var Plugin = self._makePluginApi();
+        plugin.load({ Plugin: Plugin });
+      });
+    });
+
+    // Instantiate each of the registered batch plugins.  Note that we don't
+    // do this directly in the registerCompiler (etc) call, because we want
+    // to allow people to do something like:
+    //   Plugin.registerCompiler({...}, function () { return new C; });
+    //   var C = function () {...}
+    // and so we want to wait for C to be defined.
+    _.each(self.sourceProcessors, (sourceProcessorSet) => {
+      _.each(sourceProcessorSet.allSourceProcessors, (sourceProcessor) => {
+        sourceProcessor.instantiatePlugin();
+      });
+    });
+
+    self._pluginsInitialized = true;
+  }),
+
+  _makePluginApi: function () {
+    var isopack = this;
 
     /**
      * @global
@@ -548,49 +556,146 @@ _.extend(Isopack.prototype, {
           options = {};
         }
 
-        if (_.has(self.sourceHandlers, extension)) {
-          buildmessage.error("duplicate handler for '*." +
-                             extension + "'; may only have one per Plugin",
-                             { useMyCaller: true });
-          // recover by ignoring all but the first
+        // The popular package mquandalle:bower has a call to
+        // `registerSourceHandler('json', null)` for some reason, to
+        // work around some behavior of Meteor believed to be a bug. We
+        // think that new features of registerCompiler like being able
+        // to register for filenames will allow them to drop that line,
+        // but in the meantime we might as well not choke on it. (The
+        // old implementation coincidentally didn't choke.)
+        if (!handler) {
+          handler = function () {};
+        }
+
+        isopack.sourceProcessors.compiler.addLegacyHandler({
+          extension,
+          handler,
+          packageDisplayName: isopack.displayName(),
+          isTemplate: !!options.isTemplate,
+          archMatching: options.archMatching
+        });
+      },
+
+      _registerSourceProcessor: function (
+        {extensions, filenames, archMatching, isTemplate},
+        factory,
+        {sourceProcessorSet, methodName, featurePackage}) {
+        if (!isopack.featureEnabled(featurePackage)) {
+          // This error is OK because we only define 1.0.0 for each of these
+          // feature packages (in compiler.KNOWN_ISOBUILD_FEATURE_PACKAGES).
+          buildmessage.error(
+            `your package must \`api.use('${ featurePackage }@1.0.0')\` in ` +
+              `order for its plugins to call Plugin.${ methodName }`);
           return;
         }
 
-        self.sourceHandlers[extension] = {
-          handler: handler,
-          isTemplate: !!options.isTemplate,
-          archMatching: options.archMatching
-        };
+        const hasExtensions = (extensions &&
+                               extensions instanceof Array &&
+                               extensions.length > 0);
+        const hasFilenames = (filenames &&
+                              filenames instanceof Array &&
+                              filenames.length > 0);
+        if (! (hasExtensions || hasFilenames)) {
+          buildmessage.error("Plugin." + methodName + " must specify a " +
+                             "non-empty array of extensions or filenames",
+                             { useMyCaller: 3 });
+          // recover by ignoring
+          return;
+        }
+
+        // Don't let extensions or filenames try to look for directories (in the
+        // way that WatchSet expresses them).
+        if (extensions && extensions.some(e => e.endsWith('/'))) {
+          buildmessage.error(
+            `Plugin.${methodName}: extensions may not end in /`);
+          // recover by ignoring
+          return;
+        }
+        if (filenames && filenames.some(f => f.endsWith('/'))) {
+          buildmessage.error(
+            `Plugin.${methodName}: filenames may not end in /`);
+          // recover by ignoring
+          return;
+        }
+
+        if (typeof factory !== 'function') {
+          buildmessage.error(methodName + " call must "
+                             + "specify a factory function",
+                             { useMyCaller: 3 });
+          // recover by ignoring
+          return;
+        }
+
+        const sp = new buildPluginModule.SourceProcessor({
+          isopack: isopack,
+          extensions: extensions,
+          filenames: filenames,
+          archMatching: archMatching,
+          isTemplate: isTemplate,
+          factoryFunction: factory,
+          methodName: methodName
+        });
+        // This logs a buildmessage on conflicts.
+        sourceProcessorSet.addSourceProcessor(sp);
+      },
+
+      // XXX #BBPDocs
+      //
+      // Note: It's important to ensure that all plugins that want to call
+      // plugin compiler use the isobuild:compiler-plugin fake package, so that
+      // Version Solver will not let you use registerCompiler plugins with old
+      // versions of the tool.
+      registerCompiler: function (options, factory) {
+        Plugin._registerSourceProcessor(options || {}, factory, {
+          sourceProcessorSet: isopack.sourceProcessors.compiler,
+          methodName: "registerCompiler",
+          featurePackage: "isobuild:compiler-plugin"
+        });
+      },
+
+      // XXX #BBPDocs
+      registerLinter: function (options, factory) {
+        Plugin._registerSourceProcessor(options || {}, factory, {
+          sourceProcessorSet: isopack.sourceProcessors.linter,
+          methodName: "registerLinter",
+          featurePackage: "isobuild:linter-plugin"
+        });
+      },
+
+      // The minifier plugins can fill into 2 types of minifiers: CSS or JS.
+      // When the minifier is added to an app, it is used during "bundling" to
+      // compress the app code and each package's code separately.
+      // If a package is depending on a package that provides a minifier plugin,
+      // the minifier plugin is not used anywhere.
+      // XXX #BBPDocs
+      registerMinifier: function (options, factory) {
+        var badUsedExtension = _.find(options.extensions, function (ext) {
+          return ! _.contains(['js', 'css'], ext);
+        });
+
+        if (badUsedExtension !== undefined) {
+          buildmessage.error(badUsedExtension + ': Minifiers are only allowed to register "css" or "js" extensions.');
+          return;
+        }
+
+        if (options.filenames) {
+          buildmessage.error("Plugin.registerMinifier does not accept `filenames`");
+          return;
+        }
+
+        Plugin._registerSourceProcessor(options || {}, factory, {
+          sourceProcessorSet: isopack.sourceProcessors.minifier,
+          methodName: "registerMinifier",
+          featurePackage: "isobuild:minifier-plugin"
+        });
+      },
+
+      nudge: function () {
+        Console.nudge(true);
       }
     };
-
-    self.sourceHandlers = {};
-    _.each(self.plugins, function (pluginsByArch, name) {
-      var arch = archinfo.mostSpecificMatch(
-        archinfo.host(), _.keys(pluginsByArch));
-      if (! arch) {
-        buildmessage.error("package `" + name + "` is built for incompatible " +
-                           "architecture");
-        // Recover by ignoring plugin
-        // XXX does this recovery work?
-        return;
-      }
-
-      var plugin = pluginsByArch[arch];
-      buildmessage.enterJob({
-        title: "loading plugin `" + name +
-          "` from package `" + self.name + "`"
-        // don't necessarily have rootPath anymore
-        // (XXX we do, if the isopack was locally built, which is
-        // the important case for debugging. it'd be nice to get this
-        // case right.)
-      }, function () {
-        plugin.load({ Plugin: Plugin });
-      });
-    });
-
-    self._pluginsInitialized = true;
-  }),
+    return Plugin;
+  },
 
   // Load a Isopack on disk.
   //
@@ -602,6 +707,10 @@ _.extend(Isopack.prototype, {
     var self = this;
     options = _.clone(options || {});
     options.firstIsopack = true;
+
+    if (options.pluginCacheDir) {
+      self.pluginCacheDir = options.pluginCacheDir;
+    }
 
     return self._loadUnibuildsFromPath(name, dir, options);
   }),
@@ -616,7 +725,7 @@ _.extend(Isopack.prototype, {
     // realpath'ing dir.
     dir = files.realpath(dir);
 
-    var mainJson = Isopack.readMetadataFromDirectory(dir);
+    var {metadata: mainJson} = Isopack.readMetadataFromDirectory(dir);
     if (! mainJson) {
       throw new Error("No metadata files found for isopack at: " + dir);
     }
@@ -698,9 +807,18 @@ _.extend(Isopack.prototype, {
       var unibuildBasePath =
         files.pathDirname(files.pathJoin(dir, unibuildMeta.path));
 
-      if (unibuildJson.format !== "unipackage-unibuild-pre1")
+      if (unibuildJson.format !== "unipackage-unibuild-pre1" &&
+          unibuildJson.format !== "isopack-2-unibuild") {
         throw new Error("Unsupported isopack unibuild format: " +
                         JSON.stringify(unibuildJson.format));
+      }
+
+      // Is this unibuild the legacy pre-"compiler plugin" format which contains
+      // "prelink" resources of pre-processed JS files (as well as the
+      // "packageVariables" field) instead of individual "source" resources (and
+      // a "declaredExports" field)?
+      var unibuildHasPrelink =
+            unibuildJson.format === "unipackage-unibuild-pre1";
 
       var nodeModulesPath = null;
       if (unibuildJson.node_modules) {
@@ -709,40 +827,53 @@ _.extend(Isopack.prototype, {
           files.pathJoin(unibuildBasePath, unibuildJson.node_modules);
       }
 
-      var prelinkFiles = [];
       var resources = [];
 
       _.each(unibuildJson.resources, function (resource) {
         rejectBadPath(resource.file);
-        var data = new Buffer(resource.length);
-        // Read the data from disk, if it is non-empty. Avoid doing IO for empty
-        // files, because (a) unnecessary and (b) fs.readSync with length 0
-        // throws instead of acting like POSIX read:
-        // https://github.com/joyent/node/issues/5685
-        if (resource.length > 0) {
-          var fd =
-            files.open(files.pathJoin(unibuildBasePath, resource.file), "r");
-          try {
-            var count = files.read(
-              fd, data, 0, resource.length, resource.offset);
-          } finally {
-            files.close(fd);
-          }
-          if (count !== resource.length)
-            throw new Error("couldn't read entire resource");
-        }
+        var data = files.readBufferWithLengthAndOffset(
+          files.pathJoin(unibuildBasePath, resource.file),
+          resource.length, resource.offset);
 
         if (resource.type === "prelink") {
-          var prelinkFile = {
-            source: data.toString('utf8'),
-            servePath: resource.servePath
+          if (! unibuildHasPrelink) {
+            throw Error("Unexpected prelink resource in " +
+                        unibuildJson.format + " at " + dir);
+          }
+          // We found a "prelink" resource, because we're processing a package
+          // published with an older version of Meteor which did not create
+          // isopack-2 isopacks and which always preprocessed and linked all JS
+          // files instead of leaving that until bundle time.  Let's pretend it
+          // was just a single js source file, but leave a "legacyPrelink" field
+          // on it so we can not re-link that part (and not re-analyze for
+          // assigned variables).
+          var prelinkResource = {
+            type: "source",
+            extension: "js",
+            data: data,
+            path: resource.servePath,
+            // It's a shame to have to calculate the hash here instead of having
+            // it on disk, but this only runs for legacy packages anyway.
+            hash: watch.sha1(data),
+            legacyPrelink: {
+              packageVariables: unibuildJson.packageVariables || []
+            }
           };
           if (resource.sourceMap) {
             rejectBadPath(resource.sourceMap);
-            prelinkFile.sourceMap = files.readFile(
+            prelinkResource.legacyPrelink.sourceMap = files.readFile(
               files.pathJoin(unibuildBasePath, resource.sourceMap), 'utf8');
           }
-          prelinkFiles.push(prelinkFile);
+          resources.push(prelinkResource);
+        } else if (resource.type === "source") {
+          resources.push({
+            type: "source",
+            extension: resource.extension,
+            data: data,
+            path: resource.path,
+            hash: resource.hash,
+            fileOptions: resource.fileOptions
+          });
         } else if (_.contains(["head", "body", "css", "js", "asset"],
                               resource.type)) {
           resources.push({
@@ -756,6 +887,30 @@ _.extend(Isopack.prototype, {
                           JSON.stringify(resource.type));
       });
 
+      var declaredExports;
+      if (unibuildHasPrelink) {
+        // Legacy unibuild; it stores packageVariables and says some of them
+        // are exports.
+        declaredExports = [];
+        _.each(unibuildJson.packageVariables, function (pv) {
+          if (pv.export) {
+            declaredExports.push({
+              name: pv.name,
+              testOnly: pv.export === 'tests'
+            });
+          }
+        });
+      } else {
+        declaredExports = unibuildJson.declaredExports || [];
+      }
+
+      unibuildJson.uses && unibuildJson.uses.forEach((use) => {
+        if (!use.weak && compiler.isIsobuildFeaturePackage(use.package) &&
+            self.isobuildFeatures.indexOf(use.package) === -1) {
+          self.isobuildFeatures.push(use.package);
+        }
+      });
+
       self.unibuilds.push(new Unibuild(self, {
         // At some point we stopped writing 'kind's to the metadata file, so
         // default to main.
@@ -765,8 +920,7 @@ _.extend(Isopack.prototype, {
         implies: unibuildJson.implies,
         watchSet: unibuildWatchSets[unibuildMeta.path],
         nodeModulesPath: nodeModulesPath,
-        prelinkFiles: prelinkFiles,
-        packageVariables: unibuildJson.packageVariables || [],
+        declaredExports: declaredExports,
         resources: resources
       }));
     });
@@ -792,6 +946,20 @@ _.extend(Isopack.prototype, {
   // options:
   //
   // - includeIsopackBuildInfo: If set, write an isopack-buildinfo.json file.
+  // - includePreCompilerPluginIsopackVersions: By default, saveToPath only
+  //   creates an isopack of format 'isopack-2', with unibuilds of format
+  //   'isopack-2-unibuild'.  These isopacks may contain "source" resources,
+  //   which are processed at *bundle* time by compiler plugins.  They cannot be
+  //   properly processed by older tools.  If this flag is set, saveToPath also
+  //   tries to save data for older formats (isopack-1 and unipackage-pre2),
+  //   converting JS and CSS "source" resources into "prelink" and "css"
+  //   resources.  This is not possible if there are "source" resources other
+  //   than JS or CSS; however, such packages must indirectly depend on the
+  //   "isobuild:compiler-plugin" pseudo-package which is not compatible with
+  //   older releases.  For packages that can't be converted to the older
+  //   format, this function silently only saves the newer format.  (The point
+  //   of this flag is allow us to optimize cases that never need to write the
+  //   older format, such as the per-app isopack cache.)
   saveToPath: Profile("Isopack#saveToPath", function (outputDir, options) {
     var self = this;
     var outputPath = outputDir;
@@ -813,6 +981,14 @@ _.extend(Isopack.prototype, {
       }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;
+      }
+
+      var writeLegacyBuilds = false;
+      if (options.includePreCompilerPluginIsopackVersions) {
+        // We will reset this to false if at any point later we determine that
+        // this package cannot be saved in the legacy format (because it uses a
+        // compiler plugin other than JS or CSS).
+        writeLegacyBuilds = true;
       }
 
       var isopackBuildInfoJson = null;
@@ -865,6 +1041,8 @@ _.extend(Isopack.prototype, {
           "utf8")
       });
 
+      var unibuildInfos = [];
+
       // Unibuilds
       _.each(self.unibuilds, function (unibuild) {
         // Make up a filename for this unibuild
@@ -878,6 +1056,19 @@ _.extend(Isopack.prototype, {
           arch: unibuild.arch,
           path: unibuildJsonFile
         });
+
+        var jsResourcesForLegacyPrelink = [];
+        if (writeLegacyBuilds) {
+          if (_.any(unibuild.resources, function (resource) {
+            return resource.type === "source" && resource.extension !== "js"
+              && resource.extension !== "css";
+          })) {
+            // This package cannot be represented as an isopack-1 Isopack
+            // because it uses a file implemented by registerCompiler other than
+            // the very basic JS and CSS types.
+            writeLegacyBuilds = false;
+          }
+        }
 
         // Save unibuild dependencies. Keyed by the json path rather than thinking
         // too hard about how to encode pair (name, arch).
@@ -904,8 +1095,8 @@ _.extend(Isopack.prototype, {
 
         // Construct unibuild metadata
         var unibuildJson = {
-          format: "unipackage-unibuild-pre1",
-          packageVariables: unibuild.packageVariables,
+          format: "isopack-2-unibuild",
+          declaredExports: unibuild.declaredExports,
           uses: _.map(unibuild.uses, function (u) {
             return {
               'package': u.package,
@@ -955,40 +1146,38 @@ _.extend(Isopack.prototype, {
           if (_.contains(["head", "body"], resource.type))
             return; // already did this one
 
+          // If we're going to write a legacy prelink file later, track the
+          // original form of the resource object (with the source in a Buffer,
+          // etc) instead of the later version.  #HardcodeJs
+          if (writeLegacyBuilds && resource.type === "source" &&
+              resource.extension == "js") {
+            jsResourcesForLegacyPrelink.push({
+              data: resource.data,
+              hash: resource.hash,
+              servePath: unibuild.pkg._getServePath(resource.path),
+              bare: resource.fileOptions && resource.fileOptions.bare,
+              sourceMap: resource.sourceMap,
+              // If this file was actually read from a legacy isopack and is
+              // itself prelinked, this will be an object with some metadata
+              // about it, and we can skip re-running prelink later.
+              legacyPrelink: resource.legacyPrelink
+            });
+          }
+
           unibuildJson.resources.push({
             type: resource.type,
+            extension: resource.extension,
             file: builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, resource.servePath),
+              files.pathJoin(unibuildDir,
+                             resource.servePath || resource.path),
               { data: resource.data }),
             length: resource.data.length,
             offset: 0,
             servePath: resource.servePath || undefined,
-            path: resource.path || undefined
+            path: resource.path || undefined,
+            hash: resource.hash || undefined,
+            fileOptions: resource.fileOptions || undefined
           });
-        });
-
-        // Output prelink resources
-        _.each(unibuild.prelinkFiles, function (file) {
-          var data = new Buffer(file.source, 'utf8');
-          var resource = {
-            type: 'prelink',
-            file: builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, file.servePath),
-              { data: data }),
-            length: data.length,
-            offset: 0,
-            servePath: file.servePath || undefined
-          };
-
-          if (file.sourceMap) {
-            // Write the source map.
-            resource.sourceMap = builder.writeToGeneratedFilename(
-              files.pathJoin(unibuildDir, file.servePath + '.map'),
-              { data: new Buffer(file.sourceMap, 'utf8') }
-            );
-          }
-
-          unibuildJson.resources.push(resource);
         });
 
         // If unibuild has included node_modules, copy them in
@@ -1003,6 +1192,11 @@ _.extend(Isopack.prototype, {
 
         // Control file for unibuild
         builder.writeJson(unibuildJsonFile, unibuildJson);
+        unibuildInfos.push({
+          unibuild: unibuild,
+          unibuildJson: unibuildJson,
+          jsResourcesForLegacyPrelink: jsResourcesForLegacyPrelink
+        });
       });
 
       // Plugins
@@ -1014,11 +1208,12 @@ _.extend(Isopack.prototype, {
             'plugin.' + colonConverter.convert(name) + '.' + plugin.arch,
             { directory: true });
           var pluginBuild = plugin.write(builder.enter(pluginDir));
-          mainJson.plugins.push({
+          var pluginEntry = {
             name: name,
             arch: plugin.arch,
             path: files.pathJoin(pluginDir, pluginBuild.controlFile)
-          });
+          };
+          mainJson.plugins.push(pluginEntry);
         });
       });
 
@@ -1045,21 +1240,147 @@ _.extend(Isopack.prototype, {
         mainJson.tools.push(toolMeta);
       });
 
-      // old unipackage.json format/filename
-      // XXX COMPAT WITH 0.9.3
-      builder.writeJson("unipackage.json",
-        Isopack.convertIsopackFormat(mainJson, Isopack.currentFormat, "unipackage-pre2"));
+      var mainLegacyJson = null;
+      if (writeLegacyBuilds) {
+        mainLegacyJson = _.clone(mainJson);
+        mainLegacyJson.builds = [];
 
-      // write several versions of the file
-      // add your new format here, and define some stuff
-      // in convertIsopackFormat
-      var formats = ["isopack-1"];
+        _.each(unibuildInfos, function (unibuildInfo) {
+          var unibuild = unibuildInfo.unibuild;
+          var unibuildJson = unibuildInfo.unibuildJson;
+          var jsResourcesForLegacyPrelink =
+                unibuildInfo.jsResourcesForLegacyPrelink;
+          var legacyFilename = builder.generateFilename(
+            unibuild.arch + '-legacy.json');
+          var legacyDir = unibuild.arch + '-legacy';
+          mainLegacyJson.builds.push({
+            kind: unibuild.kind,
+            arch: unibuild.arch,
+            path: legacyFilename
+          });
+
+          unibuildJson.format = 'unipackage-unibuild-pre1';
+          var newResources = [];
+          _.each(unibuildJson.resources, function (resource) {
+            if (resource.type !== 'source') {
+              newResources.push(resource);
+            } else if (resource.extension === 'css') {
+              // Convert this resource from a new-style "source" to an
+              // old-style "css".
+              newResources.push({
+                type: 'css',
+                file: resource.file,
+                length: resource.length,
+                offset: resource.offset,
+                servePath: self._getServePath(resource.path)
+              });
+            } else if (resource.extension === 'js') {
+              // Skip; we saved this in jsResourcesForLegacyPrelink above
+              // already, in the format that linker.prelink understands.
+            } else {
+              throw Error(
+                "shouldn't write legacy builds for non-JS/CSS source "
+                  + JSON.stringify(resource));
+            }
+          });
+          if (jsResourcesForLegacyPrelink.length) {
+            var prelinkFile, prelinkData, packageVariables;
+            if (jsResourcesForLegacyPrelink.length === 1 &&
+                jsResourcesForLegacyPrelink[0].legacyPrelink) {
+              // Aha!  This isopack was actually a legacy isopack in the first
+              // place! So this source file is already the output of prelink,
+              // and we don't need to reprocess it.
+              prelinkFile = jsResourcesForLegacyPrelink[0];
+              // XXX It's weird that the type of object going in and out of
+              // linker.prelink is different (so that this prelinkData
+              // assignment differs from that below), ah well.
+              prelinkData = prelinkFile.data;
+              packageVariables =
+                jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
+            } else {
+              // Not originally legacy; let's run prelink to make it legacy.
+              var results = linker.prelink({
+                inputFiles: jsResourcesForLegacyPrelink,
+                // I was confused about this, so I am leaving a comment -- the
+                // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
+                // XXX: If we change this, we can get rid of source arch names!
+                combinedServePath: (
+                  "/packages/" + colonConverter.convert(
+                    unibuild.pkg.name +
+                      (unibuild.kind === "main" ? "" : (":" + unibuild.kind)) +
+                      ".js")),
+                name: unibuild.pkg.name
+              });
+              if (results.files.length !== 1) {
+                throw Error("prelink should return 1 file, not " +
+                            results.files.length);
+              }
+              prelinkFile = results.files[0];
+              prelinkData = new Buffer(prelinkFile.source, 'utf8');
+
+              // Determine captured variables, legacy way.
+              packageVariables = [];
+              var packageVariableNames = {};
+              _.each(unibuild.declaredExports, function (symbol) {
+                if (_.has(packageVariableNames, symbol.name))
+                  return;
+                packageVariables.push({
+                  name: symbol.name,
+                  export: symbol.testOnly? "tests" : true
+                });
+                packageVariableNames[symbol.name] = true;
+              });
+              _.each(results.assignedVariables, function (name) {
+                if (_.has(packageVariableNames, name))
+                  return;
+                packageVariables.push({
+                  name: name
+                });
+                packageVariableNames[name] = true;
+              });
+            }
+
+            var prelinkResource = {
+              type: 'prelink',
+              file: builder.writeToGeneratedFilename(
+                files.pathJoin(legacyDir, prelinkFile.servePath),
+                { data: prelinkData }),
+              length: prelinkData.length,
+              offset: 0,
+              servePath: prelinkFile.servePath || undefined
+            };
+            if (prelinkFile.sourceMap) {
+              // Write the source map.
+              prelinkResource.sourceMap = builder.writeToGeneratedFilename(
+                files.pathJoin(legacyDir, prelinkFile.servePath + '.map'),
+                { data: new Buffer(prelinkFile.sourceMap, 'utf8') }
+              );
+            }
+            newResources.push(prelinkResource);
+
+            unibuildJson.packageVariables = packageVariables;
+          }
+          unibuildJson.resources = newResources;
+          delete unibuildJson.declaredExports;
+          builder.writeJson(legacyFilename, unibuildJson);
+        });
+
+        // old unipackage.json format/filename.  no point to save this if
+        // we can't even support isopack-1.
+        // XXX COMPAT WITH 0.9.3
+        builder.writeJson(
+          "unipackage.json",
+          Isopack.convertIsopackFormat(
+            // Note that mainLegacyJson is isopack-1 (has no "source" resources)
+            // rather than isopack-2.
+            mainLegacyJson, "isopack-1", "unipackage-pre2"));
+      }
+
       var isopackJson = {};
-      _.each(formats, function (format) {
-        // new, extensible format - forwards-compatible
-        isopackJson[format] = Isopack.convertIsopackFormat(mainJson,
-          Isopack.currentFormat, format);
-      });
+      isopackJson['isopack-2'] = mainJson;
+      if (writeLegacyBuilds) {
+        isopackJson['isopack-1'] = mainLegacyJson;
+      }
 
       // writes one file with all of the new formats, so that it is possible
       // to invent a new format and have old versions of meteor still read the
@@ -1140,7 +1461,7 @@ _.extend(Isopack.prototype, {
       // We don't actually want to load the babel auto-transpiler when we are
       // in a Meteor installation where everything is already transpiled for us.
       // Therefore, strip out that line in main.js
-      if (path === "tools/main-transpile-wrapper.js" ||
+      if (path === "tools/install-babel.js" ||
           path === "tools/source-map-retriever-stack.js") {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
@@ -1247,7 +1568,13 @@ _.extend(Isopack.prototype, {
     return watchSet;
   }),
 
-  // Similar to PackageSource.getPackagesToLoadFirst.
+  // Similar to PackageSource.getPackagesToLoadFirst, but doesn't include
+  // packages used by plugins, because plugin dependencies are already
+  // statically included in this built Isopack. Used by
+  // IsopackCache._ensurePackageLoaded.
+  //
+  // Like getPackagesToLoadFirst, it filters out isobuild:* pseudo-packages and
+  // should not be used to create input to Version Solver.
   getStrongOrderedUsedAndImpliedPackages: Profile(
     "Isopack#getStrongOrderedUsedAndImpliedPackages", function () {
     var self = this;
@@ -1255,6 +1582,10 @@ _.extend(Isopack.prototype, {
     var processUse = function (use) {
       if (use.weak || use.unordered)
         return;
+      // Only include real packages, not isobuild:* pseudo-packages.
+      if (compiler.isIsobuildFeaturePackage(use.package)) {
+        return;
+      }
       packages[use.package] = true;
     };
 
@@ -1263,7 +1594,31 @@ _.extend(Isopack.prototype, {
       _.each(unibuild.implies, processUse);
     });
     return _.keys(packages);
-  })
+  }),
+
+  featureEnabled(featurePackageName) {
+    return this.isobuildFeatures.indexOf(featurePackageName) !== -1;
+  },
+
+  _getServePath: function (pathInPackage) {
+    var self = this;
+    var serveRoot;
+    if (self.name) {
+      serveRoot = files.pathJoin('/packages/', self.name);
+    } else {
+      serveRoot = '/';
+    }
+
+    return colonConverter.convert(
+      files.pathJoin(
+        serveRoot,
+        // XXX or should everything in this API use slash already?
+        files.convertToStandardPath(pathInPackage, true)));
+  },
+
+  displayName() {
+    return this.name === null ? 'the app' : this.name;
+  }
 });
 
 exports.Isopack = Isopack;

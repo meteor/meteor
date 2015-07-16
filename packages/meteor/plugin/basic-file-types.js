@@ -2,9 +2,20 @@
    we can't exactly define the *.js source file handler in a *.js
    source file. */
 
-Plugin.registerSourceHandler("css", {archMatching: 'web'}, function (compileStep) {
-  compileStep.addStylesheet({
-    data: compileStep.read().toString('utf8'),
-    path: compileStep.inputPath
-  });
+Plugin.registerCompiler({
+  extensions: ['css'],
+  archMatching: 'web'
+}, function () {
+  return new CssCompiler;
 });
+
+var CssCompiler = function () {
+};
+CssCompiler.prototype.processFilesForTarget = function (inputFiles) {
+  inputFiles.forEach(function (inputFile) {
+    inputFile.addStylesheet({
+      data: inputFile.getContentsAsString(),
+      path: inputFile.getPathInPackage()
+    });
+  });
+};

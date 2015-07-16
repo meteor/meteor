@@ -1,7 +1,10 @@
-import {WatchSet, readAndWatchFile} from './watch.js';
+import {WatchSet, readAndWatchFile, sha1} from './watch.js';
 import files from './files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from './profile.js';
+
+const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
+  ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
 
 
 // Builder encapsulates much of the file-handling logic need to create
@@ -16,6 +19,12 @@ import {Profile} from './profile.js';
 //  - outputPath: Required. Path to the directory that will hold the
 //    bundle when building is complete. It should not exist. Its
 //    parents will be created if necessary.
+// - previousBuilder: Optional. An in-memory instance of Builder left
+// from the previous iteration. It is assumed that the previous builder
+// has completed its job successfully and its files are stored on the
+// file system in the exact layout as described in its usedAsFile data
+// structure; and the hashes of the contents correspond to the
+// writtenHashes data strcture.
 export default class Builder {
   constructor({outputPath, previousBuilder}) {
     this.outputPath = outputPath;
@@ -23,8 +32,10 @@ export default class Builder {
     // Paths already written to. Map from canonicalized relPath (no
     // trailing slash) to true for a file, or false for a directory.
     this.usedAsFile = { '': false, '.': false };
+    this.previousUsedAsFile = {};
 
     this.writtenHashes = {};
+    this.previousWrittenHashes = {};
 
     // foo/bar => foo/.build1234.bar
     // Should we include a random number? The advantage is that multiple
@@ -34,9 +45,38 @@ export default class Builder {
     this.buildPath = files.pathJoin(files.pathDirname(this.outputPath),
                                     '.build' + nonce + "." +
                                     files.pathBasename(this.outputPath));
-    files.rm_recursive(this.buildPath);
 
-    files.mkdir_p(this.buildPath, 0o755);
+    let resetBuildPath = true;
+
+    // If we have a previous builder and we are allowed to re-use it,
+    // let's keep all the older files on the file-system and replace
+    // only outdated ones + write the new files in the same path
+    if (previousBuilder && ENABLE_IN_PLACE_BUILDER_REPLACEMENT) {
+      if (previousBuilder.outputPath !== outputPath) {
+        throw new Error(
+          `previousBuilder option can only be set to a builder with the same output path.
+Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
+        );
+      }
+
+      if (files.exists(previousBuilder.outputPath)) {
+        // write files in-place in the output directory of the previous builder
+        this.buildPath = previousBuilder.outputPath;
+
+        this.previousWrittenHashes = previousBuilder.writtenHashes;
+        this.previousUsedAsFile = previousBuilder.usedAsFile;
+
+        resetBuildPath = false;
+      } else {
+        resetBuildPath = true;
+      }
+    }
+
+    // Build the output from scratch
+    if (resetBuildPath) {
+      files.rm_recursive(this.buildPath);
+      files.mkdir_p(this.buildPath, 0o755);
+    }
 
     this.watchSet = new WatchSet();
 
@@ -57,8 +97,21 @@ export default class Builder {
       partsSoFar.push(part);
       const partial = partsSoFar.join(files.pathSep);
       if (! (partial in this.usedAsFile)) {
-        // It's new -- create it
-        files.mkdir(files.pathJoin(this.buildPath, partial), 0o755);
+        let needToMkdir = true;
+        if (partial in this.previousUsedAsFile) {
+          if (this.previousUsedAsFile[partial]) {
+            // was previously used as file, delete it, create a directory
+            files.unlink(partial);
+          } else {
+            // is already a directory
+            needToMkdir = false;
+          }
+        }
+
+        if (needToMkdir) {
+          // It's new -- create it
+          files.mkdir(files.pathJoin(this.buildPath, partial), 0o755);
+        }
         this.usedAsFile[partial] = false;
       } else if (this.usedAsFile[partial]) {
         // Already exists and is a file. Oops.
@@ -126,20 +179,22 @@ export default class Builder {
   // `data` and or `file` must be passed.
   //
   // Options:
-  // - data: a Buffer to write to relPath.
+  // - data: a Buffer to write to relPath. Overrides `file`.
   // - file: a filename to write to relPath, as a string.
   // - sanitize: if true, then all components of the path are stripped
   //   of any potentially troubling characters, an exception is thrown
   //   if any path segments consist entirely of dots (eg, '..'), and
   //   if there is a file in the bundle with the same relPath, then
   //   the path is changed by adding a numeric suffix.
+  // - hash: a sha1 string used to determine if the contents of the
+  //   new file written is not cached.
   // - executable: if true, mark the file as executable.
   // - symlink: if set to a string, create a symlink to its value
   //
   // Returns the final canonicalize relPath that was written to.
   //
   // If `file` is used then it will be added to the builder's WatchSet.
-  write(relPath, {data, file, sanitize, executable, symlink}) {
+  write(relPath, {data, file, hash, sanitize, executable, symlink}) {
     // Ensure no trailing slash
     if (relPath.slice(-1) === files.pathSep)
       relPath = relPath.slice(0, -1);
@@ -149,14 +204,18 @@ export default class Builder {
     if (sanitize)
       relPath = this._sanitize(relPath);
 
+    let getData = null;
     if (data) {
       if (! (data instanceof Buffer))
         throw new Error("data must be a Buffer");
       if (file)
         throw new Error("May only pass one of data and file, not both");
+      getData = () => data;
     } else if (file) {
-      data =
-        readAndWatchFile(this.watchSet, files.pathResolve(file));
+      // postpone reading the file into memory
+      getData = () => readAndWatchFile(this.watchSet, files.pathResolve(file));
+    } else if (! symlink) {
+      throw new Error('Builder can not write without either data or a file path or a symlink path: ' + relPath);
     }
 
     this._ensureDirectory(files.pathDirname(relPath));
@@ -165,10 +224,18 @@ export default class Builder {
     if (symlink) {
       files.symlink(symlink, absPath);
     } else {
-      // Builder is used to create build products, which should be read-only;
-      // users shouldn't be manually editing automatically generated files and
-      // expecting the results to "stick".
-      files.writeFile(absPath, data, { mode: executable ? 0o555 : 0o444 });
+      hash = hash || sha1(getData());
+
+      if (this.previousWrittenHashes[relPath] !== hash) {
+        // Builder is used to create build products, which should be read-only;
+        // users shouldn't be manually editing automatically generated files and
+        // expecting the results to "stick".
+        atomicallyRewriteFile(absPath, getData(), {
+          mode: executable ? 0o555 : 0o444
+        });
+      }
+
+      this.writtenHashes[relPath] = hash;
     }
     this.usedAsFile[relPath] = true;
 
@@ -184,9 +251,12 @@ export default class Builder {
       relPath = relPath.slice(0, -1);
 
     this._ensureDirectory(files.pathDirname(relPath));
-    files.writeFile(files.pathJoin(this.buildPath, relPath),
-                     new Buffer(JSON.stringify(data, null, 2), 'utf8'),
-                     {mode: 0o444});
+    const absPath = files.pathJoin(this.buildPath, relPath);
+
+    atomicallyRewriteFile(
+      absPath,
+      new Buffer(JSON.stringify(data, null, 2), 'utf8'),
+      {mode: 0o444});
 
     this.usedAsFile[relPath] = true;
   }
@@ -222,7 +292,17 @@ export default class Builder {
       const shouldBeDirectory = (i < parts.length - 1) || directory;
       if (shouldBeDirectory) {
         if (! (soFar in this.usedAsFile)) {
-          files.mkdir(files.pathJoin(this.buildPath, soFar), 0o755);
+          let needToMkdir = true;
+          if (soFar in this.previousUsedAsFile) {
+            if (this.previousUsedAsFile[soFar]) {
+              files.unlink(soFar);
+            } else {
+              needToMkdir = false;
+            }
+          }
+          if (needToMkdir) {
+            files.mkdir(files.pathJoin(this.buildPath, soFar), 0o755);
+          }
           this.usedAsFile[soFar] = false;
         }
       } else {
@@ -377,6 +457,8 @@ export default class Builder {
           // it" goes.
           this.usedAsFile[thisRelTo] = true;
         } else {
+          // XXX can't really optimize this copying without reading
+          // the file into memory to calculate the hash.
           files.copyFile(thisAbsFrom,
                          files.pathResolve(this.buildPath, thisRelTo),
                          fileStatus.mode);
@@ -441,11 +523,46 @@ export default class Builder {
 
   // Move the completed bundle into its final location (outputPath)
   complete() {
+    if (this.previousUsedAsFile) {
+      // delete files and folders left-over from previous runs and not
+      // re-used in this run
+      const removed = {};
+      const paths = Object.keys(this.previousUsedAsFile);
+      paths.forEach((path) => {
+        // if the same path was re-used, leave it
+        if (this.usedAsFile.hasOwnProperty(path)) { return; }
+
+        // otherwise, remove it as it is no longer needed
+
+        // skip if already deleted
+        if (removed.hasOwnProperty(path)) { return; }
+
+        const absPath = files.pathJoin(this.buildPath, path);
+        if (this.previousUsedAsFile[path]) {
+          // file
+          files.unlink(absPath);
+          removed[path] = true;
+        } else {
+          // directory
+          files.rm_recursive(absPath);
+
+          // mark all sub-paths as removed, too
+          paths.forEach((anotherPath) => {
+            if (anotherPath.startsWith(path + '/')) {
+              removed[anotherPath] = true;
+            }
+          });
+        }
+      });
+    }
+
     // XXX Alternatively, we could just keep buildPath around, and make
     // outputPath be a symlink pointing to it. This doesn't work for the NPM use
     // case of renameDirAlmostAtomically since that one is constructing files to
     // be checked in to version control, but here we could get away with it.
-    files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+    if (this.buildPath !== this.outputPath) {
+      files.renameDirAlmostAtomically(this.buildPath, this.outputPath);
+    }
   }
 
   // Delete the partially-completed bundle. Do not disturb outputPath.
@@ -457,6 +574,29 @@ export default class Builder {
   // builder.
   getWatchSet() {
     return this.watchSet;
+  }
+}
+
+function atomicallyRewriteFile(path, data, options) {
+  let stat = null;
+  try {
+    stat = files.stat(path);
+  } catch (e) {
+    if (e.code !== 'ENOENT') {
+      throw e;
+    }
+  }
+
+  if (! stat) {
+    files.writeFile(path, data, options);
+  } else if (stat.isDirectory()) {
+    files.rm_recursive(path);
+  } else {
+    // create a different file with a random name and then rename over atomically
+    const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
+    const rpath = files.pathJoin(files.pathDirname(path), rname);
+    files.writeFile(rpath, data, options);
+    files.rename(rpath, path);
   }
 }
 

@@ -5,14 +5,18 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "compileCoffeescript",
-  use: [],
   sources: [
     'plugin/compile-coffeescript.js'
   ],
   npmDependencies: {
     "coffee-script": "1.9.2",
-    "source-map": "0.4.2"
+    "source-map": "0.4.2",
+    "lru-cache": "2.6.4"
   }
+});
+
+Package.onUse(function (api) {
+  api.use('isobuild:compiler-plugin@1.0.0');
 });
 
 Package.onTest(function (api) {

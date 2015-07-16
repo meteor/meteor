@@ -11,6 +11,6 @@ Package.describe({
 });
 
 Package.registerBuildPlugin({
-  name: "build-plugin",
+  name: "build-plugin-itself",
   sources: [ "build-plugin.js" ]
 });

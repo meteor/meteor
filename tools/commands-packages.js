@@ -1114,6 +1114,11 @@ main.registerCommand({
   // dependencies).
   projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
     var packageName = constraint.package;
+
+    // Skip isobuild:* pseudo-packages.
+    if (compiler.isIsobuildFeaturePackage(packageName))
+      return;
+
     var mapInfo = projectContext.packageMap.getInfo(packageName);
     if (! mapInfo)
       throw Error("no version for used package " + packageName);
@@ -1551,7 +1556,8 @@ main.registerCommand({
   var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-      upgradePackageNames.push(constraint.package);
+      if (! compiler.isIsobuildFeaturePackage(constraint.package))
+        upgradePackageNames.push(constraint.package);
     });
     upgradeIndirectDepPatchVersions = true;
   } else {

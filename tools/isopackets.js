@@ -43,12 +43,8 @@ var fiberHelpers = require('./fiber-helpers.js');
 
 
 // All of the defined isopackets. Whenever they are being built, they will be
-// built in the order listed here (which is mostly relevant for js-analyze).
+// built in the order listed here.
 var ISOPACKETS = {
-  // Note: when running from a checkout, js-analyze must always be the
-  // the first to be rebuilt, because it might need to be loaded as part
-  // of building other isopackets.
-  'js-analyze': ['js-analyze'],
   'ddp': ['ddp-client'],
   'mongo': ['npm-mongo'],
   'ejson': ['ejson'],
@@ -69,8 +65,10 @@ var ISOPACKETS = {
 //
 // The subtlety here is that when running from a checkout, we don't want to
 // accidentally load an isopacket before ensuring that it doesn't need to be
-// rebuilt. But we do want to be able to load the js-analyze isopacket as part
-// of building other isopackets in ensureIsopacketsLoadable.
+// rebuilt. We used to need to load a "js-analyze" isopacket as part
+// of building other isopackets in ensureIsopacketsLoadable which made this
+// more important, though we've simplified it now by moving that code into
+// the tool itself.
 var loadedIsopackets = {};
 
 // The main entry point: loads and returns an isopacket from cache or from
@@ -126,8 +124,7 @@ var ensureIsopacketsLoadable = function () {
 
   var failedPackageBuild = false;
   // Look at each isopacket. Check to see if it's on disk and up to date. If
-  // not, build it. We rebuild them in the order listed in ISOPACKETS, which
-  // ensures that we deal with js-analyze first.
+  // not, build it. We rebuild them in the order listed in ISOPACKETS.
   var messages = Console.withProgressDisplayVisible(function () {
     return buildmessage.capture(function () {
       _.each(ISOPACKETS, function (packages, isopacketName) {

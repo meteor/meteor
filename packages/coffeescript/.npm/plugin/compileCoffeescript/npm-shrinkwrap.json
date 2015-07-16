@@ -3,6 +3,9 @@
     "coffee-script": {
       "version": "1.9.2"
     },
+    "lru-cache": {
+      "version": "2.6.4"
+    },
     "source-map": {
       "version": "0.4.2",
       "dependencies": {

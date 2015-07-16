@@ -11,7 +11,10 @@ var watch = require('./watch.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
 var colonConverter = require('./colon-converter.js');
+var linterPluginModule = require('./linter-plugin.js');
+var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('./profile.js').Profile;
+import { SourceProcessorSet } from './build-plugin.js';
 
 var compiler = exports;
 
@@ -24,11 +27,11 @@ var compiler = exports;
 // bumped.
 //
 // You should also update this whenever you update any of the packages used
-// directly by the isopack creation process (eg js-analyze) since they do not
-// end up as watched dependencies. (At least for now, packages only used in
-// target creation (eg minifiers) don't require you to update BUILT_BY, though
-// you will need to quit and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/16';
+// directly by the isopack creation process since they do not end up as watched
+// dependencies. (At least for now, packages only used in target creation (eg
+// minifiers) don't require you to update BUILT_BY, though you will need to quit
+// and rerun "meteor run".)
+compiler.BUILT_BY = 'meteor/17';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -124,6 +127,30 @@ compiler.compile = Profile(function (packageSource, options) {
     }
   }
 
+  // Find all the isobuild:* pseudo-packages that this package depends on. Why
+  // do we need to do this? Well, we actually load the plugins in this package
+  // before we've fully compiled the package --- plugins are loaded before the
+  // compiler builds the unibuilds in this package (because plugins are allowed
+  // to act on the package itself). But when we load plugins, we need to know if
+  // the package depends on (eg) isobuild:compiler-plugin, to know if the plugin
+  // is allowed to call Plugin.registerCompiler. At this point, the Isopack
+  // object doesn't yet have any unibuilds... but isopack.js doesn't have access
+  // to the PackageSource either (because it needs to work with both
+  // compiled-from-source and loaded-from-disk packages). So we need to make
+  // sure here that the Isopack has *some* reference to the isobuild features
+  // which the unibuilds depend on, so we do it here (and also in
+  // Isopack#initFromPath).
+  var isobuildFeatures = [];
+  packageSource.architectures.forEach((sourceArch) => {
+    sourceArch.uses.forEach((use) => {
+      if (!use.weak && isIsobuildFeaturePackage(use.package) &&
+          isobuildFeatures.indexOf(use.package) === -1) {
+        isobuildFeatures.push(use.package);
+      }
+    });
+  });
+  isobuildFeatures = _.uniq(isobuildFeatures);
+
   var isopk = new isopack.Isopack;
   isopk.initFromOptions({
     name: packageSource.name,
@@ -135,16 +162,18 @@ compiler.compile = Profile(function (packageSource, options) {
     cordovaDependencies: packageSource.cordovaDependencies,
     npmDiscards: packageSource.npmDiscards,
     includeTool: packageSource.includeTool,
-    debugOnly: packageSource.debugOnly
+    debugOnly: packageSource.debugOnly,
+    pluginCacheDir: options.pluginCacheDir,
+    isobuildFeatures
   });
 
-  _.each(packageSource.architectures, function (unibuild) {
-    if (unibuild.arch === 'web.cordova' && ! includeCordovaUnibuild)
+  _.each(packageSource.architectures, function (architecture) {
+    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild)
       return;
 
     var unibuildResult = compileUnibuild({
       isopack: isopk,
-      sourceArch: unibuild,
+      sourceArch: architecture,
       isopackCache: isopackCache,
       nodeModulesPath: nodeModulesPath,
       isPortable: isPortable,
@@ -162,9 +191,132 @@ compiler.compile = Profile(function (packageSource, options) {
   return isopk;
 });
 
+// options:
+// - isopack
+// - isopackCache
+// - includeCordovaUnibuild
+compiler.lint = function (packageSource, options) {
+  // Note: the buildmessage context of compiler.lint and lintUnibuild is a
+  // normal error message context (eg, there might be errors from initializing
+  // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
+  // our return value.
+  buildmessage.assertInJob();
+
+  const warnings = new buildmessage._MessageSet;
+
+  _.each(packageSource.architectures, function (architecture) {
+    // skip Cordova if not required
+    if (! options.includeCordovaUnibuild
+        && architecture.arch === 'web.cordova') {
+      return;
+    }
+
+    const unibuildWarnings = lintUnibuild({
+      isopack: options.isopack,
+      isopackCache: options.isopackCache,
+      sourceArch: architecture
+    });
+    if (unibuildWarnings) {
+      warnings.merge(unibuildWarnings);
+    }
+  });
+  return warnings.hasMessages() ? warnings : null;
+};
+
+compiler.getMinifiers = function (packageSource, options) {
+  buildmessage.assertInJob();
+
+  var minifiers = [];
+  _.each(packageSource.architectures, function (architecture) {
+    var activePluginPackages = getActivePluginPackages(options.isopack, {
+      isopackCache: options.isopackCache,
+      uses: architecture.uses
+    });
+
+    _.each(activePluginPackages, function (otherPkg) {
+      otherPkg.ensurePluginsInitialized();
+
+      _.each(otherPkg.sourceProcessors.minifier.allSourceProcessors, (sp) => {
+        minifiers.push(sp);
+      });
+    });
+  });
+
+  minifiers = _.uniq(minifiers);
+  // check for extension-wise uniqness
+  _.each(['js', 'css'], function (ext) {
+    var plugins = _.filter(minifiers, function (plugin) {
+      return _.contains(plugin.extensions, ext);
+    });
+
+    if (plugins.length > 1) {
+      var packages = _.map(plugins, function (p) { return p.isopack.name; });
+      buildmessage.error(packages.join(', ') + ': multiple packages registered minifiers for extension "' + ext + '".');
+    }
+  });
+
+  return minifiers;
+};
+
+function getLinterSourceProcessorSet({isopack, activePluginPackages}) {
+  buildmessage.assertInJob();
+
+  const sourceProcessorSet = new SourceProcessorSet(
+    isopack.displayName, { allowConflicts: true });
+
+  _.each(activePluginPackages, function (otherPkg) {
+    otherPkg.ensurePluginsInitialized();
+
+    sourceProcessorSet.merge(otherPkg.sourceProcessors.linter);
+  });
+
+  return sourceProcessorSet;
+}
+
+var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
+  // Note: the buildmessage context of compiler.lint and lintUnibuild is a
+  // normal error message context (eg, there might be errors from initializing
+  // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
+  // our return value.
+  buildmessage.assertInJob();
+
+  var activePluginPackages = getActivePluginPackages(
+    isopack, {
+      isopackCache,
+      uses: sourceArch.uses
+    });
+
+  const sourceProcessorSet =
+          getLinterSourceProcessorSet({isopack, activePluginPackages});
+  // bail out early if we had trouble loading plugins or if we're not
+  // going to lint anything
+  if (buildmessage.jobHasMessages() || sourceProcessorSet.isEmpty()) {
+    return null;
+  }
+
+  const unibuild = _.findWhere(isopack.unibuilds, {arch: sourceArch.arch});
+  if (! unibuild) {
+    throw Error(`No ${ sourceArch.arch } unibuild for ${ isopack.name }!`);
+  }
+
+  var sourceItems = sourceArch.getSourcesFunc(
+    sourceProcessorSet, unibuild.watchSet);
+
+  const linterMessages = buildmessage.capture(() => {
+    runLinters({
+      isopackCache,
+      sourceItems,
+      sourceProcessorSet,
+      inputSourceArch: sourceArch,
+      watchSet: unibuild.watchSet
+    });
+  });
+  return linterMessages;
+};
+
 // options.sourceArch is a SourceArch to compile.  Process all source files
-// through the appropriate handlers and run the prelink phase on any resulting
-// JavaScript. Create a new Unibuild and add it to options.isopack.
+// through the appropriate legacy handlers. Create a new Unibuild and add it to
+// options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
 var compileUnibuild = function (options) {
@@ -179,126 +331,63 @@ var compileUnibuild = function (options) {
 
   var isApp = ! inputSourceArch.pkg.name;
   var resources = [];
-  var js = [];
   var pluginProviderPackageNames = {};
-  // The current package always is a plugin provider. (This also means we no
-  // longer need a buildOfPath entry in buildinfo.json.)
-  pluginProviderPackageNames[isopk.name] = true;
   var watchSet = inputSourceArch.watchSet.clone();
 
   // *** Determine and load active plugins
-
-  // XXX we used to include our own extensions only if we were the
-  // "use" role. now we include them everywhere because we don't have
-  // a special "use" role anymore. it's not totally clear to me what
-  // the correct behavior should be -- we need to resolve whether we
-  // think about extensions as being global to a package or particular
-  // to a unibuild.
-
-  // (there's also some weirdness here with handling implies, because
-  // the implies field is on the target unibuild, but we really only care
-  // about packages.)
-  var activePluginPackages = [isopk];
-
-  // We don't use plugins from weak dependencies, because the ability
-  // to compile a certain type of file shouldn't depend on whether or
-  // not some unrelated package in the target has a dependency. And we
-  // skip unordered dependencies, because it's not going to work to
-  // have circular build-time dependencies.
-  //
-  // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
-  // templating from standard-app-packages).
-  //
-  // We pass archinfo.host here, not self.arch, because it may be more specific,
-  // and because plugins always have to run on the host architecture.
-  compiler.eachUsedUnibuild({
-    dependencies: inputSourceArch.uses,
-    arch: archinfo.host(),
+  var activePluginPackages = getActivePluginPackages(isopk, {
+    uses: inputSourceArch.uses,
     isopackCache: isopackCache,
-    skipUnordered: true
-    // implicitly skip weak deps by not specifying acceptableWeakPackages option
-  }, function (unibuild) {
-    if (unibuild.pkg.name === isopk.name)
-      return;
-    pluginProviderPackageNames[unibuild.pkg.name] = true;
     // If other package is built from source, then we need to rebuild this
     // package if any file in the other package that could define a plugin
-    // changes.
-    watchSet.merge(unibuild.pkg.pluginWatchSet);
-
-    if (_.isEmpty(unibuild.pkg.plugins))
-      return;
-    activePluginPackages.push(unibuild.pkg);
+    // changes.  getActivePluginPackages will add entries to this WatchSet.
+    pluginProviderWatchSet: watchSet,
+    pluginProviderPackageNames
   });
 
-  activePluginPackages = _.uniq(activePluginPackages);
+  // *** Assemble the SourceProcessorSet from the plugins. This data
+  // structure lets us decide what to do with each file: which plugin
+  // should process it in what method.
+  //
+  // We also build a SourceProcessorSet for this package's linters even
+  // though we're not linting right now. This is so we can tell the
+  // difference between an file added to a package as a linter config
+  // file (not handled by any compiler), and a file that's truly not
+  // handled by anything (which is an error unless explicitly declared
+  // as a static asset).
+  let sourceProcessorSet, linterSourceProcessorSet;
+  buildmessage.enterJob("determining active plugins", () => {
+    sourceProcessorSet = new SourceProcessorSet(
+      isopk.displayName(), { hardcodeJs: true});
 
-  // *** Assemble the list of source file handlers from the plugins
-  var allHandlersWithPkgs = {};
-  var sourceExtensions = {};  // maps source extensions to isTemplate
+    activePluginPackages.forEach((otherPkg) => {
+      otherPkg.ensurePluginsInitialized();
 
-  sourceExtensions['js'] = false;
-  allHandlersWithPkgs['js'] = {
-    pkgName: null /* native handler */,
-    handler: function (compileStep) {
-      // This is a hardcoded handler for *.js files. Since plugins
-      // are written in JavaScript we have to start somewhere.
-
-      var options = {
-        data: compileStep.read().toString('utf8'),
-        path: compileStep.inputPath,
-        sourcePath: compileStep.inputPath,
-        _hash: compileStep._hash
-      };
-
-      if (compileStep.fileOptions.hasOwnProperty("bare")) {
-        options.bare = compileStep.fileOptions.bare;
-      } else if (compileStep.fileOptions.hasOwnProperty("raw")) {
-        // XXX eventually get rid of backward-compatibility "raw" name
-        // XXX COMPAT WITH 0.6.4
-        options.bare = compileStep.fileOptions.raw;
-      }
-
-      compileStep.addJavaScript(options);
-    }
-  };
-
-  _.each(activePluginPackages, function (otherPkg) {
-    _.each(otherPkg.getSourceHandlers(), function (sourceHandler, ext) {
-      // XXX comparing function text here seems wrong.
-      if (_.has(allHandlersWithPkgs, ext) &&
-          allHandlersWithPkgs[ext].handler.toString() !== sourceHandler.handler.toString()) {
-        buildmessage.error(
-          "conflict: two packages included in " +
-            (inputSourceArch.pkg.name || "the app") + ", " +
-            (allHandlersWithPkgs[ext].pkgName || "the app") + " and " +
-            (otherPkg.name || "the app") + ", " +
-            "are both trying to handle ." + ext);
-        // Recover by just going with the first handler we saw
-        return;
-      }
-      // Is this handler only registered for, say, "web", and we're building,
-      // say, "os"?
-      if (sourceHandler.archMatching &&
-          !archinfo.matches(inputSourceArch.arch, sourceHandler.archMatching)) {
-        return;
-      }
-      allHandlersWithPkgs[ext] = {
-        pkgName: otherPkg.name,
-        handler: sourceHandler.handler
-      };
-      sourceExtensions[ext] = !!sourceHandler.isTemplate;
+      // Note that this may log a buildmessage if there are conflicts.
+      sourceProcessorSet.merge(otherPkg.sourceProcessors.compiler);
     });
+
+    // Used to excuse functions from the "undeclared static asset" check.
+    linterSourceProcessorSet = getLinterSourceProcessorSet({
+      activePluginPackages,
+      isopack: isopk
+    });
+    if (buildmessage.jobHasMessages()) {
+      // Recover by not calling getSourcesFunc and pretending there are no
+      // items.
+      sourceProcessorSet = null;
+    }
   });
 
   // *** Determine source files
-  // Note: sourceExtensions does not include leading dots
   // Note: the getSourcesFunc function isn't expected to add its
   // source files to watchSet; rather, the watchSet is for other
   // things that the getSourcesFunc consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  var sourceItems = inputSourceArch.getSourcesFunc(sourceExtensions, watchSet);
+  const sourceItems = sourceProcessorSet
+          ? inputSourceArch.getSourcesFunc(sourceProcessorSet, watchSet)
+          : [];
 
   if (nodeModulesPath) {
     // If this slice has node modules, we should consider the shrinkwrap file
@@ -333,26 +422,82 @@ var compileUnibuild = function (options) {
     });
   };
 
-  var convertSourceMapPaths = function (sourcemap, f) {
-    if (! sourcemap) {
-      // Don't try to convert it if it doesn't exist
-      return sourcemap;
-    }
-
-    var srcmap = JSON.parse(sourcemap);
-    srcmap.sources = _.map(srcmap.sources, f);
-    return JSON.stringify(srcmap);
-  };
-
   _.each(sourceItems, function (source) {
     var relPath = source.relPath;
     var fileOptions = _.clone(source.fileOptions) || {};
     var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
     var filename = files.pathBasename(relPath);
+
+    // Find the handler for source files with this extension (unless explicitly
+    // tagged as a static asset).
+    let classification = null;
+    if (! fileOptions.isAsset) {
+      classification = sourceProcessorSet.classifyFilename(
+        filename, inputSourceArch.arch);
+
+      if (classification.type === 'wrong-arch') {
+        // This file is for a compiler plugin but not for this arch. Skip it,
+        // and don't even watch it.  (eg, skip CSS preprocessor files on the
+        // server.)  This `return` goes on to the next `_.each(sourceItems`
+        // iteration.
+        return;
+      }
+
+      if (classification.type === 'unmatched') {
+        // This is not matched by any compiler plugin or legacy source handler,
+        // and it wasn't explicitly tagged as a static asset (with {isAsset:
+        // true} in packages, or by being in private/public in apps).
+        //
+        // Prior to the batch-plugins project, these would be implicitly treated
+        // as static assets. Now we consider this to be an error; you need to
+        // explicitly tell that you want something to be a static asset by
+        // including the isAsset flag in packages, or by putting it in
+        // public/private in an app.
+        //
+        // This is a backwards-incompatible change, but it doesn't affect
+        // previously-published packages (because the check is occuring in the
+        // compiler), and it doesn't affect apps (where random files outside of
+        // private/public never end up in the source list anyway).
+        //
+        // As one special case, if a file is unmatched by the compiler
+        // SourceProcessorSet but is matched by the linker SourceProcessorSet
+        // (ie, a linter config file), we don't report an error; this is so that
+        // you can run `api.addFiles('.jshintrc')` and have it work and not also
+        // add the file as a static asset.  (This is only relevant for
+        // packages.)  We don't put these files in the WatchSet, though; that
+        // happens via compiler.lint.
+
+        if (isApp) {
+          // This shouldn't happen, because initFromAppDir's getSourcesFunc
+          // should only return sources that have isAsset set or which match
+          // sourceProcessorSet.
+          throw Error("app contains non-asset files without plugin? " +
+                      relPath + " - " + filename);
+        }
+
+        const linterClassification = linterSourceProcessorSet.classifyFilename(
+          filename, inputSourceArch.arch);
+        if (linterClassification.type !== 'unmatched') {
+          // The linter knows about this, so we'll just ignore it instead of
+          // throwing an error.
+          return;
+        }
+
+        buildmessage.error(
+          `No plugin known to handle file '${ relPath }'. If you want this ` +
+          `file to be a static asset, pass the {isAsset: true} option ` +
+            `to api.addFiles; eg, api.addFiles('${relPath}', 'client', ` +
+            `{isAsset: true}).`);
+        // recover by ignoring
+        return;
+      }
+    }
+
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
     // transforms from the tools/files.js part).
     var file = watch.readAndWatchFileWithHash(watchSet, absPath);
+    var hash = file.hash;
     var contents = file.contents;
 
     Console.nudge(true);
@@ -360,6 +505,9 @@ var compileUnibuild = function (options) {
     if (contents === null) {
       // It really sucks to put this check here, since this isn't publish
       // code...
+      // XXX We think this code can probably be deleted at this point because
+      // people probably aren't trying to use files with colons in them any
+      // more.
       if (source.relPath.match(/:/)) {
         buildmessage.error(
           "Couldn't build this package on Windows due to the following file " +
@@ -369,417 +517,43 @@ var compileUnibuild = function (options) {
         buildmessage.error("File not found: " + source.relPath);
       }
 
-      // recover by ignoring
+      // recover by ignoring (but still watching the file)
       return;
     }
 
-    // Find the handler for source files with this extension.
-    var handler = null;
-    if (! fileOptions.isAsset) {
-      var parts = filename.split('.');
-      for (var i = 1; i < parts.length; i++) {
-        var extension = parts.slice(i).join('.');
-        if (_.has(allHandlersWithPkgs, extension)) {
-          handler = allHandlersWithPkgs[extension].handler;
-          break;
-        }
-      }
-    }
-
-    if (! handler) {
-      // If we don't have an extension handler, serve this file as a
-      // static resource on the client, or ignore it on the server.
-      //
-      // XXX This is pretty confusing, especially if you've
-      // accidentally forgotten a plugin -- revisit?
-      addAsset(contents, relPath, file.hash);
+    // Add static assets.
+    if (fileOptions.isAsset) {
+      addAsset(contents, relPath, hash);
       return;
     }
 
-    // This object is called a #CompileStep and it's the interface
-    // to plugins that define new source file handlers (eg,
-    // Coffeescript).
-    //
-    // Fields on CompileStep:
-    //
-    // - arch: the architecture for which we are building
-    // - inputSize: total number of bytes in the input file
-    // - inputPath: the filename and (relative) path of the input
-    //   file, eg, "foo.js". We don't provide a way to get the full
-    //   path because you're not supposed to read the file directly
-    //   off of disk. Instead you should call read(). That way we
-    //   can ensure that the version of the file that you use is
-    //   exactly the one that is recorded in the dependency
-    //   information.
-    // - pathForSourceMap: If this file is to be included in a source map,
-    //   this is the name you should use for it in the map.
-    // - rootOutputPath: on web targets, for resources such as
-    //   stylesheet and static assets, this is the root URL that
-    //   will get prepended to the paths you pick for your output
-    //   files so that you get your own namespace, for example
-    //   '/packages/foo'. null on non-web targets
-    // - fileOptions: any options passed to "api.addFiles"; for
-    //   use by the plugin. The built-in "js" plugin uses the "bare"
-    //   option for files that shouldn't be wrapped in a closure.
-    // - declaredExports: An array of symbols exported by this unibuild, or null
-    //   if it may not export any symbols (eg, test unibuilds). This is used by
-    //   CoffeeScript to ensure that it doesn't close over those symbols, eg.
-    // - read(n): read from the input file. If n is given it should
-    //   be an integer, and you will receive the next n bytes of the
-    //   file as a Buffer. If n is omitted you get the rest of the
-    //   file.
-    // - appendDocument({ section: "head", data: "my markup" })
-    //   Browser targets only. Add markup to the "head" or "body"
-    //   Web targets only. Add markup to the "head" or "body"
-    //   section of the document.
-    // - addStylesheet({ path: "my/stylesheet.css", data: "my css",
-    //                   sourceMap: "stringified json sourcemap"})
-    //   Web targets only. Add a stylesheet to the
-    //   document. 'path' is a requested URL for the stylesheet that
-    //   may or may not ultimately be honored. (Meteor will add
-    //   appropriate tags to cause the stylesheet to be loaded. It
-    //   will be subject to any stylesheet processing stages in
-    //   effect, such as minification.)
-    // - addJavaScript({ path: "my/program.js", data: "my code",
-    //                   sourcePath: "src/my/program.js",
-    //                   bare: true })
-    //   Add JavaScript code, which will be namespaced into this
-    //   package's environment (eg, it will see only the exports of
-    //   this package's imports), and which will be subject to
-    //   minification and so forth. Again, 'path' is merely a hint
-    //   that may or may not be honored. 'sourcePath' is the path
-    //   that will be used in any error messages generated (eg,
-    //   "foo.js:4:1: syntax error"). It must be present and should
-    //   be relative to the project root. Typically 'inputPath' will
-    //   do handsomely. "bare" means to not wrap the file in
-    //   a closure, so that its vars are shared with other files
-    //   in the module.
-    // - addAsset({ path: "my/image.png", data: Buffer })
-    //   Add a file to serve as-is over HTTP (web targets) or
-    //   to include as-is in the bundle (os targets).
-    //   This time `data` is a Buffer rather than a string. For
-    //   web targets, it will be served at the exact path you
-    //   request (concatenated with rootOutputPath). For server
-    //   targets, the file can be retrieved by passing path to
-    //   Assets.getText or Assets.getBinary.
-    // - error({ message: "There's a problem in your source file",
-    //           sourcePath: "src/my/program.ext", line: 12,
-    //           column: 20, func: "doStuff" })
-    //   Flag an error -- at a particular location in a source
-    //   file, if you like (you can even indicate a function name
-    //   to show in the error, like in stack traces). sourcePath,
-    //   line, column, and func are all optional.
-    //
-    // XXX for now, these handlers must only generate portable code
-    // (code that isn't dependent on the arch, other than 'web'
-    // vs 'os') -- they can look at the arch that is provided
-    // but they can't rely on the running on that particular arch
-    // (in the end, an arch-specific unibuild will be emitted only if
-    // there are native node modules). Obviously this should
-    // change. A first step would be a setOutputArch() function
-    // analogous to what we do with native node modules, but maybe
-    // what we want is the ability to ask the plugin ahead of time
-    // how specific it would like to force unibuilds to be.
-    //
-    // XXX we handle encodings in a rather cavalier way and I
-    // suspect we effectively end up assuming utf8. We can do better
-    // than that!
-    //
-    // XXX addAsset probably wants to be able to set MIME type and
-    // also control any manifest field we deem relevant (if any)
-    //
-    // XXX Some handlers process languages that have the concept of
-    // include files. These are problematic because we need to
-    // somehow instrument them to get the names and hashs of all of
-    // the files that they read for dependency tracking purposes. We
-    // don't have an API for that yet, so for now we provide a
-    // workaround, which is that _fullInputPath contains the full
-    // absolute path to the input files, which allows such a plugin
-    // to set up its include search path. It's then on its own for
-    // registering dependencies (for now..)
-    //
-    // XXX in the future we should give plugins an easy and clean
-    // way to return errors (that could go in an overall list of
-    // errors experienced across all files)
-    var readOffset = 0;
+    if (classification.isNonLegacySource()) {
+      // This is source used by a new-style compiler plugin; it will be fully
+      // processed later in the bundler.
+      resources.push({
+        type: "source",
+        extension: classification.extension || null,
+        data: contents,
+        path: relPath,
+        hash: hash,
+        fileOptions: fileOptions
+      });
+      return;
+    }
 
-    /**
-     * The comments for this class aren't used to generate docs right now.
-     * The docs live in the GitHub Wiki at: https://github.com/meteor/meteor/wiki/CompileStep-API-for-Build-Plugin-Source-Handlers
-     * @class CompileStep
-     * @summary The object passed into Plugin.registerSourceHandler
-     * @global
-     */
-    var compileStep = {
+    if (classification.type !== 'legacy-handler') {
+      throw Error("unhandled type: " + classification.type);
+    }
 
-      /**
-       * @summary The total number of bytes in the input file.
-       * @memberOf CompileStep
-       * @instance
-       * @type {Integer}
-       */
-      inputSize: contents.length,
-
-      /**
-       * @summary The filename and relative path of the input file.
-       * Please don't use this filename to read the file from disk, instead
-       * use [compileStep.read](CompileStep-read).
-       * @type {String}
-       * @instance
-       * @memberOf CompileStep
-       */
-      inputPath: files.convertToOSPath(relPath, true),
-
-      /**
-       * @summary The filename and absolute path of the input file.
-       * Please don't use this filename to read the file from disk, instead
-       * use [compileStep.read](CompileStep-read).
-       * @type {String}
-       * @instance
-       * @memberOf CompileStep
-       */
-      fullInputPath: files.convertToOSPath(absPath),
-
-      // The below is used in the less and stylus packages... so it should be
-      // public API.
-      _fullInputPath: files.convertToOSPath(absPath), // avoid, see above..
-
-      // Used for one optimization. Don't rely on this otherwise.
-      _hash: file.hash,
-
-      // XXX duplicates _pathForSourceMap() in linker
-      /**
-       * @summary If you are generating a sourcemap for the compiled file, use
-       * this path for the original file in the sourcemap.
-       * @type {String}
-       * @memberOf CompileStep
-       * @instance
-       */
-      pathForSourceMap: files.convertToOSPath(
-        inputSourceArch.pkg.name ?  inputSourceArch.pkg.name + "/" + relPath :
-                                    files.pathBasename(relPath), true),
-
-      // null if this is an app. intended to be used for the sources
-      // dictionary for source maps.
-      /**
-       * @summary The name of the package in which the file being built exists.
-       * @type {String}
-       * @memberOf CompileStep
-       * @instance
-       */
-      packageName: inputSourceArch.pkg.name,
-
-      /**
-       * @summary On web targets, this will be the root URL prepended
-       * to the paths you pick for your output files. For example,
-       * it could be "/packages/my-package".
-       * @type {String}
-       * @memberOf CompileStep
-       * @instance
-       */
-      rootOutputPath: files.convertToOSPath(
-        inputSourceArch.pkg.serveRoot, true),
-
-      /**
-       * @summary The architecture for which we are building. Can be "os",
-       * "web.browser", or "web.cordova".
-       * @type {String}
-       * @memberOf CompileStep
-       * @instance
-       */
-      arch: inputSourceArch.arch,
-
-      /**
-       * @deprecated in 0.9.4
-       * This is a duplicate API of the above, we don't need it.
-       */
-      archMatches: function (pattern) {
-        return archinfo.matches(inputSourceArch.arch, pattern);
-      },
-
-      /**
-       * @summary Any options passed to "api.addFiles".
-       * @type {Object}
-       * @memberOf CompileStep
-       * @instance
-       */
-      fileOptions: fileOptions,
-
-      /**
-       * @summary The list of exports that the current package has defined.
-       * Can be used to treat those symbols differently during compilation.
-       * @type {Object}
-       * @memberOf CompileStep
-       * @instance
-       */
-      declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
-
-      /**
-       * @summary Read from the input file. If `n` is specified, returns the
-       * next `n` bytes of the file as a Buffer. XXX not sure if this actually
-       * returns a String sometimes...
-       * @param  {Integer} [n] The number of bytes to return.
-       * @instance
-       * @memberOf CompileStep
-       * @returns {Buffer}
-       */
-      read: function (n) {
-        if (n === undefined || readOffset + n > contents.length)
-          n = contents.length - readOffset;
-        var ret = contents.slice(readOffset, readOffset + n);
-        readOffset += n;
-        return ret;
-      },
-
-      /**
-       * @summary Works in web targets only. Add markup to the `head` or `body`
-       * section of the document.
-       * @param  {Object} options
-       * @param {String} options.section Which section of the document should
-       * be appended to. Can only be "head" or "body".
-       * @param {String} options.data The content to append.
-       * @memberOf CompileStep
-       * @instance
-       */
-      addHtml: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "web"))
-          throw new Error("Document sections can only be emitted to " +
-                          "web targets");
-        if (options.section !== "head" && options.section !== "body")
-          throw new Error("'section' must be 'head' or 'body'");
-        if (typeof options.data !== "string")
-          throw new Error("'data' option to appendDocument must be a string");
-        resources.push({
-          type: options.section,
-          data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
-        });
-      },
-
-      /**
-       * @deprecated in 0.9.4
-       */
-      appendDocument: function (options) {
-        this.addHtml(options);
-      },
-
-      /**
-       * @summary Web targets only. Add a stylesheet to the document.
-       * @param {Object} options
-       * @param {String} path The requested path for the added CSS, may not be
-       * satisfied if there are path conflicts.
-       * @param {String} data The content of the stylesheet that should be
-       * added.
-       * @param {String} sourceMap A stringified JSON sourcemap, in case the
-       * stylesheet was generated from a different file.
-       * @memberOf CompileStep
-       * @instance
-       */
-      addStylesheet: function (options) {
-        if (! archinfo.matches(inputSourceArch.arch, "web"))
-          throw new Error("Stylesheets can only be emitted to " +
-                          "web targets");
-        if (typeof options.data !== "string")
-          throw new Error("'data' option to addStylesheet must be a string");
-        resources.push({
-          type: "css",
-          refreshable: true,
-          data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-          servePath: colonConverter.convert(
-            files.pathJoin(
-              inputSourceArch.pkg.serveRoot,
-              files.convertToStandardPath(options.path, true))),
-          sourceMap: convertSourceMapPaths(options.sourceMap,
-                                           files.convertToStandardPath)
-        });
-      },
-
-      /**
-       * @summary Add JavaScript code. The code added will only see the
-       * namespaces imported by this package as runtime dependencies using
-       * ['api.use'](#PackageAPI-use). If the file being compiled was added
-       * with the bare flag, the resulting JavaScript won't be wrapped in a
-       * closure.
-       * @param {Object} options
-       * @param {String} options.path The path at which the JavaScript file
-       * should be inserted, may not be honored in case of path conflicts.
-       * @param {String} options.data The code to be added.
-       * @param {String} options.sourcePath The path that will be used in
-       * any error messages generated by this file, e.g. `foo.js:4:1: error`.
-       * @memberOf CompileStep
-       * @instance
-       */
-      addJavaScript: function (options) {
-        if (typeof options.data !== "string")
-          throw new Error("'data' option to addJavaScript must be a string");
-        if (typeof options.sourcePath !== "string")
-          throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
-
-        // By default, use fileOptions for the `bare` option but also allow
-        // overriding it with the options
-        var bare = fileOptions.bare;
-        if (options.hasOwnProperty("bare")) {
-          bare = options.bare;
-        }
-
-        js.push({
-          source: files.convertToStandardLineEndings(options.data),
-          sourcePath: files.convertToStandardPath(options.sourcePath, true),
-          servePath: files.pathJoin(
-            inputSourceArch.pkg.serveRoot,
-            files.convertToStandardPath(options.path, true)),
-          bare: !! bare,
-          sourceMap: convertSourceMapPaths(options.sourceMap,
-                                           files.convertToStandardPath),
-          sourceHash: options._hash
-        });
-      },
-
-      /**
-       * @summary Add a file to serve as-is to the browser or to include on
-       * the browser, depending on the target. On the web, it will be served
-       * at the exact path requested. For server targets, it can be retrieved
-       * using `Assets.getText` or `Assets.getBinary`.
-       * @param {Object} options
-       * @param {String} path The path at which to serve the asset.
-       * @param {Buffer|String} data The data that should be placed in
-       * the file.
-       * @memberOf CompileStep
-       * @instance
-       */
-      addAsset: function (options) {
-        if (! (options.data instanceof Buffer)) {
-          if (_.isString(options.data)) {
-            options.data = new Buffer(options.data);
-          } else {
-            throw new Error("'data' option to addAsset must be a Buffer or String.");
-          }
-        }
-
-        addAsset(options.data, files.convertToStandardPath(options.path, true));
-      },
-
-      /**
-       * @summary Display a build error.
-       * @param  {Object} options
-       * @param {String} message The error message to display.
-       * @param {String} [sourcePath] The path to display in the error message.
-       * @param {Integer} line The line number to display in the error message.
-       * @param {String} func The function name to display in the error message.
-       * @memberOf CompileStep
-       * @instance
-       */
-      error: function (options) {
-        buildmessage.error(options.message || ("error building " + relPath), {
-          file: options.sourcePath,
-          line: options.line ? options.line : undefined,
-          column: options.column ? options.column : undefined,
-          func: options.func ? options.func : undefined
-        });
-      }
-    };
+    // OK, time to handle legacy handlers.
+    var compileStep = compileStepModule.makeCompileStep(
+      source, file, inputSourceArch, {
+        resources: resources,
+        addAsset: addAsset
+      });
 
     try {
-      (buildmessage.markBoundary(handler))(compileStep);
+      (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
       buildmessage.exception(e);
@@ -789,52 +563,9 @@ var compileUnibuild = function (options) {
     }
   });
 
-  // *** Run Phase 1 link
-
-  // Load jsAnalyze from the js-analyze package... unless we are the
-  // js-analyze package, in which case never mind. (The js-analyze package's
-  // default unibuild is not allowed to depend on anything!)
-  var jsAnalyze = null;
-  if (! _.isEmpty(js) && inputSourceArch.pkg.name !== "js-analyze") {
-    jsAnalyze = isopackets.load('js-analyze')['js-analyze'].JSAnalyze;
-  }
-
-  var results = linker.prelink({
-    inputFiles: js,
-    useGlobalNamespace: isApp,
-    // I was confused about this, so I am leaving a comment -- the
-    // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
-    // XXX: If we change this, we can get rid of source arch names!
-    combinedServePath: isApp ? null :
-      "/packages/" + colonConverter.convert(
-        inputSourceArch.pkg.name +
-        (inputSourceArch.kind === "main" ? "" : (":" + inputSourceArch.kind)) +
-        ".js"),
-    name: inputSourceArch.pkg.name || null,
-    declaredExports: _.pluck(inputSourceArch.declaredExports, 'name'),
-    jsAnalyze: jsAnalyze,
-    noLineNumbers: noLineNumbers
-  });
-
   // *** Determine captured variables
-  var packageVariables = [];
-  var packageVariableNames = {};
-  _.each(inputSourceArch.declaredExports, function (symbol) {
-    if (_.has(packageVariableNames, symbol.name))
-      return;
-    packageVariables.push({
-      name: symbol.name,
-      export: symbol.testOnly? "tests" : true
-    });
-    packageVariableNames[symbol.name] = true;
-  });
-  _.each(results.assignedVariables, function (name) {
-    if (_.has(packageVariableNames, name))
-      return;
-    packageVariables.push({
-      name: name
-    });
-    packageVariableNames[name] = true;
+  var declaredExports = _.map(inputSourceArch.declaredExports, function (symbol) {
+    return _.pick(symbol, ['name', 'testOnly']);
   });
 
   // *** Consider npm dependencies and portability
@@ -856,8 +587,7 @@ var compileUnibuild = function (options) {
     implies: inputSourceArch.implies,
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPath,
-    prelinkFiles: results.files,
-    packageVariables: packageVariables,
+    declaredExports: declaredExports,
     resources: resources
   });
 
@@ -866,9 +596,202 @@ var compileUnibuild = function (options) {
   };
 };
 
+function runLinters({inputSourceArch, isopackCache, sourceItems,
+                     sourceProcessorSet, watchSet}) {
+  // The buildmessage context here is for linter warnings only! runLinters
+  // should not do anything that can have a real build failure.
+  buildmessage.assertInCapture();
+
+  if (sourceProcessorSet.isEmpty()) {
+    return;
+  }
+
+  // First we calculate the symbols imported into the current package by
+  // packages we depend on. This is because most JS linters are going to want to
+  // warn about the use of unknown global variables, and the linker import
+  // system works by doing something that looks a whole lot like using
+  // undeclared globals!  That said, we don't actually know the imports that
+  // will be active when an app is built if the versions of the imported
+  // packages differ from those available at package lint time. But it's a good
+  // heuristic, at least. (If we transition from linker to ES2015 modules, we
+  // won't have the issue any more.)
+
+  // We want to look at the arch of the used packages that matches the arch
+  // we're compiling.  Normally when we call compiler.eachUsedUnibuild, we're
+  // either specifically looking at archinfo.host() because we're doing
+  // something related to plugins (which always run in the host environment), or
+  // we're in the process of building a bundler Target (a program), which has a
+  // specific arch which is never 'os'.  In this odd case, though, we're trying
+  // to run eachUsedUnibuild at package-compile time (not bundle time), so the
+  // only 'arch' we've heard of might be 'os', if we're building a portable
+  // unibuild.  In that case, we should look for imports in the host arch if it
+  // exists instead of failing because a dependency does not have an 'os'
+  // unibuild.
+  const whichArch = inputSourceArch.arch === 'os'
+          ? archinfo.host() : inputSourceArch.arch;
+
+  // For linters, figure out what are the global imports from other packages
+  // that we use directly, or are implied.
+  const globalImports = ['Package'];
+
+  if (archinfo.matches(inputSourceArch.arch, "os")) {
+    globalImports.push('Npm', 'Assets');
+  }
+
+  compiler.eachUsedUnibuild({
+    dependencies: inputSourceArch.uses,
+    arch: whichArch,
+    isopackCache: isopackCache,
+    skipUnordered: true,
+    skipDebugOnly: true
+  }, (unibuild) => {
+    if (unibuild.pkg.name === inputSourceArch.pkg.name)
+      return;
+    _.each(unibuild.declaredExports, (symbol) => {
+      if (! symbol.testOnly || inputSourceArch.isTest) {
+        globalImports.push(symbol.name);
+      }
+    });
+  });
+
+  // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
+  const sourceItemsForLinter = {};
+  sourceItems.forEach((sourceItem) => {
+    const { relPath } = sourceItem;
+    const classification = sourceProcessorSet.classifyFilename(
+      files.pathBasename(relPath), inputSourceArch.arch);
+    // If we don't have a linter for this file (or we do but it's only on
+    // another arch), skip without even reading the file into a WatchSet.
+    if (classification.type === 'wrong-arch' ||
+        classification.type === 'unmatched')
+      return;
+    // We shouldn't ever add a legacy handler and we're not hardcoding JS for
+    // linters, so we should always have SourceProcessor if anything matches.
+    if (! classification.sourceProcessors) {
+      throw Error(
+        `Unexpected classification for ${ relPath }: ${ classification.type }`);
+    }
+
+    // Read the file and add it to the WatchSet.
+    const {hash, contents} = watch.readAndWatchFileWithHash(
+      watchSet,
+      files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath));
+    const wrappedSource = {
+      relPath, contents, hash,
+      arch: inputSourceArch.arch,
+      'package': inputSourceArch.pkg.name
+    };
+
+    // There can be multiple linters on a file.
+    classification.sourceProcessors.forEach((sourceProcessor) => {
+      if (! sourceItemsForLinter.hasOwnProperty(sourceProcessor.id)) {
+        sourceItemsForLinter[sourceProcessor.id] = {
+          sourceProcessor,
+          sources: []
+        };
+      }
+      sourceItemsForLinter[sourceProcessor.id].sources.push(wrappedSource);
+    });
+  });
+
+  // Run linters on files. This skips linters that don't have any files.
+  _.each(sourceItemsForLinter, ({sourceProcessor, sources}) => {
+    const sourcesToLint = sources.map(
+      wrappedSource => new linterPluginModule.LintingFile(wrappedSource)
+    );
+
+    const linter = sourceProcessor.userPlugin.processFilesForPackage;
+
+    function archToString(arch) {
+      if (arch.match(/web\.cordova/))
+        return "Cordova";
+      if (arch.match(/web\..*/))
+        return "Client";
+      if (arch.match(/os.*/))
+        return "Server";
+      throw new Error("Don't know how to display the arch: " + arch);
+    }
+
+    buildmessage.enterJob({
+      title: "linting files with " +
+        sourceProcessor.isopack.name +
+        " for " +
+        inputSourceArch.pkg.displayName() +
+        " (" + archToString(inputSourceArch.arch) + ")"
+    }, () => {
+      try {
+        var markedLinter = buildmessage.markBoundary(linter.bind(
+          sourceProcessor.userPlugin));
+        markedLinter(sourcesToLint, { globals: globalImports });
+      } catch (e) {
+        buildmessage.exception(e);
+      }
+    });
+  });
+};
+
+// takes an isopack and returns a list of packages isopack depends on,
+// containing at least one plugin
+export function getActivePluginPackages(isopk, {
+  uses,
+  isopackCache,
+  pluginProviderPackageNames,
+  pluginProviderWatchSet
+}) {
+  // XXX we used to include our own plugins only if we were the
+  // "use" role. now we include them everywhere because we don't have
+  // a special "use" role anymore. it's not totally clear to me what
+  // the correct behavior should be -- we need to resolve whether we
+  // think about plugins as being global to a package or particular
+  // to a unibuild.
+
+  // (there's also some weirdness here with handling implies, because
+  // the implies field is on the target unibuild, but we really only care
+  // about packages.)
+  var activePluginPackages = [isopk];
+  if (pluginProviderPackageNames)
+    pluginProviderPackageNames[isopk.name] = true;
+
+  // We don't use plugins from weak dependencies, because the ability
+  // to compile a certain type of file shouldn't depend on whether or
+  // not some unrelated package in the target has a dependency. And we
+  // skip unordered dependencies, because it's not going to work to
+  // have circular build-time dependencies.
+  //
+  // eachUsedUnibuild takes care of pulling in implied dependencies for us (eg,
+  // templating from standard-app-packages).
+  //
+  // We pass archinfo.host here, not self.arch, because it may be more specific,
+  // and because plugins always have to run on the host architecture.
+  compiler.eachUsedUnibuild({
+    dependencies: uses,
+    arch: archinfo.host(),
+    isopackCache: isopackCache,
+    skipUnordered: true
+    // implicitly skip weak deps by not specifying acceptableWeakPackages option
+  }, function (unibuild) {
+    if (unibuild.pkg.name === isopk.name)
+      return;
+    if (pluginProviderPackageNames) {
+      pluginProviderPackageNames[unibuild.pkg.name] = true;
+    }
+    if (pluginProviderWatchSet) {
+      pluginProviderWatchSet.merge(unibuild.pkg.pluginWatchSet);
+    }
+    if (_.isEmpty(unibuild.pkg.plugins))
+      return;
+    activePluginPackages.push(unibuild.pkg);
+  });
+
+  activePluginPackages = _.uniq(activePluginPackages);
+  return activePluginPackages;
+}
+
 // Iterates over each in options.dependencies as well as unibuilds implied by
 // them. The packages in question need to already be built and in
 // options.isopackCache.
+//
+// Skips isobuild:* pseudo-packages.
 compiler.eachUsedUnibuild = function (
   options, callback) {
   buildmessage.assertInCapture();
@@ -890,6 +813,10 @@ compiler.eachUsedUnibuild = function (
 
   while (! _.isEmpty(usesToProcess)) {
     var use = usesToProcess.shift();
+
+    // We only care about real packages, not isobuild:* psuedo-packages.
+    if (isIsobuildFeaturePackage(use.package))
+      continue;
 
     var usedPackage = isopackCache.getIsopack(use.package);
 
@@ -918,4 +845,15 @@ compiler.eachUsedUnibuild = function (
       usesToProcess.push(implied);
     });
   }
+};
+
+// Note: this code is duplicated in packages/constraint-solver/solver.js
+export function isIsobuildFeaturePackage(packageName) {
+  return packageName.startsWith('isobuild:');
+}
+
+export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
+  'isobuild:compiler-plugin': ['1.0.0'],
+  'isobuild:minifier-plugin': ['1.0.0'],
+  'isobuild:linter-plugin': ['1.0.0']
 };

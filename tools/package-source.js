@@ -29,12 +29,31 @@ var genTestName = function (name) {
 };
 
 // Returns a sort comparator to order files into load order.
-// templateExtensions should be a list of extensions like 'html'
-// which should be loaded before other extensions.
-var loadOrderSort = function (templateExtensions) {
-  var templateExtnames = {};
-  _.each(templateExtensions, function (extension) {
-    templateExtnames['.' + extension] = true;
+var loadOrderSort = function (sourceProcessorSet, arch) {
+  const isTemplate = _.memoize((filename) => {
+    const classification = sourceProcessorSet.classifyFilename(filename, arch);
+    switch (classification.type) {
+    case 'extension':
+    case 'filename':
+      if (! classification.sourceProcessors) {
+        // This is *.js, not a template. #HardcodeJs
+        return false;
+      }
+      if (classification.sourceProcessors.length > 1) {
+        throw Error("conflicts in compiler?");
+      }
+      return classification.sourceProcessors[0].isTemplate;
+
+    case 'legacy-handler':
+      return classification.legacyIsTemplate;
+
+    case 'wrong-arch':
+    case 'unmatched':
+      return false;
+
+    default:
+      throw Error(`surprising type ${classification.type} for ${filename}`);
+    }
   });
 
   return function (a, b) {
@@ -46,8 +65,8 @@ var loadOrderSort = function (templateExtensions) {
     // before the corresponding .html file.
     //
     // maybe all of the templates should go in one file?
-    var isTemplate_a = _.has(templateExtnames, files.pathExtname(a));
-    var isTemplate_b = _.has(templateExtnames, files.pathExtname(b));
+    var isTemplate_a = isTemplate(files.pathBasename(a));
+    var isTemplate_b = isTemplate(files.pathBasename(b));
     if (isTemplate_a !== isTemplate_b) {
       return (isTemplate_a ? -1 : 1);
     }
@@ -206,6 +225,11 @@ var SourceArch = function (pkg, options) {
   // In most places, instead of using 'uses' directly, you want to use
   // something like compiler.eachUsedUnibuild so you also take into
   // account implied packages.
+  //
+  // Note that if `package` starts with 'isobuild:', it actually represents a
+  // dependency on a feature of the Isobuild build tool, not a real package. You
+  // need to be aware of this when processing a `uses` array, which is another
+  // reason to use eachUsedUnibuild instead.
   self.uses = options.uses || [];
 
   // Packages which are "implied" by using this package. If a unibuild X
@@ -477,7 +501,7 @@ _.extend(PackageSource.prototype, {
 
     // Any package that depends on us needs to be rebuilt if our package.js file
     // changes, because a change to package.js might add or remove a plugin,
-    // which could change a file from being handled by extension vs treated as
+    // which could change a file from being handled by plugin vs treated as
     // an asset.
     self.pluginWatchSet.addFile(packageJsPath, packageJsHash);
 
@@ -1087,11 +1111,8 @@ _.extend(PackageSource.prototype, {
     // arch.
     _.each(compiler.ALL_ARCHES, function (arch) {
       // Everything depends on the package 'meteor', which sets up
-      // the basic environment) (except 'meteor' itself, and js-analyze
-      // which needs to be loaded by the linker).
-      // XXX add a better API for js-analyze to declare itself here
-      if (self.name !== "meteor" && self.name !== "js-analyze" &&
-          !process.env.NO_METEOR_PACKAGE) {
+      // the basic environment) (except 'meteor' itself).
+      if (self.name !== "meteor" && !process.env.NO_METEOR_PACKAGE) {
         // Don't add the dependency if one already exists. This allows the
         // package to create an unordered dependency and override the one that
         // we'd add here. This is necessary to resolve the circular dependency
@@ -1178,35 +1199,26 @@ _.extend(PackageSource.prototype, {
       sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
-      sourceArch.getSourcesFunc = function (extensions, watchSet) {
-        var sourceInclude = _.map(
-          extensions,
-          function (isTemplate, ext) {
-            return new RegExp('\\.' + utils.quotemeta(ext) + '$');
-          }
-        );
-        var sourceExclude = [/^\./].concat(ignoreFiles);
+      sourceArch.getSourcesFunc = (sourceProcessorSet, watchSet) => {
+        const sourceReadOptions =
+                sourceProcessorSet.appReadDirectoryOptions(arch);
+        // Ignore files starting with dot (unless they are explicitly in
+        // 'names').
+        sourceReadOptions.exclude.push(/^\./);
+        // Ignore the usual ignorable files.
+        sourceReadOptions.exclude.push(...ignoreFiles);
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
         // sourceRoot-relative directories.
-        var readAndWatchDirectory = function (relDir, filters) {
-          filters = filters || {};
+        var readAndWatchDirectory = (relDir, {include, exclude, names}) => {
           var absPath = files.pathJoin(self.sourceRoot, relDir);
-          var contents = watch.readAndWatchDirectory(watchSet, {
-            absPath: absPath,
-            include: filters.include,
-            exclude: filters.exclude
-          });
-          return _.map(contents, function (x) {
-            return files.pathJoin(relDir, x);
-          });
+          var contents = watch.readAndWatchDirectory(
+            watchSet, {absPath, include, exclude, names});
+          return contents.map(x => files.pathJoin(relDir, x));
         };
 
         // Read top-level source files.
-        var sources = readAndWatchDirectory('', {
-          include: sourceInclude,
-          exclude: sourceExclude
-        });
+        var sources = readAndWatchDirectory('', sourceReadOptions);
 
         // don't include watched but not included control files
         sources = _.difference(sources, controlFiles);
@@ -1252,7 +1264,7 @@ _.extend(PackageSource.prototype, {
                     /^node_modules\/$/,
                     /^public\/$/, /^private\/$/,
                     /^cordova-build-override\/$/,
-                    otherUnibuildRegExp].concat(sourceExclude)
+                    otherUnibuildRegExp].concat(sourceReadOptions.exclude)
         });
         checkForInfiniteRecursion('');
 
@@ -1266,25 +1278,19 @@ _.extend(PackageSource.prototype, {
             return [];  // pretend we found no files
 
           // Find source files in this directory.
-          Array.prototype.push.apply(sources, readAndWatchDirectory(dir, {
-            include: sourceInclude,
-            exclude: sourceExclude
-          }));
+          sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
 
           // Find sub-sourceDirectories. Note that we DON'T need to ignore the
           // directory names that are only special at the top level.
-          Array.prototype.push.apply(sourceDirectories, readAndWatchDirectory(dir, {
+          sourceDirectories.push(...readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(sourceExclude)
+            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
+              sourceReadOptions.exclude)
           }));
         }
 
         // We've found all the source files. Sort them!
-        var templateExtensions = [];
-        _.each(extensions, function (isTemplate, ext) {
-          isTemplate && templateExtensions.push(ext);
-        });
-        sources.sort(loadOrderSort(templateExtensions));
+        sources.sort(loadOrderSort(sourceProcessorSet, arch));
 
         // Convert into relPath/fileOptions objects.
         sources = _.map(sources, function (relPath) {
@@ -1304,13 +1310,11 @@ _.extend(PackageSource.prototype, {
         });
 
         // Now look for assets for this unibuild.
-        var assetDir = archinfo.matches(arch, "web") ? "public" : "private";
-        var assetDirs = readAndWatchDirectory('', {
-          include: [new RegExp('^' + assetDir + '/$')]
-        });
+        const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
+        var assetDirs = readAndWatchDirectory('', {names: [assetDir]});
 
         if (!_.isEmpty(assetDirs)) {
-          if (!_.isEqual(assetDirs, [assetDir + '/']))
+          if (!_.isEqual(assetDirs, [assetDir]))
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
 
           while (!_.isEmpty(assetDirs)) {
@@ -1366,6 +1370,8 @@ _.extend(PackageSource.prototype, {
   // Return dependency metadata for all unibuilds, in the format needed
   // by the package catalog.
   //
+  // This *DOES* include isobuild:* pseudo-packages!
+  //
   // Options:
   // - logError: if true, if something goes wrong, log a buildmessage
   //   and return null rather than throwing an exception.
@@ -1392,6 +1398,17 @@ _.extend(PackageSource.prototype, {
   // need to load those dependencies (including implied dependencies) which we
   // know contain plugins first, plus the transitive closure of all the packages
   // we depend on which contain a plugin. This seems good enough, though.)
+  //
+  // Note that this method filters out isobuild:* pseudo-packages, so it is NOT
+  // to be used to create input to Version Solver (see
+  // _computeDependencyMetadata for that).
+  //
+  // Note also that "load" here specifically means "load into the IsopackCache
+  // at build time", not "load into a running Meteor app at run
+  // time". Specifically, weak constraints do create a run-time load order
+  // dependency (if the package is in the app at all) but they do not create a
+  // build-time IsopackCache load order dependency (because weak dependencies do
+  // not provide plugins).
   getPackagesToLoadFirst: function (packageMap) {
     var self = this;
     var packages = {};
@@ -1400,8 +1417,12 @@ _.extend(PackageSource.prototype, {
       // contribute to a plugin).
       if (use.weak || use.unordered)
         return;
-      var packageInfo = packageMap.getInfo(use.package);
+      // Only include real packages, not isobuild:* pseudo-packages.
+      if (compiler.isIsobuildFeaturePackage(use.package)) {
+        return;
+      }
 
+      var packageInfo = packageMap.getInfo(use.package);
       if (! packageInfo)
         throw Error("Depending on unknown package " + use.package);
       packages[use.package] = true;
@@ -1421,7 +1442,9 @@ _.extend(PackageSource.prototype, {
       // no way to specify weak/unordered. Much like an app.
       _.each(info.use, function (spec) {
         var parsedSpec = splitConstraint(spec);
-        packages[parsedSpec.package] = true;
+        if (! compiler.isIsobuildFeaturePackage(parsedSpec.package)) {
+          packages[parsedSpec.package] = true;
+        }
       });
     });
     return _.keys(packages);
@@ -1534,6 +1557,8 @@ _.extend(PackageSource.prototype, {
   // constraint across all unibuilds (and, if logError is true, log a
   // buildmessage error).
   //
+  // This *DOES* include isobuild:* pseudo-packages!
+  //
   // For options, see getDependencyMetadata.
   _computeDependencyMetadata: function (options) {
     var self = this;
@@ -1630,6 +1655,10 @@ _.extend(PackageSource.prototype, {
     }
 
     return failed ? null : dependencies;
+  },
+
+  displayName() {
+    return this.name === null ? 'the app' : this.name;
   }
 });
 

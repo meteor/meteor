@@ -463,6 +463,9 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
 
+    // Builders saved from previous iterations
+    var builders = {};
+
     var bundleApp = function () {
       if (! firstRun) {
         // If the build fails in a way that could be fixed by a refresh, allow
@@ -551,13 +554,19 @@ _.extend(AppRunner.prototype, {
           includeNodeModules = 'reference-directly';
         }
 
-        return bundler.bundle({
+        var bundleResult = bundler.bundle({
           projectContext: self.projectContext,
           outputPath: bundlePath,
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
-          hasCachedBundle: !! cachedServerWatchSet
+          hasCachedBundle: !! cachedServerWatchSet,
+          previousBuilders: builders
         });
+
+        // save new builders with their caches
+        ({builders} = bundleResult);
+
+        return bundleResult;
       });
 
       // Keep the server watch set from the initial bundle, because subsequent
@@ -699,6 +708,22 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
+    function maybePrintLintWarnings(bundleResult) {
+      if (! (self.projectContext.lintAppAndLocalPackages &&
+             bundleResult.warnings)) {
+        return;
+      }
+      if (bundleResult.warnings.hasMessages()) {
+        const formattedMessages = bundleResult.warnings.formatMessages();
+        runLog.log(
+          `Linted your app.\n\n${ formattedMessages }`,
+          { arrow: true });
+      } else {
+        runLog.log('Linted your app. No linting errors.',
+                   { arrow: true });
+      }
+    }
+    maybePrintLintWarnings(bundleResult);
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the
@@ -751,6 +776,8 @@ _.extend(AppRunner.prototype, {
         if (bundleResultOrRunResult.runResult)
           return bundleResultOrRunResult.runResult;
         bundleResult = bundleResultOrRunResult.bundleResult;
+
+        maybePrintLintWarnings(bundleResult);
 
         var oldFuture = self.runFuture = new Future;
 

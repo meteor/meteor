@@ -38,6 +38,8 @@ var testMeteorMongo = function (appDir) {
   mongoRun.write('db.version()\n');
   mongoRun.match(/2\.6\.\d+/);
   mongoRun.stop();
+
+  run.stop();
 };
 
 selftest.define("meteor mongo", function () {

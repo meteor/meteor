@@ -268,6 +268,17 @@ _.extend(PackageAPI.prototype, {
         continue;
       }
 
+      // api.imply('isobuild:compiler-plugin') doesn't really make any sense. If
+      // we change our mind and think it makes sense, we can always implement it
+      // later...
+      if (compiler.isIsobuildFeaturePackage(parsed.package)) {
+        buildmessage.error(
+          `to declare that your package requires the build tool feature ` +
+            `'{parsed.package}', use 'api.use', not 'api.imply'`);
+        // recover by ignoring
+        continue;
+      }
+
       forAllMatchingArchs(arch, function (a) {
         // We don't allow weak or unordered implies, since the main
         // purpose of imply is to provide imports and plugins.
@@ -297,7 +308,10 @@ _.extend(PackageAPI.prototype, {
    * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
    * @param {Object} [fileOptions] Options that will be passed to build
    * plugins. For example, for JavaScript files, you can pass `{bare: true}`
-   * to not wrap the individual file in its own closure.
+   * to not wrap the individual file in its own closure. To add a static asset,
+   * pass `{isAsset: true}`; use the `architecture` parameter to determine
+   * if this is a client-side asset served by the HTTP server or a server-side
+   * asset accessible to the `Assets` APIs.
    */
   addFiles: function (paths, arch, fileOptions) {
     var self = this;

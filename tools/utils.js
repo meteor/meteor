@@ -720,3 +720,14 @@ exports.sha256 = function (contents) {
   hash.update(contents);
   return hash.digest('base64');
 };
+
+exports.sourceMapLength = function (sm) {
+  if (! sm) return 0;
+  // sum the length of sources and the mappings, the size of
+  // metadata is ignored, but it is not a big deal
+  return sm.mappings.length
+       + (sm.sourcesContent || []).reduce((soFar, current) => {
+         return soFar + (current ? current.length : 0);
+       }, 0);
+};
+

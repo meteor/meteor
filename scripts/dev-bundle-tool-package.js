@@ -29,7 +29,7 @@ var packageJson = {
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
-    "source-map-support": "0.3.1",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     semver: "4.1.0",
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
@@ -50,14 +50,14 @@ var packageJson = {
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
     "commonmark": "0.15.0",
-    // XXX We ought to be able to get this from the copy in js-analyze rather
-    // than in the dev bundle.)
     esprima: "1.2.2",
+    escope: "1.0.1",
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     cordova: "5.0.0",
-    pathwatcher: "4.1.0"
+    pathwatcher: "4.1.0",
+    'lru-cache': '2.6.4'
   }
 };
 

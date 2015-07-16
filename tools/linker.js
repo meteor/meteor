@@ -1,7 +1,24 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
-var buildmessage = require('./buildmessage');
+var buildmessage = require('./buildmessage.js');
+var isopackets = require('./isopackets.js');
 var watch = require('./watch.js');
+var Profile = require('./profile.js').Profile;
+import LRU from 'lru-cache';
+import {sourceMapLength} from './utils.js';
+import {findAssignedGlobals} from './js-analyze.js';
+
+// A rather small cache size, assuming only one module is being linked
+// most of the time.
+const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
+
+// Cache individual files prelinked
+const APP_PRELINK_CACHE = new LRU({
+  max: CACHE_SIZE,
+  length: function (prelinked) {
+    return prelinked.source.length + sourceMapLength(prelinked.sourceMap);
+  }
+});
 
 var packageDot = function (name) {
   if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name))
@@ -15,8 +32,8 @@ var packageDot = function (name) {
 ///////////////////////////////////////////////////////////////////////////////
 
 // options include name, imports, exports, useGlobalNamespace,
-// combinedServePath, and importStubServePath, all of which have the
-// same meaning as they do when passed to import().
+// combinedServePath, all of which have the same meaning as they do when passed
+// to import().
 var Module = function (options) {
   var self = this;
 
@@ -27,11 +44,8 @@ var Module = function (options) {
   self.files = [];
 
   // options
-  self.declaredExports = options.declaredExports;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
-  self.importStubServePath = options.importStubServePath;
-  self.jsAnalyze = options.jsAnalyze;
   self.noLineNumbers = options.noLineNumbers;
 };
 
@@ -62,15 +76,8 @@ _.extend(Module.prototype, {
 
   // Figure out which vars need to be specifically put in the module
   // scope.
-  computeAssignedVariables: function () {
+  computeAssignedVariables: Profile("linker Module#computeAssignedVariables", function () {
     var self = this;
-
-    if (!self.jsAnalyze) {
-      // We don't have access to static analysis, probably because we *are* the
-      // js-analyze package.  Let's do a stupid heuristic: the exports are
-      // the only module scope vars. (This works for js-analyze.JSAnalyze...)
-      return self.declaredExports;
-    }
 
     // The assigned variables in the app aren't actually used for anything:
     // we're using the global namespace, so there's no header where we declare
@@ -88,12 +95,12 @@ _.extend(Module.prototype, {
     });
     assignedVariables = _.uniq(assignedVariables);
 
-    return _.isEmpty(assignedVariables) ? undefined : assignedVariables;
-  },
+    return assignedVariables;
+  }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
   // 'sourcePath'
-  getPrelinkedFiles: function () {
+  getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", function () {
     var self = this;
 
     // If we don't want to create a separate scope for this module,
@@ -101,23 +108,31 @@ _.extend(Module.prototype, {
     // preserving the line numbers.
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
-        var node = file.getPrelinkedOutput({ preserveLineNumbers: true });
-        var results = node.toStringWithSourceMap({
-          file: file.servePath
-        }); // results has 'code' and 'map' attributes
+        const cacheKey = JSON.stringify([
+          file.sourceHash, file.bare, file.servePath]);
 
-        var sourceMap = results.map.toJSON();
-        // No use generating empty source maps.
-        if (_.isEmpty(sourceMap.sources))
-          sourceMap = null;
-        else
-          sourceMap = JSON.stringify(sourceMap);
+        if (APP_PRELINK_CACHE.has(cacheKey)) {
+          return APP_PRELINK_CACHE.get(cacheKey);
+        }
 
-        return {
+        const node = file.getPrelinkedOutput({ preserveLineNumbers: true });
+        const results = Profile.time(
+          "getPrelinkedFiles toStringWithSourceMap (app)", () => {
+            return node.toStringWithSourceMap({
+              file: file.servePath
+            }); // results has 'code' and 'map' attributes
+          }
+        );
+        const sourceMap = results.map.toJSON();
+
+        const prelinked = {
           source: results.code,
           servePath: file.servePath,
           sourceMap: sourceMap
         };
+
+        APP_PRELINK_CACHE.set(cacheKey, prelinked);
+        return prelinked;
       });
     }
 
@@ -141,15 +156,20 @@ _.extend(Module.prototype, {
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
-    var results = node.toStringWithSourceMap({
-      file: self.combinedServePath
-    }); // results has 'code' and 'map' attributes
+    var results = Profile.time(
+      'getPrelinkedFiles toStringWithSourceMap (packages)',
+      function () {
+        return node.toStringWithSourceMap({
+          file: self.combinedServePath
+        }); // results has 'code' and 'map' attributes
+      }
+    );
     return [{
       source: results.code,
       servePath: self.combinedServePath,
-      sourceMap: results.map.toString()
+      sourceMap: results.map.toJSON()
     }];
-  }
+  })
 });
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
@@ -211,36 +231,33 @@ var File = function (inputFile, module) {
   var self = this;
 
   // source code for this file (a string)
-  self.source = inputFile.source;
+  self.source = inputFile.data.toString('utf8');
 
   // hash of source (precalculated for *.js files, calculated here for files
   // produced by plugins)
-  self.sourceHash = inputFile.sourceHash || watch.sha1(self.source);
+  self.sourceHash = inputFile.hash || watch.sha1(self.source);
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
-
-  // The relative path of this input file in its source tree (eg,
-  // package or app). Used for source maps, error messages..
-  self.sourcePath = inputFile.sourcePath;
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
 
   // A source map (generated by something like CoffeeScript) for the input file.
+  // Is an Object, not a string.
   self.sourceMap = inputFile.sourceMap;
 
   // The Module containing this file.
   self.module = module;
 };
 
-// The JsAnalyze code is somewhat slow, and we often compute assigned variables
+// findAssignedGlobals is somewhat slow, and we often compute assigned variables
 // on the same file multiple times in one process (notably, a single file is
 // often processed for two or three different unibuilds, and is processed again
 // when rebuilding a package when another file has changed). We cache the
 // calculated variables under the source file's hash (calculating the source
-// file's hash is faster than running jsAnalyze, and in the case of *.js files
-// we have the hash already anyway).
+// file's hash is faster than running findAssignedGlobals, and in the case of
+// *.js files we have the hash already anyway).
 var ASSIGNED_GLOBALS_CACHE = {};
 
 _.extend(File.prototype, {
@@ -248,15 +265,8 @@ _.extend(File.prototype, {
   // example: if the code references 'Foo.bar.baz' and 'Quux', and
   // neither are declared in a scope enclosing the point where they're
   // referenced, then globalReferences would include ["Foo", "Quux"].
-  computeAssignedVariables: function () {
+  computeAssignedVariables: Profile("linker File#computeAssignedVariables", function () {
     var self = this;
-
-    var jsAnalyze = self.module.jsAnalyze;
-    // If we don't have a JSAnalyze object, we probably are the js-analyze
-    // package itself. Assume we have no global references. At the module level,
-    // we'll assume that exports are global references.
-    if (!jsAnalyze)
-      return [];
 
     if (_.has(ASSIGNED_GLOBALS_CACHE, self.sourceHash)) {
       return ASSIGNED_GLOBALS_CACHE[self.sourceHash];
@@ -264,13 +274,13 @@ _.extend(File.prototype, {
 
     try {
       return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-              _.keys(jsAnalyze.findAssignedGlobals(self.source)));
+              _.keys(findAssignedGlobals(self.source)));
     } catch (e) {
       if (!e.$ParseError)
         throw e;
 
       var errorOptions = {
-        file: self.sourcePath,
+        file: self.servePath,
         line: e.lineNumber,
         column: e.column
       };
@@ -293,7 +303,7 @@ _.extend(File.prototype, {
       self.sourceMap = null;
       return [];
     }
-  },
+  }),
 
   // Options:
   // - preserveLineNumbers: if true, decorate minimally so that line
@@ -304,7 +314,7 @@ _.extend(File.prototype, {
   // - sourceWidth: width in columns to use for the source code
   //
   // Returns a SourceNode.
-  getPrelinkedOutput: function (options) {
+  getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
     var self = this;
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
@@ -418,10 +428,26 @@ _.extend(File.prototype, {
     var pathNoSlash = self.servePath.replace(/^\//, "");
 
     if (! self.bare) {
+      var closureHeader = "(function(){";
       chunks.push(
-        "(function(){",
+        closureHeader,
         preserveLineNumbers ? "" : "\n\n"
       );
+
+      if (! smc) {
+        // No sourcemap? Generate a new one that takes into account the fact
+        // that we added a closure
+        var map = new sourcemap.SourceMapGenerator({ file: self.servePath });
+        _.each(result.code.split('\n'), function (line, i) {
+          map.addMapping({
+            source: self.servePath,
+            original: { line: i + 1, column: 0 },
+            generated: { line: i + 1, column: i === 0 ? closureHeader.length + 1 : 0 }
+          });
+        });
+        map.setSourceContent(self.servePath, result.code);
+        smc = new sourcemap.SourceMapConsumer(map.toJSON());
+      }
     }
 
     if (! preserveLineNumbers) {
@@ -468,7 +494,7 @@ _.extend(File.prototype, {
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
-  }
+  })
 });
 
 // Given a list of lines (not newline-terminated), returns a string placing them
@@ -498,13 +524,22 @@ var bannerPadding = function (bannerWidth) {
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-// Top-level entry point
+// Top-level entry points
 ///////////////////////////////////////////////////////////////////////////////
 
-// This does the first phase of linking. It does not require knowledge
-// of your imports. It returns the module's exports, plus a set of
-// partially linked files which you must pass to link() along with
-// your import list to get your final linked files.
+// Prior to the "batch-plugins" project, linker.prelink was the first phase of
+// linking. It got performed at package compile time, to be followed up with a
+// function that used to exist called linker.link at app bundle time. We now do
+// far less processing at package compile time and simply run linker.fullLink at
+// app bundle time, which is effectively the old prelink+link combined. However,
+// we keep linker.prelink around now in order to allow new published packages
+// that don't use the new build plugin APIs to be used by older Isobuilds.
+// It only gets called on packages, not on apps.
+//
+// This does about half of the of the linking process. It does not require
+// knowledge of your imports. It returns the module's exports, plus a set of
+// partially linked files which you must pass to link() along with your import
+// list to get your final linked files.
 //
 // options include:
 //
@@ -520,27 +555,10 @@ var bannerPadding = function (bannerWidth) {
 //    the bundle (this will only be seen by someone looking at the
 //    bundle, not in error messages, but it's still nice to make it
 //    look good)
-//  - sourcePath: path to use in error messages
 //  - sourceMap: an optional source map (as string) for the input file
-//
-// declaredExports: an array of symbols that the module exports. Symbols are
-// {name,testOnly} pairs.
-//
-// useGlobalNamespace: make the top level namespace be the same as the
-// global namespace, so that symbols are accessible from the
-// console. typically used when linking apps (as opposed to packages).
 //
 // combinedServePath: if we end up combining all of the files into
 // one, use this as the servePath.
-//
-// importStubServePath: if useGlobalNamespace is true, then to
-// preserve line numbers, we may want to emit an additional file
-// containing import setup code for the global environment. this is
-// the servePath to use for it.
-//
-// jsAnalyze: if possible, the JSAnalyze object from the js-analyze
-// package. (This is not possible if we are currently linking the main unibuild of
-// the js-analyze package!)
 //
 // Output is an object with keys:
 // - files: is an array of output files in the same format as inputFiles
@@ -548,14 +566,10 @@ var bannerPadding = function (bannerWidth) {
 //     sourceMap (a string) (XXX)
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
-var prelink = function (options) {
+var prelink = Profile("linker.prelink", function (options) {
   var module = new Module({
     name: options.name,
-    declaredExports: options.declaredExports,
-    useGlobalNamespace: options.useGlobalNamespace,
-    importStubServePath: options.importStubServePath,
     combinedServePath: options.combinedServePath,
-    jsAnalyze: options.jsAnalyze,
     noLineNumbers: options.noLineNumbers
   });
 
@@ -573,101 +587,14 @@ var prelink = function (options) {
     files: files,
     assignedVariables: assignedVariables
   };
-};
+});
 
 var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
   "This is a generated file. You can view the original",
   "source in your browser if your browser supports source maps.",
-  "",
-  "If you are using Chrome, open the Developer Tools and click the gear",
-  "icon in its lower right corner. In the General Settings panel, turn",
-  "on 'Enable source maps'.",
-  "",
-  "If you are using Firefox 23, go to `about:config` and set the",
-  "`devtools.debugger.source-maps-enabled` preference to true.",
-  "(The preference should be on by default in Firefox 24; versions",
-  "older than 23 do not support source maps.)"
+  "Source maps are supported by all recent versions of Chrome, Safari, ",
+  "and Firefox, and by Internet Explorer 11."
 ]);
-
-// Finish the linking.
-//
-// options include:
-//
-// imports: symbols to import. map from symbol name (something like
-// 'Foo', "Foo.bar", etc) to the module from which it should be
-// imported (which must load before us at runtime)
-//
-// packageVariables: package-scope variables, some of which may be exports.
-//   a list of {name, export} objects; any non-falsy value for "export" means
-//   to export it.
-//
-// useGlobalNamespace: must be the same value that was passed to link()
-//
-// prelinkFiles: the 'files' output from prelink()
-//
-// Output is an array of final output files in the same format as the
-// 'inputFiles' argument to prelink().
-var link = function (options) {
-  if (options.useGlobalNamespace) {
-    var ret = [];
-    if (!_.isEmpty(options.imports)) {
-      ret.push({
-        source: getImportCode(options.imports,
-                              "/* Imports for global scope */\n\n", true),
-        servePath: options.importStubServePath
-      });
-    }
-    return ret.concat(options.prelinkFiles);
-  }
-
-  var header = getHeader({
-    imports: options.imports,
-    packageVariables: options.packageVariables
-  });
-
-  var exported = _.pluck(_.filter(options.packageVariables, function (v) {
-    return v.export;
-  }), 'name');
-
-  var footer = getFooter({
-    exported: exported,
-    name: options.name
-  });
-
-  var ret = [];
-  _.each(options.prelinkFiles, function (file) {
-    if (file.sourceMap) {
-      if (options.includeSourceMapInstructions)
-        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
-
-      // Bias the source map by the length of the header without
-      // (fully) parsing and re-serializing it. (We used to do this
-      // with the source-map library, but it was incredibly slow,
-      // accounting for over half of bundling time.) It would be nice
-      // if we could use "index maps" for this (the 'sections' key),
-      // as that would let us avoid even JSON-parsing the source map,
-      // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n")
-        header += "\n"; // make sure it's a whole number of lines
-      var headerLines = header.split('\n').length - 1;
-      var sourceMapJson = JSON.parse(file.sourceMap);
-      sourceMapJson.mappings = (new Array(headerLines + 1).join(';')) +
-        sourceMapJson.mappings;
-      ret.push({
-        source: header + file.source + footer,
-        servePath: file.servePath,
-        sourceMap: JSON.stringify(sourceMapJson)
-      });
-    } else {
-      ret.push({
-        source: header + file.source + footer,
-        servePath: file.servePath
-      });
-    }
-  });
-
-  return ret;
-};
 
 var getHeader = function (options) {
   var chunks = [];
@@ -675,7 +602,7 @@ var getHeader = function (options) {
   chunks.push(getImportCode(options.imports, "/* Imports */\n", false));
   if (!_.isEmpty(options.packageVariables)) {
     chunks.push("/* Package-scope variables */\n");
-    chunks.push("var " + _.pluck(options.packageVariables, 'name').join(', ') +
+    chunks.push("var " + options.packageVariables.join(', ') +
                 ";\n\n");
   }
   return chunks.join('');
@@ -736,7 +663,131 @@ var getFooter = function (options) {
   return chunks.join('');
 };
 
+// This is the real entry point that's still used to produce Meteor apps.  It
+// takes in information about the files in the package including imports and
+// exports, and returns an array of linked source files.
+//
+// inputFiles: an array of objects representing input files.
+//  - source: the source code
+//  - hash: the hash of the source code (optional, will be calculated
+//    if not given)
+//  - servePath: the path where it would prefer to be served if
+//    possible. still allowed on non-browser targets, where it
+//    represent as hint as to what the file should be named on disk in
+//    the bundle (this will only be seen by someone looking at the
+//    bundle, not in error messages, but it's still nice to make it
+//    look good)
+//  - bare: if true, don't wrap this file in a closure
+//  - sourceMap: an optional source map (as object) for the input file
+//
+// useGlobalNamespace: make the top level namespace be the same as the global
+// namespace, so that symbols are accessible from the console, and don't
+// actually combine files into a single file. used when linking apps (as opposed
+// to packages).
+//
+// combinedServePath: if we end up combining all of the files into
+// one, use this as the servePath.
+//
+// name: the name of this module (for stashing exports to be later
+// read by the imports of other modules); null if the module has no
+// name (in that case exports will not work properly)
+//
+// declaredExports: an array of symbols that the module exports. Symbols are
+// {name,testOnly} pairs.
+//
+// imports: a map from imported symbol to the name of the package that it is
+// imported from
+//
+// importStubServePath: if useGlobalNamespace is set, this is the name of the
+// file to create with imports into the global namespace
+//
+// includeSourceMapInstructions: true if JS files with source maps should
+// have a comment explaining how to use them in a browser.
+//
+// Output is an array of output files: objects with keys source, servePath,
+// sourceMap.
+var fullLink = Profile("linker.fullLink", function (inputFiles, {
+    useGlobalNamespace, combinedServePath, name, declaredExports, imports,
+    importStubServePath, includeSourceMapInstructions
+  }) {
+  buildmessage.assertInJob();
+
+  var module = new Module({
+    name, useGlobalNamespace, combinedServePath,
+    noLineNumbers: false
+  });
+
+  _.each(inputFiles, function (inputFile) {
+    module.addFile(inputFile);
+  });
+
+  var prelinkedFiles = module.getPrelinkedFiles();
+
+  // If we're in the app, then we just add the import code as its own file in
+  // the front.
+  if (useGlobalNamespace) {
+    if (!_.isEmpty(imports)) {
+      prelinkedFiles.unshift({
+        source: getImportCode(imports,
+                              "/* Imports for global scope */\n\n", true),
+        servePath: importStubServePath
+      });
+    }
+    return prelinkedFiles;
+  }
+
+  // Do static analysis to compute module-scoped variables. Error recovery from
+  // the static analysis mutates the sources, so this has to be done before
+  // concatenation.
+  var assignedVariables = module.computeAssignedVariables();
+  if (buildmessage.jobHasMessages())
+    return [];  // recover by pretending there are no files
+
+  // Otherwise we're making a package and we have to actually combine the files
+  // into a single scope.
+  var header = getHeader({
+    imports,
+    packageVariables: _.union(assignedVariables, declaredExports)
+  });
+
+  var footer = getFooter({
+    exported: declaredExports,
+    name
+  });
+
+  return _.map(prelinkedFiles, function (file) {
+    if (file.sourceMap) {
+      if (includeSourceMapInstructions)
+        header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+
+      // Bias the source map by the length of the header without
+      // (fully) parsing and re-serializing it. (We used to do this
+      // with the source-map library, but it was incredibly slow,
+      // accounting for over half of bundling time.) It would be nice
+      // if we could use "index maps" for this (the 'sections' key),
+      // as that would let us avoid even JSON-parsing the source map,
+      // but that doesn't seem to be supported by Firefox yet.
+      if (header.charAt(header.length - 1) !== "\n")
+        header += "\n"; // make sure it's a whole number of lines
+      var headerLines = header.split('\n').length - 1;
+      var sourceMap = file.sourceMap;
+      sourceMap.mappings = (new Array(headerLines + 1).join(';')) +
+        sourceMap.mappings;
+      return {
+        source: header + file.source + footer,
+        servePath: file.servePath,
+        sourceMap: sourceMap
+      };
+    } else {
+      return {
+        source: header + file.source + footer,
+        servePath: file.servePath
+      };
+    }
+  });
+});
+
 var linker = module.exports = {
   prelink: prelink,
-  link: link
+  fullLink: fullLink
 };
