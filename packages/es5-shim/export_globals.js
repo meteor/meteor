@@ -1,7 +1,9 @@
-if (window.Date !== Date) {
-  window.Date = Date;
+var global = this;
+
+if (global.Date !== Date) {
+  global.Date = Date;
 }
 
-if (window.parseInt !== parseInt) {
-  window.parseInt = parseInt;
+if (global.parseInt !== parseInt) {
+  global.parseInt = parseInt;
 }
