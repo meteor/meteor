@@ -1,7 +1,7 @@
 Package.describe({
   name: "es5-shim",
   version: "0.1.0",
-  summary: "Shims, shams, and polyfills to improve IE8 support",
+  summary: "Shims and polyfills to improve IE8 support",
   documentation: "README.md"
 });
 
@@ -14,9 +14,8 @@ Package.onUse(function(api) {
   api.addFiles("import_globals.js", "client");
 
   api.addFiles([
-    // If these paths change, api.addFiles will throw an exception.
-    ".npm/package/node_modules/es5-shim/es5-shim.js",
-    ".npm/package/node_modules/es5-shim/es5-sham.js",
+    // If this path changes, api.addFiles will throw an exception.
+    ".npm/package/node_modules/es5-shim/es5-shim.js"
   ], "client", {
     bare: true // These files are already wrapped in closures.
   });
