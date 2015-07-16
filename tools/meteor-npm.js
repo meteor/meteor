@@ -474,8 +474,13 @@ var getShrinkwrappedDependencies = function (dir) {
 var installNpmModule = function (name, version, dir) {
   ensureConnected();
 
-  var installArg = utils.isUrlWithSha(version)
-    ? version : (name + "@" + version);
+  var installArg = name + "@" + version;
+
+  if (utils.isUrlWithFileScheme(version)) {
+    installArg = version.replace(/^file:\/\//, '');
+  } else if (utils.isUrlWithSha(version)) {
+    installArg = version;
+  }
 
   // We don't use npm.commands.install since we couldn't figure out
   // how to silence all output (specifically the installed tree which
