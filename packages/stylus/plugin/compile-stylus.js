@@ -36,6 +36,9 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
   var currentlyCompiledPackage = null;
   var currentlyProcessedImports = null;
   var parseImportPath = function (filePath, importerPath) {
+    if (! filePath) {
+      throw new Error('filePath is undefined');
+    }
     if (filePath === currentlyCompiledFile) {
       return {
         packageName: currentlyCompiledPackage,
@@ -43,6 +46,10 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       };
     }
     if (! filePath.match(/^\{.*\}\//)) {
+      if (! importerPath) {
+        return { packageName: currentlyCompiledPackage, pathInPackage: '/' + filePath };
+      }
+
       // relative path in the same package
       var parsedImporter = parseImportPath(importerPath, null);
       return {
@@ -99,6 +106,8 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
       currentlyProcessedImports.push(absolutePath);
 
+      if (! filesByAbsoluteImportPath[absolutePath]) throw new Error('Cannot read file ' + absolutePath);
+
       return filesByAbsoluteImportPath[absolutePath].getContentsAsString();
     }
   };
@@ -136,10 +145,15 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
     if (! (cacheEntry && self._cacheEntryValid(cacheEntry, filesByAbsoluteImportPath))) {
       // the entry in the cache doesn't represent the latest state
 
+      // Append a cache buster because Stylus has a buggy caching
+      // based on the contents that produces incorrect sourcemaps (the
+      // 'filename' field is not checked into cache)
+      var cacheBuster = '/*random cache buster ' + Math.random() + '*/';
       var f = new Future;
-      var style = stylus(inputFile.getContentsAsString())
+
+      var style = stylus(inputFile.getContentsAsString() + cacheBuster)
         .use(nib())
-        .set('filename', inputFile.getPathInPackage())
+        .set('filename', pathInPackage)
         .set('sourcemap', { inline: false, comment: false })
         .set('importer', importer);
 
