@@ -134,7 +134,7 @@ _.extend(InputFile.prototype, {
     var self = this;
     // XXX fileOptions only exists on some resources (of type "source"). The JS
     // resources might not have this property.
-    return self._resourceSlot.inputResource.fileOptions;
+    return self._resourceSlot.inputResource.fileOptions || {};
   },
   getArch: function () {
     return this._resourceSlot.packageSourceBatch.processor.arch;

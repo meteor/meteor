@@ -34,7 +34,7 @@ selftest.define("compiler plugin caching - coffee/less", function () {
     ['/f1.coffee', '/f2.coffee', '/f3.coffee', '/packages/local-pack/p.coffee']
   ));
   run.match('Ran less.render (#1) on: ' + JSON.stringify(
-    ["/subdir/nested-root.main.less", "/top.main.less"]));
+    ["/subdir/nested-root.less", "/top.less"]));
   // Second program doesn't need to compile anything because compilation works
   // the same on both programs.  (Note that there is no less.render execution in
   // the second program, because it has archMatching: 'web'.  We'll see this
@@ -97,26 +97,26 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   s.write('packages/local-pack/p.less', '@el4-style: inset;\n');
   expectedBorderStyles.el4 = 'inset';
   run.match('Ran coffee.compile (#9) on: []');
-  run.match('Ran less.render (#5) on: ["/top.main.less"]');
+  run.match('Ran less.render (#5) on: ["/top.less"]');
   // Note that since this was a client-only change, we're smart enough to not
   // rebuild the server at all.  So the next coffee.compile will be #10.
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
   // This works for changing a root too.
-  s.write('subdir/nested-root.main.less', '.el0 { border-style: double; }\n');
+  s.write('subdir/nested-root.less', '.el0 { border-style: double; }\n');
   expectedBorderStyles.el0 = 'double';
   // Only #10, not #11, because client-only changes don't rebuild the server!
   run.match('Ran coffee.compile (#10) on: []');
-  run.match('Ran less.render (#6) on: ["/subdir/nested-root.main.less"]');
+  run.match('Ran less.render (#6) on: ["/subdir/nested-root.less"]');
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
   // Adding a new root works too.
-  s.write('yet-another-root.main.less', '.el6 { border-style: solid; }\n');
+  s.write('yet-another-root.less', '.el6 { border-style: solid; }\n');
   expectedBorderStyles.el6 = 'solid';
   run.match('Ran coffee.compile (#11) on: []');
-  run.match('Ran less.render (#7) on: ["/yet-another-root.main.less"]');
+  run.match('Ran less.render (#7) on: ["/yet-another-root.less"]');
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
@@ -137,15 +137,15 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   run.match('Loaded less cache');
   // And we only need to re-compiler the changed file, even though we restarted.
   run.match('Ran coffee.compile (#1) on: ["/f2.coffee"]');
-  run.match('Ran less.render (#1) on: ["/top.main.less"]');
+  run.match('Ran less.render (#1) on: ["/top.less"]');
   run.match('Ran coffee.compile (#2) on: []');
 
   run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
   checkCSS(expectedBorderStyles);
 
-  s.write('bad-import.main.less', '@import "/foo/bad.less";\n');
+  s.write('bad-import.less', '@import "/foo/bad.less";\n');
   run.match('Errors prevented startup');
-  run.match('bad-import.main.less:1: Unknown import: /foo/bad.less');
+  run.match('bad-import.less:1: Unknown import: /foo/bad.less');
   run.match('Waiting for file change');
 
   run.stop();

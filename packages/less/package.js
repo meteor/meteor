@@ -25,13 +25,14 @@ Package.onUse(function (api) {
 Package.onTest(function(api) {
   api.use('less');
   api.use(['tinytest', 'test-helpers']);
-  api.addFiles(['tests/top.less',
-                'tests/top2.less',
-                'tests/top3.less',
-                'tests/not-included.less',
-                'tests/dir/in-dir.less',
-                'tests/dir/in-dir2.less',
-                'tests/dir/root.main.less',
-                'tests/dir/subdir/in-subdir.less']);
+  api.addFiles(['tests/top.import.less',
+                'tests/top3.import.less',
+                'tests/import/not-included.less',
+                'tests/dir/in-dir.import.less',
+                'tests/dir/in-dir2.import.less',
+                'tests/dir/root.less',
+                'tests/dir/subdir/in-subdir.import.less']);
+  api.addFiles('tests/top2.less', 'client', {isImport: true});
+
   api.addFiles('less_tests.js', 'client');
 });

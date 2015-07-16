@@ -6,7 +6,9 @@ var Future = Npm.require('fibers/future');
 var LRU = Npm.require('lru-cache');
 
 Plugin.registerCompiler({
-  extensions: ['less'],
+  // *.lessimport has been deprecated since 0.7.1, but it still works. We
+  // *recommend *.import.less or the import subdirectory instead.
+  extensions: ['less', 'lessimport'],
   archMatching: 'web'
 }, function () {
     return new LessCompiler();
@@ -35,7 +37,7 @@ _.extend(LessCompiler.prototype, {
   processFilesForTarget: function (inputFiles) {
     var self = this;
     var filesByAbsoluteImportPath = {};
-    var mains = [];
+    var roots = [];
     var cacheMisses = [];
 
     function decodeFilePath (filePath) {
@@ -54,20 +56,32 @@ _.extend(LessCompiler.prototype, {
     inputFiles.forEach(function (inputFile) {
       var packageName = inputFile.getPackageName();
       var pathInPackage = inputFile.getPathInPackage();
+      var fileOptions = inputFile.getFileOptions();
       var absoluteImportPath = packageName === null
             ? ('{}/' + pathInPackage)
             : ('{' + packageName + '}/' + pathInPackage);
       filesByAbsoluteImportPath[absoluteImportPath] = inputFile;
+
+      // The heuristic is that a file is an import (ie, is not itself processed
+      // as a root) if it is in a subdirectory named 'import' or if it matches
+      // *.import.less. This can be overridden in either direction via an
+      // explicit `isImport` file option in apiaddFiles.
+      var filenameSaysImport =
+            /\.import\.less$/.test(pathInPackage) ||
+            /\.lessimport$/.test(pathInPackage) ||
+            /(?:^|\/)import\//.test(pathInPackage);
+      var isImport = fileOptions.hasOwnProperty('isImport')
+            ? fileOptions.isImport : filenameSaysImport;
       // Match files named `main.less` or with a `.main.less` extension
-      if (pathInPackage.match(/(^|\/|\.)main\.less$/)) {
-        mains.push({inputFile: inputFile,
+      if (! isImport) {
+        roots.push({inputFile: inputFile,
                     absoluteImportPath: absoluteImportPath});
       }
     });
 
     var importPlugin = new MeteorImportLessPlugin(filesByAbsoluteImportPath);
 
-    mains.forEach(function (main) {
+    roots.forEach(function (main) {
       var inputFile = main.inputFile;
       var absoluteImportPath = main.absoluteImportPath;
 
