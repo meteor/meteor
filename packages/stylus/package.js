@@ -9,7 +9,7 @@ Package.registerBuildPlugin({
   sources: [
     'plugin/compile-stylus.js'
   ],
-  npmDependencies: { stylus: "0.46.3", nib: "1.0.2" }
+  npmDependencies: { stylus: "0.50.0", nib: "1.0.4" }
 });
 
 Package.onTest(function (api) {
