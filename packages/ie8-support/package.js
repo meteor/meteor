@@ -1,5 +1,5 @@
 Package.describe({
-  name: "ie8",
+  name: "ie8-support",
   version: "0.1.0",
   summary: "Shims, shams, and polyfills to improve IE8 support",
   documentation: "README.md"
