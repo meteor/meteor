@@ -557,6 +557,17 @@ _.extend(Isopack.prototype, {
           options = {};
         }
 
+        // The popular package mquandalle:bower has a call to
+        // `registerSourceHandler('json', null)` for some reason, to
+        // work around some behavior of Meteor believed to be a bug. We
+        // think that new features of registerCompiler like being able
+        // to register for filenames will allow them to drop that line,
+        // but in the meantime we might as well not choke on it. (The
+        // old implementation coincidentally didn't choke.)
+        if (!handler) {
+          handler = function () {};
+        }
+
         isopack.sourceProcessors.compiler.addLegacyHandler({
           extension,
           handler,
