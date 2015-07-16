@@ -11,9 +11,15 @@ function babelRegister() {
 
 babelRegister(); // #RemoveInProd this line is removed in isopack.js
 
-// Install a global ES6-compliant Promise constructor that knows how to
+// Install a global ES2015-compliant Promise constructor that knows how to
 // run all its callbacks in Fibers.
 global.Promise = require("meteor-promise");
+
+// Globally install ES2015-complaint Symbol, Map, and Set, patching the
+// native implementations if they are available.
+require("core-js/es6/symbol");
+require("core-js/es6/map");
+require("core-js/es6/set");
 
 // Include helpers from NPM so that the compiler doesn't need to add boilerplate
 // at the top of every file
