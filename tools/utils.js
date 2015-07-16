@@ -384,12 +384,6 @@ exports.isDirectory = function (dir) {
   return stats.isDirectory();
 };
 
-// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
-exports.startsWith = function(str, starts) {
-  return str.length >= starts.length &&
-    str.substring(0, starts.length) === starts;
-};
-
 // Options: noPrefix: do not display 'Meteor ' in front of the version number.
 exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
