@@ -6,15 +6,13 @@ packages/
 scripts/
 tools/
 !tools/*.js
+!tools/isobuild/*.js
 
 # Below, files that have yet to be converted to match the linter
 tools/archinfo.js
 tools/auth-client.js
 tools/auth.js
-tools/builder.js
 tools/buildmessage.js
-tools/build-plugin.js
-tools/bundler.js
 tools/catalog-local.js
 tools/catalog-remote.js
 tools/catalog.js
@@ -24,9 +22,6 @@ tools/commands-cordova.js
 tools/commands-packages-query.js
 tools/commands-packages.js
 tools/commands.js
-tools/compiler.js
-tools/compiler-deprecated-compile-step.js
-tools/compiler-plugin.js
 tools/config.js
 tools/console.js
 tools/deploy.js
@@ -36,20 +31,12 @@ tools/flush-buffers-on-exit-in-windows.js
 tools/func-utils.js
 tools/http-helpers.js
 tools/inspector.js
-tools/isopack-cache.js
-tools/isopack.js
 tools/isopackets.js
-tools/linker.js
-tools/linter-plugin.js
 tools/main-transpile-wrapper.js
 tools/main.js
-tools/meteor-npm.js
 tools/mongo-exit-codes.js
-tools/npm-discards.js
-tools/package-api.js
 tools/package-client.js
 tools/package-map.js
-tools/package-source.js
 tools/package-version-parser.js
 tools/parse-stack.js
 tools/processes.js
@@ -79,3 +66,18 @@ tools/upgraders.js
 tools/utils.js
 tools/warehouse.js
 tools/watch.js
+
+tools/isobuild/builder.js
+tools/isobuild/build-plugin.js
+tools/isobuild/bundler.js
+tools/isobuild/compiler.js
+tools/isobuild/compiler-deprecated-compile-step.js
+tools/isobuild/compiler-plugin.js
+tools/isobuild/isopack-cache.js
+tools/isobuild/isopack.js
+tools/isobuild/linker.js
+tools/isobuild/linter-plugin.js
+tools/isobuild/meteor-npm.js
+tools/isobuild/npm-discards.js
+tools/isobuild/package-api.js
+tools/isobuild/package-source.js

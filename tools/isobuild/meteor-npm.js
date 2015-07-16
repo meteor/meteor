@@ -4,14 +4,14 @@
 /// to ensure we get consistent versions of npm sub-dependencies.
 var Future = require('fibers/future');
 
-var cleanup = require('./cleanup.js');
-var files = require('./files.js');
+var cleanup = require('../cleanup.js');
+var files = require('../files.js');
 var os = require('os');
 var _ = require('underscore');
-var httpHelpers = require('./http-helpers.js');
-var buildmessage = require('./buildmessage.js');
-var utils = require('./utils.js');
-var runLog = require('./run-log.js');
+var httpHelpers = require('../http-helpers.js');
+var buildmessage = require('../buildmessage.js');
+var utils = require('../utils.js');
+var runLog = require('../run-log.js');
 
 var meteorNpm = exports;
 

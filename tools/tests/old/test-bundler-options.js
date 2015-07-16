@@ -2,7 +2,7 @@ require('../../install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
-var bundler = require('../../bundler.js');
+var bundler = require('../../isobuild/bundler.js');
 var release = require('../../release.js');
 var files = require('../../files.js');
 var catalog = require('../../catalog.js');

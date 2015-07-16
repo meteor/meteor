@@ -1,19 +1,19 @@
 var _ = require('underscore');
 
-var archinfo = require('./archinfo.js');
-var buildmessage = require('./buildmessage.js');
+var archinfo = require('../archinfo.js');
+var buildmessage = require('../buildmessage.js');
 var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
-var isopackets = require('./isopackets.js');
+var isopackets = require('../isopackets.js');
 var linker = require('./linker.js');
 var meteorNpm = require('./meteor-npm.js');
-var watch = require('./watch.js');
-var Console = require('./console.js').Console;
-var files = require('./files.js');
-var colonConverter = require('./colon-converter.js');
+var watch = require('../watch.js');
+var Console = require('../console.js').Console;
+var files = require('../files.js');
+var colonConverter = require('../colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
-var Profile = require('./profile.js').Profile;
+var Profile = require('../profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
 var compiler = exports;

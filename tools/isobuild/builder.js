@@ -1,7 +1,7 @@
-import {WatchSet, readAndWatchFile, sha1} from './watch.js';
-import files from './files.js';
+import {WatchSet, readAndWatchFile, sha1} from '../watch.js';
+import files from '../files.js';
 import NpmDiscards from './npm-discards.js';
-import {Profile} from './profile.js';
+import {Profile} from '../profile.js';
 
 const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;

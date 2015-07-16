@@ -1,11 +1,11 @@
 var assert = require("assert");
 var _ = require("underscore");
-var buildmessage = require('./buildmessage.js');
-var utils = require('./utils.js');
+var buildmessage = require('../buildmessage.js');
+var utils = require('../utils.js');
 var compiler = require('./compiler.js');
-var archinfo = require('./archinfo.js');
-var files = require('./files.js');
-var catalog = require('./catalog.js');
+var archinfo = require('../archinfo.js');
+var files = require('../files.js');
+var catalog = require('../catalog.js');
 
 function toArray (x) {
   if (_.isArray(x))

@@ -1,12 +1,12 @@
 var _ = require('underscore');
 
-var buildmessage = require('./buildmessage.js');
+var buildmessage = require('../buildmessage.js');
 var compiler = require('./compiler.js');
-var files = require('./files.js');
+var files = require('../files.js');
 var isopackModule = require('./isopack.js');
-var utils = require('./utils.js');
-var watch = require('./watch.js');
-var colonConverter = require("./colon-converter.js");
+var utils = require('../utils.js');
+var watch = require('../watch.js');
+var colonConverter = require("../colon-converter.js");
 
 exports.IsopackCache = function (options) {
   var self = this;

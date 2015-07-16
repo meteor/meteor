@@ -17,7 +17,7 @@ var catalogRemote = require('./catalog-remote.js');
 var Console = require('./console.js').Console;
 var tropohouseModule = require('./tropohouse.js');
 var packageMapModule = require('./package-map.js');
-var isopackCacheModule = require('./isopack-cache.js');
+var isopackCacheModule = require('./isobuild/isopack-cache.js');
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {

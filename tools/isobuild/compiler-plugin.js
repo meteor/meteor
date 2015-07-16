@@ -1,16 +1,16 @@
-var archinfo = require('./archinfo.js');
-var buildmessage = require('./buildmessage.js');
+var archinfo = require('../archinfo.js');
+var buildmessage = require('../buildmessage.js');
 var buildPluginModule = require('./build-plugin.js');
-var colonConverter = require('./colon-converter.js');
-var files = require('./files.js');
+var colonConverter = require('../colon-converter.js');
+var files = require('../files.js');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
-var Profile = require('./profile.js').Profile;
-import {sha1} from  './watch.js';
+var Profile = require('../profile.js').Profile;
+import {sha1} from  '../watch.js';
 import LRU from 'lru-cache';
-import {sourceMapLength} from './utils.js';
+import {sourceMapLength} from '../utils.js';
 
 // XXX #BBPDocs Add basic documentation of the data structures used in this
 // file.

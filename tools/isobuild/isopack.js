@@ -1,18 +1,18 @@
 var compiler = require('./compiler.js');
-var archinfo = require('./archinfo.js');
+var archinfo = require('../archinfo.js');
 var _ = require('underscore');
 var linker = require('./linker.js');
-var buildmessage = require('./buildmessage.js');
+var buildmessage = require('../buildmessage.js');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
-var watch = require('./watch.js');
-var files = require('./files.js');
-var isopackets = require("./isopackets.js");
-var colonConverter = require('./colon-converter.js');
+var watch = require('../watch.js');
+var files = require('../files.js');
+var isopackets = require("../isopackets.js");
+var colonConverter = require('../colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
-var Console = require('./console.js').Console;
-var Profile = require('./profile.js').Profile;
+var Console = require('../console.js').Console;
+var Profile = require('../profile.js').Profile;
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -1442,6 +1442,7 @@ _.extend(Isopack.prototype, {
     // Regexes matching paths to transpile using babel
     var transpileRegexes = [
       /^tools\/[^\/]+\.js$/, // General tools files
+      /^tools\/isobuild\/[^\/]+\.js$/, // Isobuild files
       // We don't support running self-test from an install anymore
     ];
 
@@ -1482,7 +1483,7 @@ _.extend(Isopack.prototype, {
       }
 
       var babelOptions = babel.getDefaultOptions(
-        require("./babel-features.js")
+        require("../babel-features.js")
       );
 
       _.extend(babelOptions, {

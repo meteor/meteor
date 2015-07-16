@@ -17,13 +17,13 @@ var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
-var isopack = require('./isopack.js');
+var isopack = require('./isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
 var colonConverter = require('./colon-converter.js');
-var PackageSource = require('./package-source.js');
+var PackageSource = require('./isobuild/package-source.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -894,7 +894,7 @@ var buildCommand = function (options) {
     projectContext: projectContext
   });
 
-  var bundler = require('./bundler.js');
+  var bundler = require('./isobuild/bundler.js');
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
@@ -1034,7 +1034,7 @@ main.registerCommand({
   });
 
   const bundlePath = projectContext.getProjectLocalDirectory('build');
-  const bundler = require('./bundler.js');
+  const bundler = require('./isobuild/bundler.js');
   const bundle = bundler.bundle({
     projectContext: projectContext,
     outputPath: null,

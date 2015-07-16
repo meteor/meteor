@@ -1,4 +1,4 @@
-import buildmessage from './buildmessage.js';
+import buildmessage from '../buildmessage.js';
 const buildPluginModule = require('./build-plugin.js');
 
 class InputFile extends buildPluginModule.InputFile {

@@ -401,7 +401,7 @@ var springboard = function (rel, options) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
   var archinfo = require('./archinfo.js');
-  var isopack = require('./isopack.js');
+  var isopack = require('./isobuild/isopack.js');
 
   var toolsPkg = rel.getToolsPackage();
   var toolsVersion = rel.getToolsVersion();

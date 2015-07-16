@@ -1,5 +1,5 @@
 var assert = require("assert");
-var files = require("./files.js");
+var files = require("../files.js");
 var _ = require("underscore");
 var hasOwn = Object.prototype.hasOwnProperty;
 

@@ -1,20 +1,20 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 
-var files = require('./files.js');
-var utils = require('./utils.js');
-var watch = require('./watch.js');
-var buildmessage = require('./buildmessage.js');
+var files = require('../files.js');
+var utils = require('../utils.js');
+var watch = require('../watch.js');
+var buildmessage = require('../buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 var NpmDiscards = require('./npm-discards.js');
 var Builder = require('./builder.js');
-var archinfo = require('./archinfo.js');
-var release = require('./release.js');
-var catalog = require('./catalog.js');
-var packageVersionParser = require('./package-version-parser.js');
+var archinfo = require('../archinfo.js');
+var release = require('../release.js');
+var catalog = require('../catalog.js');
+var packageVersionParser = require('../package-version-parser.js');
 var compiler = require('./compiler.js');
 var packageAPIModule = require('./package-api.js');
-var Profile = require('./profile.js').Profile;
+var Profile = require('../profile.js').Profile;
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file

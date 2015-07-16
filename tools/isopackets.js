@@ -1,13 +1,13 @@
 var _ = require('underscore');
-var bundler = require('./bundler.js');
-var Builder = require('./builder.js');
+var bundler = require('./isobuild/bundler.js');
+var Builder = require('./isobuild/builder.js');
 var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
-var compiler = require('./compiler.js');
+var compiler = require('./isobuild/compiler.js');
 var config = require('./config.js');
 var watch = require('./watch.js');
 var Console = require('./console.js').Console;
-var isopackCacheModule = require('./isopack-cache.js');
+var isopackCacheModule = require('./isobuild/isopack-cache.js');
 var packageMapModule = require('./package-map.js');
 var fiberHelpers = require('./fiber-helpers.js');
 

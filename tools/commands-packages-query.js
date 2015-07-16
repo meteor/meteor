@@ -12,7 +12,7 @@ var main = require('./main.js');
 var packageVersionParser = require('./package-version-parser.js');
 var projectContextModule = require('./project-context.js');
 var utils = require('./utils.js');
-var compiler = require('./compiler.js');
+var compiler = require('./isobuild/compiler.js');
 
 // We want these queries to be relatively fast, so we will only refresh the
 // catalog if it is > 15 minutes old
