@@ -127,8 +127,19 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
   files.forEach(function (inputFile) {
     var pathInPackage = inputFile.getPathInPackage();
-    // Match files named `main.styl` or with a `.main.styl` extension
-    if (! pathInPackage.match(/(^|\/|\.)main\.styl$/)) {
+    var fileOptions = inputFile.getFileOptions();
+
+    // The heuristic is that a file is an import (ie, is not itself processed
+    // as a root) if it is in a subdirectory named 'import' or if it matches
+    // *.import.styl. This can be overridden in either direction via an
+    // explicit `isImport` file option in apiaddFiles.
+    var filenameSaysImport =
+          /\.import\.styl$/.test(pathInPackage) ||
+          /(?:^|\/)import\//.test(pathInPackage);
+    var isImport = fileOptions.hasOwnProperty('isImport')
+          ? fileOptions.isImport : filenameSaysImport;
+
+    if (isImport) {
       return;
     }
 
