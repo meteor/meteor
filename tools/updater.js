@@ -170,7 +170,7 @@ var updateMeteorToolSymlink = function (printErrors) {
 
   var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
 
-  if (! utils.startsWith(localLatestReleaseLink, relativeToolPath + files.pathSep)) {
+  if (! localLatestReleaseLink.startsWith(relativeToolPath + files.pathSep)) {
     // The latest release from the catalog is not where the ~/.meteor/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.

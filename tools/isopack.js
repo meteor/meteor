@@ -13,7 +13,6 @@ var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('./console.js').Console;
 var Profile = require('./profile.js').Profile;
-import { endsWith } from './utils.js';
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -606,13 +605,13 @@ _.extend(Isopack.prototype, {
 
         // Don't let extensions or filenames try to look for directories (in the
         // way that WatchSet expresses them).
-        if (extensions && extensions.some(e => endsWith(e, '/'))) {
+        if (extensions && extensions.some(e => e.endsWith('/'))) {
           buildmessage.error(
             `Plugin.${methodName}: extensions may not end in /`);
           // recover by ignoring
           return;
         }
-        if (filenames && filenames.some(f => endsWith(f, '/'))) {
+        if (filenames && filenames.some(f => f.endsWith('/'))) {
           buildmessage.error(
             `Plugin.${methodName}: filenames may not end in /`);
           // recover by ignoring

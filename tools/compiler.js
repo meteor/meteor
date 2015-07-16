@@ -15,7 +15,6 @@ var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
 var Profile = require('./profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
-import { startsWith } from './utils.js';
 
 var compiler = exports;
 
@@ -850,7 +849,7 @@ compiler.eachUsedUnibuild = function (
 
 // Note: this code is duplicated in packages/constraint-solver/solver.js
 export function isIsobuildFeaturePackage(packageName) {
-  return startsWith(packageName, 'isobuild:');
+  return packageName.startsWith('isobuild:');
 }
 
 export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {

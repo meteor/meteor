@@ -214,8 +214,8 @@ _.extend(exports.Tropohouse.prototype, {
       }
 
       var latestMeteorSymlink = self.latestMeteorSymlink();
-      if (utils.startsWith(latestMeteorSymlink,
-                           packagesDirectoryName + files.pathSep)) {
+      if (latestMeteorSymlink.startsWith(packagesDirectoryName +
+                                         files.pathSep)) {
         var rest = latestMeteorSymlink.substr(
           packagesDirectoryName.length + files.pathSep.length);
 
@@ -247,7 +247,7 @@ _.extend(exports.Tropohouse.prototype, {
         // it points to.
         if (packageEscaped === latestToolPackageEscaped &&
             (version === latestToolVersion ||
-             utils.startsWith(version, '.' + latestToolVersion + '.'))) {
+             version.startsWith('.' + latestToolVersion + '.'))) {
           return;
         }
 
@@ -255,7 +255,7 @@ _.extend(exports.Tropohouse.prototype, {
         // operation).
         if (packageEscaped === currentToolPackageEscaped &&
             (version === currentToolVersion ||
-             utils.startsWith(version, '.' + currentToolVersion + '.'))) {
+             version.startsWith('.' + currentToolVersion + '.'))) {
           return;
         }
 

@@ -2,7 +2,6 @@ import {WatchSet, readAndWatchFile, sha1} from './watch.js';
 import files from './files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from './profile.js';
-import {startsWith} from './utils.js';
 
 const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
@@ -549,7 +548,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
           // mark all sub-paths as removed, too
           paths.forEach((anotherPath) => {
-            if (startsWith(anotherPath, path + '/')) {
+            if (anotherPath.startsWith(path + '/')) {
               removed[anotherPath] = true;
             }
           });

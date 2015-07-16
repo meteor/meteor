@@ -64,16 +64,11 @@ var formatAsList = function (list, options) {
   return _.map(list, formatter).join(", ");
 };
 
-var endsWith = function (s, suffix) {
-  return s.length >= suffix.length &&
-    s.substr(s.length - suffix.length) === suffix;
-};
-
 var removeIfEndsWith = function (s, suffix) {
-  if (!endsWith(s, suffix)) {
-    return s;
+  if (s.endsWith(suffix)) {
+    return s.substring(0, s.length - suffix.length);
   }
-  return s.substring(0, s.length - suffix.length);
+  return s;
 };
 
 var formatArchitecture = function (s) {

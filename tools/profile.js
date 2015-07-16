@@ -256,10 +256,6 @@ var print = function (indent, text) {
   console.log(prefix + spaces(indent * 2) + text);
 };
 
-var startsWith = function (s1, s2) {
-  return (s1.substr(0, s2.length) === s2);
-};
-
 var isChild = function (entry1, entry2) {
   return (entry2.length === entry1.length + 1 &&
           _.isEqual(entry1, entry2.slice(0, entry1.length)));
