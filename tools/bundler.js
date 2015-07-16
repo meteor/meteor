@@ -1539,8 +1539,8 @@ JsImage.readFromDisk = Profile("JsImage.readFromDisk", function (controlFilePath
     if (item.sourceMap) {
       // XXX this is the same code as isopack.initFromPath
       rejectBadPath(item.sourceMap);
-      loadItem.sourceMap = files.readFile(
-        files.pathJoin(dir, item.sourceMap), 'utf8');
+      loadItem.sourceMap = JSON.parse(files.readFile(
+        files.pathJoin(dir, item.sourceMap), 'utf8'));
       loadItem.sourceMapRoot = item.sourceMapRoot;
     }
 
