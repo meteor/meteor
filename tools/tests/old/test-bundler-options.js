@@ -1,4 +1,4 @@
-require('meteor-babel/register');
+require('../../install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
