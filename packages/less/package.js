@@ -27,7 +27,7 @@ Package.onTest(function(api) {
   api.use(['tinytest', 'test-helpers']);
   api.addFiles(['tests/top.import.less',
                 'tests/top3.import.less',
-                'tests/import/not-included.less',
+                'tests/imports/not-included.less',
                 'tests/dir/in-dir.import.less',
                 'tests/dir/in-dir2.import.less',
                 'tests/dir/root.less',

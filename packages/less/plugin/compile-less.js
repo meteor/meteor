@@ -7,7 +7,7 @@ var LRU = Npm.require('lru-cache');
 
 Plugin.registerCompiler({
   // *.lessimport has been deprecated since 0.7.1, but it still works. We
-  // *recommend *.import.less or the import subdirectory instead.
+  // *recommend *.import.less or the imports subdirectory instead.
   extensions: ['less', 'lessimport'],
   archMatching: 'web'
 }, function () {
@@ -63,13 +63,13 @@ _.extend(LessCompiler.prototype, {
       filesByAbsoluteImportPath[absoluteImportPath] = inputFile;
 
       // The heuristic is that a file is an import (ie, is not itself processed
-      // as a root) if it is in a subdirectory named 'import' or if it matches
+      // as a root) if it is in a subdirectory named 'imports' or if it matches
       // *.import.less. This can be overridden in either direction via an
       // explicit `isImport` file option in apiaddFiles.
       var filenameSaysImport =
             /\.import\.less$/.test(pathInPackage) ||
             /\.lessimport$/.test(pathInPackage) ||
-            /(?:^|\/)import\//.test(pathInPackage);
+            /(?:^|\/)imports\//.test(pathInPackage);
       var isImport = fileOptions.hasOwnProperty('isImport')
             ? fileOptions.isImport : filenameSaysImport;
       // Match files named `main.less` or with a `.main.less` extension
