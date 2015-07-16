@@ -6,7 +6,7 @@ var LRU = Npm.require('lru-cache');
 
 Plugin.registerCompiler({
   extensions: ['styl'],
-  archMatchin: 'web'
+  archMatching: 'web'
 }, function () {
   return new StylusCompiler();
 });
