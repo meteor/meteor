@@ -52,7 +52,7 @@ Babel = {
       }
     }
 
-    return meteorBabel.compile(code, options);
+    return meteorBabel.compile(source, options);
   },
 
   setCacheDir: function (cacheDir) {
