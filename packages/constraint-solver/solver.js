@@ -1021,7 +1021,11 @@ CS.Solver.prototype.throwConflicts = function () {
 
         error += '\n' + self.listConstraintsOnPackage(c.toPackage);
 
-        self.errors.push(error);
+        // Avoid printing exactly the same error twice.  eg, if we have two
+        // different packages which have the same unsatisfiable constraint.
+        if (self.errors.indexOf(error) === -1) {
+          self.errors.push(error);
+        }
       }
     });
   });
