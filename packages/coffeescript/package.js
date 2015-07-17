@@ -5,7 +5,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "compileCoffeescript",
-  use: ['random'],
+  use: ['ecmascript', 'random'],
   sources: [
     'plugin/compile-coffeescript.js'
   ],

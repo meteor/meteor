@@ -2,6 +2,7 @@ var _ = require('underscore');
 var selftest = require('../selftest.js');
 var files = require('../files.js');
 import { getUrl } from '../http-helpers.js';
+import { sleepMs } from '../utils.js';
 
 var Sandbox = selftest.Sandbox;
 
@@ -122,7 +123,7 @@ selftest.define("compiler plugin caching - coffee/less", function () {
 
   // We never should have loaded cache from disk, since we only made
   // each compiler once and there was no cache.json at this point.
-  run.forbid('Loaded entry from coffeescript cache');
+  run.forbid(/Loaded .* from coffeescript cache/);
   run.forbid('Loaded less cache');
 
   // Kill the run. Change one coffee file and one less file and re-run.

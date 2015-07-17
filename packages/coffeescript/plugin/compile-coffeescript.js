@@ -1,25 +1,26 @@
-var fs = Npm.require('fs');
-var path = Npm.require('path');
-var _ = Npm.require('underscore');
-var sourcemap = Npm.require('source-map');
-var LRU = Npm.require('lru-cache');
-var createHash = Npm.require("crypto").createHash;
+const fs = Npm.require('fs');
+const path = Npm.require('path');
+const _ = Npm.require('underscore');
+const sourcemap = Npm.require('source-map');
+const LRU = Npm.require('lru-cache');
+const createHash = Npm.require("crypto").createHash;
+const assert = Npm.require("assert");
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
 // Error.prepareStackTrace to properly show error messages in linked code.  Save
 // the tool's one and restore it after coffee-script clobbers it.
-var prepareStackTrace = Error.prepareStackTrace;
-var coffee = Npm.require('coffee-script');
+const prepareStackTrace = Error.prepareStackTrace;
+const coffee = Npm.require('coffee-script');
 Error.prepareStackTrace = prepareStackTrace;
 
-var CACHE_SIZE = process.env.METEOR_COFFEESCRIPT_CACHE_SIZE || 1024*1024*10;
-var CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_CACHE_DEBUG;
+const CACHE_SIZE = process.env.METEOR_COFFEESCRIPT_CACHE_SIZE || 1024*1024*10;
+const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_CACHE_DEBUG;
 
-var stripExportedVars = function (source, exports) {
+function stripExportedVars(source, exports) {
   if (!exports || _.isEmpty(exports))
     return source;
-  var lines = source.split("\n");
+  const lines = source.split("\n");
 
   // We make the following assumptions, based on the output of CoffeeScript
   // 1.7.1.
@@ -43,9 +44,9 @@ var stripExportedVars = function (source, exports) {
   //     Or alternatively, hack the compiler to allow us to specify unbound
   //     symbols directly.
 
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    var match = /^var (.+)([,;])$/.exec(line);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = /^var (.+)([,;])$/.exec(line);
     if (!match)
       continue;
 
@@ -58,7 +59,7 @@ var stripExportedVars = function (source, exports) {
     // We want to replace the line with something no shorter, so that all
     // records in the source map continue to point at valid
     // characters.
-    var replaceLine = function (x) {
+    function replaceLine(x) {
       if (x.length >= lines[i].length) {
         lines[i] = x;
       } else {
@@ -66,9 +67,9 @@ var stripExportedVars = function (source, exports) {
       }
     };
 
-    var vars = match[1].split(', ');
+    let vars = match[1].split(', ');
     vars = _.difference(vars, exports);
-    if (!_.isEmpty(vars)) {
+    if (vars.length) {
       replaceLine("var " + vars.join(', ') + match[2]);
     } else {
       // We got rid of all the vars on this line. Drop the whole line if this
@@ -84,7 +85,7 @@ var stripExportedVars = function (source, exports) {
   return lines.join('\n');
 };
 
-var addSharedHeader = function (source, sourceMap) {
+function addSharedHeader(source, sourceMap) {
   // We want the symbol "share" to be visible to all CoffeeScript files in the
   // package (and shared between them), but not visible to JavaScript
   // files. (That's because we don't want to introduce two competing ways to
@@ -96,13 +97,13 @@ var addSharedHeader = function (source, sourceMap) {
   // a global.
   //
   // This ends in a newline to make the source map easier to adjust.
-  var header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
-                "? __coffeescriptShare : {}; " +
-                "var share = __coffeescriptShare;\n");
+  const header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
+                  "? __coffeescriptShare : {}; " +
+                  "var share = __coffeescriptShare;\n");
 
   // If the file begins with "use strict", we need to keep that as the first
   // statement.
-  source = source.replace(/^(?:((['"])use strict\2;)\n)?/, function (match, useStrict) {
+  const processedSource = source.replace(/^(?:((['"])use strict\2;)\n)?/, (match, useStrict) => {
     if (match) {
       // There's a "use strict"; we keep this as the first statement and insert
       // our header at the end of the line that it's on. This doesn't change
@@ -118,41 +119,39 @@ var addSharedHeader = function (source, sourceMap) {
     }
   });
   return {
-    source: source,
+    source: processedSource,
     sourceMap: sourceMap
   };
 };
 
-var CoffeeCompiler = function () {
-  var self = this;
-  // Maps from a cache key (encoding the source hash, exports, and the other
-  // options passed to coffee.compile) to a {source,sourceMap} object.  Note
-  // that this is the result of both coffee.compile and the post-processing that
-  // we do.
-  self._cache = new LRU({
-    max: CACHE_SIZE,
-    // Cache is measured in bytes.
-    length: function (value) {
-      return value.source.length + sourceMapLength(value.sourceMap);
-    }
-  });
-  self._diskCache = null;
-  // For testing.
-  self._callCount = 0;
-};
+class CoffeeCompiler {
+  constructor() {
+    // Maps from a cache key (encoding the source hash, exports, and the other
+    // options passed to coffee.compile) to a {source,sourceMap} object.  Note
+    // that this is the result of both coffee.compile and the post-processing
+    // that we do.
+    this._cache = new LRU({
+      max: CACHE_SIZE,
+      // Cache is measured in bytes.
+      length: (value) => {
+        return value.source.length + sourceMapLength(value.sourceMap);
+      }
+    });
+    this._diskCache = null;
+    // For testing.
+    this._callCount = 0;
+  }
 
-_.extend(CoffeeCompiler.prototype, {
-  processFilesForTarget: function (inputFiles) {
-    var self = this;
-    var cacheMisses = [];
+  processFilesForTarget(inputFiles) {
+    const cacheMisses = [];
 
-    inputFiles.forEach(function (inputFile) {
-      var source = inputFile.getContentsAsString();
-      var outputFilePath = inputFile.getPathInPackage() + ".js";
-      var extension = inputFile.getExtension();
-      var literate = extension !== 'coffee';
+    inputFiles.forEach((inputFile) => {
+      const source = inputFile.getContentsAsString();
+      const outputFilePath = inputFile.getPathInPackage() + ".js";
+      const extension = inputFile.getExtension();
+      const literate = extension !== 'coffee';
 
-      var options = {
+      const options = {
         bare: true,
         filename: inputFile.getPathInPackage(),
         literate: literate,
@@ -166,21 +165,22 @@ _.extend(CoffeeCompiler.prototype, {
         sourceFiles: [inputFile.getDisplayPath()]
       };
 
-      var cacheKey = deepHash([inputFile.getSourceHash(),
-                               inputFile.getDeclaredExports(),
-                               options]);
-      var sourceWithMap = self._cache.get(cacheKey);
+      const cacheKey = deepHash([inputFile.getSourceHash(),
+                                 inputFile.getDeclaredExports(),
+                                 options]);
+      let sourceWithMap = this._cache.get(cacheKey);
       if (! sourceWithMap) {
-        sourceWithMap = self._readCache(cacheKey);
+        sourceWithMap = this._readCache(cacheKey);
         if (sourceWithMap && CACHE_DEBUG) {
-          console.log("Loaded", inputFile.getDisplayPath(),
-                      "from coffeescript cache");
+          console.log(
+            `Loaded ${ inputFile.getDisplayPath() } from coffeescript cache`);
         }
       }
       if (! sourceWithMap) {
         cacheMisses.push(inputFile.getDisplayPath());
+        let output;
         try {
-          var output = coffee.compile(source, options);
+          output = coffee.compile(source, options);
         } catch (e) {
           inputFile.error({
             message: e.message,
@@ -191,13 +191,13 @@ _.extend(CoffeeCompiler.prototype, {
           return;
         }
 
-        var stripped = stripExportedVars(
+        const stripped = stripExportedVars(
           output.js,
           _.pluck(inputFile.getDeclaredExports(), 'name'));
         sourceWithMap = addSharedHeader(
           stripped, JSON.parse(output.v3SourceMap));
-        self._cache.set(cacheKey, sourceWithMap);
-        self._writeCacheAsync(cacheKey, sourceWithMap);
+        this._cache.set(cacheKey, sourceWithMap);
+        this._writeCacheAsync(cacheKey, sourceWithMap);
       }
 
       inputFile.addJavaScript({
@@ -211,65 +211,63 @@ _.extend(CoffeeCompiler.prototype, {
 
     if (CACHE_DEBUG) {
       cacheMisses.sort();
-      console.log("Ran coffee.compile (#%s) on: %s",
-                  ++self._callCount, JSON.stringify(cacheMisses));
+      console.log(
+        `Ran coffee.compile (#${ ++this._callCount }) on: ` +
+          JSON.stringify(cacheMisses));
     }
-  },
-  setDiskCacheDirectory: function (diskCache) {
-    var self = this;
-    if (self._diskCache)
+  }
+
+  setDiskCacheDirectory(diskCache) {
+    if (this._diskCache)
       throw Error("setDiskCacheDirectory called twice?");
-    self._diskCache = diskCache;
-  },
-  _cacheFilename: function (cacheKey) {
-    var self = this;
+    this._diskCache = diskCache;
+  }
+  _cacheFilename(cacheKey) {
     // We want cacheKeys to be hex so that they work on any FS and never end in
     // .json.
     if (!/^[a-f0-9]+$/.test(cacheKey)) {
       throw Error('bad cacheKey: ' + cacheKey);
     }
-    return path.join(self._diskCache, cacheKey + '.json');
-  },
+    return path.join(this._diskCache, cacheKey + '.json');
+  }
   // Load a cache entry from disk. Returns the {source,sourceMap} object
   // and loads it into the in-memory cache too.
-  _readCache: function (cacheKey) {
-    var self = this;
-    if (! self._diskCache)
+  _readCache(cacheKey) {
+    if (! this._diskCache) {
       return null;
-    var cacheFilename = self._cacheFilename(cacheKey);
-    var cacheJSON = readJSONOrNull(cacheFilename);
-    if (! cacheJSON)
+    }
+    const cacheFilename = this._cacheFilename(cacheKey);
+    const cacheJSON = readJSONOrNull(cacheFilename);
+    if (! cacheJSON) {
       return null;
-    self._cache.set(cacheKey, cacheJSON);
+    }
+    this._cache.set(cacheKey, cacheJSON);
     return cacheJSON;
-  },
-  _writeCacheAsync: function (cacheKey, cacheJSON) {
-    var self = this;
-    if (! self._diskCache)
+  }
+  _writeCacheAsync(cacheKey, cacheJSON) {
+    if (! this._diskCache)
       return;
-    var cacheFilename = self._cacheFilename(cacheKey);
-    var cacheContents = JSON.stringify(cacheJSON);
+    const cacheFilename = this._cacheFilename(cacheKey);
+    const cacheContents = JSON.stringify(cacheJSON);
 
     // We want to write the file atomically. But we also don't want to block
     // processing on the file write.
-    var cacheTempFilename = cacheFilename + '.tmp.' + Random.id();
-    fs.writeFile(cacheTempFilename, cacheContents, function (err) {
+    const cacheTempFilename = cacheFilename + '.tmp.' + Random.id();
+    fs.writeFile(cacheTempFilename, cacheContents, (err) => {
       // ignore errors, it's just a cache
       if (err) {
         return;
       }
-      fs.rename(cacheTempFilename, cacheFilename, function (err) {
+      fs.rename(cacheTempFilename, cacheFilename, (err) => {
         // ignore this error too.
       });
     });
   }
-});
+}
 
 Plugin.registerCompiler({
   extensions: ['coffee', 'litcoffee', 'coffee.md']
-}, function () {
-  return new CoffeeCompiler();
-});
+}, () => new CoffeeCompiler());
 
 function sourceMapLength(sm) {
   if (! sm) return 0;
@@ -285,8 +283,8 @@ function sourceMapLength(sm) {
 // Borrowed from another MIT-licensed project that benjamn wrote:
 // https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
 function deepHash(val) {
-  var hash = createHash("sha1");
-  var type = typeof val;
+  const hash = createHash("sha1");
+  let type = typeof val;
 
   if (val === null) {
     type = "null";
@@ -294,14 +292,14 @@ function deepHash(val) {
 
   switch (type) {
   case "object":
-    var keys = Object.keys(val);
+    const keys = Object.keys(val);
 
     // Array keys will already be sorted.
     if (! Array.isArray(val)) {
       keys.sort();
     }
 
-    keys.forEach(function(key) {
+    keys.forEach((key) => {
       if (typeof val[key] === "function") {
         // Silently ignore nested methods, but nevertheless complain below
         // if the root value is a function.
@@ -328,8 +326,9 @@ function deepHash(val) {
 // Returns null if the file does not exist or is invalid JSON, otherwise returns
 // the parsed JSON in the file.
 function readJSONOrNull(filename) {
+  let raw;
   try {
-    var raw = fs.readFileSync(filename, 'utf8');
+    raw = fs.readFileSync(filename, 'utf8');
   } catch (e) {
     if (e && e.code === 'ENOENT')
       return null;
