@@ -24,7 +24,22 @@ BCp.processFilesForTarget = function (inputFiles) {
       babelOptions.sourceFileName = "/" + inputFilePath;
       babelOptions.sourceMapName = "/" + outputFilePath + ".map";
 
-      var result = Babel.compile(source, babelOptions);
+      try {
+        var result = Babel.compile(source, babelOptions);
+      } catch (e) {
+        if (e.loc) {
+          inputFile.error({
+            message: e.message,
+            sourcePath: inputFilePath,
+            line: e.loc.line,
+            column: e.loc.column,
+          });
+
+          return;
+        }
+
+        throw e;
+      }
 
       toBeAdded.data = result.code;
       toBeAdded.hash = result.hash;
