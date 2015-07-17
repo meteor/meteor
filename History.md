@@ -1,7 +1,8 @@
 ## batch-plugins
 
-Backwards-incompatible change: static assets in package.js files must be
-explicitly declared with `{isAsset: true}`.
+Backwards-incompatible change: static assets in package.js files must
+be explicitly declared with `{isAsset: true}`.  See the batch-plugins merge
+message for more details.
 
 
 ## v.NEXT
@@ -213,6 +214,7 @@ explicitly declared with `{isAsset: true}`.
 
 * Upgraded dependencies:
 
+  - Node: 0.10.40 (from 0.10.36)
   - uglify-js: 2.4.20 (from 2.4.17)
   - http-proxy: 1.11.1 (from 1.6.0)
 
