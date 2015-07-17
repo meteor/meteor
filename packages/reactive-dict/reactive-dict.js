@@ -24,6 +24,7 @@ ReactiveDict = function (dictName) {
       // _registerDictForMigrate will throw an error on duplicate name.
       ReactiveDict._registerDictForMigrate(dictName, this);
       this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
+      this.name = dictName;
     } else if (typeof dictName === 'object') {
       // back-compat case: dictName is actually migrationData
       this.keys = dictName;
