@@ -65,7 +65,7 @@ function stripExportedVars(source, exports) {
       } else {
         lines[i] = x + new Array(1 + (lines[i].length - x.length)).join(' ');
       }
-    };
+    }
 
     let vars = match[1].split(', ');
     vars = _.difference(vars, exports);
@@ -83,7 +83,7 @@ function stripExportedVars(source, exports) {
   }
 
   return lines.join('\n');
-};
+}
 
 function addSharedHeader(source, sourceMap) {
   // We want the symbol "share" to be visible to all CoffeeScript files in the
@@ -122,7 +122,7 @@ function addSharedHeader(source, sourceMap) {
     source: processedSource,
     sourceMap: sourceMap
   };
-};
+}
 
 class CoffeeCompiler {
   constructor() {
@@ -277,8 +277,7 @@ function sourceMapLength(sm) {
        + (sm.sourcesContent || []).reduce(function (soFar, current) {
          return soFar + (current ? current.length : 0);
        }, 0);
-};
-
+}
 
 // Borrowed from another MIT-licensed project that benjamn wrote:
 // https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
@@ -321,7 +320,7 @@ function deepHash(val) {
   }
 
   return hash.digest("hex");
-};
+}
 
 // Returns null if the file does not exist or is invalid JSON, otherwise returns
 // the parsed JSON in the file.
@@ -339,4 +338,4 @@ function readJSONOrNull(filename) {
   } catch (e) {
     return null;
   }
-};
+}
