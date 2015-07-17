@@ -1,1 +1,1 @@
-This is an internal Meteor package.
+This is an internal package.

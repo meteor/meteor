@@ -15,7 +15,7 @@ _.each(packageNames, function (name) {
   if (match) {
     var versionNumber = match[0];
     var s = versionNumber.split(".");
-    s[3] = (parseInt(s[3], 10) + 1);
+    s[2] = (parseInt(s[2], 10) + 1);
     var incremented = s.join(".") + "-galaxy.0";
 
     content = content.replace(versionNumber, incremented);

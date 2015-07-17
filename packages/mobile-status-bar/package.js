@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Good defaults for the mobile status bar",
-  version: "1.0.4"
+  version: "1.0.5-galaxy.0"
 });
 
 Package.onUse(function(api) {
