@@ -504,6 +504,11 @@ exports.execFileSync = function (file, args, opts) {
   var child_process = require('child_process');
   var eachline = require('eachline');
 
+  opts = opts || {};
+  if (! _.has(opts, 'maxBuffer')) {
+    opts.maxBuffer = 1024 * 1024 * 10;
+  }
+
   if (opts && opts.pipeOutput) {
     var p = child_process.spawn(file, args, opts);
 
