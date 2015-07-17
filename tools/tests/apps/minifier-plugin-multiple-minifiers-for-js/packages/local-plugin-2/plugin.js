@@ -7,5 +7,5 @@ Plugin.registerMinifier({
 
 function Minifier () {};
 
-Minifier.prototype.processFilesForTarget = function (files) { };
+Minifier.prototype.processFilesForBundle = function (files) { };
 

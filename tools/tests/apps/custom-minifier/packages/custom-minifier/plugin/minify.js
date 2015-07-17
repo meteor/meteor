@@ -16,7 +16,7 @@ function CustomMinifier(type) {
   this.type = type;
 };
 
-CustomMinifier.prototype.processFilesForTarget = function (files, options) {
+CustomMinifier.prototype.processFilesForBundle = function (files, options) {
   var self = this;
   var mode = options.minifyMode;
 

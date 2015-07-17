@@ -715,7 +715,7 @@ _.extend(Isopack.prototype, {
       // web.browser and web.cordova.
       //
       // The factory function must return an instance of a
-      // minifier. The method `processFilesForTarget` is passed a list of
+      // minifier. The method `processFilesForBundle` is passed a list of
       // files, possibly a linked file per target (for JavaScript files).
       //
       // - files - processed files to minify

@@ -851,7 +851,7 @@ _.extend(Target.prototype, {
         arch: self.arch
       });
     });
-    var minifier = minifierDef.userPlugin.processFilesForTarget.bind(
+    var minifier = minifierDef.userPlugin.processFilesForBundle.bind(
       minifierDef.userPlugin);
 
     buildmessage.enterJob("minifying app code", function () {
@@ -1016,7 +1016,7 @@ _.extend(ClientTarget.prototype, {
         arch: self.arch
       });
     });
-    var minifier = minifierDef.userPlugin.processFilesForTarget.bind(
+    var minifier = minifierDef.userPlugin.processFilesForBundle.bind(
       minifierDef.userPlugin);
 
     buildmessage.enterJob("minifying app stylesheet", function () {

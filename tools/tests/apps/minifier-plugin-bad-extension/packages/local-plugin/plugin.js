@@ -1,5 +1,5 @@
 Plugin.registerMinifier({
-  extensions: ["foo"],
+  extensions: ["foo"]
 }, function () {
   var minifier = new Minifier();
   return minifier;
@@ -7,5 +7,5 @@ Plugin.registerMinifier({
 
 function Minifier () {};
 
-Minifier.prototype.processFilesForTarget = function (files) { };
+Minifier.prototype.processFilesForBundle = function (files) { };
 
