@@ -144,3 +144,57 @@ selftest.define('linter plugins - running with --no-lint', () => {
 
   run.stop();
 });
+
+selftest.define('linter plugins - lint package on `meteor publish`', () => {
+  const s = new Sandbox({ fakeMongo: true });
+
+  // create an app that contains a package we want to publish
+  s.createApp('myapp', 'lint-on-publish');
+  s.cd('myapp/packages/my-package');
+
+  const run = s.run('publish');
+
+  // expected messages:
+  // from both the my-package package, its dependency but not the app
+  const messages = [
+    /While linting files .* dep-package .*Server/,
+    /dep-package.js:1:1: 'DepPackageVar'/,
+    /While linting files .* dep-package .*Client/,
+    /dep-package.js:1:1: 'DepPackageVar'/,
+    /While linting files .* dep-package .*Cordova/,
+    /dep-package.js:1:1: 'DepPackageVar'/,
+    /While linting files .* my-package .*Server/,
+    /my-package.js:1:1: 'PackageVar'/,
+    /While linting files .* my-package .*Client/,
+    /my-package.js:1:1: 'PackageVar'/,
+    /While linting files .* my-package .*Cordova/,
+    /my-package.js:1:1: 'PackageVar'/
+  ];
+
+  messages.forEach(message => run.matchErr(message));
+  run.forbid('app');
+
+  run.expectExit(1);
+});
+
+selftest.define('linter plugins - no-lint for `meteor publish`', () => {
+  const s = new Sandbox({ fakeMongo: true });
+
+  // create an app that contains a package we want to publish
+  s.createApp('myapp', 'lint-on-publish');
+  s.cd('myapp/packages/my-package');
+  s.set('METEOR_TEST_NO_PUBLISH', 't');
+
+  const run = s.run('publish', '--no-lint');
+
+  // advances further but fails for a different reason 
+  const messages = [
+    /Would publish the package at this point/
+  ];
+
+  messages.forEach(message => run.matchErr(message));
+
+  run.forbid('linting');
+
+  run.expectExit(0);
+});

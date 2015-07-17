@@ -15,6 +15,7 @@ var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var PackageSource = require('./isobuild/package-source.js');
+var bundler = require('./isobuild/bundler.js');
 var compiler = require('./isobuild/compiler.js');
 var catalog = require('./catalog.js');
 var catalogRemote = require('./catalog-remote.js');
@@ -251,7 +252,9 @@ main.registerCommand({
     'existing-version': { type: Boolean },
     // This is the equivalent of "sudo": make sure that administrators don't
     // accidentally put their personal packages in the top level namespace.
-    'top-level': { type: Boolean }
+    'top-level': { type: Boolean },
+    // An option to publish despite linting errors
+    'no-lint': { type: Boolean }
   },
   requiresPackage: true,
   // We optimize the workflow by using up-to-date package data to weed out
@@ -280,6 +283,14 @@ main.registerCommand({
     return 1;
   }
 
+  const packageSource = new PackageSource();
+  main.captureAndExit(`Errors parsing the package:`, () => {
+    buildmessage.enterJob({
+      title: "reading package from `" + options.packageDir + "`",
+      rootPath: options.packageDir
+    }, () => packageSource.initFromPackageDir(options.packageDir));
+  });
+
   var projectContext;
   if (! options.appDir) {
     // We're not in an app? OK, make a temporary app directory, and make sure
@@ -295,7 +306,8 @@ main.registerCommand({
       // When we publish, we should always include web.cordova unibuilds, even
       // though this temporary directory does not have any cordova platforms
       forceIncludeCordovaUnibuild: true,
-      allowIncompatibleUpdate: options['allow-incompatible-update']
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: ! options['no-lint']
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
@@ -309,7 +321,8 @@ main.registerCommand({
       // When we publish, we should always include web.cordova unibuilds, even
       // if this project does not have any cordova platforms
       forceIncludeCordovaUnibuild: true,
-      allowIncompatibleUpdate: options['allow-incompatible-update']
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: ! options['no-lint']
     });
   }
 
@@ -318,6 +331,45 @@ main.registerCommand({
     // constraints file a bit before we prepare the build.
     projectContext.initializeCatalog();
   });
+
+  if (options.appDir) {
+    // make the package we are publishing the only constraint
+    const constraint = utils.parsePackageConstraint(packageSource.name);
+    projectContext.projectConstraintsFile.removeAllPackages();
+    projectContext.projectConstraintsFile.addConstraints([constraint]);
+  }
+
+  main.captureAndExit("=> Errors prevented the build:", () => {
+    projectContext.prepareProjectForBuild();
+  });
+
+  const bundlePath = projectContext.getProjectLocalDirectory('build');
+  const bundle = bundler.bundle({
+    projectContext: projectContext,
+    outputPath: null,
+    buildOptions: {
+      minifyMode: 'development'
+    }
+  });
+  if (bundle.errors) {
+    Console.error(
+      `=> Errors building your package:\n\n${bundle.errors.formatMessages()}`
+    );
+    throw main.ExitWithCode(2);
+  }
+  // print linting errors
+  if (bundle.warnings) {
+    Console.warn(bundle.warnings.formatMessages());
+    return 1;
+  }
+
+  if (process.env.METEOR_TEST_NO_PUBLISH) {
+    Console.error(
+      'Would publish the package at this point, but since the ' +
+      'METEOR_TEST_NO_PUBLISH environment variable is set, just going ' +
+      'to finish here.');
+    return 0;
+  }
 
   // Connect to the package server and log in.
   try {
@@ -347,9 +399,6 @@ main.registerCommand({
     return 1;
   }
   var packageName = localVersionRecord.packageName;
-  var packageSource = projectContext.localCatalog.getPackageSource(packageName);
-  if (! packageSource)
-    throw Error("no PackageSource for " + packageName);
 
   // Anything published to the server must explicitly set a version.
   if (! packageSource.versionExplicitlyProvided) {
