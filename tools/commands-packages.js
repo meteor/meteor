@@ -1593,9 +1593,12 @@ main.registerCommand({
   // We want to use the project's release for constraints even if we are
   // currently running a newer release (eg if we ran 'meteor update --patch' and
   // updated to an older patch release).  (If the project has release 'none'
-  // because this is just 'updating packages', this can be null.)
+  // because this is just 'updating packages', this can be null. Also, if we're
+  // running from a checkout this should be null even if the file doesn't say
+  // 'none'.)
   var releaseRecordForConstraints = null;
-  if (projectContext.releaseFile.normalReleaseSpecified()) {
+  if (!files.inCheckout()
+      && projectContext.releaseFile.normalReleaseSpecified()) {
     releaseRecordForConstraints = catalog.official.getReleaseVersion(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
