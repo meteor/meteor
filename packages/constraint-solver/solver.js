@@ -704,11 +704,13 @@ CS.Solver.prototype._getAnswer = function (options) {
         self.setSolution(newSolution);
         logic.forbid(p);
       } else {
-        self.errors.push(
+        var error =
           'No version of ' + p + ' satisfies all constraints: ' +
             _.map(constrs, function (constr) {
               return '@' + constr.constraintString;
-            }).join(', '));
+            }).join(', ');
+        error += '\n' + self.listConstraintsOnPackage(p);
+        self.errors.push(error);
       }
     });
     self.throwAnyErrors();
