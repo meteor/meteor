@@ -28,7 +28,7 @@ There are two different types of files recognized by this package:
 
 - Less sources (all `*.less` files that are not imports)
 - Less imports (files with the `import.less` extension: `*.import.less` or files
-  in an `import` directory: `**/import/**/*.less`)
+  in an `imports` directory: `**/imports/**/*.less`)
 
 The source files are compiled automitically. The imports are not loaded, you
 need to import them from one of the source files to use them.
@@ -60,7 +60,7 @@ Importing styles from a different package:
 Importing styles from the target app:
 
 ```less
-@import "{}/client/styles/import/colors.less"
+@import "{}/client/styles/imports/colors.less"
 
 .my-nav {
   // use a color from the app style pallete
