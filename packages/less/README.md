@@ -27,8 +27,10 @@ Package.onUse(function (api) {
 There are two different types of files recognized by this package:
 
 - Less sources (all `*.less` files that are not imports)
-- Less imports (files with the `import.less` extension: `*.import.less` or files
-  in an `imports` directory: `**/imports/**/*.less`)
+- Less imports:
+  * files with the `import.less` extension: `*.import.less`
+  * files in an `imports` directory: `**/imports/**/*.less`
+  * marked as `isImport: true` in the package's `package.js` file
 
 The source files are compiled automitically. The imports are not loaded, you
 need to import them from one of the source files to use them.
