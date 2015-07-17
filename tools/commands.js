@@ -999,21 +999,17 @@ main.registerCommand({
       lintAppAndLocalPackages: true
     });
 
-    const packageSource = new PackageSource();
-    main.captureAndExit(`Errors parsing the package:`, () => {
-      buildmessage.enterJob({
-        title: "reading package from `" + packageDir + "`",
-        rootPath: packageDir
-      }, () => packageSource.initFromPackageDir(packageDir));
-    });
-
     main.captureAndExit("=> Errors while setting up package:", () =>
       // Read metadata and initialize catalog.
       projectContext.initializeCatalog()
     );
-
-    const constraint = utils.parsePackageConstraint(packageSource.name);
-
+    const versionRecord =
+        projectContext.localCatalog.getVersionBySourceRoot(packageDir);
+    if (! versionRecord) {
+      throw Error("explicitly added local package dir missing?");
+    }
+    const packageName = versionRecord.packageName;
+    const constraint = utils.parsePackageConstraint(packageName);
     projectContext.projectConstraintsFile.removeAllPackages();
     projectContext.projectConstraintsFile.addConstraints([constraint]);
   }
