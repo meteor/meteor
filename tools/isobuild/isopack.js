@@ -700,13 +700,28 @@ _.extend(Isopack.prototype, {
 
       // Minifiers are part of the Batch Plugin API.
       //
-      // XXX #BBPDocs
+      // The minifiers are applied in the very end of the bundling
+      // process, after the linters and compilers. Unlike linters and
+      // compilers, minifiers are given the output of compilers and not
+      // the source files the application developer supplied.
       //
       // The minifier plugins can fill into 2 types of minifiers: CSS or JS.
       // When the minifier is added to an app, it is used during "bundling" to
       // compress the app code and each package's code separately.
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
+      //
+      // So far, the minifiers are only ran on client targets such as
+      // web.browser and web.cordova.
+      //
+      // The factory function must return an instance of a
+      // minifier. The method `processFilesForTarget` is passed a list of
+      // files, possibly a linked file per target (for JavaScript files).
+      //
+      // - files - processed files to minify
+      // - options - Object
+      //   - minifyMode - string - 'development' or 'production', based
+      //     on the bundling mode
       registerMinifier: function (options, factory) {
         var badUsedExtension = _.find(options.extensions, function (ext) {
           return ! _.contains(['js', 'css'], ext);
