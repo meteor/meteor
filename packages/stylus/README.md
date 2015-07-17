@@ -20,15 +20,19 @@ See <http://tj.github.io/nib/> for documentation of the nib extensions of Stylus
 
 ## Usage
 
-The package processes all `.styl` files, treating `.main.styl` as entry points
-and all other `.styl` as potential imports.
+The package processes all `.styl` files, treating `.styl` as entry points
+and all files with extension `.import.styl` or a file in under an `imports`
+folder as an import.
+
+Also, if a file is added in a package, a special `isImport: true` option can be
+passed to mark it as an import: `api.add('styles.styl', 'client', {isImport: true})`.
 
 Example:
 
 A component stylus file, importable, but not an entry-point:
 
 ```stylus
-// app/components/my-component/styles.styl
+// app/components/my-component/styles.import.styl
 $primary-color = #A7A7A7
 .my-component
   input
@@ -37,11 +41,11 @@ $primary-color = #A7A7A7
     color $primary-color
 ```
 
-The main app entry point for the styles, `app.main.styl`:
+The main app entry point for the styles, `app.styl`:
 
 ```stylus
-// app/app.main.styl
-@import './components/my-component/styles'
+// app/app.styl
+@import './components/my-component/styles.import'
 
 // ... rest of app styles
 ```
@@ -52,8 +56,15 @@ The main app entry point for the styles, `app.main.styl`:
 This package allows apps to import Stylus styles from packages and vice-versa.
 The import syntax from importing files from other packages is curly braces:
 
+```javasciprt
+// in procoder:fancy-buttons package's package.js file
+...
+api.add('styles/buttons.styl', 'client', {isImport: true});
+...
+```
+
 ```stylus
-// app.main.styl
+// app.styl
 // import styles from a package
 @import '{procoder:fancy-buttons}/styles/buttons.styl'
 
@@ -66,9 +77,9 @@ The import syntax from importing files from other packages is curly braces:
 To import a file from the app, leave the content of curly braces empty:
 
 ```stylus
-// packages/my-package/generic-buttons.main.styl
+// packages/my-package/generic-buttons.styl
 // import the base styles from app
-@import '{}/client/colors.styl'
+@import '{}/client/imports/colors.styl'
 
 // use the colors from app in this component
 .generic-buttons
