@@ -203,7 +203,7 @@ compiler.lint = function (packageSource, options) {
   buildmessage.assertInJob();
 
   const warnings = new buildmessage._MessageSet;
-
+  let linted = false;
   _.each(packageSource.architectures, function (architecture) {
     // skip Cordova if not required
     if (! options.includeCordovaUnibuild
@@ -217,10 +217,11 @@ compiler.lint = function (packageSource, options) {
       sourceArch: architecture
     });
     if (unibuildWarnings) {
+      linted = true;
       warnings.merge(unibuildWarnings);
     }
   });
-  return warnings.hasMessages() ? warnings : null;
+  return {warnings, linted};
 };
 
 compiler.getMinifiers = function (packageSource, options) {

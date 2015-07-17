@@ -1994,7 +1994,6 @@ exports.bundle = function ({
   hasCachedBundle
 }) {
   buildOptions = buildOptions || {};
-  const shouldLint = !!projectContext.lintAppAndLocalPackages;
 
   var appDir = projectContext.projectDir;
 
@@ -2085,7 +2084,7 @@ exports.bundle = function ({
       return;
     }
 
-    if (! buildmessage.jobHasMessages() && shouldLint) {
+    if (! buildmessage.jobHasMessages()) {
       lintingMessages = lintBundle(projectContext, app, packageSource);
     }
     // If while trying to lint, we got a compilation error (eg, an issue loading
@@ -2209,30 +2208,30 @@ exports.bundle = function ({
 function lintBundle (projectContext, isopack, packageSource) {
   buildmessage.assertInJob();
 
+  let lintedAnything = false;
   const lintingMessages = new buildmessage._MessageSet();
 
-  const appMessages = compiler.lint(packageSource, {
-    isopack,
-    isopackCache: projectContext.isopackCache
-  });
-  if (appMessages) {
-    lintingMessages.merge(appMessages);
+  if (projectContext.lintAppAndLocalPackages) {
+    const {warnings: appMessages, linted} = compiler.lint(packageSource, {
+      isopack,
+      isopackCache: projectContext.isopackCache
+    });
+    if (linted) {
+      lintedAnything = true;
+      lintingMessages.merge(appMessages);
+    }
   }
 
   const localPackagesMessages =
     projectContext.getLintingMessagesForLocalPackages();
   if (localPackagesMessages) {
+    lintedAnything = true;
     lintingMessages.merge(localPackagesMessages);
   }
 
   // if there was no linting performed since there are no applicable
   // linters for neither app nor packages, just return null
-  const appLinters = isopack.sourceProcessors.linter;
-  if (appLinters.isEmpty() && ! localPackagesMessages) {
-    return null;
-  }
-
-  return lintingMessages;
+  return lintedAnything ? lintingMessages : null;
 }
 
 // Make a JsImage object (a complete, linked, ready-to-go JavaScript

@@ -164,6 +164,10 @@ _.extend(ProjectContext.prototype, {
     // is not passed.
     self.lintAppAndLocalPackages = options.lintAppAndLocalPackages;
 
+    // If set, we run the linter on just one local package, with this
+    // source root. Set by 'meteor lint' in a package, and 'meteor publish'.
+    self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -717,7 +721,8 @@ _.extend(ProjectContext.prototype, {
       pluginCacheDirRoot: self.getProjectLocalDirectory('plugin-cache'),
       tropohouse: self.tropohouse,
       previousIsopackCache: self._previousIsopackCache,
-      lintLocalPackages: self.lintAppAndLocalPackages
+      lintLocalPackages: self.lintAppAndLocalPackages,
+      lintPackageWithSourceRoot: self._lintPackageWithSourceRoot
     });
 
     if (self._forceRebuildPackages) {

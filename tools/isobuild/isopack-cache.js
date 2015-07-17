@@ -51,6 +51,7 @@ exports.IsopackCache = function (options) {
   self._noLineNumbers = !! options.noLineNumbers;
 
   self._lintLocalPackages = !! options.lintLocalPackages;
+  self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
 
   self.allLoadedLocalPackagesWatchSet = new watch.WatchSet;
 };
@@ -302,18 +303,19 @@ _.extend(exports.IsopackCache.prototype, {
   // Runs appropriate linters on a package. It also augments their unibuilds'
   // WatchSets with files used by the linter.
   _lintLocalPackage(packageSource, isopack) {
-    const self = this;
     buildmessage.assertInJob();
-    if (! self._lintLocalPackages)
+    if (!this._shouldLintPackage(packageSource)) {
       return;
-
-    const lintingMessages = compiler.lint(packageSource, {
-      isopackCache: self,
+    }
+    const {warnings, linted} = compiler.lint(packageSource, {
+      isopackCache: this,
       isopack: isopack,
-      includeCordovaUnibuild: self._includeCordovaUnibuild
+      includeCordovaUnibuild: this._includeCordovaUnibuild
     });
-    if (lintingMessages && lintingMessages.hasMessages()) {
-      isopack.lintingMessages = lintingMessages;
+    // Empty lintingMessages means we ran linters and everything was OK.
+    // lintingMessages left null means there were no linters to run.
+    if (linted) {
+      isopack.lintingMessages = warnings;
     }
   },
 
@@ -412,6 +414,14 @@ _.extend(exports.IsopackCache.prototype, {
     self._previousIsopackCache = null;
   },
 
+  _shouldLintPackage(packageSource) {
+    if (this._lintLocalPackages)
+      return true;
+    if (! this._lintPackageWithSourceRoot)
+      return false;
+    return this._lintPackageWithSourceRoot === packageSource.sourceRoot;
+  },
+
   getLintingMessagesForLocalPackages: function () {
     const messages = new buildmessage._MessageSet();
     let anyLinters = false;
@@ -419,10 +429,12 @@ _.extend(exports.IsopackCache.prototype, {
     this._packageMap.eachPackage((name, packageInfo) => {
       const isopack = this._isopacks[name];
       if (packageInfo.kind === 'local') {
-        anyLinters = anyLinters || ! isopack.sourceProcessors.linter.isEmpty();
-
+        if (!this._shouldLintPackage(packageInfo.packageSource)) {
+          return;
+        }
         const isopackMessages = isopack.lintingMessages;
         if (isopackMessages) {
+          anyLinters = true;
           messages.merge(isopackMessages);
         }
       }

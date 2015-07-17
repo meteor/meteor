@@ -996,7 +996,7 @@ main.registerCommand({
       alwaysWritePackageMap: true,
       forceIncludeCordovaUnibuild: true,
       allowIncompatibleUpdate: options['allow-incompatible-update'],
-      lintAppAndLocalPackages: true
+      lintPackageWithSourceRoot: packageDir
     });
 
     main.captureAndExit("=> Errors while setting up package:", () =>
