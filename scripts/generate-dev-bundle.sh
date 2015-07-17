@@ -43,7 +43,7 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
 # Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_VERSION=0.10.36
+NODE_VERSION=0.10.40
 NODE_BUILD_NUMBER=13
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then

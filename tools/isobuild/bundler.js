@@ -1833,7 +1833,7 @@ var writeSiteArchive = Profile(
 
       builder.write('README', { data: new Buffer(
 `This is a Meteor application bundle. It has only one external dependency:
-Node.js 0.10.36 or newer. To run the application:
+Node.js 0.10.40 or newer. To run the application:
 
   $ (cd programs/server && npm install)
   $ export MONGO_URL='mongodb://user:password@host:port/databasename'
