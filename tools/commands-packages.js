@@ -283,14 +283,6 @@ main.registerCommand({
     return 1;
   }
 
-  const packageSource = new PackageSource();
-  main.captureAndExit(`Errors parsing the package:`, () => {
-    buildmessage.enterJob({
-      title: "reading package from `" + options.packageDir + "`",
-      rootPath: options.packageDir
-    }, () => packageSource.initFromPackageDir(options.packageDir));
-  });
-
   var projectContext;
   if (! options.appDir) {
     // We're not in an app? OK, make a temporary app directory, and make sure
@@ -307,7 +299,7 @@ main.registerCommand({
       // though this temporary directory does not have any cordova platforms
       forceIncludeCordovaUnibuild: true,
       allowIncompatibleUpdate: options['allow-incompatible-update'],
-      lintAppAndLocalPackages: ! options['no-lint']
+      lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
@@ -322,7 +314,7 @@ main.registerCommand({
       // if this project does not have any cordova platforms
       forceIncludeCordovaUnibuild: true,
       allowIncompatibleUpdate: options['allow-incompatible-update'],
-      lintAppAndLocalPackages: ! options['no-lint']
+      lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   }
 
@@ -332,55 +324,18 @@ main.registerCommand({
     projectContext.initializeCatalog();
   });
 
-  if (options.appDir) {
-    // make the package we are publishing the only constraint
-    const constraint = utils.parsePackageConstraint(packageSource.name);
-    projectContext.projectConstraintsFile.removeAllPackages();
-    projectContext.projectConstraintsFile.addConstraints([constraint]);
-  }
-
-  main.captureAndExit("=> Errors prevented the build:", () => {
-    projectContext.prepareProjectForBuild();
-  });
-
-  const bundlePath = projectContext.getProjectLocalDirectory('build');
-  const bundle = bundler.bundle({
-    projectContext: projectContext,
-    outputPath: null,
-    buildOptions: {
-      minifyMode: 'development'
+  if (!process.env.METEOR_TEST_NO_PUBLISH) {
+    // Connect to the package server and log in.
+    try {
+      var conn = packageClient.loggedInPackagesConnection();
+    } catch (err) {
+      packageClient.handlePackageServerConnectionError(err);
+      return 1;
     }
-  });
-  if (bundle.errors) {
-    Console.error(
-      `=> Errors building your package:\n\n${bundle.errors.formatMessages()}`
-    );
-    throw main.ExitWithCode(2);
-  }
-  // print linting errors
-  if (bundle.warnings) {
-    Console.warn(bundle.warnings.formatMessages());
-    return 1;
-  }
-
-  if (process.env.METEOR_TEST_NO_PUBLISH) {
-    Console.error(
-      'Would publish the package at this point, but since the ' +
-      'METEOR_TEST_NO_PUBLISH environment variable is set, just going ' +
-      'to finish here.');
-    return 0;
-  }
-
-  // Connect to the package server and log in.
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-  if (! conn) {
-    Console.error('No connection: Publish failed.');
-    return 1;
+    if (! conn) {
+      Console.error('No connection: Publish failed.');
+      return 1;
+    }
   }
 
   var localVersionRecord = projectContext.localCatalog.getVersionBySourceRoot(
@@ -399,6 +354,9 @@ main.registerCommand({
     return 1;
   }
   var packageName = localVersionRecord.packageName;
+  var packageSource = projectContext.localCatalog.getPackageSource(packageName);
+  if (! packageSource)
+    throw Error("no PackageSource for " + packageName);
 
   // Anything published to the server must explicitly set a version.
   if (! packageSource.versionExplicitlyProvided) {
@@ -461,6 +419,26 @@ main.registerCommand({
   });
   // We don't display the package map delta here, because it includes adding the
   // package's test and all the test's dependencies.
+
+  if (!options['no-lint']) {
+    const warnings = projectContext.getLintingMessagesForLocalPackages();
+    if (warnings.hasMessages()) {
+      Console.arrowError(
+        "Errors linting your package; run with --no-lint to ignore.");
+      Console.printMessages(warnings);
+      return 1;
+    } else if (warnings) {
+      Console.arrowInfo('Linted your package. No linting errors.');
+    }
+  }
+
+  if (process.env.METEOR_TEST_NO_PUBLISH) {
+    Console.error(
+      'Would publish the package at this point, but since the ' +
+      'METEOR_TEST_NO_PUBLISH environment variable is set, just going ' +
+      'to finish here.');
+    return 0;
+  }
 
   var isopack = projectContext.isopackCache.getIsopack(packageName);
   if (! isopack) {
