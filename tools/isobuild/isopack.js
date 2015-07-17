@@ -639,7 +639,25 @@ _.extend(Isopack.prototype, {
         sourceProcessorSet.addSourceProcessor(sp);
       },
 
-      // XXX #BBPDocs
+      // Compilers are part of the Batch Plugins API.
+      //
+      // A compiler plugin is provided by packages to participate in
+      // the build process. A compiler can register file extensions and
+      // filenames it handles and the build tool will call the compiler's
+      // `processFilesForTarget` method with the source files for a
+      // target (ex.: a server program for app, a browser part of a
+      // package, etc).
+      //
+      // Compilers are ran on application bundling (in bundle.js).
+      // Since starting with isopack-2 format, Isopacks
+      // distributed the original sources, compilers can be involved in
+      // the very end, when the app is bundled (not in package publish time).
+      //
+      // Unlike the legacy API called "source handlers" (deprecated in
+      // Meteor 1.2), compiler plugins can handle all files for the target,
+      // making independent decisions about caching and dependencies resolution.
+      //
+      // The factory function must return an instance of a compiler.
       //
       // Note: It's important to ensure that all plugins that want to call
       // plugin compiler use the isobuild:compiler-plugin fake package, so that
@@ -653,7 +671,25 @@ _.extend(Isopack.prototype, {
         });
       },
 
-      // XXX #BBPDocs
+      // Linters are part of the Batch Plugin API.
+      //
+      // A linter plugin provides a Linter instance. The linter is
+      // given a batch of source files for the target according to
+      // linter's declared file extensions and filenames (e.g.: '*.js',
+      // '.jshintrc').
+      //
+      // Linters don't output any files. They can only raise an error
+      // message on one of the source files to force the build tool to
+      // print a linting message.
+      //
+      // The factory function must return an instance of the linter.
+      // The linter must have the `processFilesForTarget` method that
+      // has two arguments:
+      // - inputFiles - LinterFile - sources instances
+      // - options - Object
+      // - globals - a list of strings - global variables that can be
+      //    used in the target's scope as they are dependencies of the
+      //    package or the app. e.g.: "Minimongo" or "Webapp".
       registerLinter: function (options, factory) {
         Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.linter,
@@ -662,12 +698,15 @@ _.extend(Isopack.prototype, {
         });
       },
 
+      // Minifiers are part of the Batch Plugin API.
+      //
+      // XXX #BBPDocs
+      //
       // The minifier plugins can fill into 2 types of minifiers: CSS or JS.
       // When the minifier is added to an app, it is used during "bundling" to
       // compress the app code and each package's code separately.
       // If a package is depending on a package that provides a minifier plugin,
       // the minifier plugin is not used anywhere.
-      // XXX #BBPDocs
       registerMinifier: function (options, factory) {
         var badUsedExtension = _.find(options.extensions, function (ext) {
           return ! _.contains(['js', 'css'], ext);
