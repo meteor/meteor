@@ -3,6 +3,7 @@ var path = Npm.require('path');
 var _ = Npm.require('underscore');
 var sourcemap = Npm.require('source-map');
 var LRU = Npm.require('lru-cache');
+var createHash = Npm.require("crypto").createHash;
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -165,10 +166,17 @@ _.extend(CoffeeCompiler.prototype, {
         sourceFiles: [inputFile.getDisplayPath()]
       };
 
-      var cacheKey = JSON.stringify([inputFile.getSourceHash(),
-                                     inputFile.getDeclaredExports(),
-                                     options]);
+      var cacheKey = deepHash([inputFile.getSourceHash(),
+                               inputFile.getDeclaredExports(),
+                               options]);
       var sourceWithMap = self._cache.get(cacheKey);
+      if (! sourceWithMap) {
+        sourceWithMap = self._readCache(cacheKey);
+        if (sourceWithMap && CACHE_DEBUG) {
+          console.log("Loaded", inputFile.getDisplayPath(),
+                      "from coffeescript cache");
+        }
+      }
       if (! sourceWithMap) {
         cacheMisses.push(inputFile.getDisplayPath());
         try {
@@ -189,6 +197,7 @@ _.extend(CoffeeCompiler.prototype, {
         sourceWithMap = addSharedHeader(
           stripped, JSON.parse(output.v3SourceMap));
         self._cache.set(cacheKey, sourceWithMap);
+        self._writeCacheAsync(cacheKey, sourceWithMap);
       }
 
       inputFile.addJavaScript({
@@ -199,10 +208,6 @@ _.extend(CoffeeCompiler.prototype, {
         bare: inputFile.getFileOptions().bare
       });
     });
-
-    // Rewrite the cache to disk.
-    // XXX #BBPBetterCache we should just write individual entries separately.
-    self._writeCache();
 
     if (CACHE_DEBUG) {
       cacheMisses.sort();
@@ -215,38 +220,48 @@ _.extend(CoffeeCompiler.prototype, {
     if (self._diskCache)
       throw Error("setDiskCacheDirectory called twice?");
     self._diskCache = diskCache;
-    self._readCache();
   },
-  // XXX #BBPBetterCache this is an inefficiently designed cache that will cause
-  // quadratic behavior due to writing the whole cache on each write, and has no
-  // error handling, and uses sync, and has an exists/read race condition, and
-  // might not work on Windows
-  _cacheFile: function () {
+  _cacheFilename: function (cacheKey) {
     var self = this;
-    return path.join(self._diskCache, 'cache.json');
-  },
-  _readCache: function () {
-    var self = this;
-    var cacheFile = self._cacheFile();
-    if (! fs.existsSync(cacheFile))
-      return;
-    var cacheJSON = JSON.parse(fs.readFileSync(cacheFile));
-    _.each(cacheJSON, function (value, cacheKey) {
-      self._cache.set(cacheKey, value);
-    });
-    if (CACHE_DEBUG) {
-      console.log("Loaded coffeescript cache");
+    // We want cacheKeys to be hex so that they work on any FS and never end in
+    // .json.
+    if (!/^[a-f0-9]+$/.test(cacheKey)) {
+      throw Error('bad cacheKey: ' + cacheKey);
     }
+    return path.join(self._diskCache, cacheKey + '.json');
   },
-  _writeCache: function () {
+  // Load a cache entry from disk. Returns the {source,sourceMap} object
+  // and loads it into the in-memory cache too.
+  _readCache: function (cacheKey) {
+    var self = this;
+    if (! self._diskCache)
+      return null;
+    var cacheFilename = self._cacheFilename(cacheKey);
+    var cacheJSON = readJSONOrNull(cacheFilename);
+    if (! cacheJSON)
+      return null;
+    self._cache.set(cacheKey, cacheJSON);
+    return cacheJSON;
+  },
+  _writeCacheAsync: function (cacheKey, cacheJSON) {
     var self = this;
     if (! self._diskCache)
       return;
-    var cacheJSON = {};
-    self._cache.forEach(function (value, cacheKey) {
-      cacheJSON[cacheKey] = value;
+    var cacheFilename = self._cacheFilename(cacheKey);
+    var cacheContents = JSON.stringify(cacheJSON);
+
+    // We want to write the file atomically. But we also don't want to block
+    // processing on the file write.
+    var cacheTempFilename = cacheFilename + '.tmp.' + Random.id();
+    fs.writeFile(cacheTempFilename, cacheContents, function (err) {
+      // ignore errors, it's just a cache
+      if (err) {
+        return;
+      }
+      fs.rename(cacheTempFilename, cacheFilename, function (err) {
+        // ignore this error too.
+      });
     });
-    fs.writeFileSync(self._cacheFile(), JSON.stringify(cacheJSON));
   }
 });
 
@@ -264,4 +279,65 @@ function sourceMapLength(sm) {
        + (sm.sourcesContent || []).reduce(function (soFar, current) {
          return soFar + (current ? current.length : 0);
        }, 0);
+};
+
+
+// Borrowed from another MIT-licensed project that benjamn wrote:
+// https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
+function deepHash(val) {
+  var hash = createHash("sha1");
+  var type = typeof val;
+
+  if (val === null) {
+    type = "null";
+  }
+
+  switch (type) {
+  case "object":
+    var keys = Object.keys(val);
+
+    // Array keys will already be sorted.
+    if (! Array.isArray(val)) {
+      keys.sort();
+    }
+
+    keys.forEach(function(key) {
+      if (typeof val[key] === "function") {
+        // Silently ignore nested methods, but nevertheless complain below
+        // if the root value is a function.
+        return;
+      }
+
+      hash.update(key + "\0").update(deepHash(val[key]));
+    });
+
+    break;
+
+  case "function":
+    assert.ok(false, "cannot hash function objects");
+    break;
+
+  default:
+    hash.update("" + val);
+    break;
+  }
+
+  return hash.digest("hex");
+};
+
+// Returns null if the file does not exist or is invalid JSON, otherwise returns
+// the parsed JSON in the file.
+function readJSONOrNull(filename) {
+  try {
+    var raw = fs.readFileSync(filename, 'utf8');
+  } catch (e) {
+    if (e && e.code === 'ENOENT')
+      return null;
+    throw e;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
 };

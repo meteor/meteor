@@ -122,7 +122,7 @@ selftest.define("compiler plugin caching - coffee/less", function () {
 
   // We never should have loaded cache from disk, since we only made
   // each compiler once and there was no cache.json at this point.
-  run.forbid('Loaded coffeescript cache');
+  run.forbid('Loaded entry from coffeescript cache');
   run.forbid('Loaded less cache');
 
   // Kill the run. Change one coffee file and one less file and re-run.
@@ -133,8 +133,10 @@ selftest.define("compiler plugin caching - coffee/less", function () {
   run = startRun(s);
 
   // This time there's a cache to load!
-  run.match('Loaded coffeescript cache');
   run.match('Loaded less cache');
+  run.match('Loaded /packages/local-pack/p.coffee from coffeescript cache');
+  run.match('Loaded /f1.coffee from coffeescript cache');
+  run.match('Loaded /f3.coffee from coffeescript cache');
   // And we only need to re-compiler the changed file, even though we restarted.
   run.match('Ran coffee.compile (#1) on: ["/f2.coffee"]');
   run.match('Ran less.render (#1) on: ["/top.less"]');
