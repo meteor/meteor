@@ -546,8 +546,14 @@ _.extend(PackageSourceBatch.prototype, {
 
     // nb: linkedFiles might be aliased to an entry in LINKER_CACHE, so don't
     // mutate anything from it.
-    var linkedFiles = linker.fullLink(jsResources, linkerOptions);
-
+    let canCache = true;
+    let linkedFiles = null;
+    buildmessage.enterJob('linking', () => {
+      linkedFiles = linker.fullLink(jsResources, linkerOptions);
+      if (buildmessage.jobHasMessages()) {
+        canCache = false;
+      }
+    });
     // Add each output as a resource
     const ret = linkedFiles.map((file) => {
       const sm = (typeof file.sourceMap === 'string')
@@ -559,7 +565,9 @@ _.extend(PackageSourceBatch.prototype, {
         sourceMap: sm
       };
     });
-    LINKER_CACHE.set(cacheKey, ret);
+    if (canCache) {
+      LINKER_CACHE.set(cacheKey, ret);
+    }
     return ret;
   })
 });

@@ -300,6 +300,7 @@ _.extend(File.prototype, {
       // Recover by pretending that this file is empty (which
       // includes replacing its source code with '' in the output)
       self.source = "";
+      self.sourceHash = watch.sha1(self.source);
       self.sourceMap = null;
       return [];
     }
@@ -739,8 +740,12 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // Do static analysis to compute module-scoped variables. Error recovery from
   // the static analysis mutates the sources, so this has to be done before
   // concatenation.
-  var assignedVariables = module.computeAssignedVariables();
-  if (buildmessage.jobHasMessages())
+  let assignedVariables;
+  const failed = buildmessage.enterJob('computing assigned variables', () => {
+    assignedVariables = module.computeAssignedVariables();
+    return buildmessage.jobHasMessages();
+  });
+  if (failed)
     return [];  // recover by pretending there are no files
 
   // Otherwise we're making a package and we have to actually combine the files
