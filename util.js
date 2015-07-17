@@ -1,6 +1,7 @@
 var fs = require("fs");
 var path = require("path");
 var createHash = require("crypto").createHash;
+var assert = require("assert");
 
 exports.mkdirp = function mkdirp(dir) {
   if (! fs.existsSync(dir)) {
