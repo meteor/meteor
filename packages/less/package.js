@@ -2,7 +2,7 @@ Package.describe({
   name: 'less',
   version: '2.5.0_1',
   summary: 'Leaner CSS language',
-  documentation: null  // XXX #BBPDocs
+  documentation: 'README.md'
 });
 
 Package.registerBuildPlugin({
