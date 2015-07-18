@@ -1,10 +1,4 @@
-const fs = Npm.require('fs');
-const path = Npm.require('path');
-const _ = Npm.require('underscore');
 const sourcemap = Npm.require('source-map');
-const LRU = Npm.require('lru-cache');
-const createHash = Npm.require("crypto").createHash;
-const assert = Npm.require("assert");
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
@@ -14,11 +8,90 @@ const prepareStackTrace = Error.prepareStackTrace;
 const coffee = Npm.require('coffee-script');
 Error.prepareStackTrace = prepareStackTrace;
 
-const CACHE_SIZE = process.env.METEOR_COFFEESCRIPT_CACHE_SIZE || 1024*1024*10;
-const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_CACHE_DEBUG;
+Plugin.registerCompiler({
+  extensions: ['coffee', 'litcoffee', 'coffee.md']
+}, () => new CoffeeCompiler());
+
+// XXX document that compileResult is {source,sourceMap}
+
+class CoffeeCompiler extends CachingCompiler {
+  constructor() {
+    super({
+      compilerName: 'coffeescript',
+      defaultCacheSize: 1024*1024*10,
+    });
+  }
+
+  _getCompileOptions(inputFile) {
+    return {
+      bare: true,
+      filename: inputFile.getPathInPackage(),
+      literate: inputFile.getExtension() !== 'coffee',
+      // Return a source map.
+      sourceMap: true,
+      // Include the original source in the source map (sourcesContent field).
+      inline: true,
+      // This becomes the "file" field of the source map.
+      generatedFile: "/" + this._outputFilePath(inputFile),
+      // This becomes the "sources" field of the source map.
+      sourceFiles: [inputFile.getDisplayPath()],
+    };
+  }
+
+  _outputFilePath(inputFile) {
+    return inputFile.getPathInPackage() + ".js";
+  }
+
+  getCacheKey(inputFile) {
+    return [
+      inputFile.getSourceHash(),
+      inputFile.getDeclaredExports(),
+      this._getCompileOptions(inputFile),
+    ];
+  }
+
+  compileOneFile(inputFile) {
+    const source = inputFile.getContentsAsString();
+    const compileOptions = this._getCompileOptions(inputFile);
+
+    let output;
+    try {
+      output = coffee.compile(source, compileOptions);
+    } catch (e) {
+      inputFile.error({
+        message: e.message,
+        line: e.location && (e.location.first_line + 1),
+        column: e.location && (e.location.first_column + 1)
+      });
+      return null;
+    }
+
+    const stripped = stripExportedVars(
+      output.js,
+      inputFile.getDeclaredExports().map(e => e.name));
+    const sourceWithMap = addSharedHeader(
+      stripped, JSON.parse(output.v3SourceMap));
+    return sourceWithMap;
+  }
+
+  addCompileResult(inputFile, sourceWithMap) {
+    inputFile.addJavaScript({
+      path: this._outputFilePath(inputFile),
+      sourcePath: inputFile.getPathInPackage(),
+      data: sourceWithMap.source,
+      sourceMap: sourceWithMap.sourceMap,
+      bare: inputFile.getFileOptions().bare
+    });
+  }
+
+  compileResultSize(sourceWithMap) {
+    return sourceWithMap.source.length +
+      sourceMapLength(sourceWithMap.sourceMap);
+  }
+}
 
 function stripExportedVars(source, exports) {
-  if (!exports || _.isEmpty(exports))
+  if (!exports || !exports.length)
     return source;
   const lines = source.split("\n");
 
@@ -67,8 +140,7 @@ function stripExportedVars(source, exports) {
       }
     }
 
-    let vars = match[1].split(', ');
-    vars = _.difference(vars, exports);
+    let vars = match[1].split(', ').filter(v => exports.indexOf(v) === -1);
     if (vars.length) {
       replaceLine("var " + vars.join(', ') + match[2]);
     } else {
@@ -124,151 +196,6 @@ function addSharedHeader(source, sourceMap) {
   };
 }
 
-class CoffeeCompiler {
-  constructor() {
-    // Maps from a cache key (encoding the source hash, exports, and the other
-    // options passed to coffee.compile) to a {source,sourceMap} object.  Note
-    // that this is the result of both coffee.compile and the post-processing
-    // that we do.
-    this._cache = new LRU({
-      max: CACHE_SIZE,
-      // Cache is measured in bytes.
-      length: (value) => {
-        return value.source.length + sourceMapLength(value.sourceMap);
-      }
-    });
-    this._diskCache = null;
-    // For testing.
-    this._callCount = 0;
-  }
-
-  processFilesForTarget(inputFiles) {
-    const cacheMisses = [];
-
-    inputFiles.forEach((inputFile) => {
-      const source = inputFile.getContentsAsString();
-      const outputFilePath = inputFile.getPathInPackage() + ".js";
-      const extension = inputFile.getExtension();
-      const literate = extension !== 'coffee';
-
-      const options = {
-        bare: true,
-        filename: inputFile.getPathInPackage(),
-        literate: literate,
-        // Return a source map.
-        sourceMap: true,
-        // Include the original source in the source map (sourcesContent field).
-        inline: true,
-        // This becomes the "file" field of the source map.
-        generatedFile: "/" + outputFilePath,
-        // This becomes the "sources" field of the source map.
-        sourceFiles: [inputFile.getDisplayPath()]
-      };
-
-      const cacheKey = deepHash([inputFile.getSourceHash(),
-                                 inputFile.getDeclaredExports(),
-                                 options]);
-      let sourceWithMap = this._cache.get(cacheKey);
-      if (! sourceWithMap) {
-        sourceWithMap = this._readCache(cacheKey);
-        if (sourceWithMap && CACHE_DEBUG) {
-          console.log(
-            `Loaded ${ inputFile.getDisplayPath() } from coffeescript cache`);
-        }
-      }
-      if (! sourceWithMap) {
-        cacheMisses.push(inputFile.getDisplayPath());
-        let output;
-        try {
-          output = coffee.compile(source, options);
-        } catch (e) {
-          inputFile.error({
-            message: e.message,
-            line: e.location && (e.location.first_line + 1),
-            column: e.location && (e.location.first_column + 1)
-          });
-
-          return;
-        }
-
-        const stripped = stripExportedVars(
-          output.js,
-          _.pluck(inputFile.getDeclaredExports(), 'name'));
-        sourceWithMap = addSharedHeader(
-          stripped, JSON.parse(output.v3SourceMap));
-        this._cache.set(cacheKey, sourceWithMap);
-        this._writeCacheAsync(cacheKey, sourceWithMap);
-      }
-
-      inputFile.addJavaScript({
-        path: outputFilePath,
-        sourcePath: inputFile.getPathInPackage(),
-        data: sourceWithMap.source,
-        sourceMap: sourceWithMap.sourceMap,
-        bare: inputFile.getFileOptions().bare
-      });
-    });
-
-    if (CACHE_DEBUG) {
-      cacheMisses.sort();
-      console.log(
-        `Ran coffee.compile (#${ ++this._callCount }) on: ` +
-          JSON.stringify(cacheMisses));
-    }
-  }
-
-  setDiskCacheDirectory(diskCache) {
-    if (this._diskCache)
-      throw Error("setDiskCacheDirectory called twice?");
-    this._diskCache = diskCache;
-  }
-  _cacheFilename(cacheKey) {
-    // We want cacheKeys to be hex so that they work on any FS and never end in
-    // .json.
-    if (!/^[a-f0-9]+$/.test(cacheKey)) {
-      throw Error('bad cacheKey: ' + cacheKey);
-    }
-    return path.join(this._diskCache, cacheKey + '.json');
-  }
-  // Load a cache entry from disk. Returns the {source,sourceMap} object
-  // and loads it into the in-memory cache too.
-  _readCache(cacheKey) {
-    if (! this._diskCache) {
-      return null;
-    }
-    const cacheFilename = this._cacheFilename(cacheKey);
-    const cacheJSON = readJSONOrNull(cacheFilename);
-    if (! cacheJSON) {
-      return null;
-    }
-    this._cache.set(cacheKey, cacheJSON);
-    return cacheJSON;
-  }
-  _writeCacheAsync(cacheKey, cacheJSON) {
-    if (! this._diskCache)
-      return;
-    const cacheFilename = this._cacheFilename(cacheKey);
-    const cacheContents = JSON.stringify(cacheJSON);
-
-    // We want to write the file atomically. But we also don't want to block
-    // processing on the file write.
-    const cacheTempFilename = cacheFilename + '.tmp.' + Random.id();
-    fs.writeFile(cacheTempFilename, cacheContents, (err) => {
-      // ignore errors, it's just a cache
-      if (err) {
-        return;
-      }
-      fs.rename(cacheTempFilename, cacheFilename, (err) => {
-        // ignore this error too.
-      });
-    });
-  }
-}
-
-Plugin.registerCompiler({
-  extensions: ['coffee', 'litcoffee', 'coffee.md']
-}, () => new CoffeeCompiler());
-
 function sourceMapLength(sm) {
   if (! sm) return 0;
   // sum the length of sources and the mappings, the size of
@@ -277,65 +204,4 @@ function sourceMapLength(sm) {
        + (sm.sourcesContent || []).reduce(function (soFar, current) {
          return soFar + (current ? current.length : 0);
        }, 0);
-}
-
-// Borrowed from another MIT-licensed project that benjamn wrote:
-// https://github.com/reactjs/commoner/blob/235d54a12c/lib/util.js#L136-L168
-function deepHash(val) {
-  const hash = createHash("sha1");
-  let type = typeof val;
-
-  if (val === null) {
-    type = "null";
-  }
-
-  switch (type) {
-  case "object":
-    const keys = Object.keys(val);
-
-    // Array keys will already be sorted.
-    if (! Array.isArray(val)) {
-      keys.sort();
-    }
-
-    keys.forEach((key) => {
-      if (typeof val[key] === "function") {
-        // Silently ignore nested methods, but nevertheless complain below
-        // if the root value is a function.
-        return;
-      }
-
-      hash.update(key + "\0").update(deepHash(val[key]));
-    });
-
-    break;
-
-  case "function":
-    assert.ok(false, "cannot hash function objects");
-    break;
-
-  default:
-    hash.update("" + val);
-    break;
-  }
-
-  return hash.digest("hex");
-}
-
-// Returns null if the file does not exist or is invalid JSON, otherwise returns
-// the parsed JSON in the file.
-function readJSONOrNull(filename) {
-  let raw;
-  try {
-    raw = fs.readFileSync(filename, 'utf8');
-  } catch (e) {
-    if (e && e.code === 'ENOENT')
-      return null;
-    throw e;
-  }
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    return null;
-  }
 }
