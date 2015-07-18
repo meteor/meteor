@@ -108,10 +108,12 @@ Ap.callLoginMethod = function (options) {
     if (!error) {
       self._onLoginHook.each(function (callback) {
         callback();
+        return true;
       });
     } else {
       self._onLoginFailureHook.each(function (callback) {
         callback();
+        return true;
       });
     }
     options.userCallback.apply(this, arguments);
