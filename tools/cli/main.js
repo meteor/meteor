@@ -285,6 +285,7 @@ main.captureAndExit = function (header, title, f) {
 require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
+require('./cordova/commands.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Long-form help

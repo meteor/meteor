@@ -51,7 +51,6 @@ tools/catalog/catalog-remote.js
 tools/catalog/catalog.js
 tools/catalog/catalog-utils.js
 
-tools/cli/commands-cordova.js
 tools/cli/commands-packages-query.js
 tools/cli/commands-packages.js
 tools/cli/commands.js

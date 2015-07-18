@@ -13,7 +13,9 @@ var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
-var cordova = require('./commands-cordova.js');
+import { platformsForTargets } from '../cordova/platforms.js';
+import { buildCordovaProject } from '../cordova/build.js';
+import { buildCordovaRunners } from '../cordova/run.js';
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 
@@ -37,41 +39,6 @@ var VALID_ARCHITECTURES = {
 
 // __dirname - the location of the current executing file
 var __dirnameConverted = files.convertToStandardPath(__dirname);
-
-/**
- * Display a message that we can't do mobile things on Windows, and then
- * either crash or continue with no mobile platforms.
- * @param  {String[]} platforms The platforms we are trying to build for. This
- * function does nothing if this is empty.
- * @param  {Object} options
- * @param {Boolean} exit If true, exit if there are any selected platforms.
- * Use for situations where the program should not continue running if we are
- * trying to do mobile things on Windows.
- * @param {Function} messageFunc Print this to warn people that you can't
- * build for mobile. Takes the platforms as an argument.
- * @return {String[]} an empty array on Windows, the platforms unchanged
- * everywhere else
- */
-var dontBuildMobileOnWindows = function (platforms, options) {
-  options = options || {};
-
-  if (! _.isEmpty(platforms) && process.platform === "win32") {
-    // Default message to print when we can't Cordova on Windows
-    var MESSAGE_NOTHING_ON_WINDOWS =
-      "Currently, it is not possible to build mobile apps on a Windows system.";
-
-    Console.failWarn(options.messageFunc ?
-      options.messageFunc(platforms) : MESSAGE_NOTHING_ON_WINDOWS);
-
-    if (options.exit) {
-      throw new main.ExitWithCode(2);
-    }
-
-    return [];
-  }
-
-  return platforms;
-};
 
 // Given a site name passed on the command line (eg, 'mysite'), return
 // a fully-qualified hostname ('mysite.meteor.com').
@@ -223,11 +190,10 @@ main.registerCommand(_.extend(
   runCommandOptions
 ), doRunCommand);
 
-function doRunCommand (options) {
-  cordova.setVerboseness(options.verbose);
-  Console.setVerbose(options.verbose);
+function doRunCommand(options) {
+  Console.setVerbose(!!options.verbose);
 
-  cordova.verboseLog('Parsing the --port option');
+  Console.debug('Parsing the --port option');
   try {
     var parsedUrl = utils.parseUrl(options.port);
   } catch (err) {
@@ -244,14 +210,6 @@ function doRunCommand (options) {
     Console.error("--port must include a port.");
     return 1;
   }
-
-  options.args = dontBuildMobileOnWindows(options.args, {
-    exit: true,
-    messageFunc: function (platforms) {
-      return "Can't run on the following platforms on Windows: " +
-        platforms.join(", ");
-    }
-  });
 
   try {
     var parsedMobileServer = utils.mobileServerForRun(options);
@@ -307,7 +265,7 @@ function doRunCommand (options) {
         options.httpProxyPort = '3002';
       }
 
-      cordova.verboseLog('Will compile mobile builds');
+      Console.debug('Will compile mobile builds');
       // Run the constraint solver and build local packages.
       // XXX This code should be part of the main runner loop so that we can
       //     wait on a fix, just like in the non-Cordova case!  (That would also
@@ -317,15 +275,14 @@ function doRunCommand (options) {
       });
       projectContext.packageMapDelta.displayOnConsole();
 
-      var appName = files.pathBasename(projectContext.projectDir);
-      cordova.buildTargets(projectContext, options.args, _.extend({
-        appName: appName,
-        debug: ! options.production,
-        skipIfNoSDK: false
+      let targets = options.args;
+      var platforms = platformsForTargets(targets);
+      const cordovaProject = buildCordovaProject(projectContext, platforms, _.extend({
+        debug: ! options.production
       }, options, parsedMobileServer));
 
       runners = runners.concat(
-        cordova.buildPlatformRunners(projectContext, options.args, options));
+        buildCordovaRunners(projectContext, cordovaProject, targets, options));
     } catch (err) {
       if (err instanceof main.ExitWithCode) {
         throw err;
@@ -338,9 +295,9 @@ function doRunCommand (options) {
 
   // If we are targeting the remote devices, warn about ports and same network
   if (utils.runOnDevice(options)) {
-    cordova.verboseLog('A run on a device requested');
+    Console.debug('A run on a device requested');
     var warning =
-      "You are testing your app on a remote device." +
+      "You are testing your app on a remote device. " +
       "For the mobile app to be able to connect to the local server, make " +
       "sure your device is on the same network, and that the network " +
       "configuration allows clients to talk to each other " +
@@ -793,7 +750,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
 });
 
 var buildCommand = function (options) {
-  cordova.setVerboseness(options.verbose);
+  Console.setVerbose(!!options.verbose);
   // XXX output, to stderr, the name of the file written to (for human
   // comfort, especially since we might change the name)
 
@@ -834,15 +791,6 @@ var buildCommand = function (options) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
 
-  mobilePlatforms = dontBuildMobileOnWindows(mobilePlatforms, {
-    messageFunc: function (platforms) {
-      return "Can't build for mobile on Windows. Skipping the following " +
-        "platforms: " + platforms.join(", ");
-    }
-  });
-
-  var appName = files.pathBasename(options.appDir);
-
   if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
     // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
     var mobileServer = options.server || options["mobile-port"];
@@ -872,12 +820,10 @@ var buildCommand = function (options) {
 
     try {
       mobilePlatforms =
-        cordova.buildTargets(projectContext, mobilePlatforms, _.extend({}, options, {
+        buildCordovaProject(projectContext, mobilePlatforms, _.extend({}, options, {
           host: parsedMobileServer.host,
           port: parsedMobileServer.port,
-          protocol: parsedMobileServer.protocol,
-          appName: appName,
-          skipIfNoSDK: true
+          protocol: parsedMobileServer.protocol
       }));
     } catch (err) {
       if (err instanceof main.ExitWithCode)
@@ -1450,8 +1396,7 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  cordova.setVerboseness(options.verbose);
-  Console.setVerbose(options.verbose);
+  Console.setVerbose(!!options.verbose);
 
   try {
     var parsedUrl = utils.parseUrl(options.port);
@@ -1552,14 +1497,6 @@ main.registerCommand({
       mobileTargets.push(option);
   });
 
-  mobileTargets = dontBuildMobileOnWindows(mobileTargets, {
-    exit: true,
-    messageFunc: function (platforms) {
-      return "Can't run test-packages on Windows using platforms: " +
-        platforms.join(", ");
-    }
-  });
-
   if (! _.isEmpty(mobileTargets)) {
     var runners = [];
     // For this release; we won't force-enable the httpProxy
@@ -1568,7 +1505,7 @@ main.registerCommand({
       options.httpProxyPort = '3002';
     }
 
-    var platforms = cordova.targetsToPlatforms(mobileTargets);
+    var platforms = platformsForTargets(mobileTargets);
     projectContext.platformList.write(platforms);
 
     // Run the constraint solver and build local packages.
@@ -1582,18 +1519,16 @@ main.registerCommand({
     // of the packages!
 
     try {
-      var appName = files.pathBasename(projectContext.projectDir);
-      cordova.buildTargets(projectContext, mobileTargets,
+      const cordovaProject = buildCordovaProject(projectContext, platforms,
         _.extend({}, options, {
-          appName: appName,
           debug: ! options.production,
           // Default to localhost for mobile builds.
           host: parsedMobileServer.host,
           protocol: parsedMobileServer.protocol,
           port: parsedMobileServer.port
         }));
-      runners = runners.concat(cordova.buildPlatformRunners(
-        projectContext, mobileTargets, options));
+      runners = runners.concat(buildCordovaRunners(projectContext,
+        cordovaProject, mobileTargets, options));
     } catch (err) {
       if (err instanceof main.ExitWithCode) {
         throw err;
