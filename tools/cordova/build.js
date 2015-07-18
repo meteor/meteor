@@ -4,7 +4,7 @@ import main from '../main.js';
 import { Console } from '../console.js';
 import buildmessage from '../buildmessage.js';
 import files from '../files.js';
-import bundler from '../bundler.js';
+import bundler from '../isobuild/bundler.js';
 import archinfo from '../archinfo.js';
 import release from '../release.js';
 import isopackets from '../isopackets.js'
