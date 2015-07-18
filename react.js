@@ -1,7 +1,7 @@
 // A visitor to ensure that React components included via the `{{>
 // React}}` template defined in the react-template-helper package are
 // the only child in their parent component. Otherwise `React.render`
-// would elinimate all of their sibling nodes.
+// would eliminate all of their sibling nodes.
 //
 // It's a little strange that this logic is in spacebars-compiler if
 // it's only relevant to a specific package but there's no way to have
