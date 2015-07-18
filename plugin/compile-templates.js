@@ -1,77 +1,49 @@
-var path = Npm.require('path');
-var LRU = Npm.require('lru-cache');
+const path = Npm.require('path');
 
-var CACHE_SIZE = process.env.METEOR_TEMPLATING_CACHE_SIZE || 1024*1024*10;
-var CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_TEMPLATING_CACHE_DEBUG;
+Plugin.registerCompiler({
+  extensions: ['html'],
+  archMatching: 'web',
+  isTemplate: true
+}, () => new TemplateCompiler());
 
-function TemplateCompiler () {
-  var self = this;
-  // Maps from a source hash to the return value of htmlScanner.scan (a {js,
-  // head, body} object.
-  self._cache = new LRU({
-    max: CACHE_SIZE,
-    // Cache is measured in bytes.
-    length: function (value) {
-      function lengthOrZero (field) {
-        return field ? field.length : 0;
-      }
-      return lengthOrZero(value.head) + lengthOrZero(value.body) +
-        lengthOrZero(value.js);
-    }
-  });
-}
-TemplateCompiler.prototype.processFilesForTarget = function (files) {
-  var self = this;
-  var bodyAttrs = {};
-  var bodyAttrsOrigin = {};
-
-  files.forEach(function (file) {
-    var scanned = doHTMLScanning(file, html_scanner, self._cache);
-
-    // failed to parse?
-    if (! scanned)
-      return;
-
-    Object.keys(scanned.bodyAttrs).forEach(function (attr) {
-      var val = scanned.bodyAttrs[attr];
-      if (bodyAttrs.hasOwnProperty(attr) && bodyAttrs[attr] !== val) {
-        // two conflicting attributes on <body> tags in two different template
-        // files
-        var conflictingFilesStr = [bodyAttrsOrigin[attr], file].map(function (f) {
-          return f.getPathInPackage();
-        }).join(', ');
-
-        file.error({
-          message: [
-            "<body> declarations have conflicting values for the '",
-            attr,
-            "' attribute in the following files: ",
-            conflictingFilesStr,
-            "."
-          ].join('')
-        });
-        return;
-      }
-
-      bodyAttrs[attr] = val;
-      bodyAttrsOrigin[attr] = file;
+// The CompileResult type for this CachingCompiler is the return value of
+// htmlScanner.scan: a {js, head, body, bodyAttrs} object.
+class TemplateCompiler extends CachingCompiler {
+  constructor() {
+    super({
+      compilerName: 'templating',
+      defaultCacheSize: 1024*1024*10,
     });
-  });
-};
+    this._bodyAttrInfo = null;
+  }
 
-var doHTMLScanning = function (inputFile, htmlScanner, cache) {
-  var cacheKey = inputFile.getSourceHash();
-  var results = cache.get(cacheKey);
+  compileResultSize(compileResult) {
+    function lengthOrZero(field) {
+      return field ? field.length : 0;
+    }
+    return lengthOrZero(compileResult.head) + lengthOrZero(compileResult.body) +
+      lengthOrZero(compileResult.js);
+  }
 
-  if (! results) {
-    var contents = inputFile.getContentsAsString();
+  processFilesForTarget(inputFiles) {
+    this._bodyAttrInfo = {};
+    super.processFilesForTarget(inputFiles);
+  }
+
+  getCacheKey(inputFile) {
+    // Note: the path is only used for errors, so it doesn't have to be part
+    // of the cache key.
+    return inputFile.getSourceHash();
+  }
+
+  compileOneFile(inputFile) {
+    const contents = inputFile.getContentsAsString();
+    const path = inputFile.getPathInPackage();
     try {
-      // Note: the path is only used for errors, so it doesn't have to be part
-      // of the cache key.
-      results = htmlScanner.scan(contents, inputFile.getPathInPackage());
+      return html_scanner.scan(contents, path);
     } catch (e) {
-      if ((e instanceof htmlScanner.ParseError) ||
-          (e instanceof htmlScanner.BodyAttrsError)) {
+      if ((e instanceof html_scanner.ParseError) ||
+          (e instanceof html_scanner.BodyAttrsError)) {
         inputFile.error({
           message: e.message,
           line: e.line
@@ -81,43 +53,52 @@ var doHTMLScanning = function (inputFile, htmlScanner, cache) {
         throw e;
       }
     }
-    cache.set(cacheKey, results);
   }
 
-  if (results.head)
-    inputFile.addHtml({ section: "head", data: results.head });
+  addCompileResult(inputFile, compileResult) {
+    if (compileResult.head) {
+      inputFile.addHtml({ section: "head", data: compileResult.head });
+    }
 
-  if (results.body)
-    inputFile.addHtml({ section: "body", data: results.body });
+    if (compileResult.body) {
+      inputFile.addHtml({ section: "body", data: compileResult.body });
+    }
 
-  if (results.js) {
-    var filePath = inputFile.getPathInPackage();
-    var pathPart = path.dirname(filePath);
-    if (pathPart === '.')
-      pathPart = '';
-    if (pathPart.length && pathPart !== path.sep)
-      pathPart = pathPart + path.sep;
-    var ext = path.extname(filePath);
-    var basename = path.basename(filePath, ext);
+    if (compileResult.js) {
+      const filePath = inputFile.getPathInPackage();
+      // XXX this path manipulation may be unnecessarily complex
+      let pathPart = path.dirname(filePath);
+      if (pathPart === '.')
+        pathPart = '';
+      if (pathPart.length && pathPart !== path.sep)
+        pathPart = pathPart + path.sep;
+      const ext = path.extname(filePath);
+      const basename = path.basename(filePath, ext);
 
-    // XXX generate a source map
+      // XXX generate a source map
 
-    inputFile.addJavaScript({
-      path: path.join(pathPart, "template." + basename + ".js"),
-      data: results.js
+      inputFile.addJavaScript({
+        path: path.join(pathPart, "template." + basename + ".js"),
+        data: compileResult.js
+      });
+    }
+
+    Object.keys(compileResult.bodyAttrs).forEach((attr) => {
+      const value = compileResult.bodyAttrs[attr];
+      if (this._bodyAttrInfo.hasOwnProperty(attr) &&
+          this._bodyAttrInfo[attr].value !== value) {
+        // two conflicting attributes on <body> tags in two different template
+        // files
+        inputFile.error({
+          message:
+          `<body> declarations have conflicting values for the '${ attr }' ` +
+            `attribute in the following files: ` +
+            this._bodyAttrInfo[attr].inputFile.getPathInPackage() +
+            `, ${ inputFile.getPathInPackage() }`
+        });
+      } else {
+        this._bodyAttrInfo[attr] = {inputFile, value};
+      }
     });
   }
-
-  return {
-    bodyAttrs: results.bodyAttrs
-  };
-};
-
-Plugin.registerCompiler({
-  extensions: ['html'],
-  archMatching: 'web',
-  isTemplate: true
-}, function () {
-    return new TemplateCompiler();
-});
-
+}
