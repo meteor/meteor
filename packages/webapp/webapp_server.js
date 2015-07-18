@@ -109,7 +109,7 @@ WebApp.categorizeRequest = function (req) {
   return _.extend({
     browser: identifyBrowser(req.headers['user-agent']),
     url: url.parse(req.url, true)
-  }, _.pick(req, 'head', 'body'));
+  }, _.pick(req, 'dynamicHead', 'dynamicBody'));
 };
 
 // HTML attribute hooks: functions to be called to determine any attributes to
@@ -244,7 +244,7 @@ var boilerplateByArch = {};
 // XXX so far this function is always called with arch === 'web.browser'
 var memoizedBoilerplate = {};
 var getBoilerplate = function (request, arch) {
-  var useMemoized = ! (request.head || request.body);
+  var useMemoized = ! (request.dynamicHead || request.dynamicBody);
   var htmlAttributes = getHtmlAttributes(request);
   
   if (useMemoized) {
@@ -268,7 +268,7 @@ var getBoilerplate = function (request, arch) {
   
   var boilerplateOptions = _.extend({ 
     htmlAttributes: htmlAttributes 
-  }, _.pick(request, 'head', 'body'));
+  }, _.pick(request, 'dynamicHead', 'dynamicBody'));
   
   return boilerplateByArch[arch].toHTML(boilerplateOptions);
 };
