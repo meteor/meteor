@@ -30,14 +30,18 @@ There are two different types of files recognized by this package:
 - Less imports:
   * files with the `import.less` extension: `*.import.less`
   * files in an `imports` directory: `**/imports/**/*.less`
-  * marked as `isImport: true` in the package's `package.js` file
+  * marked as `isImport: true` in the package's `package.js` file:
+    `api.addFiles('x.less', 'client', {isImport: true})`
 
-The source files are compiled automitically. The imports are not loaded, you
-need to import them from one of the source files to use them.
+The source files are compiled automatically. The imports are not loaded by
+themselves; you need to import them from one of the source files to use them.
 
-The imports are intended to keep shared mixins and variables for your project.
+The imports are intended to keep shared mixins and variables for your project,
+or to allow your package to provide several components which your package's
+users can opt into one by one.
 
-Each compiled source file produces a separate CSS file.
+Each compiled source file produces a separate CSS file.  (The
+`standard-minifiers` package merges them into one file afterwards.)
 
 ## Importing
 
@@ -68,4 +72,10 @@ Importing styles from the target app:
   // use a color from the app style pallete
   background-color: @primary-branding-color;
 }
+```
+
+Importing styles relative to the current package/app's root:
+
+```less
+@import "/path/to/style.import.less";
 ```
