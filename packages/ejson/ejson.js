@@ -199,33 +199,57 @@ EJSON._getConverters = function () {
 // for both arrays and objects, in-place modification.
 var adjustTypesToJSONValue =
 EJSON._adjustTypesToJSONValue = function (obj) {
-  // Is it an atom that we need to adjust?
-  if (obj === null)
-    return null;
-  var maybeChanged = toJSONValueHelper(obj);
-  if (maybeChanged !== undefined)
-    return maybeChanged;
+  var visited = []; // contains objects/arrays that we have visited
+  var vData = []; // contains data about visited objects
+  var parent = null; // used in recursion - to store parent node in vData
+  var cKey = null; // used in recursion - to store current key in vData
+  
+  var _adjust = function(obj){
+    // Is it an atom that we need to adjust?
+    if (obj === null)
+      return null;
+    var maybeChanged = toJSONValueHelper(obj);
+    if (maybeChanged !== undefined)
+      return maybeChanged;
 
-  // Other atoms are unchanged.
-  if (typeof obj !== 'object')
+    // Other atoms are unchanged.
+    if (typeof obj !== 'object')
+      return obj;
+
+    visited.push(obj);
+    vData.push({parent: parent, key: cKey, obj: obj});
+    // Iterate over array or object structure.
+    _.each(obj, function (value, key) {
+      if (typeof value !== 'object' && value !== undefined &&
+          !isInfOrNan(value))
+        return; // continue
+
+      var changed = toJSONValueHelper(value);
+      if (changed) {
+        obj[key] = changed;
+        return; // on to the next key
+      }
+      // if we get here, value is an object but not adjustable
+      // at this level.  recurse.
+      var vIdx = visited.indexOf(value);
+      if(vIdx === -1){
+        cKey = key;
+        parent = obj;
+        _adjust(value);
+      } else {
+        var refData = '';
+        var visitedNode = vData[vIdx];
+        while(visitedNode.parent !== null){
+          refData = '.' + visitedNode.key + refData;
+          visitedNode = vData[visited.indexOf(visitedNode.parent)];
+        };
+        obj[key] = '#ref.base' + refData;
+      }
+    });
     return obj;
-
-  // Iterate over array or object structure.
-  _.each(obj, function (value, key) {
-    if (typeof value !== 'object' && value !== undefined &&
-        !isInfOrNan(value))
-      return; // continue
-
-    var changed = toJSONValueHelper(value);
-    if (changed) {
-      obj[key] = changed;
-      return; // on to the next key
-    }
-    // if we get here, value is an object but not adjustable
-    // at this level.  recurse.
-    adjustTypesToJSONValue(value);
-  });
-  return obj;
+  };
+  
+  return _adjust(obj);
 };
 
 // Either return the JSON-compatible version of the argument, or undefined (if
