@@ -374,84 +374,108 @@ EJSON.isBinary = function (obj) {
  * @param {Boolean} options.keyOrderSensitive Compare in key sensitive order, if supported by the JavaScript implementation.  For example, `{a: 1, b: 2}` is equal to `{b: 2, a: 1}` only when `keyOrderSensitive` is `false`.  The default is `false`.
  */
 EJSON.equals = function (a, b, options) {
-  var i;
-  var keyOrderSensitive = !!(options && options.keyOrderSensitive);
-  if (a === b)
-    return true;
-  if (_.isNaN(a) && _.isNaN(b))
-    return true; // This differs from the IEEE spec for NaN equality, b/c we don't want
-                 // anything ever with a NaN to be poisoned from becoming equal to anything.
-  if (!a || !b) // if either one is falsy, they'd have to be === to be equal
-    return false;
-  if (!(typeof a === 'object' && typeof b === 'object'))
-    return false;
-  if (a instanceof Date && b instanceof Date)
-    return a.valueOf() === b.valueOf();
-  if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
-    if (a.length !== b.length)
-      return false;
-    for (i = 0; i < a.length; i++) {
-      if (a[i] !== b[i])
-        return false;
-    }
-    return true;
-  }
-  if (typeof (a.equals) === 'function')
-    return a.equals(b, options);
-  if (typeof (b.equals) === 'function')
-    return b.equals(a, options);
-  if (a instanceof Array) {
-    if (!(b instanceof Array))
-      return false;
-    if (a.length !== b.length)
-      return false;
-    for (i = 0; i < a.length; i++) {
-      if (!EJSON.equals(a[i], b[i], options))
-        return false;
-    }
-    return true;
-  }
-  // fallback for custom types that don't implement their own equals
-  switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
-    case 1: return false;
-    case 2: return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
-  }
-  // fall back to structural equality of objects
-  var ret;
-  if (keyOrderSensitive) {
-    var bKeys = [];
-    _.each(b, function (val, x) {
-        bKeys.push(x);
-    });
-    i = 0;
-    ret = _.all(a, function (val, x) {
-      if (i >= bKeys.length) {
-        return false;
-      }
-      if (x !== bKeys[i]) {
-        return false;
-      }
-      if (!EJSON.equals(val, b[bKeys[i]], options)) {
-        return false;
-      }
-      i++;
+  var aVisited = []; // visited objects in a
+  var bVisited = []; // visited objects in b
+  
+  var _equals = function(a, b, options){
+    var i;
+    var keyOrderSensitive = !!(options && options.keyOrderSensitive);
+    if (a === b)
       return true;
-    });
-    return ret && i === bKeys.length;
-  } else {
-    i = 0;
-    ret = _.all(a, function (val, key) {
-      if (!_.has(b, key)) {
+    if (_.isNaN(a) && _.isNaN(b))
+      return true; // This differs from the IEEE spec for NaN equality, b/c we don't want
+                   // anything ever with a NaN to be poisoned from becoming equal to anything.
+    if (!a || !b) // if either one is falsy, they'd have to be === to be equal
+      return false;
+    if (!(typeof a === 'object' && typeof b === 'object'))
+      return false;
+    if (a instanceof Date && b instanceof Date)
+      return a.valueOf() === b.valueOf();
+    if (EJSON.isBinary(a) && EJSON.isBinary(b)) {
+      if (a.length !== b.length)
         return false;
+      for (i = 0; i < a.length; i++) {
+        if (a[i] !== b[i])
+          return false;
       }
-      if (!EJSON.equals(val, b[key], options)) {
-        return false;
-      }
-      i++;
       return true;
-    });
-    return ret && _.size(b) === i;
-  }
+    }
+    if (typeof (a.equals) === 'function')
+      return a.equals(b, options);
+    if (typeof (b.equals) === 'function')
+      return b.equals(a, options);
+    if (a instanceof Array) {
+      if (!(b instanceof Array))
+        return false;
+      if (a.length !== b.length)
+        return false;
+      for (i = 0; i < a.length; i++) {
+        if (!_equals(a[i], b[i], options))
+          return false;
+      }
+      return true;
+    }
+    // fallback for custom types that don't implement their own equals
+    switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
+      case 1: return false;
+      case 2: return _equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
+    }
+    // fall back to structural equality of objects
+    var ret;
+    aVisited.push(a);
+    bVisited.push(b);
+    
+    if (keyOrderSensitive) {
+      var bKeys = [];
+      _.each(b, function (val, x) {
+          bKeys.push(x);
+      });
+      i = 0;
+      ret = _.all(a, function (val, x) {
+        if (i >= bKeys.length) {
+          return false;
+        }
+        if (x !== bKeys[i]) {
+          return false;
+        }
+        var aVIdx = aVisited.indexOf(val);
+        if(aVIdx === -1){
+          if (!_equals(val, b[bKeys[i]], options)) {
+            return false;
+          }
+        } else {
+          if(bVisited.indexOf(b[bKeys[i]]) !== aVIdx){
+            return false;
+          }
+        }
+        i++;
+        return true;
+      });
+      return ret && i === bKeys.length;
+    } else {
+      i = 0;
+      ret = _.all(a, function (val, key) {
+        if (!_.has(b, key)) {
+          return false;
+        }
+        var aVIdx = aVisited.indexOf(val);
+        if(aVIdx === -1){
+          if (!_equals(val, b[key], options)) {
+            return false;
+          }
+        } else {
+          if(bVisited.indexOf(b[key]) !== aVIdx){
+            return false;
+          }
+        }
+        i++;
+        return true;
+      });
+      return ret && _.size(b) === i;
+    }
+  };
+  
+  return _equals(a, b, options);
 };
 
 /**

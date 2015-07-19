@@ -41,6 +41,15 @@ Tinytest.add("ejson - some equality tests", function (test) {
   test.isFalse(EJSON.equals({a: 1, b: 2, c: 3}, {a: 1, c: 3, b: 4}));
   test.isFalse(EJSON.equals({a: {}}, {a: {b:2}}));
   test.isFalse(EJSON.equals({a: {b:2}}, {a: {}}));
+  
+  // Test circular references
+  var circ = {};
+  circ.circ = circ;
+  var circ2 = {};
+  circ2.circ = circ2;
+  test.isTrue(EJSON.equals(circ, circ));
+  test.isTrue(EJSON.equals(circ, circ2));
+  test.isFalse(EJSON.equals(circ, {}));
 });
 
 Tinytest.add("ejson - equality and falsiness", function (test) {
