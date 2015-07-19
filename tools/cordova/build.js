@@ -10,7 +10,8 @@ import release from '../release.js';
 import isopackets from '../isopackets.js'
 
 import { createCordovaProjectIfNecessary } from './project.js';
-import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized } from './platforms.js';
+import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized,
+  checkCordovaPlatforms } from './platforms.js';
 import { ensureCordovaPluginsAreSynchronized } from './plugins.js';
 import { processMobileControlFile } from './mobile-control-file.js';
 
@@ -31,6 +32,8 @@ export function buildCordovaProject(projectContext, platforms, options) {
   if (_.isEmpty(platforms)) return;
 
   Console.debug('Building the Cordova project');
+
+  platforms = checkCordovaPlatforms(projectContext, platforms);
 
   // Make sure there is a project, as all other operations depend on that
   const cordovaProject = createCordovaProjectIfNecessary(projectContext);

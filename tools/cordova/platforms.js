@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import main from '../main.js';
 import { Console } from '../console.js';
 import { PlatformList } from '../project-context.js';
 
@@ -53,3 +54,26 @@ export function ensureCordovaPlatformsAreSynchronized(cordovaProject, projectCon
     }
   });
 };
+
+// Filter out unsupported Cordova platforms, and exit if platform hasn't been
+// added to the project yet
+export function checkCordovaPlatforms(projectContext, platforms) {
+  var cordovaPlatformsInProject = projectContext.platformList.getCordovaPlatforms();
+  return _.filter(platforms, function (platform) {
+    var inProject = _.contains(cordovaPlatformsInProject, platform);
+
+    if (platform === 'ios' && process.platform !== 'darwin') {
+      Console.warn("Currently, it is only possible to build iOS apps on an OS X system.");
+      return false;
+    }
+
+    if (!inProject) {
+      Console.warn("Please add the " + displayNameForPlatform(platform) +
+                   " platform to your project first.");
+      Console.info("Run: " + Console.command("meteor add-platform " + platform));
+      throw new main.ExitWithCode(2);
+    }
+
+    return true;
+  });
+}
