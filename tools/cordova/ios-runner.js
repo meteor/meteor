@@ -53,7 +53,7 @@ export default class iOSRunner extends CordovaRunner {
   }
 }
 
-function openInXcode(prodddddddddddddddddddjectDir) {
+function openInXcode(projectDir) {
   // XXX this is buggy if your app directory is under something with a space,
   // because the this.projectRoot part is not quoted for sh!
   args = ['-c', 'open ' +
