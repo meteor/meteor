@@ -6,9 +6,11 @@ export default class CordovaRunner {
   constructor(projectContext, cordovaProject, options) {
     this.projectContext = projectContext;
     this.cordovaProject = cordovaProject;
-
     this.options = options;
-    this.title = `app on ${this.displayName}`;
+  }
+
+  get title() {
+    return `app on ${this.displayName}`;
   }
 
   prestart() {
