@@ -31,6 +31,8 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(["ecmascript", "tinytest"]);
-  api.addFiles("ecmascript-tests.js");
+  api.use(["tinytest", "underscore"]);
+  api.use(["ecmascript", "babel-compiler"]);
+  api.addFiles("runtime-tests.js");
+  api.addFiles("transpilation-tests.js", "server");
 });
