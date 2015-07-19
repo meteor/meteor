@@ -460,47 +460,64 @@ EJSON.equals = function (a, b, options) {
  * @param {EJSON} val A value to copy.
  */
 EJSON.clone = function (v) {
-  var ret;
-  if (typeof v !== "object")
-    return v;
-  if (v === null)
-    return null; // null has typeof "object"
-  if (v instanceof Date)
-    return new Date(v.getTime());
-  // RegExps are not really EJSON elements (eg we don't define a serialization
-  // for them), but they're immutable anyway, so we can support them in clone.
-  if (v instanceof RegExp)
-    return v;
-  if (EJSON.isBinary(v)) {
-    ret = EJSON.newBinary(v.length);
-    for (var i = 0; i < v.length; i++) {
-      ret[i] = v[i];
+  var visited = []; // objects that we have seen throughout the cloning process
+  var clones = []; // clones of the objects that we have seen
+  
+  var _clone = function(v){
+    var ret;
+    if (typeof v !== "object")
+      return v;
+    if (v === null)
+      return null; // null has typeof "object"
+    if (v instanceof Date)
+      return new Date(v.getTime());
+    // RegExps are not really EJSON elements (eg we don't define a serialization
+    // for them), but they're immutable anyway, so we can support them in clone.
+    if (v instanceof RegExp)
+      return v;
+    if (EJSON.isBinary(v)) {
+      ret = EJSON.newBinary(v.length);
+      for (var i = 0; i < v.length; i++) {
+        ret[i] = v[i];
+      }
+      return ret;
     }
+    // XXX: Use something better than underscore's isArray
+    if (_.isArray(v) || _.isArguments(v)) {
+      // For some reason, _.map doesn't work in this context on Opera (weird test
+      // failures).
+      ret = [];
+      for (i = 0; i < v.length; i++)
+        ret[i] = _clone(v[i]);
+      return ret;
+    }
+    // handle general user-defined typed Objects if they have a clone method
+    if (typeof v.clone === 'function') {
+      return v.clone();
+    }
+    // handle other custom types
+    if (EJSON._isCustomType(v)) {
+      return EJSON.fromJSONValue(_clone(EJSON.toJSONValue(v)), true);
+    }
+    // handle other objects
+    ret = {};
+    visited.push(v);
+    clones.push(ret);
+    
+    _.each(v, function (value, key) {
+      // check for circular references. If there is a circular reference, insert
+      // the clone of the object
+      var vIdx = visited.indexOf(value);
+      if(vIdx === -1){
+        ret[key] = _clone(value);
+      } else {
+        ret[key] = clones[vIdx];
+      }
+    });
     return ret;
   }
-  // XXX: Use something better than underscore's isArray
-  if (_.isArray(v) || _.isArguments(v)) {
-    // For some reason, _.map doesn't work in this context on Opera (weird test
-    // failures).
-    ret = [];
-    for (i = 0; i < v.length; i++)
-      ret[i] = EJSON.clone(v[i]);
-    return ret;
-  }
-  // handle general user-defined typed Objects if they have a clone method
-  if (typeof v.clone === 'function') {
-    return v.clone();
-  }
-  // handle other custom types
-  if (EJSON._isCustomType(v)) {
-    return EJSON.fromJSONValue(EJSON.clone(EJSON.toJSONValue(v)), true);
-  }
-  // handle other objects
-  ret = {};
-  _.each(v, function (value, key) {
-    ret[key] = EJSON.clone(value);
-  });
-  return ret;
+  
+  return _clone(v);
 };
 
 /**

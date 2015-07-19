@@ -90,6 +90,11 @@ Tinytest.add("ejson - clone", function (test) {
   cloneTest([1, 2, 3]);
   cloneTest([1, "fasdf", {foo: 42}]);
   cloneTest({x: 42, y: "asdf"});
+  
+  // Test circular references
+  var circ = {};
+  circ.circ = circ;
+  cloneTest(circ);
 
   var testCloneArgs = function (/*arguments*/) {
     var clonedArgs = EJSON.clone(arguments);
