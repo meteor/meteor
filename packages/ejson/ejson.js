@@ -286,29 +286,49 @@ EJSON.toJSONValue = function (item) {
 //
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
-  if (obj === null)
-    return null;
-  var maybeChanged = fromJSONValueHelper(obj);
-  if (maybeChanged !== obj)
-    return maybeChanged;
+  var base = obj; // stores base object (in case we recurse somewhere)
+  
+  var _adjust = function(obj){
+    if (obj === null)
+      return null;
+    var maybeChanged = fromJSONValueHelper(obj);
+    if (maybeChanged !== obj)
+      return maybeChanged;
 
-  // Other atoms are unchanged.
-  if (typeof obj !== 'object')
-    return obj;
+    // Other atoms are unchanged.
+    if (typeof obj !== 'object')
+      return obj;
 
-  _.each(obj, function (value, key) {
-    if (typeof value === 'object') {
-      var changed = fromJSONValueHelper(value);
-      if (value !== changed) {
-        obj[key] = changed;
-        return;
+    _.each(obj, function (value, key) {
+      if(typeof value === 'string' && value.indexOf('#ref') === 0){
+        // value is referencing another object
+        // reference is a string with the format '#ref.base.<key>...<key>'
+        var refData = value.split('.');
+        // reference always starts with '#ref.base', so remove first 2 elements
+        refData.splice(0, 2);
+        var cObj = base;
+        
+        while(refData.length > 0){
+          cObj = cObj[refData.shift()];
+        }
+        
+        // replace reference string with the real object
+        obj[key] = cObj;
+      } else if (typeof value === 'object') {
+        var changed = fromJSONValueHelper(value);
+        if (value !== changed) {
+          obj[key] = changed;
+          return;
+        }
+        // if we get here, value is an object but not adjustable
+        // at this level.  recurse.
+        _adjust(value);
       }
-      // if we get here, value is an object but not adjustable
-      // at this level.  recurse.
-      adjustTypesFromJSONValue(value);
-    }
-  });
-  return obj;
+    });
+    return obj;
+  };
+  
+  return _adjust(obj);
 };
 
 // Either return the argument changed to have the non-json
