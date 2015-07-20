@@ -21,20 +21,17 @@ export default class iOSRunner extends CordovaRunner {
     return this.isDevice ? 'iOS Device' : 'iOS Simulator';
   }
 
-  configureEnv() {
-    let path = process.env.PATH || '.';
-    path += ':' + files.pathJoin(files.getCurrentToolsDir(), 'tools/node_modules/ios-sim/bin');
-    process.env['PATH'] = path;
-  }
-
-  async run(options) {
+  async run(options = {}) {
     // ios-deploy is super buggy, so we just open xcode and let the user
     // start the app themselves.
     if (this.isDevice) {
       openInXcode(files.pathJoin(this.cordovaProject.projectRoot, 'platforms', 'ios'));
     } else {
-      this.configureEnv();
-      return this.cordovaProject.run(this.platform, this.isDevice, options)
+      let path = process.env.PATH || '.';
+      path += ':' + files.pathJoin(files.getCurrentToolsDir(), 'tools/node_modules/ios-sim/bin');
+      let env = options.env || {};
+      env.PATH = path;
+      return this.cordovaProject.run(this.platform, this.isDevice, _.extend(options, { env: env }));
     }
   }
 
