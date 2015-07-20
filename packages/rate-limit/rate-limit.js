@@ -165,10 +165,7 @@ RateLimiter.prototype.check = function (input) {
       // other rules that match, update the reply field.
       if (rule.options.numRequestsAllowed - numInvocations <
         reply.numInvocationsLeft && reply.allowed) {
-        reply.allowed = true;
-        reply.timeToReset = ruleResult.timeToNextReset < 0 ?
-          rule.options.intervalTime :
-          ruleResult.timeToNextReset;
+        reply.timeToReset = ruleResult.timeToNextReset;
         reply.numInvocationsLeft = rule.options.numRequestsAllowed -
           numInvocations;
       }

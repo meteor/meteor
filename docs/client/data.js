@@ -2379,18 +2379,18 @@ DocsData = {
   "DDPRateLimiter.addRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 40,
+    "lineno": 77,
     "longname": "DDPRateLimiter.addRule",
     "memberof": "DDPRateLimiter",
     "name": "addRule",
     "options": [],
     "params": [
       {
-        "description": "<p>Rule should be an object where the keys are one or\nmore of <code>['userId', 'ipAddr', 'type', 'name', 'sessionId']</code> and the values\nare either <code>null</code>, a primitive, or a function that returns true if the rule\nshould apply to the provided input for that key.</p>",
-        "name": "rule",
+        "description": "<p>Matchers specify which events are counted towards a rate limit. A matcher\n  is an object that has a subset of the same properties as the event objects\n  described above. Each value in a matcher object is one of the following:</p>\n<ul>\n<li><p>a string: for the event to satisfy the matcher, this value must be equal\nto the value of the same property in the event object</p>\n</li>\n<li><p>a function: for the event to satisfy the matcher, the function must\nevaluate to true when passed the value of the same property\nin the event object</p>\n</li>\n</ul>\n<p>Here's how events are counted: Each event that satisfies the matcher's\nfilter is mapped to a bucket. Buckets are uniquely determined by the\nevent object's values for all properties present in both the matcher and\nevent objects.</p>",
+        "name": "matcher",
         "type": {
           "names": [
-            "object"
+            "Object"
           ]
         }
       },
@@ -2399,7 +2399,7 @@ DocsData = {
         "name": "numRequests",
         "type": {
           "names": [
-            "integer"
+            "number"
           ]
         }
       },
@@ -2408,28 +2408,18 @@ DocsData = {
         "name": "timeInterval",
         "type": {
           "names": [
-            "integer"
-          ]
-        }
-      }
-    ],
-    "returns": [
-      {
-        "description": "<p>Returns unique <code>ruleId</code> that can be passed to <code>removeRule</code>.</p>",
-        "type": {
-          "names": [
-            "string"
+            "number"
           ]
         }
       }
     ],
     "scope": "static",
-    "summary": "Adds a rule with a number of requests allowed per time interval.\nReturns a `ruleId` string that is used as the input to `removeRule()`."
+    "summary": "Add a rule that matches against a stream of events describing method or\nsubscription attempts. Each event is an object with the following properties:\n\n- `type`: Either \"method\" or \"subscription\"\n- `name`: The name of the method or subscription being called\n- `userId`: The user ID attempting the method or subscription\n- `connectionId`: A string representing the user's DDP connection\n- `ipAddr`: The IP address of the user\n\nReturns unique `ruleId` that can be passed to `removeRule`."
   },
   "DDPRateLimiter.removeRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 49,
+    "lineno": 86,
     "longname": "DDPRateLimiter.removeRule",
     "memberof": "DDPRateLimiter",
     "name": "removeRule",
@@ -2461,7 +2451,7 @@ DocsData = {
   "DDPRateLimiter.setErrorMessage": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 23,
+    "lineno": 25,
     "longname": "DDPRateLimiter.setErrorMessage",
     "memberof": "DDPRateLimiter",
     "name": "setErrorMessage",
@@ -2479,7 +2469,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Update the error message returned when call is rate limited."
+    "summary": "Set error message text when method or subscription rate limit\nexceeded."
   },
   "EJSON": {
     "filepath": "ejson/ejson.js",

@@ -590,9 +590,9 @@ _.extend(Session.prototype, {
         var rateLimiterInput = {
           userId: self.userId,
           ipAddr: self.connectionHandle.clientAddress,
-          type: "sub",
+          type: "subscription",
           name: msg.name,
-          sessionId: self.id
+          connectionId: self.id
         };
 
         DDPRateLimiter._increment(rateLimiterInput);
@@ -600,7 +600,10 @@ _.extend(Session.prototype, {
         if (!rateLimitResult.allowed) {
           self.send({
             msg: 'nosub', id: msg.id,
-            error: new Meteor.Error('too-many-requests', DDPRateLimiter.getErrorMessage(rateLimitResult))
+            error: new Meteor.Error(
+              'too-many-requests',
+              DDPRateLimiter.getErrorMessage(rateLimitResult),
+              {timeToReset: rateLimitResult.timeToReset});
           });
         }
       }
@@ -683,7 +686,7 @@ _.extend(Session.prototype, {
             ipAddr: self.connectionHandle.clientAddress,
             type: "method",
             name: msg.method,
-            sessionId: self.id
+            connectionId: self.id
           };
           DDPRateLimiter._increment(rateLimiterInput);
           var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)

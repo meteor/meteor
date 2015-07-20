@@ -182,39 +182,37 @@ options about how the client executes the method.
 
 <h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
 
-The DDPRateLimiter allows users to add rules to limit calls to Meteor methods
-and subscriptions by one or more of user IDs, IP addresses, sessions, and
-method & subscription names. The rate limiter is called on every method and
-subscription invocation. A default rule of limiting login, password reset and
-new user creation  attempts to 5 calls every 10 seconds per session has been
-added to the [`accounts package`](#accounts_api). The rule can be removed by
-calling `Accounts.removeDefaultRateLimit()`.
+Customize rate limiting for methods and subscriptions.
 
-The DDPRateLimiter is configured with a set of rules. Each rule is a set of
-keys to be inspected with filters on those keys to specify all DDP messages
-that satisfy the rule. Each of these possible messages that satisfy the rule
-is given a bucket by creating a unique string composed of all the keys in the
-rule and the values from the message. After each rule's specified time
-interval, all the buckets are deleted. A rate limit is said to have been hit
-when a bucket has reached the rule's capacity, at which point errors will be
-returned for that input until the buckets are reset.
+By default, `DDPRateLimiter` is configured with a single rule. This rule
+limits login attempts, new user creation, and password resets to 5 attempts
+every 10 seconds per connection. It can be removed by calling
+`Accounts.removeDefaultRateLimit()`.
+
+{{> autoApiBox "DDPRateLimiter.addRule"}}
+
+Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
+limiter is called on every method and subscription invocation.
+
+A rate limit is reached when a bucket has surpassed the rule's predefined
+capactiy, at which point errors will be returned for that input until the
+buckets are reset. Buckets are regularly reset after the end of a time
+interval.
+
 
 Here's example of defining a rule and adding it into the `DDPRateLimiter`:
 ```javascript
-// Add a rule that limits all users except Admins to have 5 login attempts per second
+// Define a rule that matches login attempts by non-admin users
 var loginRule = {
-    userId: function (userId) {
-        return Meteor.users.findOne(userId).type !== 'Admin';
-    },
-    type: 'method',
-    method: 'login'
+  userId: function (userId) {
+    return Meteor.users.findOne(userId).type !== 'Admin';
+  },
+  type: 'method',
+  method: 'login'
 }
-// Add the rule, setting the number of messages allowed at 5 with a time
-// interval of 1000 milliseconds.
+// Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
-
-{{> autoApiBox "DDPRateLimiter.addRule"}}
 {{> autoApiBox "DDPRateLimiter.removeRule"}}
 {{> autoApiBox "DDPRateLimiter.setErrorMessage"}}
 {{/template}}

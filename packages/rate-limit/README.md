@@ -26,11 +26,11 @@ follows:
 
 ```javascript
 {
-	...
-	id: function (id) {
-		return id % 2 === 0;
-	},
-	...
+  ...
+  id: function (id) {
+    return id % 2 === 0;
+  },
+  ...
 }
 ```
 A rule is only said to apply to a given input if every key in the matcher
@@ -49,18 +49,18 @@ with matchers as such:
 
 ```javascript
 {
- username: function(username)  {
- 	return true;
- },
- methodName: 'hello'
+  username: function(username)  {
+    return true;
+  },
+  methodName: 'hello'
 }
 ```
 and we were passed an input as follows:
 
 ```
 {
- username: 'meteor'
- methodName: 'hello'
+  username: 'meteor'
+  methodName: 'hello'
 }
 ```
 The key generated would be 'usernamemeteormethodNamehello'. This is guaranteed
