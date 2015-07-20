@@ -176,7 +176,7 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
     var absolutePath = absoluteImportPath({
       packageName: currentlyCompiledPackage,
-      filePath: currentlyCompiledFile
+      pathInPackage: '/' + currentlyCompiledFile
     });
 
     var cacheEntry = self._cache.get(absolutePath);
