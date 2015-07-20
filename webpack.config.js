@@ -3,7 +3,7 @@ module.exports = {
   entry: "promise",
   output: {
     library: "Promise",
-    libraryTarget: "var",
+    libraryTarget: "this",
     path: __dirname,
     filename: "promise_client.js"
   }
