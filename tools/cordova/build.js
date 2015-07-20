@@ -106,23 +106,6 @@ export function buildCordovaProject(projectContext, platforms, options) {
     // Run the actual build
     Console.debug('Running the build command');
 
-    // Depending on the debug mode build the android part in different modes
-    if (_.contains(projectContext.platformList.getPlatforms(), 'android') &&
-        _.contains(platforms, 'android')) {
-      var androidBuildPath = files.pathJoin(cordovaProject.projectRoot, 'platforms', 'android');
-      var manifestPath = files.pathJoin(androidBuildPath, 'AndroidManifest.xml');
-
-      // XXX a hack to reset the debuggable mode
-      var manifest = files.readFile(manifestPath, 'utf8');
-      manifest = manifest.replace(/android:debuggable=.(true|false)./g, '');
-      if (options.debug)
-        manifest = manifest.replace(/<application /g, '<application android:debuggable="' + !!options.debug + '" ');
-      files.writeFile(manifestPath, manifest, 'utf8');
-
-      // XXX workaround the problem of cached apk invalidation
-      files.rm_recursive(files.pathJoin(androidBuildPath, 'build'));
-    }
-
     buildmessage.enterJob({ title: 'building mobile project' }, () => {
       const buildOptions = options.debug ? [] : ['release'];
       Promise.await(cordovaProject.build({ platforms: platforms, options: buildOptions }));
