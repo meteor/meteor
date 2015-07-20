@@ -15,21 +15,11 @@ selftest.define("add cordova platforms", ["cordova"], function () {
   run.match("meteor add-platform android");
   run.expectExit(2);
 
-  // XXX: This prints the Android EULA.
-  // We should move this to a once-per-machine agreement.
-  /*
-  run = s.run("add-platform", "android");
-  run.matchErr("Platform is not installed");
-  run.expectExit(2);
-  */
-
   run = s.run("install-sdk", "android");
   run.waitSecs(90); // Big downloads
   run.expectExit(0);
 
   run = s.run("add-platform", "android");
-  run.match("Do you agree");
-  run.write("Y\n");
   run.waitSecs(90); // Huge download
   run.match("added");
   run.expectExit(0);

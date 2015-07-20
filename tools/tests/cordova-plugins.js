@@ -170,9 +170,6 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.match("meteor add-platform ");
 
   run = s.run("add-platform", "android");
-  run.waitSecs(2);
-  run.match("Do you agree");
-  run.write("Y\n");
   run.waitSecs(90); // Huge download
   run.match("added platform");
 
@@ -282,7 +279,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
 
 });
 
-selftest.define("remove cordova plugins", function () {
+selftest.define("remove cordova plugins", ['cordova'], function () {
   var s = new Sandbox();
   var run;
 
@@ -336,8 +333,6 @@ selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"
 
   // Add a platform via command line
   var platformRun = s.run("add-platform", "android");
-  platformRun.match("Do you agree");
-  platformRun.write("Y\n");
   platformRun.waitSecs(90); // Huge download
   platformRun.match("added platform");
 
@@ -397,8 +392,6 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   s.cd("myapp");
 
   run = s.run("add-platform", "android");
-  run.match("Do you agree");
-  run.write("Y\n");
   run.waitSecs(90);
   run.match("added platform");
 
@@ -506,8 +499,6 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   s.cd("myapp");
 
   run = s.run("add-platform", "android");
-  run.match("Do you agree");
-  run.write("Y\n");
   run.waitSecs(90); // Huge download
   run.match("added platform");
 
@@ -646,8 +637,6 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow", 
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
   run = s.run("add-platform", "android");
-  run.match("Do you agree");
-  run.write("Y\n");
   run.waitSecs(90); // Huge download
   run.match("added platform");
 
