@@ -3,6 +3,8 @@ var stylus = Npm.require('stylus');
 var nib = Npm.require('nib');
 var Future = Npm.require('fibers/future');
 var LRU = Npm.require('lru-cache');
+var fs = Npm.require('fs');
+var path = Npm.require('path');
 
 Plugin.registerCompiler({
   extensions: ['styl'],
@@ -92,6 +94,16 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
 
       if (! parsed) { return null; }
 
+      if (importPath[0] !== '{') {
+        // if it is not a custom syntax path, it could be a lookup in a folder
+        for (var i = paths.length - 1; i >= 0; i--) {
+          var joined = path.join(paths[i], importPath);
+          if (fs.existsSync(joined))
+            return [joined];
+        }
+      }
+
+
       var absolutePath = absoluteImportPath(parsed);
 
       if (! filesByAbsoluteImportPath[absolutePath]) {
@@ -101,12 +113,27 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       return [absolutePath];
     },
     readFile: function (filePath) {
+      var isAbsolute = (process.platform === 'win32') ?
+                       filePath[0].match(/^[A-Za-z]:\\/) : filePath[0] === '/';
+      var normalizedPath = (process.platform === 'win32') ?
+                           filePath.replace(/\\/g, '/') : filePath;
+      var isNib = normalizedPath.indexOf('/node_modules/nib/lib/nib/') !== -1;
+      var isStylusBuiltIn = normalizedPath.indexOf('/node_modules/stylus/lib/') !== -1;
+
+      if (isAbsolute || isNib || isStylusBuiltIn) {
+        // absolute path? let the default implementation handle this
+        return fs.readFileSync(filePath, 'utf8');
+      }
+
       var parsed = parseImportPath(filePath);
       var absolutePath = absoluteImportPath(parsed);
 
       currentlyProcessedImports.push(absolutePath);
 
-      if (! filesByAbsoluteImportPath[absolutePath]) throw new Error('Cannot read file ' + absolutePath);
+      if (! filesByAbsoluteImportPath[absolutePath]) {
+        throw new Error(
+          'Cannot read file ' + absolutePath + ' for ' + currentlyCompiledPackage + '/' + currentlyCompiledFile);
+      }
 
       return filesByAbsoluteImportPath[absolutePath].getContentsAsString();
     }
@@ -159,10 +186,9 @@ StylusCompiler.prototype.processFilesForTarget = function (files) {
       // Append a cache buster because Stylus has a buggy caching
       // based on the contents that produces incorrect sourcemaps (the
       // 'filename' field is not checked into cache)
-      var cacheBuster = '/*random cache buster ' + Math.random() + '*/';
       var f = new Future;
 
-      var style = stylus(inputFile.getContentsAsString() + cacheBuster)
+      var style = stylus(inputFile.getContentsAsString())
         .use(nib())
         .set('filename', pathInPackage)
         .set('sourcemap', { inline: false, comment: false })

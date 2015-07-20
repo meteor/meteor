@@ -9,7 +9,7 @@ Package.registerBuildPlugin({
     'plugin/compile-stylus.js'
   ],
   npmDependencies: {
-    stylus: "https://github.com/meteor/stylus/tarball/b05bbcb7c840f3541d78e5f78e81dd28913e3281", // fork of 0.51.1
+    stylus: "https://github.com/meteor/stylus/tarball/d4352c9cb4056faf238e6bd9f9f2172472b67c5b", // fork of 0.51.1
     nib: "1.1.0",
     "lru-cache": "2.6.4"
   }

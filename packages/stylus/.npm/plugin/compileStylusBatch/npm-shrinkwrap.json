@@ -55,7 +55,7 @@
       }
     },
     "stylus": {
-      "version": "https://github.com/meteor/stylus/tarball/b05bbcb7c840f3541d78e5f78e81dd28913e3281",
+      "version": "https://github.com/meteor/stylus/tarball/d4352c9cb4056faf238e6bd9f9f2172472b67c5b",
       "dependencies": {
         "css-parse": {
           "version": "1.7.0"
@@ -99,7 +99,7 @@
           "version": "0.1.43",
           "dependencies": {
             "amdefine": {
-              "version": "0.1.1"
+              "version": "1.0.0"
             }
           }
         }
