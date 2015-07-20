@@ -860,13 +860,6 @@ var buildCordova = function (projectContext, platforms, options) {
         bundle.starManifest)
     }));
 
-    // XXX hack, copy files from app folder one level up
-    if (files.exists(cordovaProgramAppPath)) {
-      verboseLog('Copying the JS/CSS files one level up');
-      files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
-      files.rm_recursive(cordovaProgramAppPath);
-    }
-
     verboseLog('Removing the www folder');
     // rewrite the www folder
     files.rm_recursive(wwwPath);
