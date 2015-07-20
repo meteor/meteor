@@ -601,76 +601,6 @@ _.extend(exports.ThrottledYield.prototype, {
   }
 });
 
-
-// Are we running on device?
-exports.runOnDevice = function (options) {
-  return !! _.intersection(options.args,
-    ['ios-device', 'android-device']).length;
-};
-
-// Given the options for a 'meteor run' command, returns a parsed URL ({
-// host: *, protocol: *, port: * }. The rules for --mobile-server are:
-//   * If you don't specify anything for --mobile-server, then it
-//     defaults to <detected ip address>:<port from --port>.
-//   * If you specify something for --mobile-server, we use that,
-//     defaulting to http:// as the protocol and 80 or 443 as the port.
-exports.mobileServerForRun = function (options) {
-  // we want to do different IP generation depending on whether we
-  // are running for a device or simulator
-  options = _.extend({}, options, {
-    runOnDevice: exports.runOnDevice(options)
-  });
-
-  var parsedUrl = parseUrl(options.port);
-  if (! parsedUrl.port) {
-    throw new Error("--port must include a port.");
-  }
-
-  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  var mobileServer = options["mobile-server"] || options["mobile-port"];
-
-
-  // if we specified a mobile server, use that
-
-  if (mobileServer) {
-    var parsedMobileServer = parseUrl(mobileServer, {
-      protocol: "http://"
-    });
-
-    if (! parsedMobileServer.host) {
-      throw new Error("--mobile-server must specify a hostname.");
-    }
-
-    return parsedMobileServer;
-  }
-
-
-  // if we are running on a device, use the auto-detected IP
-
-  if (options.runOnDevice) {
-    var myIp = ipAddress();
-    if (! myIp) {
-      throw new Error(
-"Error detecting IP address for mobile app to connect to.\n" +
-"Please specify the address that the mobile app should connect\n" +
-"to with --mobile-server.");
-    }
-
-    return {
-      host: myIp,
-      port: parsedUrl.port,
-      protocol: "http://"
-    };
-  }
-
-  // we are running a simulator, use localhost:3000
-  return {
-    host: "localhost",
-    port: parsedUrl.port,
-    protocol: "http://"
-  };
-};
-
 // Use this to convert dates into our preferred human-readable format.
 //
 // Takes in either null, a raw date string (ex: 2014-12-09T18:37:48.977Z) or a
@@ -705,4 +635,3 @@ exports.sourceMapLength = function (sm) {
          return soFar + (current ? current.length : 0);
        }, 0);
 };
-

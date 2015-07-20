@@ -69,6 +69,104 @@ var showInvalidArchMsg = function (arch) {
   });
 };
 
+// Utility functions to parse options in run/build/test-packages commands
+
+export function parseServerOptionsForRunCommand(options) {
+  const serverUrl = parsePortOption(options.port);
+
+  // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
+  const mobileServerOption = options['mobile-server'] || options['mobile-port'];
+  let mobileServerUrl;
+  if (mobileServerOption) {
+    mobileServerUrl = parseMobileServerOption(mobileServerOption);
+  } else {
+    mobileServerUrl = mobileServerUrlForServerUrl(serverUrl,
+      isRunOnDeviceRequested(options));
+  }
+
+  return { serverUrl, mobileServerUrl };
+}
+
+function parsePortOption(portOption) {
+  let serverUrl;
+  try {
+    serverUrl = utils.parseUrl(portOption);
+  } catch (err) {
+    if (options.verbose) {
+      Console.rawError(
+        `Error while parsing --port option: ${err.stack} \n`);
+    } else {
+      Console.error(err.message);
+    }
+    throw main.ExitWithCode(1);
+  }
+
+  if (!serverUrl.port) {
+    Console.error("--port must include a port.");
+    throw main.ExitWithCode(1);
+  }
+
+  return serverUrl;
+}
+
+function parseMobileServerOption(mobileServerOption,
+  optionName = 'mobile-server') {
+  let mobileServerUrl;
+  try {
+    mobileServerUrl = utils.parseUrl(mobileServerOption, {
+      protocol: 'http://'
+    });
+  } catch (err) {
+    if (options.verbose) {
+      Console.rawError(
+        `Error while parsing --${optionName} option: ${err.stack} \n`);
+    } else {
+      Console.error(err.message);
+    }
+    throw main.ExitWithCode(1);
+  }
+
+  if (!mobileServerUrl.host) {
+    Console.error(`--${optionName} must specify a hostname.`);
+    throw main.ExitWithCode(1);
+  }
+
+  return mobileServerUrl;
+}
+
+function mobileServerUrlForServerUrl(serverUrl, isRunOnDeviceRequested) {
+  // If we are running on a device, use the auto-detected IP
+  if (isRunOnDeviceRequested) {
+    var myIp = utils.ipAddress();
+    if (!myIp) {
+      Console.Error(
+        "Error detecting IP address for mobile app to connect to.\n" +
+        "Please specify the address that the mobile app should connect\n" +
+        "to with --mobile-server.");
+      throw main.ExitWithCode(1);
+    }
+    return {
+      protocol: 'http://',
+      host: myIp,
+      port: serverUrl.port
+    };
+  } else {
+    // We are running a simulator, use localhost
+    return {
+      protocol: 'http://',
+      host: 'localhost',
+      port: serverUrl.port
+    };
+  }
+}
+
+// Is a run on a device requested?
+// XXX This shouldn't be hard-coded
+function isRunOnDeviceRequested(options) {
+  return !!_.intersection(options.args,
+    ['ios-device', 'android-device']).length;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
 ///////////////////////////////////////////////////////////////////////////////
@@ -193,35 +291,8 @@ main.registerCommand(_.extend(
 function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
-  Console.debug('Parsing the --port option');
-  try {
-    var parsedUrl = utils.parseUrl(options.port);
-  } catch (err) {
-    if (options.verbose) {
-      Console.rawError(
-        "Error while parsing --port option: " + err.stack + "\n");
-    } else {
-      Console.error(err.message);
-    }
-    return 1;
-  }
-
-  if (! parsedUrl.port) {
-    Console.error("--port must include a port.");
-    return 1;
-  }
-
-  try {
-    var parsedMobileServer = utils.mobileServerForRun(options);
-  } catch (err) {
-    if (options.verbose) {
-      Console.rawError(
-        "Error while parsing --mobile-server option: " + err.stack  + "\n");
-    } else {
-      Console.error(err.message);
-    }
-    return 1;
-  }
+  const { serverUrl, mobileServerUrl } =
+    parseServerOptionsForRunCommand(options);
 
   options.httpProxyPort = options['http-proxy-port'];
 
@@ -252,6 +323,7 @@ function doRunCommand(options) {
   //     eg, move it into a CordovaBuildRunner or something.
 
   if (options.args.length) {
+    let cordovaProject;
     // will asynchronously start mobile emulators/devices
     try {
       // --clean encapsulates the behavior of once
@@ -277,9 +349,13 @@ function doRunCommand(options) {
 
       let targets = options.args;
       var platforms = platformsForTargets(targets);
-      const cordovaProject = buildCordovaProject(projectContext, platforms, _.extend({
-        debug: ! options.production
-      }, options, parsedMobileServer));
+      cordovaProject = buildCordovaProject(projectContext, platforms, _.extend({
+        debug: !options.production
+      }, options, {
+        protocol: mobileServerUrl.protocol,
+        host: mobileServerUrl.host,
+        port: mobileServerUrl.port
+      }));
 
       runners = runners.concat(
         buildCordovaRunners(projectContext, cordovaProject, targets, options));
@@ -293,20 +369,7 @@ function doRunCommand(options) {
     }
   }
 
-  // If we are targeting the remote devices, warn about ports and same network
-  if (utils.runOnDevice(options)) {
-    Console.debug('A run on a device requested');
-    var warning =
-      "You are testing your app on a remote device. " +
-      "For the mobile app to be able to connect to the local server, make " +
-      "sure your device is on the same network, and that the network " +
-      "configuration allows clients to talk to each other " +
-      "(no client isolation).";
-    Console.labelWarn(warning);
-  }
-
-
-  var appHost, appPort;
+  let appHost, appPort;
   if (options['app-port']) {
     var appPortMatch = options['app-port'].match(/^(?:(.+):)?([0-9]+)?$/);
     if (!appPortMatch) {
@@ -331,22 +394,22 @@ function doRunCommand(options) {
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
     options.once = true;
-    var serverUrl = "http://" + (parsedUrl.host || "localhost") +
-          ":" + parsedUrl.port;
-    var velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrl);
+    const serverUrlString = "http://" + (serverUrl.host || "localhost") +
+          ":" + serverUrl.port;
+    const velocity = require('../runners/run-velocity.js');
+    velocity.runVelocity(serverUrlString);
   }
 
-  var mobileServer = parsedMobileServer.protocol + parsedMobileServer.host;
-  if (parsedMobileServer.port) {
-    mobileServer = mobileServer + ":" + parsedMobileServer.port;
+  let mobileServerUrlString = mobileServerUrl.protocol + mobileServerUrl.host;
+  if (mobileServerUrl.port) {
+    mobileServerUrlString.concat(`:${mobileServerUrl.port}`);
   }
 
   var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,
-    proxyPort: parsedUrl.port,
-    proxyHost: parsedUrl.host,
+    proxyPort: serverUrl.port,
+    proxyHost: serverUrl.host,
     httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
@@ -359,7 +422,7 @@ function doRunCommand(options) {
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
-    mobileServerUrl: mobileServer,
+    mobileServerUrl: mobileServerUrlString,
     once: options.once,
     extraRunners: runners
   });
@@ -791,24 +854,10 @@ var buildCommand = function (options) {
     mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
   }
 
-  if (! _.isEmpty(mobilePlatforms) && ! options._serverOnly) {
+  if (!_.isEmpty(mobilePlatforms) && !options._serverOnly) {
     // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-    var mobileServer = options.server || options["mobile-port"];
-
-    if (mobileServer) {
-      try {
-        var parsedMobileServer = utils.parseUrl(
-          mobileServer, { protocol: "http://" });
-      } catch (err) {
-        Console.error(err.message);
-        return 1;
-      }
-
-      if (! parsedMobileServer.host) {
-        Console.error("--server must include a hostname.");
-        return 1;
-      }
-    } else {
+    const mobileServerOption = options.server || options["mobile-port"];
+    if (!mobileServerOption) {
       // For Cordova builds, require '--server'.
       // XXX better error message?
       Console.error(
@@ -816,15 +865,19 @@ var buildCommand = function (options) {
           "for mobile app builds.");
       return 1;
     }
+    const mobileServerUrl = parseMobileServerOption(mobileServerOption,
+      'server');
+
     var cordovaSettings = {};
 
     try {
-      mobilePlatforms =
-        buildCordovaProject(projectContext, mobilePlatforms, _.extend({}, options, {
-          host: parsedMobileServer.host,
-          port: parsedMobileServer.port,
-          protocol: parsedMobileServer.protocol
-      }));
+      cordovaProject =
+        buildCordovaProject(projectContext, mobilePlatforms, _.extend({},
+          options, {
+            protocol: mobileServerUrl.protocol,
+            host: mobileServerUrl.host,
+            port: mobileServerUrl.port
+        }));
     } catch (err) {
       if (err instanceof main.ExitWithCode)
          throw err;
@@ -891,7 +944,7 @@ var buildCommand = function (options) {
   if (! options.directory) {
     try {
       var outputTar = options._serverOnly ? outputPath :
-        files.pathJoin(outputPath, appName + '.tar.gz');
+        files.pathJoin(outputPath, cordovaProject.appName + '.tar.gz');
 
       files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
     } catch (err) {
@@ -1398,29 +1451,10 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
-  try {
-    var parsedUrl = utils.parseUrl(options.port);
-  } catch (err) {
-    Console.error(err.message);
-    return 1;
-  }
-
-  if (! parsedUrl.port) {
-    Console.error("--port must include a port.");
-    return 1;
-  }
-
-  try {
-    var parsedMobileServer = utils.mobileServerForRun(options);
-  } catch (err) {
-    Console.error(err.message);
-    return 1;
-  }
+  const { serverUrl, mobileServerUrl } =
+    parseServerOptionsForRunCommand(options);
 
   options.httpProxyPort = options['http-proxy-port'];
-
-  // XXX not good to change the options this way
-  _.extend(options, parsedUrl);
 
   // Find any packages mentioned by a path instead of a package name. We will
   // load them explicitly into the catalog.
@@ -1521,11 +1555,11 @@ main.registerCommand({
     try {
       const cordovaProject = buildCordovaProject(projectContext, platforms,
         _.extend({}, options, {
-          debug: ! options.production,
-          // Default to localhost for mobile builds.
-          host: parsedMobileServer.host,
-          protocol: parsedMobileServer.protocol,
-          port: parsedMobileServer.port
+          debug: ! options.production
+        }, {
+          protocol: mobileServerUrl.protocol,
+          host: mobileServerUrl.host,
+          port: mobileServerUrl.port
         }));
       runners = runners.concat(buildCordovaRunners(projectContext,
         cordovaProject, mobileTargets, options));
@@ -1541,10 +1575,10 @@ main.registerCommand({
   }
 
   if (options.velocity) {
-    var serverUrl = "http://" + (parsedUrl.host || "localhost") +
+    const serverUrlString = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
-    var velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrl);
+    const velocity = require('../runners/run-velocity.js');
+    velocity.runVelocity(serverUrlString);
   }
 
   return runTestAppForPackages(projectContext, options);

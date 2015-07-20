@@ -31,6 +31,17 @@ export default class CordovaRunner {
           "https://github.com/meteor/meteor/wiki/" +
           "OAuth-for-mobile-Meteor-clients."));
     }
+
+    // If we are targeting the remote devices, warn about ports and same network
+    if (this.isDevice) {
+      Console.warn();
+      Console.labelWarn(
+        "You are testing your app on a remote device. " +
+        "For the mobile app to be able to connect to the local server, make " +
+        "sure your device is on the same network, and that the network " +
+        "configuration allows clients to talk to each other " +
+        "(no client isolation).");
+    }
   }
 
   start() {
