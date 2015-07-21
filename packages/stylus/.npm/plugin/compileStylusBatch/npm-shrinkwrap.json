@@ -1,8 +1,5 @@
 {
   "dependencies": {
-    "lru-cache": {
-      "version": "2.6.4"
-    },
     "nib": {
       "version": "1.1.0",
       "dependencies": {
@@ -35,6 +32,9 @@
                 "minimatch": {
                   "version": "0.3.0",
                   "dependencies": {
+                    "lru-cache": {
+                      "version": "2.6.5"
+                    },
                     "sigmund": {
                       "version": "1.0.1"
                     }
@@ -88,6 +88,9 @@
             "minimatch": {
               "version": "0.3.0",
               "dependencies": {
+                "lru-cache": {
+                  "version": "2.6.5"
+                },
                 "sigmund": {
                   "version": "1.0.1"
                 }
