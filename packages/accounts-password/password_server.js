@@ -473,9 +473,13 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     from: Accounts.emailTemplates.resetPassword.from
       ? Accounts.emailTemplates.resetPassword.from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.resetPassword.subject(user),
-    text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)
+    subject: Accounts.emailTemplates.resetPassword.subject(user)
   };
+
+  if (typeof Accounts.emailTemplates.resetPassword.text === 'function') {
+    options.text =
+      Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl);
+  }
 
   if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
     options.html =
@@ -537,9 +541,13 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     from: Accounts.emailTemplates.enrollAccount.from
       ? Accounts.emailTemplates.enrollAccount.from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.enrollAccount.subject(user),
-    text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
+    subject: Accounts.emailTemplates.enrollAccount.subject(user)
   };
+
+  if (typeof Accounts.emailTemplates.enrollAccount.text === 'function') {
+    options.text =
+      Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl);
+  }
 
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
@@ -679,9 +687,13 @@ Accounts.sendVerificationEmail = function (userId, address) {
     from: Accounts.emailTemplates.verifyEmail.from
       ? Accounts.emailTemplates.verifyEmail.from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.verifyEmail.subject(user),
-    text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
+    subject: Accounts.emailTemplates.verifyEmail.subject(user)
   };
+
+  if (typeof Accounts.emailTemplates.verifyEmail.text === 'function') {
+    options.text =
+      Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl);
+  }
 
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
