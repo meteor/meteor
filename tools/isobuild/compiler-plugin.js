@@ -142,6 +142,12 @@ _.extend(InputFile.prototype, {
   getSourceHash: function () {
     return this._resourceSlot.inputResource.hash;
   },
+
+  /**
+   * @summary Returns the extension that matched the compiler plugin.
+   * The longest prefix is prefered.
+   * @returns {String}
+   */
   getExtension: function () {
     return this._resourceSlot.inputResource.extension;
   },
