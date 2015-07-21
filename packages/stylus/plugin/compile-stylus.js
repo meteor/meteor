@@ -1,254 +1,196 @@
-var url = Npm.require('url');
-var stylus = Npm.require('stylus');
-var nib = Npm.require('nib');
-var Future = Npm.require('fibers/future');
-var LRU = Npm.require('lru-cache');
-var fs = Npm.require('fs');
-var path = Npm.require('path');
+const url = Npm.require('url');
+const stylus = Npm.require('stylus');
+const nib = Npm.require('nib');
+const Future = Npm.require('fibers/future');
+const fs = Npm.require('fs');
+const path = Npm.require('path');
 
 Plugin.registerCompiler({
   extensions: ['styl'],
   archMatching: 'web'
-}, function () {
-  return new StylusCompiler();
-});
+}, () => new StylusCompiler());
 
-var APP_SYMBOL = '__app__';
+const APP_SYMBOL = '__app__';
 
-var CACHE_SIZE = process.env.METEOR_STYLUS_CACHE_SIZE || 1024*1024*10;
-
-function StylusCompiler () {
-  var self = this;
-
-  self._cache = new LRU({
-    max: CACHE_SIZE,
-    // Cache is measured in bytes (not counting the hashes).
-    length: function (value) {
-      return value.css.length + sourceMapLength(value.sourceMap);
-    }
-  });
-
-  self._diskCache = null;
-}
-
-StylusCompiler.prototype.processFilesForTarget = function (files) {
-  var self = this;
-
-  var currentlyCompiledFile = null;
-  var currentlyCompiledPackage = null;
-  var currentlyProcessedImports = null;
-  var parseImportPath = function (filePath, importerPath) {
-    if (! filePath) {
-      throw new Error('filePath is undefined');
-    }
-    if (filePath === currentlyCompiledFile) {
-      return {
-        packageName: currentlyCompiledPackage,
-        pathInPackage: '/' + currentlyCompiledFile
-      };
-    }
-    if (! filePath.match(/^\{.*\}\//)) {
-      if (! importerPath) {
-        return { packageName: currentlyCompiledPackage, pathInPackage: '/' + filePath };
-      }
-
-      // relative path in the same package
-      var parsedImporter = parseImportPath(importerPath, null);
-      return {
-        packageName: parsedImporter.packageName,
-        pathInPackage: url.resolve(parsedImporter.pathInPackage, filePath)
-      };
-    }
-
-    var match = /^(\{.*\})(\/.*)$/.exec(filePath);
-    if (! match) { return null; }
-
-    var packageName = match[1];
-    if (!packageName || packageName === '{}')
-      packageName = APP_SYMBOL;
-    else
-      packageName = packageName.substr(1, packageName.length - 2);
-
-    var pathInPackage = match[2];
-
-    return {packageName: packageName, pathInPackage: pathInPackage};
-  };
-  var absoluteImportPath = function (parsed) {
-    return '{' + parsed.packageName + '}' + parsed.pathInPackage;
-  };
-
-  var filesByAbsoluteImportPath = {};
-  files.forEach(function (inputFile) {
-    var packageName = inputFile.getPackageName() || APP_SYMBOL;
-    var filePath = '/' + inputFile.getPathInPackage();
-    filesByAbsoluteImportPath[absoluteImportPath({
-      packageName: packageName,
-      pathInPackage: filePath
-    })] = inputFile;
-  });
-
-
-  var importer = {
-    find: function (importPath, paths, importerPath) {
-      var parsed = parseImportPath(importPath, importerPath);
-
-      if (! parsed) { return null; }
-
-      if (importPath[0] !== '{') {
-        // if it is not a custom syntax path, it could be a lookup in a folder
-        for (var i = paths.length - 1; i >= 0; i--) {
-          var joined = path.join(paths[i], importPath);
-          if (fs.existsSync(joined))
-            return [joined];
-        }
-      }
-
-
-      var absolutePath = absoluteImportPath(parsed);
-
-      if (! filesByAbsoluteImportPath[absolutePath]) {
-        return null;
-      }
-
-      return [absolutePath];
-    },
-    readFile: function (filePath) {
-      var isAbsolute = (process.platform === 'win32') ?
-                       filePath[0].match(/^[A-Za-z]:\\/) : filePath[0] === '/';
-      var normalizedPath = (process.platform === 'win32') ?
-                           filePath.replace(/\\/g, '/') : filePath;
-      var isNib = normalizedPath.indexOf('/node_modules/nib/lib/nib/') !== -1;
-      var isStylusBuiltIn = normalizedPath.indexOf('/node_modules/stylus/lib/') !== -1;
-
-      if (isAbsolute || isNib || isStylusBuiltIn) {
-        // absolute path? let the default implementation handle this
-        return fs.readFileSync(filePath, 'utf8');
-      }
-
-      var parsed = parseImportPath(filePath);
-      var absolutePath = absoluteImportPath(parsed);
-
-      currentlyProcessedImports.push(absolutePath);
-
-      if (! filesByAbsoluteImportPath[absolutePath]) {
-        throw new Error(
-          'Cannot read file ' + absolutePath + ' for ' + currentlyCompiledPackage + '/' + currentlyCompiledFile);
-      }
-
-      return filesByAbsoluteImportPath[absolutePath].getContentsAsString();
-    }
-  };
-
-  function processSourcemap(sourcemap) {
-    delete sourcemap.file;
-    sourcemap.sourcesContent = sourcemap.sources.map(importer.readFile);
-    sourcemap.sources = sourcemap.sources.map(function (filePath) {
-      var parsed = parseImportPath(filePath);
-      if (parsed.packageName === APP_SYMBOL)
-        return parsed.pathInPackage.substr(1);
-      return 'packages/' + parsed.packageName + parsed.pathInPackage;
+// CompileResult is {css, sourceMap}.
+class StylusCompiler extends MultiFileCachingCompiler {
+  constructor() {
+    super({
+      compilerName: 'stylus',
+      defaultCacheSize: 1024*1024*10,
+      // because of currentlyCompiledFile etc
+      maxParallelism: 1
     });
-
-    return sourcemap;
   }
 
-  files.forEach(function (inputFile) {
-    var pathInPackage = inputFile.getPathInPackage();
-    var fileOptions = inputFile.getFileOptions();
 
-    // The heuristic is that a file is an import (ie, is not itself processed
-    // as a root) if it is in a subdirectory named 'imports' or if it matches
-    // *.import.styl. This can be overridden in either direction via an
-    // explicit `isImport` file option in apiaddFiles.
-    var filenameSaysImport =
-          /\.import\.styl$/.test(pathInPackage) ||
-          /(?:^|\/)imports\//.test(pathInPackage);
-    var isImport = fileOptions.hasOwnProperty('isImport')
-          ? fileOptions.isImport : filenameSaysImport;
+  getCacheKey(inputFile) {
+    return inputFile.getSourceHash();
+  }
 
-    if (isImport) {
-      return;
+  compileResultSize(compileResult) {
+    return compileResult.css.length +
+      this.sourceMapSize(compileResult.sourceMap);
+  }
+
+  // Same as in less, except with {__app__} instead of {};
+  getAbsoluteImportPath(inputFile) {
+    const packageName = inputFile.getPackageName() || APP_SYMBOL;
+    return '{' + packageName + '}/' + inputFile.getPathInPackage();
+  }
+
+  // The heuristic is that a file is an import (ie, is not itself processed as a
+  // root) if it is in a subdirectory named 'imports' or if it matches
+  // *.import.styl. This can be overridden in either direction via an explicit
+  // `isImport` file option in api.addFiles.
+  isRoot(inputFile) {
+    const fileOptions = inputFile.getFileOptions();
+    if (fileOptions.hasOwnProperty('isImport')) {
+      return !fileOptions.isImport;
     }
 
-    currentlyCompiledFile = pathInPackage;
-    currentlyCompiledPackage = inputFile.getPackageName() || APP_SYMBOL;
-    currentlyProcessedImports = [];
+    const pathInPackage = inputFile.getPathInPackage();
+    return !(/\.import\.styl$/.test(pathInPackage) ||
+             /(?:^|\/)imports\//.test(pathInPackage));
+  }
 
-    var absolutePath = absoluteImportPath({
-      packageName: currentlyCompiledPackage,
-      pathInPackage: '/' + currentlyCompiledFile
-    });
+  compileOneFile(inputFile, allFiles) {
+    const referencedImportPaths = [];
 
-    var cacheEntry = self._cache.get(absolutePath);
-    if (! (cacheEntry && self._cacheEntryValid(cacheEntry, filesByAbsoluteImportPath))) {
-      // the entry in the cache doesn't represent the latest state
-
-      // Append a cache buster because Stylus has a buggy caching
-      // based on the contents that produces incorrect sourcemaps (the
-      // 'filename' field is not checked into cache)
-      var f = new Future;
-
-      var style = stylus(inputFile.getContentsAsString())
-        .use(nib())
-        .set('filename', pathInPackage)
-        .set('sourcemap', { inline: false, comment: false })
-        .set('importer', importer);
-
-      style.render(f.resolver());
-
-      try {
-        var css = f.wait();
-      } catch (e) {
-        inputFile.error({
-          message: "Stylus compiler error: " + e.message
-        });
-        return;
+    function parseImportPath(filePath, importerPath) {
+      if (! filePath) {
+        throw new Error('filePath is undefined');
       }
-      var sourcemap = processSourcemap(style.sourcemap);
+      if (filePath === inputFile.getPathInPackage()) {
+        return {
+          packageName: inputFile.getPackageName() || APP_SYMBOL,
+          pathInPackage: '/' + inputFile.getPathInPackage()
+        };
+      }
+      if (! filePath.match(/^\{.*\}\//)) {
+        if (! importerPath) {
+          return { packageName: inputFile.getPackageName(),
+                   pathInPackage: '/' + filePath };
+        }
 
-      cacheEntry = {
-        hashes: {},
-        css: css,
-        sourceMap: sourcemap
-      };
-      cacheEntry.hashes[absolutePath] = inputFile.getSourceHash();
-      currentlyProcessedImports.forEach(function (path) {
-        cacheEntry.hashes[path] =
-          filesByAbsoluteImportPath[path].getSourceHash();
+        // relative path in the same package
+        const parsedImporter = parseImportPath(importerPath, null);
+        return {
+          packageName: parsedImporter.packageName,
+          pathInPackage: url.resolve(parsedImporter.pathInPackage, filePath)
+        };
+      }
+
+      const match = /^(\{.*\})(\/.*)$/.exec(filePath);
+      if (! match) { return null; }
+
+      let packageName = match[1];
+      if (!packageName || packageName === '{}') {
+        packageName = APP_SYMBOL;
+      } else {
+        packageName = packageName.substr(1, packageName.length - 2);
+      }
+
+      const pathInPackage = match[2];
+      return {packageName, pathInPackage};
+    }
+    function absoluteImportPath(parsed) {
+      return '{' + parsed.packageName + '}' + parsed.pathInPackage;
+    }
+
+    const importer = {
+      find(importPath, paths, importerPath) {
+        const parsed = parseImportPath(importPath, importerPath);
+
+        if (! parsed) { return null; }
+
+        if (importPath[0] !== '{') {
+          // if it is not a custom syntax path, it could be a lookup in a folder
+          for (let i = paths.length - 1; i >= 0; i--) {
+            const joined = path.join(paths[i], importPath);
+            if (fs.existsSync(joined))
+              return [joined];
+          }
+        }
+
+        const absolutePath = absoluteImportPath(parsed);
+
+        if (! allFiles.has(absolutePath)) {
+          return null;
+        }
+
+        return [absolutePath];
+      },
+      readFile(filePath) {
+        const isAbsolute = (process.platform === 'win32') ?
+                filePath[0].match(/^[A-Za-z]:\\/) : filePath[0] === '/';
+        const normalizedPath = (process.platform === 'win32') ?
+                filePath.replace(/\\/g, '/') : filePath;
+        const isNib =
+                normalizedPath.indexOf('/node_modules/nib/lib/nib/') !== -1;
+        const isStylusBuiltIn =
+                normalizedPath.indexOf('/node_modules/stylus/lib/') !== -1;
+
+        if (isAbsolute || isNib || isStylusBuiltIn) {
+          // absolute path? let the default implementation handle this
+          return fs.readFileSync(filePath, 'utf8');
+        }
+
+        const parsed = parseImportPath(filePath);
+        const absolutePath = absoluteImportPath(parsed);
+
+        referencedImportPaths.push(absolutePath);
+
+        if (! allFiles.has(absolutePath)) {
+          throw new Error(
+            `Cannot read file ${absolutePath} for ${inputFile.getDisplayPath()}`
+          );
+        }
+
+        return allFiles.get(absolutePath).getContentsAsString();
+      }
+    };
+
+    function processSourcemap(sourcemap) {
+      delete sourcemap.file;
+      sourcemap.sourcesContent = sourcemap.sources.map(importer.readFile);
+      sourcemap.sources = sourcemap.sources.map((filePath) => {
+        const parsed = parseImportPath(filePath);
+        if (parsed.packageName === APP_SYMBOL)
+          return parsed.pathInPackage.substr(1);
+        return 'packages/' + parsed.packageName + parsed.pathInPackage;
       });
 
-      self._cache.set(absolutePath, cacheEntry);
+      return sourcemap;
     }
 
+    const f = new Future;
+
+    const style = stylus(inputFile.getContentsAsString())
+            .use(nib())
+            .set('filename', inputFile.getPathInPackage())
+            .set('sourcemap', { inline: false, comment: false })
+            .set('importer', importer);
+
+    style.render(f.resolver());
+    let css;
+    try {
+      css = f.wait();
+    } catch (e) {
+      inputFile.error({
+        message: 'Stylus compiler error: ' + e.message
+      });
+      return null;
+    }
+    const sourceMap = processSourcemap(style.sourcemap);
+    return {referencedImportPaths, compileResult: {css, sourceMap}};
+  }
+
+  addCompileResult(inputFile, {css, sourceMap}) {
     inputFile.addStylesheet({
-      path: inputFile.getPathInPackage() + ".css",
-      data: cacheEntry.css,
-      sourceMap: cacheEntry.sourceMap
+      path: inputFile.getPathInPackage() + '.css',
+      data: css,
+      sourceMap: sourceMap
     });
-  });
-
-  // Rewrite the cache to disk.
-  // XXX #BBPBetterCache we should just write individual entries separately.
-  self._writeCache();
-};
-
-StylusCompiler.prototype._cacheEntryValid = function (cacheEntry, filesMap) {
-  return Object.keys(cacheEntry.hashes).every(function (path) {
-    var hash = cacheEntry.hashes[path];
-    return filesMap[path] && filesMap[path].getSourceHash() === hash;
-  });
-};
-
-StylusCompiler.prototype._writeCache = function () {
-  // XXX #BBPBetterCache no on-disk caching yet
-};
-
-function sourceMapLength(sm) {
-  if (! sm) return 0;
-  // sum the length of sources and the mappings, the size of
-  // metadata is ignored, but it is not a big deal
-  return sm.mappings.length
-       + (sm.sourcesContent || []).reduce(function (soFar, current) {
-         return soFar + (current ? current.length : 0);
-       }, 0);
-};
+  }
+}

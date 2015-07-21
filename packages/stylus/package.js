@@ -5,6 +5,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: 'compileStylusBatch',
+  use: ['ecmascript', 'caching-compiler'],
   sources: [
     'plugin/compile-stylus.js'
   ],
