@@ -10,21 +10,20 @@ var errorMessage = function (rateLimitResult) {
 var rateLimiter = new RateLimiter();
 
 DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
-    if (typeof errorMessage === 'function')
-      return errorMessage(rateLimitResult);
-    else
-      return errorMessage;
+  if (typeof errorMessage === 'function')
+    return errorMessage(rateLimitResult);
+  else
+    return errorMessage;
 }
 
-  /**
-   * @summary Set error message text when method or subscription rate limit
-   * exceeded.
-   * @param {string|function} message
-   * Error messages can either be strings or functions. Functions are
-   * passed in an object with a timeToReset field that specifies the number of
-   * milliseconds until the next method or subscription is allowed to run. The
-   * function must return a string of the error message.
-   */
+/**
+ * @summary Set error message text when method or subscription rate limit
+ * exceeded.
+ * @param {string|function} message Functions are passed in an object with a
+ * `timeToReset` field that specifies the number of milliseconds until the next
+ * method or subscription is allowed to run. The function must return a string
+ * of the error message.
+ */
 DDPRateLimiter.setErrorMessage = function (message) {
   errorMessage = message;
 }

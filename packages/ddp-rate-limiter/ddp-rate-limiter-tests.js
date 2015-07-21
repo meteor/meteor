@@ -48,12 +48,14 @@ testAsyncMulti("ddp rate limiter - matchers get passed correct arguments", [
     );
   },
   function (test, expect) {
+    var self = this;
     Meteor.call(
       "getLastRateLimitEvent", expect(function (error, result) {
         test.equal(error, undefined);
         test.equal(result.userId, Meteor.userId());
         test.equal(result.type, "method");
         test.equal(result.name, "dummyMethod");
+        test.isNotUndefined(result.clientAddress, "clientAddress is not defined");
       }));
   },
   function (test, expect) {
@@ -61,8 +63,7 @@ testAsyncMulti("ddp rate limiter - matchers get passed correct arguments", [
   },
   function (test, expect) {
     var self = this;
-    // By removing the rule from the DDP rate limiter, we no longer restrict
-    // them even though they were rate limited
+    // Cleanup
     Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId,
       expect(function(error, result) {
         test.equal(result,true);
@@ -84,15 +85,15 @@ testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
       test.equal(error, undefined);
       test.equal(result.type, "subscription");
       test.equal(result.name, "testSubscription");
+      test.isNotUndefined(result.clientAddress, "clientAddress is not defined");
     }));
   },
   function (test, expect) {
     var self = this;
-    // By removing the rule from the DDP rate limiter, we no longer restrict
-    // them even though they were rate limited
+    // Cleanup
     Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId,
       expect(function(error, result) {
-        test.equal(result,true);
+        test.equal(result, true);
     }));
   }
 ]);
@@ -107,7 +108,7 @@ testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
     );
   },
   function (test, expect) {
-    var doSub = function (cb) {
+    this.doSub = function (cb) {
       Meteor.subscribe('testSubscription', {
         onReady: function () {
           cb(null, true);
@@ -118,7 +119,7 @@ testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
       });
     };
 
-    callFnMultipleTimesThenExpectResult(test, expect, doSub,
+    callFnMultipleTimesThenExpectResult(test, expect, this.doSub,
       {
         expectedError: null,
         expectedResult: true,
@@ -127,19 +128,34 @@ testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
     );
   },
   function (test, expect) {
-    // Cleanup
+    // After removing rule, subscriptions are no longer rate limited.
     var self = this;
     Meteor.call('removeRuleFromDDPRateLimiter', self.ruleId,
       expect(function(error, result) {
         test.equal(result,true);
     }));
+  },
+  function (test, expect) {
+    callFnMultipleTimesThenExpectResult(test, expect, this.doSub,
+    {
+      expectedError: null,
+      expectedResult: true,
+      expectedIntervalTimeInMs: false
+    });
+
+    callFnMultipleTimesThenExpectResult(test, expect, this.doSub,
+    {
+      expectedError: null,
+      expectedResult: true,
+      expectedIntervalTimeInMs: false
+    });
   }
 ]);
 
 
 // - If you wait 5 seconds you are no longer rate limited
-testAsyncMulti("ddp rate limiter - rate limit resets after " + "
-  RATE_LIMIT_INTERVAL_TIME_MS", [
+testAsyncMulti("ddp rate limiter - rate limit resets after " +
+  "RATE_LIMIT_INTERVAL_TIME_MS", [
   function (test, expect) {
     _.extend(this, createTestUser(test, expect));
   },
@@ -307,7 +323,7 @@ function callFnMultipleTimesThenExpectResult(
 
   fn(expect(function (error, result) {
     if (expectedRateLimitWillBeHit) {
-      test.equal(error && error.error, 'too-many-requests');
+      test.equal(error && error.error, 'too-many-requests', 'error : ' + error);
       test.isTrue(error &&  error.details.timeToReset <
         expectedIntervalTimeInMs || RATE_LIMIT_INTERVAL_TIME_MS, 'too long');
       test.equal(result, undefined, 'result is not undefined');

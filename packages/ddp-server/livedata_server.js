@@ -589,7 +589,7 @@ _.extend(Session.prototype, {
         var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
         var rateLimiterInput = {
           userId: self.userId,
-          ipAddr: self.connectionHandle.clientAddress,
+          clientAddress: self.connectionHandle.clientAddress,
           type: "subscription",
           name: msg.name,
           connectionId: self.id
@@ -684,7 +684,7 @@ _.extend(Session.prototype, {
           var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
           var rateLimiterInput = {
             userId: self.userId,
-            ipAddr: self.connectionHandle.clientAddress,
+            clientAddress: self.connectionHandle.clientAddress,
             type: "method",
             name: msg.method,
             connectionId: self.id
@@ -696,7 +696,7 @@ _.extend(Session.prototype, {
               "too-many-requests",
               DDPRateLimiter.getErrorMessage(rateLimitResult),
               {timeToReset: rateLimitResult.timeToReset});
-            }
+          }
         }
 
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
