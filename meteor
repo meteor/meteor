@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # XXX the version 0.5.5 is used on branch cordova-improvements
-BUNDLE_VERSION=0.5.11
+BUNDLE_VERSION=0.5.5
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
