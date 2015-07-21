@@ -61,6 +61,11 @@ export default class CordovaProject {
     return { silent: !Console.verbose, verbose: Console.verbose };
   }
 
+  env(extraPaths) {
+    const paths = (this.defaultPaths || []).unshift(extraPaths);
+    return files.currentEnvWithPathsAdded(paths);
+  }
+
   get defaultPaths() {
     const nodeBinDir = files.convertToOSPath(files.getCurrentNodeBinDir());
     return [nodeBinDir];
@@ -74,12 +79,14 @@ export default class CordovaProject {
 
   async addPlatform(platform) {
     this.chdirToProjectRoot();
-    return await cordova.raw.platform('add', platform, this.defaultOptions);
+    const options = _.extend(this.defaultOptions, { env: this.env() });
+    return await cordova.raw.platform('add', platform, options);
   }
 
   async removePlatform(platform) {
     this.chdirToProjectRoot();
-    return await cordova.raw.platform('rm', platform, this.defaultOptions);
+    const options = _.extend(this.defaultOptions, { env: this.env() });
+    return await cordova.raw.platform('rm', platform, options);
   }
 
   // Plugins
@@ -92,8 +99,6 @@ export default class CordovaProject {
   }
 
   async addPlugin(name, version, config) {
-    this.chdirToProjectRoot();
-
     let pluginTarget;
     if (version && utils.isUrlWithSha(version)) {
       pluginTarget = this.fetchCordovaPluginFromShaUrl(version, name);
@@ -111,14 +116,17 @@ export default class CordovaProject {
     });
     pluginTarget.concat(additionalArgs)
 
-    return await cordova.raw.plugin('add', pluginTarget, this.defaultOptions);
+    this.chdirToProjectRoot();
+    const options = _.extend(this.defaultOptions, { env: this.env() });
+    return await cordova.raw.plugin('add', pluginTarget, options);
   }
 
   async removePlugin(plugin, isFromTarballUrl = false) {
     verboseLog('Removing a plugin', name);
 
     this.chdirToProjectRoot();
-    await cordova.raw.plugin('rm', plugin, this.defaultOptions);
+    const options = _.extend(this.defaultOptions, { env: this.env() });
+    await cordova.raw.plugin('rm', plugin, options);
 
     if (isFromTarballUrl) {
       Console.debug('Removing plugin from the tarball plugins lock', name);
@@ -234,8 +242,7 @@ export default class CordovaProject {
   async build(options) {
     this.chdirToProjectRoot();
 
-    const extraPaths = (this.defaultPaths || []).unshift(options.extraPaths);
-    const env = files.currentEnvWithPathsAdded(extraPaths);
+    const env = this.env(options.extraPaths);
     options = _.extend(this.defaultOptions, options, { env: env });
 
     return await cordova.raw.build(options);
@@ -245,8 +252,7 @@ export default class CordovaProject {
   async run(platform, isDevice, options) {
     this.chdirToProjectRoot();
 
-    const extraPaths = (this.defaultPaths || []).unshift(options.extraPaths);
-    const env = files.currentEnvWithPathsAdded(extraPaths);
+    const env = this.env(options.extraPaths);
     options = _.extend(this.defaultOptions, options, { env: env },
       { platforms: [platform] });
 
