@@ -10,7 +10,8 @@ var util = require("./util.js");
 var config = {
   babelOptions: require("./options").getDefaults({
     modules: true,
-    meteorAsyncAwait: true
+    meteorAsyncAwait: true,
+    react: true,
   })
 };
 

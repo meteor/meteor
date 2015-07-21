@@ -188,6 +188,33 @@ val = "zxcv";`;
     assert.strictEqual(add3(1, 2, 3), 6);
   });
 
+  it("react", function react() {
+    let calledCreateClass = false;
+    let calledCreateElement = false;
+
+    const React = {
+      createClass(spec) {
+        assert.strictEqual(spec.displayName, "Oyez");
+        calledCreateClass = true;
+        spec.render();
+      },
+
+      createElement(name) {
+        assert.strictEqual(name, "div");
+        calledCreateElement = true;
+      }
+    }
+
+    var Oyez = React.createClass({
+      render() {
+        return <div id="oyez"></div>;
+      }
+    });
+
+    assert.strictEqual(calledCreateClass, true);
+    assert.strictEqual(calledCreateElement, true);
+  });
+
   it("flow", () => {
     function add(...args: [number]): number {
       let sum = 0;

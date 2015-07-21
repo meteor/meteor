@@ -41,6 +41,13 @@ exports.getDefaults = function getDefaults(features) {
       options.loose.push("es6.modules");
       options.whitelist.push("es6.modules");
     }
+
+    if (features.react) {
+      options.whitelist.push(
+        "react",
+        "react.displayName"
+      );
+    }
   }
 
   return options;
