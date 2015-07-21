@@ -1,20 +1,24 @@
 # caching-compiler: caching superclasses for Plugin.registerCompiler
 
-CachingCompiler is a class designed to be used with Plugin.registerCompiler
-which implements in-memory and on-disk caches for the files that it processes.
-You should subclass CachingCompiler and define the following methods:
-`getCacheKey`, `compileOneFile`, `addCompileResult`, and `compileResultSize`.
+CachingCompiler and MultiFileCachingCompiler are classes designed to be used
+with Plugin.registerCompiler. They implement in-memory and on-disk caches for
+the files that they process.
 
-CachingCompiler assumes that files are processed independently of each other;
-there is no 'import' directive allowing one file to reference another.  That is,
-editing one file should only require that file to be rebuilt, not other files.
+CachingCompiler is for compilers whose files can be processed independently of
+each other (ie, editing one such file only requires that file to be
+rebuilt). MultiFileCachingCompiler is for compilers whose files can depend on
+each other, such as CSS preprocessors with `@import` directives.
+
+You should subclass CachingCompiler and define the
+following methods: `getCacheKey`, `compileOneFile`, `addCompileResult`, and
+`compileResultSize`.
 
 # CompileResult
 
 The data that is cached for each file is of a type that is (implicitly) defined
-by your subclass. CachingCompiler refers to this type as `CompileResult`, but
+by your subclass. `caching-compiler` refers to this type as `CompileResult`, but
 this isn't a single type: it's up to your subclass to decide what type of data
-this is.  You should document what your subclass's CompileResult type is.
+this is.  You should document what your subclass's `CompileResult` type is.
 
 # Example usage
 

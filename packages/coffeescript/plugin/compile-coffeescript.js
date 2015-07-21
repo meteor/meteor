@@ -86,7 +86,7 @@ class CoffeeCompiler extends CachingCompiler {
 
   compileResultSize(sourceWithMap) {
     return sourceWithMap.source.length +
-      sourceMapLength(sourceWithMap.sourceMap);
+      this.sourceMapSize(sourceWithMap.sourceMap);
   }
 }
 
@@ -194,14 +194,4 @@ function addSharedHeader(source, sourceMap) {
     source: processedSource,
     sourceMap: sourceMap
   };
-}
-
-function sourceMapLength(sm) {
-  if (! sm) return 0;
-  // sum the length of sources and the mappings, the size of
-  // metadata is ignored, but it is not a big deal
-  return sm.mappings.length
-       + (sm.sourcesContent || []).reduce(function (soFar, current) {
-         return soFar + (current ? current.length : 0);
-       }, 0);
 }
