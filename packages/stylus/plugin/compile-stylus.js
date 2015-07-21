@@ -170,6 +170,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
             .use(nib())
             .set('filename', inputFile.getPathInPackage())
             .set('sourcemap', { inline: false, comment: false })
+            .set('cache', false)
             .set('importer', importer);
 
     style.render(f.resolver());
