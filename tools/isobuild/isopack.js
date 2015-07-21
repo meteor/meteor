@@ -549,6 +549,8 @@ _.extend(Isopack.prototype, {
        * Documentation for CompileStep is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/CompileStep-API-for-Build-Plugin-Source-Handlers).
        * @memberOf Plugin
        * @locus Build Plugin
+       * @deprecated since 1.2
+       * XXX COMPAT WITH 1.1
        */
       registerSourceHandler: function (extension, options, handler) {
         if (!handler) {
@@ -663,6 +665,25 @@ _.extend(Isopack.prototype, {
       // plugin compiler use the isobuild:compiler-plugin fake package, so that
       // Version Solver will not let you use registerCompiler plugins with old
       // versions of the tool.
+
+      /**
+       * @summary Inside a build plugin source file specified in
+       * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
+       * add a compiler that will handle files with ceratin extensions or
+       * filenames.
+       * @param {Object} options
+       * @param {[String]} options.extensions The file extensions that this
+       * plugin should handle, without the first dot.
+       * Examples: `["coffee", "coffee.md"]`.
+       * @param {[String]} options.filenames The list of filenames
+       * that this plugin should handle. Examples: `["config.json"]`.
+       * @param {Function} factory A function that returns an instance
+       * of a compiler class.
+       *
+       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+       * @memberOf Plugin
+       * @locus Build Plugin
+       */
       registerCompiler: function (options, factory) {
         Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.compiler,
@@ -690,6 +711,23 @@ _.extend(Isopack.prototype, {
       // - globals - a list of strings - global variables that can be
       //    used in the target's scope as they are dependencies of the
       //    package or the app. e.g.: "Minimongo" or "Webapp".
+
+      /**
+       * @summary Inside a build plugin source file specified in
+       * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
+       * add a linter that will handle files with ceratin extensions or
+       * filenames.
+       * @param {Object} options
+       * @param {[String]} options.extensions The file extensions that this
+       * plugin should handle, without the first dot.
+       * Examples: `["js", "es6", "jsx"]`.
+       * @param {Function} factory A function that returns an instance
+       * of a linter class.
+       *
+       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+       * @memberOf Plugin
+       * @locus Build Plugin
+       */
       registerLinter: function (options, factory) {
         Plugin._registerSourceProcessor(options || {}, factory, {
           sourceProcessorSet: isopack.sourceProcessors.linter,
@@ -722,6 +760,25 @@ _.extend(Isopack.prototype, {
       // - options - Object
       //   - minifyMode - string - 'development' or 'production', based
       //     on the bundling mode
+
+      /**
+       * @summary Inside a build plugin source file specified in
+       * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
+       * add a linter that will handle files with ceratin extensions or
+       * filenames.
+       * @param {Object} options
+       * @param {[String]} options.extensions The file extensions that this
+       * plugin should handle, without the first dot. Can only be "js" or "css".
+       * Examples: `["js", "css"]`.
+       * @param {[String]} options.filenames The list of filenames
+       * that this plugin should handle. Examples: `["config.json"]`.
+       * @param {Function} factory A function that returns an instance
+       * of a minifier class.
+       *
+       * More detailed documentation for build plugins is available [on the GitHub Wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+       * @memberOf Plugin
+       * @locus Build Plugin
+       */
       registerMinifier: function (options, factory) {
         var badUsedExtension = _.find(options.extensions, function (ext) {
           return ! _.contains(['js', 'css'], ext);
