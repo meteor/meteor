@@ -6,7 +6,18 @@ Meteor.methods({
     var connection = this.connection;
     connection.lastRateLimitEvent = connection.lastRateLimitEvent || {};
     connection.lastMethodName = connection.lastMethodName || '';
+    // XXX In Javascript v8 engine, we are currently guaranteed the ordering of
+    // the keys in objects as they are listed. This may change in future
+    // iterations of v8 for performance reasons and will potentially break this
+    // test.
     this.ruleId = DDPRateLimiter.addRule({
+      name: function (name) {
+        connection.lastMethodName = name;
+        if (name !== 'getLastRateLimitEvent') {
+          connection.lastRateLimitEvent.name = name;
+        }
+        return name !== "a-method-that-is-not-rate-limited";
+      },
       userId: function (userId) {
         connection.lastRateLimitEvent.userId = userId;
         return true;
@@ -18,13 +29,6 @@ Meteor.methods({
           connection.lastRateLimitEvent.type = type;
         }
         return true;
-      },
-      name: function (name) {
-        if (name !== 'getLastRateLimitEvent') {
-          connection.lastRateLimitEvent.name = name;
-        }
-        connection.lastMethodName = name;
-        return name !== "a-method-that-is-not-rate-limited";
       },
       clientAddress: function (clientAddress) {
         connection.lastRateLimitEvent.clientAddress = clientAddress
@@ -54,36 +58,6 @@ Meteor.methods({
   },
   'a-method-that-is-not-rate-limited': function () {
     return "not-rate-limited";
-  },
-  addSubscriptionRuleToDDPRateLimiter: function () {
-    var connection = this.connection;
-    connection.lastRateLimitEvent = connection.lastRateLimitEvent || {};
-    connection.lastMethodName = connection.lastMethodName || '';
-    this.ruleId = DDPRateLimiter.addRule({
-      userId: function (userId) {
-        connection.lastRateLimitEvent.userId = userId;
-        return true;
-      },
-      name: function (name) {
-        connection.lastMethodName = name;
-        // Special check to return proper name since 'getLastRateLimitEvent'
-        // is another method call
-        if (name !== 'getLastRateLimitEvent')
-          connection.lastRateLimitEvent.name = name;
-        return true;
-      },
-      type: function (type) {
-        if (connection.lastMethodName !== 'getLastRateLimitEvent')
-          connection.lastRateLimitEvent.type = type;
-        return type === 'subscription';
-      },
-      clientAddress: function (clientAddress) {
-        connection.lastRateLimitEvent.clientAddress = clientAddress;
-        return true;
-      },
-      connectionId: this.connection.id
-    }, RATE_LIMIT_NUM_CALLS, RATE_LIMIT_INTERVAL_TIME_MS);
-    return this.ruleId;
   }
 });
 

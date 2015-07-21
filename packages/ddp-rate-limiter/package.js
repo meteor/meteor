@@ -20,10 +20,11 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use('underscore');
-  api.use('ddp-rate-limiter');
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'underscore', 'check',
            'ddp', 'ecmascript', 'es5-shim']);
+  api.use('ddp-rate-limiter');
+
   api.addFiles('ddp-rate-limiter-tests-common.js');
   api.addFiles('ddp-rate-limiter-test-service.js', 'server');
   api.addFiles('ddp-rate-limiter-tests.js', 'client');

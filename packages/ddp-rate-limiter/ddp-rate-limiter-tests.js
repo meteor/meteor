@@ -74,7 +74,7 @@ testAsyncMulti("ddp rate limiter - matchers get passed correct arguments", [
 testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
   function (test, expect) {
     var self = this;
-    Meteor.call("addSubscriptionRuleToDDPRateLimiter", expect(
+    Meteor.call("addRuleToDDPRateLimiter", expect(
       function(error, result) {
         self.ruleId = result;
       }));
@@ -101,7 +101,7 @@ testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
 testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
   function (test, expect) {
     var self = this;
-    Meteor.call("addSubscriptionRuleToDDPRateLimiter", expect(
+    Meteor.call("addRuleToDDPRateLimiter", expect(
       function(error, result) {
         self.ruleId = result;
       })
