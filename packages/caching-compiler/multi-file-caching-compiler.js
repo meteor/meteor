@@ -113,13 +113,13 @@ extends CachingCompilerBase {
         if (! (cacheEntry && this._cacheEntryValid(cacheEntry, cacheKeyMap))) {
           cacheMisses.push(inputFile.getDisplayPath());
 
-          const {compileResult, referencedImportPaths} =
-                  this.compileOneFile(inputFile, allFiles);
-          if (! compileResult) {
+          const compileOneFileReturn = this.compileOneFile(inputFile, allFiles);
+          if (! compileOneFileReturn) {
             // compileOneFile should have called inputFile.error.
             //  We don't cache failures for now.
             return;
           }
+          const {compileResult, referencedImportPaths} = compileOneFileReturn;
 
           cacheEntry = {
             compileResult,
