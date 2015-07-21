@@ -1,10 +1,8 @@
 module.exports = {
   context: __dirname,
-  entry: "promise",
+  entry: "./promise_client.js",
   output: {
-    library: "Promise",
-    libraryTarget: "this",
     path: __dirname,
-    filename: "promise_client.js"
+    filename: "promise.bundle.js"
   }
 };
