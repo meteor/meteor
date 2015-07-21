@@ -145,7 +145,7 @@ _.extend(InputFile.prototype, {
 
   /**
    * @summary Returns the extension that matched the compiler plugin.
-   * The longest prefix is prefered.
+   * The longest prefix is preferred.
    * @returns {String}
    */
   getExtension: function () {

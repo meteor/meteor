@@ -646,14 +646,20 @@ _.extend(Isopack.prototype, {
       // A compiler plugin is provided by packages to participate in
       // the build process. A compiler can register file extensions and
       // filenames it handles and the build tool will call the compiler's
-      // `processFilesForTarget` method with the source files for a
-      // target (ex.: a server program for app, a browser part of a
-      // package, etc).
+      // `processFilesForTarget` method once for each target (eg, the server
+      // or client program) with all of the files in the target.
       //
-      // Compilers are ran on application bundling (in bundle.js).
-      // Since starting with isopack-2 format, Isopacks
-      // distributed the original sources, compilers can be involved in
-      // the very end, when the app is bundled (not in package publish time).
+      // Compilers are run on application bundling (in bundle.js).
+      // This is different from the legacy registerSourceHandler API,
+      // which runs on a single file at a time when a *package* is built.
+      // Published Isopack packages contain the original sources of
+      // files handled by registerCompiler, not the generated output,
+      // so compilers can be involved in the very end, when the app is bundled
+      // (not in package publish time).  (Note that this requires a new
+      // Isopack format, 'isopack-2'; versions of packages published with new
+      // compilers cannot be used with previous releases of Meteor, but
+      // Version Solver knows this and will select an older compatible
+      // version if possible.
       //
       // Unlike the legacy API called "source handlers" (deprecated in
       // Meteor 1.2), compiler plugins can handle all files for the target,
@@ -669,7 +675,7 @@ _.extend(Isopack.prototype, {
       /**
        * @summary Inside a build plugin source file specified in
        * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
-       * add a compiler that will handle files with ceratin extensions or
+       * add a compiler that will handle files with certain extensions or
        * filenames.
        * @param {Object} options
        * @param {[String]} options.extensions The file extensions that this
@@ -704,18 +710,22 @@ _.extend(Isopack.prototype, {
       // print a linting message.
       //
       // The factory function must return an instance of the linter.
-      // The linter must have the `processFilesForTarget` method that
+      // The linter must have the `processFilesForPackage` method that
       // has two arguments:
       // - inputFiles - LinterFile - sources instances
       // - options - Object
-      // - globals - a list of strings - global variables that can be
-      //    used in the target's scope as they are dependencies of the
-      //    package or the app. e.g.: "Minimongo" or "Webapp".
-
+      //   - globals - a list of strings - global variables that can be
+      //     used in the target's scope as they are dependencies of the
+      //     package or the app. e.g.: "Minimongo" or "Webapp".
+      //
+      // Unlike compilers and minifiers, linters run on one package
+      // at a time.  Linters are run by `meteor run`, `meteor publish`,
+      // and `meteor lint`.
+      
       /**
        * @summary Inside a build plugin source file specified in
        * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
-       * add a linter that will handle files with ceratin extensions or
+       * add a linter that will handle files with certain extensions or
        * filenames.
        * @param {Object} options
        * @param {[String]} options.extensions The file extensions that this
@@ -746,10 +756,11 @@ _.extend(Isopack.prototype, {
       // The minifier plugins can fill into 2 types of minifiers: CSS or JS.
       // When the minifier is added to an app, it is used during "bundling" to
       // compress the app code and each package's code separately.
-      // If a package is depending on a package that provides a minifier plugin,
-      // the minifier plugin is not used anywhere.
+      // Only minifier packages directly used by an app (or implied by a package
+      // directly used by the app) are active: using a minifer's package in
+      // another package does nothing.
       //
-      // So far, the minifiers are only ran on client targets such as
+      // So far, the minifiers are only run on client targets such as
       // web.browser and web.cordova.
       //
       // The factory function must return an instance of a
@@ -764,7 +775,7 @@ _.extend(Isopack.prototype, {
       /**
        * @summary Inside a build plugin source file specified in
        * [Package.registerBuildPlugin](#Package-registerBuildPlugin),
-       * add a linter that will handle files with ceratin extensions or
+       * add a linter that will handle files with certain extensions or
        * filenames.
        * @param {Object} options
        * @param {[String]} options.extensions The file extensions that this
