@@ -1,8 +1,10 @@
 const fs = Npm.require('fs');
 const path = Npm.require('path');
 const createHash = Npm.require('crypto').createHash;
-const LRU = Npm.require('lru-cache');
 const assert = Npm.require('assert');
+const Future = Npm.require('fibers/future');
+const LRU = Npm.require('lru-cache');
+const async = Npm.require('async');
 
 // CachingCompiler is a class designed to be used with Plugin.registerCompiler
 // which implements in-memory and on-disk caches for the files that it
@@ -25,6 +27,13 @@ const assert = Npm.require('assert');
 // compiler name (used to generate environment variables for debugging and
 // tweaking in-memory cache size) and the default cache size.
 //
+// By default, CachingCompiler processes each file in "parallel". That is, if it
+// needs to yield to read from the disk cache, or if getCacheKey,
+// compileOneFile, or addCompileResult yields, it will start processing the next
+// few files. To set how many files can be processed in parallel (including
+// setting it to 1 if your subclass doesn't support any parallelism), pass the
+// maxParallelism option to the superclass constructor.
+//
 // For example (using ES2015 via the ecmascript package):
 //
 //   class AwesomeCompiler extends CachingCompiler {
@@ -45,9 +54,11 @@ const assert = Npm.require('assert');
 CachingCompiler = class CachingCompiler {
   constructor({
     compilerName,
-    defaultCacheSize
+    defaultCacheSize,
+    maxParallelism = 20,
   }) {
     this._compilerName = compilerName;
+    this._maxParallelism = maxParallelism;
     const envVarPrefix = 'METEOR_' + compilerName.toUpperCase() + '_CACHE_';
 
     const debugEnvVar = envVarPrefix + 'DEBUG';
@@ -106,7 +117,8 @@ CachingCompiler = class CachingCompiler {
   // This method is given an InputFile (the data type passed to
   // processFilesForTarget as part of the Plugin.registerCompiler API) and a
   // CompileResult (either returned directly from compileOneFile or read from
-  // the cache).  It should call methods like `inputFile.addJavaScript`.
+  // the cache).  It should call methods like `inputFile.addJavaScript`
+  // and `inputFile.error`.
   addCompileResult(inputFile, compileResult) {
     throw Error('CachingCompiler subclass should implement addCompileResult!');
   }
@@ -145,34 +157,42 @@ CachingCompiler = class CachingCompiler {
   processFilesForTarget(inputFiles) {
     const cacheMisses = [];
 
-    inputFiles.forEach((inputFile) => {
-      const cacheKey = deepHash(this.getCacheKey(inputFile));
-      let compileResult = this._cache.get(cacheKey);
-
-      if (! compileResult) {
-        // XXX Should do this asynchronously!
-        compileResult = this._readCache(cacheKey);
-        if (compileResult) {
-          this._cacheDebug(`Loaded ${ inputFile.getDisplayPath() }`);
-        }
-      }
-
-      if (! compileResult) {
-        cacheMisses.push(inputFile.getDisplayPath());
-        compileResult = this.compileOneFile(inputFile);
+    const future = new Future;
+    async.eachLimit(inputFiles, this._maxParallelism, (inputFile, cb) => {
+      try {
+        const cacheKey = deepHash(this.getCacheKey(inputFile));
+        let compileResult = this._cache.get(cacheKey);
 
         if (! compileResult) {
-          // compileOneFile should have raised an error
-          return;
+          // XXX Should do this asynchronously!
+          compileResult = this._readCache(cacheKey);
+          if (compileResult) {
+            this._cacheDebug(`Loaded ${ inputFile.getDisplayPath() }`);
+          }
         }
 
-        // Save what we've compiled.
-        this._cache.set(cacheKey, compileResult);
-        this._writeCacheAsync(cacheKey, compileResult);
-      }
+        if (! compileResult) {
+          cacheMisses.push(inputFile.getDisplayPath());
+          compileResult = this.compileOneFile(inputFile);
 
-      this.addCompileResult(inputFile, compileResult);
-    });
+          if (! compileResult) {
+            // compileOneFile should have called inputFile.error.
+            //  We don't cache failures for now.
+            return;
+          }
+
+          // Save what we've compiled.
+          this._cache.set(cacheKey, compileResult);
+          this._writeCacheAsync(cacheKey, compileResult);
+        }
+
+        this.addCompileResult(inputFile, compileResult);
+        cb();
+      } catch (e) {
+        cb(e);
+      }
+    }, future.resolver());
+    future.wait();
 
     if (this._cacheDebugEnabled) {
       cacheMisses.sort();

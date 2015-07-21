@@ -22,6 +22,13 @@ Your subclass's compiler should call the superclass compiler specifying the
 compiler name (used to generate environment variables for debugging and tweaking
 in-memory cache size) and the default cache size.
 
+By default, CachingCompiler processes each file in "parallel". That is, if it
+needs to yield to read from the disk cache, or if getCacheKey, compileOneFile,
+or addCompileResult yields, it will start processing the next few files. To set
+how many files can be processed in parallel (including setting it to 1 if your
+subclass doesn't support any parallelism), pass the maxParallelism option to the
+superclass constructor.
+
 For example (using ES2015 via the ecmascript package):
 
 ```js
