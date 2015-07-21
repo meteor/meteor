@@ -1,11 +1,12 @@
 var assert = require("assert");
-var Promise = require("promise");
+var MeteorPromise = typeof Promise === "function"
+  ? Promise : require("promise");
 var fiberPool = require("./fiber_pool.js").makePool();
 
-// Replace Promise.prototype.then with a wrapper that ensures the
+// Replace MeteorPromise.prototype.then with a wrapper that ensures the
 // onResolved and onRejected callbacks always run in a Fiber.
-var es6PromiseThen = Promise.prototype.then;
-Promise.prototype.then = function (onResolved, onRejected) {
+var es6PromiseThen = MeteorPromise.prototype.then;
+MeteorPromise.prototype.then = function (onResolved, onRejected) {
   var Promise = this.constructor;
 
   if (typeof Promise.Fiber === "function") {
@@ -60,21 +61,21 @@ function await(promise) {
   return Fiber.yield();
 }
 
-Promise.awaitAll = function (args) {
+MeteorPromise.awaitAll = function (args) {
   return await(this.all(args));
 };
 
-Promise.await = function (arg) {
+MeteorPromise.await = function (arg) {
   return await(this.resolve(arg));
 };
 
-Promise.prototype.await = function () {
+MeteorPromise.prototype.await = function () {
   return await(this);
 };
 
 // Return a wrapper function that returns a Promise for the eventual
 // result of the original function.
-Promise.async = function (fn, allowReuseOfCurrentFiber) {
+MeteorPromise.async = function (fn, allowReuseOfCurrentFiber) {
   var Promise = this;
   return function () {
     return Promise.asyncApply(
@@ -84,8 +85,9 @@ Promise.async = function (fn, allowReuseOfCurrentFiber) {
   };
 };
 
-Promise.asyncApply = function (fn, context, args,
-                               allowReuseOfCurrentFiber) {
+MeteorPromise.asyncApply = function (
+  fn, context, args, allowReuseOfCurrentFiber
+) {
   var Promise = this;
   var Fiber = Promise.Fiber;
   var fiber = Fiber && Fiber.current;
@@ -103,12 +105,15 @@ Promise.asyncApply = function (fn, context, args,
 };
 
 Function.prototype.async = function (allowReuseOfCurrentFiber) {
-  return Promise.async(this, allowReuseOfCurrentFiber);
+  return MeteorPromise.async(this, allowReuseOfCurrentFiber);
 };
 
-Function.prototype.asyncApply = function (context, args,
-                                          allowReuseOfCurrentFiber) {
-  return Promise.asyncApply(this, context, args, allowReuseOfCurrentFiber);
+Function.prototype.asyncApply = function (
+  context, args, allowReuseOfCurrentFiber
+) {
+  return MeteorPromise.asyncApply(
+    this, context, args, allowReuseOfCurrentFiber
+  );
 };
 
-module.exports = exports = Promise;
+module.exports = exports = MeteorPromise;
