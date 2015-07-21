@@ -93,9 +93,15 @@ _.extend(Proxy.prototype, {
     // discussion at https://github.com/nodejitsu/node-http-proxy/pull/488
     self.proxy.on('error', function (err, req, resOrSocket) {
       if (resOrSocket instanceof http.ServerResponse) {
-        resOrSocket.writeHead(503, {
-          'Content-Type': 'text/plain'
-        });
+        if (!resOrSocket.headersSent) {
+          // Return a 503, but only if we haven't already written headers (or
+          // we'll get an ugly crash about rendering headers twice).  end()
+          // doesn't crash if called twice so we don't have to conditionalize
+          // that call.
+          resOrSocket.writeHead(503, {
+            'Content-Type': 'text/plain'
+          });
+        }
         resOrSocket.end('Unexpected error.');
       } else if (resOrSocket instanceof net.Socket) {
         resOrSocket.end();
