@@ -7,6 +7,7 @@ import buildmessage from '../buildmessage.js';
 import httpHelpers from '../http-helpers.js';
 
 import { cordova, events, CordovaError } from 'cordova-lib';
+import superspawn from 'cordova-lib/src/cordova/superspawn.js';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
 import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
 
@@ -81,14 +82,14 @@ export default class CordovaProject {
 
   async addPlatform(platform) {
     this.chdirToProjectRoot();
-    const options = _.extend(this.defaultOptions, { env: this.env() });
-    return await cordova.raw.platform('add', platform, options);
+    superspawn.setEnv(this.env());
+    return await cordova.raw.platform('add', platform, this.defaultOptions);
   }
 
   async removePlatform(platform) {
     this.chdirToProjectRoot();
-    const options = _.extend(this.defaultOptions, { env: this.env() });
-    return await cordova.raw.platform('rm', platform, options);
+    superspawn.setEnv(this.env());
+    return await cordova.raw.platform('rm', platform, this.defaultOptions);
   }
 
   // Plugins
@@ -119,16 +120,16 @@ export default class CordovaProject {
     pluginTarget.concat(additionalArgs)
 
     this.chdirToProjectRoot();
-    const options = _.extend(this.defaultOptions, { env: this.env() });
-    return await cordova.raw.plugin('add', pluginTarget, options);
+    superspawn.setEnv(this.env());
+    return await cordova.raw.plugin('add', pluginTarget, this.defaultOptions);
   }
 
   async removePlugin(plugin, isFromTarballUrl = false) {
     verboseLog('Removing a plugin', name);
 
     this.chdirToProjectRoot();
-    const options = _.extend(this.defaultOptions, { env: this.env() });
-    await cordova.raw.plugin('rm', plugin, options);
+    superspawn.setEnv(this.env());
+    await cordova.raw.plugin('rm', plugin, this.defaultOptions);
 
     if (isFromTarballUrl) {
       Console.debug('Removing plugin from the tarball plugins lock', name);
@@ -244,8 +245,8 @@ export default class CordovaProject {
   async build(options) {
     this.chdirToProjectRoot();
 
-    const env = this.env(options.extraPaths);
-    options = _.extend(this.defaultOptions, options, { env: env });
+    superspawn.setEnv(this.env(options.extraPaths));
+    options = _.extend(this.defaultOptions, options);
 
     return await cordova.raw.build(options);
   }
@@ -254,8 +255,8 @@ export default class CordovaProject {
   async run(platform, isDevice, options) {
     this.chdirToProjectRoot();
 
-    const env = this.env(options.extraPaths);
-    options = _.extend(this.defaultOptions, options, { env: env },
+    superspawn.setEnv(this.env(options.extraPaths));
+    options = _.extend(this.defaultOptions, options,
       { platforms: [platform] });
 
     if (isDevice) {
