@@ -61,6 +61,11 @@ export default class CordovaProject {
     return { silent: !Console.verbose, verbose: Console.verbose };
   }
 
+  get defaultPaths() {
+    const nodeBinDir = files.convertToOSPath(files.getCurrentNodeBinDir());
+    return [nodeBinDir];
+  }
+
   // Platforms
 
   getInstalledPlatforms() {
@@ -229,7 +234,9 @@ export default class CordovaProject {
   async build(options) {
     this.chdirToProjectRoot();
 
-    options =_.extend(this.defaultOptions, options);
+    const extraPaths = (this.defaultPaths || []).unshift(options.extraPaths);
+    const env = files.currentEnvWithPathsAdded(extraPaths);
+    options = _.extend(this.defaultOptions, options, { env: env });
 
     return await cordova.raw.build(options);
   }
@@ -238,7 +245,10 @@ export default class CordovaProject {
   async run(platform, isDevice, options) {
     this.chdirToProjectRoot();
 
-    options =_.extend(this.defaultOptions, { platforms: [platform] }, options);
+    const extraPaths = (this.defaultPaths || []).unshift(options.extraPaths);
+    const env = files.currentEnvWithPathsAdded(extraPaths);
+    options = _.extend(this.defaultOptions, options, { env: env },
+      { platforms: [platform] });
 
     if (isDevice) {
       return await cordova.raw.run(options);

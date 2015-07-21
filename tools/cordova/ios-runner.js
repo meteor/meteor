@@ -27,11 +27,11 @@ export default class iOSRunner extends CordovaRunner {
     if (this.isDevice) {
       openInXcode(files.pathJoin(this.cordovaProject.projectRoot, 'platforms', 'ios'));
     } else {
-      let path = process.env.PATH || '.';
-      path += ':' + files.pathJoin(files.getCurrentToolsDir(), 'tools/node_modules/ios-sim/bin');
-      let env = options.env || {};
-      env.PATH = path;
-      return this.cordovaProject.run(this.platform, this.isDevice, _.extend(options, { env: env }));
+      const iosSimBinPath = files.convertToOSPath(
+        files.pathJoin(files.getCurrentToolsDir(),
+        'tools/node_modules/ios-sim/bin'));
+      return this.cordovaProject.run(this.platform, this.isDevice,
+        _.extend(options, { extraPaths: [iosSimBinPath] }));
     }
   }
 
