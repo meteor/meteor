@@ -12,7 +12,7 @@ Plugin.registerCompiler({
   extensions: ['coffee', 'litcoffee', 'coffee.md']
 }, () => new CoffeeCompiler());
 
-// XXX document that compileResult is {source,sourceMap}
+// The CompileResult for this CachingCompiler is a {source, sourceMap} object.
 
 class CoffeeCompiler extends CachingCompiler {
   constructor() {
