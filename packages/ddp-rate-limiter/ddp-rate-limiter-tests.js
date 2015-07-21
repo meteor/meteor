@@ -1,5 +1,5 @@
 // Test that we do hit the default login rate limit.
-testAsyncMulti("ddp rate limiting - default rate limit", [
+testAsyncMulti("ddp rate limiter - default rate limit", [
   function (test, expect) {
     _.extend(this, createTestUser(test, expect));
   },
@@ -27,7 +27,7 @@ testAsyncMulti("ddp rate limiting - default rate limit", [
   }
 ]);
 
-testAsyncMulti("ddp rate limiting - matchers get passed correct arguments", [
+testAsyncMulti("ddp rate limiter - matchers get passed correct arguments", [
   function (test, expect) {
     _.extend(this, createTestUser(test, expect));
   },
@@ -70,7 +70,7 @@ testAsyncMulti("ddp rate limiting - matchers get passed correct arguments", [
   }
 ]);
 
-testAsyncMulti("ddp rate limiting - we can return with type 'subscription'", [
+testAsyncMulti("ddp rate limiter - we can return with type 'subscription'", [
   function (test, expect) {
     var self = this;
     Meteor.call("addSubscriptionRuleToDDPRateLimiter", expect(
@@ -97,7 +97,7 @@ testAsyncMulti("ddp rate limiting - we can return with type 'subscription'", [
   }
 ]);
 
-testAsyncMulti("ddp rate limiting - rate limits to subscriptions", [
+testAsyncMulti("ddp rate limiter - rate limits to subscriptions", [
   function (test, expect) {
     var self = this;
     Meteor.call("addSubscriptionRuleToDDPRateLimiter", expect(
@@ -138,7 +138,8 @@ testAsyncMulti("ddp rate limiting - rate limits to subscriptions", [
 
 
 // - If you wait 5 seconds you are no longer rate limited
-testAsyncMulti("wait RATE_LIMIT_INTERVAL_TIME_MS, no longer rate limited", [
+testAsyncMulti("ddp rate limiter - rate limit resets after " + "
+  RATE_LIMIT_INTERVAL_TIME_MS", [
   function (test, expect) {
     _.extend(this, createTestUser(test, expect));
   },
@@ -181,7 +182,8 @@ testAsyncMulti("wait RATE_LIMIT_INTERVAL_TIME_MS, no longer rate limited", [
   }
 ]);
 
-testAsyncMulti("'a-method-that-is-not-rate-limited' is not rate limited", [
+testAsyncMulti("ddp rate limiter - 'a-method-that-is-not-rate-limited' is not" +
+  " rate limited", [
   function (test, expect) {
     var self = this;
     Meteor.call('addRuleToDDPRateLimiter', expect(function(error, result){
@@ -208,8 +210,8 @@ testAsyncMulti("'a-method-that-is-not-rate-limited' is not rate limited", [
 
 // When we have a rate limited client and we remove the rate limit rule,
 // all requests should be allowed immediately afterwards.
-testAsyncMulti("test removing rule with rateLimited client lets them send " +
-  "new queries", [
+testAsyncMulti("ddp rate limiter - test removing rule with rateLimited " +
+  "client lets them send new queries", [
   function (test, expect) {
     _.extend(this, createTestUser(test, expect));
   },

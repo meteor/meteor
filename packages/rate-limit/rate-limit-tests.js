@@ -1,10 +1,32 @@
-Tinytest.add('Check empty constructor creation', function (test) {
-  r = new RateLimiter();
-  test.equal(r.rules, {});
+// These tests were written before rate-limit was factored outside of DDP Rate
+// Limiter and thus are structured with DDP method invocations in mind. These
+// rules still test abstract rate limit package behavior. The tests currently
+// implemented are:
+// * Empty rule set on RateLimiter construction
+// * Multiple inputs, only 1 that matches rule and reaches rate limit
+// * Multiple inputs, 1 hits rate limit, wait for reset, after which inputs
+//   allowed
+// * 2 rules, 3 inputs where 2/3 match 1 rule and thus hit rate limit. Second
+//   input matches another rule and hits rate limit while 3rd rule not rate
+//   limited
+// * One rule affected by two inputs still throws
+// * Global rule triggers on any invocation after reaching limit
+// * Fuzzy rule matching triggers rate limit only when input has more keys than
+//   rule
+// * matchRule tests that have various levels of similarity in input and rule
+// * generateKeyString tests for various matches creating appropriate string
+//
+// XXX These tests should be refactored to use Tinytest.add instead of
+// testAsyncMulti as they're all on the server. Any future tests should be
+// written that way.
+Tinytest.add('rate limit tests - Check empty constructor creation',
+  function (test) {
+    r = new RateLimiter();
+    test.equal(r.rules, {});
 });
 
-Tinytest.add(
-  'Check single rule with multiple invocations, only 1 that matches',
+Tinytest.add('rate limit tests - Check single rule with multiple ' +
+  'invocations, only 1 that matches',
   function (test) {
     r = new RateLimiter();
     var userIdOne = 1;
@@ -28,7 +50,8 @@ Tinytest.add(
     test.equal(r.check(methodInvc2).allowed, true);
   });
 
-testAsyncMulti("Run multiple invocations and wait for one to return", [
+testAsyncMulti("rate limit tests - Run multiple invocations and wait for one" +
+  " to reset", [
   function (test, expect) {
     var self = this;
     self.r = new RateLimiter();
@@ -41,10 +64,10 @@ testAsyncMulti("Run multiple invocations and wait for one to return", [
     };
     self.r.addRule(self.restrictJustUserIdOneRule, 1, 1000);
     self.connectionHandle = createTempConnectionHandle(123, '127.0.0.1')
-    self.methodInvc1 = createTempMethodInvocation(self.userIdOne, self.connectionHandle,
-      'login');
-    self.methodInvc2 = createTempMethodInvocation(self.userIdTwo, self.connectionHandle,
-      'login');
+    self.methodInvc1 = createTempMethodInvocation(self.userIdOne,
+      self.connectionHandle, 'login');
+    self.methodInvc2 = createTempMethodInvocation(self.userIdTwo,
+      self.connectionHandle, 'login');
     for (var i = 0; i < 2; i++) {
       self.r.increment(self.methodInvc1);
       self.r.increment(self.methodInvc2);
@@ -64,7 +87,8 @@ testAsyncMulti("Run multiple invocations and wait for one to return", [
   }
 ]);
 
-Tinytest.add('Check two rules that affect same methodInvc still throw',
+Tinytest.add('rate limit tests - Check two rules that affect same methodInvc' +
+  ' still throw',
   function (test) {
     r = new RateLimiter();
     var loginMethodRule = {
@@ -110,7 +134,8 @@ Tinytest.add('Check two rules that affect same methodInvc still throw',
 
   });
 
-Tinytest.add('Check two rules that are affected by different invocations',
+Tinytest.add('rate limit tests - Check one rule affected by two different ' +
+  'invocations',
   function (test) {
     r = new RateLimiter();
     var loginMethodRule = {
@@ -138,7 +163,7 @@ Tinytest.add('Check two rules that are affected by different invocations',
     test.equal(r.check(methodInvc2).allowed, false);
   });
 
-Tinytest.add("add global rule", function (test) {
+Tinytest.add("rate limit tests - add global rule", function (test) {
   r = new RateLimiter();
   var globalRule = {
     userId: null,
@@ -169,57 +194,59 @@ Tinytest.add("add global rule", function (test) {
   test.equal(r.check(methodInvc3).allowed, false);
 });
 
-Tinytest.add('Fuzzy rule match does not trigger rate limit', function (test) {
-  r = new RateLimiter();
-  var rule = {
-    a: function (inp) {
-      return inp % 3 == 0
-    },
-    b: 5,
-    c: "hi",
-  }
-  r.addRule(rule, 1, 10000);
-  var input = {
-    a: 3,
-    b: 5
-  }
-  for (var i = 0; i < 5; i++) {
-    r.increment(input);
-  }
-  test.equal(r.check(input).allowed, true);
-  var matchingInput = {
-    a: 3,
-    b: 5,
-    c: "hi",
-    d: 1
-  }
-  r.increment(matchingInput);
-  r.increment(matchingInput);
-  // Past limit so should be false
-  test.equal(r.check(matchingInput).allowed, false);
+Tinytest.add('rate limit tests - Fuzzy rule match does not trigger rate limit',
+  function (test) {
+    r = new RateLimiter();
+    var rule = {
+      a: function (inp) {
+        return inp % 3 == 0
+      },
+      b: 5,
+      c: "hi",
+    }
+    r.addRule(rule, 1, 10000);
+    var input = {
+      a: 3,
+      b: 5
+    }
+    for (var i = 0; i < 5; i++) {
+      r.increment(input);
+    }
+    test.equal(r.check(input).allowed, true);
+    var matchingInput = {
+      a: 3,
+      b: 5,
+      c: "hi",
+      d: 1
+    }
+    r.increment(matchingInput);
+    r.increment(matchingInput);
+    // Past limit so should be false
+    test.equal(r.check(matchingInput).allowed, false);
 
-  // Add secondary rule and check that longer time is returned when multiple
-  // rules limits are hit
-  var newRule = {
-    a: function (inp) {
-      return inp % 3 == 0
-    },
-    b: 5,
-    c: "hi",
-    d: 1
+    // Add secondary rule and check that longer time is returned when multiple
+    // rules limits are hit
+    var newRule = {
+      a: function (inp) {
+        return inp % 3 == 0
+      },
+      b: 5,
+      c: "hi",
+      d: 1
+    }
+    r.addRule(newRule, 1, 10);
+    // First rule should still throw while second rule will trigger as well,
+    // causing us to return longer time to reset to user
+    r.increment(matchingInput);
+    r.increment(matchingInput);
+    test.equal(r.check(matchingInput).timeToReset > 50, true);
   }
-  r.addRule(newRule, 1, 10);
-  // First rule should still throw while second rule will trigger as well,
-  // causing us to return longer time to reset to user
-  r.increment(matchingInput);
-  r.increment(matchingInput);
-  test.equal(r.check(matchingInput).timeToReset > 50, true);
-});
+);
 
 
 /****** Test Our Helper Methods *****/
 
-Tinytest.add("test matchRule method", function (test) {
+Tinytest.add("rate limit tests - test matchRule method", function (test) {
   r = new RateLimiter();
   var globalRule = {
     userId: null,
@@ -259,48 +286,50 @@ Tinytest.add("test matchRule method", function (test) {
   test.equal(r.rules[oneNotNullId].match(notCompleteInput), false);
 });
 
-Tinytest.add('test generateMethodKey string', function (test) {
-  r = new RateLimiter();
-  var globalRule = {
-    userId: null,
-    IPAddr: null,
-    type: null,
-    name: null
+Tinytest.add('rate limit tests - test generateMethodKey string',
+  function (test) {
+    r = new RateLimiter();
+    var globalRule = {
+      userId: null,
+      IPAddr: null,
+      type: null,
+      name: null
+    }
+    var globalRuleId = r.addRule(globalRule);
+
+    var rateLimiterInput = {
+      userId: 1023,
+      IPAddr: "127.0.0.1",
+      type: 'sub',
+      name: 'getSubLists'
+    };
+
+    test.equal(r.rules[globalRuleId]._generateKeyString(rateLimiterInput), "");
+    globalRule.userId = 1023;
+
+    test.equal(r.rules[globalRuleId]._generateKeyString(rateLimiterInput),
+      "userId1023");
+
+    var ruleWithFuncs = {
+      userId: function (input) {
+        return input % 2 === 0
+      },
+      IPAddr: null,
+      type: null
+    };
+    var funcRuleId = r.addRule(ruleWithFuncs);
+    test.equal(r.rules[funcRuleId]._generateKeyString(rateLimiterInput), "");
+    rateLimiterInput.userId = 1024;
+    test.equal(r.rules[funcRuleId]._generateKeyString(rateLimiterInput),
+      "userId1024");
+
+    var multipleRules = ruleWithFuncs;
+    multipleRules.IPAddr = '127.0.0.1';
+    var multipleRuleId = r.addRule(multipleRules);
+    test.equal(r.rules[multipleRuleId]._generateKeyString(rateLimiterInput),
+      "userId1024IPAddr127.0.0.1")
   }
-  var globalRuleId = r.addRule(globalRule);
-
-  var rateLimiterInput = {
-    userId: 1023,
-    IPAddr: "127.0.0.1",
-    type: 'sub',
-    name: 'getSubLists'
-  };
-
-  test.equal(r.rules[globalRuleId]._generateKeyString(rateLimiterInput), "");
-  globalRule.userId = 1023;
-
-  test.equal(r.rules[globalRuleId]._generateKeyString(rateLimiterInput),
-    "userId1023");
-
-  var ruleWithFuncs = {
-    userId: function (input) {
-      return input % 2 === 0
-    },
-    IPAddr: null,
-    type: null
-  };
-  var funcRuleId = r.addRule(ruleWithFuncs);
-  test.equal(r.rules[funcRuleId]._generateKeyString(rateLimiterInput), "");
-  rateLimiterInput.userId = 1024;
-  test.equal(r.rules[funcRuleId]._generateKeyString(rateLimiterInput),
-    "userId1024");
-
-  var multipleRules = ruleWithFuncs;
-  multipleRules.IPAddr = '127.0.0.1';
-  var multipleRuleId = r.addRule(multipleRules);
-  test.equal(r.rules[multipleRuleId]._generateKeyString(rateLimiterInput),
-    "userId1024IPAddr127.0.0.1")
-})
+);
 
 function createTempConnectionHandle(id, clientIP) {
   return {
