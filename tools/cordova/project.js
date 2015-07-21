@@ -61,9 +61,11 @@ export default class CordovaProject {
     return { silent: !Console.verbose, verbose: Console.verbose };
   }
 
-  env(extraPaths) {
-    const paths = (this.defaultPaths || []).unshift(extraPaths);
-    return files.currentEnvWithPathsAdded(paths);
+  env(...extraPaths) {
+    let paths = (this.defaultPaths || []);
+    paths.unshift(...extraPaths);
+    const env = files.currentEnvWithPathsAdded(paths);
+    return env;
   }
 
   get defaultPaths() {
