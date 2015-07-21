@@ -126,7 +126,7 @@ Override fields of the object by assigning to them:
    by the `emailTemplates.from` field.
  - `subject`: A `Function` that takes a user object and returns
    a `String` for the subject line of a reset password email.
- - `text`: A `Function` that takes a user object and a url, and
+ - `text`: An optional `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
  - `html`: An optional `Function` that takes a user object and a
    url, and returns the body html for a reset password email.
