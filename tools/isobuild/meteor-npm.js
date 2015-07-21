@@ -338,17 +338,13 @@ var currentNodeCompatibilityVersion = function () {
 };
 
 var runNpmCommand = function (args, cwd) {
+  const nodeBinDir = files.getCurrentNodeBinDir();
   var npmPath;
-  var nodeBinDir;
 
   if (os.platform() === "win32") {
-    npmPath = files.convertToOSPath(
-      files.pathJoin(files.getDevBundle(), "bin", "npm.cmd"));
-    nodeBinDir = files.convertToOSPath(
-      files.pathJoin(files.getDevBundle(), "bin"));
+    npmPath = files.pathJoin(nodeBinDir, "npm.cmd");
   } else {
-    npmPath = files.pathJoin(files.getDevBundle(), "bin", "npm");
-    nodeBinDir = files.pathJoin(files.getDevBundle(), "bin");
+    npmPath = files.pathJoin(nodeBinDir, "npm");
   }
 
   if (meteorNpm._printNpmCalls) // only used by test-bundler.js
@@ -358,7 +354,6 @@ var runNpmCommand = function (args, cwd) {
   if (cwd)
     cwd = files.convertToOSPath(cwd);
 
-  var env = process.env;
   // It looks like some npm commands (such as build commands, specifically on
   // Windows) rely on having a global node binary present.
   // Sometimes users have a global node installed, so it is not
@@ -367,9 +362,8 @@ var runNpmCommand = function (args, cwd) {
   // containing the node binary we are running in right now as the highest
   // priority.
   // This hack is confusing as npm is supposed to do it already.
-  var pathDecomposed = (env.PATH || "").split(files.pathOsDelimiter);
-  pathDecomposed.unshift(nodeBinDir);
-  env.PATH = pathDecomposed.join(files.pathOsDelimiter);
+  const env = files.currentEnvWithPathsAdded(nodeBinDir);
+
   var opts = { cwd: cwd, env: env, maxBuffer: 10 * 1024 * 1024 };
 
   var future = new Future;
@@ -648,4 +642,3 @@ var logUpdateDependencies = function (packageName, npmDependencies) {
 };
 
 exports.runNpmCommand = runNpmCommand;
-

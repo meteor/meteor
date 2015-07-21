@@ -194,6 +194,10 @@ files.getDevBundle = function () {
   return files.pathJoin(files.getCurrentToolsDir(), 'dev_bundle');
 };
 
+files.getCurrentNodeBinDir = function () {
+  return files.pathJoin(files.getDevBundle(), "bin");
+}
+
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
   var dirname = files.convertToStandardPath(__dirname);
@@ -1172,6 +1176,17 @@ files.getHomeDir = function () {
     return process.env.HOME;
   }
 };
+
+files.currentEnvWithPathsAdded = function (...paths) {
+  const env = {...process.env};
+
+  const convertedPaths = paths.map(path => files.convertToOSPath(path));
+  let pathDecomposed = (env.PATH || "").split(files.pathOsDelimiter);
+  pathDecomposed.unshift(...convertedPaths);
+
+  env.PATH = pathDecomposed.join(files.pathOsDelimiter);
+  return env;
+}
 
 // add .bat extension to link file if not present
 var ensureBatExtension = function (p) {
