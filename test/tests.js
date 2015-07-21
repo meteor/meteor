@@ -2,6 +2,8 @@ var assert = require("assert");
 var Fiber = require("fibers");
 var Promise = require("../promise_server.js");
 
+Promise.Fiber = Fiber;
+
 describe("Promise.await", function () {
   it("should work inside an existing Fiber", function () {
     assert.strictEqual(Promise.await(42), 42);

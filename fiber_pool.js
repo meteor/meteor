@@ -1,10 +1,5 @@
 var assert = require("assert");
-var Fiber = require("fibers");
 var undefined;
-
-// Just in case someone tampers with Fiber.yield, don't let that interfere
-// with our processing of the callback queue.
-var originalYield = Fiber.yield;
 
 function FiberPool(targetFiberCount) {
   assert.ok(this instanceof FiberPool);
@@ -12,7 +7,11 @@ function FiberPool(targetFiberCount) {
 
   var fiberStack = [];
 
-  function makeNewFiber() {
+  function makeNewFiber(Fiber) {
+    // Just in case someone tampers with Fiber.yield, don't let that interfere
+    // with our processing of the callback queue.
+    var originalYield = Fiber.yield;
+
     var fiber = new Fiber(function () {
       while (true) {
         // Call Fiber.yield() to await further instructions.
@@ -63,7 +62,16 @@ function FiberPool(targetFiberCount) {
     assert.strictEqual(typeof entry, "object");
     assert.strictEqual(typeof entry.callback, "function");
 
-    var fiber = fiberStack.pop() || makeNewFiber();
+    if (typeof Promise.Fiber !== "function") {
+      return new Promise(function (resolve) {
+        resolve(entry.callback.apply(
+          entry.context || null,
+          entry.args
+        ));
+      });
+    }
+
+    var fiber = fiberStack.pop() || makeNewFiber(Promise.Fiber);
 
     var promise = new Promise(function (resolve, reject) {
       entry.resolve = resolve;

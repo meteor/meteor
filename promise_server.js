@@ -1,5 +1,4 @@
 var assert = require("assert");
-var Fiber = require("fibers");
 var Promise = require("promise");
 var fiberPool = require("./fiber_pool.js").makePool();
 
@@ -8,15 +7,20 @@ var fiberPool = require("./fiber_pool.js").makePool();
 var es6PromiseThen = Promise.prototype.then;
 Promise.prototype.then = function (onResolved, onRejected) {
   var Promise = this.constructor;
-  return es6PromiseThen.call(
-    this,
-    wrapCallback(onResolved, Promise),
-    wrapCallback(onRejected, Promise)
-  );
+
+  if (typeof Promise.Fiber === "function") {
+    return es6PromiseThen.call(
+      this,
+      wrapCallback(onResolved, Promise),
+      wrapCallback(onRejected, Promise)
+    );
+  }
+
+  return es6PromiseThen.call(this, onResolved, onRejected);
 };
 
 function wrapCallback(callback, Promise) {
-  var fiber = Fiber.current;
+  var fiber = Promise.Fiber.current;
   var dynamics = fiber && fiber._meteorDynamics;
 
   return callback && function (arg) {
@@ -30,6 +34,14 @@ function wrapCallback(callback, Promise) {
 
 // Yield the current Fiber until the given Promise has been fulfilled.
 function await(promise) {
+  var Promise = promise.constructor;
+  var Fiber = Promise.Fiber;
+
+  assert.strictEqual(
+    typeof Fiber, "function",
+    "Cannot await unless Promise.Fiber is defined"
+  );
+
   var fiber = Fiber.current;
 
   assert.ok(
@@ -74,7 +86,10 @@ Promise.async = function (fn, allowReuseOfCurrentFiber) {
 
 Promise.asyncApply = function (fn, context, args,
                                allowReuseOfCurrentFiber) {
-  var fiber = Fiber.current;
+  var Promise = this;
+  var Fiber = Promise.Fiber;
+  var fiber = Fiber && Fiber.current;
+
   if (fiber && allowReuseOfCurrentFiber) {
     return this.resolve(fn.apply(context, args));
   }
@@ -84,7 +99,7 @@ Promise.asyncApply = function (fn, context, args,
     context: context,
     args: args,
     dynamics: fiber && fiber._meteorDynamics
-  }, this);
+  }, Promise);
 };
 
 Function.prototype.async = function (allowReuseOfCurrentFiber) {
