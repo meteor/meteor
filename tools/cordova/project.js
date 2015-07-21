@@ -65,7 +65,7 @@ export default class CordovaProject {
   env(...extraPaths) {
     let paths = (this.defaultPaths || []);
     paths.unshift(...extraPaths);
-    const env = files.currentEnvWithPathsAdded(paths);
+    const env = files.currentEnvWithPathsAdded(...paths);
     return env;
   }
 
@@ -245,7 +245,7 @@ export default class CordovaProject {
   async build(options) {
     this.chdirToProjectRoot();
 
-    superspawn.setEnv(this.env(options.extraPaths));
+    superspawn.setEnv(this.env(...options.extraPaths));
     options = _.extend(this.defaultOptions, options);
 
     return await cordova.raw.build(options);
@@ -255,7 +255,7 @@ export default class CordovaProject {
   async run(platform, isDevice, options) {
     this.chdirToProjectRoot();
 
-    superspawn.setEnv(this.env(options.extraPaths));
+    superspawn.setEnv(this.env(...options.extraPaths));
     options = _.extend(this.defaultOptions, options,
       { platforms: [platform] });
 
