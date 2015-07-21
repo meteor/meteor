@@ -603,8 +603,9 @@ _.extend(Session.prototype, {
             error: new Meteor.Error(
               'too-many-requests',
               DDPRateLimiter.getErrorMessage(rateLimitResult),
-              {timeToReset: rateLimitResult.timeToReset});
+              {timeToReset: rateLimitResult.timeToReset})
           });
+          return;
         }
       }
 
@@ -691,7 +692,10 @@ _.extend(Session.prototype, {
           DDPRateLimiter._increment(rateLimiterInput);
           var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
           if (!rateLimitResult.allowed) {
-            throw new Meteor.Error("too-many-requests", DDPRateLimiter.getErrorMessage(rateLimitResult));
+            throw new Meteor.Error(
+              "too-many-requests",
+              DDPRateLimiter.getErrorMessage(rateLimitResult),
+              {timeToReset: rateLimitResult.timeToReset});
             }
         }
 

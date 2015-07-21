@@ -1,6 +1,3 @@
-RATE_LIMIT_NUM_CALLS = 5;
-RATE_LIMIT_INTERVAL_TIME_MS = 5000;
-
 Meteor.methods({
   // Adds in a new rule with the specific intervalTime and connectionId as
   // passed in to speed up testing & allow the rule to apply to the connection
@@ -8,18 +5,25 @@ Meteor.methods({
   addRuleToDDPRateLimiter: function () {
     var connection = this.connection;
     connection.lastRateLimitEvent = connection.lastRateLimitEvent || {};
-
+    connection.lastMethodName = connection.lastMethodName || '';
     this.ruleId = DDPRateLimiter.addRule({
       userId: function (userId) {
-        connection.lastRateLimitEvent.userId = type;
+        connection.lastRateLimitEvent.userId = userId;
         return true;
       },
       type: function (type) {
-        connection.lastRateLimitEvent.type = type;
+        // Special check to return proper name since 'getLastRateLimitEvent'
+        // is another method call
+        if (connection.lastMethodName !== 'getLastRateLimitEvent'){
+          connection.lastRateLimitEvent.type = type;
+        }
         return true;
       },
       name: function (name) {
-        connection.lastRateLimitEvent.name = name;
+        if (name !== 'getLastRateLimitEvent') {
+          connection.lastRateLimitEvent.name = name;
+        }
+        connection.lastMethodName = name;
         return name !== "a-method-that-is-not-rate-limited";
       },
       connectionId: this.connection.id
@@ -38,10 +42,43 @@ Meteor.methods({
   printCurrentListOfRules: function () {
     console.log('Current list of rules :', DDPRateLimiter.printRules());
   },
-  removeUsersByUsername: function (username) {
+  removeUserByUsername: function (username) {
     Meteor.users.remove({username: username});
   },
-  dummy: function () {
+  dummyMethod: function () {
     return "yup";
+  },
+  'a-method-that-is-not-rate-limited': function () {
+    return "not-rate-limited";
+  },
+  addSubscriptionRuleToDDPRateLimiter: function () {
+    var connection = this.connection;
+    connection.lastRateLimitEvent = connection.lastRateLimitEvent || {};
+    connection.lastMethodName = connection.lastMethodName || '';
+    this.ruleId = DDPRateLimiter.addRule({
+        userId: function (userId) {
+          connection.lastRateLimitEvent.userId = userId;
+          return true;
+        },
+        name: function (name) {
+          connection.lastMethodName = name;
+          // Special check to return proper name since 'getLastRateLimitEvent'
+          // is another method call
+          if (name !== 'getLastRateLimitEvent')
+            connection.lastRateLimitEvent.name = name;
+          return true;
+        },
+        type: function (type) {
+          if (connection.lastMethodName !== 'getLastRateLimitEvent')
+            connection.lastRateLimitEvent.type = type;
+          return type === 'subscription';
+        },
+        connectionId: this.connection.id
+      }, RATE_LIMIT_NUM_CALLS, RATE_LIMIT_INTERVAL_TIME_MS);
+    return this.ruleId;
   }
+});
+
+Meteor.publish("testSubscription", function () {
+  return [];
 });

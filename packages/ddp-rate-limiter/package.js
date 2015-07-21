@@ -23,8 +23,8 @@ Package.onTest(function(api) {
   api.use('ddp-rate-limiter');
   api.use(['accounts-password', 'tinytest', 'test-helpers', 'tracker',
            'accounts-base', 'random', 'email', 'underscore', 'check',
-           'ddp']);
+           'ddp', 'ecmascript', 'es5-shim']);
+  api.addFiles('ddp-rate-limiter-tests-common.js');
   api.addFiles('ddp-rate-limiter-test-service.js', 'server');
-  api.addFiles('ddp-rate-limiter-server-tests.js', 'server');
   api.addFiles('ddp-rate-limiter-tests.js', 'client');
 });
