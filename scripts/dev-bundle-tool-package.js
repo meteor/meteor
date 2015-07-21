@@ -21,8 +21,8 @@ var packageJson = {
   version: "0.0.0",
   dependencies: {
     fibers: fibersVersion,
-    "meteor-babel": "0.3.4",
-    "meteor-promise": "0.2.4",
+    "meteor-babel": "0.4.4",
+    "meteor-promise": "0.4.0",
     // For Map and Set polyfills.
     "core-js": "0.9.18",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done

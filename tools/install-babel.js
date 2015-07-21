@@ -15,6 +15,9 @@ babelRegister(); // #RemoveInProd this line is removed in isopack.js
 // run all its callbacks in Fibers.
 global.Promise = require('meteor-promise');
 
+// Allow all Promise callbacks to be run in a Fiber.
+global.Promise.Fiber = require('fibers');
+
 // Install ES2015-complaint polyfills for Symbol, Map, Set, and String,
 // patching the native implementations if they are available.
 require('core-js/es6/symbol');
