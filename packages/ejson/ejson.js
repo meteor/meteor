@@ -329,7 +329,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
       return obj;
 
     _.each(obj, function (value, key) {
-       if (typeof value === 'object') {
+      if (typeof value === 'object') {
         var changed = fromJSONValueHelper(value, _base);
         if (value !== changed) {
           obj[key] = changed;
