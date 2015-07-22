@@ -25,6 +25,7 @@ exports.getDefaults = function getDefaults(features) {
       "es7.objectRestSpread",
       "es6.destructuring",
       "es7.trailingFunctionCommas",
+      "jscript",
       "flow"
     ]
   };

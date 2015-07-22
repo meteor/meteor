@@ -215,6 +215,29 @@ val = "zxcv";`;
     assert.strictEqual(calledCreateElement, true);
   });
 
+  const expectedFns = [
+    "function jscript(",
+    "function (", // Wrapper IIFE for f.
+    "function f(",
+    "function (", // Wrapper IIFE for C.
+    "function C("
+  ];
+
+  it("jscript", function jscript() {
+    let f = function f() {
+      return f;
+    };
+
+    assert.strictEqual(f, f());
+
+    const C = class C {};
+
+    var code = jscript.toString();
+    var fns = code.match(/\bfunction[^(]*\(/gm);
+
+    assert.deepEqual(fns, expectedFns);
+  });
+
   it("flow", () => {
     function add(...args: [number]): number {
       let sum = 0;
