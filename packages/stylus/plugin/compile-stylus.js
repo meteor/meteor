@@ -69,7 +69,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
       }
       if (! filePath.match(/^\{.*\}\//)) {
         if (! importerPath) {
-          return { packageName: inputFile.getPackageName(),
+          return { packageName: inputFile.getPackageName() || APP_SYMBOL,
                    pathInPackage: '/' + filePath };
         }
 
