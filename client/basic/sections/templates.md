@@ -153,7 +153,7 @@ you can also make a helper available in all templates by using
 [`Template.registerHelper`](#template_registerhelper).
 
 You can find detailed documentation for Spacebars in the
-[README on GitHub](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
+[README on GitHub](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md).
 Later in this documentation, the sections about `Session`, `Tracker`,
 `Collections`, and `Accounts` will talk more about how to add dynamic data
 to your templates.
