@@ -1,10 +1,10 @@
 {
   "dependencies": {
     "meteor-babel": {
-      "version": "0.4.5",
+      "version": "0.4.6",
       "dependencies": {
         "babel-core": {
-          "version": "5.7.3",
+          "version": "5.8.3",
           "dependencies": {
             "babel-plugin-constant-folding": {
               "version": "1.0.1"
@@ -57,7 +57,7 @@
               "version": "1.1.6"
             },
             "babylon": {
-              "version": "5.7.2"
+              "version": "5.8.3"
             },
             "bluebird": {
               "version": "2.9.34"
@@ -114,9 +114,6 @@
                 }
               }
             },
-            "estraverse": {
-              "version": "4.1.0"
-            },
             "esutils": {
               "version": "2.0.2"
             },
@@ -152,13 +149,13 @@
                   "version": "1.1.0",
                   "dependencies": {
                     "define-properties": {
-                      "version": "1.1.0",
+                      "version": "1.1.1",
                       "dependencies": {
                         "foreach": {
                           "version": "2.0.5"
                         },
                         "object-keys": {
-                          "version": "1.0.6"
+                          "version": "1.0.7"
                         }
                       }
                     }
@@ -181,7 +178,7 @@
               "version": "3.10.0"
             },
             "minimatch": {
-              "version": "2.0.8",
+              "version": "2.0.9",
               "dependencies": {
                 "brace-expansion": {
                   "version": "1.1.0",
