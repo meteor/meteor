@@ -1,13 +1,12 @@
-import esprima from 'esprima';
+import { parse } from 'meteor-babel';
 import escope from 'escope';
 
-// Like esprima.parse, but annotates any thrown error with $ParseError = true.
-function esprimaParse(source) {
+// Like babel.parse, but annotates any thrown error with $ParseError = true.
+function tryToParse(source) {
   try {
-    return esprima.parse(source);
+    return parse(source);
   } catch (e) {
-    if ('index' in e && 'lineNumber' in e &&
-        'column' in e && 'description' in e) {
+    if (typeof e.loc === 'object') {
       e.$ParseError = true;
     }
     throw e;
@@ -26,10 +25,10 @@ function esprimaParse(source) {
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
 export function findAssignedGlobals(source) {
   // escope's analyzer treats vars in the top-level "Program" node as globals.
-  // The newline is necessary in case source ends with a comment.
-  const wrappedSource = '(function () {' + source + '\n})';
+  // The \n// */\n is necessary in case source ends with an unclosed comment.
+  const wrappedSource = 'function wrapper() {' + source + '\n// */\n}';
 
-  const parseTree = esprimaParse(wrappedSource);
+  const ast = tryToParse(wrappedSource);
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
   // This is because an eval can pull references inward:
@@ -44,7 +43,7 @@ export function findAssignedGlobals(source) {
   //
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
-  const scoper = escope.analyze(parseTree, {ignoreEval: true});
+  const scoper = escope.analyze(ast, { ignoreEval: true });
   const globalScope = scoper.scopes[0];
 
   const assignedGlobals = {};
