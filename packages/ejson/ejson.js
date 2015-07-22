@@ -129,6 +129,31 @@ var builtinConverters = [
       return Base64.decode(obj.$binary);
     }
   },
+  {
+    // Reference
+    matchJSONValue: function (obj) {
+      return _.has(obj, '$ref') && _.size(obj) === 1;
+    },
+    matchObject: function (obj) {
+      return false;
+    },
+    toJSONValue: function (obj) {
+      return false;
+    },
+    fromJSONValue: function (obj, base) {
+      var value = obj.$ref;
+      var refData = value.split('.');
+      // reference always starts with 'base', so remove first element
+      refData.splice(0, 1);
+      var cObj = base;
+
+      while(refData.length > 0){
+        cObj = cObj[refData.shift()];
+      }
+
+      return cObj;
+    }
+  },
   { // Escaping one level
     matchJSONValue: function (obj) {
       return _.has(obj, '$escape') && _.size(obj) === 1;
@@ -229,21 +254,25 @@ EJSON._adjustTypesToJSONValue = function (obj) {
         obj[key] = changed;
         return; // on to the next key
       }
-      // if we get here, value is an object but not adjustable
-      // at this level.  recurse.
       var vIdx = visited.indexOf(value);
       if(vIdx === -1){
+        // if we get here, value is an object but not adjustable
+        // at this level.  recurse.
         cKey = key;
         parent = obj;
         _adjust(value);
       } else {
+        // this is a circular reference
         var refData = '';
         var visitedNode = vData[vIdx];
         while(visitedNode.parent !== null){
           refData = '.' + visitedNode.key + refData;
           visitedNode = vData[visited.indexOf(visitedNode.parent)];
+        }
+
+        obj[key] = {
+          '$ref': 'base' + refData
         };
-        obj[key] = '#ref.base' + refData;
       }
     });
     return obj;
@@ -286,7 +315,7 @@ EJSON.toJSONValue = function (item) {
 //
 var adjustTypesFromJSONValue =
 EJSON._adjustTypesFromJSONValue = function (obj) {
-  var base = obj; // stores base object (in case we recurse somewhere)
+  var _base = obj; // stores base object (in case we recurse somewhere)
   
   var _adjust = function(obj){
     if (obj === null)
@@ -300,22 +329,8 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
       return obj;
 
     _.each(obj, function (value, key) {
-      if(typeof value === 'string' && value.indexOf('#ref') === 0){
-        // value is referencing another object
-        // reference is a string with the format '#ref.base.<key>...<key>'
-        var refData = value.split('.');
-        // reference always starts with '#ref.base', so remove first 2 elements
-        refData.splice(0, 2);
-        var cObj = base;
-        
-        while(refData.length > 0){
-          cObj = cObj[refData.shift()];
-        }
-        
-        // replace reference string with the real object
-        obj[key] = cObj;
-      } else if (typeof value === 'object') {
-        var changed = fromJSONValueHelper(value);
+       if (typeof value === 'object') {
+        var changed = fromJSONValueHelper(value, _base);
         if (value !== changed) {
           obj[key] = changed;
           return;
@@ -336,7 +351,7 @@ EJSON._adjustTypesFromJSONValue = function (obj) {
 
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
-var fromJSONValueHelper = function (value) {
+var fromJSONValueHelper = function (value /* arguments */) {
   if (typeof value === 'object' && value !== null) {
     if (_.size(value) <= 2
         && _.all(value, function (v, k) {
@@ -345,7 +360,7 @@ var fromJSONValueHelper = function (value) {
       for (var i = 0; i < builtinConverters.length; i++) {
         var converter = builtinConverters[i];
         if (converter.matchJSONValue(value)) {
-          return converter.fromJSONValue(value);
+          return converter.fromJSONValue.apply(this, arguments);
         }
       }
     }
