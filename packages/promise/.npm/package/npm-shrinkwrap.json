@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "meteor-promise": {
-      "version": "0.4.0",
+      "version": "0.4.1",
       "dependencies": {
         "promise": {
           "version": "7.0.3",
