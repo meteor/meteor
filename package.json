@@ -34,7 +34,8 @@
     "meteor-async-await": "^0.1.1"
   },
   "devDependencies": {
-    "meteor-promise": "^0.2.4",
+    "fibers": "^1.0.5",
+    "meteor-promise": "^0.4.1",
     "mocha": "^2.2.5"
   }
 }

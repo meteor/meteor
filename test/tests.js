@@ -226,6 +226,8 @@ val = "zxcv";`;
   });
 
   let Promise = require("meteor-promise");
+  Promise.Fiber = require("fibers");
+
   it("async/await", async () => {
     var two = Promise.resolve(2);
     var three = Promise.resolve(3);
