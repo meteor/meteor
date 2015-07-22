@@ -107,7 +107,8 @@ class StylusCompiler extends MultiFileCachingCompiler {
         if (importPath[0] !== '{') {
           // if it is not a custom syntax path, it could be a lookup in a folder
           for (let i = paths.length - 1; i >= 0; i--) {
-            const joined = path.join(paths[i], importPath);
+            const joined = path.join(paths[i], importPath)
+              .replace(/\\/g, '/'); // XXX turn Windows paths back into standard path
             if (fs.existsSync(joined))
               return [joined];
           }

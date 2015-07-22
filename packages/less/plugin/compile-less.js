@@ -137,6 +137,12 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     } else {
       resolvedFilename = path.join(currentDirectory, filename);
     }
+
+    if (process.platform === 'win32') {
+      // convert the path back to standard path (backslashes to forward slashes)
+      resolvedFilename = resolvedFilename.replace(/\\/g, '/');
+    }
+
     if (!this.allFiles.has(resolvedFilename)) {
       cb({type: 'File', message: 'Unknown import: ' + filename});
       return;
