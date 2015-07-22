@@ -10,6 +10,11 @@ Meteor.methods({
     // the keys in objects as they are listed. This may change in future
     // iterations of v8 for performance reasons and will potentially break this
     // test.
+    //
+    // This is important because we use `connection.lastMethodName` to
+    // ignore the "getLastRateLimitEvent" method so that it can return
+    // the actual last rate limit event rather than the one
+    // corresponding to the method call to "getLastRateLimitEvent".
     this.ruleId = DDPRateLimiter.addRule({
       name: function (name) {
         connection.lastMethodName = name;
