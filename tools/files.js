@@ -987,51 +987,46 @@ files.runJavaScript = function (code, options) {
     // for more information. One thing to try (and in fact, what an
     // early version of this function did) is to actually fork a new
     // node to run the code and parse its output. We instead run an
-    // entirely different JS parser, from the esprima project, but
+    // entirely different JS parser, from the Babel project, but
     // which at least has a nice API for reporting errors.
-    var esprima = require('esprima');
+    var parse = require('meteor-babel').parse;
     try {
-      esprima.parse(wrapped);
-    } catch (esprimaParseError) {
-      // Is this actually an Esprima syntax error?
-      if (!('index' in esprimaParseError &&
-            'lineNumber' in esprimaParseError &&
-            'column' in esprimaParseError &&
-            'description' in esprimaParseError)) {
-        throw esprimaParseError;
+      parse(wrapped);
+    } catch (parseError) {
+      if (typeof parseError.loc !== "object") {
+        throw parseError;
       }
-      var err = new files.FancySyntaxError;
 
-      err.message = esprimaParseError.description;
+      var err = new files.FancySyntaxError;
+      err.message = parseError.message;
 
       if (parsedSourceMap) {
         // XXX this duplicates code in computeGlobalReferences
         var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
-        var original = consumer2.originalPositionFor({
-          line: esprimaParseError.lineNumber,
-          column: esprimaParseError.column - 1
-        });
+        var original = consumer2.originalPositionFor(parseError.loc);
         if (original.source) {
           err.file = original.source;
           err.line = original.line;
-          err.column = original.column + 1;
+          err.column = original.column;
           throw err;
         }
       }
 
       err.file = filename;  // *not* stackFilename
-      err.line = esprimaParseError.lineNumber;
-      err.column = esprimaParseError.column;
+      err.line = parseError.loc.line;
+      err.column = parseError.loc.column;
+
       // adjust errors on line 1 to account for our header
       if (err.line === 1) {
         err.column -= header.length;
       }
+
       throw err;
     }
 
-    // What? Node thought that this was a parse error and esprima didn't? Eh,
-    // just throw Node's error and don't care too much about the line numbers
-    // being right.
+    // What? Node thought that this was a parse error and Babel didn't?
+    // Eh, just throw Node's error and don't care too much about the line
+    // numbers being right.
     throw nodeParseError;
   }
 
