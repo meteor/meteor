@@ -20,10 +20,7 @@ $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 $DIR = $script_path + "\gdbXXX"
 echo $DIR
 
-# removing folders isn't easy on Windows, try both commands
-rm -Recurse -Force "${DIR}"
-cmd /C "rmdir /S /Q ${DIR}"
-
+cmd /c rmdir "$DIR" /s /q
 mkdir "$DIR"
 cd "$DIR"
 
@@ -40,7 +37,7 @@ npm install
 npm shrinkwrap
 
 mkdir -Force "${DIR}\server-lib\node_modules"
-cp -R "${DIR}\b\t\node_modules\*" "${DIR}\server-lib\node_modules\"
+cmd /c robocopy "${DIR}\b\t\node_modules" "${DIR}\server-lib\node_modules" /e /nfl /ndl
 
 mkdir -Force "${DIR}\etc"
 Move-Item package.json "${DIR}\etc\"
@@ -54,12 +51,9 @@ npm dedupe
 # install the latest flatten-packages
 npm install -g flatten-packages
 flatten-packages .
-cp -R "${DIR}\b\p\node_modules\" "${DIR}\lib\node_modules\"
+cmd /c robocopy "${DIR}\b\p\node_modules" "${DIR}\lib\node_modules" /e /nfl /ndl
 cd "$DIR"
-
-# deleting folders is hard so we try twice
-rm -Recurse -Force "${DIR}\b"
-cmd /C "rmdir /s /q $DIR\b"
+cmd /c rmdir "${DIR}\b" /s /q
 
 cd "$DIR"
 mkdir "$DIR\mongodb"
@@ -122,14 +116,11 @@ echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
 cd "$DIR\.."
 
 # rename and move the folder with the devbundle
-# XXX this can generate a path that is too long
-Move-Item "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+cmd /c robocopy "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /e /move /nfl /ndl
 
 cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
 del dev_bundle.tar
-rm -Recurse -Force "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
-cmd /C "rmdir /s /q dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
+cmd /c rmdir "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /s /q
 
 echo "Done building Dev Bundle!"
-
