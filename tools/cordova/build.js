@@ -142,7 +142,7 @@ function getBundle(projectContext, bundlePath, options) {
 };
 
 function generateCordovaBoilerplate(projectContext, clientDir, options) {
-  var clientJsonPath = files.pathJoin(clientDir, 'program.json');
+  var clientJsonPath = files.convertToOSPath(files.pathJoin(clientDir, 'program.json'));
   var clientJson = JSON.parse(files.readFile(clientJsonPath, 'utf8'));
   var manifest = clientJson.manifest;
   var settings = options.settings ?

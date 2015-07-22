@@ -51,11 +51,11 @@ export default class CordovaProject {
     // Cordova app identifiers have to look like Java namespaces.
     // Change weird characters (especially hyphens) into underscores.
     const appId = 'com.meteor.userapps.' + this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
-    return await cordova.raw.create(this.projectRoot, appId, this.appName);
+    return await cordova.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
   }
 
   chdirToProjectRoot() {
-    process.chdir(this.projectRoot);
+    process.chdir(files.convertToOSPath(this.projectRoot));
   }
 
   get defaultOptions() {
@@ -70,7 +70,7 @@ export default class CordovaProject {
   }
 
   get defaultPaths() {
-    const nodeBinDir = files.convertToOSPath(files.getCurrentNodeBinDir());
+    const nodeBinDir = files.getCurrentNodeBinDir();
     return [nodeBinDir];
   }
 
@@ -96,7 +96,7 @@ export default class CordovaProject {
 
   getInstalledPlugins() {
     let pluginInfoProvider = new PluginInfoProvider();
-    return _.object(_.map(pluginInfoProvider.getAllWithinSearchPath(this.pluginsDir), plugin => {
+    return _.object(_.map(pluginInfoProvider.getAllWithinSearchPath(files.convertToOSPath(this.pluginsDir)), plugin => {
       return [ plugin.id, plugin.version ];
     }));
   }
@@ -107,7 +107,7 @@ export default class CordovaProject {
       pluginTarget = this.fetchCordovaPluginFromShaUrl(version, name);
     } else if (version && utils.isUrlWithFileScheme(version)) {
       // Strip file:// and compute the relative path from plugin to corodova-build
-      pluginTarget = this.getCordovaLocalPluginPath(version);
+      pluginTarget = files.convertToOSPath(this.getCordovaLocalPluginPath(version));
     } else {
       pluginTarget = version ? `${name}@${version}` : name;
     }
@@ -165,7 +165,7 @@ export default class CordovaProject {
 
     var tarballPluginsLock;
     try {
-      var text = files.readFile(this.tarballPluginsLockPath, 'utf8');
+      var text = files.readFile(files.convertToOSPath(this.tarballPluginsLockPath), 'utf8');
       tarballPluginsLock = JSON.parse(text);
 
       Console.debug('The tarball plugins lock:', tarballPluginsLock);
