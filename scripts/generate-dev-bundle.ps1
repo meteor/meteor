@@ -5,7 +5,7 @@ $MONGO_VERSION = "2.6.7"
 $NODE_VERSION = "0.10.40"
 
 # take it form the environment if exists
-if (Test-Path variable:global:PLATFORM) {
+if (Test-Path env:PLATFORM) {
   $PLATFORM = (Get-Item env:PLATFORM).Value
 }
 
