@@ -1,4 +1,3 @@
-const url = Npm.require('url');
 const stylus = Npm.require('stylus');
 const nib = Npm.require('nib');
 const Future = Npm.require('fibers/future');
@@ -10,19 +9,14 @@ Plugin.registerCompiler({
   archMatching: 'web'
 }, () => new StylusCompiler());
 
-const APP_SYMBOL = '__app__';
-
 // CompileResult is {css, sourceMap}.
 class StylusCompiler extends MultiFileCachingCompiler {
   constructor() {
     super({
       compilerName: 'stylus',
       defaultCacheSize: 1024*1024*10,
-      // because of currentlyCompiledFile etc
-      maxParallelism: 1
     });
   }
-
 
   getCacheKey(inputFile) {
     return inputFile.getSourceHash();
@@ -31,12 +25,6 @@ class StylusCompiler extends MultiFileCachingCompiler {
   compileResultSize(compileResult) {
     return compileResult.css.length +
       this.sourceMapSize(compileResult.sourceMap);
-  }
-
-  // Same as in less, except with {__app__} instead of {};
-  getAbsoluteImportPath(inputFile) {
-    const packageName = inputFile.getPackageName() || APP_SYMBOL;
-    return '{' + packageName + '}/' + inputFile.getPathInPackage();
   }
 
   // The heuristic is that a file is an import (ie, is not itself processed as a
@@ -63,45 +51,37 @@ class StylusCompiler extends MultiFileCachingCompiler {
       }
       if (filePath === inputFile.getPathInPackage()) {
         return {
-          packageName: inputFile.getPackageName() || APP_SYMBOL,
-          pathInPackage: '/' + inputFile.getPathInPackage()
+          packageName: inputFile.getPackageName() || '',
+          pathInPackage: inputFile.getPathInPackage()
         };
       }
       if (! filePath.match(/^\{.*\}\//)) {
         if (! importerPath) {
-          return { packageName: inputFile.getPackageName() || APP_SYMBOL,
-                   pathInPackage: '/' + filePath };
+          return { packageName: inputFile.getPackageName() || '',
+                   pathInPackage: filePath };
         }
 
         // relative path in the same package
         const parsedImporter = parseImportPath(importerPath, null);
         return {
           packageName: parsedImporter.packageName,
-          pathInPackage: url.resolve(parsedImporter.pathInPackage, filePath)
+          pathInPackage: path.resolve(parsedImporter.pathInPackage, filePath)
         };
       }
 
-      const match = /^(\{.*\})(\/.*)$/.exec(filePath);
+      const match = /^\{(.*)\}\/(.*)$/.exec(filePath);
       if (! match) { return null; }
 
-      let packageName = match[1];
-      if (!packageName || packageName === '{}') {
-        packageName = APP_SYMBOL;
-      } else {
-        packageName = packageName.substr(1, packageName.length - 2);
-      }
-
-      const pathInPackage = match[2];
+      const [ignored, packageName, pathInPackage] = match;
       return {packageName, pathInPackage};
     }
     function absoluteImportPath(parsed) {
-      return '{' + parsed.packageName + '}' + parsed.pathInPackage;
+      return '{' + parsed.packageName + '}/' + parsed.pathInPackage;
     }
 
     const importer = {
       find(importPath, paths, importerPath) {
         const parsed = parseImportPath(importPath, importerPath);
-
         if (! parsed) { return null; }
 
         if (importPath[0] !== '{') {
@@ -157,9 +137,9 @@ class StylusCompiler extends MultiFileCachingCompiler {
       sourcemap.sourcesContent = sourcemap.sources.map(importer.readFile);
       sourcemap.sources = sourcemap.sources.map((filePath) => {
         const parsed = parseImportPath(filePath);
-        if (parsed.packageName === APP_SYMBOL)
-          return parsed.pathInPackage.substr(1);
-        return 'packages/' + parsed.packageName + parsed.pathInPackage;
+        if (!parsed.packageName)
+          return parsed.pathInPackage;
+        return 'packages/' + parsed.packageName + '/' + parsed.pathInPackage;
       });
 
       return sourcemap;

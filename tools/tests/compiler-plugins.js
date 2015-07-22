@@ -19,7 +19,7 @@ function startRun(sandbox) {
 };
 
 // Tests the actual cache logic used by coffeescript.
-selftest.define("compiler plugin caching - coffee", function () {
+selftest.define("compiler plugin caching - coffee", () => {
   var s = new Sandbox({ fakeMongo: true });
 
   s.createApp("myapp", "caching-coffee");
@@ -84,104 +84,139 @@ selftest.define("compiler plugin caching - coffee", function () {
   run.stop();
 });
 
-// Tests the actual cache logic used by less.
-selftest.define("compiler plugin caching - less", function () {
-  var s = new Sandbox({ fakeMongo: true });
+// Tests the actual cache logic used by less and stylus.
+['less', 'stylus'].forEach((packageName) => {
+  const extension = packageName === 'stylus' ? 'styl' : packageName;
 
-  s.createApp("myapp", "caching-less");
-  s.cd("myapp");
-  // Ask them to print out when they build a file (instead of using it from the
-  // cache) as well as when they load cache from disk.
-  s.set("METEOR_LESS_CACHE_DEBUG", "t");
-  var run = startRun(s);
+  selftest.define("compiler plugin caching - " + packageName, () => {
+    var s = new Sandbox({ fakeMongo: true });
 
-  // First program built (web.browser) compiles everything.
-  run.match('CACHE(less): Ran (#1) on: ' + JSON.stringify(
-    ["/subdir/nested-root.less", "/top.less"]));
-  // There is no less.render execution in the server program, because it has
-  // archMatching:'web'.  We'll see this more clearly when the next call later
-  // is "#2" --- we didn't miss a call!
-  // App prints this:
-  run.match("Hello world");
+    s.createApp("myapp", "caching-" + packageName);
+    s.cd("myapp");
+    // Ask them to print out when they build a file (instead of using it from
+    // the cache) as well as when they load cache from disk.
+    s.set(`METEOR_${ packageName.toUpperCase() }_CACHE_DEBUG`, "t");
+    var run = startRun(s);
 
-  // Check that the CSS is what we expect.
-  var checkCSS = selftest.markStack(function (borderStyleMap) {
-    var builtBrowserProgramDir = files.pathJoin(
-      s.cwd, '.meteor', 'local', 'build', 'programs', 'web.browser');
-    var cssFile = _.find(
-      files.readdir(
-        files.pathJoin(s.cwd, '.meteor/local/build/programs/web.browser')),
-      function (path) {
-        return path.match(/\.css$/);
+    const cacheMatch = selftest.markStack((message) => {
+      run.match(`CACHE(${ packageName }): ${ message }`);
+    });
+
+    // First program built (web.browser) compiles everything.
+    cacheMatch('Ran (#1) on: ' + JSON.stringify(
+      ["/subdir/nested-root." + extension, "/top." + extension]));
+    // There is no render execution in the server program, because it has
+    // archMatching:'web'.  We'll see this more clearly when the next call later
+    // is "#2" --- we didn't miss a call!
+    // App prints this:
+    run.match("Hello world");
+
+    // Check that the CSS is what we expect.
+    var checkCSS = selftest.markStack((borderStyleMap) => {
+      var builtBrowserProgramDir = files.pathJoin(
+        s.cwd, '.meteor', 'local', 'build', 'programs', 'web.browser');
+      var cssFile = _.find(
+        files.readdir(
+          files.pathJoin(s.cwd, '.meteor/local/build/programs/web.browser')),
+        path => path.match(/\.css$/)
+      );
+      selftest.expectTrue(cssFile);
+      var actual = s.read(
+        files.pathJoin('.meteor/local/build/programs/web.browser', cssFile));
+      actual = actual.replace(/\s+/g, ' ');  // simplify whitespace
+      var expected = _.map(borderStyleMap, (style, className) => {
+        return '.' + className + " { border-style: " + style + "; }";
+      }).join(' ');
+      selftest.expectEqual(actual, expected);
+    });
+    var expectedBorderStyles = {
+      el0: "dashed", el1: "dotted", el2: "solid", el3: "groove", el4: "ridge"};
+    checkCSS(expectedBorderStyles);
+
+    // Force a rebuild of the local package without actually changing the
+    // preprocessor file in it. This should not require us to render anything.
+    s.append("packages/local-pack/package.js", "\n// foo\n");
+    cacheMatch('Ran (#2) on: []');
+    run.match("Hello world");
+
+    function setVariable(variableName, value) {
+      switch (packageName) {
+      case 'less':
+        return `@${ variableName }: ${ value };\n`;
+      case 'stylus':
+        return `$${ variableName } = ${ value }\n`;
       }
-    );
-    selftest.expectTrue(cssFile);
-    var actual = s.read(
-      files.pathJoin('.meteor/local/build/programs/web.browser', cssFile));
-    actual = actual.replace(/\s+/g, ' ');  // simplify whitespace
-    var expected = _.map(borderStyleMap, function (style, className) {
-      return '.' + className + " { border-style: " + style + "; }";
-    }).join(' ');
-    selftest.expectEqual(actual, expected);
+    }
+    function importLine(fileWithoutExtension) {
+      switch (packageName) {
+      case 'less':
+        return `@import "${ fileWithoutExtension }.less";\n`;
+      case 'stylus':
+        return `@import "${ fileWithoutExtension }.styl"\n`;
+      }
+    }
+
+    // Writing to a single file only re-renders the root that depends on it.
+    s.write('packages/local-pack/p.' + extension,
+            setVariable('el4-style', 'inset'));
+    expectedBorderStyles.el4 = 'inset';
+    cacheMatch(`Ran (#3) on: ["/top.${ extension }"]`);
+    run.match("Client modified -- refreshing");
+    checkCSS(expectedBorderStyles);
+
+    // This works for changing a root too.
+    s.write('subdir/nested-root.' + extension,
+            '.el0 { border-style: double; }\n');
+    expectedBorderStyles.el0 = 'double';
+    cacheMatch(`Ran (#4) on: ["/subdir/nested-root.${ extension }"]`);
+    run.match("Client modified -- refreshing");
+    checkCSS(expectedBorderStyles);
+
+    // Adding a new root works too.
+    s.write('yet-another-root.' + extension,
+            '.el6 { border-style: solid; }\n');
+    expectedBorderStyles.el6 = 'solid';
+    cacheMatch(`Ran (#5) on: ["/yet-another-root.${ extension }"]`);
+    run.match("Client modified -- refreshing");
+    checkCSS(expectedBorderStyles);
+
+    // We never should have loaded cache from disk, since we only made
+    // each compiler once and there were no cache files at this point.
+    run.forbid('CACHE(${ packageName }): Loaded');
+
+    // Kill the run. Change one file and re-run.
+    run.stop();
+    s.write('packages/local-pack/p.' + extension,
+            setVariable('el4-style', 'double'));
+    expectedBorderStyles.el4 = 'double';
+    run = startRun(s);
+
+    // This time there's a cache to load!  Note that for
+    // MultiFileCachingCompiler we load all the cache entries, even for the
+    // not-up-to-date file 'top', because we only key off of filename, not off
+    // of cache key.
+    cacheMatch('Loaded {}/subdir/nested-root.' + extension);
+    cacheMatch('Loaded {}/top.' + extension);
+    cacheMatch('Loaded {}/yet-another-root.' + extension);
+    cacheMatch(`Ran (#1) on: ["/top.${ extension }"]`);
+    run.match('Hello world');
+    checkCSS(expectedBorderStyles);
+
+    s.write('bad-import.' + extension, importLine('/foo/bad'));
+    run.match('Errors prevented startup');
+    switch (packageName) {
+    case 'less':
+      run.match('bad-import.less:1: Unknown import: /foo/bad.less');
+      break;
+    case 'stylus':
+      run.match('bad-import.styl: Stylus compiler error: bad-import.styl:1');
+      run.match('failed to locate @import file /foo/bad.styl');
+      break;
+    }
+    run.match('Waiting for file change');
+
+    run.stop();
   });
-  var expectedBorderStyles = {
-    el0: "dashed", el1: "dotted", el2: "solid", el3: "groove", el4: "ridge"};
-  checkCSS(expectedBorderStyles);
-
-  // Force a rebuild of the local package without actually changing the
-  // less file in it. This should not require us to less.render
-  // anything.
-  s.append("packages/local-pack/package.js", "\n// foo\n");
-  run.match('CACHE(less): Ran (#2) on: []');
-  run.match("Hello world");
-
-  // Writing to a single less file only re-renders the root that depends on it.
-  s.write('packages/local-pack/p.less', '@el4-style: inset;\n');
-  expectedBorderStyles.el4 = 'inset';
-  run.match('CACHE(less): Ran (#3) on: ["/top.less"]');
-  run.match("Client modified -- refreshing");
-  checkCSS(expectedBorderStyles);
-
-  // This works for changing a root too.
-  s.write('subdir/nested-root.less', '.el0 { border-style: double; }\n');
-  expectedBorderStyles.el0 = 'double';
-  run.match('CACHE(less): Ran (#4) on: ["/subdir/nested-root.less"]');
-  run.match("Client modified -- refreshing");
-  checkCSS(expectedBorderStyles);
-
-  // Adding a new root works too.
-  s.write('yet-another-root.less', '.el6 { border-style: solid; }\n');
-  expectedBorderStyles.el6 = 'solid';
-  run.match('CACHE(less): Ran (#5) on: ["/yet-another-root.less"]');
-  run.match("Client modified -- refreshing");
-  checkCSS(expectedBorderStyles);
-
-  // We never should have loaded cache from disk, since we only made
-  // each compiler once and there were no cache files at this point.
-  run.forbid('CACHE(less): Loaded');
-
-  // Kill the run. Change one file and re-run.
-  run.stop();
-  s.write('packages/local-pack/p.less', '@el4-style: double;\n');
-  expectedBorderStyles.el4 = 'double';
-  run = startRun(s);
-
-  // This time there's a cache to load!  Note that for MultiFileCachingCompiler
-  // we load all the cache entries, even for the not-up-to-date file top.less,
-  // because we only key off of filename, not off of cache key.
-  run.match('CACHE(less): Loaded {}/subdir/nested-root.less');
-  run.match('CACHE(less): Loaded {}/top.less');
-  run.match('CACHE(less): Loaded {}/yet-another-root.less');
-  run.match('CACHE(less): Ran (#1) on: ["/top.less"]');
-  run.match('Hello world');
-  checkCSS(expectedBorderStyles);
-
-  s.write('bad-import.less', '@import "/foo/bad.less";\n');
-  run.match('Errors prevented startup');
-  run.match('bad-import.less:1: Unknown import: /foo/bad.less');
-  run.match('Waiting for file change');
-
-  run.stop();
 });
 
 // Tests that rebuilding a compiler plugin re-instantiates the source processor,
