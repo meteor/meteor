@@ -18,32 +18,91 @@ function startRun(sandbox) {
   return run;
 };
 
-// Tests the actual cache logic used by coffeescript and less.
-selftest.define("compiler plugin caching - coffee/less", function () {
+// Tests the actual cache logic used by coffeescript.
+selftest.define("compiler plugin caching - coffee", function () {
   var s = new Sandbox({ fakeMongo: true });
 
-  // Create an app that uses coffeescript and less.
-  s.createApp("myapp", "coffee-and-less");
+  s.createApp("myapp", "caching-coffee");
   s.cd("myapp");
   // Ask them to print out when they build a file (instead of using it from the
   // cache) as well as when they load cache from disk.
   s.set('METEOR_COFFEESCRIPT_CACHE_DEBUG', 't');
-  s.set("METEOR_LESS_CACHE_DEBUG", "t");
   var run = startRun(s);
 
   // First program built (server or web.browser) compiles everything.
   run.match('CACHE(coffeescript): Ran (#1) on: ' + JSON.stringify(
     ['/f1.coffee', '/f2.coffee', '/f3.coffee', '/packages/local-pack/p.coffee']
   ));
-  run.match('CACHE(less): Ran (#1) on: ' + JSON.stringify(
-    ["/subdir/nested-root.less", "/top.less"]));
   // Second program doesn't need to compile anything because compilation works
-  // the same on both programs.  (Note that there is no less.render execution in
-  // the second program, because it has archMatching: 'web'.  We'll see this
-  // more clearly when the next call later is "#2" --- we didn't miss a call!)
+  // the same on both programs.
   run.match("CACHE(coffeescript): Ran (#2) on: []");
   // App prints this:
   run.match("Coffeescript X is 2 Y is 1 FromPackage is 4");
+
+  s.write("f2.coffee", "share.Y = 'Y is 3'\n");
+  // Only recompiles f2.
+  run.match('CACHE(coffeescript): Ran (#3) on: ["/f2.coffee"]');
+  // And other program doesn't even need to do f2.
+  run.match("CACHE(coffeescript): Ran (#4) on: []");
+  // Program prints this:
+  run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
+
+  // Force a rebuild of the local package without actually changing the
+  // coffeescript file in it. This should not require us to coffee.compile
+  // anything (for either program).
+  s.append("packages/local-pack/package.js", "\n// foo\n");
+  run.match("CACHE(coffeescript): Ran (#5) on: []");
+  run.match("CACHE(coffeescript): Ran (#6) on: []");
+  run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
+
+  // But writing to the actual source file in the local package should
+  // recompile.
+  s.write("packages/local-pack/p.coffee", "FromPackage = 'FromPackage is 5'");
+  run.match('CACHE(coffeescript): Ran (#7) on: ["/packages/local-pack/p.coffee"]');
+  run.match('CACHE(coffeescript): Ran (#8) on: []');
+  run.match("Coffeescript X is 2 Y is 3 FromPackage is 5");
+
+  // We never should have loaded cache from disk, since we only made
+  // each compiler once and there were no cache files at this point.
+  run.forbid('CACHE(coffeescript): Loaded');
+
+  // Kill the run. Change one coffee file and re-run.
+  run.stop();
+  s.write("f2.coffee", "share.Y = 'Y is edited'\n");
+  run = startRun(s);
+
+  // This time there's a cache to load!
+  run.match('CACHE(coffeescript): Loaded /packages/local-pack/p.coffee');
+  run.match('CACHE(coffeescript): Loaded /f1.coffee');
+  run.match('CACHE(coffeescript): Loaded /f3.coffee');
+  // And we only need to re-compiler the changed file, even though we restarted.
+  run.match('CACHE(coffeescript): Ran (#1) on: ["/f2.coffee"]');
+  run.match('CACHE(coffeescript): Ran (#2) on: []');
+
+  run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
+
+  run.stop();
+});
+
+// Tests the actual cache logic used by less.
+selftest.define("compiler plugin caching - less", function () {
+  var s = new Sandbox({ fakeMongo: true });
+
+  s.createApp("myapp", "caching-less");
+  s.cd("myapp");
+  // Ask them to print out when they build a file (instead of using it from the
+  // cache) as well as when they load cache from disk.
+  s.set("METEOR_LESS_CACHE_DEBUG", "t");
+  var run = startRun(s);
+
+  // First program built (web.browser) compiles everything.
+  run.match('CACHE(less): Ran (#1) on: ' + JSON.stringify(
+    ["/subdir/nested-root.less", "/top.less"]));
+  // There is no less.render execution in the server program, because it has
+  // archMatching:'web'.  We'll see this more clearly when the next call later
+  // is "#2" --- we didn't miss a call!
+  // App prints this:
+  run.match("Hello world");
 
   // Check that the CSS is what we expect.
   var checkCSS = selftest.markStack(function (borderStyleMap) {
@@ -69,87 +128,52 @@ selftest.define("compiler plugin caching - coffee/less", function () {
     el0: "dashed", el1: "dotted", el2: "solid", el3: "groove", el4: "ridge"};
   checkCSS(expectedBorderStyles);
 
-  s.write("f2.coffee", "share.Y = 'Y is 3'\n");
-  // Only recompiles f2.
-  run.match('CACHE(coffeescript): Ran (#3) on: ["/f2.coffee"]');
-  run.match('CACHE(less): Ran (#2) on: []');
-  // And other program doesn't even need to do f2.
-  run.match("CACHE(coffeescript): Ran (#4) on: []");
-  // Program prints this:
-  run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
-
   // Force a rebuild of the local package without actually changing the
-  // coffeescript file in it. This should not require us to coffee.compile
-  // anything (for either program).
+  // less file in it. This should not require us to less.render
+  // anything.
   s.append("packages/local-pack/package.js", "\n// foo\n");
-  run.match("CACHE(coffeescript): Ran (#5) on: []");
-  run.match('CACHE(less): Ran (#3) on: []');
-  run.match("CACHE(coffeescript): Ran (#6) on: []");
-  run.match("Coffeescript X is 2 Y is 3 FromPackage is 4");
-
-  // But writing to the actual source file in the local package should
-  // recompile.
-  s.write("packages/local-pack/p.coffee", "FromPackage = 'FromPackage is 5'");
-  run.match('CACHE(coffeescript): Ran (#7) on: ["/packages/local-pack/p.coffee"]');
-  run.match('CACHE(less): Ran (#4) on: []');
-  run.match('CACHE(coffeescript): Ran (#8) on: []');
-  run.match("Coffeescript X is 2 Y is 3 FromPackage is 5");
+  run.match('CACHE(less): Ran (#2) on: []');
+  run.match("Hello world");
 
   // Writing to a single less file only re-renders the root that depends on it.
   s.write('packages/local-pack/p.less', '@el4-style: inset;\n');
   expectedBorderStyles.el4 = 'inset';
-  run.match('CACHE(coffeescript): Ran (#9) on: []');
-  run.match('CACHE(less): Ran (#5) on: ["/top.less"]');
-  // Note that since this was a client-only change, we're smart enough to not
-  // rebuild the server at all.  So the next coffee.compile will be #10.
+  run.match('CACHE(less): Ran (#3) on: ["/top.less"]');
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
   // This works for changing a root too.
   s.write('subdir/nested-root.less', '.el0 { border-style: double; }\n');
   expectedBorderStyles.el0 = 'double';
-  // Only #10, not #11, because client-only changes don't rebuild the server!
-  run.match('CACHE(coffeescript): Ran (#10) on: []');
-  run.match('CACHE(less): Ran (#6) on: ["/subdir/nested-root.less"]');
+  run.match('CACHE(less): Ran (#4) on: ["/subdir/nested-root.less"]');
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
   // Adding a new root works too.
   s.write('yet-another-root.less', '.el6 { border-style: solid; }\n');
   expectedBorderStyles.el6 = 'solid';
-  run.match('CACHE(coffeescript): Ran (#11) on: []');
-  run.match('CACHE(less): Ran (#7) on: ["/yet-another-root.less"]');
+  run.match('CACHE(less): Ran (#5) on: ["/yet-another-root.less"]');
   run.match("Client modified -- refreshing");
   checkCSS(expectedBorderStyles);
 
   // We never should have loaded cache from disk, since we only made
-  // each compiler once and there was no cache.json at this point.
-  run.forbid('CACHE(coffeescript): Loaded');
+  // each compiler once and there were no cache files at this point.
   run.forbid('CACHE(less): Loaded');
 
-  // Kill the run. Change one coffee file and one less file and re-run.
+  // Kill the run. Change one file and re-run.
   run.stop();
-  s.write("f2.coffee", "share.Y = 'Y is edited'\n");
   s.write('packages/local-pack/p.less', '@el4-style: double;\n');
   expectedBorderStyles.el4 = 'double';
   run = startRun(s);
 
-  // This time there's a cache to load!
-  run.match('CACHE(coffeescript): Loaded /packages/local-pack/p.coffee');
-  run.match('CACHE(coffeescript): Loaded /f1.coffee');
-  run.match('CACHE(coffeescript): Loaded /f3.coffee');
-  // And we only need to re-compiler the changed file, even though we restarted.
-  run.match('CACHE(coffeescript): Ran (#1) on: ["/f2.coffee"]');
-  // Note that for MultiFileCachingCompiler we load all the cache entries, even
-  // for the not-up-to-date top.less, because we only key off of filename, not
-  // off of cache key.
+  // This time there's a cache to load!  Note that for MultiFileCachingCompiler
+  // we load all the cache entries, even for the not-up-to-date file top.less,
+  // because we only key off of filename, not off of cache key.
   run.match('CACHE(less): Loaded {}/subdir/nested-root.less');
   run.match('CACHE(less): Loaded {}/top.less');
   run.match('CACHE(less): Loaded {}/yet-another-root.less');
   run.match('CACHE(less): Ran (#1) on: ["/top.less"]');
-  run.match('CACHE(coffeescript): Ran (#2) on: []');
-
-  run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
+  run.match('Hello world');
   checkCSS(expectedBorderStyles);
 
   s.write('bad-import.less', '@import "/foo/bad.less";\n');
