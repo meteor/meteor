@@ -101,9 +101,6 @@ flatten-packages .
 cd node_modules\npm
 npm install node-gyp
 
-# this path is too long
-rm -Recurse -Force "node_modules\node-gyp\node_modules\request\node_modules\combined-stream\node_modules\delayed-stream\test"
-
 cd ..\..
 
 cp node_modules\npm\bin\npm.cmd .
