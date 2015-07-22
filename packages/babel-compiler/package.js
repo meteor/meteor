@@ -12,6 +12,6 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.addFiles('babel.js', 'server');
-  api.use('check');
+  api.use('check@1.0.5');
   api.export('Babel', 'server');
 });
