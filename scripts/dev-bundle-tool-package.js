@@ -68,7 +68,9 @@ var packageJson = {
 };
 
 if (process.platform === 'win32') {
-  // kexec doesn't work on Windows
+  // Remove dependencies that do not work on Windows
+  delete packageJson.dependencies['ios-sim'];
+  delete packageJson.dependencies.netroute;
   delete packageJson.dependencies.kexec;
 }
 
