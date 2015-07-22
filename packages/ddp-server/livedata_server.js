@@ -580,7 +580,37 @@ _.extend(Session.prototype, {
         // reconnect.
         return;
 
+      // XXX It'd be much better if we had generic hooks where any package can
+      // hook into subscription handling, but in the mean while we special case
+      // ddp-rate-limiter package. This is also done for weak requirements to
+      // add the ddp-rate-limiter package in case we don't have Accounts. A
+      // user trying to use the ddp-rate-limiter must explicitly require it.
+      if (Package['ddp-rate-limiter']) {
+        var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
+        var rateLimiterInput = {
+          userId: self.userId,
+          clientAddress: self.connectionHandle.clientAddress,
+          type: "subscription",
+          name: msg.name,
+          connectionId: self.id
+        };
+
+        DDPRateLimiter._increment(rateLimiterInput);
+        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+        if (!rateLimitResult.allowed) {
+          self.send({
+            msg: 'nosub', id: msg.id,
+            error: new Meteor.Error(
+              'too-many-requests',
+              DDPRateLimiter.getErrorMessage(rateLimitResult),
+              {timeToReset: rateLimitResult.timeToReset})
+          });
+          return;
+        }
+      }
+
       var handler = self.server.publish_handlers[msg.name];
+
       self._startSubscription(handler, msg.id, msg.params, msg.name);
 
     },
@@ -644,7 +674,31 @@ _.extend(Session.prototype, {
         connection: self.connectionHandle,
         randomSeed: randomSeed
       });
+
       try {
+        // XXX It'd be better if we could hook into method handlers better but
+        // for now, we need to check if the ddp-rate-limiter exists since we
+        // have a weak requirement for the ddp-rate-limiter package to be added
+        // to our application.
+        if (Package['ddp-rate-limiter']) {
+          var DDPRateLimiter = Package['ddp-rate-limiter'].DDPRateLimiter;
+          var rateLimiterInput = {
+            userId: self.userId,
+            clientAddress: self.connectionHandle.clientAddress,
+            type: "method",
+            name: msg.method,
+            connectionId: self.id
+          };
+          DDPRateLimiter._increment(rateLimiterInput);
+          var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+          if (!rateLimitResult.allowed) {
+            throw new Meteor.Error(
+              "too-many-requests",
+              DDPRateLimiter.getErrorMessage(rateLimitResult),
+              {timeToReset: rateLimitResult.timeToReset});
+          }
+        }
+
         var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
           return DDP._CurrentInvocation.withValue(invocation, function () {
             return maybeAuditArgumentChecks(

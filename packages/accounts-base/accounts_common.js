@@ -3,7 +3,7 @@
 // @param options {Object} an object with fields:
 // - connection {Object} Optional DDP connection to reuse.
 // - ddpUrl {String} Optional URL for creating a new DDP connection.
-AccountsCommon = function AccountsCommon(options) {
+AccountsCommon = function _AccountsCommon(options) {
   // Currently this is read directly by packages like accounts-password
   // and accounts-ui-unstyled.
   this._options = {};

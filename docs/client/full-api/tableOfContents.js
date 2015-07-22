@@ -40,7 +40,8 @@ var toc = [
         {instance: "this", name: "stop", id: "publish_stop"},
         {instance: "this", name: "connection", id: "publish_connection"}
       ],
-      "Meteor.subscribe"
+      "Meteor.subscribe",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"}
     ],
 
     {name: "Methods", id: "methods_header"}, [
@@ -53,7 +54,8 @@ var toc = [
       ],
       "Meteor.Error",
       "Meteor.call",
-      "Meteor.apply"
+      "Meteor.apply",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"}
     ],
 
     {name: "Check", id: "check_package"}, [

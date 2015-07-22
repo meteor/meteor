@@ -5,7 +5,7 @@
 // @param options {Object} an object with fields:
 // - connection {Object} Optional DDP connection to reuse.
 // - ddpUrl {String} Optional URL for creating a new DDP connection.
-AccountsClient = function AccountsClient(options) {
+AccountsClient = function _AccountsClient(options) {
   AccountsCommon.call(this, options);
 
   this._loggingIn = false;

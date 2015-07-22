@@ -180,4 +180,41 @@ even if the method's writes are not available yet, you can specify an
 passed as an array rather than directly as arguments, and you can specify
 options about how the client executes the method.
 
+<h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
+
+Customize rate limiting for methods and subscriptions.
+
+By default, `DDPRateLimiter` is configured with a single rule. This rule
+limits login attempts, new user creation, and password resets to 5 attempts
+every 10 seconds per connection. It can be removed by calling
+`Accounts.removeDefaultRateLimit()`.
+
+{{> autoApiBox "DDPRateLimiter.addRule"}}
+
+Custom rules can be added by calling `DDPRateLimiter.addRule`. The rate
+limiter is called on every method and subscription invocation.
+
+A rate limit is reached when a bucket has surpassed the rule's predefined
+capactiy, at which point errors will be returned for that input until the
+buckets are reset. Buckets are regularly reset after the end of a time
+interval.
+
+
+Here's example of defining a rule and adding it into the `DDPRateLimiter`:
+```javascript
+// Define a rule that matches login attempts by non-admin users
+var loginRule = {
+  userId: function (userId) {
+    return Meteor.users.findOne(userId).type !== 'Admin';
+  },
+  type: 'method',
+  method: 'login'
+}
+// Add the rule, allowing up to 5 messages every 1000 milliseconds.
+DDPRateLimiter.addRule(loginRule, 5, 1000);
+```
+{{> autoApiBox "DDPRateLimiter.removeRule"}}
+{{> autoApiBox "DDPRateLimiter.setErrorMessage"}}
 {{/template}}
+
+{{> auto}}
