@@ -1,13 +1,13 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.1.2',
+  version: '0.1.3',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
 
 Package.registerBuildPlugin({
   name: 'compile-ecmascript',
-  use: ['babel-compiler@5.8.3'],
+  use: ['babel-compiler@5.8.3_1'],
   sources: ['plugin.js']
 });
 

@@ -9,7 +9,9 @@ function getDefaultOptions(extraFeatures) {
       // Modify options to enable ES2015 module syntax.
       modules: Match.Optional(Boolean),
       // Modify options to enable async/await syntax powered by Fibers.
-      meteorAsyncAwait: Match.Optional(Boolean)
+      meteorAsyncAwait: Match.Optional(Boolean),
+      // Modify options to enable React/JSX syntax.
+      react: Match.Optional(Boolean)
     });
   }
 
