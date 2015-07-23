@@ -422,7 +422,7 @@ main.registerCommand({
 
   if (!options['no-lint']) {
     const warnings = projectContext.getLintingMessagesForLocalPackages();
-    if (warnings.hasMessages()) {
+    if (warnings && warnings.hasMessages()) {
       Console.arrowError(
         "Errors linting your package; run with --no-lint to ignore.");
       Console.printMessages(warnings);
