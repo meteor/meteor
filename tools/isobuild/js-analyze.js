@@ -1,5 +1,5 @@
 import { parse } from 'meteor-babel';
-import escope from 'escope';
+import { analyze as analyzeScope } from 'escope';
 
 // Like babel.parse, but annotates any thrown error with $ParseError = true.
 function tryToParse(source) {
@@ -43,8 +43,8 @@ export function findAssignedGlobals(source) {
   //
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
-  const scoper = escope.analyze(ast, { ignoreEval: true });
-  const globalScope = scoper.scopes[0];
+  const scopeManager = analyzeScope(ast, { ignoreEval: true });
+  const globalScope = scopeManager.acquire(ast);
 
   const assignedGlobals = {};
   // Underscore is not available in this package.
