@@ -17,7 +17,8 @@ $BUNDLE_VERSION = Select-String -Path ($CHECKOUT_DIR + "\meteor") -Pattern 'BUND
 $BUNDLE_VERSION = $BUNDLE_VERSION.Trim()
 
 # generate-dev-bundle-xxxxxxxx shortly
-$DIR = $script_path + "\gdbXXX"
+# convert relative path to absolute path because not all commands know how to deal with this themselves
+$DIR = $executionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath("${script_path}\..\gdbXXX")
 echo $DIR
 
 cmd /c rmdir "$DIR" /s /q
