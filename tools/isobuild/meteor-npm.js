@@ -342,7 +342,8 @@ var runNpmCommand = function (args, cwd) {
   var npmPath;
 
   if (os.platform() === "win32") {
-    npmPath = files.pathJoin(nodeBinDir, "npm.cmd");
+    npmPath = files.convertToOSPath(
+      files.pathJoin(nodeBinDir, "npm.cmd"));
   } else {
     npmPath = files.pathJoin(nodeBinDir, "npm");
   }
