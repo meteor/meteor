@@ -12,14 +12,47 @@ import {sha1} from  '../watch.js';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils.js';
 
-// XXX #BBPDocs Add basic documentation of the data structures used in this
-// file.
-
-const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
-const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
+// This file implements the new compiler plugins added in Meteor 1.2, which are
+// registered with the Plugin.registerCompiler API.
+//
+// Unlike legacy source handlers (Plugin.registerSourceHandler), compilers run
+// in the context of an entire app. That is to say, they don't run when you run
+// `meteor publish`; whenever they run, they have access to all the files of
+// their type across all packages as well as the app. This allows them to
+// implement cross-file and cross-package inclusion, or config files in the app
+// that affect how packages are processed, among other possibilities.
+//
+// Compilers can specify which extensions or filenames they process. They only
+// process files in packages (or the app) that directly use the plugin's package
+// (or that use it indirectly via the "imply" directive); just because compiler
+// plugins act on multiple packages at a time doesn't mean they automatically
+// act on all packages in your app.
+//
+// The CompilerPluginProcessor is the main entry point to this file; it is used
+// by the bundler to run all plugins on a target. It doesn't have much
+// interesting state and perhaps could have just been a function.
+//
+// It receives an ordered list of unibuilds (essentially, packages) from the
+// bundler. It turns them into an ordered list of PackageSourceBatch objects,
+// each of which represents the source files in a single package. Each
+// PackageSourceBatch consists of an ordered list of ResourceSlots representing
+// the resources in that package. The idea here is that, because Meteor executes
+// all JS files in the order produced by the bundler, we need to make sure to
+// maintain the order of packages from the bundler and the order of source files
+// within a package. Each ResourceSlot represents a resource (either a 'source'
+// resource which will be processed by a compiler plugin, or something else like
+// a static asset or some JavaScript produced by a legacy source handler), and
+// when the compiler plugin calls something like `inputFile.addJavaScript` on a
+// file, we replace that source file with the resource produced by the plugin.
+//
+// InputFile is a wrapper around ResourceSlot that is the object presented to
+// the compiler in the plugin. It is part of the documented registerCompiler
+// API.
 
 // Cache the (slightly post-processed) results of linker.fullLink.
 // XXX #BBPBetterCache implement an on-disk cache too to speed up initial build?
+const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
+const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
 const LINKER_CACHE = new LRU({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -256,7 +289,6 @@ _.extend(InputFile.prototype, {
   }
 });
 
-// XXX #BBPDocs
 var ResourceSlot = function (unibuildResourceInfo,
                              sourceProcessor,
                              packageSourceBatch) {
@@ -383,8 +415,6 @@ _.extend(ResourceSlot.prototype, {
   }
 });
 
-// XXX #BBPDocs document this data structure (or allude to potential top-of-file
-// docstring)
 var PackageSourceBatch = function (unibuild, processor) {
   var self = this;
   buildmessage.assertInJob();
