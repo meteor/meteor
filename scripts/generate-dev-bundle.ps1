@@ -24,12 +24,36 @@ cmd /c rmdir "$DIR" /s /q
 mkdir "$DIR"
 cd "$DIR"
 
+mkdir bin
+cd bin
+
+$webclient = New-Object System.Net.WebClient
+
+# download node
+# same node on 32bit vs 64bit?
+$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
+$webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
+
+# install npm
+echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
+npm install npm@3.0-latest --save
+
+# npm depends on a hardcoded file path to node-gyp, so we need this to be
+# un-flattened
+cd node_modules\npm
+npm install node-gyp
+cd ..\..
+
+cp node_modules\npm\bin\npm.cmd .
+
+# add bin to the front of the path so we can use our own node for building
+$env:PATH = "${DIR}\bin;${env:PATH}"
+
 # install dev-bundle-package.json
 # use short folder names
-mkdir b # for build
-cd b
-mkdir t
-cd t
+# b for build
+mkdir "$DIR\b\t"
+cd "$DIR\b\t"
 
 npm config set loglevel error
 node "${CHECKOUT_DIR}\scripts\dev-bundle-server-package.js" | Out-File -FilePath package.json -Encoding ascii
@@ -47,10 +71,6 @@ mkdir -Force "${DIR}\b\p"
 cd "${DIR}\b\p"
 node "${CHECKOUT_DIR}\scripts\dev-bundle-tool-package.js" | Out-File -FilePath package.json -Encoding ascii
 npm install
-npm dedupe
-# install the latest flatten-packages
-npm install -g flatten-packages
-flatten-packages .
 cmd /c robocopy "${DIR}\b\p\node_modules" "${DIR}\lib\node_modules" /e /nfl /ndl
 cd "$DIR"
 cmd /c rmdir "${DIR}\b" /s /q
@@ -58,8 +78,6 @@ cmd /c rmdir "${DIR}\b" /s /q
 cd "$DIR"
 mkdir "$DIR\mongodb"
 mkdir "$DIR\mongodb\bin"
-
-$webclient = New-Object System.Net.WebClient
 
 # download Mongo
 $mongo_name = "mongodb-win32-i386-${MONGO_VERSION}"
@@ -83,27 +101,6 @@ cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 
 rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
-
-mkdir bin
-cd bin
-
-# download node
-# same node on 32bit vs 64bit?
-$node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
-$webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
-# install npm
-echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm --save
-flatten-packages .
-
-# npm depends on a hardcoded file path to node-gyp, so we need this to be
-# un-flattened
-cd node_modules\npm
-npm install node-gyp
-
-cd ..\..
-
-cp node_modules\npm\bin\npm.cmd .
 
 cd $DIR
 
