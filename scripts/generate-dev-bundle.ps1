@@ -3,6 +3,7 @@
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "2.6.7"
 $NODE_VERSION = "0.10.40"
+$NPM_VERSION = "1.4.9"
 
 # take it form the environment if exists
 if (Test-Path env:PLATFORM) {
@@ -29,26 +30,42 @@ mkdir bin
 cd bin
 
 $webclient = New-Object System.Net.WebClient
+$shell = New-Object -com shell.application
 
 # download node
 # same node on 32bit vs 64bit?
 $node_link = "http://nodejs.org/dist/v${NODE_VERSION}/node.exe"
 $webclient.DownloadFile($node_link, "$DIR\bin\node.exe")
 
-# install npm
+# download initial version of npm
+$npm_zip = "$DIR\bin\npm.zip"
+$npm_link = "https://nodejs.org/dist/npm/npm-${NPM_VERSION}.zip"
+$webclient.DownloadFile($npm_link, $npm_zip)
+
+$zip = $shell.NameSpace($npm_zip)
+foreach($item in $zip.items()) {
+  $shell.Namespace("$DIR\bin").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
+}
+
+rm -Recurse -Force $npm_zip
+
+# add bin to the front of the path so we can use our own node for building
+$env:PATH = "${DIR}\bin;${env:PATH}"
+
+mkdir "${DIR}\bin\npm3"
+cd "${DIR}\bin\npm3"
 echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm@3.0-latest --save
+npm install npm@3.0-latest
+
+# add bin\npm3 to the front of the path so we can use npm 3 for building
+$env:PATH = "${DIR}\bin\npm3;${env:PATH}"
 
 # npm depends on a hardcoded file path to node-gyp, so we need this to be
 # un-flattened
 cd node_modules\npm
 npm install node-gyp
 cd ..\..
-
-cp node_modules\npm\bin\npm.cmd .
-
-# add bin to the front of the path so we can use our own node for building
-$env:PATH = "${DIR}\bin;${env:PATH}"
+cp node_modules\npm\bin\npm.cmd
 
 # install dev-bundle-package.json
 # use short folder names
@@ -91,7 +108,6 @@ $mongo_zip = "$DIR\mongodb\mongo.zip"
 
 $webclient.DownloadFile($mongo_link, $mongo_zip)
 
-$shell = New-Object -com shell.application
 $zip = $shell.NameSpace($mongo_zip)
 foreach($item in $zip.items()) {
   $shell.Namespace("$DIR\mongodb").copyhere($item, 0x14) # 0x10 - overwrite, 0x4 - no dialog
@@ -102,6 +118,9 @@ cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 
 rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
+
+# Remove npm 3 before we package the dev bundle
+rm -Recurse -Force "${DIR}\bin\npm3"
 
 cd $DIR
 
