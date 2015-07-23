@@ -5,7 +5,7 @@
   "readme": "no warn",
   "repository": "no warn",
   "dependencies": {
-    "jsdoc": "3.3.0-alpha9",
+    "jsdoc": "jsdoc3/jsdoc#99fb8a00",
     "canonical-json": "0.0.4"
   }
 }
