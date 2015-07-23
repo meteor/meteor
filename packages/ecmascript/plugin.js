@@ -19,10 +19,21 @@ BCp.processFilesForTarget = function (inputFiles) {
 
     if (fileOptions.transpile !== false) {
       var babelOptions = Babel.getDefaultOptions();
+
       babelOptions.sourceMap = true;
       babelOptions.filename = inputFilePath;
       babelOptions.sourceFileName = "/" + inputFilePath;
       babelOptions.sourceMapName = "/" + outputFilePath + ".map";
+
+      var targetCouldBeInternetExplorer8 =
+        inputFile.getArch() === "web.browser";
+
+      if (targetCouldBeInternetExplorer8) {
+        // Perform some additional transformations to improve
+        // compatibility in older browsers (e.g. wrapping named function
+        // expressions, per http://kiro.me/blog/nfe_dilemma.html).
+        babelOptions.whitelist.push("jscript");
+      }
 
       try {
         var result = Babel.compile(source, babelOptions);
