@@ -149,6 +149,9 @@ delete sqlite3/deps
 delete wordwrap/test
 delete moment/min
 
+# Remove esprima tests to reduce the size of the dev bundle
+find . -path '*/esprima-fb/test' | xargs rm -rf
+
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
 
