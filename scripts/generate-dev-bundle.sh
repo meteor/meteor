@@ -73,7 +73,7 @@ export PATH="$DIR/bin:$PATH"
 # install npm 3 in a temporary directory
 mkdir "$DIR/bin/npm3"
 cd "$DIR/bin/npm3"
-npm install npm@3.0-latest
+npm install npm@3.1.2
 cp node_modules/npm/bin/npm .
 
 # export path again with our temporary npm3 directory first,

@@ -55,7 +55,7 @@ $env:PATH = "${DIR}\bin;${env:PATH}"
 mkdir "${DIR}\bin\npm3"
 cd "${DIR}\bin\npm3"
 echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm@3.0-latest
+npm install npm@3.1.2
 
 # add bin\npm3 to the front of the path so we can use npm 3 for building
 $env:PATH = "${DIR}\bin\npm3;${env:PATH}"
