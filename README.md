@@ -53,7 +53,11 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 <a name="naming">
 ### What's in a name...
 
-Although the name of this package is 'roles', you can define your permissions however you like.  You can have traditional roles like, "admin" or "webmaster".  But you can also assign more granular permissions such as, "view-secrets" or "manage-users".  Often times this is actually better because you are able to handle all those pesky edge cases that come up in real life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
+Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign to a user and can check for later.
+
+You can have traditional roles like, "admin" or "webmaster", or you can assign more granular permissions such as, "view-secrets" or "manage-users".  Often times more granular is actually better because you are able to handle all those pesky edge cases that come up in real life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
+
+Sometimes its useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  Users can have one set of permissions in group A and another set of permissions in group B.  The next section gives an example of this using soccer/football teams as groups.
 
 <br />
 
@@ -177,7 +181,7 @@ Add users to roles:
     if (user.roles.length > 0) {
       // Need _id of existing user record so this call must come 
       // after `Accounts.createUser` or `Accounts.onCreate`
-      Roles.addUsersToRoles(id, user.roles);
+      Roles.addUsersToRoles(id, user.roles, 'default-group');
     }
   
   });
@@ -216,6 +220,7 @@ Prevent non-authorized users from creating new users:
     var loggedInUser = Meteor.user();
 
     if (Roles.userIsInRole(loggedInUser, ['admin','manage-users'])) {
+      // NOTE: This example assumes the user is not using groups. 
       return true;
     }
 
