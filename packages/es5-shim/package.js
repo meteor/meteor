@@ -10,6 +10,10 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
+  // Allow the meteor package to register a weak dependency on this
+  // package, even though es5-shim implicitly depends on meteor.
+  api.use("meteor", { unordered: true });
+
   // Initialize Date and parseInt with their initial global values.
   api.addFiles("import_globals.js");
 
