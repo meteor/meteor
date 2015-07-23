@@ -67,10 +67,19 @@ else
     curl "${MONGO_URL}" | tar zx
 fi
 
-cd "$DIR/build"
-
-# export path so we use our new node for later builds
+# export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
+
+# install npm 3 in a temporary directory
+mkdir "$DIR/bin/npm3"
+cd "$DIR/bin/npm3"
+npm install npm@3.0-latest
+cp node_modules/npm/bin/npm .
+
+# export path again with our temporary npm3 directory first,
+# so we can use npm 3 during builds
+export PATH="$DIR/bin/npm3:$PATH"
+
 which node
 which npm
 
@@ -94,7 +103,6 @@ mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
 cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 
-mkdir "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
@@ -116,8 +124,6 @@ mkdir "${DIR}/build/npm-tool-install"
 cd "${DIR}/build/npm-tool-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
-# Refactor node modules to top level and remove unnecessary duplicates.
-npm dedupe
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
@@ -143,19 +149,6 @@ delete sqlite3/deps
 delete wordwrap/test
 delete moment/min
 
-# dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
-find . -path '*/esprima/test' | xargs rm -rf
-find . -path '*/esprima-fb/test' | xargs rm -rf
-
-# dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
-find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
-
-# Not sure why dedupe doesn't lift these to the top.
-pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
-delete crypto-browserify/test
-delete umd/node_modules/ruglify/test
-popd
-
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
 
@@ -167,6 +160,9 @@ curl -O $BROWSER_STACK_LOCAL_URL
 gunzip BrowserStackLocal*
 mv BrowserStackLocal* BrowserStackLocal
 mv BrowserStackLocal "$DIR/bin/"
+
+# remove our temporary npm3 directory
+rm -rf "$DIR/bin/npm3"
 
 echo BUNDLING
 
