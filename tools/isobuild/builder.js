@@ -3,7 +3,14 @@ import files from '../files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../profile.js';
 
+// Builder has two modes of working:
+// - write files to a temp directory and later atomically move it to destination
+// - write files in-place replacing the older files
+// The later doesn't work on Windows but works well on Mac OS X and Linux, since
+// the file system allows writing new files to the path of a file opened by a
+// process. The process only retains the inode, not the path.
 const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
+  (process.platform !== 'win32') &&
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
 
 
