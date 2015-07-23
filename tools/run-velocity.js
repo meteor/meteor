@@ -123,7 +123,7 @@ var runVelocity = function (url) {
           '/bin/bash',
           ['-c',
            ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
-            phantomScript + "END\n")]);
+            phantomScript + "\nEND\n")]);
         browserProcesses.push(browserProcess);
       }
 
