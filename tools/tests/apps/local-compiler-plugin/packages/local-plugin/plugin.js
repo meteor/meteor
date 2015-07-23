@@ -1,5 +1,5 @@
-var fs = Npm.require('fs');
-var path = Npm.require('path');
+var fs = Plugin.fs;
+var path = Plugin.path;
 
 Plugin.registerCompiler({
   extensions: ['printme'],
@@ -25,14 +25,14 @@ PrintmeCompiler.prototype.processFilesForTarget = function (inputFiles) {
   });
   console.log("PrintmeCompiler invocation", ++self.runCount);
   if (self.diskCache) {
-    fs.writeFileSync(self.diskCache, self.runCount + '\n');
+    fs.writeFile(self.diskCache, self.runCount + '\n');
   }
 };
 PrintmeCompiler.prototype.setDiskCacheDirectory = function (diskCacheDir) {
   var self = this;
   self.diskCache = path.join(diskCacheDir, 'cache');
   try {
-    var data = fs.readFileSync(self.diskCache, 'utf8');
+    var data = fs.readFile(self.diskCache, 'utf8');
   } catch (e) {
     if (e.code !== 'ENOENT')
       throw e;

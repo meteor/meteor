@@ -814,7 +814,21 @@ _.extend(Isopack.prototype, {
 
       nudge: function () {
         Console.nudge(true);
-      }
+      },
+
+      convertToOSPath: files.convertToOSPath,
+      convertToStandardPath: files.convertToStandardPath,
+      path: {
+        join: files.pathJoin,
+        normalize: files.pathNormalize,
+        relative: files.pathRelative,
+        resolve: files.pathResolve,
+        dirname: files.pathDirname,
+        basename: files.pathBasename,
+        extname: files.pathExtname,
+        sep: files.pathSep
+      },
+      fs: files
     };
     return Plugin;
   },

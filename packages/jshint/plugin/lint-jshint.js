@@ -1,6 +1,5 @@
 var util = Npm.require('util');
 var Future = Npm.require('fibers/future');
-var path = Npm.require('path');
 var jshint = Npm.require('jshint').JSHINT;
 
 Plugin.registerLinter({

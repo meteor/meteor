@@ -1,5 +1,5 @@
-const fs = Npm.require('fs');
-const path = Npm.require('path');
+const fs = Plugin.fs;
+const path = Plugin.path;
 const createHash = Npm.require('crypto').createHash;
 const assert = Npm.require('assert');
 const Future = Npm.require('fibers/future');
@@ -178,7 +178,7 @@ CachingCompilerBase = class CachingCompilerBase {
   // doesn't exist.
   _readFileOrNull(filename) {
     try {
-      return fs.readFileSync(filename, 'utf8');
+      return fs.readFile(filename, 'utf8');
     } catch (e) {
       if (e && e.code === 'ENOENT')
         return null;
