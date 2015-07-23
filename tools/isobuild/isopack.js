@@ -1068,25 +1068,33 @@ _.extend(Isopack.prototype, {
   },
 
   canWriteLegacyBuilds() {
-    function isResourceUnsafeForLegacyBuilds(resource) {
-      if (resource.type === "source") {
-        // This package cannot be represented as an isopack-1 Isopack if
-        // it uses a file implemented by registerCompiler other than the
-        // very basic JS and CSS types.
-        if (resource.extension === "js") {
-          // If this JS resource uses hard-coded support for plain old
-          // ES5, then it is safe to write as part of a legacy Isopack.
-          return ! resource.usesDefaultSourceProcessor;
-        }
-
-        return resource.extension !== "css";
+    function isResourceSafeForLegacyBuilds(resource) {
+      // The only new kind of resource is "source"; other resources are
+      // unchanged from legacy builds.
+      if (resource.type !== "source") {
+        return true;
       }
 
+      // CSS is safe for legacy builds. (We assume everyone is using the
+      // SourceProcessor from the 'meteor' package.)
+      if (resource.extension === "css") {
+        return true;
+      }
+
+      // If this JS resource uses hard-coded support for plain old ES5, then it
+      // is safe to write as part of a legacy Isopack.
+      if (resource.extension === "js" && resource.usesDefaultSourceProcessor) {
+        return true;
+      }
+
+      // Nope, this package cannot be represented as an isopack-1 Isopack
+      // because it uses a file implemented by registerCompiler other than the
+      // very basic JS and CSS types.
       return false;
     }
 
-    return ! this.unibuilds.some(
-      unibuild => unibuild.resources.some(isResourceUnsafeForLegacyBuilds)
+    return this.unibuilds.every(
+      unibuild => unibuild.resources.every(isResourceSafeForLegacyBuilds)
     );
   },
 
