@@ -1067,11 +1067,7 @@ _.extend(Isopack.prototype, {
     });
   },
 
-  _canWriteLegacyBuilds(options) {
-    if (! options.includePreCompilerPluginIsopackVersions) {
-      return false;
-    }
-
+  canWriteLegacyBuilds() {
     function isResourceUnsafeForLegacyBuilds(resource) {
       if (resource.type === "source") {
         // This package cannot be represented as an isopack-1 Isopack if
@@ -1134,7 +1130,9 @@ _.extend(Isopack.prototype, {
         mainJson.cordovaDependencies = self.cordovaDependencies;
       }
 
-      const writeLegacyBuilds = self._canWriteLegacyBuilds(options);
+      const writeLegacyBuilds = (
+        options.includePreCompilerPluginIsopackVersions
+          && self.canWriteLegacyBuilds());
 
       var isopackBuildInfoJson = null;
       if (options.includeIsopackBuildInfo) {
