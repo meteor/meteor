@@ -177,6 +177,12 @@ _.extend(CodeGen.prototype, {
           var includeCode =
                 'Spacebars.include(' + includeArgs.join(', ') + ')';
 
+          // check if data context was set by template or otherwise
+          // create an empty one so that data context is always accessible
+          if (!dataCode) {
+            dataCode = '{}'
+          }
+
           // calling convention compat -- set the data context around the
           // entire inclusion, so that if the name of the inclusion is
           // a helper function, it gets the data context in `this`.
@@ -184,11 +190,9 @@ _.extend(CodeGen.prototype, {
           // In `{{#foo bar}}`, `foo` is evaluated in the context of `bar`
           // -- but it's what we shipped for 0.8.0.  The rationale is that
           // `{{#foo bar}}` is sugar for `{{#with bar}}{{#foo}}...`.
-          if (dataCode) {
-            includeCode =
-              'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
-              includeCode + '; })';
-          }
+          includeCode =
+            'Blaze._TemplateWith(' + dataCode + ', function () { return ' +
+            includeCode + '; })';
 
           // XXX BACK COMPAT - UI is the old name, Template is the new
           if ((path[0] === 'UI' || path[0] === 'Template') &&
