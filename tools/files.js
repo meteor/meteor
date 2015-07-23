@@ -23,7 +23,6 @@ var buildmessage = require('./buildmessage.js');
 var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var colonConverter = require("./colon-converter.js");
-var Console = require("./console.js").Console;
 
 var miniFiles = require("./server/mini-files.js");
 
@@ -643,7 +642,7 @@ files.freeTempDir = function (tempDir) {
       // Don't crash and print a stack trace because we failed to delete a temp
       // directory. This happens sometimes on Windows and seems to be
       // unavoidable.
-      Console.debug(err);
+      console.log(err);
     }
 
     tempDirs = _.without(tempDirs, tempDir);
@@ -659,7 +658,7 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
         // Don't crash and print a stack trace because we failed to delete a temp
         // directory. This happens sometimes on Windows and seems to be
         // unavoidable.
-        Console.debug(err);
+        console.log(err);
       }
     });
 
