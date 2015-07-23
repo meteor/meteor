@@ -422,7 +422,6 @@ var getInstalledDependenciesTree = function (dir) {
   if (result.success)
     return JSON.parse(result.stdout);
 
-  runLog.log(result.error);
   buildmessage.error(`couldn't read npm version lock information: ${result.error}`);
   // Recover by returning false from updateDependencies
   throw new NpmFailure;
@@ -498,7 +497,6 @@ var installNpmModule = function (name, version, dir) {
       buildmessage.error(name + " version " + version + " " +
                          "is not available in the npm registry");
     } else {
-      runLog.log(result.error);
       buildmessage.error(`couldn't install npm package ${name}@${version}: ${result.error}`);
     }
 
@@ -541,7 +539,6 @@ var installFromShrinkwrap = function (dir) {
   var result = runNpmCommand(["install"], dir);
 
   if (! result.success) {
-    runLog.log(result.error);
     buildmessage.error(`couldn't install npm packages from npm-shrinkwrap: ${result.error}`);
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
@@ -571,7 +568,6 @@ var shrinkwrap = function (dir) {
   var result = runNpmCommand(["shrinkwrap"], dir);
 
   if (! result.success) {
-    runLog.log(result.error);
     buildmessage.error(`couldn't run \`npm shrinkwrap\`: ${result.error}`);
     // Recover by returning false from updateDependencies
     throw new NpmFailure;
