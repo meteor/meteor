@@ -594,9 +594,7 @@ function atomicallyRewriteFile(path, data, options) {
     }
   }
 
-  if (! stat) {
-    files.writeFile(path, data, options);
-  } else if (stat.isDirectory()) {
+  if (stat && stat.isDirectory()) {
     files.rm_recursive(path);
     files.writeFile(path, data, options);
   } else {
