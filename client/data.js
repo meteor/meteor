@@ -6,12 +6,13 @@ DocsData = {
     "lineno": 1,
     "longname": "Accounts",
     "name": "Accounts",
+    "scope": "global",
     "summary": "The namespace for all server-side accounts-related methods."
   },
   "Accounts.changePassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 145,
+    "lineno": 150,
     "locus": "Client",
     "longname": "Accounts.changePassword",
     "memberof": "Accounts",
@@ -53,7 +54,7 @@ DocsData = {
   "Accounts.createUser": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 108,
+    "lineno": 113,
     "locus": "Anywhere",
     "longname": "Accounts.createUser",
     "memberof": "Accounts",
@@ -133,7 +134,7 @@ DocsData = {
   "Accounts.forgotPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 207,
+    "lineno": 212,
     "locus": "Client",
     "longname": "Accounts.forgotPassword",
     "memberof": "Accounts",
@@ -175,7 +176,7 @@ DocsData = {
   "Accounts.resetPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 227,
+    "lineno": 232,
     "locus": "Client",
     "longname": "Accounts.resetPassword",
     "memberof": "Accounts",
@@ -217,7 +218,7 @@ DocsData = {
   "Accounts.sendEnrollmentEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 438,
+    "lineno": 509,
     "locus": "Server",
     "longname": "Accounts.sendEnrollmentEmail",
     "memberof": "Accounts",
@@ -250,7 +251,7 @@ DocsData = {
   "Accounts.sendResetPasswordEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 377,
+    "lineno": 444,
     "locus": "Server",
     "longname": "Accounts.sendResetPasswordEmail",
     "memberof": "Accounts",
@@ -283,7 +284,7 @@ DocsData = {
   "Accounts.sendVerificationEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 573,
+    "lineno": 648,
     "locus": "Server",
     "longname": "Accounts.sendVerificationEmail",
     "memberof": "Accounts",
@@ -316,7 +317,7 @@ DocsData = {
   "Accounts.setPassword": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 329,
+    "lineno": 396,
     "locus": "Server",
     "longname": "Accounts.setPassword",
     "memberof": "Accounts",
@@ -436,7 +437,7 @@ DocsData = {
   "Accounts.verifyEmail": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 254,
+    "lineno": 259,
     "locus": "Client",
     "longname": "Accounts.verifyEmail",
     "memberof": "Accounts",
@@ -538,7 +539,7 @@ DocsData = {
   "Ap.onCreateUser": {
     "filepath": "accounts-base/accounts_server.js",
     "kind": "function",
-    "lineno": 1173,
+    "lineno": 1174,
     "locus": "Server",
     "longname": "Ap.onCreateUser",
     "memberof": "Ap",
@@ -607,7 +608,7 @@ DocsData = {
   "Ap.onLogin": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 239,
+    "lineno": 240,
     "locus": "Anywhere",
     "longname": "Ap.onLogin",
     "memberof": "Ap",
@@ -630,7 +631,7 @@ DocsData = {
   "Ap.onLoginFailure": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 248,
+    "lineno": 249,
     "locus": "Anywhere",
     "longname": "Ap.onLoginFailure",
     "memberof": "Ap",
@@ -689,7 +690,7 @@ DocsData = {
   "Ap.validateLoginAttempt": {
     "filepath": "accounts-base/accounts_server.js",
     "kind": "function",
-    "lineno": 90,
+    "lineno": 91,
     "locus": "Server",
     "longname": "Ap.validateLoginAttempt",
     "memberof": "Ap",
@@ -712,7 +713,7 @@ DocsData = {
   "Ap.validateNewUser": {
     "filepath": "accounts-base/accounts_server.js",
     "kind": "function",
-    "lineno": 1256,
+    "lineno": 1257,
     "locus": "Server",
     "longname": "Ap.validateNewUser",
     "memberof": "Ap",
@@ -910,6 +911,7 @@ DocsData = {
     "kind": "namespace",
     "longname": "Assets",
     "name": "Assets",
+    "scope": "global",
     "summary": "The namespace for Assets functions, lives in the bundler."
   },
   "Assets.getBinary": {
@@ -980,6 +982,7 @@ DocsData = {
     "lineno": 1,
     "longname": "Blaze",
     "name": "Blaze",
+    "scope": "global",
     "summary": "The namespace for all Blaze-related methods and classes."
   },
   "Blaze.Each": {
@@ -2246,12 +2249,13 @@ DocsData = {
     "lineno": 1,
     "longname": "DDP",
     "name": "DDP",
+    "scope": "global",
     "summary": "Namespace for DDP-related methods/classes."
   },
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1626,
+    "lineno": 1627,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -2277,6 +2281,7 @@ DocsData = {
     "lineno": 1,
     "longname": "DDPCommon",
     "name": "DDPCommon",
+    "scope": "global",
     "summary": "Namespace for DDPCommon-related methods/classes. Shared between \n`ddp-client` and `ddp-server`, where the ddp-client is the implementation\nof a ddp client for both client AND server; and the ddp server is the\nimplementation of the livedata server and stream server. Common \nfunctionality shared between both can be shared under this namespace"
   },
   "DDPCommon.MethodInvocation": {
@@ -2379,7 +2384,7 @@ DocsData = {
   "DDPRateLimiter.addRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 77,
+    "lineno": 67,
     "longname": "DDPRateLimiter.addRule",
     "memberof": "DDPRateLimiter",
     "name": "addRule",
@@ -2414,12 +2419,12 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Add a rule that matches against a stream of events describing method or\nsubscription attempts. Each event is an object with the following properties:\n\n- `type`: Either \"method\" or \"subscription\"\n- `name`: The name of the method or subscription being called\n- `userId`: The user ID attempting the method or subscription\n- `connectionId`: A string representing the user's DDP connection\n- `ipAddr`: The IP address of the user\n\nReturns unique `ruleId` that can be passed to `removeRule`."
+    "summary": "Add a rule that matches against a stream of events describing method or\nsubscription attempts. Each event is an object with the following\nproperties:\n\n- `type`: Either \"method\" or \"subscription\"\n- `name`: The name of the method or subscription being called\n- `userId`: The user ID attempting the method or subscription\n- `connectionId`: A string representing the user's DDP connection\n- `clientAddress`: The IP address of the user\n\nReturns unique `ruleId` that can be passed to `removeRule`."
   },
   "DDPRateLimiter.removeRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 86,
+    "lineno": 81,
     "longname": "DDPRateLimiter.removeRule",
     "memberof": "DDPRateLimiter",
     "name": "removeRule",
@@ -2446,19 +2451,19 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Removes the rule with specified id."
+    "summary": "Removes the specified rule from the rate limiter. If rule had\nhit a rate limit, that limit is removed as well."
   },
   "DDPRateLimiter.setErrorMessage": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 25,
+    "lineno": 27,
     "longname": "DDPRateLimiter.setErrorMessage",
     "memberof": "DDPRateLimiter",
     "name": "setErrorMessage",
     "options": [],
     "params": [
       {
-        "description": "<p>Function that takes an object with a\ntimeToReset field that specifies the first time a method or subscription\ncall is allowed.</p>",
+        "description": "<p>Functions are passed in an object with a\n<code>timeToReset</code> field that specifies the number of milliseconds until the next\nmethod or subscription is allowed to run. The function must return a string\nof the error message.</p>",
         "name": "message",
         "type": {
           "names": [
@@ -2921,7 +2926,7 @@ DocsData = {
   "HTTP.call": {
     "filepath": "http/httpcall_client.js",
     "kind": "function",
-    "lineno": 18,
+    "lineno": 19,
     "locus": "Anywhere",
     "longname": "HTTP.call",
     "memberof": "HTTP",
@@ -3007,6 +3012,15 @@ DocsData = {
             "Object"
           ]
         }
+      },
+      {
+        "description": "<p>On the client, this will be called before the request is sent to allow for more direct manipulation of the underlying XMLHttpRequest object, which will be passed as the first argument. If the callback returns <code>false</code>, the request will be not be send.</p>",
+        "name": "beforeSend",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
       }
     ],
     "params": [
@@ -3054,7 +3068,7 @@ DocsData = {
   "HTTP.del": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 77,
+    "lineno": 78,
     "locus": "Anywhere",
     "longname": "HTTP.del",
     "memberof": "HTTP",
@@ -3097,7 +3111,7 @@ DocsData = {
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 44,
+    "lineno": 45,
     "locus": "Anywhere",
     "longname": "HTTP.get",
     "memberof": "HTTP",
@@ -3140,7 +3154,7 @@ DocsData = {
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 55,
+    "lineno": 56,
     "locus": "Anywhere",
     "longname": "HTTP.post",
     "memberof": "HTTP",
@@ -3183,7 +3197,7 @@ DocsData = {
   "HTTP.put": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 66,
+    "lineno": 67,
     "locus": "Anywhere",
     "longname": "HTTP.put",
     "memberof": "HTTP",
@@ -3223,10 +3237,478 @@ DocsData = {
     "scope": "static",
     "summary": "Send an HTTP `PUT` request. Equivalent to calling [`HTTP.call`](#http_call) with \"PUT\" as the first argument."
   },
+  "InputFile#addAsset": {
+    "kind": "function",
+    "longname": "InputFile#addAsset",
+    "memberof": "InputFile",
+    "name": "addAsset",
+    "options": [
+      {
+        "description": "<p>The path at which to serve the asset.</p>",
+        "name": "path",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The data that should be placed in the\nfile.</p>",
+        "name": "data",
+        "type": {
+          "names": [
+            "Buffer",
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optionally, supply a hash for the output\nfile.</p>",
+        "name": "hash",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Add a file to serve as-is to the browser or to include on\nthe browser, depending on the target. On the web, it will be served\nat the exact path requested. For server targets, it can be retrieved\nusing `Assets.getText` or `Assets.getBinary`."
+  },
+  "InputFile#addHtml": {
+    "kind": "function",
+    "longname": "InputFile#addHtml",
+    "memberof": "InputFile",
+    "name": "addHtml",
+    "options": [
+      {
+        "description": "<p>Which section of the document should\nbe appended to. Can only be &quot;head&quot; or &quot;body&quot;.</p>",
+        "name": "section",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The content to append.</p>",
+        "name": "data",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Works in web targets only. Add markup to the `head` or `body`\nsection of the document."
+  },
+  "InputFile#addJavaScript": {
+    "kind": "function",
+    "longname": "InputFile#addJavaScript",
+    "memberof": "InputFile",
+    "name": "addJavaScript",
+    "options": [
+      {
+        "description": "<p>The path at which the JavaScript file\nshould be inserted, may not be honored in case of path conflicts.</p>",
+        "name": "path",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The code to be added.</p>",
+        "name": "data",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>A stringified JSON\nsourcemap, in case the JavaScript file was generated from a\ndifferent file.</p>",
+        "name": "sourceMap",
+        "type": {
+          "names": [
+            "String",
+            "Object"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Add JavaScript code. The code added will only see the\nnamespaces imported by this package as runtime dependencies using\n['api.use'](#PackageAPI-use). If the file being compiled was added\nwith the bare flag, the resulting JavaScript won't be wrapped in a\nclosure."
+  },
+  "InputFile#addStylesheet": {
+    "kind": "function",
+    "longname": "InputFile#addStylesheet",
+    "memberof": "InputFile",
+    "name": "addStylesheet",
+    "options": [
+      {
+        "description": "<p>The requested path for the added CSS, may not\nbe satisfied if there are path conflicts.</p>",
+        "name": "path",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The content of the stylesheet that should be\nadded.</p>",
+        "name": "data",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>A stringified JSON\nsourcemap, in case the stylesheet was generated from a different\nfile.</p>",
+        "name": "sourceMap",
+        "type": {
+          "names": [
+            "String",
+            "Object"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Web targets only. Add a stylesheet to the document. Not available\nfor linter build plugins."
+  },
+  "InputFile#getPathInBundle": {
+    "kind": "function",
+    "longname": "InputFile#getPathInBundle",
+    "memberof": "InputFile",
+    "name": "getPathInBundle",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Returns the path of the compiled file in the bundle."
+  },
+  "InputFile#getSourceMap": {
+    "kind": "function",
+    "longname": "InputFile#getSourceMap",
+    "memberof": "InputFile",
+    "name": "getSourceMap",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Returns the source-map associated with the file."
+  },
+  "InputFile.error": {
+    "kind": "function",
+    "longname": "InputFile.error",
+    "memberof": "InputFile",
+    "name": "error",
+    "options": [
+      {
+        "description": "<p>The error message to display.</p>",
+        "name": "message",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The path to display in the error message.</p>",
+        "name": "sourcePath",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The line number to display in the error message.</p>",
+        "name": "line",
+        "type": {
+          "names": [
+            "Integer"
+          ]
+        }
+      },
+      {
+        "description": "<p>The function name to display in the error message.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Call this method to raise a compilation or linting error for the\nfile."
+  },
+  "InputFile.getArch": {
+    "kind": "function",
+    "longname": "InputFile.getArch",
+    "memberof": "InputFile",
+    "name": "getArch",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the architecture that is targeted while processing this\nfile."
+  },
+  "InputFile.getBasename": {
+    "kind": "function",
+    "longname": "InputFile.getBasename",
+    "memberof": "InputFile",
+    "name": "getBasename",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the filename of the file."
+  },
+  "InputFile.getContentsAsBuffer": {
+    "kind": "function",
+    "longname": "InputFile.getContentsAsBuffer",
+    "memberof": "InputFile",
+    "name": "getContentsAsBuffer",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Buffer"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the full contents of the file as a buffer."
+  },
+  "InputFile.getContentsAsString": {
+    "kind": "function",
+    "longname": "InputFile.getContentsAsString",
+    "memberof": "InputFile",
+    "name": "getContentsAsString",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the full contents of the file as a string."
+  },
+  "InputFile.getDeclaredExports": {
+    "kind": "function",
+    "longname": "InputFile.getDeclaredExports",
+    "memberof": "InputFile",
+    "name": "getDeclaredExports",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Array.<String>"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns a list of symbols declared as exports in this target. The\nresult of `api.export('symbol')` calls in target's control file such as\npackage.js."
+  },
+  "InputFile.getDirname": {
+    "kind": "function",
+    "longname": "InputFile.getDirname",
+    "memberof": "InputFile",
+    "name": "getDirname",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the directory path relative to the package or app root.\nThe returned path always uses forward slashes."
+  },
+  "InputFile.getDisplayPath": {
+    "kind": "function",
+    "longname": "InputFile.getDisplayPath",
+    "memberof": "InputFile",
+    "name": "getDisplayPath",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns a relative path that can be used to form error messages or\nother display properties. Can be used as an input to a source map."
+  },
+  "InputFile.getPackageName": {
+    "kind": "function",
+    "longname": "InputFile.getPackageName",
+    "memberof": "InputFile",
+    "name": "getPackageName",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the name of the package or `null` if the file is not in a\npackage."
+  },
+  "InputFile.getPathInPackage": {
+    "kind": "function",
+    "longname": "InputFile.getPathInPackage",
+    "memberof": "InputFile",
+    "name": "getPathInPackage",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns the relative path of file to the package or app root\ndirectory. The returned path always uses forward slashes."
+  },
+  "InputFile.getSourceHash": {
+    "kind": "function",
+    "longname": "InputFile.getSourceHash",
+    "memberof": "InputFile",
+    "name": "getSourceHash",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns a hash string for the file that can be used to implement\ncaching."
+  },
   "IterationCallback": {
     "filepath": "minimongo/minimongo.js",
     "kind": "typedef",
-    "lineno": 146,
+    "lineno": 140,
     "longname": "IterationCallback",
     "name": "IterationCallback",
     "params": [
@@ -3247,6 +3729,7 @@ DocsData = {
         }
       }
     ],
+    "scope": "global",
     "type": {
       "names": [
         "function"
@@ -3259,6 +3742,7 @@ DocsData = {
     "lineno": 40,
     "longname": "Match",
     "name": "Match",
+    "scope": "global",
     "summary": "The namespace for all Match types and methods."
   },
   "Match.test": {
@@ -3299,6 +3783,7 @@ DocsData = {
     "lineno": 1,
     "longname": "Meteor",
     "name": "Meteor",
+    "scope": "global",
     "summary": "The Meteor namespace"
   },
   "Meteor.Error": {
@@ -3408,7 +3893,7 @@ DocsData = {
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 705,
+    "lineno": 706,
     "locus": "Anywhere",
     "longname": "Meteor.apply",
     "memberof": "Meteor",
@@ -3478,7 +3963,7 @@ DocsData = {
   "Meteor.call": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 664,
+    "lineno": 665,
     "locus": "Anywhere",
     "longname": "Meteor.call",
     "memberof": "Meteor",
@@ -3567,7 +4052,7 @@ DocsData = {
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1017,
+    "lineno": 1018,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
@@ -3628,7 +4113,7 @@ DocsData = {
   "Meteor.loggingIn": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 54,
+    "lineno": 53,
     "locus": "Client",
     "longname": "Meteor.loggingIn",
     "memberof": "Meteor",
@@ -3729,7 +4214,7 @@ DocsData = {
   "Meteor.loginWithPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 18,
+    "lineno": 23,
     "locus": "Client",
     "longname": "Meteor.loginWithPassword",
     "memberof": "Meteor",
@@ -3737,7 +4222,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>Either a string interpreted as a username or an email; or an object with a single key: <code>email</code>, <code>username</code> or <code>id</code>.</p>",
+        "description": "<p>Either a string interpreted as a username or an email; or an object with a\n  single key: <code>email</code>, <code>username</code> or <code>id</code>. Username or email match in a case\n  insensitive manner.</p>",
         "name": "user",
         "type": {
           "names": [
@@ -3756,7 +4241,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "description": "<p>Optional callback.\n  Called with no arguments on success, or with a single <code>Error</code> argument\n  on failure.</p>",
         "name": "callback",
         "optional": true,
         "type": {
@@ -3772,7 +4257,7 @@ DocsData = {
   "Meteor.logout": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 255,
+    "lineno": 256,
     "locus": "Client",
     "longname": "Meteor.logout",
     "memberof": "Meteor",
@@ -3796,7 +4281,7 @@ DocsData = {
   "Meteor.logoutOtherClients": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 278,
+    "lineno": 279,
     "locus": "Client",
     "longname": "Meteor.logoutOtherClients",
     "memberof": "Meteor",
@@ -3820,7 +4305,7 @@ DocsData = {
   "Meteor.methods": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1504,
+    "lineno": 1513,
     "locus": "Anywhere",
     "longname": "Meteor.methods",
     "memberof": "Meteor",
@@ -3843,7 +4328,7 @@ DocsData = {
   "Meteor.onConnection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1365,
+    "lineno": 1374,
     "locus": "Server",
     "longname": "Meteor.onConnection",
     "memberof": "Meteor",
@@ -3866,7 +4351,7 @@ DocsData = {
   "Meteor.publish": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1439,
+    "lineno": 1448,
     "locus": "Server",
     "longname": "Meteor.publish",
     "memberof": "Meteor",
@@ -3898,7 +4383,7 @@ DocsData = {
   "Meteor.reconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1007,
+    "lineno": 1008,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
@@ -4030,7 +4515,7 @@ DocsData = {
   "Meteor.status": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 995,
+    "lineno": 996,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
@@ -4043,7 +4528,7 @@ DocsData = {
   "Meteor.subscribe": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 479,
+    "lineno": 480,
     "locus": "Client",
     "longname": "Meteor.subscribe",
     "memberof": "Meteor",
@@ -4144,7 +4629,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Wrap a function that takes a callback function as its final parameter. On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback."
+    "summary": "Wrap a function that takes a callback function as its final parameter. The signature of the callback of the wrapped function should be `function(error, result){}`. On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback. If a callback is provided, the environment captured when the original function was called will be restored in the callback."
   },
   "Mongo": {
     "filepath": "mongo/collection.js",
@@ -4740,7 +5225,7 @@ DocsData = {
   "Mongo.Cursor#count": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 222,
+    "lineno": 216,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#count",
     "memberof": "Mongo.Cursor",
@@ -4762,7 +5247,7 @@ DocsData = {
   "Mongo.Cursor#fetch": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 205,
+    "lineno": 199,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#fetch",
     "memberof": "Mongo.Cursor",
@@ -4784,7 +5269,7 @@ DocsData = {
   "Mongo.Cursor#forEach": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 151,
+    "lineno": 145,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#forEach",
     "memberof": "Mongo.Cursor",
@@ -4817,7 +5302,7 @@ DocsData = {
   "Mongo.Cursor#map": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 187,
+    "lineno": 181,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#map",
     "memberof": "Mongo.Cursor",
@@ -4850,7 +5335,7 @@ DocsData = {
   "Mongo.Cursor#observe": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 305,
+    "lineno": 299,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observe",
     "memberof": "Mongo.Cursor",
@@ -4873,7 +5358,7 @@ DocsData = {
   "Mongo.Cursor#observeChanges": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 317,
+    "lineno": 311,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observeChanges",
     "memberof": "Mongo.Cursor",
@@ -4932,7 +5417,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An object where the keys are package\nnames and the values are version numbers in string form.\nYou can only depend on exact versions of NPM packages. Example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({moment: &quot;2.8.3&quot;});</code></pre>",
+        "description": "<p>An object where the keys are package\nnames and the values are version numbers in string form or URLs to a\ngit commit by SHA.  You can only depend on exact versions of NPM\npackages. Example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre>",
         "name": "dependencies",
         "type": {
           "names": [
@@ -5019,6 +5504,15 @@ DocsData = {
       {
         "description": "<p>Optional Filepath to\ndocumentation. Set to 'README.md' by default. Set this to null to submit\nno documentation.</p>",
         "name": "documentation",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>A package with this flag set to true\nwill not be bundled into production builds. This is useful for packages\nmeant to be used in development only.</p>",
+        "name": "debugOnly",
         "type": {
           "names": [
             "String"
@@ -5159,7 +5653,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>Name of the source file, or array of strings of source file names.</p>",
+        "description": "<p>Name of the source file, or array of\nstrings of source file names.</p>",
         "name": "filename",
         "type": {
           "names": [
@@ -5169,17 +5663,18 @@ DocsData = {
         }
       },
       {
-        "description": "<p>If you only want to export the file\non the server (or the client), you can pass in the second argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the file is used with.</p>",
+        "description": "<p>If you only want to export the file\non the server (or the client), you can pass in the second argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the file is used with. You can specify multiple\narchitectures by passing in an array, for example <code>['web.cordova', 'os.linux']</code>.</p>",
         "name": "architecture",
         "optional": true,
         "type": {
           "names": [
-            "String"
+            "String",
+            "Array.<String>"
           ]
         }
       },
       {
-        "description": "<p>Options that will be passed to build\nplugins. For example, for JavaScript files, you can pass <code>{bare: true}</code>\nto not wrap the individual file in its own closure.</p>",
+        "description": "<p>Options that will be passed to build\nplugins. For example, for JavaScript files, you can pass <code>{bare: true}</code>\nto not wrap the individual file in its own closure. To add a static asset,\npass <code>{isAsset: true}</code>; use the <code>architecture</code> parameter to determine\nif this is a client-side asset served by the HTTP server or a server-side\nasset accessible to the <code>Assets</code> APIs.</p>",
         "name": "fileOptions",
         "optional": true,
         "type": {
@@ -5201,27 +5696,47 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>Name of the object.</p>",
-        "name": "exportedObject",
+        "description": "<p>Name of the object to export, or\nan array of object names.</p>",
+        "name": "exportedObjects",
         "type": {
           "names": [
-            "String"
+            "String",
+            "Array.<String>"
           ]
         }
       },
       {
-        "description": "<p>If you only want to export the object\non the server (or the client), you can pass in the second argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the export is used with.</p>",
+        "description": "<p>If you only want to export the\nobject on the server (or the client), you can pass in the second argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify what\narchitecture the export is used with. You can specify multiple\narchitectures by passing in an array, for example <code>['web.cordova',\n'os.linux']</code>.</p>",
         "name": "architecture",
         "optional": true,
         "type": {
           "names": [
-            "String"
+            "String",
+            "Array.<String>"
+          ]
+        }
+      },
+      {
+        "name": "exportOptions",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>If true, this symbol will only be\nexported when running tests for this package.</p>",
+        "name": "exportOptions.testOnly",
+        "type": {
+          "names": [
+            "Boolean"
           ]
         }
       }
     ],
     "scope": "instance",
-    "summary": "Export package-level variables in your package. The specified variables (declared without `var` in the source code) will be available to packages that use this package."
+    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use this package."
   },
   "PackageAPI#imply": {
     "kind": "function",
@@ -5232,8 +5747,19 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>Name of a package, or array of package names, with an optional @version component for each.</p>",
-        "name": "packageSpecs",
+        "description": "<p>Name of a package, or array of\npackage names, with an optional @version component for each.</p>",
+        "name": "packageNames",
+        "type": {
+          "names": [
+            "String",
+            "Array.<String>"
+          ]
+        }
+      },
+      {
+        "description": "<p>If you only use the package on\nthe server (or the client), you can pass in the second argument (e.g.,\n<code>'server'</code>, <code>'client'</code>, <code>'web.browser'</code>, <code>'web.cordova'</code>) to specify what\narchitecture the package is used with. You can specify multiple\narchitectures by passing in an array, for example <code>['web.cordova',\n'os.linux']</code>.</p>",
+        "name": "architecture",
+        "optional": true,
         "type": {
           "names": [
             "String",
@@ -5243,7 +5769,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Give users of this package access to another package (by passing  in the string `packagename`) or a collection of packages (by passing in an  array of strings [`packagename1`, `packagename2`]"
+    "summary": "Give users of this package access to another package (by passing\nin the string `packagename`) or a collection of packages (by passing in\nan array of strings [`packagename1`, `packagename2`]"
   },
   "PackageAPI#use": {
     "kind": "function",
@@ -5283,12 +5809,13 @@ DocsData = {
         }
       },
       {
-        "description": "<p>If you only use the package on the\nserver (or the client), you can pass in the second argument (e.g.,\n<code>'server'</code>, <code>'client'</code>, <code>'web.browser'</code>, <code>'web.cordova'</code>) to specify\nwhat architecture the package is used with.</p>",
+        "description": "<p>If you only use the package on the\nserver (or the client), you can pass in the second argument (e.g.,\n<code>'server'</code>, <code>'client'</code>, <code>'web.browser'</code>, <code>'web.cordova'</code>) to specify\nwhat architecture the package is used with. You can specify multiple\narchitectures by passing in an array, for example <code>['web.cordova', 'os.linux']</code>.</p>",
         "name": "architecture",
         "optional": true,
         "type": {
           "names": [
-            "String"
+            "String",
+            "Array.<String>"
           ]
         }
       },
@@ -5314,7 +5841,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>Specification of a release: track@version. Just 'version' (e.g. <code>&quot;0.9.0&quot;</code>) is sufficient if using the default release track <code>METEOR</code>.</p>",
+        "description": "<p>Specification of a release:\ntrack@version. Just 'version' (e.g. <code>&quot;0.9.0&quot;</code>) is sufficient if using the\ndefault release track <code>METEOR</code>. Can be an array of specifications.</p>",
         "name": "meteorRelease",
         "type": {
           "names": [
@@ -5325,7 +5852,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Use versions of core packages from a release. Unless provided, all packages will default to the versions released along with `meteorRelease`. This will save you from having to figure out the exact versions of the core packages you want to use. For example, if the newest release of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you can write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you later write `api.use('jquery')`, it will be equivalent to `api.use('jquery@1.0.0')`. You may specify an array of multiple releases, in which case the default value for constraints will be the \"or\" of the versions from each release: `api.versionsFrom(['METEOR@0.9.0', 'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as `api.use('jquery@1.0.0 || 2.0.0')`."
+    "summary": "Use versions of core packages from a release. Unless provided,\nall packages will default to the versions released along with\n`meteorRelease`. This will save you from having to figure out the exact\nversions of the core packages you want to use. For example, if the newest\nrelease of meteor is `METEOR@0.9.0` and it includes `jquery@1.0.0`, you\ncan write `api.versionsFrom('METEOR@0.9.0')` in your package, and when you\nlater write `api.use('jquery')`, it will be equivalent to\n`api.use('jquery@1.0.0')`. You may specify an array of multiple releases,\nin which case the default value for constraints will be the \"or\" of the\nversions from each release: `api.versionsFrom(['METEOR@0.9.0',\n'METEOR@0.9.5'])` may cause `api.use('jquery')` to be interpreted as\n`api.use('jquery@1.0.0 || 2.0.0')`."
   },
   "Plugin": {
     "kind": "namespace",
@@ -5334,7 +5861,143 @@ DocsData = {
     "scope": "global",
     "summary": "The namespace that is exposed inside build plugin files."
   },
+  "Plugin.registerCompiler": {
+    "kind": "function",
+    "locus": "Build Plugin",
+    "longname": "Plugin.registerCompiler",
+    "memberof": "Plugin",
+    "name": "registerCompiler",
+    "options": [
+      {
+        "description": "<p>The file extensions that this\nplugin should handle, without the first dot.\nExamples: <code>[&quot;coffee&quot;, &quot;coffee.md&quot;]</code>.</p>",
+        "name": "extensions",
+        "type": {
+          "names": [
+            "Array.<String>"
+          ]
+        }
+      },
+      {
+        "description": "<p>The list of filenames\nthat this plugin should handle. Examples: <code>[&quot;config.json&quot;]</code>.</p>",
+        "name": "filenames",
+        "type": {
+          "names": [
+            "Array.<String>"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>A function that returns an instance\nof a compiler class.</p>\n<p>More detailed documentation for build plugins is available <a href=\"https://github.com/meteor/meteor/wiki/Build-Plugins-API\">on the GitHub Wiki</a>.</p>",
+        "name": "factory",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Inside a build plugin source file specified in\n[Package.registerBuildPlugin](#Package-registerBuildPlugin),\nadd a compiler that will handle files with certain extensions or\nfilenames."
+  },
+  "Plugin.registerLinter": {
+    "kind": "function",
+    "locus": "Build Plugin",
+    "longname": "Plugin.registerLinter",
+    "memberof": "Plugin",
+    "name": "registerLinter",
+    "options": [
+      {
+        "description": "<p>The file extensions that this\nplugin should handle, without the first dot.\nExamples: <code>[&quot;js&quot;, &quot;es6&quot;, &quot;jsx&quot;]</code>.</p>",
+        "name": "extensions",
+        "type": {
+          "names": [
+            "Array.<String>"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>A function that returns an instance\nof a linter class.</p>\n<p>More detailed documentation for build plugins is available <a href=\"https://github.com/meteor/meteor/wiki/Build-Plugins-API\">on the GitHub Wiki</a>.</p>",
+        "name": "factory",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Inside a build plugin source file specified in\n[Package.registerBuildPlugin](#Package-registerBuildPlugin),\nadd a linter that will handle files with certain extensions or\nfilenames."
+  },
+  "Plugin.registerMinifier": {
+    "kind": "function",
+    "locus": "Build Plugin",
+    "longname": "Plugin.registerMinifier",
+    "memberof": "Plugin",
+    "name": "registerMinifier",
+    "options": [
+      {
+        "description": "<p>The file extensions that this\nplugin should handle, without the first dot. Can only be &quot;js&quot; or &quot;css&quot;.\nExamples: <code>[&quot;js&quot;, &quot;css&quot;]</code>.</p>",
+        "name": "extensions",
+        "type": {
+          "names": [
+            "Array.<String>"
+          ]
+        }
+      },
+      {
+        "description": "<p>The list of filenames\nthat this plugin should handle. Examples: <code>[&quot;config.json&quot;]</code>.</p>",
+        "name": "filenames",
+        "type": {
+          "names": [
+            "Array.<String>"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>A function that returns an instance\nof a minifier class.</p>\n<p>More detailed documentation for build plugins is available <a href=\"https://github.com/meteor/meteor/wiki/Build-Plugins-API\">on the GitHub Wiki</a>.</p>",
+        "name": "factory",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Inside a build plugin source file specified in\n[Package.registerBuildPlugin](#Package-registerBuildPlugin),\nadd a linter that will handle files with certain extensions or\nfilenames."
+  },
   "Plugin.registerSourceHandler": {
+    "deprecated": "since 1.2\nXXX COMPAT WITH 1.1",
     "kind": "function",
     "locus": "Build Plugin",
     "longname": "Plugin.registerSourceHandler",
@@ -5561,17 +6224,18 @@ DocsData = {
     "filepath": "ddp-server/livedata_server.js",
     "instancename": "this",
     "kind": "class",
-    "lineno": 907,
+    "lineno": 916,
     "longname": "Subscription",
     "name": "Subscription",
     "options": [],
     "params": [],
+    "scope": "global",
     "summary": "The server's side of a subscription"
   },
   "Subscription#added": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1195,
+    "lineno": 1204,
     "locus": "Server",
     "longname": "Subscription#added",
     "memberof": "Subscription",
@@ -5612,7 +6276,7 @@ DocsData = {
   "Subscription#changed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1213,
+    "lineno": 1222,
     "locus": "Server",
     "longname": "Subscription#changed",
     "memberof": "Subscription",
@@ -5653,7 +6317,7 @@ DocsData = {
   "Subscription#connection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 917,
+    "lineno": 926,
     "locus": "Server",
     "longname": "Subscription#connection",
     "memberof": "Subscription",
@@ -5664,7 +6328,7 @@ DocsData = {
   "Subscription#error": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1138,
+    "lineno": 1147,
     "locus": "Server",
     "longname": "Subscription#error",
     "memberof": "Subscription",
@@ -5687,7 +6351,7 @@ DocsData = {
   "Subscription#onStop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1170,
+    "lineno": 1179,
     "locus": "Server",
     "longname": "Subscription#onStop",
     "memberof": "Subscription",
@@ -5710,7 +6374,7 @@ DocsData = {
   "Subscription#ready": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1246,
+    "lineno": 1255,
     "locus": "Server",
     "longname": "Subscription#ready",
     "memberof": "Subscription",
@@ -5723,7 +6387,7 @@ DocsData = {
   "Subscription#removed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1229,
+    "lineno": 1238,
     "locus": "Server",
     "longname": "Subscription#removed",
     "memberof": "Subscription",
@@ -5755,7 +6419,7 @@ DocsData = {
   "Subscription#stop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1156,
+    "lineno": 1165,
     "locus": "Server",
     "longname": "Subscription#stop",
     "memberof": "Subscription",
@@ -5768,7 +6432,7 @@ DocsData = {
   "Subscription#userId": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 959,
+    "lineno": 968,
     "locus": "Server",
     "longname": "Subscription#userId",
     "memberof": "Subscription",
@@ -6078,6 +6742,7 @@ DocsData = {
     "lineno": 5,
     "longname": "Tracker",
     "name": "Tracker",
+    "scope": "global",
     "summary": "The namespace for Tracker-related methods."
   },
   "Tracker.Computation": {
@@ -6512,17 +7177,35 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 389,
+    "lineno": 390,
     "longname": "currentUser",
     "name": "currentUser",
     "scope": "global",
     "summary": "Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."
   },
+  "getExtension": {
+    "kind": "function",
+    "longname": "getExtension",
+    "name": "getExtension",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Returns the extension that matched the compiler plugin.\nThe longest prefix is preferred."
+  },
   "loggingIn": {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 399,
+    "lineno": 400,
     "longname": "loggingIn",
     "name": "loggingIn",
     "scope": "global",
