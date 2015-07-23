@@ -678,10 +678,10 @@ _.extend(Isopack.prototype, {
        * add a compiler that will handle files with certain extensions or
        * filenames.
        * @param {Object} options
-       * @param {[String]} options.extensions The file extensions that this
+       * @param {String[]} options.extensions The file extensions that this
        * plugin should handle, without the first dot.
        * Examples: `["coffee", "coffee.md"]`.
-       * @param {[String]} options.filenames The list of filenames
+       * @param {String[]} options.filenames The list of filenames
        * that this plugin should handle. Examples: `["config.json"]`.
        * @param {Function} factory A function that returns an instance
        * of a compiler class.
@@ -728,7 +728,7 @@ _.extend(Isopack.prototype, {
        * add a linter that will handle files with certain extensions or
        * filenames.
        * @param {Object} options
-       * @param {[String]} options.extensions The file extensions that this
+       * @param {String[]} options.extensions The file extensions that this
        * plugin should handle, without the first dot.
        * Examples: `["js", "es6", "jsx"]`.
        * @param {Function} factory A function that returns an instance
@@ -778,10 +778,10 @@ _.extend(Isopack.prototype, {
        * add a linter that will handle files with certain extensions or
        * filenames.
        * @param {Object} options
-       * @param {[String]} options.extensions The file extensions that this
+       * @param {String[]} options.extensions The file extensions that this
        * plugin should handle, without the first dot. Can only be "js" or "css".
        * Examples: `["js", "css"]`.
-       * @param {[String]} options.filenames The list of filenames
+       * @param {String[]} options.filenames The list of filenames
        * that this plugin should handle. Examples: `["config.json"]`.
        * @param {Function} factory A function that returns an instance
        * of a minifier class.
