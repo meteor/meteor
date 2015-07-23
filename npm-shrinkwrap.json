@@ -277,9 +277,9 @@
           "resolved": "https://registry.npmjs.org/lodash/-/lodash-3.10.0.tgz"
         },
         "minimatch": {
-          "version": "2.0.9",
+          "version": "2.0.10",
           "from": "minimatch@^2.0.3",
-          "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-2.0.9.tgz",
+          "resolved": "https://registry.npmjs.org/minimatch/-/minimatch-2.0.10.tgz",
           "dependencies": {
             "brace-expansion": {
               "version": "1.1.0",
