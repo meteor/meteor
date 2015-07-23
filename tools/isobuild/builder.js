@@ -591,6 +591,7 @@ function atomicallyRewriteFile(path, data, options) {
     files.writeFile(path, data, options);
   } else if (stat.isDirectory()) {
     files.rm_recursive(path);
+    files.writeFile(path, data, options);
   } else {
     // create a different file with a random name and then rename over atomically
     const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
