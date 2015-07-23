@@ -9,5 +9,5 @@ export BABEL_CACHE_DIR
 mocha \
     --reporter spec \
     --full-trace \
-    --compilers js:${TEST_DIR}/../register.js \
+    --compilers js:${TEST_DIR}/register.js \
     tests.js

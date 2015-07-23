@@ -8,11 +8,7 @@ var meteorBabel = require("./index.js");
 var util = require("./util.js");
 
 var config = {
-  babelOptions: require("./options").getDefaults({
-    modules: true,
-    meteorAsyncAwait: true,
-    react: true,
-  })
+  babelOptions: require("./options").getDefaults()
 };
 
 exports = module.exports = function reconfigure(newConfig) {
