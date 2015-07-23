@@ -48,8 +48,8 @@ var _call = function(method, url, options, callback) {
   var newUrl = URL._constructUrl(url, options.query, paramsForUrl);
 
   if (options.auth) {
-    if (options.auth.indexOf(':') < 0)
-      throw new Error('auth option should be of the form "username:password"');
+    if (typeof options.auth === 'string' && options.auth.indexOf(':') < 0)
+      throw new Error('auth option should be a String of the form "username:password"');
     headers['Authorization'] = "Basic "+
       (new Buffer(options.auth, "ascii")).toString("base64");
   }
