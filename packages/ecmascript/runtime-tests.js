@@ -1,7 +1,10 @@
 Tinytest.add("ecmascript - runtime - template literals", (test) => {
   function dump(pieces) {
-    return [_.extend({}, pieces),
-            _.toArray(arguments).slice(1)];
+    var copy = {};
+    // Can't use _.extend({}, pieces) because es5-shim adds enumerable
+    // methods to Array.prototype, and _.extend has no own property check.
+    _.each(_.keys(pieces), key => copy[key] = pieces[key]);
+    return [copy, _.toArray(arguments).slice(1)];
   };
   const foo = 'B';
   // uses `babelHelpers.taggedTemplateLiteralLoose`
