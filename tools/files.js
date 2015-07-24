@@ -1303,12 +1303,17 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
+
+files.fsFixPath = {};
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
  * and run in a fiber, then assign it to the "files" namespace. Each call
  * creates a files.func that runs asynchronously with Fibers (yielding and
  * until the call is done), unless run outside a Fiber or in noYieldsAllowed, in
  * which case it uses fs.funcSync.
+ *
+ * Also creates a simpler version on files.fsFixPath.* that just fixes the path
+ * and fiberizes the Sync version if possible.
  *
  * @param  {String} fsFuncName         The name of the node fs function to wrap
  * @param  {Number[]} pathArgIndices Indices of arguments that have paths, these
@@ -1322,46 +1327,72 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   options = options || {};
 
-  var fsFunc = fs[fsFuncName];
-  var fsFuncSync = fs[fsFuncName + "Sync"];
+  const fsFunc = fs[fsFuncName];
+  const fsFuncSync = fs[fsFuncName + "Sync"];
 
-  function wrapper(...args) {
-    for (var j = pathArgIndices.length - 1; j >= 0; --j) {
-      i = pathArgIndices[j];
-      args[i] = files.convertToOSPath(args[i]);
-    }
+  function makeWrapper ({alwaysSync, sync}) {
+    function wrapper(...args) {
+      for (let j = pathArgIndices.length - 1; j >= 0; --j) {
+        const i = pathArgIndices[j];
+        args[i] = files.convertToOSPath(args[i]);
+      }
 
-    if (Fiber.current &&
-        Fiber.yield && ! Fiber.yield.disallowed) {
-      var fut = new Future;
+      const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
+      const shouldBeSync = alwaysSync || sync;
 
-      args.push(function callback(err, value) {
-        if (options.noErr) {
-          fut.return(err);
-        } else if (err) {
-          fut.throw(err);
-        } else {
-          fut.return(value);
+      if (canYield && shouldBeSync) {
+        const fut = new Future;
+
+        args.push(function callback(err, value) {
+          if (options.noErr) {
+            fut.return(err);
+          } else if (err) {
+            fut.throw(err);
+          } else {
+            fut.return(value);
+          }
+        });
+
+        fsFunc.apply(fs, args);
+
+        const result = fut.wait();
+        return options.modifyReturnValue
+          ? options.modifyReturnValue(result)
+          : result;
+      } else if (shouldBeSync) {
+        // Should be sync but can't yield: we are not in a Fiber.
+        // Run the sync version of the fs.* method.
+        const result = fsFuncSync.apply(fs, args);
+        return options.modifyReturnValue ?
+               options.modifyReturnValue(result) : result;
+      } else if (! sync) {
+        // wrapping a plain async version
+        const cb = args[fsFunc.length - 1];
+        if (typeof cb === 'function') {
+          args[fsFunc.length - 1] = function (err, res) {
+            if (options.modifyReturnValue) {
+              res = options.modifyReturnValue(res);
+            }
+            Fiber(cb.bind(null, err, res)).run();
+          };
         }
-      });
+        fsFunc.apply(fs, args);
+        return null;
+      }
 
-      fsFunc.apply(fs, args);
-
-      var result = fut.wait();
-      return options.modifyReturnValue
-        ? options.modifyReturnValue(result)
-        : result;
+      throw new Error('unexpected');
     }
 
-    // If we're not in a Fiber, run the sync version of the fs.* method.
-    var result = fsFuncSync.apply(fs, args);
-    return options.modifyReturnValue
-      ? options.modifyReturnValue(result)
-      : result;
+    wrapper.displayName = fsFuncName;
+    return wrapper;
   }
 
-  wrapper.displayName = fsFuncName;
-  return files[fsFuncName] = Profile("files." + fsFuncName, wrapper);
+  files[fsFuncName] = Profile('files.' + fsFuncName, makeWrapper({ alwaysSync: true }));
+
+  files.fsFixPath[fsFuncName] =
+    Profile('wrapped.fs.' + fsFuncName, makeWrapper({ sync: false }));
+  files.fsFixPath[fsFuncName + 'Sync'] =
+    Profile('wrapped.fs.' + fsFuncName + 'Sync', makeWrapper({ sync: true }));
 }
 
 wrapFsFunc("writeFile", [0]);

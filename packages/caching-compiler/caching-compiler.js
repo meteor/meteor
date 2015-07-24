@@ -178,7 +178,7 @@ CachingCompilerBase = class CachingCompilerBase {
   // doesn't exist.
   _readFileOrNull(filename) {
     try {
-      return fs.readFile(filename, 'utf8');
+      return fs.readFileSync(filename, 'utf8');
     } catch (e) {
       if (e && e.code === 'ENOENT')
         return null;

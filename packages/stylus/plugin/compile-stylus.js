@@ -110,7 +110,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
         if (isAbsolute || isNib || isStylusBuiltIn) {
           // absolute path? let the default implementation handle this
-          return fs.readFile(filePath, 'utf8');
+          return fs.readFileSync(filePath, 'utf8');
         }
 
         const parsed = parseImportPath(filePath);

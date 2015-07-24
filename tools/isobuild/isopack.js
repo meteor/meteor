@@ -828,7 +828,7 @@ _.extend(Isopack.prototype, {
         extname: files.pathExtname,
         sep: files.pathSep
       },
-      fs: files
+      fs: files.fsFixPath
     };
     return Plugin;
   },
