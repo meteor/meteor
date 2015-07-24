@@ -473,6 +473,8 @@ var Target = function (options) {
   // true: 99 KB / 315 KB
 
   self.includeDebug = options.includeDebug;
+
+  self.bundlerCacheDir = options.bundlerCacheDir;
 };
 
 _.extend(Target.prototype, {
@@ -693,7 +695,9 @@ _.extend(Target.prototype, {
     var processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: self.unibuilds,
       arch: self.arch,
-      isopackCache: self.isopackCache
+      isopackCache: self.isopackCache,
+      linkerCacheDir: (self.bundlerCacheDir &&
+                       files.pathJoin(self.bundlerCacheDir, 'linker')),
     });
     return processor.runCompilerPlugins();
   }),
@@ -2016,6 +2020,9 @@ exports.bundle = function ({
   var lintingMessages = null;
   var builders = {};
 
+  const bundlerCacheDir =
+      projectContext.getProjectLocalDirectory('bundler-cache');
+
   if (! release.usingRightReleaseForApp(projectContext))
     throw new Error("running wrong release for app?");
 
@@ -2023,15 +2030,15 @@ exports.bundle = function ({
     title: "building the application"
   }, function () {
     var makeClientTarget = Profile(
-      "bundler.bundle..makeClientTarget",
-      function (app, webArch, options) {
+      "bundler.bundle..makeClientTarget", function (app, webArch, options) {
       var client = new ClientTarget({
+        bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
-        includeDebug: buildOptions.includeDebug
+        includeDebug: buildOptions.includeDebug,
       });
 
       client.make({
@@ -2047,6 +2054,7 @@ exports.bundle = function ({
     var makeServerTarget = Profile(
       "bundler.bundle..makeServerTarget", function (app, clientTargets) {
       var targetOptions = {
+        bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         arch: serverArch,
