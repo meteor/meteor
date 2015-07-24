@@ -47,17 +47,17 @@ class LessCompiler extends MultiFileCachingCompiler {
     const importPlugin = new MeteorImportLessPlugin(allFiles);
 
     const f = new Future;
-    less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
-      filename: this.getAbsoluteImportPath(inputFile),
-      plugins: [importPlugin],
-      // Generate a source map, and include the source files in the
-      // sourcesContent field.  (Note that source files which don't
-      // themselves produce text (eg, are entirely variable definitions)
-      // won't end up in the source map!)
-      sourceMap: { outputSourceFiles: true }
-    }, f.resolver());
     let output;
     try {
+      less.render(inputFile.getContentsAsBuffer().toString('utf8'), {
+        filename: this.getAbsoluteImportPath(inputFile),
+        plugins: [importPlugin],
+        // Generate a source map, and include the source files in the
+        // sourcesContent field.  (Note that source files which don't themselves
+        // produce text (eg, are entirely variable definitions) won't end up in
+        // the source map!)
+        sourceMap: { outputSourceFiles: true }
+      }, f.resolver());
       output = f.wait();
     } catch (e) {
       inputFile.error({
