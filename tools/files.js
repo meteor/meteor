@@ -990,7 +990,7 @@ files.runJavaScript = function (code, options) {
     // which at least has a nice API for reporting errors.
     var parse = require('meteor-babel').parse;
     try {
-      parse(wrapped);
+      parse(wrapped, { strictMode: false });
     } catch (parseError) {
       if (typeof parseError.loc !== "object") {
         throw parseError;
