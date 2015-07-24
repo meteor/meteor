@@ -124,7 +124,8 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
     if (! packageMatch) {
       // shouldn't happen.  all filenames less ever sees should involve this {}
       // thing!
-      throw new Error('file without Meteor context? ' + currentDirectory);
+      cb(new Error('file without Meteor context? ' + currentDirectory));
+      return;
     }
     const currentPackagePrefix = packageMatch[1];
 
