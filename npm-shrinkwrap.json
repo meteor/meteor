@@ -27,6 +27,11 @@
           "from": "babel-plugin-inline-environment-variables@>=1.0.1 <2.0.0",
           "resolved": "https://registry.npmjs.org/babel-plugin-inline-environment-variables/-/babel-plugin-inline-environment-variables-1.0.1.tgz"
         },
+        "babel-plugin-jscript": {
+          "version": "1.0.4",
+          "from": "babel-plugin-jscript@>=1.0.1 <2.0.0",
+          "resolved": "https://registry.npmjs.org/babel-plugin-jscript/-/babel-plugin-jscript-1.0.4.tgz"
+        },
         "babel-plugin-member-expression-literals": {
           "version": "1.0.1",
           "from": "babel-plugin-member-expression-literals@>=1.0.1 <2.0.0",
@@ -656,11 +661,6 @@
           "resolved": "https://registry.npmjs.org/trim-right/-/trim-right-1.0.1.tgz"
         }
       }
-    },
-    "babel-plugin-jscript": {
-      "version": "1.0.1",
-      "from": "babel-plugin-jscript@1.0.1",
-      "resolved": "https://registry.npmjs.org/babel-plugin-jscript/-/babel-plugin-jscript-1.0.1.tgz"
     },
     "convert-source-map": {
       "version": "1.1.1",
