@@ -63,9 +63,15 @@ class StylusCompiler extends MultiFileCachingCompiler {
 
         // relative path in the same package
         const parsedImporter = parseImportPath(importerPath, null);
+
+        // resolve path if it is absolute or relative
+        const importPath =
+          (filePath[0] === '/') ? filePath :
+            path.join(path.dirname(parsedImporter.pathInPackage), filePath);
+
         return {
           packageName: parsedImporter.packageName,
-          pathInPackage: path.resolve(parsedImporter.pathInPackage, filePath)
+          pathInPackage: importPath
         };
       }
 
