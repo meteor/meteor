@@ -45,7 +45,7 @@ class StylusCompiler extends MultiFileCachingCompiler {
   compileOneFile(inputFile, allFiles) {
     const referencedImportPaths = [];
 
-    function parseImportPath(filePath, importerPath) {
+    function parseImportPath(filePath, importerDir) {
       if (! filePath) {
         throw new Error('filePath is undefined');
       }
@@ -56,18 +56,18 @@ class StylusCompiler extends MultiFileCachingCompiler {
         };
       }
       if (! filePath.match(/^\{.*\}\//)) {
-        if (! importerPath) {
+        if (! importerDir) {
           return { packageName: inputFile.getPackageName() || '',
                    pathInPackage: filePath };
         }
 
         // relative path in the same package
-        const parsedImporter = parseImportPath(importerPath, null);
+        const parsedImporter = parseImportPath(importerDir, null);
 
         // resolve path if it is absolute or relative
         const importPath =
           (filePath[0] === '/') ? filePath :
-            path.join(path.dirname(parsedImporter.pathInPackage), filePath);
+            path.join(parsedImporter.pathInPackage, filePath);
 
         return {
           packageName: parsedImporter.packageName,
@@ -86,8 +86,8 @@ class StylusCompiler extends MultiFileCachingCompiler {
     }
 
     const importer = {
-      find(importPath, paths, importerPath) {
-        const parsed = parseImportPath(importPath, importerPath);
+      find(importPath, paths) {
+        const parsed = parseImportPath(importPath, paths[paths.length - 1]);
         if (! parsed) { return null; }
 
         if (importPath[0] !== '{') {
