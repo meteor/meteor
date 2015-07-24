@@ -295,7 +295,7 @@ _.extend(File.prototype, {
         }
       }
 
-      buildmessage.error(e.description, errorOptions);
+      buildmessage.error(e.message, errorOptions);
 
       // Recover by pretending that this file is empty (which
       // includes replacing its source code with '' in the output)
