@@ -20,7 +20,6 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
-    npm: "1.4.28",
     fibers: fibersVersion,
     "meteor-babel": "0.4.4",
     "meteor-promise": "0.4.0",

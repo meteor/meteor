@@ -67,6 +67,12 @@ else
     curl "${MONGO_URL}" | tar zx
 fi
 
+# Copy bundled npm to temporary directory so we can restore it later
+# We do this because the bundled node is built using PORTABLE=1,
+# which makes npm look for node relative to it's own directory
+# See build-node-for-dev-bundle.sh
+cp -r "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
+
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
@@ -166,6 +172,22 @@ mv BrowserStackLocal "$DIR/bin/"
 
 # remove our temporary npm3 directory
 rm -rf "$DIR/bin/npm3"
+
+# Sanity check to see if we're not breaking anything by replacing npm
+INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
+xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
+if [ "$INSTALLED_NPM_VERSION" != "1.3.4" ]; then
+  echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
+  echo "We will be replacing it with our own version because the bundled node"
+  echo "is built using PORTABLE=1, which makes npm look for node relative to"
+  echo "its own directory."
+  echo "Update this check if you know what you're doing."
+  exit 1
+fi
+
+# Overwrite lib/modules/npm with bundled npm from temporary directory
+rm -rf "$DIR/lib/node_modules/npm"
+mv -f "$DIR/bundled-npm" "$DIR/lib/node_modules/npm"
 
 echo BUNDLING
 
