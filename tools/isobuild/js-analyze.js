@@ -4,7 +4,7 @@ import { analyze as analyzeScope } from 'escope';
 // Like babel.parse, but annotates any thrown error with $ParseError = true.
 function tryToParse(source) {
   try {
-    return parse(source);
+    return parse(source, {strictMode: false});
   } catch (e) {
     if (typeof e.loc === 'object') {
       e.$ParseError = true;
