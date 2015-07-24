@@ -158,62 +158,68 @@ _.extend(SessionCollectionView.prototype, {
 
   added: function (subscriptionHandle, id, fields) {
     var self = this;
-    var docView = self.documents[id];
-    var added = false;
-    if (!docView) {
-      added = true;
-      docView = new SessionDocumentView();
-      self.documents[id] = docView;
-    }
-    docView.existsIn[subscriptionHandle] = true;
-    var changeCollector = {};
-    _.each(fields, function (value, key) {
-      docView.changeField(
-        subscriptionHandle, key, value, changeCollector, true);
-    });
-    if (added)
-      self.callbacks.added(self.collectionName, id, changeCollector);
-    else
-      self.callbacks.changed(self.collectionName, id, changeCollector);
+/*    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () { */
+      var docView = self.documents[id];
+      var added = false;
+      if (!docView) {
+        added = true;
+        docView = new SessionDocumentView();
+        self.documents[id] = docView;
+      }
+      docView.existsIn[subscriptionHandle] = true;
+      var changeCollector = {};
+      _.each(fields, function (value, key) {
+        docView.changeField(
+          subscriptionHandle, key, value, changeCollector, true);
+      });
+      if (added)
+        self.callbacks.added(self.collectionName, id, changeCollector);
+      else
+        self.callbacks.changed(self.collectionName, id, changeCollector);
+/*    } );*/
   },
 
   changed: function (subscriptionHandle, id, changed) {
     var self = this;
-    var changedResult = {};
-    var docView = self.documents[id];
-    if (!docView)
-      throw new Error("Could not find element with id " + id + " to change");
-    _.each(changed, function (value, key) {
-      if (value === undefined)
-        docView.clearField(subscriptionHandle, key, changedResult);
-      else
-        docView.changeField(subscriptionHandle, key, value, changedResult);
-    });
-    self.callbacks.changed(self.collectionName, id, changedResult);
+    /*Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () { */
+      var changedResult = {};
+      var docView = self.documents[id];
+      if (!docView)
+        throw new Error("Could not find element with id " + id + " to change");
+      _.each(changed, function (value, key) {
+        if (value === undefined)
+          docView.clearField(subscriptionHandle, key, changedResult);
+        else
+          docView.changeField(subscriptionHandle, key, value, changedResult);
+      });
+      self.callbacks.changed(self.collectionName, id, changedResult);
+/*    });*/
   },
 
   removed: function (subscriptionHandle, id) {
     var self = this;
-    var docView = self.documents[id];
-    if (!docView) {
-      var err = new Error("Removed nonexistent document " + id);
-      throw err;
-    }
-    delete docView.existsIn[subscriptionHandle];
-    if (_.isEmpty(docView.existsIn)) {
-      // it is gone from everyone
-      self.callbacks.removed(self.collectionName, id);
-      delete self.documents[id];
-    } else {
-      var changed = {};
-      // remove this subscription from every precedence list
-      // and record the changes
-      _.each(docView.dataByKey, function (precedenceList, key) {
-        docView.clearField(subscriptionHandle, key, changed);
-      });
+    /*Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {*/
+      var docView = self.documents[id];
+      if (!docView) {
+        var err = new Error("Removed nonexistent document " + id);
+        throw err;
+      }
+      delete docView.existsIn[subscriptionHandle];
+      if (_.isEmpty(docView.existsIn)) {
+        // it is gone from everyone
+        self.callbacks.removed(self.collectionName, id);
+        delete self.documents[id];
+      } else {
+        var changed = {};
+        // remove this subscription from every precedence list
+        // and record the changes
+        _.each(docView.dataByKey, function (precedenceList, key) {
+          docView.clearField(subscriptionHandle, key, changed);
+        });
 
-      self.callbacks.changed(self.collectionName, id, changed);
-    }
+        self.callbacks.changed(self.collectionName, id, changed);
+      }
+/*    )*/
   }
 });
 
@@ -535,20 +541,23 @@ _.extend(Session.prototype, {
       }
 
       Fiber(function () {
-        var blocked = true;
+//        measureDuration("incoming ddp message", () => {
+          var blocked = true;
 
-        var unblock = function () {
-          if (!blocked)
-            return; // idempotent
-          blocked = false;
-          processNext();
-        };
+          var unblock = function () {
+            if (!blocked)
+              return; // idempotent
+            blocked = false;
+            processNext();
+          };
 
-        if (_.has(self.protocol_handlers, msg.msg))
-          self.protocol_handlers[msg.msg].call(self, msg, unblock);
-        else
-          self.sendError('Bad request', msg);
-        unblock(); // in case the handler didn't already do it
+          if (_.has(self.protocol_handlers, msg.msg))
+            self.protocol_handlers[msg.msg].call(self, msg, unblock);
+          else
+            self.sendError('Bad request', msg);
+
+          unblock(); // in case the handler didn't already do it
+//        });
       }).run();
     };
 
@@ -926,6 +935,18 @@ _.extend(Session.prototype, {
 /* Subscription                                                               */
 /******************************************************************************/
 
+var subsByHandle = {};
+function descForSubHandle(subHandle) {
+  return [
+    "sub(",
+    JSON.stringify(subsByHandle[subHandle]._name),
+    _.map(
+      subsByHandle[subHandle._params],
+      param => ", " + JSON.stringify(param)).join(""),
+    ")"
+  ].join("");
+};
+
 // ctor for a sub handle: the input to each publish function
 
 // Instance name is this because it's usually referred to as this inside a
@@ -966,6 +987,8 @@ var Subscription = function (
   } else {
     self._subscriptionHandle = 'U' + Random.id();
   }
+
+  subsByHandle[self._subscriptionHandle] = self;
 
   // has _deactivate been called?
   self._deactivated = false;

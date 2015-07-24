@@ -96,11 +96,14 @@ _.extend(OplogHandle.prototype, {
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
-      // XXX can we avoid this clone by making oplog.js careful?
-      originalCallback(EJSON.clone(notification));
+      measureDuration("oplog", function () {
+        // XXX can we avoid this clone by making oplog.js careful?
+        originalCallback(EJSON.clone(notification));
+      });
     }, function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
     });
+
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
       stop: function () {

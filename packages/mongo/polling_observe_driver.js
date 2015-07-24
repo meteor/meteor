@@ -1,4 +1,6 @@
 PollingObserveDriver = function (options) {
+  console.log("PollingObserveDriver");
+
   var self = this;
 
   self._cursorDescription = options.cursorDescription;

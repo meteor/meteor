@@ -29,6 +29,8 @@ var currentId = 0;
 // callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
 // it by calling the stop() method.
 OplogObserveDriver = function (options) {
+  console.log("OplogObserveDriver");
+
   var self = this;
   self._usesOplog = true;  // tests look at this
 
@@ -116,28 +118,28 @@ OplogObserveDriver = function (options) {
   forEachTrigger(self._cursorDescription, function (trigger) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
-        Meteor._noYieldsAllowed(finishIfNeedToPollQuery(function () {
-          var op = notification.op;
-          if (notification.dropCollection || notification.dropDatabase) {
-            // Note: this call is not allowed to block on anything (especially
-            // on waiting for oplog entries to catch up) because that will block
-            // onOplogEntry!
-            self._needToPollQuery();
-          } else {
-            // All other operators should be handled depending on phase
-            if (self._phase === PHASE.QUERYING)
-              self._handleOplogEntryQuerying(op);
-            else
-              self._handleOplogEntrySteadyOrFetching(op);
-          }
-        }));
-      }
-    ));
+        Meteor._noYieldsAllowed(
+          self._measure(finishIfNeedToPollQuery(function () {
+            var op = notification.op;
+            if (notification.dropCollection || notification.dropDatabase) {
+              // Note: this call is not allowed to block on anything (especially
+              // on waiting for oplog entries to catch up) because that will block
+              // onOplogEntry!
+              self._needToPollQuery();
+            } else {
+              // All other operators should be handled depending on phase
+              if (self._phase === PHASE.QUERYING)
+                self._handleOplogEntryQuerying(op);
+              else
+                self._handleOplogEntrySteadyOrFetching(op);
+            }
+          })));
+      }));
   });
 
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
-    self._cursorDescription, function (notification) {
+    self._cursorDescription, self._measure(function (notification) {
       // If we're not in a pre-fire write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
       if (!fence || fence.fired)
@@ -176,7 +178,7 @@ OplogObserveDriver = function (options) {
           }
         });
       });
-    }
+    })
   ));
 
   // When Mongo fails over, we need to repoll the query, in case we processed an
@@ -188,12 +190,32 @@ OplogObserveDriver = function (options) {
 
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
+
+  // xcxc use `self._measure` here once it supports yielding, but
+  // count it differently as "initial query"
   Meteor.defer(finishIfNeedToPollQuery(function () {
     self._runInitialQuery();
   }));
 };
 
 _.extend(OplogObserveDriver.prototype, {
+  _measure: function (f) {
+    var self = this;
+    return function () {
+      f();
+//      measureDuration(self._cursorDescStr(), f);
+    };
+  },
+  _cursorDescStr: function () {
+    return [
+      "db.",
+      this._cursorDescription.collectionName,
+      ".find(",
+      JSON.stringify(this._cursorDescription.selector),
+      ", ",
+      JSON.stringify(this._cursorDescription.options)
+    ].join("");
+  },
   _addPublished: function (id, doc) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
@@ -484,7 +506,7 @@ _.extend(OplogObserveDriver.prototype, {
       self._registerPhaseChange(PHASE.FETCHING);
       // Defer, because nothing called from the oplog entry handler may yield,
       // but fetch() yields.
-      Meteor.defer(finishIfNeedToPollQuery(function () {
+      Meteor.defer(self._measure(finishIfNeedToPollQuery(function () {
         while (!self._stopped && !self._needToFetch.empty()) {
           if (self._phase === PHASE.QUERYING) {
             // While fetching, we decided to go into QUERYING mode, and then we
@@ -538,6 +560,7 @@ _.extend(OplogObserveDriver.prototype, {
                 }
               }));
           });
+          console.log("wait");
           fut.wait();
           // Exit now if we've had a _pollQuery call (here or in another fiber).
           if (self._phase === PHASE.QUERYING)
@@ -548,7 +571,7 @@ _.extend(OplogObserveDriver.prototype, {
         // _pollQuery call (here or in another fiber).
         if (self._phase !== PHASE.QUERYING)
           self._beSteady();
-      }));
+      })));
     });
   },
   _beSteady: function () {
