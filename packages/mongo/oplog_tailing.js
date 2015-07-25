@@ -150,10 +150,21 @@ _.extend(OplogHandle.prototype, {
       return;
     }
 
-    console.log('START', callbacks.length);
+    function startProcess() {
+      self._oplogCheckRunning = true;
+      self._oplogCheckCallbacks = [];
+    }
 
-    self._oplogCheckRunning = true;
-    self._oplogCheckCallbacks = [];
+    function completeProcess() {
+      callbacks.forEach(function(c) {
+        c();
+      });
+
+      self._oplogCheckRunning = false;
+      self._tryFindingOplogLastEntry();
+    }
+
+    startProcess();
 
     while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
@@ -173,11 +184,11 @@ _.extend(OplogHandle.prototype, {
     }
 
     if (self._stopped)
-      return complete();
+      return completeProcess();
 
     if (!lastEntry) {
       // Really, nothing in the oplog? Well, we've processed everything.
-      return complete();
+      return completeProcess();
     }
 
     var ts = lastEntry.ts;
@@ -187,9 +198,8 @@ _.extend(OplogHandle.prototype, {
 
     if (self._lastProcessedTS && ts.lessThanOrEqual(self._lastProcessedTS)) {
       // We've already caught up to here.
-      return complete();
+      return completeProcess();
     }
-
 
     // Insert the future into our list. Almost always, this will be at the end,
     // but it's conceivable that if we fail over from one primary to another,
@@ -203,17 +213,7 @@ _.extend(OplogHandle.prototype, {
     self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
     f.wait();
 
-    complete();
-
-    function complete() {
-      callbacks.forEach(function(c) {
-        c();
-      });
-
-      self._oplogCheckRunning = false;
-      console.log('END', callbacks.length);
-      self._tryFindingOplogLastEntry();
-    }
+    return completeProcess();
   },
   _startTailing: function () {
     var self = this;
