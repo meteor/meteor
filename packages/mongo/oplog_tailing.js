@@ -96,6 +96,8 @@ _.extend(OplogHandle.prototype, {
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
+      // Prvent accidently modifying the notification
+      Object.freeze(notification);
       originalCallback(notification);
     }, function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
