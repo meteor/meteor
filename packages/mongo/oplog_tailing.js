@@ -96,8 +96,7 @@ _.extend(OplogHandle.prototype, {
 
     var originalCallback = callback;
     callback = Meteor.bindEnvironment(function (notification) {
-      // XXX can we avoid this clone by making oplog.js careful?
-      originalCallback(EJSON.clone(notification));
+      originalCallback(notification);
     }, function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
     });
