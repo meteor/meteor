@@ -3,11 +3,21 @@ var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var catalog = require('../catalog.js');
 
+function matchPath (text, doubleBS) {
+  if (process.platform === 'win32')
+    return text.replace(/\//g, doubleBS ? '\\\\' : '\\');
+  return text;
+ }
+ function matchPathRegexp (regexp) {
+  return new RegExp(matchPath(regexp, true));
+ }
+
 selftest.define("source maps from checkout", ['checkout'], function () {
   try {
     throw new Error();
   } catch (e) {
-    selftest.expectEqual(e.stack.split(":")[1], "8");
+    var index = (process.platform === 'win32') ? 2 : 1;
+    selftest.expectEqual(e.stack.split(":")[index], "17");
   }
 });
 
@@ -33,13 +43,13 @@ selftest.define("source maps from an app", ['checkout'], function () {
   s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));  // XXX why?
   run = s.run("run");
   run.waitSecs(10);
-  run.match(/at throw.js:3\b/);
+  run.match(matchPathRegexp('at throw\\.js:3\\b'));
   run.stop();
 
   s.set('THROW_FROM_PACKAGE', 't');
   run = s.run('run');
   run.waitSecs(10);
-  run.match(/packages\/throwing-package\/thrower\.js:2\b/);
+  run.match(matchPathRegexp('packages/throwing-package/thrower\\.js:2\\b'));
   run.stop();
 });
 
@@ -70,7 +80,7 @@ selftest.define("source maps from built meteor tool", ['checkout'], function () 
   }
 
   var run = s.run("throw-error");
-  run.matchErr('(/tools/commands.js:' + lineNumber);
+  run.matchErr(matchPathRegexp('\\(/tools/commands\\.js:' + lineNumber));
   run.expectExit(8);
 });
 
@@ -92,6 +102,6 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   // XXX This is wrong! The path on disk is
   // packages/build-plugin/build-plugin.js, but at some point we switched to the
   // servePath which is based on the *plugin*'s "package" name.
-  run.match(/packages\/build-plugin-itself\/build-plugin.js:2:1/);
+  run.match(matchPathRegexp('packages/build-plugin-itself/build-plugin\\.js:2:1\\b'));
   run.stop();
 });
