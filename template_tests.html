@@ -1130,3 +1130,13 @@ Hi there!
     <div>{{this}}</div>
   {{/each}}
 </template>
+
+<template name="spacebars_template_test_lexical_leakage">
+  {{#each list}}
+    <div><span>{{@index}}</span>{{> spacebars_template_test_get_index}}</div>
+  {{/each}}
+</template>
+
+<template name="spacebars_template_test_get_index">
+  <span>{{@index}}</span>
+</template>
