@@ -346,6 +346,7 @@ Blaze._InOuterTemplateScope = function (templateView, contentFunc) {
   view.onViewCreated(function () {
     this.originalParentView = this.parentView;
     this.parentView = parentView;
+    this.__childDoesntStartNewLexicalScope = true;
   });
   return view;
 };

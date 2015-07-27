@@ -3248,7 +3248,7 @@ Tinytest.add("spacebars-tests - template_tests - new #each binding lookup is sco
 Tinytest.add("spacebars-tests - template_tests - let bindings", function (test) {
   var tmpl = Template.spacebars_template_test_let_bindings;
 
-  v = new ReactiveVar("var");
+  var v = new ReactiveVar("var");
   tmpl.helpers({
     dataContext: function () {
       return {
@@ -3425,9 +3425,7 @@ Tinytest.add("spacebars-tests - template_tests - lexical scope doesn't leak", fu
     list: ['a', 'b', 'c']
   });
 
-  var div = renderToDiv(tmpl);
-  test.equal(canonicalizeHtml(div.innerHTML),
-             ["<div><span>0</span><span></span></div>",
-              "<div><span>1</span><span></span></div>",
-              "<div><span>2</span><span></span></div>"].join(''));
+  test.throws(function () {
+    var div = renderToDiv(tmpl);
+  }, /Unsupported directive/);
 });
