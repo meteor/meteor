@@ -1,6 +1,6 @@
 Package.describe({
   name: 'less',
-  version: '2.5.0-plugins.0_1',
+  version: '2.5.0-plugins.0_2',
   summary: 'Leaner CSS language',
   documentation: 'README.md'
 });
