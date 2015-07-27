@@ -5,6 +5,7 @@
 # but you can also edit it by hand.
 
 meteor-platform
+standard-minifiers
 insecure
 less
 iron:router@0.9.4

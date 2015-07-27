@@ -43,8 +43,8 @@ S3_HOST="s3.amazonaws.com/com.meteor.jenkins"
 
 # Update these values after building the dev-bundle-node Jenkins project.
 # Also make sure to update NODE_VERSION in generate-dev-bundle.ps1.
-NODE_VERSION=0.10.36
-NODE_BUILD_NUMBER=13
+NODE_VERSION=0.10.40
+NODE_BUILD_NUMBER=18
 NODE_TGZ="node_${PLATFORM}_v${NODE_VERSION}.tar.gz"
 if [ -f "${CHECKOUT_DIR}/${NODE_TGZ}" ] ; then
     tar zxf "${CHECKOUT_DIR}/${NODE_TGZ}"
@@ -67,10 +67,25 @@ else
     curl "${MONGO_URL}" | tar zx
 fi
 
-cd "$DIR/build"
+# Copy bundled npm to temporary directory so we can restore it later
+# We do this because the bundled node is built using PORTABLE=1,
+# which makes npm look for node relative to it's own directory
+# See build-node-for-dev-bundle.sh
+cp -r "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
 
-# export path so we use our new node for later builds
+# export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
+
+# install npm 3 in a temporary directory
+mkdir "$DIR/bin/npm3"
+cd "$DIR/bin/npm3"
+npm install npm@3.1.2
+cp node_modules/npm/bin/npm .
+
+# export path again with our temporary npm3 directory first,
+# so we can use npm 3 during builds
+export PATH="$DIR/bin/npm3:$PATH"
+
 which node
 which npm
 
@@ -94,7 +109,6 @@ mkdir -p "${DIR}/server-lib/node_modules"
 # This ignores the stuff in node_modules/.bin, but that's OK.
 cp -R node_modules/* "${DIR}/server-lib/node_modules/"
 
-mkdir "${DIR}/etc"
 mv package.json npm-shrinkwrap.json "${DIR}/etc/"
 
 # Fibers ships with compiled versions of its C code for a dozen platforms. This
@@ -116,8 +130,6 @@ mkdir "${DIR}/build/npm-tool-install"
 cd "${DIR}/build/npm-tool-install"
 node "${CHECKOUT_DIR}/scripts/dev-bundle-tool-package.js" >package.json
 npm install
-# Refactor node modules to top level and remove unnecessary duplicates.
-npm dedupe
 cp -R node_modules/* "${DIR}/lib/node_modules/"
 
 cd "${DIR}/lib"
@@ -143,18 +155,8 @@ delete sqlite3/deps
 delete wordwrap/test
 delete moment/min
 
-# dedupe isn't good enough to eliminate 3 copies of esprima, sigh.
-find . -path '*/esprima/test' | xargs rm -rf
+# Remove esprima tests to reduce the size of the dev bundle
 find . -path '*/esprima-fb/test' | xargs rm -rf
-
-# dedupe isn't good enough to eliminate 4 copies of JSONstream, sigh.
-find . -path '*/JSONStream/test/fixtures' | xargs rm -rf
-
-# Not sure why dedupe doesn't lift these to the top.
-pushd cordova/node_modules/cordova-lib/node_modules/cordova-js/node_modules/browserify/node_modules
-delete crypto-browserify/test
-delete umd/node_modules/ruglify/test
-popd
 
 cd "$DIR/lib/node_modules/fibers/bin"
 shrink_fibers
@@ -167,6 +169,25 @@ curl -O $BROWSER_STACK_LOCAL_URL
 gunzip BrowserStackLocal*
 mv BrowserStackLocal* BrowserStackLocal
 mv BrowserStackLocal "$DIR/bin/"
+
+# remove our temporary npm3 directory
+rm -rf "$DIR/bin/npm3"
+
+# Sanity check to see if we're not breaking anything by replacing npm
+INSTALLED_NPM_VERSION=$(cat "$DIR/lib/node_modules/npm/package.json" |
+xargs -0 node -e "console.log(JSON.parse(process.argv[1]).version)")
+if [ "$INSTALLED_NPM_VERSION" != "1.3.4" ]; then
+  echo "Unexpected NPM version in lib/node_modules: $INSTALLED_NPM_VERSION"
+  echo "We will be replacing it with our own version because the bundled node"
+  echo "is built using PORTABLE=1, which makes npm look for node relative to"
+  echo "its own directory."
+  echo "Update this check if you know what you're doing."
+  exit 1
+fi
+
+# Overwrite lib/modules/npm with bundled npm from temporary directory
+rm -rf "$DIR/lib/node_modules/npm"
+mv -f "$DIR/bundled-npm" "$DIR/lib/node_modules/npm"
 
 echo BUNDLING
 

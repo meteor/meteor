@@ -1382,8 +1382,8 @@ _.extend(Connection.prototype, {
         // Did we already receive a ready message? (Oops!)
         if (subRecord.ready)
           return;
-        subRecord.readyCallback && subRecord.readyCallback();
         subRecord.ready = true;
+        subRecord.readyCallback && subRecord.readyCallback();
         subRecord.readyDeps.changed();
       });
     });

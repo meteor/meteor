@@ -1,10 +1,10 @@
-require('meteor-babel/register');
+require('../../install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
 var Future = require('fibers/future');
 var files = require('../../files.js');
-var bundler = require('../../bundler.js');
+var bundler = require('../../isobuild/bundler.js');
 var isopackets = require("../../isopackets.js");
 var release = require('../../release.js');
 var catalog = require('../../catalog.js');

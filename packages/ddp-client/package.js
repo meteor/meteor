@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data client",
-  version: '1.2.0'
+  version: '1.2.0-plugins.0',
+  documentation: null
 });
 
 Npm.depends({

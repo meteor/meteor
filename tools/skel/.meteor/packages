@@ -5,5 +5,8 @@
 # but you can also edit it by hand.
 
 meteor-platform
-autopublish
-insecure
+standard-minifiers # JS/CSS minifiers run for production mode
+autopublish # publishes all data to the clients for prototyping
+insecure # allows all DB writes from clients for prototyping
+es5-shim # ECMAScript 5 compatibility for older browsers.
+ecmascript # allows ECMAScript2015+ syntax by default

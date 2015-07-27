@@ -5,7 +5,7 @@
 // @param options {Object} an object with fields:
 // - connection {Object} Optional DDP connection to reuse.
 // - ddpUrl {String} Optional URL for creating a new DDP connection.
-AccountsClient = function AccountsClient(options) {
+AccountsClient = function _AccountsClient(options) {
   AccountsCommon.call(this, options);
 
   this._loggingIn = false;
@@ -108,10 +108,12 @@ Ap.callLoginMethod = function (options) {
     if (!error) {
       self._onLoginHook.each(function (callback) {
         callback();
+        return true;
       });
     } else {
       self._onLoginFailureHook.each(function (callback) {
         callback();
+        return true;
       });
     }
     options.userCallback.apply(this, arguments);

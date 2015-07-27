@@ -250,7 +250,7 @@ selftest.define("change packages during hot code push", [], function () {
     s.write("package.js", "]");
     run.waitSecs(3);
     run.match("=> Errors prevented startup");
-    run.match("package.js:1:1: Unexpected token ]");
+    run.match("package.js:1: Unexpected token");
     run.match("Waiting for file change");
 
     s.write("package.js", packageJs);

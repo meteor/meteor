@@ -1,4 +1,4 @@
-require('meteor-babel/register');
+require('../../install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
@@ -63,7 +63,8 @@ var go = function (options) {
     var realDir = {
       absPath: files.pathJoin(tmp, dir.absPath),
       include: dir.include,
-      exclude: dir.exclude
+      exclude: dir.exclude,
+      names: dir.names
     };
     realDir.contents = dir.contents || watch.readDirectory(realDir);
     watchSet.addDirectory(realDir);
@@ -259,6 +260,21 @@ Fiber(function () {
   });
   assert(!fires());
   touchFile('/aa/bla');
+  assert(fires());
+
+  touchDir('/cc');
+  go({
+    directories: [
+      {absPath: '/cc',
+       names: ['abc-foo', 'def-bar'],
+       exclude: [/foo/],
+       contents: []
+      }
+    ]
+  });
+  assert(!fires());
+  touchFile('/cc/abc-foo');
+  // See that names overrides exclude.
   assert(fires());
 
   // nb: these are supposed to verify that the "wait a second and try again"

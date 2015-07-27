@@ -193,6 +193,10 @@ files.getDevBundle = function () {
   return files.pathJoin(files.getCurrentToolsDir(), 'dev_bundle');
 };
 
+files.getCurrentNodeBinDir = function () {
+  return files.pathJoin(files.getDevBundle(), "bin");
+}
+
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
   var dirname = files.convertToStandardPath(__dirname);
@@ -638,7 +642,7 @@ files.freeTempDir = function (tempDir) {
       // Don't crash and print a stack trace because we failed to delete a temp
       // directory. This happens sometimes on Windows and seems to be
       // unavoidable.
-      Console.debug(err);
+      console.log(err);
     }
 
     tempDirs = _.without(tempDirs, tempDir);
@@ -654,7 +658,7 @@ if (! process.env.METEOR_SAVE_TMPDIRS) {
         // Don't crash and print a stack trace because we failed to delete a temp
         // directory. This happens sometimes on Windows and seems to be
         // unavoidable.
-        Console.debug(err);
+        console.log(err);
       }
     });
 
@@ -982,51 +986,46 @@ files.runJavaScript = function (code, options) {
     // for more information. One thing to try (and in fact, what an
     // early version of this function did) is to actually fork a new
     // node to run the code and parse its output. We instead run an
-    // entirely different JS parser, from the esprima project, but
+    // entirely different JS parser, from the Babel project, but
     // which at least has a nice API for reporting errors.
-    var esprima = require('esprima');
+    var parse = require('meteor-babel').parse;
     try {
-      esprima.parse(wrapped);
-    } catch (esprimaParseError) {
-      // Is this actually an Esprima syntax error?
-      if (!('index' in esprimaParseError &&
-            'lineNumber' in esprimaParseError &&
-            'column' in esprimaParseError &&
-            'description' in esprimaParseError)) {
-        throw esprimaParseError;
+      parse(wrapped, { strictMode: false });
+    } catch (parseError) {
+      if (typeof parseError.loc !== "object") {
+        throw parseError;
       }
-      var err = new files.FancySyntaxError;
 
-      err.message = esprimaParseError.description;
+      var err = new files.FancySyntaxError;
+      err.message = parseError.message;
 
       if (parsedSourceMap) {
         // XXX this duplicates code in computeGlobalReferences
         var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
-        var original = consumer2.originalPositionFor({
-          line: esprimaParseError.lineNumber,
-          column: esprimaParseError.column - 1
-        });
+        var original = consumer2.originalPositionFor(parseError.loc);
         if (original.source) {
           err.file = original.source;
           err.line = original.line;
-          err.column = original.column + 1;
+          err.column = original.column;
           throw err;
         }
       }
 
       err.file = filename;  // *not* stackFilename
-      err.line = esprimaParseError.lineNumber;
-      err.column = esprimaParseError.column;
+      err.line = parseError.loc.line;
+      err.column = parseError.loc.column;
+
       // adjust errors on line 1 to account for our header
       if (err.line === 1) {
         err.column -= header.length;
       }
+
       throw err;
     }
 
-    // What? Node thought that this was a parse error and esprima didn't? Eh,
-    // just throw Node's error and don't care too much about the line numbers
-    // being right.
+    // What? Node thought that this was a parse error and Babel didn't?
+    // Eh, just throw Node's error and don't care too much about the line
+    // numbers being right.
     throw nodeParseError;
   }
 
@@ -1172,6 +1171,17 @@ files.getHomeDir = function () {
   }
 };
 
+files.currentEnvWithPathsAdded = function (...paths) {
+  const env = {...process.env};
+
+  const convertedPaths = paths.map(path => files.convertToOSPath(path));
+  let pathDecomposed = (env.PATH || "").split(files.pathOsDelimiter);
+  pathDecomposed.unshift(...convertedPaths);
+
+  env.PATH = pathDecomposed.join(files.pathOsDelimiter);
+  return env;
+}
+
 // add .bat extension to link file if not present
 var ensureBatExtension = function (p) {
   if (p.indexOf(".bat") !== p.length - 4) {
@@ -1293,12 +1303,17 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 //   A helpful file to import for this purpose is colon-converter.js, which also
 //   knows how to convert various configuration file formats.
 
+
+files.fsFixPath = {};
 /**
  * Wrap a function from node's fs module to use the right slashes for this OS
  * and run in a fiber, then assign it to the "files" namespace. Each call
  * creates a files.func that runs asynchronously with Fibers (yielding and
  * until the call is done), unless run outside a Fiber or in noYieldsAllowed, in
  * which case it uses fs.funcSync.
+ *
+ * Also creates a simpler version on files.fsFixPath.* that just fixes the path
+ * and fiberizes the Sync version if possible.
  *
  * @param  {String} fsFuncName         The name of the node fs function to wrap
  * @param  {Number[]} pathArgIndices Indices of arguments that have paths, these
@@ -1312,46 +1327,72 @@ files.readLinkToMeteorScript = function (linkLocation, platform) {
 function wrapFsFunc(fsFuncName, pathArgIndices, options) {
   options = options || {};
 
-  var fsFunc = fs[fsFuncName];
-  var fsFuncSync = fs[fsFuncName + "Sync"];
+  const fsFunc = fs[fsFuncName];
+  const fsFuncSync = fs[fsFuncName + "Sync"];
 
-  function wrapper(...args) {
-    for (var j = pathArgIndices.length - 1; j >= 0; --j) {
-      i = pathArgIndices[j];
-      args[i] = files.convertToOSPath(args[i]);
-    }
+  function makeWrapper ({alwaysSync, sync}) {
+    function wrapper(...args) {
+      for (let j = pathArgIndices.length - 1; j >= 0; --j) {
+        const i = pathArgIndices[j];
+        args[i] = files.convertToOSPath(args[i]);
+      }
 
-    if (Fiber.current &&
-        Fiber.yield && ! Fiber.yield.disallowed) {
-      var fut = new Future;
+      const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
+      const shouldBeSync = alwaysSync || sync;
 
-      args.push(function callback(err, value) {
-        if (options.noErr) {
-          fut.return(err);
-        } else if (err) {
-          fut.throw(err);
-        } else {
-          fut.return(value);
+      if (canYield && shouldBeSync) {
+        const fut = new Future;
+
+        args.push(function callback(err, value) {
+          if (options.noErr) {
+            fut.return(err);
+          } else if (err) {
+            fut.throw(err);
+          } else {
+            fut.return(value);
+          }
+        });
+
+        fsFunc.apply(fs, args);
+
+        const result = fut.wait();
+        return options.modifyReturnValue
+          ? options.modifyReturnValue(result)
+          : result;
+      } else if (shouldBeSync) {
+        // Should be sync but can't yield: we are not in a Fiber.
+        // Run the sync version of the fs.* method.
+        const result = fsFuncSync.apply(fs, args);
+        return options.modifyReturnValue ?
+               options.modifyReturnValue(result) : result;
+      } else if (! sync) {
+        // wrapping a plain async version
+        const cb = args[fsFunc.length - 1];
+        if (typeof cb === 'function') {
+          args[fsFunc.length - 1] = function (err, res) {
+            if (options.modifyReturnValue) {
+              res = options.modifyReturnValue(res);
+            }
+            Fiber(cb.bind(null, err, res)).run();
+          };
         }
-      });
+        fsFunc.apply(fs, args);
+        return null;
+      }
 
-      fsFunc.apply(fs, args);
-
-      var result = fut.wait();
-      return options.modifyReturnValue
-        ? options.modifyReturnValue(result)
-        : result;
+      throw new Error('unexpected');
     }
 
-    // If we're not in a Fiber, run the sync version of the fs.* method.
-    var result = fsFuncSync.apply(fs, args);
-    return options.modifyReturnValue
-      ? options.modifyReturnValue(result)
-      : result;
+    wrapper.displayName = fsFuncName;
+    return wrapper;
   }
 
-  wrapper.displayName = fsFuncName;
-  return files[fsFuncName] = Profile("files." + fsFuncName, wrapper);
+  files[fsFuncName] = Profile('files.' + fsFuncName, makeWrapper({ alwaysSync: true }));
+
+  files.fsFixPath[fsFuncName] =
+    Profile('wrapped.fs.' + fsFuncName, makeWrapper({ sync: false }));
+  files.fsFixPath[fsFuncName + 'Sync'] =
+    Profile('wrapped.fs.' + fsFuncName + 'Sync', makeWrapper({ sync: true }));
 }
 
 wrapFsFunc("writeFile", [0]);
@@ -1448,4 +1489,24 @@ files.pathwatcherWatch = function (...args) {
   // pathwatcher has a record of keeping some global state
   var pathwatcher = require('pathwatcher');
   return require("pathwatcher").watch(...args);
+};
+
+files.readBufferWithLengthAndOffset = function (filename, length, offset) {
+  var data = new Buffer(length);
+  // Read the data from disk, if it is non-empty. Avoid doing IO for empty
+  // files, because (a) unnecessary and (b) fs.readSync with length 0
+  // throws instead of acting like POSIX read:
+  // https://github.com/joyent/node/issues/5685
+  if (length > 0) {
+    var fd = files.open(filename, "r");
+    try {
+      var count = files.read(
+        fd, data, 0, length, offset);
+    } finally {
+      files.close(fd);
+    }
+    if (count !== length)
+      throw new Error("couldn't read entire resource");
+  }
+  return data;
 };

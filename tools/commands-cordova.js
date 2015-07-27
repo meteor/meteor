@@ -342,13 +342,13 @@ var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
 // options
 //  - debug
 var getBundle = function (projectContext, bundlePath, options) {
-  var bundler = require('./bundler.js');
+  var bundler = require('./isobuild/bundler.js');
 
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
-      minify: ! options.debug,
+      minifyMode: options.debug ? 'development' : 'production',
       // XXX can we ask it not to create the server arch?
       serverArch: archinfo.host(),
       webArchs: [WEB_ARCH_NAME],
@@ -859,13 +859,6 @@ var buildCordova = function (projectContext, platforms, options) {
       packagePlugins: cordova.getCordovaDependenciesFromStar(
         bundle.starManifest)
     }));
-
-    // XXX hack, copy files from app folder one level up
-    if (files.exists(cordovaProgramAppPath)) {
-      verboseLog('Copying the JS/CSS files one level up');
-      files.cp_r(cordovaProgramAppPath, cordovaProgramPath);
-      files.rm_recursive(cordovaProgramAppPath);
-    }
 
     verboseLog('Removing the www folder');
     // rewrite the www folder

@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '1.2.0'
+  version: '1.2.0-plugins.0',
+  documentation: null
 });
 
 Npm.depends({
@@ -15,7 +16,7 @@ Package.onUse(function (api) {
 
   // common functionality
   api.use('ddp-common', 'server'); // heartbeat
-
+  api.use('ddp-rate-limiter', 'server', {weak: true});
   // Transport
   api.use('ddp-client', 'server');
   api.imply('ddp-client');

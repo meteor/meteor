@@ -1,12 +1,12 @@
 Package.describe({
   summary: "JavaScript and CSS minifiers",
-  version: "1.1.5"
+  version: "1.1.6-plugins.0"
 });
 
 Npm.depends({
   "uglify-js": "2.4.20",
-  "css-parse": "https://github.com/reworkcss/css-parse/tarball/aa7e23285375ca621dd20250bac0266c6d8683a5",
-  "css-stringify": "https://github.com/reworkcss/css-stringify/tarball/a7fe6de82e055d41d1c5923ec2ccef06f2a45efa"
+  "css-parse": "2.0.0",
+  "css-stringify": "2.0.0"
 });
 
 Npm.strip({

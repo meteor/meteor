@@ -4,7 +4,7 @@ var release = require('./release.js');
 var runLog = require('./run-log.js');
 var catalog = require('./catalog.js');
 var archinfo = require('./archinfo.js');
-var isopack = require('./isopack.js');
+var isopack = require('./isobuild/isopack.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var Console = require('./console.js').Console;
@@ -170,7 +170,7 @@ var updateMeteorToolSymlink = function (printErrors) {
 
   var localLatestReleaseLink = tropohouse.default.latestMeteorSymlink();
 
-  if (! utils.startsWith(localLatestReleaseLink, relativeToolPath + files.pathSep)) {
+  if (! localLatestReleaseLink.startsWith(relativeToolPath + files.pathSep)) {
     // The latest release from the catalog is not where the ~/.meteor/meteor
     // symlink points to. Let's make sure we have that release on disk,
     // and then update the symlink.

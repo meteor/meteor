@@ -10,5 +10,6 @@ Package.registerBuildPlugin({
 
 Package.onUse(function (api) {
   api.export('TestAsset', 'server');
-  api.addFiles(['test-package.js', 'test-package.txt', 'test.notregistered'], 'server');
+  api.addFiles(['test-package.js', 'test-package.txt'],'server');
+  api.addFiles(['test.notregistered'], 'server', {isAsset: true});
 });

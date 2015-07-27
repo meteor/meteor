@@ -2,14 +2,15 @@ var _ = require('underscore');
 var packageClient = require('./package-client.js');
 var watch = require('./watch.js');
 var archinfo = require('./archinfo.js');
-var isopack = require('./isopack.js');
+var isopack = require('./isobuild/isopack.js');
 var buildmessage = require('./buildmessage.js');
 var tropohouse = require('./tropohouse.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var catalog = require('./catalog.js');
-var PackageSource = require('./package-source.js');
+var PackageSource = require('./isobuild/package-source.js');
 var VersionParser = require('./package-version-parser.js');
+import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
 // LocalCatalog represents packages located in the application's
 // package directory, other package directories specified via an
@@ -147,10 +148,20 @@ _.extend(LocalCatalog.prototype, {
   },
 
   // Given a package, returns an array of the version records available (ie, the
-  // one version we have, or an empty array).
+  // one version we have, or an empty array). This method is intended for use by
+  // Version Solver's CatalogLoader.
+  //
+  // As a special case, if name is an isobuild:* pseudo-package, returns
+  // (minimal) information about it as well.
   getSortedVersionRecords: function (name) {
     var self = this;
     self._requireInitialized();
+
+    if (_.has(KNOWN_ISOBUILD_FEATURE_PACKAGES, name)) {
+      return KNOWN_ISOBUILD_FEATURE_PACKAGES[name].map(
+        version => ({version, packageName: name, dependencies: {}})
+      );
+    }
 
     if (!_.has(self.packages, name))
       return [];

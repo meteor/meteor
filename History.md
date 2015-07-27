@@ -1,3 +1,10 @@
+## batch-plugins
+
+Backwards-incompatible change: static assets in package.js files must
+be explicitly declared with `{isAsset: true}`.  See the batch-plugins merge
+message for more details.
+
+
 ## v.NEXT
 
 
@@ -8,6 +15,24 @@
 
 * Parse `application/javascript` and `application/x-javascript` HTTP replies as
   JSON too.  #4595
+
+
+### Meteor Accounts
+
+* `loginWithPassword` now matches username or email in a case insensitive manner. If there are multiple users with a username or email only differing in case, a case sensitive match is required. #550
+* `loginWithGithub` now requests `user:email` scope by default, and attempts to fetch the user's emails. If no public email has been set, we use the primary email instead. We also store the complete list of emails. #4545
+
+
+### DDP
+
+* `sub.ready()` should return true inside that subscription's `onReady`
+  callback.  #4614
+
+### Livequery
+
+* Improved server performance by reducing overhead of processing oplog after
+  database writes. Improvements are most noticeable in case when a method is
+  doing a lot of writes on collections with plenty of active observers.  #4694
 
 
 ## in progress: v.1.1.1
@@ -185,8 +210,11 @@
 
 ### Other bug fixes and improvements
 
+* The `spiderable` package now reports the URL it's trying to fetch on failure.
+
 * Upgraded dependencies:
 
+  - Node: 0.10.40 (from 0.10.36)
   - uglify-js: 2.4.20 (from 2.4.17)
   - http-proxy: 1.11.1 (from 1.6.0)
 

@@ -1,6 +1,7 @@
 var _ = require('underscore');
 var packageVersionParser = require('./package-version-parser.js');
 var utils = require('./utils.js');
+import { isIsobuildFeaturePackage } from './isobuild/compiler.js';
 
 // PackageMap: Represents the choices of package versions being used for a
 // project. It knows all the packages that are used (direct and indirect
@@ -24,6 +25,12 @@ exports.PackageMap = function (versions, options) {
   self._localCatalog = options.localCatalog || null;
 
   _.each(versions, function (version, packageName) {
+    // If the constraint solver told us that we needed an isobuild feature,
+    // that's fine, but it's not a real package.
+    if (isIsobuildFeaturePackage(packageName)) {
+      return;
+    }
+
     var packageSource = self._localCatalog &&
           self._localCatalog.getPackageSource(packageName);
     if (packageSource) {

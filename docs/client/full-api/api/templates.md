@@ -502,6 +502,6 @@ browsers.
 
 Spacebars is the language used to write Meteor templates. It is inspired by [Handlebars](http://handlebarsjs.com/). It shares some of the spirit and syntax of Handlebars, but has been tailored to produce reactive Meteor templates when compiled.
 
-For more information about Spacebars, see the [Spacebars README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
+For more information about Spacebars, see the [Spacebars README](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md).
 
 {{/template}}

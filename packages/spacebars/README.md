@@ -254,6 +254,14 @@ Instead of simply naming a template, an inclusion tag can also specify a path
 that evalutes to a template object, or to a function that returns a template
 object.
 
+Note that the above two points interact in a way that can be surprising!
+If `foo` is a template helper function that returns another template, then
+`{{>foo bar}}` will _first_ push `bar` onto the data context stack _then_ call
+`foo()`, due to the way this line is expanded as shown above. You will need to
+use `Template.parentData(1)` to access the original context. This differs
+from regular helper calls like `{{foo bar}}`, in which `bar` is passed as a
+parameter rather than pushed onto the data context stack.
+
 ### Function Returning a Template
 
 If an inclusion tag resolves to a function, the function must return a template

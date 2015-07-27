@@ -125,6 +125,13 @@ var upgradersByName = {
         Console.options({ bulletPoint: "1.0.5: " })
       );
     }
+  },
+
+  "1.2.0-standard-minifiers-package": function (projectContext) {
+    // Minifiers are extracted into a new package called "standard-minifiers"
+    projectContext.projectConstraintsFile.addConstraints(
+      ['standard-minifiers']);
+    projectContext.projectConstraintsFile.writeIfModified();
   }
 
   ////////////

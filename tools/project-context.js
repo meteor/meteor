@@ -7,7 +7,7 @@ var catalog = require('./catalog.js');
 var catalogLocal = require('./catalog-local.js');
 var Console = require('./console.js').Console;
 var files = require('./files.js');
-var isopackCacheModule = require('./isopack-cache.js');
+var isopackCacheModule = require('./isobuild/isopack-cache.js');
 var isopackets = require('./isopackets.js');
 var packageMapModule = require('./package-map.js');
 var release = require('./release.js');
@@ -85,7 +85,7 @@ _.extend(ProjectContext.prototype, {
       options.explicitlyAddedLocalPackageDirs;
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
-    // package names.
+    // package names.  Deletes the isopacks and their plugin caches.
     self._forceRebuildPackages = options.forceRebuildPackages;
 
     // Set in a few cases where we really want to only get packages from
@@ -159,6 +159,15 @@ _.extend(ProjectContext.prototype, {
     // them or change their major version).
     self._allowIncompatibleUpdate = options.allowIncompatibleUpdate;
 
+    // If set, we run the linter on the app and local packages.  Set by 'meteor
+    // lint', and the runner commands (run/test-packages/debug) when --no-lint
+    // is not passed.
+    self.lintAppAndLocalPackages = options.lintAppAndLocalPackages;
+
+    // If set, we run the linter on just one local package, with this
+    // source root. Set by 'meteor lint' in a package, and 'meteor publish'.
+    self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
+
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
     self.projectConstraintsFile = null;
@@ -198,6 +207,13 @@ _.extend(ProjectContext.prototype, {
     self.isopackCache = null;
 
     self._completedStage = STAGE.INITIAL;
+
+    // The resolverResultCache is used by the constraint solver; to
+    // us it's just an opaque object.  If we pass it into repeated
+    // calls to the constraint solver, the constraint solver can be
+    // more efficient by caching or memoizing its work.  We choose not
+    // to reset this when reset() is called more than once.
+    self._resolverResultCache = (self._resolverResultCache || {});
   },
 
   readProjectMetadata: function () {
@@ -376,6 +392,11 @@ _.extend(ProjectContext.prototype, {
       watchSet.merge(self.isopackCache.allLoadedLocalPackagesWatchSet);
     }
     return watchSet;
+  },
+
+  getLintingMessagesForLocalPackages: function () {
+    var self = this;
+    return self.isopackCache.getLintingMessagesForLocalPackages();
   },
 
   _ensureAppIdentifier: function () {
@@ -664,7 +685,8 @@ _.extend(ProjectContext.prototype, {
               nudge: function () {
                 Console.nudge(true);
               },
-              Profile: Profile
+              Profile: Profile,
+              resultCache: self._resolverResultCache
             });
     return resolver;
   },
@@ -696,8 +718,11 @@ _.extend(ProjectContext.prototype, {
       includeCordovaUnibuild: (self._forceIncludeCordovaUnibuild
                                || self.platformList.usesCordova()),
       cacheDir: self.getProjectLocalDirectory('isopacks'),
+      pluginCacheDirRoot: self.getProjectLocalDirectory('plugin-cache'),
       tropohouse: self.tropohouse,
-      previousIsopackCache: self._previousIsopackCache
+      previousIsopackCache: self._previousIsopackCache,
+      lintLocalPackages: self.lintAppAndLocalPackages,
+      lintPackageWithSourceRoot: self._lintPackageWithSourceRoot
     });
 
     if (self._forceRebuildPackages) {

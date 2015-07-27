@@ -134,6 +134,8 @@ will be logged out.
 
 {{> autoApiBox "Meteor.loginWithPassword"}}
 
+If there are multiple users with a username or email only differing in case, a case sensitive match is required. Although `createUser` won't let you create users with ambiguous usernames or emails, this could happen with existing databases or if you modify the users collection directly.
+
 This function is provided by the `accounts-password` package. See the
 [Passwords](#accounts_passwords) section below.
 
@@ -396,4 +398,17 @@ These functions return an object with a single method, `stop`.  Calling
 On the server, the callbacks get a single argument, the same attempt info
 object as [`validateLoginAttempt`](#accounts_validateloginattempt). On the
 client, no arguments are passed.
+
+<h3 id="accounts_rate_limit"><span>Rate Limiting</span></h3>
+
+By default, there are rules added to the [`DDPRateLimiter`](#ddpratelimiter)
+that rate limit logins, new user registration and password reset calls to a
+limit of 5 requests per 10 seconds per session. These are a basic solution
+to dictionary attacks where a malicious user attempts to guess the passwords
+of legitimate users by attempting all possible passwords.
+
+These rate limiting rules can be removed by calling
+`Accounts.removeDefaultRateLimit()`. Please see the
+[`DDPRateLimiter`](#ddpratelimiter) docs for more information.
+
 {{/template}}

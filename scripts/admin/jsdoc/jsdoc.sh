@@ -19,4 +19,5 @@ git grep -al "@summary" | xargs -L ${INFINITY} -t \
     "${TOPDIR}/dev_bundle/bin/node" \
     "${SCRIPTDIR}/node_modules/.bin/jsdoc" \
     -t "${TOPDIR}/scripts/admin/jsdoc/docdata-jsdoc-template" \
-    -c "${TOPDIR}/scripts/admin/jsdoc/jsdoc-conf.json"
+    -c "${TOPDIR}/scripts/admin/jsdoc/jsdoc-conf.json" \
+    2>&1 | grep -v 'WARNING: JSDoc does not currently handle'

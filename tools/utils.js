@@ -384,12 +384,6 @@ exports.isDirectory = function (dir) {
   return stats.isDirectory();
 };
 
-// XXX from Underscore.String (http://epeli.github.com/underscore.string/)
-exports.startsWith = function(str, starts) {
-  return str.length >= starts.length &&
-    str.substring(0, starts.length) === starts;
-};
-
 // Options: noPrefix: do not display 'Meteor ' in front of the version number.
 exports.displayRelease = function (track, version, options) {
   var catalog = require('./catalog.js');
@@ -509,6 +503,11 @@ exports.execFileSync = function (file, args, opts) {
 
   var child_process = require('child_process');
   var eachline = require('eachline');
+
+  opts = opts || {};
+  if (! _.has(opts, 'maxBuffer')) {
+    opts.maxBuffer = 1024 * 1024 * 10;
+  }
 
   if (opts && opts.pipeOutput) {
     var p = child_process.spawn(file, args, opts);
@@ -726,3 +725,14 @@ exports.sha256 = function (contents) {
   hash.update(contents);
   return hash.digest('base64');
 };
+
+exports.sourceMapLength = function (sm) {
+  if (! sm) return 0;
+  // sum the length of sources and the mappings, the size of
+  // metadata is ignored, but it is not a big deal
+  return sm.mappings.length
+       + (sm.sourcesContent || []).reduce((soFar, current) => {
+         return soFar + (current ? current.length : 0);
+       }, 0);
+};
+

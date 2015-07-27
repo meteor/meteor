@@ -8,7 +8,7 @@ var release = require('./release.js');
 var files = require('./files.js');
 var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
-var compiler = require('./compiler.js');
+var compiler = require('./isobuild/compiler.js');
 var authClient = require('./auth-client.js');
 var catalog = require('./catalog.js');
 var projectContextModule = require('./project-context.js');
@@ -348,7 +348,11 @@ var bundleBuild = function (isopack) {
   // disk in an IsopackCache, because we don't want to include
   // isopack-buildinfo.json. (We don't include it because we're not passing
   // includeIsopackBuildInfo to saveToPath here.)
-  isopack.saveToPath(tarInputDir);
+  isopack.saveToPath(tarInputDir, {
+    // When publishing packages that don't use new registerCompiler plugins,
+    // make sure that old Meteors can use it too
+    includePreCompilerPluginIsopackVersions: true
+  });
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
 
@@ -626,8 +630,9 @@ exports.publishPackage = function (options) {
   }
   var readmePath = saveReadmeToTmp(readmeInfo);
 
-  // Check that the package does not have any unconstrained references.
   var packageDeps = packageSource.getDependencyMetadata();
+
+  // Check that the package does not have any unconstrained references.
   _.each(packageDeps, function(refs, label) {
     if (refs.constraint == null) {
       if (packageSource.isCore && files.inCheckout() &&
@@ -663,6 +668,20 @@ exports.publishPackage = function (options) {
   var isopack = projectContext.isopackCache.getIsopack(name);
   if (! isopack)
     throw Error("no isopack " + name);
+
+  // If we aren't able to include legacy builds in this version, make sure that
+  // it has a fake dependency on isobuild:isopack-2 so that old versions of
+  // Isobuild won't accidentally use it.
+  if (!isopack.canWriteLegacyBuilds()
+      && !_.has(packageDeps, 'isobuild:isopack-2')) {
+    packageDeps['isobuild:isopack-2'] = {
+      constraint: '1.0.0',
+      // Arbitrary arch here; nothing other than meteor show really pays
+      // attention to reference arch anymore, because we no longer pay attention
+      // to the arch with the constraint in Version Solver.
+      references: [{arch: 'os'}],
+    };
+  }
 
   var sourceFiles = isopack.getSourceFilesUnderSourceRoot(
     packageSource.sourceRoot);

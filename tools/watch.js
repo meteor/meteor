@@ -3,6 +3,7 @@ import _ from "underscore";
 import pathwatcher from "./safe-pathwatcher.js";
 import {createHash} from "crypto";
 import {coalesce} from "./func-utils.js";
+import {Profile} from "./profile.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a
@@ -22,7 +23,8 @@ import {coalesce} from "./func-utils.js";
 //
 // In a directory watch, you provide an absolute path to a directory,
 // two lists of regular expressions specifying the entries to
-// include and exclude, and an array of which entries to expect.
+// include and exclude, a list of specific names to include (which ignores
+// the exclude regexp list) and an array of which entries to expect.
 //
 // For directory watches, the regular expressions work as follows. You provide
 // two arrays of regular expressions, an include list and an exclude list. An
@@ -32,7 +34,11 @@ import {coalesce} from "./func-utils.js";
 // '/' if the entry is directory. There is NO IMPLICIT RECURSION here: a
 // directory watch ONLY watches the immediate children of the directory! If you
 // want a recursive watch, you need to do the recursive walk while building the
-// WatchSet and add a bunch of separate directory watches.
+// WatchSet and add a bunch of separate directory watches.  In addition, you
+// can provide a list of specific names to expect; these are not filtered
+// by the exclude list.  (For example, you might want to see all "*.js" files
+// but ignore files starting with dots (which are often temporary files), but
+// explicitly ask for ".jshintrc".)
 //
 // There can be multiple directory watches on the same directory. There is no
 // relationship between the files found in directory watches and the files
@@ -75,6 +81,7 @@ export class WatchSet {
     // - 'absPath': absolute path to a directory
     // - 'include': array of RegExps
     // - 'exclude': array of RegExps
+    // - 'names': array of strings
     // - 'contents': array of strings, or null if the directory should not exist
     //
     // This represents the assertion that 'absPath' is a directory and that
@@ -83,7 +90,7 @@ export class WatchSet {
     // directory names end with '/'. 'contents' is sorted. An entry is in
     // 'contents' if its value (including the slash, for directories) matches at
     // least one regular expression in 'include' and no regular expressions in
-    // 'exclude'.
+    // 'exclude'... or if it is in 'names'.
     //
     // There is no recursion here: files contained in subdirectories never appear.
     //
@@ -95,12 +102,14 @@ export class WatchSet {
   addFile(filePath, hash) {
     var self = this;
     // No need to update if this is in always-fire mode already.
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
+    }
     if (_.has(self.files, filePath)) {
       // Redundant?
-      if (self.files[filePath] === hash)
+      if (self.files[filePath] === hash) {
         return;
+      }
       // Nope, inconsistent.
       self.alwaysFire = true;
       return;
@@ -108,32 +117,29 @@ export class WatchSet {
     self.files[filePath] = hash;
   }
 
-  // Takes options absPath, include, exclude, and contents, as described
-  // above. contents does not need to be pre-sorted.
-  addDirectory(options) {
+  addDirectory({absPath, include, exclude, names, contents: unsortedContents}) {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
-    if (_.isEmpty(options.include))
+    }
+    if (_.isEmpty(include) && _.isEmpty(names)) {
       return;
-    var contents = _.clone(options.contents);
-    if (contents)
+    }
+    const contents = _.clone(unsortedContents);
+    if (contents) {
       contents.sort();
+    }
 
-    self.directories.push({
-      absPath: options.absPath,
-      include: options.include,
-      exclude: options.exclude,
-      contents: contents
-    });
+    self.directories.push({absPath, include, exclude, names, contents});
   }
 
   // Merges another WatchSet into this one. This one will now fire if either
   // WatchSet would have fired.
   merge(other) {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return;
+    }
     if (other.alwaysFire) {
       self.alwaysFire = true;
       return;
@@ -162,20 +168,25 @@ export class WatchSet {
 
   toJSON() {
     var self = this;
-    if (self.alwaysFire)
+    if (self.alwaysFire) {
       return {alwaysFire: true};
+    }
     var ret = {files: self.files};
 
     var reToJSON = function (r) {
       var options = '';
-      if (r.ignoreCase)
+      if (r.ignoreCase) {
         options += 'i';
-      if (r.multiline)
+      }
+      if (r.multiline) {
         options += 'm';
-      if (r.global)
+      }
+      if (r.global) {
         options += 'g';
-      if (options)
+      }
+      if (options) {
         return {$regex: r.source, $options: options};
+      }
       return r.source;
     };
 
@@ -184,6 +195,7 @@ export class WatchSet {
         absPath: d.absPath,
         include: _.map(d.include, reToJSON),
         exclude: _.map(d.exclude, reToJSON),
+        names: d.names,
         contents: d.contents
       };
     });
@@ -194,8 +206,9 @@ export class WatchSet {
   static fromJSON(json) {
     var set = new WatchSet();
 
-    if (! json)
+    if (! json) {
       return set;
+    }
 
     if (json.alwaysFire) {
       set.alwaysFire = true;
@@ -205,8 +218,9 @@ export class WatchSet {
     set.files = _.clone(json.files);
 
     var reFromJSON = function (j) {
-      if (_.has(j, '$regex'))
+      if (_.has(j, '$regex')) {
         return new RegExp(j.$regex, j.$options);
+      }
       return new RegExp(j);
     };
 
@@ -215,6 +229,7 @@ export class WatchSet {
         absPath: d.absPath,
         include: _.map(d.include, reFromJSON),
         exclude: _.map(d.exclude, reFromJSON),
+        names: d.names,
         contents: d.contents
       };
     });
@@ -228,27 +243,31 @@ var readFile = function (absPath) {
     return files.readFile(absPath);
   } catch (e) {
     // Rethrow most errors.
-    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR'))
+    if (! e || (e.code !== 'ENOENT' && e.code !== 'EISDIR')) {
       throw e;
+    }
     // File does not exist (or is a directory).
     return null;
   }
 };
 
 export function sha1(contents) {
-  var hash = createHash('sha1');
-  hash.update(contents);
-  return hash.digest('hex');
+  return Profile("sha1", function () {
+    var hash = createHash('sha1');
+    hash.update(contents);
+    return hash.digest('hex');
+  })();
 }
 
-export function readDirectory(options) {
+export function readDirectory({absPath, include, exclude, names}) {
   // Read the directory.
   try {
-    var contents = files.readdir(options.absPath);
+    var contents = files.readdir(absPath);
   } catch (e) {
     // If the path is not a directory, return null; let other errors through.
-    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR'))
+    if (e && (e.code === 'ENOENT' || e.code === 'ENOTDIR')) {
       return null;
+    }
     throw e;
   }
 
@@ -259,7 +278,7 @@ export function readDirectory(options) {
       // We do stat instead of lstat here, so that we treat symlinks to
       // directories just like directories themselves.
       // XXX Does the treatment of symlinks make sense?
-      var stats = files.stat(files.pathJoin(options.absPath, entry));
+      var stats = files.stat(files.pathJoin(absPath, entry));
     } catch (e) {
       if (e && (e.code === 'ENOENT')) {
         // Disappeared after the readdir (or a dangling symlink)? Eh,
@@ -268,18 +287,27 @@ export function readDirectory(options) {
       }
       throw e;
     }
-    if (stats.isDirectory())
+    if (stats.isDirectory()) {
       entry += '/';
+    }
     contentsWithSlashes.push(entry);
   });
 
   // Filter based on regexps.
-  var filtered = _.filter(contentsWithSlashes, function (entry) {
-    return _.any(options.include, function (re) {
-      return re.test(entry);
-    }) && ! _.any(options.exclude, function (re) {
-      return re.test(entry);
-    });
+  var filtered = contentsWithSlashes.filter((entry) => {
+    // Is it one of the names we explicitly requested?
+    if (names && names.indexOf(entry) !== -1) {
+      return true;
+    }
+    // Is it ruled out by an exclude rule?
+    if (exclude && exclude.some(re => re.test(entry))) {
+      return false;
+    }
+    // Is it ruled in by an include rule?
+    if (include && include.some(re => re.test(entry))) {
+      return true;
+    }
+    return false;
   });
 
   // Sort it!
@@ -294,14 +322,16 @@ export class Watcher {
 
     // The set to watch.
     self.watchSet = options.watchSet;
-    if (! self.watchSet)
+    if (! self.watchSet) {
       throw new Error("watchSet option is required");
+    }
 
     // Function to call when a change is detected according to one of
     // the above.
     self.onChange = options.onChange;
-    if (! self.onChange)
+    if (! self.onChange) {
       throw new Error("onChange option is required");
+    }
 
     self.stopped = false;
     self.justCheckOnce = !! options._justCheckOnce;
@@ -329,21 +359,24 @@ export class Watcher {
   _fireIfFileChanged(absPath) {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return true;
+    }
 
     var oldHash = self.watchSet.files[absPath];
 
-    if (oldHash === undefined)
+    if (oldHash === undefined) {
       throw new Error("Checking unknown file " + absPath);
+    }
 
     var contents = readFile(absPath);
 
     if (contents === null) {
       // File does not exist (or is a directory).
       // Is this what we expected?
-      if (oldHash === null)
+      if (oldHash === null) {
         return false;
+      }
       // Nope, not what we expected.
       self._fire();
       return true;
@@ -358,8 +391,9 @@ export class Watcher {
     var newHash = sha1(contents);
 
     // Unchanged?
-    if (newHash === oldHash)
+    if (newHash === oldHash) {
       return false;
+    }
 
     self._fire();
     return true;
@@ -368,13 +402,15 @@ export class Watcher {
   _fireIfDirectoryChanged(info) {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return true;
+    }
 
     var newContents = readDirectory({
       absPath: info.absPath,
       include: info.include,
-      exclude: info.exclude
+      exclude: info.exclude,
+      names: info.names
     });
 
     // If the directory has changed (including being deleted or created).
@@ -391,11 +427,13 @@ export class Watcher {
 
     // Set up a watch for each file
     _.each(self.watchSet.files, function (hash, absPath) {
-      if (self.stopped)
+      if (self.stopped) {
         return;
+      }
 
-      if (! self.justCheckOnce)
+      if (! self.justCheckOnce) {
         self._watchFileOrDirectory(absPath);
+      }
 
       // Check for the case where by the time we created the watch,
       // the file had already changed from the sha we were provided.
@@ -533,15 +571,17 @@ export class Watcher {
   // See #3854.
   _mustNotExist(absPath) {
     var wsFiles = this.watchSet.files;
-    if (_.has(wsFiles, absPath))
+    if (_.has(wsFiles, absPath)) {
       return wsFiles[absPath] === null;
+    }
     return false;
   }
 
   _mustBeAFile(absPath) {
     var wsFiles = this.watchSet.files;
-    if (_.has(wsFiles, absPath))
+    if (_.has(wsFiles, absPath)) {
       return _.isString(wsFiles[absPath]);
+    }
     return false;
   }
 
@@ -612,15 +652,18 @@ export class Watcher {
   _checkDirectories() {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     _.each(self.watchSet.directories, function (info) {
-      if (self.stopped)
+      if (self.stopped) {
         return;
+      }
 
-      if (! self.justCheckOnce)
+      if (! self.justCheckOnce) {
         self._watchFileOrDirectory(info.absPath);
+      }
 
       // Check for the case where by the time we created the watch, the
       // directory has already changed.
@@ -631,8 +674,9 @@ export class Watcher {
   _fire() {
     var self = this;
 
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     self.stop();
     self.onChange();
@@ -670,7 +714,7 @@ export function isUpToDate(watchSet) {
   return upToDate;
 }
 
-// Options should have absPath/include/exclude.
+// Options should have absPath/include/exclude/names.
 export function readAndWatchDirectory(watchSet, options) {
   var contents = readDirectory(options);
   watchSet.addDirectory(_.extend({contents: contents}, options));

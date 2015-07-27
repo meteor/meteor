@@ -9,7 +9,7 @@ var bootUtils = require('./boot-utils.js');
 var files = require('./mini-files.js');
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.36';
+var MIN_NODE_VERSION = 'v0.10.40';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
@@ -70,6 +70,25 @@ var retrieveSourceMap = function (pathForSourceMap) {
   return null;
 };
 
+var origWrapper = sourcemap_support.wrapCallSite;
+var wrapCallSite = function (frame) {
+  var frame = origWrapper(frame);
+  var wrapGetter = function (name) {
+    var origGetter = frame[name];
+    frame[name] = function (arg) {
+      // replace a custom location domain that we set for better UX in Chrome
+      // DevTools (separate domain group) in source maps.
+      var source = origGetter(arg);
+      if (! source)
+        return source;
+      return source.replace(/(^|\()meteor:\/\/..app\//, '$1');
+    };
+  };
+  wrapGetter('getScriptNameOrSourceURL');
+  wrapGetter('getEvalOrigin');
+
+  return frame;
+};
 sourcemap_support.install({
   // Use the source maps specified in program.json instead of parsing source
   // code for them.
@@ -77,7 +96,8 @@ sourcemap_support.install({
   // For now, don't fix the source line in uncaught exceptions, because we
   // haven't fixed handleUncaughtExceptions in source-map-support to properly
   // locate the source files.
-  handleUncaughtExceptions: false
+  handleUncaughtExceptions: false,
+  wrapCallSite: wrapCallSite
 });
 
 // Only enabled by default in development.
@@ -166,9 +186,9 @@ Fiber(function () {
         callback = fut.resolver();
       }
       // This assumes that we've already loaded the meteor package, so meteor
-      // itself (and weird special cases like js-analyze) can't call
-      // Assets.get*. (We could change this function so that it doesn't call
-      // bindEnvironment if you don't pass a callback if we need to.)
+      // itself can't call Assets.get*. (We could change this function so that
+      // it doesn't call bindEnvironment if you don't pass a callback if we need
+      // to.)
       var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
         if (result && ! encoding)
           // Sadly, this copies in Node 0.10.

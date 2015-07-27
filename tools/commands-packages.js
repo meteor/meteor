@@ -14,12 +14,13 @@ var utils = require('./utils.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
-var PackageSource = require('./package-source.js');
-var compiler = require('./compiler.js');
+var PackageSource = require('./isobuild/package-source.js');
+var bundler = require('./isobuild/bundler.js');
+var compiler = require('./isobuild/compiler.js');
 var catalog = require('./catalog.js');
 var catalogRemote = require('./catalog-remote.js');
 var stats = require('./stats.js');
-var isopack = require('./isopack.js');
+var isopack = require('./isobuild/isopack.js');
 var updater = require('./updater.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('./console.js').Console;
@@ -64,16 +65,11 @@ var formatAsList = function (list, options) {
   return _.map(list, formatter).join(", ");
 };
 
-var endsWith = function (s, suffix) {
-  return s.length >= suffix.length &&
-    s.substr(s.length - suffix.length) === suffix;
-};
-
 var removeIfEndsWith = function (s, suffix) {
-  if (!endsWith(s, suffix)) {
-    return s;
+  if (s.endsWith(suffix)) {
+    return s.substring(0, s.length - suffix.length);
   }
-  return s.substring(0, s.length - suffix.length);
+  return s;
 };
 
 var formatArchitecture = function (s) {
@@ -256,7 +252,9 @@ main.registerCommand({
     'existing-version': { type: Boolean },
     // This is the equivalent of "sudo": make sure that administrators don't
     // accidentally put their personal packages in the top level namespace.
-    'top-level': { type: Boolean }
+    'top-level': { type: Boolean },
+    // An option to publish despite linting errors
+    'no-lint': { type: Boolean }
   },
   requiresPackage: true,
   // We optimize the workflow by using up-to-date package data to weed out
@@ -300,7 +298,8 @@ main.registerCommand({
       // When we publish, we should always include web.cordova unibuilds, even
       // though this temporary directory does not have any cordova platforms
       forceIncludeCordovaUnibuild: true,
-      allowIncompatibleUpdate: options['allow-incompatible-update']
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   } else {
     // We're in an app; let the app be our context, but make sure we don't
@@ -314,7 +313,8 @@ main.registerCommand({
       // When we publish, we should always include web.cordova unibuilds, even
       // if this project does not have any cordova platforms
       forceIncludeCordovaUnibuild: true,
-      allowIncompatibleUpdate: options['allow-incompatible-update']
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintPackageWithSourceRoot: options['no-lint'] ? null : options.packageDir,
     });
   }
 
@@ -324,16 +324,18 @@ main.registerCommand({
     projectContext.initializeCatalog();
   });
 
-  // Connect to the package server and log in.
-  try {
-    var conn = packageClient.loggedInPackagesConnection();
-  } catch (err) {
-    packageClient.handlePackageServerConnectionError(err);
-    return 1;
-  }
-  if (! conn) {
-    Console.error('No connection: Publish failed.');
-    return 1;
+  if (!process.env.METEOR_TEST_NO_PUBLISH) {
+    // Connect to the package server and log in.
+    try {
+      var conn = packageClient.loggedInPackagesConnection();
+    } catch (err) {
+      packageClient.handlePackageServerConnectionError(err);
+      return 1;
+    }
+    if (! conn) {
+      Console.error('No connection: Publish failed.');
+      return 1;
+    }
   }
 
   var localVersionRecord = projectContext.localCatalog.getVersionBySourceRoot(
@@ -417,6 +419,26 @@ main.registerCommand({
   });
   // We don't display the package map delta here, because it includes adding the
   // package's test and all the test's dependencies.
+
+  if (!options['no-lint']) {
+    const warnings = projectContext.getLintingMessagesForLocalPackages();
+    if (warnings && warnings.hasMessages()) {
+      Console.arrowError(
+        "Errors linting your package; run with --no-lint to ignore.");
+      Console.printMessages(warnings);
+      return 1;
+    } else if (warnings) {
+      Console.arrowInfo('Linted your package. No linting errors.');
+    }
+  }
+
+  if (process.env.METEOR_TEST_NO_PUBLISH) {
+    Console.error(
+      'Would publish the package at this point, but since the ' +
+      'METEOR_TEST_NO_PUBLISH environment variable is set, just going ' +
+      'to finish here.');
+    return 0;
+  }
 
   var isopack = projectContext.isopackCache.getIsopack(packageName);
   if (! isopack) {
@@ -1119,6 +1141,11 @@ main.registerCommand({
   // dependencies).
   projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
     var packageName = constraint.package;
+
+    // Skip isobuild:* pseudo-packages.
+    if (compiler.isIsobuildFeaturePackage(packageName))
+      return;
+
     var mapInfo = projectContext.packageMap.getInfo(packageName);
     if (! mapInfo)
       throw Error("no version for used package " + packageName);
@@ -1556,7 +1583,8 @@ main.registerCommand({
   var upgradeIndirectDepPatchVersions = false;
   if (options.args.length === 0) {
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
-      upgradePackageNames.push(constraint.package);
+      if (! compiler.isIsobuildFeaturePackage(constraint.package))
+        upgradePackageNames.push(constraint.package);
     });
     upgradeIndirectDepPatchVersions = true;
   } else {
@@ -1565,9 +1593,12 @@ main.registerCommand({
   // We want to use the project's release for constraints even if we are
   // currently running a newer release (eg if we ran 'meteor update --patch' and
   // updated to an older patch release).  (If the project has release 'none'
-  // because this is just 'updating packages', this can be null.)
+  // because this is just 'updating packages', this can be null. Also, if we're
+  // running from a checkout this should be null even if the file doesn't say
+  // 'none'.)
   var releaseRecordForConstraints = null;
-  if (projectContext.releaseFile.normalReleaseSpecified()) {
+  if (!files.inCheckout()
+      && projectContext.releaseFile.normalReleaseSpecified()) {
     releaseRecordForConstraints = catalog.official.getReleaseVersion(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);

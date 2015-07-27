@@ -400,7 +400,7 @@ var bundleAndDeploy = function (options) {
   });
 
   if (! messages.hasMessages()) {
-    var bundler = require('./bundler.js');
+    var bundler = require('./isobuild/bundler.js');
 
     var bundleResult = bundler.bundle({
       projectContext: options.projectContext,

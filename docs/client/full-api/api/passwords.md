@@ -26,7 +26,7 @@ id.
 
 On the client, you must pass `password` and at least one of `username` or
 `email` &mdash; enough information for the user to be able to log in again
-later. On the server, you do not need to specify `password`, but the user will
+later. If there are existing users with a username or email only differing in case, `createUser` will fail. On the server, you do not need to specify `password`, but the user will
 not be able to log in until it has a password (eg, set with
 [`Accounts.setPassword`](#accounts_setpassword)).
 
@@ -126,7 +126,7 @@ Override fields of the object by assigning to them:
    by the `emailTemplates.from` field.
  - `subject`: A `Function` that takes a user object and returns
    a `String` for the subject line of a reset password email.
- - `text`: A `Function` that takes a user object and a url, and
+ - `text`: An optional `Function` that takes a user object and a url, and
    returns the body text for a reset password email.
  - `html`: An optional `Function` that takes a user object and a
    url, and returns the body html for a reset password email.

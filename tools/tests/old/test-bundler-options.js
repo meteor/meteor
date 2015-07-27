@@ -1,8 +1,8 @@
-require('meteor-babel/register');
+require('../../install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');
-var bundler = require('../../bundler.js');
+var bundler = require('../../isobuild/bundler.js');
 var release = require('../../release.js');
 var files = require('../../files.js');
 var catalog = require('../../catalog.js');
@@ -61,7 +61,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: true }
+      buildOptions: { minifyMode: 'production' }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -83,7 +83,7 @@ var runTest = function () {
       if (item.type !== 'js')
         return;
       // Just a hash, and no "packages/".
-      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path));
+      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path), item.path);
     });
   });
 
@@ -93,7 +93,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: false }
+      buildOptions: { minifyMode: 'development' }
     });
     assert.strictEqual(result.errors, false);
 

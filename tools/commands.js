@@ -17,12 +17,13 @@ var archinfo = require('./archinfo.js');
 var tropohouse = require('./tropohouse.js');
 var catalog = require('./catalog.js');
 var stats = require('./stats.js');
-var isopack = require('./isopack.js');
+var isopack = require('./isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
 var execFileSync = require('./utils.js').execFileSync;
 var Console = require('./console.js').Console;
 var projectContextModule = require('./project-context.js');
 var colonConverter = require('./colon-converter.js');
+var PackageSource = require('./isobuild/package-source.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -215,6 +216,8 @@ var runCommandOptions = {
     // bundled assets only. Encapsulates the behavior of once (does not rerun)
     // and does not monitor for file changes. Not for end-user use.
     clean: { type: Boolean},
+    // Don't run linter on rebuilds
+    'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
     'allow-incompatible-update': { type: Boolean }
@@ -273,7 +276,8 @@ function doRunCommand (options) {
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
-    allowIncompatibleUpdate: options['allow-incompatible-update']
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint']
   });
 
   main.captureAndExit("=> Errors while initializing project:", function () {
@@ -399,7 +403,7 @@ function doRunCommand (options) {
     debugPort: options['debug-port'],
     settingsFile: options.settings,
     buildOptions: {
-      minify: options.production,
+      minifyMode: options.production ? 'production' : 'development',
       includeDebug: ! options.production
     },
     rootUrl: process.env.ROOT_URL,
@@ -890,12 +894,12 @@ var buildCommand = function (options) {
     projectContext: projectContext
   });
 
-  var bundler = require('./bundler.js');
+  var bundler = require('./isobuild/bundler.js');
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
     buildOptions: {
-      minify: ! options.debug,
+      minifyMode: options.debug ? 'development' : 'production',
       // XXX is this a good idea, or should linux be the default since
       //     that's where most people are deploying
       //     default?  i guess the problem with using DEPLOY_ARCH as default
@@ -964,6 +968,92 @@ var buildCommand = function (options) {
 var findApkPath = function (dirPath, debug) {
   return files.pathJoin(dirPath, 'outputs', 'apk', debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
 };
+
+///////////////////////////////////////////////////////////////////////////////
+// lint
+///////////////////////////////////////////////////////////////////////////////
+main.registerCommand({
+  name: 'lint',
+  maxArgs: 0,
+  requiresAppOrPackage: true,
+  options: {
+    'allow-incompatible-updates': { type: Boolean }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  const {packageDir, appDir} = options;
+
+  let projectContext = null;
+
+  // if the goal is to lint the package, don't include the whole app
+  if (packageDir) {
+    // similar to `meteor publish`, create a fake project
+    const tempProjectDir = files.mkdtemp('meteor-package-build');
+    projectContext = new projectContextModule.ProjectContext({
+      projectDir: tempProjectDir,
+      explicitlyAddedLocalPackageDirs: [packageDir],
+      packageMapFilename: files.pathJoin(packageDir, '.versions'),
+      alwaysWritePackageMap: true,
+      forceIncludeCordovaUnibuild: true,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintPackageWithSourceRoot: packageDir
+    });
+
+    main.captureAndExit("=> Errors while setting up package:", () =>
+      // Read metadata and initialize catalog.
+      projectContext.initializeCatalog()
+    );
+    const versionRecord =
+        projectContext.localCatalog.getVersionBySourceRoot(packageDir);
+    if (! versionRecord) {
+      throw Error("explicitly added local package dir missing?");
+    }
+    const packageName = versionRecord.packageName;
+    const constraint = utils.parsePackageConstraint(packageName);
+    projectContext.projectConstraintsFile.removeAllPackages();
+    projectContext.projectConstraintsFile.addConstraints([constraint]);
+  }
+
+  // linting the app
+  if (! projectContext && appDir) {
+    projectContext = new projectContextModule.ProjectContext({
+      projectDir: appDir,
+      serverArchitectures: [archinfo.host()],
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: true
+    });
+  }
+
+
+  main.captureAndExit("=> Errors prevented the build:", () => {
+    projectContext.prepareProjectForBuild();
+  });
+
+  const bundlePath = projectContext.getProjectLocalDirectory('build');
+  const bundler = require('./isobuild/bundler.js');
+  const bundle = bundler.bundle({
+    projectContext: projectContext,
+    outputPath: null,
+    buildOptions: {
+      minifyMode: 'development'
+    }
+  });
+
+  const displayName = options.packageDir ? 'package' : 'app';
+  if (bundle.errors) {
+    Console.error(
+      `=> Errors building your ${displayName}:\n\n${bundle.errors.formatMessages()}`
+    );
+    throw main.ExitWithCode(2);
+  }
+
+  if (bundle.warnings) {
+    Console.warn(bundle.warnings.formatMessages());
+    return 1;
+  }
+
+  return 0;
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // mongo
@@ -1154,7 +1244,7 @@ main.registerCommand({
   projectContext.packageMapDelta.displayOnConsole();
 
   var buildOptions = {
-    minify: ! options.debug,
+    minifyMode: options.debug ? 'development' : 'production',
     includeDebug: options.debug,
     serverArch: buildArch
   };
@@ -1329,7 +1419,10 @@ main.registerCommand({
 
     // This could theoretically be useful/necessary in conjunction with
     // --test-app-path.
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+
+    // Don't print linting messages for tested packages
+    'no-lint': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1390,7 +1483,8 @@ main.registerCommand({
     projectDirForLocalPackages: options.appDir,
     explicitlyAddedLocalPackageDirs: packagesByPath,
     serverArchitectures: serverArchitectures,
-    allowIncompatibleUpdate: options['allow-incompatible-update']
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint']
   });
 
   main.captureAndExit("=> Errors while setting up tests:", function () {
@@ -1552,7 +1646,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
 
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
-    minify: options.production,
+    minifyMode: options.production ? 'production' : 'development',
     includeDebug: ! options.production
   };
 
