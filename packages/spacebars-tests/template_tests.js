@@ -3417,3 +3417,17 @@ Tinytest.add("spacebars-tests - template_tests - #each takes multiple arguments"
   var div = renderToDiv(tmpl);
   test.equal(canonicalizeHtml(div.innerHTML), "<div>a</div><div>b</div><div>c</div>");
 });
+
+Tinytest.add("spacebars-tests - template_tests - lexical scope doesn't leak", function (test) {
+  // make sure '@index' doesn't leak into subtemplates
+  var tmpl = Template.spacebars_template_test_lexical_leakage;
+  tmpl.helpers({
+    list: ['a', 'b', 'c']
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML),
+             ["<div><span>0</span><span></span></div>",
+              "<div><span>1</span><span></span></div>",
+              "<div><span>2</span><span></span></div>"].join(''));
+});
