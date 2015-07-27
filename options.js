@@ -31,9 +31,7 @@ exports.getDefaults = function getDefaults(features) {
 
   if (features) {
     if (features.meteorAsyncAwait) {
-      var plugins = options.plugins || [];
-      plugins.push(require.resolve("meteor-async-await"));
-      options.plugins = plugins;
+      addPlugin(options, "./plugins/async-await.js");
       options.whitelist.push("es7.asyncFunctions");
     }
 
@@ -48,7 +46,21 @@ exports.getDefaults = function getDefaults(features) {
         "react.displayName"
       );
     }
+
+    if (features.jscript) {
+      addPlugin(options, "./plugins/named-function-expressions.js", true);
+    }
   }
 
   return options;
 };
+
+function addPlugin(options, relativePath, after) {
+  var plugins = options.plugins || [];
+  var absolutePath = require.resolve(relativePath);
+  if (after) {
+    absolutePath += ":after";
+  }
+  plugins.push(absolutePath);
+  options.plugins = plugins;
+}
