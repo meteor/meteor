@@ -58,7 +58,12 @@ var runVelocity = function (url) {
                   console.log("PASSED", testDesc);
                 } else if (msg.fields.result === "failed") {
                   console.error("FAILED", testDesc);
-                  console.log(msg.fields.failureStackTrace);
+                  if (msg.fields.failureMessage) {
+                    console.error(msg.fields.failureMessage);
+                  }
+                  if (msg.fields.failureStackTrace) {
+                    console.error(msg.fields.failureStackTrace);
+                  }
                 }
               }
             }
