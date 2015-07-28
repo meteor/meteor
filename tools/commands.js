@@ -392,6 +392,14 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
+  var errorAppConfig = {};
+  errorAppConfig.projectContext = new projectContextModule.ProjectContext({
+    projectDir: '/Users/anubhavjain/Documents/playpen/my-errors-app',
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint']
+  });
+  errorAppConfig.appPort = 8600;
+
   var runAll = require('./run-all.js');
   return runAll.run({
     projectContext: projectContext,
@@ -411,7 +419,8 @@ function doRunCommand (options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: mobileServer,
     once: options.once,
-    extraRunners: runners
+    extraRunners: runners,
+    errorAppConfig: errorAppConfig
   });
 }
 

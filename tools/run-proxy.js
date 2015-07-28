@@ -1,6 +1,11 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
+var isopackets = require('./isopackets.js');
+
+var getLoadedPackages = function () {
+  return isopackets.load('ddp');
+};
 
 // options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
@@ -11,6 +16,8 @@ var Proxy = function (options) {
   // note: run-all.js updates proxyToPort directly
   self.proxyToPort = options.proxyToPort;
   self.proxyToHost = options.proxyToHost || '127.0.0.1';
+  self.proxyToErrorPort = options.proxyToErrorPort;
+  self.proxyToErrorApp = options.proxyToErrorApp || '127.0.0.1';
   self.onFailure = options.onFailure || function () {};
 
   self.mode = "hold";
@@ -36,6 +43,11 @@ _.extend(Proxy.prototype, {
     var http = require('http');
     var net = require('net');
     var httpProxy = require('http-proxy');
+
+    var errorAppConnection = getLoadedPackages()['ddp-client'].DDP.connect(
+      'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
+    );
+    console.log('error app ddp connection', errorAppConnection);
 
     self.proxy = httpProxy.createProxyServer({
       // agent is required to handle keep-alive, and http-proxy 1.0 is a little
@@ -174,14 +186,17 @@ _.extend(Proxy.prototype, {
       if (self.mode === "errorpage") {
         // XXX serve an app that shows the logs nicely and that also
         // knows how to reload when the server comes back up
+        /*
         c.res.writeHead(200, {'Content-Type': 'text/plain'});
         c.res.write("Your app is crashing. Here's the latest log.\n\n");
 
         _.each(runLog.getLog(), function (item) {
           c.res.write(item.message + "\n");
         });
-
-        c.res.end();
+        c.res.end(); */
+        self.proxy.web(c.req, c.res, {
+          target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
+        })
       } else {
         self.proxy.web(c.req, c.res, {
           target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
@@ -194,9 +209,15 @@ _.extend(Proxy.prototype, {
         break;
 
       var c = self.websocketQueue.shift();
-      self.proxy.ws(c.req, c.socket, c.head, {
-        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
-      });
+      if (self.mode === "errorpage") {
+        self.proxy.ws(c.req, c.socket, c.head, {
+          target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
+        });
+      } else {
+        self.proxy.ws(c.req, c.socket, c.head, {
+          target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
+        });
+      }
     }
   },
 
@@ -208,6 +229,7 @@ _.extend(Proxy.prototype, {
   //
   // The initial mode is "hold".
   setMode: function (mode) {
+    console.log("changing mode to be :", mode);
     var self = this;
     self.mode = mode;
     self._tryHandleConnections();
