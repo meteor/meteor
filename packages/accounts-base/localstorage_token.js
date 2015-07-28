@@ -80,7 +80,7 @@ Ap._storedUserId = function () {
 Ap._unstoreLoginTokenIfExpiresSoon = function () {
   var tokenExpires = this._storedLoginTokenExpires();
   if (tokenExpires && this._tokenExpiresSoon(new Date(tokenExpires))) {
-    self._unstoreLoginToken();
+    this._unstoreLoginToken();
   }
 };
 
