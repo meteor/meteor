@@ -44,11 +44,6 @@ _.extend(Proxy.prototype, {
     var net = require('net');
     var httpProxy = require('http-proxy');
 
-    var errorAppConnection = getLoadedPackages()['ddp-client'].DDP.connect(
-      'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
-    );
-    console.log('error app ddp connection', errorAppConnection);
-
     self.proxy = httpProxy.createProxyServer({
       // agent is required to handle keep-alive, and http-proxy 1.0 is a little
       // buggy without it: https://github.com/nodejitsu/node-http-proxy/pull/488
@@ -207,9 +202,18 @@ _.extend(Proxy.prototype, {
     while (self.websocketQueue.length) {
       if (self.mode !== "proxy")
         break;
+      var done = false;
 
       var c = self.websocketQueue.shift();
       if (self.mode === "errorpage") {
+        if (!done) {
+          var DDP = isopackets.load('ddp')['ddp-client'].DDP
+          var errorAppConnection = DDP.connect(
+            'localhost' + ':' + self.proxyToErrorPort
+          );
+          console.log('error app ddp connection', errorAppConnection);
+        }
+
         self.proxy.ws(c.req, c.socket, c.head, {
           target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
         });
