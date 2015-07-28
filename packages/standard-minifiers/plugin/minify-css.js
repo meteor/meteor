@@ -79,8 +79,12 @@ var mergeCss = function (css) {
   var mergedCssAst = CssTools.mergeCssAsts(cssAsts, warnCb);
 
   // Overwrite the CSS files list with the new concatenated file
-  var stringifiedCss = CssTools.stringifyCss(mergedCssAst,
-                                             { sourcemap: true });
+  var stringifiedCss = CssTools.stringifyCss(mergedCssAst, {
+    sourcemap: true,
+    // don't try to read the referenced sourcemaps from the input
+    inputSourcemaps: false
+  });
+
   if (! stringifiedCss.code) {
     return { code: '' };
   }
