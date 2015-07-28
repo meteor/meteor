@@ -17,13 +17,11 @@ Package.registerBuildPlugin({
   // XXX maybe uglify should be applied by this plugin instead of via magic
   // weak dependency.
   use: [
-    'minifiers',
-    'spacebars-compiler',
-    'caching-compiler',
-    'ecmascript'
+    'caching-html-compiler',
+    'ecmascript',
+    'templating-tools'
   ],
   sources: [
-    'plugin/html_scanner.js',
     'plugin/compile-templates.js'
   ]
 });
@@ -47,28 +45,4 @@ Package.onUse(function (api) {
   api.imply(['meteor', 'blaze', 'spacebars'], 'client');
 
   api.addFiles(['dynamic.html', 'dynamic.js'], 'client');
-});
-
-Package.onTest(function (api) {
-  api.use('tinytest');
-  api.use('htmljs');
-  api.use('templating');
-  api.use('underscore');
-  api.use([
-    'test-helpers',
-    'session',
-    'tracker',
-    'minimongo',
-    'reactive-var',
-    'spacebars'
-  ], 'client');
-  api.use('spacebars-compiler');
-  api.use('minifiers'); // ensure compiler output is beautified
-
-  api.addFiles([
-    'plugin/html_scanner.js',
-    'scanner_tests.js'
-  ], 'server');
-
-  api.addFiles(["dynamic_tests.html", "dynamic_tests.js"], "client");
 });
