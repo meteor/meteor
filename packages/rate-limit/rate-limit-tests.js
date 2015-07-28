@@ -31,12 +31,12 @@ Tinytest.add('rate limit tests - Check single rule with multiple ' +
     r = new RateLimiter();
     var userIdOne = 1;
     var restrictJustUserIdOneRule = {
-      userId: myUserId,
+      userId: userIdOne,
       IPAddr: null,
       method: null
     };
 
-    r.addRule(restrictJustUserId1Rule, 1, 1000);
+    r.addRule(restrictJustUserIdOneRule, 1, 1000);
     var connectionHandle = createTempConnectionHandle(123, '127.0.0.1');
     var methodInvc1 = createTempMethodInvocation(userIdOne, connectionHandle,
       'login');
@@ -58,7 +58,7 @@ testAsyncMulti("rate limit tests - Run multiple invocations and wait for one" +
     self.userIdOne = 1;
     self.userIdTwo = 2;
     self.restrictJustUserIdOneRule = {
-      userId: myUserId,
+      userId: self.userIdOne,
       IPAddr: null,
       method: null
     };
@@ -273,10 +273,10 @@ Tinytest.add("rate limit tests - test matchRule method", function (test) {
   }
 
   var oneNotNullId = r.addRule(oneNotNullRule);
-  test.equal(r.rules[oneNotNullId].match(RateLimiterInput), false);
+  test.equal(r.rules[oneNotNullId].match(rateLimiterInput), false);
 
   oneNotNullRule.userId = 1023;
-  test.equal(r.rules[oneNotNullId].match(RateLimiterInput), true);
+  test.equal(r.rules[oneNotNullId].match(rateLimiterInput), true);
 
   var notCompleteInput = {
     userId: 102,
