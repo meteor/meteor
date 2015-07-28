@@ -124,6 +124,15 @@ var runVelocity = function (url) {
           ['-c',
            ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
             phantomScript + "\nEND\n")]);
+        var prependPhantomJSOutput = function (data) {
+          return data.toString().replace(/^(.+)$/gm, '[PhantomJS] $1');
+        };
+        browserProcess.stdout.on('data', function (data) {
+          process.stdout.write(prependPhantomJSOutput(data));
+        });
+        browserProcess.stderr.on('data', function (data) {
+          process.stderr.write(prependPhantomJSOutput(data));
+        });
         browserProcesses.push(browserProcess);
       }
 
