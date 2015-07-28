@@ -35,7 +35,7 @@ Migrations = {
 }
 
 // collection holding the control record
-Migrations._collection = new Meteor.Collection('migrations');
+Migrations._collection = new Mongo.Collection('migrations');
 
 Meteor.startup(function () {
   if (process.env.MIGRATE)
