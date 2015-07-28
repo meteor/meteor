@@ -169,6 +169,9 @@ _.extend(exports, {
 
     // This should never, ever be false, or else why are you using SSL?
     options.forceSSL = true;
+    if (process.env.METEOR_ADDITIONAL_CERT) {
+      options.ca = require('fs').readFileSync(process.env.METEOR_ADDITIONAL_CERT);
+    }
 
     // followRedirect is very dangerous because request does not
     // appear to segregate cookies by origin, so any cookies (and
