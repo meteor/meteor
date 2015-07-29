@@ -19,8 +19,13 @@ exports.parse = function (err) {
 
   frames.shift(); // at least the first line is the exception
 
-  // XXX assumes this can only happen once; I don't actually know enough about
-  // fibers to know if it can happen multiple times
+  // "    - - - - -"
+  // This is something added when you throw an Error through a Future. The
+  // stack above the dashes is the stack of the 'wait' call; the stack below
+  // is the stack inside the fiber where the Error is originally
+  // constructed.
+  // XXX This code assumes that the stack trace can only be split once. It's not
+  // clear whether this can happen multiple times.
   var indexOfFiberSplit = frames.indexOf("    - - - - -");
 
   if (indexOfFiberSplit === -1) {
@@ -28,9 +33,13 @@ exports.parse = function (err) {
     return parseStackFrames(frames);
   }
 
+  // If this is a split stack trace from a future, parse the frames above and
+  // below the split separately.
   var outsideFiber = parseStackFrames(frames);
   var insideFiber = parseStackFrames(frames.slice(indexOfFiberSplit + 1));
 
+  // Put the frames below the split at the top of the printed stack trace, since
+  // they are more likely to contain the code that actually threw the error.
   return insideFiber.concat(outsideFiber);
 };
 
@@ -102,13 +111,7 @@ function parseStackFrames(frames) {
         column: m[5] ? +m[5] : undefined
       });
     } else if (m = frame.match(/^\s*-\s*-\s*-\s*-\s*-\s*$/)) {
-      // "    - - - - -"
-      // This is something added when you throw an Error through a future. The
-      // stack above the dashes is the stack of the 'wait' call; the stack below
-      // is the stack inside the fiber where the Error is originally
-      // constructed. Taking just the former seems good for now, but in the
-      // future we may want to sew them together (possibly in the opposite
-      // order?)
+      // Stop parsing if we reach a stack split from a Future
       stop = true;
     } else if (_.isEmpty(ret)) {
       // We haven't found any stack frames, so probably we have newlines in the
