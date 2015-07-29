@@ -2,7 +2,7 @@ var _ = require('underscore');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
 var isopackets = require('./isopackets.js');
-
+var errorAppConnection = null;
 var getLoadedPackages = function () {
   return isopackets.load('ddp');
 };
@@ -202,18 +202,9 @@ _.extend(Proxy.prototype, {
     while (self.websocketQueue.length) {
       if (self.mode !== "proxy")
         break;
-      var done = false;
 
       var c = self.websocketQueue.shift();
       if (self.mode === "errorpage") {
-        if (!done) {
-          var DDP = isopackets.load('ddp')['ddp-client'].DDP
-          var errorAppConnection = DDP.connect(
-            'localhost' + ':' + self.proxyToErrorPort
-          );
-          console.log('error app ddp connection', errorAppConnection);
-        }
-
         self.proxy.ws(c.req, c.socket, c.head, {
           target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
         });
@@ -233,9 +224,17 @@ _.extend(Proxy.prototype, {
   //
   // The initial mode is "hold".
   setMode: function (mode) {
-    console.log("changing mode to be :", mode);
     var self = this;
     self.mode = mode;
+    if (mode == "errorpage") {
+        var DDP = isopackets.load('ddp')['ddp-client'].DDP
+        errorAppConnection = DDP.connect('localhost:8600');
+        var errorMessageToSend = "";
+        _.each(runLog.getLog(), function(item) {
+          errorMessageToSend += item.message + " \n ";
+        });
+        errorAppConnection.call('setErrorMessage', errorMessageToSend);
+    }
     self._tryHandleConnections();
   }
 });
