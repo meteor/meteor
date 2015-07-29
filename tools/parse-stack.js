@@ -73,8 +73,8 @@ export function markTop(f) {
 }
 
 function parseStackFrames(frames) {
-  const stop = false;
-  const ret = [];
+  let stop = false;
+  let ret = [];
   frames.forEach((frame) => {
     if (stop) {
       return;
