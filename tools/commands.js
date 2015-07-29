@@ -1130,6 +1130,9 @@ main.registerCommand({
 
 main.registerCommand({
   name: 'reset',
+  options: {
+    'yes': { type: Boolean, short: 'y' }
+  },
   // Doesn't actually take an argument, but we want to print an custom
   // error message if they try to pass one.
   maxArgs: 1,
@@ -1147,6 +1150,23 @@ main.registerCommand({
       Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
+
+  // Project Reset Confirmation Dialog
+  if (options.yes !== true) {
+    Console.warn('meteor reset will delete your local database.');
+
+    var confirmReset = Console.readLine({
+      prompt: "Are you sure (Y/n)? ",
+      stream: process.stderr
+    });
+
+    confirmReset = confirmReset.trim().toLowerCase();
+
+    if (!(confirmReset === 'y' || confirmReset === 'yes')) {
+      Console.info('Project reset cancelled.');
+      return 1;
+    };
+  };
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
