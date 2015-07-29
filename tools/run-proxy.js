@@ -227,7 +227,8 @@ _.extend(Proxy.prototype, {
     var self = this;
     self.mode = mode;
     if (mode == "errorpage") {
-        var DDP = isopackets.load('ddp')['ddp-client'].DDP
+        var DDP = isopackets.load('ddp')['ddp-client'].DDP;
+        // XXX Check if connection is alive before restarting a DDP conn
         errorAppConnection = DDP.connect('localhost:8600');
         var errorMessageToSend = "";
         _.each(runLog.getLog(), function(item) {

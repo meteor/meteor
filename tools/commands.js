@@ -394,7 +394,7 @@ function doRunCommand (options) {
 
   var errorAppConfig = {};
   errorAppConfig.projectContext = new projectContextModule.ProjectContext({
-    projectDir: '/Users/anubhavjain/Documents/playpen/my-errors-app',
+    projectDir: '/Users/anubhavjain/Documents/playpen/compiler-error-app',
     allowIncompatibleUpdate: options['allow-incompatible-update'],
     lintAppAndLocalPackages: !options['no-lint']
   });
