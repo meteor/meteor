@@ -77,6 +77,26 @@ files.cwd = function () {
   return files.convertToStandardPath(process.cwd());
 };
 
+files.isCurrentDir = function (filepath) {
+  return (filepath === '.' || filepath === ('.' + path.sep));
+};
+
+files.isFileOfType = function (basePath, filePath, exts) {
+  var isHidden = /^\./.test(filePath);
+  if (isHidden)
+    return true;
+
+  var stats = files.stat(path.join(basePath, filePath));
+  if (stats.isDirectory())
+    return false;
+
+  var ext = path.extname(filePath);
+  if (ext == '' || _.contains(exts, ext))
+    return true;
+
+  return false;
+}
+
 // Determine if 'filepath' (a path, or omit for cwd) is within an app
 // directory. If so, return the top-level app directory.
 files.findAppDir = function (filepath) {
