@@ -13,7 +13,11 @@ var urlParser = Npm.require('url');
 // the _escaped_fragment_ protocol, so we need to hardcode a list
 // here. I shed a silent tear.
 Spiderable.userAgentRegExps = [
-    /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
+  /^facebookexternalhit/i,
+  /^linkedinbot/i,
+  /^twitterbot/i,
+  /^slackbot-linkexpanding/i
+];
 
 // how long to let phantomjs run before we kill it (and send down the
 // regular page instead). Users may modify this number.
