@@ -18,9 +18,50 @@ exports.parse = function (err) {
   var frames = err.stack.split('\n');
 
   frames.shift(); // at least the first line is the exception
+
+  // XXX assumes this can only happen once; I don't actually know enough about
+  // fibers to know if it can happen multiple times
+  var indexOfFiberSplit = frames.indexOf("    - - - - -");
+
+  if (indexOfFiberSplit === -1) {
+    // This is a normal stack trace, not a split fiber stack trace
+    return parseStackFrames(frames);
+  }
+
+  var outsideFiber = parseStackFrames(frames);
+  var insideFiber = parseStackFrames(frames.slice(indexOfFiberSplit + 1));
+
+  return insideFiber.concat(outsideFiber);
+};
+
+// Decorator. Mark the point at which a stack trace returned by
+// parse() should stop: no frames earlier than this point will be
+// included in the parsed stack. Confusingly, in the argot of the
+// times, you'd say that frames "higher up" than this or "above" this
+// will not be returned, but you'd also say that those frames are "at
+// the bottom of the stack". Frames below the bottom are the outer
+// context of the framework running the user's code.
+exports.markBottom = function (f) {
+  return function __bottom_mark__ () {
+    return f.apply(this, arguments);
+  };
+};
+
+// Decorator. Mark the point at which a stack trace returned by
+// parse() should begin: no frames later than this point will be
+// included in the parsed stack. The opposite of markBottom().
+// Frames above the top are helper functions defined by the
+// framework and executed by user code whose internal behavior
+// should not be exposed.
+exports.markTop = function (f) {
+  return function __top_mark__ () {
+    return f.apply(this, arguments);
+  };
+};
+
+function parseStackFrames(frames) {
   var stop = false;
   var ret = [];
-
   _.each(frames, function (frame) {
     if (stop)
       return;
@@ -78,29 +119,4 @@ exports.parse = function (err) {
   });
 
   return ret;
-};
-
-// Decorator. Mark the point at which a stack trace returned by
-// parse() should stop: no frames earlier than this point will be
-// included in the parsed stack. Confusingly, in the argot of the
-// times, you'd say that frames "higher up" than this or "above" this
-// will not be returned, but you'd also say that those frames are "at
-// the bottom of the stack". Frames below the bottom are the outer
-// context of the framework running the user's code.
-exports.markBottom = function (f) {
-  return function __bottom_mark__ () {
-    return f.apply(this, arguments);
-  };
-};
-
-// Decorator. Mark the point at which a stack trace returned by
-// parse() should begin: no frames later than this point will be
-// included in the parsed stack. The opposite of markBottom().
-// Frames above the top are helper functions defined by the
-// framework and executed by user code whose internal behavior
-// should not be exposed.
-exports.markTop = function (f) {
-  return function __top_mark__ () {
-    return f.apply(this, arguments);
-  };
-};
+}
