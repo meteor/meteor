@@ -22,3 +22,6 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
       "parse-stack-test.js");
   })();
 });
+
+// XXX I really want to add a test here for the crazy double-stack-trace Fiber
+// situation, but I don't know how to create it inside a test.
