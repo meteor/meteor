@@ -6,7 +6,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.use([
     'check',
-    'ejson' 
+    'ejson'
   ], 'server');
 
   api.use('routepolicy', 'server');
