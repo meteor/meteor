@@ -1,8 +1,8 @@
 #! /usr/bin/env ruby
 
 # This script takes two arguments:
-# 1. The name of a package - ex. ejson
-# 2. The name of an export - ex. EJSON
+# 1. The name of an export - ex. EJSON
+# 2. The name of a package - ex. ejson
 # It makes sure that if the export appears somewhere in package source code, the
 # name of the package appears somewhere in package.js for that package.
 
