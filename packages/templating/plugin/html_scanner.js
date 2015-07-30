@@ -197,6 +197,24 @@ html_scanner = {
         results.js += "\nTemplate.__checkName(" + nameLiteral + ");\n" +
           "Template[" + nameLiteral + "] = new Template(" +
           templateDotNameLiteral + ", " + renderFuncCode + ");\n";
+
+        // allow for <template> tags to have attribs attached
+        // see: https://github.com/meteor/meteor/issues/3980
+        if (hasAttribs) {
+          // store attributes in a unique namespace in the Template
+          results.js += "\nTemplate[" + nameLiteral + "][\"attributes\"] = {};"
+          for(var key in attribs) {
+            if (attribs.hasOwnProperty(key)) {
+              // don't duplicate name as it's stored under Template already
+              if (key == "name") { continue; }
+
+              var keyLiteral = JSON.stringify(key);
+              var valueLiteral = JSON.stringify(attribs[key]);
+              results.js += "\nTemplate[" + nameLiteral + "][\"attributes\"][" + keyLiteral + "] = " + valueLiteral + ";"
+            }
+          }
+        }
+
       } else {
         // <body>
         if (hasAttribs) {
