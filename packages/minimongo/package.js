@@ -13,6 +13,7 @@ Package.onUse(function (api) {
   api.use('geojson-utils');
   // This package is used to get diff results on arrays and objects
   api.use('diff-sequence');
+
   api.addFiles([
     'minimongo.js',
     'wrap_transform.js',

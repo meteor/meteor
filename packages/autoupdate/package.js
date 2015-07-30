@@ -9,15 +9,29 @@ Cordova.depends({
 });
 
 Package.onUse(function (api) {
-  api.use('webapp', 'server');
-  api.use(['tracker', 'retry'], 'client');
-  api.use(['ddp', 'mongo', 'underscore'], ['client', 'server']);
-  api.use('tracker', 'client');
-  api.use('reload', 'client', {weak: true});
-  api.use(['http', 'random'], 'web.cordova');
+  api.use([
+    'webapp',
+    'check'
+  ], 'server');
 
-  api.export('Autoupdate');
+  api.use([
+    'tracker',
+    'retry'
+  ], 'client');
+
+  api.use([
+    'ddp',
+    'mongo',
+    'underscore'
+  ], ['client', 'server']);
+
+  api.use('reload', 'client', {weak: true});
+
+  api.use(['http', 'random'], 'web.cordova');
+  
   api.addFiles('autoupdate_server.js', 'server');
   api.addFiles('autoupdate_client.js', 'web.browser');
   api.addFiles('autoupdate_cordova.js', 'web.cordova');
+
+  api.export('Autoupdate');
 });

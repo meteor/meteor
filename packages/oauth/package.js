@@ -4,9 +4,15 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use([
+    'check',
+    'ejson' 
+  ], 'server');
+
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
   api.use('mongo', 'server');
+
   api.use('reload', 'client');
   api.use('base64', 'client');
 

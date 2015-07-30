@@ -238,7 +238,11 @@ LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var collection = self.collection.name;
 
   // XXX minimongo should not depend on mongo-livedata!
-  return Mongo.Collection._publishCursor(self, sub, collection);
+  if (! Package.mongo) {
+    throw new Error("Can't publish from Minimongo without the `mongo` package.");
+  }
+
+  return Package.mongo.Mongo.Collection._publishCursor(self, sub, collection);
 };
 
 LocalCollection.Cursor.prototype._getCollectionName = function () {
