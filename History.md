@@ -1,5 +1,12 @@
 ## v.NEXT
 
+## v1.1.0.3, 2015-Jul-30
+
+### Accounts
+
+* When using Facebook API version 2.4, properly fetch `email` and other fields.
+  Facebook recently forced all new apps to use version 2.4 of their API.  #4743
+
 ## v1.1.0.2, 2015-Apr-06
 
 ### `meteor` command-line tool
