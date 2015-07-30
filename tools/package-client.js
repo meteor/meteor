@@ -10,7 +10,7 @@ var utils = require('./utils.js');
 var buildmessage = require('./buildmessage.js');
 var compiler = require('./isobuild/compiler.js');
 var authClient = require('./auth-client.js');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog/catalog.js');
 var projectContextModule = require('./project-context.js');
 var colonConverter = require("./colon-converter.js");
 

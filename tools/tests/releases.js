@@ -1,7 +1,7 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 

@@ -17,8 +17,8 @@ var tropohouse = require('../tropohouse.js');
 var PackageSource = require('../isobuild/package-source.js');
 var bundler = require('../isobuild/bundler.js');
 var compiler = require('../isobuild/compiler.js');
-var catalog = require('../catalog.js');
-var catalogRemote = require('../catalog-remote.js');
+var catalog = require('../catalog/catalog.js');
+var catalogRemote = require('../catalog/catalog-remote.js');
 var stats = require('../stats.js');
 var isopack = require('../isobuild/isopack.js');
 var updater = require('../updater.js');
@@ -28,6 +28,7 @@ var projectContextModule = require('../project-context.js');
 var packageMapModule = require('../package-map.js');
 var packageVersionParser = require('../package-version-parser.js');
 var colonConverter = require("../colon-converter.js");
+var catalogUtils = require('../catalog/catalog-utils.js');
 
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if
@@ -1945,7 +1946,7 @@ main.registerCommand({
   if (messages.hasMessages()) {
     Console.arrowError("Errors while parsing arguments:", 1);
     Console.printMessages(messages);
-    utils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
+    catalogUtils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
     return 1;
   }
 
@@ -1958,7 +1959,7 @@ main.registerCommand({
   if (messages.hasMessages()) {
     Console.arrowError("Errors while adding packages:", 1);
     Console.printMessages(messages);
-    utils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
+    catalogUtils.explainIfRefreshFailed();  // this is why we're not using captureAndExit
     return 1;
   }
 
@@ -2219,7 +2220,7 @@ main.registerCommand({
   // We get this as an argument, so it is an OS path. Make it a standard path.
   var outputDirectory = files.convertToStandardPath(options.args[1]);
 
-  var trackAndVersion = utils.splitReleaseName(releaseNameAndVersion);
+  var trackAndVersion = catalogUtils.splitReleaseName(releaseNameAndVersion);
   var releaseTrack = trackAndVersion[0];
   var releaseVersion = trackAndVersion[1];
 

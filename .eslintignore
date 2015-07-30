@@ -13,9 +13,10 @@ tools/archinfo.js
 tools/auth-client.js
 tools/auth.js
 tools/buildmessage.js
-tools/catalog-local.js
-tools/catalog-remote.js
-tools/catalog.js
+tools/catalog/catalog-local.js
+tools/catalog/catalog-remote.js
+tools/catalog/catalog.js
+tools/catalog/catalog-utils.js
 tools/cleanup.js
 tools/colon-converter.js
 tools/cli/commands-cordova.js

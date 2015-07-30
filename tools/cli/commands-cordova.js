@@ -13,7 +13,7 @@ var tropohouse = require('../tropohouse.js');
 var httpHelpers = require('../http-helpers.js');
 var Console = require('../console.js').Console;
 var processes = require('../processes.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 var release = require('../release.js');
 
 // XXX hard-coded the use of default tropohouse

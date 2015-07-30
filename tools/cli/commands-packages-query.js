@@ -4,7 +4,7 @@
 var _ = require('underscore');
 var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 var Console = require("../console.js").Console;
 var files = require('../files.js');
 var isopackets = require('../isopackets.js');
@@ -12,6 +12,7 @@ var main = require('./main.js');
 var packageVersionParser = require('../package-version-parser.js');
 var projectContextModule = require('../project-context.js');
 var utils = require('../utils.js');
+var catalogUtils = require('../catalog/catalog-utils.js');
 var compiler = require('../isobuild/compiler.js');
 
 // We want these queries to be relatively fast, so we will only refresh the
@@ -168,7 +169,7 @@ var getTempContext = function (options) {
 // Print an error message if the user asks about an unknown item.
 var itemNotFound = function (item) {
   Console.error(item + ": not found");
-  utils.explainIfRefreshFailed();
+  catalogUtils.explainIfRefreshFailed();
   return 1;
 };
 
@@ -1609,7 +1610,7 @@ main.registerCommand({
 
   if (!output) {
     Console.error(pattern + ': nothing found');
-    utils.explainIfRefreshFailed();
+    catalogUtils.explainIfRefreshFailed();
   } else {
     Console.info(
       "You can use", Console.command("'meteor show'"),

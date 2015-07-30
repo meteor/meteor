@@ -3,7 +3,7 @@ var files = require('./files.js');
 var utils = require('./utils.js');
 var parseStack = require('./parse-stack.js');
 var release = require('./release.js');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog/catalog.js');
 var archinfo = require('./archinfo.js');
 var Future = require('fibers/future');
 var isopackets = require("./isopackets.js");
@@ -13,7 +13,7 @@ var util = require('util');
 var child_process = require('child_process');
 var webdriver = require('browserstack-webdriver');
 var phantomjs = require('phantomjs');
-var catalogRemote = require('./catalog-remote.js');
+var catalogRemote = require('./catalog/catalog-remote.js');
 var Console = require('./console.js').Console;
 var tropohouseModule = require('./tropohouse.js');
 var packageMapModule = require('./package-map.js');
@@ -163,7 +163,7 @@ var newSelfTestCatalog = function () {
   if (! files.inCheckout())
     throw Error("Only can build packages from a checkout");
 
-  var catalogLocal = require('./catalog-local.js');
+  var catalogLocal = require('./catalog/catalog-local.js');
   var selfTestCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },

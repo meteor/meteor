@@ -2,7 +2,7 @@ var _ = require('underscore');
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
 var runLog = require('./run-log.js');
-var catalog = require('./catalog.js');
+var catalog = require('./catalog/catalog.js');
 var archinfo = require('./archinfo.js');
 var isopack = require('./isobuild/isopack.js');
 var utils = require('./utils.js');
@@ -107,6 +107,8 @@ var maybeShowBanners = function () {
   if (release.forced)
     return;
 
+  const catalogUtils = require('./catalog/catalog-utils.js');
+
   // Didn't print a banner? Maybe we have a patch release to recommend.
   var track = release.current.getReleaseTrack();
   var patchReleaseVersion = releaseData.patchReleaseVersion;
@@ -118,7 +120,7 @@ var maybeShowBanners = function () {
       if (shouldShow(patchKey)) {
         runLog.log(
           "=> A patch (" +
-          utils.displayRelease(track, patchReleaseVersion) +
+          catalogUtils.displayRelease(track, patchReleaseVersion) +
           ") for your current release is available!");
         runLog.log("   Update this project now with 'meteor update --patch'.");
       }
@@ -137,7 +139,7 @@ var maybeShowBanners = function () {
     var futureReleaseKey = "futurerelease-" + track + "-" + futureReleases[0];
     if (shouldShow(futureReleaseKey)) {
       runLog.log(
-        "=> " + utils.displayRelease(track, futureReleases[0]) +
+        "=> " + catalogUtils.displayRelease(track, futureReleases[0]) +
         " is available. Update this project with 'meteor update'.");
     }
     return;

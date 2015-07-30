@@ -292,7 +292,7 @@ exports.validatePackageNameOrExit = function (packageName, options) {
     Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file
-    var main = require('./main.js');
+    var main = require('./cli/main.js');
     throw new main.ExitWithCode(1);
   }
 };
@@ -382,35 +382,6 @@ exports.isDirectory = function (dir) {
     return false;
   }
   return stats.isDirectory();
-};
-
-// Options: noPrefix: do not display 'Meteor ' in front of the version number.
-exports.displayRelease = function (track, version, options) {
-  var catalog = require('./catalog.js');
-  options = options || {};
-  var prefix = options.noPrefix ? "" : "Meteor ";
-
-  if (track === catalog.DEFAULT_TRACK) {
-    return prefix + version;
-  } else {
-    return track + '@' + version;
-  }
-};
-
-exports.splitReleaseName = function (releaseName) {
-  var parts = releaseName.split('@');
-  var track, version;
-  if (parts.length === 1) {
-    var catalog = require('./catalog.js');
-    track = catalog.DEFAULT_TRACK;
-    version = parts[0];
-  } else {
-    track = parts[0];
-    // Do we forbid '@' sign in release versions? I sure hope so, but let's
-    // be careful.
-    version = parts.slice(1).join("@");
-  }
-  return [track, version];
 };
 
 // Calls cb with each subset of the array "total", with non-decreasing size,
@@ -706,17 +677,6 @@ exports.longformDate = function (date) {
 // (September is the longest month name, so "September 24th, 2014" would be an
 // example).
 exports.maxDateLength = "September 24th, 2014".length;
-
-// If we have failed to update the catalog, informs the user and advises them to
-// go online for up to date inforation.
-exports.explainIfRefreshFailed = function () {
-  var Console = require("./console.js").Console;
-  var catalog = require('./catalog.js');
-  if (catalog.official.offline || catalog.refreshFailed) {
-    Console.info("Your package catalog may be out of date.\n" +
-      "Please connect to the internet and try again.");
-  }
-};
 
 // Returns a sha256 hash of a given string.
 exports.sha256 = function (contents) {

@@ -12,7 +12,7 @@ var warehouse = require('../warehouse.js');
 var tropohouse = require('../tropohouse.js');
 var release = require('../release.js');
 var projectContextModule = require('../project-context.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 var buildmessage = require('../buildmessage.js');
 var httpHelpers = require('../http-helpers.js');
 

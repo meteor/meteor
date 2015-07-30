@@ -1585,6 +1585,8 @@ _.extend(Isopack.prototype, {
     var transpileRegexes = [
       /^tools\/[^\/]+\.js$/, // General tools files
       /^tools\/isobuild\/[^\/]+\.js$/, // Isobuild files
+      /^tools\/cli\/[^\/]+\.js$/, // CLI files
+      /^tools\/catalog\/[^\/]+\.js$/, // Catalog files
       // We don't support running self-test from an install anymore
     ];
 

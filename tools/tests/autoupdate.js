@@ -1,6 +1,6 @@
 var selftest = require('../selftest.js');
 var config = require("../config.js");
-var catalogRemote = require("../catalog-remote.js");
+var catalogRemote = require("../catalog/catalog-remote.js");
 var buildmessage = require("../buildmessage.js");
 var Sandbox = selftest.Sandbox;
 

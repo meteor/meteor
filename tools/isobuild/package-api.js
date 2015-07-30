@@ -5,7 +5,7 @@ var utils = require('../utils.js');
 var compiler = require('./compiler.js');
 var archinfo = require('../archinfo.js');
 var files = require('../files.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 
 function toArray (x) {
   if (_.isArray(x))

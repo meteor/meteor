@@ -5,7 +5,7 @@ var net = require('net');
 var Future = require('fibers/future');
 var _ = require('underscore');
 var files = require('../files.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 

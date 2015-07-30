@@ -11,7 +11,7 @@ var runLog = require('./run-log.js');
 var stats = require('./stats.js');
 var cordova = require('./cli/commands-cordova.js');
 var Console = require('./console.js').Console;
-var catalog = require('./catalog.js');
+var catalog = require('./catalog/catalog.js');
 var Profile = require('./profile.js').Profile;
 
 // Parse out s as if it were a bash command line.

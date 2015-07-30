@@ -1,7 +1,7 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
-var catalog = require('../catalog.js');
+var catalog = require('../catalog/catalog.js');
 
 function matchPath (text, doubleBS) {
   if (process.platform === 'win32')
@@ -62,7 +62,7 @@ selftest.define("source maps from built meteor tool", ['checkout'], function () 
 
   // Find the line number that is supposed to throw an error
   var commandsJs = files.readFile(files.pathJoin(
-    files.convertToStandardPath(__dirname), "../commands.js"), "utf8");
+    files.convertToStandardPath(__dirname), "../cli/commands.js"), "utf8");
 
   var lineNumber = 0;
   commandsJs.split("\n").some((line, index) => {
