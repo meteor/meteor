@@ -7,6 +7,7 @@ Package.onUse(function (api) {
   api.export(['Blaze', 'UI', 'Handlebars']);
   api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('tracker');
+  api.use('check');
   api.use('underscore'); // only the subset in microscore.js
   api.use('htmljs');
   api.imply('htmljs');

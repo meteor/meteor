@@ -10,7 +10,7 @@ root = File.join(File.dirname(__FILE__), "..", "..");
 
 Dir.chdir(root)
 
-file_list = `git grep -l '#{ARGV[0]}' packages/`.lines
+file_list = `git grep -lw '#{ARGV[0]}' packages/`.lines
 package_list = file_list.map do |filename|
   filename.split("/")[1]
 end
@@ -20,7 +20,7 @@ package_list = package_list.uniq
 package_list.each do |p|
   unless File.open("packages/#{p}/package.js").read.include? ARGV[1]
     puts "'#{ARGV[0]}' appears in #{p} but '#{ARGV[1]}' not in package.js. Files:"
-    puts `git grep -l '#{ARGV[0]}' packages/#{p}/`
+    puts `git grep '#{ARGV[0]}' packages/#{p}/`
     puts ""
   end
 end
