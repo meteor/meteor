@@ -18,10 +18,10 @@ tools/catalog-remote.js
 tools/catalog.js
 tools/cleanup.js
 tools/colon-converter.js
-tools/commands-cordova.js
-tools/commands-packages-query.js
-tools/commands-packages.js
-tools/commands.js
+tools/cli/commands-cordova.js
+tools/cli/commands-packages-query.js
+tools/cli/commands-packages.js
+tools/cli/commands.js
 tools/config.js
 tools/console.js
 tools/deploy.js
@@ -33,7 +33,7 @@ tools/http-helpers.js
 tools/inspector.js
 tools/isopackets.js
 tools/main-transpile-wrapper.js
-tools/main.js
+tools/cli/main.js
 tools/mongo-exit-codes.js
 tools/package-client.js
 tools/package-map.js

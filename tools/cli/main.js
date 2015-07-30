@@ -1,20 +1,20 @@
 var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
-  require('./profile-require.js').start();
+  require('../profile-require.js').start();
 
 var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var Console = require('./console.js').Console;
-var files = require('./files.js');
-var warehouse = require('./warehouse.js');
-var tropohouse = require('./tropohouse.js');
-var release = require('./release.js');
-var projectContextModule = require('./project-context.js');
-var catalog = require('./catalog.js');
-var buildmessage = require('./buildmessage.js');
-var httpHelpers = require('./http-helpers.js');
+var Console = require('../console.js').Console;
+var files = require('../files.js');
+var warehouse = require('../warehouse.js');
+var tropohouse = require('../tropohouse.js');
+var release = require('../release.js');
+var projectContextModule = require('../project-context.js');
+var catalog = require('../catalog.js');
+var buildmessage = require('../buildmessage.js');
+var httpHelpers = require('../http-helpers.js');
 
 var main = exports;
 
@@ -23,7 +23,7 @@ var main = exports;
 // Node 0.12, so when we upgrade let's remember to remove this clause, and the
 // file it requires. See https://github.com/joyent/node/issues/3584
 if (process.platform === "win32") {
-  require('./flush-buffers-on-exit-in-windows.js');
+  require('../flush-buffers-on-exit-in-windows.js');
 }
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -400,12 +400,12 @@ var springboard = function (rel, options) {
   if (process.env.METEOR_DEBUG_SPRINGBOARD)
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
-  var archinfo = require('./archinfo.js');
-  var isopack = require('./isobuild/isopack.js');
+  var archinfo = require('../archinfo.js');
+  var isopack = require('../isobuild/isopack.js');
 
   var toolsPkg = rel.getToolsPackage();
   var toolsVersion = rel.getToolsVersion();
-  var packageMapModule = require('./package-map.js');
+  var packageMapModule = require('../package-map.js');
   var versionMap = {};
   versionMap[toolsPkg] = toolsVersion;
   var packageMap = new packageMapModule.PackageMap(versionMap);
@@ -542,7 +542,7 @@ Fiber(function () {
 
   // Set up git hooks
   if (files.inCheckout()) {
-    var installGitHooks = require('./install-git-hooks.js');
+    var installGitHooks = require('../install-git-hooks.js');
     installGitHooks();
   }
 
@@ -745,7 +745,7 @@ Fiber(function () {
     appDir = files.pathResolve(appDir);
   }
 
-  require('./isopackets.js').ensureIsopacketsLoadable();
+  require('../isopackets.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk
@@ -974,7 +974,7 @@ Fiber(function () {
       // Let's do some processing here. If the user/release file specified a
       // track, we need to display that correctly, and if they didn't, we should
       // make it clear that we are talking about the default track.
-      var utils = require('./utils.js');
+      var utils = require('../utils.js');
       var trackAndVersion = utils.splitReleaseName(releaseName);
       var displayRelease = utils.displayRelease(
         trackAndVersion[0], trackAndVersion[1]);
@@ -1359,7 +1359,7 @@ Fiber(function () {
   // Now that we're ready to start executing the command, if we are in
   // startup time profiling mode, print the profile.
   if (showRequireProfile)
-    require('./profile-require.js').printReport();
+    require('../profile-require.js').printReport();
 
   Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);

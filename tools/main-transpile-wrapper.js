@@ -2,4 +2,4 @@
 require('./install-babel.js');
 
 // Run the Meteor command line tool
-require('./main.js');
+require('./cli/main.js');

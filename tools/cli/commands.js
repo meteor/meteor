@@ -1,29 +1,29 @@
 var main = require('./main.js');
 var _ = require('underscore');
-var files = require('./files.js');
-var deploy = require('./deploy.js');
-var buildmessage = require('./buildmessage.js');
-var warehouse = require('./warehouse.js');
-var auth = require('./auth.js');
-var authClient = require('./auth-client.js');
-var config = require('./config.js');
-var release = require('./release.js');
+var files = require('../files.js');
+var deploy = require('../deploy.js');
+var buildmessage = require('../buildmessage.js');
+var warehouse = require('../warehouse.js');
+var auth = require('../auth.js');
+var authClient = require('../auth-client.js');
+var config = require('../config.js');
+var release = require('../release.js');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js');
-var packageClient = require('./package-client.js');
-var utils = require('./utils.js');
-var httpHelpers = require('./http-helpers.js');
-var archinfo = require('./archinfo.js');
-var tropohouse = require('./tropohouse.js');
-var catalog = require('./catalog.js');
-var stats = require('./stats.js');
-var isopack = require('./isobuild/isopack.js');
+var runLog = require('../run-log.js');
+var packageClient = require('../package-client.js');
+var utils = require('../utils.js');
+var httpHelpers = require('../http-helpers.js');
+var archinfo = require('../archinfo.js');
+var tropohouse = require('../tropohouse.js');
+var catalog = require('../catalog.js');
+var stats = require('../stats.js');
+var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
-var execFileSync = require('./utils.js').execFileSync;
-var Console = require('./console.js').Console;
-var projectContextModule = require('./project-context.js');
-var colonConverter = require('./colon-converter.js');
-var PackageSource = require('./isobuild/package-source.js');
+var execFileSync = require('../utils.js').execFileSync;
+var Console = require('../console.js').Console;
+var projectContextModule = require('../project-context.js');
+var colonConverter = require('../colon-converter.js');
+var PackageSource = require('../isobuild/package-source.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -119,7 +119,7 @@ main.registerCommand({
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  var archinfo = require('./archinfo.js');
+  var archinfo = require('../archinfo.js');
   Console.rawInfo(archinfo.host() + "\n");
 });
 
@@ -383,7 +383,7 @@ function doRunCommand (options) {
     options.once = true;
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
-    var velocity = require('./run-velocity.js');
+    var velocity = require('../run-velocity.js');
     velocity.runVelocity(serverUrl);
   }
 
@@ -392,7 +392,7 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
-  var runAll = require('./run-all.js');
+  var runAll = require('../run-all.js');
   return runAll.run({
     projectContext: projectContext,
     proxyPort: parsedUrl.port,
@@ -450,7 +450,7 @@ main.registerCommand({
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
-    require('./shell-client.js').connect(
+    require('../shell-client.js').connect(
       files.convertToOSPath(projectContext.getMeteorShellDirectory())
     );
 
@@ -553,7 +553,7 @@ main.registerCommand({
     };
 
     try {
-      files.cp_r(files.pathJoin(__dirnameConverted, 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirnameConverted, '..', 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
         },
@@ -600,7 +600,7 @@ main.registerCommand({
     }
   }
 
-  var exampleDir = files.pathJoin(__dirnameConverted, '..', 'examples');
+  var exampleDir = files.pathJoin(__dirnameConverted, '..', '..', 'examples');
   var examples = _.reject(files.readdir(exampleDir), function (e) {
     return (e === 'unfinished' || e === 'other'  || e[0] === '.');
   });
@@ -661,7 +661,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(files.pathJoin(__dirnameConverted, 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirnameConverted, '..', 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },
@@ -698,7 +698,7 @@ main.registerCommand({
 
     // Any upgrader that is in this version of Meteor doesn't need to be run on
     // this project.
-    var upgraders = require('./upgraders.js');
+    var upgraders = require('../upgraders.js');
     projectContext.finishedUpgraders.appendUpgraders(upgraders.allUpgraders());
 
     projectContext.prepareProjectForBuild();
@@ -894,7 +894,7 @@ var buildCommand = function (options) {
     projectContext: projectContext
   });
 
-  var bundler = require('./isobuild/bundler.js');
+  var bundler = require('../isobuild/bundler.js');
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
     outputPath: bundlePath,
@@ -1030,7 +1030,7 @@ main.registerCommand({
   });
 
   const bundlePath = projectContext.getProjectLocalDirectory('build');
-  const bundler = require('./isobuild/bundler.js');
+  const bundler = require('../isobuild/bundler.js');
   const bundle = bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
@@ -1077,7 +1077,7 @@ main.registerCommand({
   if (options.args.length === 0) {
     // localhost mode
     var findMongoPort =
-      require('./run-mongo.js').findMongoPort;
+      require('../run-mongo.js').findMongoPort;
     var mongoPort = findMongoPort(options.appDir);
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
@@ -1118,7 +1118,7 @@ main.registerCommand({
     if (usedMeteorAccount)
       auth.maybePrintRegistrationLink();
     process.stdin.pause();
-    var runMongo = require('./run-mongo.js');
+    var runMongo = require('../run-mongo.js');
     runMongo.runMongoShell(mongoUrl);
     throw new main.WaitForExit;
   }
@@ -1150,7 +1150,7 @@ main.registerCommand({
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
-  var findMongoPort = require('./run-mongo.js').findMongoPort;
+  var findMongoPort = require('../run-mongo.js').findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
     Console.error("reset: Meteor is running.");
@@ -1582,7 +1582,7 @@ main.registerCommand({
   if (options.velocity) {
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
-    var velocity = require('./run-velocity.js');
+    var velocity = require('../run-velocity.js');
     velocity.runVelocity(serverUrl);
   }
 
@@ -1667,7 +1667,7 @@ var runTestAppForPackages = function (projectContext, options) {
       recordPackageUsage: false
     });
   } else {
-    var runAll = require('./run-all.js');
+    var runAll = require('../run-all.js');
     return runAll.run({
       projectContext: projectContext,
       proxyPort: options.port,
@@ -1705,7 +1705,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never(),
   'allow-incompatible-update': { type: Boolean }
 }, function (options) {
-  var projectContextModule = require('./project-context.js');
+  var projectContextModule = require('../project-context.js');
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     forceRebuildPackages: options.args.length ? options.args : true,
@@ -1930,13 +1930,13 @@ main.registerCommand({
     return 1;
   }
 
-  var selftest = require('./selftest.js');
+  var selftest = require('../selftest.js');
 
   // Auto-detect whether to skip 'net' tests, unless --force-online is passed.
   var offline = false;
   if (!options['force-online']) {
     try {
-      require('./http-helpers.js').getUrl("http://www.google.com/");
+      require('../http-helpers.js').getUrl("http://www.google.com/");
     } catch (e) {
       if (e instanceof files.OfflineError)
         offline = true;

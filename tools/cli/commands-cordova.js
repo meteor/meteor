@@ -3,18 +3,18 @@ var _ = require('underscore');
 var util = require('util');
 var path = require('path');
 var chalk = require('chalk');
-var files = require('./files.js');
-var buildmessage = require('./buildmessage.js');
-var projectContextModule = require('./project-context.js');
+var files = require('../files.js');
+var buildmessage = require('../buildmessage.js');
+var projectContextModule = require('../project-context.js');
 var Future = require('fibers/future');
-var utils = require('./utils.js');
-var archinfo = require('./archinfo.js');
-var tropohouse = require('./tropohouse.js');
-var httpHelpers = require('./http-helpers.js');
-var Console = require('./console.js').Console;
-var processes = require('./processes.js');
-var catalog = require('./catalog.js');
-var release = require('./release.js');
+var utils = require('../utils.js');
+var archinfo = require('../archinfo.js');
+var tropohouse = require('../tropohouse.js');
+var httpHelpers = require('../http-helpers.js');
+var Console = require('../console.js').Console;
+var processes = require('../processes.js');
+var catalog = require('../catalog.js');
+var release = require('../release.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;
@@ -212,7 +212,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
                       process.env,
                       opts.env || {});
 
-  var execFileAsync = require('./utils.js').execFileAsync;
+  var execFileAsync = require('../utils.js').execFileAsync;
 
   var p = execFileAsync(file, args, opts);
   p.on('close', function (code) {
@@ -228,7 +228,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 };
 
 var execFileSyncOrThrow = function (file, args, opts) {
-  var execFileSync = require('./utils.js').execFileSync;
+  var execFileSync = require('../utils.js').execFileSync;
 
   verboseLog('Running synchronously: ', file, args);
 
@@ -277,7 +277,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
 };
 
 var getLoadedPackages = function () {
-  var isopackets = require("./isopackets.js");
+  var isopackets = require("../isopackets.js");
   return isopackets.load('cordova-support');
 };
 
@@ -342,7 +342,7 @@ var generateCordovaBoilerplate = function (projectContext, clientDir, options) {
 // options
 //  - debug
 var getBundle = function (projectContext, bundlePath, options) {
-  var bundler = require('./isobuild/bundler.js');
+  var bundler = require('../isobuild/bundler.js');
 
   var bundleResult = bundler.bundle({
     projectContext: projectContext,
@@ -754,7 +754,7 @@ var fetchCordovaPluginFromShaUrl =
   var pluginPath = files.pathJoin(localPluginsDir, pluginName);
   var pluginTarballPath = pluginPath + '.tgz';
 
-  var execFileSync = require('./utils.js').execFileSync;
+  var execFileSync = require('../utils.js').execFileSync;
   var whichCurl = execFileSync('which', ['curl']);
 
   var downloadProcess = null;
@@ -2080,7 +2080,7 @@ _.extend(IOS.prototype, {
   },
 
   killSimulator: function () {
-    var execFileSync = require('./utils.js').execFileSync;
+    var execFileSync = require('../utils.js').execFileSync;
     execFileSync('killall', ['iOS Simulator']);
     execFileSync('killall', ['iPhone Simulator']);
   }

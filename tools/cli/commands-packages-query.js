@@ -2,17 +2,17 @@
 // contained in the Meteor Package Server. They also deal with presenting this
 // to the user in various human or machine-readable ways.
 var _ = require('underscore');
-var archinfo = require('./archinfo.js');
-var buildmessage = require('./buildmessage.js');
-var catalog = require('./catalog.js');
-var Console = require("./console.js").Console;
-var files = require('./files.js');
-var isopackets = require('./isopackets.js');
+var archinfo = require('../archinfo.js');
+var buildmessage = require('../buildmessage.js');
+var catalog = require('../catalog.js');
+var Console = require("../console.js").Console;
+var files = require('../files.js');
+var isopackets = require('../isopackets.js');
 var main = require('./main.js');
-var packageVersionParser = require('./package-version-parser.js');
-var projectContextModule = require('./project-context.js');
-var utils = require('./utils.js');
-var compiler = require('./isobuild/compiler.js');
+var packageVersionParser = require('../package-version-parser.js');
+var projectContextModule = require('../project-context.js');
+var utils = require('../utils.js');
+var compiler = require('../isobuild/compiler.js');
 
 // We want these queries to be relatively fast, so we will only refresh the
 // catalog if it is > 15 minutes old
