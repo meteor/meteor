@@ -132,6 +132,37 @@ var upgradersByName = {
     projectContext.projectConstraintsFile.addConstraints(
       ['standard-minifiers']);
     projectContext.projectConstraintsFile.writeIfModified();
+  },
+
+  "1.2.0-meteor-platform-split": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    // meteor-platform is split into a series of smaller umbrella packages
+    // Only run this upgrader if the app has meteor-platform
+    if (packagesFile.getConstraint('meteor-platform')) {
+      packagesFile.removePackages(['meteor-platform']);
+
+      packagesFile.addConstraints([
+        // These packages replace meteor-platform in newly created apps
+        'meteor-base',
+        'mobile-experience',
+        'mongo',
+        'blaze-html-templates',
+        'session',
+        'jquery',
+        'tracker',
+
+        // These packages are not in newly created apps, but were in
+        // meteor-platform so we need to add them just in case
+        'logging',
+        'reload',
+        'random',
+        'ejson',
+        'spacebars',
+        'check',
+      ].map((pkgName) => {return {package: pkgName}}));
+
+      packagesFile.writeIfModified();
+    }
   }
 
   ////////////

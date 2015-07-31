@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "Publish the entire database to all clients",
+  summary: "(For prototyping only) Publish the entire database to all clients",
   version: '1.0.4-plugins.0'
 });
 
