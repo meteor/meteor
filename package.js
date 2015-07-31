@@ -6,17 +6,21 @@ Package.describe({
 // These tests are in a separate package to avoid a circular dependency
 // between the `spacebars` and `templating` packages.
 Package.onTest(function (api) {
-  api.use('underscore');
-  api.use('spacebars');
-  api.use('tinytest');
-  api.use('jquery');
-  api.use('test-helpers');
-  api.use('reactive-var');
-  api.use('showdown');
-  api.use('minimongo');
-  api.use('tracker');
-  api.use('mongo');
-  api.use('random');
+  api.use([
+    'underscore',
+    'spacebars',
+    'tinytest',
+    'jquery',
+    'test-helpers',
+    'reactive-var',
+    'showdown',
+    'minimongo',
+    'tracker',
+    'mongo',
+    'random',
+    'blaze',
+    'session'
+  ]);
 
   api.use('templating', 'client');
   api.addFiles([
