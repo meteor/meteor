@@ -95,8 +95,8 @@ _.extend(ReactiveDict.prototype, {
 
     // Mongo.ObjectID is in the 'mongo' package
     var ObjectID = null;
-    if (typeof Mongo !== 'undefined') {
-      ObjectID = Mongo.ObjectID;
+    if (Package.mongo) {
+      ObjectID = Package.mongo.Mongo.ObjectID;
     }
 
     // We don't allow objects (or arrays that might include objects) for
@@ -114,8 +114,9 @@ _.extend(ReactiveDict.prototype, {
         typeof value !== 'undefined' &&
         !(value instanceof Date) &&
         !(ObjectID && value instanceof ObjectID) &&
-        value !== null)
+        value !== null) {
       throw new Error("ReactiveDict.equals: value must be scalar");
+    }
     var serializedValue = stringify(value);
 
     if (Tracker.active) {
@@ -139,7 +140,7 @@ _.extend(ReactiveDict.prototype, {
     if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
     return EJSON.equals(oldValue, value);
   },
-  
+
   all: function() {
     this.allDeps.depend();
     var ret = {};
@@ -148,21 +149,21 @@ _.extend(ReactiveDict.prototype, {
     });
     return ret;
   },
-  
+
   clear: function() {
     var self = this;
-    
+
     var oldKeys = self.keys;
     self.keys = {};
-    
+
     self.allDeps.changed();
-    
+
     _.each(oldKeys, function(value, key) {
       changed(self.keyDeps[key]);
       changed(self.keyValueDeps[key][value]);
       changed(self.keyValueDeps[key]['undefined']);
     });
-    
+
   },
 
   _setObject: function (object) {

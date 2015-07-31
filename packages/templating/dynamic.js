@@ -1,3 +1,5 @@
+var Template = Blaze.Template;
+
 /**
  * @isTemplate true
  * @memberOf Template
@@ -5,7 +7,8 @@
  * @summary Choose a template to include dynamically, by name.
  * @locus Templates
  * @param {String} template The name of the template to include.
- * @param {Object} [data] Optional. The data context in which to include the template.
+ * @param {Object} [data] Optional. The data context in which to include the
+ * template.
  */
 
 Template.__dynamicWithDataContext.helpers({

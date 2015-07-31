@@ -7,7 +7,10 @@ Package.onUse(function (api) {
   api.use("npm-node-aes-gcm@=0.1.3_6");
 
   api.export("OAuthEncryption", ["server"]);
-  api.use("underscore");
+  api.use([
+    "underscore",
+    "ejson"
+  ]);
   api.addFiles("encrypt.js", ["server"]);
 });
 

@@ -1497,8 +1497,10 @@ main.registerCommand({
     release.current.isCheckout() ? "none" : release.current.name);
 
   var packagesToAdd = getTestPackageNames(projectContext, options.args);
-  // Use the driver package and meteor-platform as well.
-  packagesToAdd.unshift('meteor-platform', options['driver-package']);
+
+  // Use the driver package
+  // Also, add `autoupdate` so that you don't have to manually refresh the tests
+  packagesToAdd.unshift("autoupdate", options['driver-package']);
   var constraintsToAdd = _.map(packagesToAdd, function (p) {
     return utils.parsePackageConstraint(p);
   });

@@ -62,11 +62,16 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('accounts-base');
-  api.use('tinytest');
-  api.use('random');
-  api.use('test-helpers');
-  api.use('oauth-encryption');
+  api.use([
+    'accounts-base',
+    'tinytest',
+    'random',
+    'test-helpers',
+    'oauth-encryption',
+    'underscore',
+    'ddp'
+  ]);
+
   api.addFiles('accounts_tests.js', 'server');
   api.addFiles("accounts_url_tests.js", "client");
 });

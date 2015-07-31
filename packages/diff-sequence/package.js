@@ -13,11 +13,14 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('tinytest');
+  api.use([
+    'tinytest',
+    'underscore',
+    'ejson'
+  ]);
+
   api.use('diff-sequence');
   api.addFiles([
     'tests.js'
   ]);
 });
-
-

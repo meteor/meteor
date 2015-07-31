@@ -9,6 +9,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(["tinytest", "browser-policy", "ejson"], "server");
+  api.use(["tinytest", "browser-policy", "ejson", "underscore"], "server");
   api.addFiles("browser-policy-test.js", "server");
 });

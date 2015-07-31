@@ -5,7 +5,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('webapp', 'server');
-  api.use(['ddp'], 'client');
+  api.use(['ddp', 'tracker'], 'client');
   api.use(['callback-hook'], 'client');
   api.use(['templating'], 'client');
   api.use(['underscore'], ['client', 'server']);
@@ -21,7 +21,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['spiderable', 'tinytest']);
+  api.use(['spiderable', 'tinytest', 'underscore', 'ddp']);
   api.addFiles('spiderable_client_tests.js', 'client');
   api.addFiles('spiderable_server_tests.js', 'server');
 });

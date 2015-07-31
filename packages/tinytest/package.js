@@ -4,19 +4,19 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use('underscore', ['client', 'server']);
-  api.use('random', ['client', 'server']);
+  api.use([
+    'ejson',
+    'underscore',
+    'random',
+    'ddp',
+    'mongo',
+    'check'
+  ]);
 
-  api.export('Tinytest');
-
-  api.addFiles('tinytest.js', ['client', 'server']);
-
-  api.use('ddp', ['client', 'server']);
-  api.use('mongo', ['client', 'server']);
-  api.addFiles('model.js', ['client', 'server']);
-
+  api.addFiles('tinytest.js');
+  api.addFiles('model.js');
   api.addFiles('tinytest_client.js', 'client');
   api.addFiles('tinytest_server.js', 'server');
 
-  api.use('check');
+  api.export('Tinytest');
 });

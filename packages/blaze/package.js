@@ -7,6 +7,7 @@ Package.onUse(function (api) {
   api.export(['Blaze', 'UI', 'Handlebars']);
   api.use('jquery'); // should be a weak dep, by having multiple "DOM backends"
   api.use('tracker');
+  api.use('check');
   api.use('underscore'); // only the subset in microscore.js
   api.use('htmljs');
   api.imply('htmljs');
@@ -46,6 +47,8 @@ Package.onTest(function (api) {
   api.use('blaze-tools'); // for BlazeTools.toJS
   api.use('html-tools');
   api.use('reactive-var');
+  api.use('tracker');
+  api.use('templating');
 
   api.addFiles('view_tests.js');
   api.addFiles('render_tests.js', 'client');

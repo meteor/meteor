@@ -43,8 +43,10 @@ Package.onUse(function (api) {
   // html_scanner.js emits client code that calls Meteor.startup and
   // Blaze, so anybody using templating (eg apps) need to implicitly use
   // 'meteor' and 'blaze'.
-  api.use('blaze');
-  api.imply(['meteor', 'blaze'], 'client');
+  api.use(['blaze', 'spacebars']);
+  api.imply(['meteor', 'blaze', 'spacebars'], 'client');
+
+  api.addFiles(['dynamic.html', 'dynamic.js'], 'client');
 });
 
 Package.onTest(function (api) {
@@ -52,8 +54,14 @@ Package.onTest(function (api) {
   api.use('htmljs');
   api.use('templating');
   api.use('underscore');
-  api.use(['test-helpers', 'session', 'tracker',
-           'minimongo'], 'client');
+  api.use([
+    'test-helpers',
+    'session',
+    'tracker',
+    'minimongo',
+    'reactive-var',
+    'spacebars'
+  ], 'client');
   api.use('spacebars-compiler');
   api.use('minifiers'); // ensure compiler output is beautified
 
@@ -61,4 +69,6 @@ Package.onTest(function (api) {
     'plugin/html_scanner.js',
     'scanner_tests.js'
   ], 'server');
+
+  api.addFiles(["dynamic_tests.html", "dynamic_tests.js"], "client");
 });

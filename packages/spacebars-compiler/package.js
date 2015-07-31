@@ -23,11 +23,15 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('underscore');
-  api.use('spacebars-compiler');
-  api.use('tinytest');
-  api.use('blaze-tools');
-  api.use('coffeescript');
+  api.use([
+    'underscore',
+    'spacebars-compiler',
+    'tinytest',
+    'blaze-tools',
+    'coffeescript',
+    'spacebars',
+    'blaze'
+  ]);
   api.addFiles('spacebars_tests.js');
   api.addFiles('compile_tests.js');
   api.addFiles('compiler_output_tests.coffee');

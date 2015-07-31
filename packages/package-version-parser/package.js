@@ -12,6 +12,6 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('package-version-parser');
-  api.use(['tinytest']);
+  api.use(['tinytest', 'underscore']);
   api.addFiles('package-version-parser-tests.js', 'server');
 });
