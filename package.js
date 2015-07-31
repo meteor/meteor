@@ -47,6 +47,8 @@ Package.onTest(function (api) {
   api.use('blaze-tools'); // for BlazeTools.toJS
   api.use('html-tools');
   api.use('reactive-var');
+  api.use('tracker');
+  api.use('templating');
 
   api.addFiles('view_tests.js');
   api.addFiles('render_tests.js', 'client');
