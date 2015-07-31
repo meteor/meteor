@@ -11,6 +11,6 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.addFiles("safetybelt.js", "server", { isAsset: true });
-  api.use(["reload-safetybelt", "tinytest", "http", "webapp"]);
+  api.use(["reload-safetybelt", "tinytest", "http", "webapp", "underscore"]);
   api.addFiles("reload-safety-belt-tests.js", "server");
 });

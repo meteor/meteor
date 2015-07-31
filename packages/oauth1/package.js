@@ -7,8 +7,12 @@ Package.onUse(function (api) {
   api.use('random');
   api.use('service-configuration', ['client', 'server']);
   api.use('oauth', ['client', 'server']);
-  api.use('underscore', 'server');
-  api.use('http', 'server');
+  api.use([
+    'underscore',
+    'check',
+    'http'
+  ], 'server');
+
   api.use('mongo');
 
   api.export('OAuth1Binding', 'server');

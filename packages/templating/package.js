@@ -44,7 +44,7 @@ Package.onUse(function (api) {
   // Blaze, so anybody using templating (eg apps) need to implicitly use
   // 'meteor' and 'blaze'.
   api.use('blaze');
-  api.imply(['meteor', 'blaze'], 'client');
+  api.imply(['meteor', 'blaze', 'spacebars'], 'client');
 });
 
 Package.onTest(function (api) {

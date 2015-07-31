@@ -14,9 +14,14 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('tinytest');
-  api.use('observe-sequence');
-  api.use('underscore');
-  api.use('ejson');
+  api.use([
+    'tinytest',
+    'observe-sequence',
+    'underscore',
+    'ejson',
+    'tracker',
+    'mongo'
+  ]);
+
   api.addFiles(['observe_sequence_tests.js'], 'client');
 });

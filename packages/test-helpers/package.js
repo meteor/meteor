@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random']);
+  api.use(['underscore', 'tracker', 'ejson', 'tinytest', 'random', 'blaze']);
   api.use(['jquery'], 'client');
 
   // XXX for connection.js. Not sure this really belongs in

@@ -14,7 +14,7 @@ Package.on_use(function (api) {
 });
 
 Package.on_test(function (api) {
-  api.use('tinytest');
+  api.use(['tinytest', 'check', 'underscore']);
   api.use('logic-solver');
 
   // logic-solver is totally meant for the client too, but not old
