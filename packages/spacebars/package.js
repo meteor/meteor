@@ -20,11 +20,4 @@ Package.onUse(function (api) {
   api.use('observe-sequence');
   api.use('underscore');
   api.addFiles(['spacebars-runtime.js']);
-  api.addFiles(['dynamic.js'], 'client');
-});
-
-Package.onTest(function (api) {
-  api.use(["spacebars", "tinytest", "test-helpers", "reactive-var", "tracker"]);
-  api.use("templating", "client");
-  api.addFiles(["dynamic_tests.html", "dynamic_tests.js"], "client");
 });
