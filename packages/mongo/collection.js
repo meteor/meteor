@@ -328,6 +328,12 @@ Mongo.Collection._rewriteSelector = function (selector) {
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
 
+  if (_.isArray(selector)) {
+    // This is consistent with the Mongo console itself; if we don't do this
+    // check passing an empty array ends up selecting all items
+    throw new Error("Mongo selector can't be an array.");
+  }
+
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
     return {_id: Random.id()};
