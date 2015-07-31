@@ -136,8 +136,8 @@ _.extend(AppProcess.prototype, {
     // When the parent process exits (i.e. the server is shutting down and
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
-    require("./cleanup.js").onExit(function() {
-      require("./server/shell-server.js").disable(
+    require('./cleanup.js').onExit(function() {
+      require('./static-assets/server/shell-server.js').disable(
         self.projectContext.getMeteorShellDirectory()
       );
     });

@@ -24,7 +24,7 @@ var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
 var colonConverter = require("./colon-converter.js");
 
-var miniFiles = require("./server/mini-files.js");
+var miniFiles = require('./mini-files.js');
 
 var Profile = require('./profile.js').Profile;
 

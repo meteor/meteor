@@ -553,7 +553,7 @@ main.registerCommand({
     };
 
     try {
-      files.cp_r(files.pathJoin(__dirnameConverted, '..', 'skel-pack'), packageDir, {
+      files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel-pack'), packageDir, {
         transformFilename: function (f) {
           return transform(f);
         },
@@ -661,7 +661,7 @@ main.registerCommand({
       });
     }
   } else {
-    files.cp_r(files.pathJoin(__dirnameConverted, '..', 'skel'), appPath, {
+    files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
       },

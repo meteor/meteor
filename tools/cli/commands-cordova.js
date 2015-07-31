@@ -880,12 +880,12 @@ var buildCordova = function (projectContext, platforms, options) {
 
     // write the cordova loader
     verboseLog('Writing meteor_cordova_loader');
-    var loaderPath = files.pathJoin(__dirname, 'client', 'meteor_cordova_loader.js');
+    var loaderPath = files.pathJoin(__dirname, 'static-assets', 'cordova-bootstrap-page', 'meteor_cordova_loader.js');
     var loaderCode = files.readFile(loaderPath);
     files.writeFile(files.pathJoin(wwwPath, 'meteor_cordova_loader.js'), loaderCode);
 
     verboseLog('Writing a default index.html for cordova app');
-    var indexPath = files.pathJoin(__dirname, 'client', 'cordova_index.html');
+    var indexPath = files.pathJoin(__dirname, 'static-assets', 'cordova-bootstrap-page', 'cordova_index.html');
     var indexContent = files.readFile(indexPath);
     files.writeFile(files.pathJoin(wwwPath, 'index.html'), indexContent);
 
@@ -1511,7 +1511,7 @@ var consumeControlFile = function (
   }
 
   // Defaults are Meteor meatball images located in tool's directory
-  var assetsPath = files.pathJoin(__dirname, 'cordova-assets');
+  var assetsPath = files.pathJoin(__dirname, 'static-assets', 'cordova-assets');
   var iconsPath = files.pathJoin(assetsPath, 'icons');
   var launchscreensPath = files.pathJoin(assetsPath, 'launchscreens');
   var imagePaths = {

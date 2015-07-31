@@ -1216,8 +1216,9 @@ _.extend(JsImage.prototype, {
     var self = this;
     var ret = {};
 
-    // XXX This is mostly duplicated from server/boot.js, as is Npm.require
-    // below. Some way to avoid this?
+    // XXX This is mostly duplicated from
+    // static-assets/server/boot.js, as is Npm.require below.
+    // Some way to avoid this?
     var getAsset = function (assets, assetPath, encoding, callback) {
       assetPath = files.convertToStandardPath(assetPath);
       var fut;
@@ -1695,7 +1696,8 @@ _.extend(ServerTarget.prototype, {
       builder.write(filename, {
         file: files.pathJoin(
           files.pathDirname(files.convertToStandardPath(__dirname)),
-          "server",
+          'static-assets',
+          'server',
           filename
         )
       });
