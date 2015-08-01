@@ -1564,7 +1564,8 @@ _.extend(Isopack.prototype, {
     var self = this;
 
     var pathsToCopy = files.runGitInCheckout(
-      'ls-files',
+      'ls-tree',
+      '-r',
       '--name-only',
       '--full-tree',
       'HEAD',
