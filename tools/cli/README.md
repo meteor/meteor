@@ -86,3 +86,14 @@ separated by a marker `>>>` with the name of the command.
 
 Commands are parsed so the help text for an individual command could be
 separated from the rest.
+
+Sadly, these commands need to be redocumented in the docs app as well. The docs
+text is not shared between these two places, yet.
+
+## Admin commands
+
+Given that `self-test` is the only reliable way to test code in Meteor Tool, you
+might need to create special "admin" commands. Since "admin" commands don't show
+up in the help text, this namespace is abused to store all sorts of one-of
+commands to run in automated and manual tests.
+
