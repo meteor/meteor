@@ -184,8 +184,6 @@ _.extend(AppProcess.prototype, {
     }
     if (self.settings) {
       env.METEOR_SETTINGS = self.settings;
-    } else {
-      delete env.METEOR_SETTINGS;
     }
     if (self.listenHost) {
       env.BIND_IP = self.listenHost;
