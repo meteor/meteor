@@ -14,7 +14,7 @@ var catalog = require('../catalog/catalog.js');
 var packageVersionParser = require('../package-version-parser.js');
 var compiler = require('./compiler.js');
 var packageAPIModule = require('./package-api.js');
-var Profile = require('../profile.js').Profile;
+var Profile = require('../tool-env/profile.js').Profile;
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file

@@ -12,7 +12,7 @@ var stats = require('./stats.js');
 var cordova = require('./cli/commands-cordova.js');
 var Console = require('./console.js').Console;
 var catalog = require('./catalog/catalog.js');
-var Profile = require('./profile.js').Profile;
+var Profile = require('./tool-env/profile.js').Profile;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -136,7 +136,7 @@ _.extend(AppProcess.prototype, {
     // When the parent process exits (i.e. the server is shutting down and
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
-    require('./cleanup.js').onExit(function() {
+    require('./tool-env/cleanup.js').onExit(function() {
       require('./static-assets/server/shell-server.js').disable(
         self.projectContext.getMeteorShellDirectory()
       );

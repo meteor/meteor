@@ -12,7 +12,7 @@ var colonConverter = require('../colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console.js').Console;
-var Profile = require('../profile.js').Profile;
+var Profile = require('../tool-env/profile.js').Profile;
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./))
@@ -1564,8 +1564,7 @@ _.extend(Isopack.prototype, {
     var self = this;
 
     var pathsToCopy = files.runGitInCheckout(
-      'ls-tree',
-      '-r',  // recursive
+      'ls-files',
       '--name-only',
       '--full-tree',
       'HEAD',
@@ -1587,6 +1586,7 @@ _.extend(Isopack.prototype, {
       /^tools\/isobuild\/[^\/]+\.js$/, // Isobuild files
       /^tools\/cli\/[^\/]+\.js$/, // CLI files
       /^tools\/catalog\/[^\/]+\.js$/, // Catalog files
+      /^tools\/tool-env\/[^\/]+\.js$/, // Tool initiation and clean up
       // We don't support running self-test from an install anymore
     ];
 
@@ -1621,13 +1621,13 @@ _.extend(Isopack.prototype, {
       // We don't actually want to load the babel auto-transpiler when we are
       // in a Meteor installation where everything is already transpiled for us.
       // Therefore, strip out that line in main.js
-      if (path === "tools/install-babel.js" ||
-          path === "tools/source-map-retriever-stack.js") {
+      if (path === "tools/tool-env/install-babel.js" ||
+          path === "tools/tool-env/source-map-retriever-stack.js") {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
       var babelOptions = babel.getDefaultOptions(
-        require("../babel-features.js")
+        require("../tool-env/babel-features.js")
       );
 
       _.extend(babelOptions, {

@@ -14,7 +14,7 @@ var release = require('./release.js');
 var tropohouse = require('./tropohouse.js');
 var utils = require('./utils.js');
 var watch = require('./watch.js');
-var Profile = require('./profile.js').Profile;
+var Profile = require('./tool-env/profile.js').Profile;
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions

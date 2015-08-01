@@ -112,7 +112,7 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
 fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-METEOR="$SCRIPT_DIR/tools/main-transpile-wrapper.js"
+METEOR="$SCRIPT_DIR/tools/index.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a

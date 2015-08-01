@@ -1,6 +1,6 @@
 var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile)
-  require('../profile-require.js').start();
+  require('../tool-env/profile-require.js').start();
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -23,7 +23,7 @@ var main = exports;
 // Node 0.12, so when we upgrade let's remember to remove this clause, and the
 // file it requires. See https://github.com/joyent/node/issues/3584
 if (process.platform === "win32") {
-  require('../flush-buffers-on-exit-in-windows.js');
+  require('../tool-env/flush-buffers-on-exit-in-windows.js');
 }
 
 // node (v8) defaults to only recording 10 lines of stack trace. This
@@ -542,7 +542,7 @@ Fiber(function () {
 
   // Set up git hooks
   if (files.inCheckout()) {
-    var installGitHooks = require('../install-git-hooks.js');
+    var installGitHooks = require('../tool-env/install-git-hooks.js');
     installGitHooks();
   }
 
@@ -1359,7 +1359,7 @@ Fiber(function () {
   // Now that we're ready to start executing the command, if we are in
   // startup time profiling mode, print the profile.
   if (showRequireProfile)
-    require('../profile-require.js').printReport();
+    require('../tool-env/profile-require.js').printReport();
 
   Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);

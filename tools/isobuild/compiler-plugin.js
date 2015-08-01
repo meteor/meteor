@@ -7,7 +7,7 @@ var compiler = require('./compiler.js');
 var linker = require('./linker.js');
 var util = require('util');
 var _ = require('underscore');
-var Profile = require('../profile.js').Profile;
+var Profile = require('../tool-env/profile.js').Profile;
 import {sha1} from  '../watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';

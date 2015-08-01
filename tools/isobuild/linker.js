@@ -3,7 +3,7 @@ var sourcemap = require('source-map');
 var buildmessage = require('../buildmessage.js');
 var isopackets = require('../isopackets.js');
 var watch = require('../watch.js');
-var Profile = require('../profile.js').Profile;
+var Profile = require('../tool-env/profile.js').Profile;
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils.js';
 import {findAssignedGlobals} from './js-analyze.js';

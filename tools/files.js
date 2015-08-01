@@ -15,10 +15,10 @@ var crypto = require('crypto');
 var rimraf = require('rimraf');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
-var sourceMapRetrieverStack = require('./source-map-retriever-stack.js');
+var sourceMapRetrieverStack = require('./tool-env/source-map-retriever-stack.js');
 
 var utils = require('./utils.js');
-var cleanup = require('./cleanup.js');
+var cleanup = require('./tool-env/cleanup.js');
 var buildmessage = require('./buildmessage.js');
 var watch = require('./watch.js');
 var fiberHelpers = require('./fiber-helpers.js');
@@ -26,7 +26,7 @@ var colonConverter = require("./colon-converter.js");
 
 var miniFiles = require('./mini-files.js');
 
-var Profile = require('./profile.js').Profile;
+var Profile = require('./tool-env/profile.js').Profile;
 
 // Attach all exports of miniFiles here to avoid code duplication
 var files = exports;

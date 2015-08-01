@@ -13,7 +13,7 @@ var files = require('../files.js');
 var colonConverter = require('../colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var compileStepModule = require('./compiler-deprecated-compile-step.js');
-var Profile = require('../profile.js').Profile;
+var Profile = require('../tool-env/profile.js').Profile;
 import { SourceProcessorSet } from './build-plugin.js';
 
 var compiler = exports;

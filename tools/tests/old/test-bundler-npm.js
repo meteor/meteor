@@ -1,4 +1,4 @@
-require('../../install-babel.js');
+require('../../tool-env/install-babel.js');
 
 var _ = require('underscore');
 var assert = require('assert');

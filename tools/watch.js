@@ -3,7 +3,7 @@ import _ from "underscore";
 import pathwatcher from "./safe-pathwatcher.js";
 import {createHash} from "crypto";
 import {coalesce} from "./func-utils.js";
-import {Profile} from "./profile.js";
+import {Profile} from "./tool-env/profile.js";
 
 // Watch for changes to a set of files, and the first time that any of
 // the files change, call a user-provided callback. (If you want a

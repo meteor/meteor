@@ -1,7 +1,7 @@
 import {WatchSet, readAndWatchFile, sha1} from '../watch.js';
 import files from '../files.js';
 import NpmDiscards from './npm-discards.js';
-import {Profile} from '../profile.js';
+import {Profile} from '../tool-env/profile.js';
 
 // Builder has two modes of working:
 // - write files to a temp directory and later atomically move it to destination

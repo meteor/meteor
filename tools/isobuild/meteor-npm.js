@@ -4,7 +4,7 @@
 /// to ensure we get consistent versions of npm sub-dependencies.
 var Future = require('fibers/future');
 
-var cleanup = require('../cleanup.js');
+var cleanup = require('../tool-env/cleanup.js');
 var files = require('../files.js');
 var os = require('os');
 var _ = require('underscore');
