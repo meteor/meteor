@@ -974,9 +974,9 @@ Fiber(function () {
       // Let's do some processing here. If the user/release file specified a
       // track, we need to display that correctly, and if they didn't, we should
       // make it clear that we are talking about the default track.
-      var utils = require('../utils.js');
-      var trackAndVersion = utils.splitReleaseName(releaseName);
-      var displayRelease = utils.displayRelease(
+      var catalogUtils = require('../catalog/catalog-utils.js');
+      var trackAndVersion = catalogUtils.splitReleaseName(releaseName);
+      var displayRelease = catalogUtils.displayRelease(
         trackAndVersion[0], trackAndVersion[1]);
       // Now, let's process this.
       if (releaseOverride) {

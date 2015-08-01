@@ -80,7 +80,7 @@ selftest.define("source maps from built meteor tool", ['checkout'], function () 
   }
 
   var run = s.run("throw-error");
-  run.matchErr(matchPathRegexp('\\(/tools/commands\\.js:' + lineNumber));
+  run.matchErr(matchPathRegexp('\\(/tools/cli/commands\\.js:' + lineNumber));
   run.expectExit(8);
 });
 
