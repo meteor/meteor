@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 var buildmessage = require('../buildmessage.js');
-var isopackets = require('../isopackets.js');
 var watch = require('../watch.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import LRU from 'lru-cache';

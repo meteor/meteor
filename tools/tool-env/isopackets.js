@@ -1,15 +1,17 @@
 var _ = require('underscore');
-var bundler = require('./isobuild/bundler.js');
-var Builder = require('./isobuild/builder.js');
-var buildmessage = require('./buildmessage.js');
-var files = require('./files.js');
-var compiler = require('./isobuild/compiler.js');
-var config = require('./config.js');
-var watch = require('./watch.js');
-var Console = require('./console.js').Console;
-var isopackCacheModule = require('./isobuild/isopack-cache.js');
-var packageMapModule = require('./package-map.js');
-var fiberHelpers = require('./fiber-helpers.js');
+
+var bundler = require('../isobuild/bundler.js');
+var Builder = require('../isobuild/builder.js');
+var compiler = require('../isobuild/compiler.js');
+var isopackCacheModule = require('../isobuild/isopack-cache.js');
+
+var buildmessage = require('../buildmessage.js');
+var files = require('../files.js');
+var config = require('../config.js');
+var watch = require('../watch.js');
+var Console = require('../console.js').Console;
+var packageMapModule = require('../package-map.js');
+var fiberHelpers = require('../fiber-helpers.js');
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
 // meteor-tool.
@@ -202,7 +204,7 @@ var newIsopacketBuildingCatalog = function () {
   if (! files.inCheckout())
     throw Error("No need to build isopackets unless in checkout!");
 
-  var catalogLocal = require('./catalog/catalog-local.js');
+  var catalogLocal = require('../catalog/catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },

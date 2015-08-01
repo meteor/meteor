@@ -154,7 +154,6 @@ var Builder = require('./builder.js');
 var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var _ = require('underscore');
-var isopackets = require("../isopackets.js");
 var watch = require('../watch.js');
 var release = require('../release.js');
 var Fiber = require('fibers');

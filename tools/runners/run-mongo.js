@@ -6,7 +6,7 @@ var runLog = require('../run-log.js');
 var child_process = require('child_process');
 
 var _ = require('underscore');
-var isopackets = require("../isopackets.js");
+var isopackets = require('../tool-env/isopackets.js');
 var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal

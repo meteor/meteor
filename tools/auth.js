@@ -9,7 +9,7 @@ var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
-var isopackets = require('./isopackets.js');
+var isopackets = require('./tool-env/isopackets.js');
 var Console = require('./console.js').Console;
 
 var auth = exports;

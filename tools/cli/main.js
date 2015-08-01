@@ -745,7 +745,7 @@ Fiber(function () {
     appDir = files.pathResolve(appDir);
   }
 
-  require('../isopackets.js').ensureIsopacketsLoadable();
+  require('../tool-env/isopackets.js').ensureIsopacketsLoadable();
 
   // Initialize the server catalog. Among other things, this is where we get
   // release information (used by springboarding). We do not at this point talk

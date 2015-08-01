@@ -277,7 +277,7 @@ var execFileSyncOrThrow = function (file, args, opts) {
 };
 
 var getLoadedPackages = function () {
-  var isopackets = require("../isopackets.js");
+  var isopackets = require('../tool-env/isopackets.js');
   return isopackets.load('cordova-support');
 };
 

@@ -1,6 +1,6 @@
 var Future = require("fibers/future");
 var _ = require("underscore");
-var isopackets = require("./isopackets.js");
+var isopackets = require('./tool-env/isopackets.js');
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful

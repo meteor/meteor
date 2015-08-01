@@ -9,7 +9,7 @@ var release = require('../../release.js');
 var catalog = require('../../catalog/catalog.js');
 var buildmessage = require('../../buildmessage.js');
 var meteorNpm = require('../../isobuild/meteor-npm.js');
-var isopackets = require("../../isopackets.js");
+var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;

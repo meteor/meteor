@@ -7,7 +7,7 @@ var release = require('../../release.js');
 var files = require('../../files.js');
 var catalog = require('../../catalog/catalog.js');
 var buildmessage = require('../../buildmessage.js');
-var isopackets = require("../../isopackets.js");
+var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 
 
