@@ -2,12 +2,12 @@ const _ = require('underscore');
 const Fiber = require('fibers');
 const Future = require('fibers/future');
 
-const files = require('./files.js');
-const release = require('./release.js');
-const buildmessage = require('./buildmessage.js');
-const runLog = require('./run-log.js');
+const files = require('../files.js');
+const release = require('../release.js');
+const buildmessage = require('../buildmessage.js');
+const runLog = require('../run-log.js');
 
-const Console = require('./console.js').Console;
+const Console = require('../console.js').Console;
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
@@ -242,7 +242,7 @@ class Runner {
     if (self.specifiedAppPort) {
       self.appPort = self.specifiedAppPort;
     } else {
-      self.appPort = require('./utils.js').randomPort();
+      self.appPort = require('../utils.js').randomPort();
     }
     if (self.proxy)
       self.proxy.proxyToPort = self.appPort;

@@ -1,18 +1,18 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
-var fiberHelpers = require('./fiber-helpers.js');
-var files = require('./files.js');
-var watch = require('./watch.js');
-var bundler = require('./isobuild/bundler.js');
-var release = require('./release.js');
-var buildmessage = require('./buildmessage.js');
-var runLog = require('./run-log.js');
-var stats = require('./stats.js');
-var cordova = require('./cli/commands-cordova.js');
-var Console = require('./console.js').Console;
-var catalog = require('./catalog/catalog.js');
-var Profile = require('./tool-env/profile.js').Profile;
+var fiberHelpers = require('../fiber-helpers.js');
+var files = require('../files.js');
+var watch = require('../watch.js');
+var bundler = require('../isobuild/bundler.js');
+var release = require('../release.js');
+var buildmessage = require('../buildmessage.js');
+var runLog = require('../run-log.js');
+var stats = require('../stats.js');
+var cordova = require('../cli/commands-cordova.js');
+var Console = require('../console.js').Console;
+var catalog = require('../catalog/catalog.js');
+var Profile = require('../tool-env/profile.js').Profile;
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -136,8 +136,8 @@ _.extend(AppProcess.prototype, {
     // When the parent process exits (i.e. the server is shutting down and
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
-    require('./tool-env/cleanup.js').onExit(function() {
-      require('./static-assets/server/shell-server.js').disable(
+    require('../tool-env/cleanup.js').onExit(function() {
+      require('../static-assets/server/shell-server.js').disable(
         self.projectContext.getMeteorShellDirectory()
       );
     });
@@ -237,7 +237,7 @@ _.extend(AppProcess.prototype, {
 
     var attach;
     if (self.debugPort) {
-      attach = require("./inspector.js").start(self.debugPort, entryPoint);
+      attach = require("../inspector.js").start(self.debugPort, entryPoint);
 
       // If you do opts.push("--debug-brk", port) it doesn't work on Windows
       // for some reason

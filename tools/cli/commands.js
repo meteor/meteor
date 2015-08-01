@@ -383,7 +383,7 @@ function doRunCommand (options) {
     options.once = true;
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
-    var velocity = require('../run-velocity.js');
+    var velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrl);
   }
 
@@ -392,7 +392,7 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
-  var runAll = require('../run-all.js');
+  var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,
     proxyPort: parsedUrl.port,
@@ -1077,7 +1077,7 @@ main.registerCommand({
   if (options.args.length === 0) {
     // localhost mode
     var findMongoPort =
-      require('../run-mongo.js').findMongoPort;
+      require('../runners/run-mongo.js').findMongoPort;
     var mongoPort = findMongoPort(options.appDir);
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
@@ -1118,7 +1118,7 @@ main.registerCommand({
     if (usedMeteorAccount)
       auth.maybePrintRegistrationLink();
     process.stdin.pause();
-    var runMongo = require('../run-mongo.js');
+    var runMongo = require('../runners/run-mongo.js');
     runMongo.runMongoShell(mongoUrl);
     throw new main.WaitForExit;
   }
@@ -1150,7 +1150,7 @@ main.registerCommand({
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
-  var findMongoPort = require('../run-mongo.js').findMongoPort;
+  var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
   var isRunning = !! findMongoPort(options.appDir);
   if (isRunning) {
     Console.error("reset: Meteor is running.");
@@ -1584,7 +1584,7 @@ main.registerCommand({
   if (options.velocity) {
     var serverUrl = "http://" + (parsedUrl.host || "localhost") +
           ":" + parsedUrl.port;
-    var velocity = require('../run-velocity.js');
+    var velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrl);
   }
 
@@ -1669,7 +1669,7 @@ var runTestAppForPackages = function (projectContext, options) {
       recordPackageUsage: false
     });
   } else {
-    var runAll = require('../run-all.js');
+    var runAll = require('../runners/run-all.js');
     return runAll.run({
       projectContext: projectContext,
       proxyPort: options.port,

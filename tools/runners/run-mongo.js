@@ -1,12 +1,12 @@
-var files = require('./files.js');
-var utils = require('./utils.js');
-var mongoExitCodes = require('./mongo-exit-codes.js');
-var fiberHelpers = require('./fiber-helpers.js');
-var runLog = require('./run-log.js');
+var files = require('../files.js');
+var utils = require('../utils.js');
+var mongoExitCodes = require('../mongo-exit-codes.js');
+var fiberHelpers = require('../fiber-helpers.js');
+var runLog = require('../run-log.js');
 var child_process = require('child_process');
 
 var _ = require('underscore');
-var isopackets = require("./isopackets.js");
+var isopackets = require("../isopackets.js");
 var Future = require('fibers/future');
 
 // Given a Mongo URL, open an interative Mongo shell on this terminal

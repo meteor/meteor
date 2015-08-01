@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js');
+var runLog = require('../run-log.js');
 
 // options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {

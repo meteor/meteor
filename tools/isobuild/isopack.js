@@ -1588,6 +1588,7 @@ _.extend(Isopack.prototype, {
       /^tools\/cli\/[^\/]+\.js$/, // CLI files
       /^tools\/catalog\/[^\/]+\.js$/, // Catalog files
       /^tools\/tool-env\/[^\/]+\.js$/, // Tool initiation and clean up
+      /^tools\/runners\/[^\/]+\.js$/, // Parts of tool process
       // We don't support running self-test from an install anymore
     ];
 

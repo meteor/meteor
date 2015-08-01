@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
-var fiberHelpers = require('./fiber-helpers.js');
-var Console = require("./console.js").Console;
+var fiberHelpers = require('../fiber-helpers.js');
+var Console = require("../console.js").Console;
 
 var Updater = function () {
   var self = this;
@@ -33,7 +33,7 @@ _.extend(Updater.prototype, {
 
   _check: function () {
     var self = this;
-    var updater = require('./updater.js');
+    var updater = require('../updater.js');
     try {
       updater.tryToDownloadUpdate({showBanner: true});
     } catch (e) {

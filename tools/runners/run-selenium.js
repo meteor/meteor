@@ -1,9 +1,9 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var files = require('./files.js');
-var runLog = require('./run-log.js');
-var utils = require('./utils.js');
+var files = require('../files.js');
+var runLog = require('../run-log.js');
+var utils = require('../utils.js');
 
 // options: runner url browserId xunitOutputFile
 var Selenium = function (options) {

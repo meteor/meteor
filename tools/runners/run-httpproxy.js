@@ -4,7 +4,7 @@
 // (whereas run-proxy.js is just for our app)
 var _ = require('underscore');
 var Future = require('fibers/future');
-var runLog = require('./run-log.js');
+var runLog = require('../run-log.js');
 var url = require('url');
 
 // options: listenPort, listenHost, onFailure
