@@ -82,7 +82,6 @@ _.extend(AppProcess.prototype, {
 
     // Start the app!
     self.proc = self._spawn();
-
     // Send stdout and stderr to the runLog
     var eachline = require('eachline');
     eachline(self.proc.stdout, 'utf8', fiberHelpers.inBareFiber(function (line) {
@@ -452,7 +451,6 @@ _.extend(AppRunner.prototype, {
     var firstRun = options.firstRun;
 
     Console.enableProgressDisplay(true);
-
     runLog.clearLog();
     self.proxy.setMode("hold");
 
@@ -769,7 +767,6 @@ _.extend(AppRunner.prototype, {
       while (ret.outcome === 'changed-refreshable') {
         if (! canRefreshClient)
           throw Error("Can't refresh client?");
-
         // We stay in this loop as long as only refreshable assets have changed.
         // When ret.refreshable becomes false, we restart the server.
         bundleResultOrRunResult = bundleApp();
@@ -801,7 +798,6 @@ _.extend(AppRunner.prototype, {
       if (ret.outcome === 'changed') {
         runLog.logTemporary("=> Server modified -- restarting...");
       }
-
       self.proxy.setMode("hold");
       appProcess.stop();
 
@@ -896,7 +892,7 @@ _.extend(AppRunner.prototype, {
         }
 
         crashCount ++;
-        if (crashCount < 3)
+        if (crashCount < 1)
           continue;
 
         if (self.watchForChanges) {

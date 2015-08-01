@@ -172,7 +172,6 @@ _.extend(Proxy.prototype, {
 
   _tryHandleConnections: function () {
     var self = this;
-
     while (self.httpQueue.length) {
       if (self.mode !== "errorpage" && self.mode !== "proxy")
         break;
@@ -200,8 +199,9 @@ _.extend(Proxy.prototype, {
     }
 
     while (self.websocketQueue.length) {
-      if (self.mode !== "proxy")
+      if (self.mode === "hold"){
         break;
+      }
 
       var c = self.websocketQueue.shift();
       if (self.mode === "errorpage") {
@@ -225,18 +225,30 @@ _.extend(Proxy.prototype, {
   // The initial mode is "hold".
   setMode: function (mode) {
     var self = this;
-    self.mode = mode;
-    if (mode == "errorpage") {
-        var DDP = isopackets.load('ddp')['ddp-client'].DDP;
-        // XXX Check if connection is alive before restarting a DDP conn
+
+    if (mode == "proxy") {
+      // Set Error Page to disconnect
+      var DDP = isopackets.load('ddp')['ddp-client'].DDP;
+      // XXX Check if connection is alive before restarting a DDP conn
+      if (!errorAppConnection || errorAppConnection.status() !== "connected")
         errorAppConnection = DDP.connect('localhost:8600');
-        var errorMessageToSend = "";
-        _.each(runLog.getLog(), function(item) {
-          errorMessageToSend += item.message + " \n ";
-        });
-        errorAppConnection.call('setErrorMessage', errorMessageToSend);
+      errorAppConnection.call('disconnectEveryone');
     }
+    self.mode = mode;
+
     self._tryHandleConnections();
+
+    if (mode == "errorpage") {
+      var DDP = isopackets.load('ddp')['ddp-client'].DDP;
+      // XXX Check if connection is alive before restarting a DDP conn
+      if (!errorAppConnection || errorAppConnection.status() !== "connected")
+        errorAppConnection = DDP.connect('localhost:8600');
+      var errorMessageToSend = "";
+      _.each(runLog.getLog(), function(item) {
+        errorMessageToSend += item.message + " \n ";
+      });
+      errorAppConnection.call('setErrorMessage', errorMessageToSend);
+    }
   }
 });
 
