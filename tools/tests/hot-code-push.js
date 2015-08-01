@@ -182,7 +182,7 @@ selftest.define("javascript hot code push", function (options) {
     // important part of this test.)
     s.write("hot-code-push-test.html", ">");
     run.match("Errors prevented startup");
-    run.match("Expected <template>, <head>, or <body> tag in template file");
+    run.match("Expected one of: <body>, <head>, <template>");
     // Fix it. It should notice, and restart. The client will restart too.
     s.write("hot-code-push-test.html", "");
     run.match("server restarted");
