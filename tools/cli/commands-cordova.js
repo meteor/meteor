@@ -1,13 +1,13 @@
 import _ from 'underscore';
 import main from './main.js';
 import { Console } from '../console.js';
-import catalog from '../catalog.js';
+import catalog from '../catalog/catalog.js';
 import { ProjectContext, PlatformList } from '../project-context.js';
 import buildmessage from '../buildmessage.js';
 import files from '../files.js';
 
-import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized } from './platforms.js';
-import { createCordovaProjectIfNecessary } from './project.js';
+import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized } from '../cordova/platforms.js';
+import { createCordovaProjectIfNecessary } from '../cordova/project.js';
 
 function createProjectContext(appDir) {
   const projectContext = new ProjectContext({

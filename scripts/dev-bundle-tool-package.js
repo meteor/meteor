@@ -57,11 +57,6 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    // We use our own branch because cordove-lib does not respect the silent option
-    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
-    // Can't download the tarball from GitHub because the package.json is in a subdirectory
-    'cordova-lib': "https://s3.amazonaws.com/android-bundle/cordova-lib-respect-silent.tar.gz",
-    "ios-sim": "4.1.1",
     pathwatcher: "4.1.0",
     'lru-cache': '2.6.4'
   }

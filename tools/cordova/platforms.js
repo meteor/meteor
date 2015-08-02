@@ -1,5 +1,5 @@
 import _ from 'underscore';
-import main from '../main.js';
+import main from '../cli/main.js';
 import { Console } from '../console.js';
 import { PlatformList } from '../project-context.js';
 

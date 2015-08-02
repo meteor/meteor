@@ -1,4 +1,5 @@
 import _ from 'underscore';
+import isopackets from '../isopackets.js'
 import chalk from 'chalk';
 import files from '../files.js';
 import utils from '../utils.js';
@@ -6,21 +7,23 @@ import { Console } from '../console.js';
 import buildmessage from '../buildmessage.js';
 import httpHelpers from '../http-helpers.js';
 
-import { cordova, events, CordovaError } from 'cordova-lib';
-import superspawn from 'cordova-lib/src/cordova/superspawn.js';
-import cordova_util from 'cordova-lib/src/cordova/util.js';
-import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
+function loadDependenciesFromCordovaPackageIfNeeded() {
+  if (typeof Cordova !== 'undefined') return;
+
+  ({ Cordova } = isopackets.load('cordova-support').cordova);
+  ({ cordova, events, CordovaError, superspawn, cordova_util, PluginInfoProvider } = Cordova);
+
+  events.on('results', logIfVerbose);
+  events.on('log', logIfVerbose);
+  events.on('warn', console.warn);
+  events.on('verbose', logIfVerbose);
+}
 
 const logIfVerbose = (...args) => {
   if (Console.verbose) {
     console.log(args);
   }
 };
-
-events.on('results', logIfVerbose);
-events.on('log', logIfVerbose);
-events.on('warn', console.warn);
-events.on('verbose', logIfVerbose);
 
 // Creates a Cordova project if necessary.
 export function createCordovaProjectIfNecessary(projectContext) {
@@ -39,6 +42,8 @@ export function createCordovaProjectIfNecessary(projectContext) {
 
 export default class CordovaProject {
   constructor(projectRoot, appName) {
+    loadDependenciesFromCordovaPackageIfNeeded();
+
     this.projectRoot = projectRoot;
     this.appName = appName;
 
