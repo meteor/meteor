@@ -10,3 +10,9 @@ Package.onUse(function (api) {
 
   api.addFiles('hook.js', ['client', 'server']);
 });
+
+Package.onTest(function (api) {
+  api.use('callback-hook');
+  api.use('tinytest');
+  api.addFiles('hook_tests.js', 'server');
+});

@@ -45,7 +45,7 @@ AccountsServer = function AccountsServer(server) {
   setupDefaultLoginHandlers(this);
   setExpireTokensInterval(this);
 
-  this._validateLoginHook = new Hook;
+  this._validateLoginHook = new Hook({ bindEnvironment: false });
   this._validateNewUserHooks = [
     defaultValidateNewUserHook.bind(this)
   ];
