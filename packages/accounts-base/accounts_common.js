@@ -22,10 +22,12 @@ AccountsCommon = function _AccountsCommon(options) {
 
   // Callback exceptions are printed with Meteor._debug and ignored.
   this._onLoginHook = new Hook({
+    bindEnvironment: false,
     debugPrintExceptions: "onLogin callback"
   });
 
   this._onLoginFailureHook = new Hook({
+    bindEnvironment: false,
     debugPrintExceptions: "onLoginFailure callback"
   });
 };
