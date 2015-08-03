@@ -62,9 +62,9 @@ function shouldNotTransform(filename) {
     return filename.split(path.sep).indexOf("node_modules") >= 0;
   }
 
-  // If the file is inside the meteor-babel directory, then ignore it only
-  // if it is contained by the local meteor-babel/node_modules directory.
-  return firstPart === "node_modules";
+  // If the file is inside the meteor-babel directory, then transform it
+  // only if it is contained by the test directory.
+  return firstPart !== "test";
 }
 
 function getBabelResult(filename) {
