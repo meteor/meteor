@@ -295,6 +295,32 @@ _.extend(Mongo.Collection.prototype, {
     var argArray = _.toArray(arguments);
     return self._collection.findOne(self._getFindSelector(argArray),
                                     self._getFindOptions(argArray));
+  },
+  
+  /**
+   * @summary Check if the documents in a collection that match the selector exists.
+   * @locus Anywhere
+   * @method exists
+   * @memberOf Mongo.Collection
+   * @instance
+   * @param {MongoSelector} [selector] A query describing the documents to find
+   * @param {Object} [options]
+   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
+   * @param {Number} options.skip Number of results to skip at the beginning
+   * @param {Number} options.limit Maximum number of results to return
+   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
+   * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
+   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @returns {Boolean}
+   */
+  exists: function (/* selector, options */) {
+    // Collection.exists() (always return true if Collection isn't empty) behaves differently
+    // from Collection.exists(undefined) (always return false).  so be
+    // careful about the length of arguments.
+    var self = this;
+    var argArray = _.toArray(arguments);
+    return self._collection.find(self._getFindSelector(argArray),
+                                 self._getFindOptions(argArray)).count() ? true : false;
   }
 
 });
