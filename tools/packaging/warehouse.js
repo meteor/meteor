@@ -40,9 +40,9 @@ var os = require("os");
 var Future = require("fibers/future");
 var _ = require("underscore");
 
-var files = require('./files.js');
-var httpHelpers = require('./http-helpers.js');
-var fiberHelpers = require('./fiber-helpers.js');
+var files = require('../files.js');
+var httpHelpers = require('../http-helpers.js');
+var fiberHelpers = require('../fiber-helpers.js');
 
 var WAREHOUSE_URLBASE = 'https://warehouse.meteor.com';
 

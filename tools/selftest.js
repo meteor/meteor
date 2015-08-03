@@ -1,23 +1,26 @@
 var _ = require('underscore');
+var util = require('util');
+var Future = require('fibers/future');
+var child_process = require('child_process');
+var phantomjs = require('phantomjs');
+var webdriver = require('browserstack-webdriver');
+
 var files = require('./files.js');
 var utils = require('./utils.js');
 var parseStack = require('./parse-stack.js');
-var release = require('./release.js');
-var catalog = require('./catalog/catalog.js');
+var Console = require('./console.js').Console;
 var archinfo = require('./archinfo.js');
-var Future = require('fibers/future');
-var isopackets = require('./tool-env/isopackets.js');
 var config = require('./config.js');
 var buildmessage = require('./buildmessage.js');
-var util = require('util');
-var child_process = require('child_process');
-var webdriver = require('browserstack-webdriver');
-var phantomjs = require('phantomjs');
+
+var catalog = require('./catalog/catalog.js');
 var catalogRemote = require('./catalog/catalog-remote.js');
-var Console = require('./console.js').Console;
-var tropohouseModule = require('./tropohouse.js');
-var packageMapModule = require('./package-map.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
+var isopackets = require('./tool-env/isopackets.js');
+
+var tropohouseModule = require('./packaging/tropohouse.js');
+var packageMapModule = require('./packaging/package-map.js');
+var release = require('./packaging/release.js');
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {

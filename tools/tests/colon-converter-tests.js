@@ -4,7 +4,7 @@ var files = require('../files.js');
 var testUtils = require('../test-utils.js');
 var utils = require('../utils.js');
 var _ = require('underscore');
-var tropohouse = require('../tropohouse.js');
+var tropohouse = require('../packaging/tropohouse.js');
 
 var username = "test";
 var password = "testtest";

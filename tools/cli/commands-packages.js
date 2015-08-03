@@ -1,19 +1,14 @@
 var main = require('./main.js');
 var _ = require('underscore');
 var files = require('../files.js');
-var deploy = require('../deploy.js');
 var buildmessage = require('../buildmessage.js');
-var warehouse = require('../warehouse.js');
 var auth = require('../auth.js');
 var config = require('../config.js');
-var release = require('../release.js');
 var Future = require('fibers/future');
 var runLog = require('../run-log.js');
-var packageClient = require('../package-client.js');
 var utils = require('../utils.js');
 var httpHelpers = require('../http-helpers.js');
 var archinfo = require('../archinfo.js');
-var tropohouse = require('../tropohouse.js');
 var PackageSource = require('../isobuild/package-source.js');
 var bundler = require('../isobuild/bundler.js');
 var compiler = require('../isobuild/compiler.js');
@@ -21,14 +16,18 @@ var catalog = require('../catalog/catalog.js');
 var catalogRemote = require('../catalog/catalog-remote.js');
 var stats = require('../stats.js');
 var isopack = require('../isobuild/isopack.js');
-var updater = require('../updater.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('../console.js').Console;
 var projectContextModule = require('../project-context.js');
-var packageMapModule = require('../package-map.js');
-var packageVersionParser = require('../package-version-parser.js');
 var colonConverter = require("../colon-converter.js");
 var catalogUtils = require('../catalog/catalog-utils.js');
+
+var release = require('../packaging/release.js');
+var packageVersionParser = require('../packaging/package-version-parser.js');
+var updater = require('../packaging/updater.js');
+var packageMapModule = require('../packaging/package-map.js');
+var packageClient = require('../packaging/package-client.js');
+var tropohouse = require('../packaging/tropohouse.js');
 
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if

@@ -1,15 +1,8 @@
 var _ = require('underscore');
-var packageClient = require('../package-client.js');
-var watch = require('../watch.js');
-var archinfo = require('../archinfo.js');
-var isopack = require('../isobuild/isopack.js');
 var buildmessage = require('../buildmessage.js');
-var tropohouse = require('../tropohouse.js');
 var files = require('../files.js');
-var utils = require('../utils.js');
-var catalog = require('./catalog.js');
+var watch = require('../watch.js');
 var PackageSource = require('../isobuild/package-source.js');
-var VersionParser = require('../package-version-parser.js');
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../isobuild/compiler.js';
 
 // LocalCatalog represents packages located in the application's

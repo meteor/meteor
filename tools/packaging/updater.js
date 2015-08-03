@@ -1,16 +1,17 @@
 var _ = require('underscore');
+
+var runLog = require('../run-log.js');
+var catalog = require('../catalog/catalog.js');
+var archinfo = require('../archinfo.js');
+var isopack = require('../isobuild/isopack.js');
+var buildmessage = require('../buildmessage.js');
+var Console = require('../console.js').Console;
+var auth = require('../auth.js');
+var files = require('../files.js');
+
 var tropohouse = require('./tropohouse.js');
 var release = require('./release.js');
-var runLog = require('./run-log.js');
-var catalog = require('./catalog/catalog.js');
-var archinfo = require('./archinfo.js');
-var isopack = require('./isobuild/isopack.js');
-var utils = require('./utils.js');
-var buildmessage = require('./buildmessage.js');
-var Console = require('./console.js').Console;
-var auth = require('./auth.js');
 var packageMapModule = require('./package-map.js');
-var files = require("./files.js");
 
 /**
  * Check to see if an update is available. If so, download and install
@@ -107,7 +108,7 @@ var maybeShowBanners = function () {
   if (release.forced)
     return;
 
-  const catalogUtils = require('./catalog/catalog-utils.js');
+  const catalogUtils = require('../catalog/catalog-utils.js');
 
   // Didn't print a banner? Maybe we have a patch release to recommend.
   var track = release.current.getReleaseTrack();

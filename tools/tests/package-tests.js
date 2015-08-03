@@ -1,10 +1,11 @@
+var _= require('underscore');
+
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../files.js');
 var testUtils = require('../test-utils.js');
 var utils = require('../utils.js');
-var _= require('underscore');
-var packageClient = require("../package-client.js");
+var packageClient = require('../packaging/package-client.js');
 var catalog = require('../catalog/catalog.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;

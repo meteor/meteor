@@ -10,8 +10,8 @@ var files = require('../files.js');
 var config = require('../config.js');
 var watch = require('../watch.js');
 var Console = require('../console.js').Console;
-var packageMapModule = require('../package-map.js');
 var fiberHelpers = require('../fiber-helpers.js');
+var packageMapModule = require('../packaging/package-map.js');
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
 // meteor-tool.

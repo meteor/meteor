@@ -5,7 +5,6 @@ var config = require('./config.js');
 var httpHelpers = require('./http-helpers.js');
 var archinfo = require('./archinfo.js');
 var fiberHelpers = require('./fiber-helpers.js');
-var release = require('./release.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');

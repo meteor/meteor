@@ -33,7 +33,7 @@ _.extend(Updater.prototype, {
 
   _check: function () {
     var self = this;
-    var updater = require('../updater.js');
+    var updater = require('../packaging/updater.js');
     try {
       updater.tryToDownloadUpdate({showBanner: true});
     } catch (e) {

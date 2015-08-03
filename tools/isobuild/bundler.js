@@ -149,23 +149,25 @@
 // wait until later.
 
 var util = require('util');
-var files = require('../files.js');
-var Builder = require('./builder.js');
-var archinfo = require('../archinfo.js');
-var buildmessage = require('../buildmessage.js');
-var _ = require('underscore');
-var watch = require('../watch.js');
-var release = require('../release.js');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
+var _ = require('underscore');
 var sourcemap = require('source-map');
-var runLog = require('../run-log.js');
-var PackageSource = require('./package-source.js');
-var Profile = require('../tool-env/profile.js').Profile;
+
 var compiler = require('./compiler.js');
-var packageVersionParser = require('../package-version-parser.js');
-var colonConverter = require('../colon-converter.js');
+var PackageSource = require('./package-source.js');
+var Builder = require('./builder.js');
 var compilerPluginModule = require('./compiler-plugin.js');
+
+var files = require('../files.js');
+var archinfo = require('../archinfo.js');
+var buildmessage = require('../buildmessage.js');
+var watch = require('../watch.js');
+var runLog = require('../run-log.js');
+var colonConverter = require('../colon-converter.js');
+var Profile = require('../tool-env/profile.js').Profile;
+var packageVersionParser = require('../packaging/package-version-parser.js');
+var release = require('../packaging/release.js');
 
 // files to ignore when bundling. node has no globs, so use regexps
 exports.ignoreFiles = [

@@ -9,12 +9,13 @@ var projectContextModule = require('../project-context.js');
 var Future = require('fibers/future');
 var utils = require('../utils.js');
 var archinfo = require('../archinfo.js');
-var tropohouse = require('../tropohouse.js');
 var httpHelpers = require('../http-helpers.js');
 var Console = require('../console.js').Console;
 var processes = require('../processes.js');
 var catalog = require('../catalog/catalog.js');
-var release = require('../release.js');
+
+var tropohouse = require('../packaging/tropohouse.js');
+var release = require('../packaging/release.js');
 
 // XXX hard-coded the use of default tropohouse
 var tropo = tropohouse.default;

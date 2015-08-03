@@ -1,13 +1,14 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
+var semver = require('semver');
+var os = require('os');
+var url = require('url');
+
 var fiberHelpers = require('./fiber-helpers.js');
 var archinfo = require('./archinfo.js');
 var buildmessage = require('./buildmessage.js');
 var files = require('./files.js');
-var packageVersionParser = require('./package-version-parser.js');
-var semver = require('semver');
-var os = require('os');
-var url = require('url');
+var packageVersionParser = require('./packaging/package-version-parser.js');
 
 var utils = exports;
 

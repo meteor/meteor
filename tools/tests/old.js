@@ -4,7 +4,7 @@ var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
 var files = require('../files.js');
-var release = require('../release.js');
+var release = require('../packaging/release.js');
 
 // old tests don't get to test --release, and always run this release
 var maybeFixRelease = function (env) {

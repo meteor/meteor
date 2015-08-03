@@ -3,9 +3,9 @@ const Fiber = require('fibers');
 const Future = require('fibers/future');
 
 const files = require('../files.js');
-const release = require('../release.js');
 const buildmessage = require('../buildmessage.js');
 const runLog = require('../run-log.js');
+const release = require('../packaging/release.js');
 
 const Console = require('../console.js').Console;
 

@@ -3,18 +3,14 @@ var _ = require('underscore');
 var files = require('../files.js');
 var deploy = require('../deploy.js');
 var buildmessage = require('../buildmessage.js');
-var warehouse = require('../warehouse.js');
 var auth = require('../auth.js');
 var authClient = require('../auth-client.js');
 var config = require('../config.js');
-var release = require('../release.js');
 var Future = require('fibers/future');
 var runLog = require('../run-log.js');
-var packageClient = require('../package-client.js');
 var utils = require('../utils.js');
 var httpHelpers = require('../http-helpers.js');
 var archinfo = require('../archinfo.js');
-var tropohouse = require('../tropohouse.js');
 var catalog = require('../catalog/catalog.js');
 var stats = require('../stats.js');
 var isopack = require('../isobuild/isopack.js');
@@ -24,6 +20,8 @@ var Console = require('../console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../colon-converter.js');
 var PackageSource = require('../isobuild/package-source.js');
+
+var release = require('../packaging/release.js');
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -119,7 +117,6 @@ main.registerCommand({
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  var archinfo = require('../archinfo.js');
   Console.rawInfo(archinfo.host() + "\n");
 });
 

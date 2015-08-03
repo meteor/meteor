@@ -11,7 +11,7 @@ var Future = require('fibers/future');
 var files = require('./files.js');
 var auth = require('./auth.js');
 var config = require('./config.js');
-var release = require('./release.js');
+var release = require('./packaging/release.js');
 var Console = require('./console.js').Console;
 
 

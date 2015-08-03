@@ -1,18 +1,18 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
-var child_process = require("child_process");
+var child_process = require('child_process');
 
-var config = require('./config.js');
-var httpHelpers = require('./http-helpers.js');
+var config = require('../config.js');
+var httpHelpers = require('../http-helpers.js');
 var release = require('./release.js');
-var files = require('./files.js');
-var utils = require('./utils.js');
-var buildmessage = require('./buildmessage.js');
-var compiler = require('./isobuild/compiler.js');
-var authClient = require('./auth-client.js');
-var catalog = require('./catalog/catalog.js');
-var projectContextModule = require('./project-context.js');
-var colonConverter = require("./colon-converter.js");
+var files = require('../files.js');
+var utils = require('../utils.js');
+var buildmessage = require('../buildmessage.js');
+var compiler = require('../isobuild/compiler.js');
+var authClient = require('../auth-client.js');
+var catalog = require('../catalog/catalog.js');
+var projectContextModule = require('../project-context.js');
+var colonConverter = require('../colon-converter.js');
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,

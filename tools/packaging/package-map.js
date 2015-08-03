@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var packageVersionParser = require('./package-version-parser.js');
-var utils = require('./utils.js');
-import { isIsobuildFeaturePackage } from './isobuild/compiler.js';
+var utils = require('../utils.js');
+import { isIsobuildFeaturePackage } from '../isobuild/compiler.js';
 
 // PackageMap: Represents the choices of package versions being used for a
 // project. It knows all the packages that are used (direct and indirect
@@ -263,7 +263,7 @@ _.extend(exports.PackageMapDelta.prototype, {
       displayItems.push({ name: name, description: description });
     });
 
-    var Console = require('./console.js').Console;
+    var Console = require('../console.js').Console;
 
     Console.info();
     Console.info(options.title);

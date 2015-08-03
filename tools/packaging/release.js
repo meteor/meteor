@@ -1,9 +1,11 @@
 var _ = require('underscore');
-var files = require('./files.js');
+
 var warehouse = require('./warehouse.js');
-var catalog = require('./catalog/catalog.js');
-var utils = require('./utils.js');
-var buildmessage = require('./buildmessage.js');
+
+var files = require('../files.js');
+var catalog = require('../catalog/catalog.js');
+var utils = require('../utils.js');
+var buildmessage = require('../buildmessage.js');
 
 var release = exports;
 
@@ -124,7 +126,7 @@ _.extend(Release.prototype, {
 
   getDisplayName: function (options) {
     var self = this;
-    const catalogUtils = require('./catalog/catalog-utils.js');
+    const catalogUtils = require('../catalog/catalog-utils.js');
     return catalogUtils.displayRelease(
       self.getReleaseTrack(),
       self.getReleaseVersion(),

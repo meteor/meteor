@@ -5,7 +5,6 @@ var fiberHelpers = require('../fiber-helpers.js');
 var files = require('../files.js');
 var watch = require('../watch.js');
 var bundler = require('../isobuild/bundler.js');
-var release = require('../release.js');
 var buildmessage = require('../buildmessage.js');
 var runLog = require('../run-log.js');
 var stats = require('../stats.js');
@@ -13,6 +12,7 @@ var cordova = require('../cli/commands-cordova.js');
 var Console = require('../console.js').Console;
 var catalog = require('../catalog/catalog.js');
 var Profile = require('../tool-env/profile.js').Profile;
+var release = require('../packaging/release.js');
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
