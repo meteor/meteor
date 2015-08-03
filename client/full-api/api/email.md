@@ -3,7 +3,11 @@
 <h2 id="email"><span>Email</span></h2>
 
 The `email` package allows sending email from a Meteor app. To use it, add the
-package to your project with `$ meteor add email`.
+package to your project by running in your terminal:
+
+```bash
+meteor add email
+```
 
 The server reads from the `MAIL_URL` environment variable to determine how to
 send mail. Currently, Meteor supports sending mail over SMTP; the `MAIL_URL`
