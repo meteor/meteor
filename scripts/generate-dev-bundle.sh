@@ -71,7 +71,7 @@ fi
 # We do this because the bundled node is built using PORTABLE=1,
 # which makes npm look for node relative to it's own directory
 # See build-node-for-dev-bundle.sh
-cp -r "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
+cp -R "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
