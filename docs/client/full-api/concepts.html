@@ -871,7 +871,9 @@ wanted: an easy way to take an app idea, flesh it out over a weekend,
 and put it out there for the world to use, with nothing getting in the
 way of creativity.
 
-    $ meteor deploy myapp.meteor.com
+```bash
+meteor deploy myapp.meteor.com
+```
 
 Your application is now available at myapp.meteor.com.  If
 this is the first time deploying to this hostname, Meteor creates a
@@ -882,7 +884,9 @@ code.
 You can also deploy to your own domain.  Just set up the hostname you
 want to use as a CNAME to `origin.meteor.com`, then deploy to that name.
 
-    $ meteor deploy www.myapp.com
+```bash
+meteor deploy www.myapp.com
+```
 
 We provide this as a free service so you can try Meteor.  It is also
 helpful for quickly putting up internal betas, demos, and so on. For
@@ -895,7 +899,9 @@ hosting provider that can run Node.js apps.
 
 To get started, run
 
-    $ meteor build my_directory
+```bash
+meteor build my_directory
+```
 
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
@@ -904,9 +910,9 @@ MongoDB server.  (The current release of Meteor has been tested with Node
 HTTP port for the application to listen on, and the MongoDB endpoint.
 
 ```bash
-$ cd my_directory
-$ (cd programs/server && npm install)
-$ PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
+cd my_directory
+(cd programs/server && npm install)
+env PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
 ```
 
 Some packages might require other environment variables. For example,

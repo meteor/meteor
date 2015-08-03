@@ -3,7 +3,12 @@
 <h2 id="http"><span>HTTP</span></h2>
 
 `HTTP` provides an HTTP request API on the client and server.  To use
-these functions, add the HTTP package to your project with `$ meteor add http`.
+these functions, add the HTTP package to your project by running in your
+terminal:
+
+```bash
+meteor add http
+```
 
 {{> autoApiBox "HTTP.call"}}
 

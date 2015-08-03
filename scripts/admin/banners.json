@@ -5,19 +5,19 @@
                    "0.9.2.1", "0.9.2.2", "0.9.3", "0.9.3.1", "0.9.4", "1.0", "1.0.1", "1.0.2", "1.0.2.1",
                    "1.0.3", "1.0.3.1", "1.0.3.2", "1.0.4", "1.0.4.1", "1.0.4.2", "1.0.5"],
       "banner": {
-        "text": "=> Meteor 1.1.0.2: official Windows support, new package version constraint solver.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.1.0.2 by running 'meteor update'."
+        "text": "=> Meteor 1.1.0.3: official Windows support, new package version constraint solver.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.1.0.3 by running 'meteor update'."
       }
     },
     {
-      "versions": ["1.1"],
+      "versions": ["1.1", "1.1.0.1"],
       "banner": {
-        "text": "=> Meteor 1.1.0.2: fixes a client-side Blaze crash regression in 1.1.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.1.0.2 by running 'meteor update'."
+        "text": "=> Meteor 1.1.0.3: bug fixes to 1.1.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.1.0.3 by running 'meteor update'."
       }
     },
     {
-      "versions": ["1.1.0.1"],
+      "versions": ["1.1.0.2"],
       "banner": {
-        "text": "=> Meteor 1.1.0.2: fixes a Linux `meteor mongo` regression in 1.1.0.1.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.1.0.2 by running 'meteor update'."
+        "text": "=> Meteor 1.1.0.3: fixes Facebook integration for new apps.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.1.0.3 by running 'meteor update'."
       }
     }
   ]

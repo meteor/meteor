@@ -12,8 +12,13 @@ The Meteor server stores passwords using the
 protect against embarrassing password leaks if the server's database is
 compromised.
 
-To add password support to your application, run `$ meteor add
-accounts-password`. You can construct your own user interface using the
+To add password support to your application, run this command in your terminal:
+
+```bash
+meteor add accounts-password
+```
+
+You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](#accountsui) to
 include a turn-key user interface for password-based sign-in.
 
