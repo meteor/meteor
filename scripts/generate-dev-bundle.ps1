@@ -129,8 +129,8 @@ echo "${BUNDLE_VERSION}" | Out-File .bundle_version.txt -Encoding ascii
 
 cd "$DIR\.."
 
-# rename and move the folder with the devbundle
-cmd /c robocopy "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}" /e /move /nfl /ndl
+# rename the folder with the devbundle
+cmd /c rename "$DIR" "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 
 cmd /c 7z.exe a -ttar dev_bundle.tar "dev_bundle_${PLATFORM}_${BUNDLE_VERSION}"
 cmd /c 7z.exe a -tgzip "${CHECKOUT_DIR}\dev_bundle_${PLATFORM}_${BUNDLE_VERSION}.tar.gz" dev_bundle.tar
