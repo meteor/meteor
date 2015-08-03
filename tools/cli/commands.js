@@ -139,7 +139,7 @@ function mobileServerUrlForServerUrl(serverUrl, isRunOnDeviceRequested) {
   if (isRunOnDeviceRequested) {
     var myIp = utils.ipAddress();
     if (!myIp) {
-      Console.Error(
+      Console.error(
         "Error detecting IP address for mobile app to connect to.\n" +
         "Please specify the address that the mobile app should connect\n" +
         "to with --mobile-server.");
