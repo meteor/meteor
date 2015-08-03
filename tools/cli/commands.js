@@ -98,12 +98,12 @@ function parsePortOption(portOption) {
     } else {
       Console.error(err.message);
     }
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
 
   if (!serverUrl.port) {
     Console.error("--port must include a port.");
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
 
   return serverUrl;
@@ -123,12 +123,12 @@ function parseMobileServerOption(mobileServerOption,
     } else {
       Console.error(err.message);
     }
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
 
   if (!mobileServerUrl.host) {
     Console.error(`--${optionName} must specify a hostname.`);
-    throw main.ExitWithCode(1);
+    throw new main.ExitWithCode(1);
   }
 
   return mobileServerUrl;
@@ -143,7 +143,7 @@ function mobileServerUrlForServerUrl(serverUrl, isRunOnDeviceRequested) {
         "Error detecting IP address for mobile app to connect to.\n" +
         "Please specify the address that the mobile app should connect\n" +
         "to with --mobile-server.");
-      throw main.ExitWithCode(1);
+      throw new main.ExitWithCode(1);
     }
     return {
       protocol: 'http://',
@@ -1067,7 +1067,7 @@ main.registerCommand({
     Console.error(
       `=> Errors building your ${displayName}:\n\n${bundle.errors.formatMessages()}`
     );
-    throw main.ExitWithCode(2);
+    throw new main.ExitWithCode(2);
   }
 
   if (bundle.warnings) {
