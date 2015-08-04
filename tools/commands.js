@@ -295,11 +295,13 @@ function doRunCommand (options) {
     // Also copy the existing build and isopacks to speed up the initial start
     files.cp_r(
       files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
-      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build')
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
+      {preserveSymlinks: true}
     );
     files.cp_r(
       files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
-      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks')
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
+      {preserveSymlinks: true}
     );
     projectContextOptions.projectLocalDir = files.pathJoin(
       testRunnerAppDir, '.meteor', 'local');
