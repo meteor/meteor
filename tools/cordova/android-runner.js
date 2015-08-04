@@ -22,7 +22,7 @@ export default class AndroidRunner extends CordovaRunner {
   checkRequirementsAndSetEnvIfNeeded() {
     const platformsDir = files.pathJoin(this.cordovaProject.projectRoot, 'platforms');
     const modulePath = files.pathJoin(platformsDir, 'android', 'cordova', 'lib', 'check_reqs');
-    Promise.await(require(modulePath).run());
+    Promise.await(require(files.convertToOSPath(modulePath)).run());
   }
 
   async run(options) {

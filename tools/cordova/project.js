@@ -82,7 +82,7 @@ export default class CordovaProject {
   // Platforms
 
   getInstalledPlatforms() {
-    return cordova_util.listPlatforms(this.projectRoot);
+    return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
   }
 
   async addPlatform(platform) {
@@ -109,7 +109,7 @@ export default class CordovaProject {
   async addPlugin(name, version, config) {
     let pluginTarget;
     if (version && utils.isUrlWithSha(version)) {
-      pluginTarget = this.fetchCordovaPluginFromShaUrl(version, name);
+      pluginTarget = files.convertToOSPath(this.fetchCordovaPluginFromShaUrl(version, name));
     } else if (version && utils.isUrlWithFileScheme(version)) {
       // Strip file:// and compute the relative path from plugin to corodova-build
       pluginTarget = files.convertToOSPath(this.getCordovaLocalPluginPath(version));

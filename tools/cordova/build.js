@@ -184,7 +184,7 @@ function generateCordovaBoilerplate(projectContext, clientDir, options) {
   const { Boilerplate } = isopackets.load('cordova-support')['boilerplate-generator'];
   var boilerplate = new Boilerplate(WEB_ARCH_NAME, manifest, {
     urlMapper: _.identity,
-    pathMapper: function (p) { return files.pathJoin(clientDir, p); },
+    pathMapper: (path) => files.convertToOSPath(files.pathJoin(clientDir, path)),
     baseDataExtension: {
       meteorRuntimeConfig: JSON.stringify(
         encodeURIComponent(JSON.stringify(runtimeConfig)))
