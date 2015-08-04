@@ -292,7 +292,8 @@ function doRunCommand (options) {
     // on each other.
     var testRunnerAppDir =
       options['test-app-path'] || files.mkdtemp('meteor-test-run');
-    // Also copy the existing build and isopacks to speed up the initial start
+    files.rm_recursive(testRunnerAppDir);
+    // Copy the existing build and isopacks to speed up the initial start
     files.cp_r(
       files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
       files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
