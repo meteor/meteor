@@ -49,6 +49,7 @@ exports.getDefaults = function getDefaults(features) {
 
     if (features.jscript) {
       addPlugin(options, "./plugins/named-function-expressions.js", true);
+      addPlugin(options, "./plugins/sanitize-for-in-objects.js", true);
     }
   }
 

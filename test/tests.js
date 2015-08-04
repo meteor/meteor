@@ -238,6 +238,23 @@ val = "zxcv";`;
     assert.deepEqual(fns, expectedFns);
   });
 
+  it("for-in loop sanitization", function loop() {
+    Array.prototype.dummy = () => {};
+
+    let sparseArray = [];
+    sparseArray[2] = "c";
+    sparseArray[0] = "a";
+
+    let keys = [];
+    for (let index in sparseArray) {
+      keys.push(index);
+    }
+
+    assert.deepEqual(keys, [0, 2]);
+
+    delete Array.prototype.dummy;
+  });
+
   it("flow", () => {
     function add(...args: [number]): number {
       let sum = 0;
