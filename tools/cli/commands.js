@@ -718,6 +718,13 @@ main.registerCommand({
   Console.info(
     Console.command("meteor"), Console.options({ indent: 2 }));
 
+  Console.info("");
+  Console.info("If this is your first time using Meteor, try the tutorial:");
+  Console.info(
+    Console.url("http://www.meteor.com/tutorials"),
+      Console.options({ indent: 2 }));
+
+  Console.info("");
 });
 
 ///////////////////////////////////////////////////////////////////////////////
