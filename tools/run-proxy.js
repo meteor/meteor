@@ -4,16 +4,6 @@ var runLog = require('./run-log.js');
 var isopackets = require('./isopackets.js');
 var errorAppConnection = null;
 
-var getDDPConnectionToErrorApp = function () {
-  var DDP = isopackets.load('ddp')['ddp-client'].DDP;
-  // XXX Check if connection is alive before restarting a DDP conn
-  if (!errorAppConnection || errorAppConnection.status() !== "connected")
-    errorAppConnection = DDP.connect('localhost:8600');
-  if (!errorAppConnection.status() === "connected") {
-    throw new Meteor.Error("Failed to connect to error app");
-  }
-}
-
 // options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
   var self = this;
@@ -232,16 +222,28 @@ _.extend(Proxy.prototype, {
     if (mode == "proxy") {
       // Make error page disconnect all ddp connections to force client
       // to refresh their connection and reload main app
-      getDDPConnectionToErrorApp();
+      self.getDDPConnectionToErrorApp();
       errorAppConnection.call('disconnectEveryone');
     } else if (mode == "errorpage") {
-      getDDPConnectionToErrorApp();
+      self.getDDPConnectionToErrorApp();
       // Send over logs to error app
       var errorMessage = "";
       _.each(runLog.getLog(), function(item) {
         errorMessage += item.message + " \n ";
       });
       errorAppConnection.call('addErrorMessage', errorMessage);
+    }
+  },
+
+  getDDPConnectionToErrorApp: function () {
+    var self = this;
+    var DDP = isopackets.load('ddp')['ddp-client'].DDP;
+    // Check if connection is alive before creating new DDP connection
+    if (!errorAppConnection || errorAppConnection.status() !== "connected")
+      errorAppConnection = DDP.connect(self.proxyToErrorApp + ':' +
+        self.proxyToErrorPort);
+    if (!(errorAppConnection.status() === "connected")) {
+      // XXX throw an error because this should never be the case
     }
   }
 });

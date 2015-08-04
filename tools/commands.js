@@ -395,7 +395,8 @@ function doRunCommand (options) {
   let errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
     'reactive-browser-debugger');
   let errorAppConfig = {
-    appPort: 8600,
+    appPort: require('./utils.js').randomPort(),
+    appHost: appHost,
     projectContext: new projectContextModule.ProjectContext({
       projectDir: errorAppPath,
       allowIncompatibleUpdate: options['allow-incompatible-update'],

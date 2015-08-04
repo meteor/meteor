@@ -70,7 +70,7 @@ class Runner {
       proxyToPort: self.appPort,
       proxyToHost: appHost,
       proxyToErrorPort: errorAppConfig.appPort,
-      proxyToErrorHost: '127.0.0.1',
+      proxyToErrorHost: errorAppConfig.appHost,
       onFailure
     });
 
@@ -177,9 +177,8 @@ class Runner {
 
     if (! self.stopped) {
       buildmessage.enterJob({ title: "starting your app" }, function () {
-        console.log('starting error app');
         self.errorAppRunner.start();
-        console.log('starting regular app');
+        runLog.log('Started error app.', {arrow: true});
         self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped)
