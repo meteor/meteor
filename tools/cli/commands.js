@@ -719,9 +719,9 @@ main.registerCommand({
     Console.command("meteor"), Console.options({ indent: 2 }));
 
   Console.info("");
-  Console.info("If this is your first time using Meteor, try the tutorial:");
+  Console.info("If you are new to Meteor, try some of the learning resources here:");
   Console.info(
-    Console.url("http://www.meteor.com/tutorials"),
+    Console.url("https://www.meteor.com/learn"),
       Console.options({ indent: 2 }));
 
   Console.info("");
