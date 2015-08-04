@@ -548,10 +548,10 @@ _.extend(PackageSource.prototype, {
        * @param {String} options.documentation Optional Filepath to
        * documentation. Set to 'README.md' by default. Set this to null to submit
        * no documentation.
-       * @param {String} options.debugOnly A package with this flag set to true
+       * @param {Boolean} options.debugOnly A package with this flag set to true
        * will not be bundled into production builds. This is useful for packages
        * meant to be used in development only.
-       * @param {String} options.prodOnly A package with this flag set to true
+       * @param {Boolean} options.prodOnly A package with this flag set to true
        * will ONLY be bundled into production builds.
        */
       describe: function (options) {
