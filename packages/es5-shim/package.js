@@ -17,13 +17,15 @@ Package.onUse(function(api) {
   // Initialize Date and parseInt with their initial global values.
   api.addFiles("import_globals.js");
 
-  api.addFiles([
-    // If this file does not exist, api.addFiles will throw an exception.
-    ".npm/package/node_modules/es5-shim/es5-shim.js"
-  ], ["client", "server"], {
+  var es5ShimPath = ".npm/package/node_modules/es5-shim/es5-shim.js";
+
+  api.addFiles(es5ShimPath, "client", {
     // Files in the es5-shim package are already wrapped in closures.
     bare: true
   });
+
+  // Only client-side files can be { bare: true }.
+  api.addFiles(es5ShimPath, "server");
 
   // If Date and parseInt were actually reassigned, make the global
   // environment reflect those changes.
