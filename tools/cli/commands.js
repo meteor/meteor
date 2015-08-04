@@ -137,14 +137,17 @@ function parseMobileServerOption(mobileServerOption,
 function mobileServerUrlForServerUrl(serverUrl, isRunOnDeviceRequested) {
   // If we are running on a device, use the auto-detected IP
   if (isRunOnDeviceRequested) {
-    var myIp = utils.ipAddress();
-    if (!myIp) {
-      Console.error(
-        "Error detecting IP address for mobile app to connect to.\n" +
-        "Please specify the address that the mobile app should connect\n" +
-        "to with --mobile-server.");
-      throw new main.ExitWithCode(1);
-    }
+    let myIp;
+    try {
+      myIp = utils.ipAddress();
+  } catch (err) {
+    Console.error(
+`Error detecting IP address for mobile app to connect to:
+${err.message}
+Please specify the address that the mobile app should connect
+to with --mobile-server.`);
+    throw new main.ExitWithCode(1);
+  }
     return {
       protocol: 'http://',
       host: myIp,
