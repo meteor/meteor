@@ -21,6 +21,7 @@ LivedataTest.ClientStream = function (endpoint, options) {
   self.endpoint = endpoint;
 
   self.headers = self.options.headers || {};
+  self.fayeOptions = self.options.fayeOptions || {};
 
   self._initCommon(self.options);
 
@@ -137,6 +138,7 @@ _.extend(LivedataTest.ClientStream.prototype, {
       headers: self.headers,
       extensions: [deflate]
     };
+    fayeOptions = _.extend(fayeOptions, self.fayeOptions);
     var proxyUrl = self._getProxyUrl(targetUrl);
     if (proxyUrl) {
       fayeOptions.proxy = { origin: proxyUrl };

@@ -50,6 +50,11 @@ var ServiceConnection = function (endpointUrl, options) {
       connectFuture.return();
     }
   });
+  if (process.env.METEOR_ADDITIONAL_CERT) {
+    options.fayeOptions= {
+      ca: require('fs').readFileSync(process.env.METEOR_ADDITIONAL_CERT)
+    }
+  }
 
   self.connection = Package['ddp-client'].DDP.connect(endpointUrl, options);
 
