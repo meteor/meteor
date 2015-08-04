@@ -293,6 +293,13 @@ function doRunCommand (options) {
     var testRunnerAppDir =
       options['test-app-path'] || files.mkdtemp('meteor-test-run');
     files.rm_recursive(testRunnerAppDir);
+    // Meteor will not use these files itself but maybe some packages will
+    // For example sanjo:meteor-files-helpers
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor'),
+      files.pathJoin(testRunnerAppDir, '.meteor'),
+      {preserveSymlinks: true, ignore: [/^local$/, /^\.id$/, /^cordova-plugins$/]}
+    );
     // Copy the existing build and isopacks to speed up the initial start
     files.cp_r(
       files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
