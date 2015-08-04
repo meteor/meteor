@@ -215,6 +215,11 @@ _.extend(Proxy.prototype, {
   setMode: function (mode) {
     var self = this;
 
+    if (self.mode === "errorpage" && mode === "hold") {
+      self.getDDPConnectionToErrorApp();
+      errorAppConnection.call('isAppRefreshing', true);
+    }
+
     self.mode = mode;
 
     self._tryHandleConnections();
@@ -223,6 +228,7 @@ _.extend(Proxy.prototype, {
       // Make error page disconnect all ddp connections to force client
       // to refresh their connection and reload main app
       self.getDDPConnectionToErrorApp();
+      errorAppConnection.call('isAppRefreshing', false);
       errorAppConnection.call('disconnectEveryone');
     } else if (mode == "errorpage") {
       self.getDDPConnectionToErrorApp();
@@ -231,6 +237,7 @@ _.extend(Proxy.prototype, {
       _.each(runLog.getLog(), function(item) {
         errorMessage += item.message + " \n ";
       });
+      errorAppConnection.call('isAppRefreshing', false);
       errorAppConnection.call('addErrorMessage', errorMessage);
     }
   },
