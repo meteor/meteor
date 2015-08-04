@@ -1174,11 +1174,27 @@ files.getHomeDir = function () {
 files.currentEnvWithPathsAdded = function (...paths) {
   const env = {...process.env};
 
+  let pathPropertyName;
+  if (process.platform === "win32") {
+    // process.env allows for case insensitive access on Windows, but copying it
+    // creates a normal JavaScript object with case sensitive property access.
+    // This leads to problems, because we would be adding a PATH property instead
+    // of setting Path for instance.
+    // We want to make sure we're setting the right property, so we
+    // lookup the property name case insensitively ourselves.
+    pathPropertyName = _.find(Object.keys(env), (key) => {
+      return key.toUpperCase() === 'PATH';
+    });
+    if (!pathPropertyName) pathPropertyName = 'Path';
+  } else {
+    pathPropertyName = 'PATH';
+  }
+
   const convertedPaths = paths.map(path => files.convertToOSPath(path));
-  let pathDecomposed = (env.PATH || "").split(files.pathOsDelimiter);
+  let pathDecomposed = (env[pathPropertyName] || "").split(files.pathOsDelimiter);
   pathDecomposed.unshift(...convertedPaths);
 
-  env.PATH = pathDecomposed.join(files.pathOsDelimiter);
+  env[pathPropertyName] = pathDecomposed.join(files.pathOsDelimiter);
   return env;
 }
 
