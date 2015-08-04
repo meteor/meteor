@@ -1452,8 +1452,9 @@ main.registerCommand({
     maintainer: { type: String },
     "show-all": { type: Boolean },
     ejson: { type: Boolean },
-    // Undocumented debug-only option for Velocity.
-    "debug-only": { type: Boolean }
+    // Undocumented debug-only option (originally added for Velocity).
+    "debug-only": { type: Boolean },
+    "prod-only": { type: Boolean }
   },
   catalogRefresh:
     new catalog.Refresh.OnceAtStart(
@@ -1516,6 +1517,11 @@ main.registerCommand({
     // If we asked for debug-only packages and this package is NOT debug only,
     // we don't care.
     if (options["debug-only"] && !vr.debugOnly) {
+      return false;
+    }
+    // If we asked for prod-only packages and this package is NOT prod only,
+    // we don't care.
+    if (options["prod-only"] && !vr.prodOnly) {
       return false;
     }
     return true;

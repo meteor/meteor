@@ -161,6 +161,7 @@ compiler.compile = Profile(function (packageSource, options) {
     npmDiscards: packageSource.npmDiscards,
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly,
+    prodOnly: packageSource.prodOnly,
     pluginCacheDir: options.pluginCacheDir,
     isobuildFeatures
   });
@@ -825,6 +826,9 @@ compiler.eachUsedUnibuild = function (
     // debug-only.
     if (usedPackage.debugOnly && options.skipDebugOnly)
       continue;
+    // Ditto prodOnly.
+    if (usedPackage.prodOnly && options.skipProdOnly)
+      continue;
 
     var unibuild = usedPackage.getUnibuildAtArch(arch);
     if (!unibuild) {
@@ -887,5 +891,9 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // (Why not isobuild:isopack@2.0.0? Well, that would imply that Version Solver
   // would have to choose only one isobuild:isopack feature version, which
   // doesn't make sense here.)
-  'isobuild:isopack-2': ['1.0.0']
+  'isobuild:isopack-2': ['1.0.0'],
+
+  // This package uses the `prodOnly` metadata flag, which causes it to
+  // automatically depend on the `isobuild:prod-only` feature package.
+  'isobuild:prod-only': ['1.0.0'],
 };

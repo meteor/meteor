@@ -360,7 +360,7 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   s.mkdir("server");
-  s.write("server/debug.js",
+  s.write("server/exit-test.js",
           "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
 
   run = s.run("--once");
@@ -370,6 +370,23 @@ selftest.define("add packages to app", [], function () {
   run = s.run("--once", "--production");
   run.waitSecs(15);
   run.expectExit(235);
+
+  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  run = s.run("add", "prod-only");
+  run.match("prod-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js", // overwrite
+          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(234);
 });
 
 // Add a package that adds files to specific client architectures.

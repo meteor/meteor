@@ -349,6 +349,10 @@ var PackageSource = function () {
   // for production builds.
   self.debugOnly = false;
 
+  // A package marked prodOnly is ONLY picked up by the bundler for production
+  // builds.
+  self.prodOnly = false;
+
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
   // built copies of all known isopackets.
@@ -547,6 +551,8 @@ _.extend(PackageSource.prototype, {
        * @param {String} options.debugOnly A package with this flag set to true
        * will not be bundled into production builds. This is useful for packages
        * meant to be used in development only.
+       * @param {String} options.prodOnly A package with this flag set to true
+       * will ONLY be bundled into production builds.
        */
       describe: function (options) {
         _.each(options, function (value, key) {
@@ -600,6 +606,8 @@ _.extend(PackageSource.prototype, {
             }
           } else if (key === "debugOnly") {
             self.debugOnly = !!value;
+          } else if (key === "prodOnly") {
+            self.prodOnly = !!value;
           } else {
           // Do nothing. We might want to add some keys later, and we should err
           // on the side of backwards compatibility.
@@ -1037,6 +1045,18 @@ _.extend(PackageSource.prototype, {
       _.each(api.uses[label], doNotDepOnSelf);
       _.each(api.implies[label], doNotDepOnSelf);
     });
+
+    // Cause packages that use `prodOnly` to automatically depend on the
+    // `isobuild:prod-only` feature package, which will cause an error
+    // when a package using `prodOnly` is run by a version of the tool
+    // that doesn't support the feature.  The choice of 'os' architecture
+    // is arbitrary, as the version solver combines the dependencies of all
+    // arches.
+    if (self.prodOnly) {
+      api.uses['os'].push({
+        package: 'isobuild:prod-only', constraint: '1.0.0'
+      });
+    }
 
     // If we have specified some release, then we should go through the
     // dependencies and fill in the unspecified constraints with the versions in
