@@ -1,5 +1,19 @@
 ## v.NEXT
 
+## v1.1.0.3, 2015-Jul-30
+
+### Accounts
+
+* When using Facebook API version 2.4, properly fetch `email` and other fields.
+  Facebook recently forced all new apps to use version 2.4 of their API.  #4743
+
+## v1.1.0.2, 2015-Apr-06
+
+### `meteor` command-line tool
+
+* Revert a change in 1.1.0.1 that caused `meteor mongo` to fail on some Linux
+  systems. #4115, #4124, #4134
+
 ## v1.1.0.1, 2015-Apr-02
 
 ### Blaze

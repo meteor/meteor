@@ -1473,7 +1473,7 @@ DocsData = {
   "Blaze.currentView": {
     "filepath": "blaze/view.js",
     "kind": "member",
-    "lineno": 515,
+    "lineno": 517,
     "locus": "Client",
     "longname": "Blaze.currentView",
     "memberof": "Blaze",
@@ -1489,7 +1489,7 @@ DocsData = {
   "Blaze.getData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 726,
+    "lineno": 728,
     "locus": "Client",
     "longname": "Blaze.getData",
     "memberof": "Blaze",
@@ -1514,7 +1514,7 @@ DocsData = {
   "Blaze.getView": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 764,
+    "lineno": 766,
     "locus": "Client",
     "longname": "Blaze.getView",
     "memberof": "Blaze",
@@ -1561,7 +1561,7 @@ DocsData = {
   "Blaze.remove": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 660,
+    "lineno": 662,
     "locus": "Client",
     "longname": "Blaze.remove",
     "memberof": "Blaze",
@@ -1584,7 +1584,7 @@ DocsData = {
   "Blaze.render": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 597,
+    "lineno": 599,
     "locus": "Client",
     "longname": "Blaze.render",
     "memberof": "Blaze",
@@ -1637,7 +1637,7 @@ DocsData = {
   "Blaze.renderWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 648,
+    "lineno": 650,
     "locus": "Client",
     "longname": "Blaze.renderWithData",
     "memberof": "Blaze",
@@ -1700,7 +1700,7 @@ DocsData = {
   "Blaze.toHTML": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 681,
+    "lineno": 683,
     "locus": "Client",
     "longname": "Blaze.toHTML",
     "memberof": "Blaze",
@@ -1724,7 +1724,7 @@ DocsData = {
   "Blaze.toHTMLWithData": {
     "filepath": "blaze/view.js",
     "kind": "function",
-    "lineno": 693,
+    "lineno": 695,
     "locus": "Client",
     "longname": "Blaze.toHTMLWithData",
     "memberof": "Blaze",

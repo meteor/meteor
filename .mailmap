@@ -1,6 +1,7 @@
-# This makes it easier to find GitHub usernames for History.md.
+# The presence of this file makes it easier to find GitHub usernames for
+# History.md.
 #
-# This controls 'git shortlog'. eg, run:
+# This is a git dotfile that affects the output of 'git shortlog'. eg, run:
 #   git shortlog -s release/METEOR@1.0.1..HEAD
 # to get a sorted list of all committers to revisions in HEAD but not
 # in 1.0.1.  To get the list including email addresses (useful for input
@@ -87,6 +88,7 @@ GITHUB: Neftedollar <oildollar@gmail.com>
 GITHUB: netanelgilad <netanelgilad@gmail.com>
 GITHUB: ogourment <ogourment@smarterportal.com>
 GITHUB: ograycode <jason@theograys.com>
+GITHUB: omeid <public@omeid.me>
 GITHUB: OyoKooN <nathan@sxnlabs.com>
 GITHUB: paulswartz <paulswartz@gmail.com>
 GITHUB: pcjpcj2 <pcjpcj2@gmail.com>
