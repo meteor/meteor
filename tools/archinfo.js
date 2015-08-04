@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var files = require('./files.js');
+var files = require('./fs/files.js');
 var os = require('os');
 
 /* Meteor's current architecture scheme defines the following virtual

@@ -1,7 +1,7 @@
 /* eslint no-console: 0 */
 
 var _ = require('underscore');
-var files = require('./files.js');
+var files = require('./fs/files.js');
 var Console = require('./console.js').Console;
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to

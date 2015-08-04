@@ -1,4 +1,4 @@
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;

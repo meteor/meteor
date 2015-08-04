@@ -1,5 +1,5 @@
 var url = require('url');
-var files = require('./files.js');
+var files = require('./fs/files.js');
 var _ = require('underscore');
 var tropohouse = require('./packaging/tropohouse.js');
 

@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 import { getUrl } from '../utils/http-helpers.js';
 import { sleepMs } from '../utils/utils.js';
 

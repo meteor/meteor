@@ -3,7 +3,7 @@ var Sandbox = selftest.Sandbox;
 var archinfo = require('../archinfo.js');
 var release = require('../packaging/release.js');
 var _ = require('underscore');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var runMongo = require('../runners/run-mongo.js');
 

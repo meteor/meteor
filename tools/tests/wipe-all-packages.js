@@ -1,6 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var archinfo = require('../archinfo.js');
 var _ = require('underscore');

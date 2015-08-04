@@ -4,7 +4,7 @@ var testUtils = require('../test-utils.js');
 var selftest = require('../selftest.js');
 var stats = require('../stats.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
+var files = require('../fs/files.js');
 
 selftest.define("create-publish-and-search",
     ["slow", "net", "test-package-server", "checkout"], function () {

@@ -1,5 +1,5 @@
-import {WatchSet, readAndWatchFile, sha1} from '../watch.js';
-import files from '../files.js';
+import {WatchSet, readAndWatchFile, sha1} from '../fs/watch.js';
+import files from '../fs/files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
 

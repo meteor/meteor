@@ -1,6 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var catalog = require('../catalog/catalog.js');
 
 function matchPath (text, doubleBS) {

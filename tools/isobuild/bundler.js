@@ -159,10 +159,10 @@ var PackageSource = require('./package-source.js');
 var Builder = require('./builder.js');
 var compilerPluginModule = require('./compiler-plugin.js');
 
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
-var watch = require('../watch.js');
+var watch = require('../fs/watch.js');
 var runLog = require('../run-log.js');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;

@@ -5,8 +5,8 @@ var linker = require('./linker.js');
 var buildmessage = require('../buildmessage.js');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
-var watch = require('../watch.js');
-var files = require('../files.js');
+var watch = require('../fs/watch.js');
+var files = require('../fs/files.js');
 var isopackets = require('../tool-env/isopackets.js');
 var colonConverter = require('../utils/colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
@@ -1591,6 +1591,7 @@ _.extend(Isopack.prototype, {
       /^tools\/runners\/[^\/]+\.js$/, // Parts of tool process
       /^tools\/packaging\/[^\/]+\.js$/,
       /^tools\/utils\/[^\/]+\.js$/,
+      /^tools\/fs\/[^\/]+\.js$/,
       // We don't support running self-test from an install anymore
     ];
 

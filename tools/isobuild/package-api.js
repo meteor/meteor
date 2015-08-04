@@ -4,7 +4,7 @@ var buildmessage = require('../buildmessage.js');
 var utils = require('../utils/utils.js');
 var compiler = require('./compiler.js');
 var archinfo = require('../archinfo.js');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var catalog = require('../catalog/catalog.js');
 
 function toArray (x) {

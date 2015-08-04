@@ -3,7 +3,7 @@ require('../../tool-env/install-babel.js');
 var _ = require('underscore');
 var assert = require('assert');
 var Fiber = require('fibers');
-var files = require('../../files.js');
+var files = require('../../fs/files.js');
 var bundler = require('../../isobuild/bundler.js');
 var release = require('../../packaging/release.js');
 var catalog = require('../../catalog/catalog.js');

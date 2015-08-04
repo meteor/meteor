@@ -2,7 +2,7 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
 
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var buildmessage = require('../buildmessage.js');
 var config = require('../config.js');

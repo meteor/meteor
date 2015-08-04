@@ -5,7 +5,7 @@ var child_process = require('child_process');
 var phantomjs = require('phantomjs');
 var webdriver = require('browserstack-webdriver');
 
-var files = require('./files.js');
+var files = require('./fs/files.js');
 var utils = require('./utils/utils.js');
 var parseStack = require('./utils/parse-stack.js');
 var Console = require('./console.js').Console;

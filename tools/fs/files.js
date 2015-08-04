@@ -15,18 +15,18 @@ var crypto = require('crypto');
 var rimraf = require('rimraf');
 var Future = require('fibers/future');
 var sourcemap = require('source-map');
-var sourceMapRetrieverStack = require('./tool-env/source-map-retriever-stack.js');
+var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
-var utils = require('./utils/utils.js');
-var cleanup = require('./tool-env/cleanup.js');
-var buildmessage = require('./buildmessage.js');
+var utils = require('../utils/utils.js');
+var cleanup = require('../tool-env/cleanup.js');
+var buildmessage = require('../buildmessage.js');
 var watch = require('./watch.js');
-var fiberHelpers = require('./utils/fiber-helpers.js');
-var colonConverter = require('./utils/colon-converter.js');
+var fiberHelpers = require('../utils/fiber-helpers.js');
+var colonConverter = require('../utils/colon-converter.js');
 
 var miniFiles = require('./mini-files.js');
 
-var Profile = require('./tool-env/profile.js').Profile;
+var Profile = require('../tool-env/profile.js').Profile;
 
 // Attach all exports of miniFiles here to avoid code duplication
 var files = exports;
@@ -200,7 +200,7 @@ files.getCurrentNodeBinDir = function () {
 // Return the top-level directory for this meteor install or checkout
 files.getCurrentToolsDir = function () {
   var dirname = files.convertToStandardPath(__dirname);
-  return files.pathJoin(dirname, '..');
+  return files.pathJoin(dirname, '..', '..');
 };
 
 // Read a settings file and sanity-check it. Returns a string on

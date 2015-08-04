@@ -1,6 +1,6 @@
 var main = require('./main.js');
 var _ = require('underscore');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var buildmessage = require('../buildmessage.js');
 var auth = require('../auth.js');
 var config = require('../config.js');

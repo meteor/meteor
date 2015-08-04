@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var buildmessage = require('../buildmessage.js');
-var files = require('../files.js');
-var watch = require('../watch.js');
+var files = require('../fs/files.js');
+var watch = require('../fs/watch.js');
 var PackageSource = require('../isobuild/package-source.js');
 import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../isobuild/compiler.js';
 

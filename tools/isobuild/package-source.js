@@ -1,9 +1,9 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
 
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
-var watch = require('../watch.js');
+var watch = require('../fs/watch.js');
 var buildmessage = require('../buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 var NpmDiscards = require('./npm-discards.js');

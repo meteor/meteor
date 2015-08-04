@@ -5,7 +5,7 @@
 var Future = require('fibers/future');
 
 var cleanup = require('../tool-env/cleanup.js');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var os = require('os');
 var _ = require('underscore');
 var httpHelpers = require('../utils/http-helpers.js');

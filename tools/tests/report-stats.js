@@ -3,7 +3,7 @@ var os = require('os');
 var util = require('util');
 
 var auth = require('../auth.js');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var config = require('../config.js');
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');

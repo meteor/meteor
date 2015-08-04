@@ -8,7 +8,7 @@ var util = require('util');
 var _ = require('underscore');
 var Future = require('fibers/future');
 
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var auth = require('../auth.js');
 var config = require('../config.js');
 var release = require('../packaging/release.js');

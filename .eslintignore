@@ -12,6 +12,7 @@ tools/
 !tools/cli/*.js
 !tools/runners/*.js
 !tools/tool-env/*.js
+!tools/fs/*.js
 
 # Below, files that have yet to be converted to match the linter
 tools/archinfo.js
@@ -24,8 +25,8 @@ tools/config.js
 tools/console.js
 tools/deploy.js
 tools/fiber-helpers.js
-tools/files.js
-tools/mini-files.js
+tools/fs/files.js
+tools/fs/mini-files.js
 tools/func-utils.js
 tools/http-helpers.js
 tools/inspector.js
@@ -35,15 +36,15 @@ tools/processes.js
 tools/progress.js
 tools/project-context.js
 tools/run-log.js
-tools/safe-pathwatcher.js
+tools/fs/safe-pathwatcher.js
 tools/selftest.js
 tools/service-connection.js
 tools/shell-client.js
 tools/stats.js
 tools/test-utils.js
 tools/upgraders.js
-tools/utils.js
-tools/watch.js
+tools/utils/utils.js
+tools/fs/watch.js
 
 tools/catalog/catalog-local.js
 tools/catalog/catalog-remote.js

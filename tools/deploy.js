@@ -5,7 +5,7 @@
 // send RPC with or without password as required
 
 var qs = require('querystring');
-var files = require('./files.js');
+var files = require('./fs/files.js');
 var httpHelpers = require('./utils/http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var config = require('./config.js');

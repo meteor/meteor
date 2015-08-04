@@ -2,7 +2,7 @@ var _ = require('underscore');
 
 var warehouse = require('./warehouse.js');
 
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var catalog = require('../catalog/catalog.js');
 var utils = require('../utils/utils.js');
 var buildmessage = require('../buildmessage.js');

@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var runLog = require('../run-log.js');
 var utils = require('../utils/utils.js');
 

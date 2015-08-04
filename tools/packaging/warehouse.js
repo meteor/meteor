@@ -40,7 +40,7 @@ var os = require("os");
 var Future = require("fibers/future");
 var _ = require("underscore");
 
-var files = require('../files.js');
+var files = require('../fs/files.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 

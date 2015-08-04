@@ -40,7 +40,7 @@ exports.watch = function watch(absPath, callback) {
       if (e.message !== 'Unable to watch path')
         throw e;
       var constants = require('constants');
-      var archinfo = require('./archinfo.js');
+      var archinfo = require('../archinfo.js');
       if (! suggestedRaisingWatchLimit &&
           // Note: the not-super-documented require('constants') maps from
           // strings to SYSTEM errno values. System errno values aren't the same
@@ -54,7 +54,7 @@ exports.watch = function watch(absPath, callback) {
           // The only suggestion we currently have is for Linux.
           archinfo.matches(archinfo.host(), 'os.linux')) {
         suggestedRaisingWatchLimit = true;
-        var Console = require('./console.js').Console;
+        var Console = require('../console.js').Console;
         Console.arrowWarn(
           "It looks like a simple tweak to your system's configuration will " +
             "make many tools (including this Meteor command) more efficient. " +

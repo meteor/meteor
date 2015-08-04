@@ -6,14 +6,14 @@ var buildmessage = require('./buildmessage.js');
 var catalog = require('./catalog/catalog.js');
 var catalogLocal = require('./catalog/catalog-local.js');
 var Console = require('./console.js').Console;
-var files = require('./files.js');
+var files = require('./fs/files.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
 var isopackets = require('./tool-env/isopackets.js');
 var packageMapModule = require('./packaging/package-map.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
-var watch = require('./watch.js');
+var watch = require('./fs/watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
 
 // The ProjectContext represents all the context associated with an app:
