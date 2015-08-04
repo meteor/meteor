@@ -1,7 +1,7 @@
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var Sandbox = selftest.Sandbox;
-var config = require("../config.js");
+var config = require('../config.js');
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 

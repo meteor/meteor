@@ -64,7 +64,7 @@ var buildmessage = require('./buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
 var cleanup = require('./tool-env/cleanup.js');
-var utils = require('./utils.js');
+var utils = require('./utils/utils.js');
 var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;

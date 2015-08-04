@@ -3,8 +3,8 @@ var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var files = require('../files.js');
 var Sandbox = selftest.Sandbox;
-var httpHelpers = require('../http-helpers.js');
-var config = require("../config.js");
+var httpHelpers = require('../utils/http-helpers.js');
+var config = require('../config.js');
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 

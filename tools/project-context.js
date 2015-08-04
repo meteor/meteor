@@ -12,7 +12,7 @@ var isopackets = require('./tool-env/isopackets.js');
 var packageMapModule = require('./packaging/package-map.js');
 var release = require('./packaging/release.js');
 var tropohouse = require('./packaging/tropohouse.js');
-var utils = require('./utils.js');
+var utils = require('./utils/utils.js');
 var watch = require('./watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
 

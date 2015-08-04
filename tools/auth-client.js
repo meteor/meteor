@@ -1,7 +1,7 @@
 var auth = require('./auth.js');
 var Console = require('./console.js').Console;
 var ServiceConnection = require('./service-connection.js');
-var httpHelpers = require('./http-helpers.js');
+var httpHelpers = require('./utils/http-helpers.js');
 
 exports.AlreadyPrintedMessageError = function () {};
 

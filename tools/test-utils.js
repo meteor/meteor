@@ -1,6 +1,6 @@
 var isopackets = require('./tool-env/isopackets.js');
 var config = require('./config.js');
-var utils = require('./utils.js');
+var utils = require('./utils/utils.js');
 var auth = require('./auth.js');
 var selftest = require('./selftest.js');
 

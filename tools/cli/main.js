@@ -14,7 +14,7 @@ var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var catalog = require('../catalog/catalog.js');
 var buildmessage = require('../buildmessage.js');
-var httpHelpers = require('../http-helpers.js');
+var httpHelpers = require('../utils/http-helpers.js');
 
 var main = exports;
 

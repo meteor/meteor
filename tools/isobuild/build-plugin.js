@@ -2,7 +2,7 @@ var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var files = require('../files.js');
 var _ = require('underscore');
-import utils from '../utils.js';
+import utils from '../utils/utils.js';
 
 let nextId = 1;
 

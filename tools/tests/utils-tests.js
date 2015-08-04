@@ -1,5 +1,5 @@
 var selftest = require('../selftest.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 
 selftest.define('subset generator', function () {
   var out = [];

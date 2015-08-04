@@ -242,7 +242,7 @@ class Runner {
     if (self.specifiedAppPort) {
       self.appPort = self.specifiedAppPort;
     } else {
-      self.appPort = require('../utils.js').randomPort();
+      self.appPort = require('../utils/utils.js').randomPort();
     }
     if (self.proxy)
       self.proxy.proxyToPort = self.appPort;

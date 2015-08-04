@@ -1,12 +1,12 @@
 var Fiber = require("fibers");
 var _ = require("underscore");
 
-var config = require("./config.js");
-var files = require("./files.js");
-var auth = require("./auth.js");
-var ServiceConnection = require("./service-connection.js");
-var httpHelpers = require("./http-helpers.js");
-var Console = require("./console.js").Console;
+var config = require('./config.js');
+var files = require('./files.js');
+var auth = require('./auth.js');
+var ServiceConnection = require('./service-connection.js');
+var httpHelpers = require('./utils/http-helpers.js');
+var Console = require('./console.js').Console;
 
 // The name of the package that you add to your app to opt out of
 // sending stats.

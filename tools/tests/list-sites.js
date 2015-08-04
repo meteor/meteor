@@ -2,7 +2,7 @@ var _ = require('underscore');
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
 var files = require('../files.js');
-var config = require("../config.js");
+var config = require('../config.js');
 var Sandbox = selftest.Sandbox;
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;

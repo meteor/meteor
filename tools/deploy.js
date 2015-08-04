@@ -6,11 +6,11 @@
 
 var qs = require('querystring');
 var files = require('./files.js');
-var httpHelpers = require('./http-helpers.js');
+var httpHelpers = require('./utils/http-helpers.js');
 var buildmessage = require('./buildmessage.js');
 var config = require('./config.js');
 var auth = require('./auth.js');
-var utils = require('./utils.js');
+var utils = require('./utils/utils.js');
 var _ = require('underscore');
 var Future = require('fibers/future');
 var stats = require('./stats.js');

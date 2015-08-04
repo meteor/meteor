@@ -1,7 +1,7 @@
 var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var buildPluginModule = require('./build-plugin.js');
-var colonConverter = require('../colon-converter.js');
+var colonConverter = require('../utils/colon-converter.js');
 var files = require('../files.js');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
@@ -11,7 +11,7 @@ var Profile = require('../tool-env/profile.js').Profile;
 import {sha1} from  '../watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
-import {sourceMapLength} from '../utils.js';
+import {sourceMapLength} from '../utils/utils.js';
 
 // This file implements the new compiler plugins added in Meteor 1.2, which are
 // registered with the Plugin.registerCompiler API.

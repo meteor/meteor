@@ -6,8 +6,8 @@ var auth = require('../auth.js');
 var config = require('../config.js');
 var Future = require('fibers/future');
 var runLog = require('../run-log.js');
-var utils = require('../utils.js');
-var httpHelpers = require('../http-helpers.js');
+var utils = require('../utils/utils.js');
+var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../archinfo.js');
 var PackageSource = require('../isobuild/package-source.js');
 var bundler = require('../isobuild/bundler.js');
@@ -19,7 +19,7 @@ var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('../console.js').Console;
 var projectContextModule = require('../project-context.js');
-var colonConverter = require("../colon-converter.js");
+var colonConverter = require('../utils/colon-converter.js');
 var catalogUtils = require('../catalog/catalog-utils.js');
 
 var release = require('../packaging/release.js');
@@ -1715,7 +1715,7 @@ main.registerCommand({
 
   var upgrader = options.args[0];
 
-  var upgraders = require("../upgraders.js");
+  var upgraders = require('../upgraders.js');
   console.log("%s: running upgrader %s.",
               files.pathBasename(options.appDir), upgrader);
   upgraders.runUpgrader(projectContext, upgrader);

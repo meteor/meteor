@@ -1,9 +1,9 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var Sandbox = selftest.Sandbox;
-var httpHelpers = require('../http-helpers.js');
+var httpHelpers = require('../utils/http-helpers.js');
 
 // Poll the given app looking for the correct settings. Throws an error
 // if the settings aren't found after a timeout.

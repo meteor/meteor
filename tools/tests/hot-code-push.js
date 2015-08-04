@@ -1,6 +1,6 @@
 var selftest = require('../selftest.js');
 var Sandbox = selftest.Sandbox;
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 
 selftest.define("css hot code push", function (options) {
   var s = new Sandbox({

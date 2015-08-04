@@ -8,7 +8,7 @@ var bundler = require('./bundler.js');
 var watch = require('../watch.js');
 var files = require('../files.js');
 var isopackets = require('../tool-env/isopackets.js');
-var colonConverter = require('../colon-converter.js');
+var colonConverter = require('../utils/colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console.js').Console;
@@ -1590,6 +1590,7 @@ _.extend(Isopack.prototype, {
       /^tools\/tool-env\/[^\/]+\.js$/, // Tool initiation and clean up
       /^tools\/runners\/[^\/]+\.js$/, // Parts of tool process
       /^tools\/packaging\/[^\/]+\.js$/,
+      /^tools\/utils\/[^\/]+\.js$/,
       // We don't support running self-test from an install anymore
     ];
 
@@ -1630,7 +1631,7 @@ _.extend(Isopack.prototype, {
       }
 
       var babelOptions = babel.getDefaultOptions(
-        require("../tool-env/babel-features.js")
+        require('../tool-env/babel-features.js')
       );
 
       _.extend(babelOptions, {

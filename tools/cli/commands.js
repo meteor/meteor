@@ -8,17 +8,17 @@ var authClient = require('../auth-client.js');
 var config = require('../config.js');
 var Future = require('fibers/future');
 var runLog = require('../run-log.js');
-var utils = require('../utils.js');
-var httpHelpers = require('../http-helpers.js');
+var utils = require('../utils/utils.js');
+var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../archinfo.js');
 var catalog = require('../catalog/catalog.js');
 var stats = require('../stats.js');
 var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
-var execFileSync = require('../utils.js').execFileSync;
+var execFileSync = require('../utils/utils.js').execFileSync;
 var Console = require('../console.js').Console;
 var projectContextModule = require('../project-context.js');
-var colonConverter = require('../colon-converter.js');
+var colonConverter = require('../utils/colon-converter.js');
 var PackageSource = require('../isobuild/package-source.js');
 
 var release = require('../packaging/release.js');
@@ -1935,7 +1935,7 @@ main.registerCommand({
   var offline = false;
   if (!options['force-online']) {
     try {
-      require('../http-helpers.js').getUrl("http://www.google.com/");
+      require('../utils/http-helpers.js').getUrl("http://www.google.com/");
     } catch (e) {
       if (e instanceof files.OfflineError)
         offline = true;

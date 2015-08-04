@@ -1,4 +1,4 @@
-var files = require("./files.js");
+var files = require('./files.js');
 
 // Set METEOR_WATCH_FORCE_POLLING environment variable to a truthy value to
 // force the use of files.watchFile instead of pathwatcher.watch.

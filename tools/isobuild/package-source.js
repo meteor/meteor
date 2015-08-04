@@ -2,7 +2,7 @@ var _ = require('underscore');
 var sourcemap = require('source-map');
 
 var files = require('../files.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var watch = require('../watch.js');
 var buildmessage = require('../buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');

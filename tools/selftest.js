@@ -6,8 +6,8 @@ var phantomjs = require('phantomjs');
 var webdriver = require('browserstack-webdriver');
 
 var files = require('./files.js');
-var utils = require('./utils.js');
-var parseStack = require('./parse-stack.js');
+var utils = require('./utils/utils.js');
+var parseStack = require('./utils/parse-stack.js');
 var Console = require('./console.js').Console;
 var archinfo = require('./archinfo.js');
 var config = require('./config.js');
@@ -1095,7 +1095,7 @@ var Run = function (execPath, options) {
   self.fakeMongoPort = null;
   self.fakeMongoConnection = null;
   if (options.fakeMongo) {
-    self.fakeMongoPort = require('./utils.js').randomPort();
+    self.fakeMongoPort = require('./utils/utils.js').randomPort();
     self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
   }
 
@@ -1887,7 +1887,7 @@ var runTests = function (options) {
 // up automatically.
 //
 // Start your file with something like:
-//   var selftest = require('../selftest.js');
+//   var selftest = require('./selftest.js');
 //   var Sandbox = selftest.Sandbox;
 //
 // Define tests with:

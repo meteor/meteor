@@ -4,9 +4,9 @@ var buildmessage = require('../buildmessage.js');
 var compiler = require('./compiler.js');
 var files = require('../files.js');
 var isopackModule = require('./isopack.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var watch = require('../watch.js');
-var colonConverter = require("../colon-converter.js");
+var colonConverter = require('../utils/colon-converter.js');
 
 exports.IsopackCache = function (options) {
   var self = this;

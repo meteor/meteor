@@ -10,7 +10,7 @@ var files = require('../files.js');
 var config = require('../config.js');
 var watch = require('../watch.js');
 var Console = require('../console.js').Console;
-var fiberHelpers = require('../fiber-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers.js');
 var packageMapModule = require('../packaging/package-map.js');
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside

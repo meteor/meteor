@@ -7,11 +7,11 @@ var files = require('../files.js');
 var buildmessage = require('../buildmessage.js');
 var projectContextModule = require('../project-context.js');
 var Future = require('fibers/future');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var archinfo = require('../archinfo.js');
-var httpHelpers = require('../http-helpers.js');
+var httpHelpers = require('../utils/http-helpers.js');
 var Console = require('../console.js').Console;
-var processes = require('../processes.js');
+var processes = require('../utils/processes.js');
 var catalog = require('../catalog/catalog.js');
 
 var tropohouse = require('../packaging/tropohouse.js');
@@ -213,7 +213,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
                       process.env,
                       opts.env || {});
 
-  var execFileAsync = require('../utils.js').execFileAsync;
+  var execFileAsync = require('../utils/utils.js').execFileAsync;
 
   var p = execFileAsync(file, args, opts);
   p.on('close', function (code) {
@@ -229,7 +229,7 @@ var execFileAsyncOrThrow = function (file, args, opts, cb) {
 };
 
 var execFileSyncOrThrow = function (file, args, opts) {
-  var execFileSync = require('../utils.js').execFileSync;
+  var execFileSync = require('../utils/utils.js').execFileSync;
 
   verboseLog('Running synchronously: ', file, args);
 
@@ -755,7 +755,7 @@ var fetchCordovaPluginFromShaUrl =
   var pluginPath = files.pathJoin(localPluginsDir, pluginName);
   var pluginTarballPath = pluginPath + '.tgz';
 
-  var execFileSync = require('../utils.js').execFileSync;
+  var execFileSync = require('../utils/utils.js').execFileSync;
   var whichCurl = execFileSync('which', ['curl']);
 
   var downloadProcess = null;
@@ -2081,7 +2081,7 @@ _.extend(IOS.prototype, {
   },
 
   killSimulator: function () {
-    var execFileSync = require('../utils.js').execFileSync;
+    var execFileSync = require('../utils/utils.js').execFileSync;
     execFileSync('killall', ['iOS Simulator']);
     execFileSync('killall', ['iPhone Simulator']);
   }

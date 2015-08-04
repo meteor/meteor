@@ -1,8 +1,8 @@
 var _ = require('underscore');
 var selftest = require('../selftest.js');
 var files = require('../files.js');
-import { getUrl } from '../http-helpers.js';
-import { sleepMs } from '../utils.js';
+import { getUrl } from '../utils/http-helpers.js';
+import { sleepMs } from '../utils/utils.js';
 
 var Sandbox = selftest.Sandbox;
 

@@ -1,5 +1,5 @@
-import selftest from '../selftest';
-import { parse, markBottom } from '../parse-stack';
+import selftest from '../selftest.js';
+import { parse, markBottom } from '../utils/parse-stack.js';
 import _ from 'underscore';
 import Fiber from 'fibers';
 import Future from 'fibers/future';

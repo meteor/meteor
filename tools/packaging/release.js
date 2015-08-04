@@ -4,7 +4,7 @@ var warehouse = require('./warehouse.js');
 
 var files = require('../files.js');
 var catalog = require('../catalog/catalog.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var buildmessage = require('../buildmessage.js');
 
 var release = exports;

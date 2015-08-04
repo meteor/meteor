@@ -8,9 +8,9 @@ var cleanup = require('../tool-env/cleanup.js');
 var files = require('../files.js');
 var os = require('os');
 var _ = require('underscore');
-var httpHelpers = require('../http-helpers.js');
+var httpHelpers = require('../utils/http-helpers.js');
 var buildmessage = require('../buildmessage.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var runLog = require('../run-log.js');
 
 var meteorNpm = exports;

@@ -22,7 +22,7 @@ exports.coalesce = function(delayMs, callback, context) {
       return;
     }
 
-    var fiberCallback = require("./fiber-helpers.js").inBareFiber(function() {
+    var fiberCallback = require('./fiber-helpers.js').inBareFiber(function() {
       // Now that the timeout has fired, set inProgress to 1 so that
       // (until the callback is complete and we set inProgress to 0 again)
       // any calls to coalescingWrapper will increment inProgress to

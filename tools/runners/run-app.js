@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 var Fiber = require('fibers');
-var fiberHelpers = require('../fiber-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers.js');
 var files = require('../files.js');
 var watch = require('../watch.js');
 var bundler = require('../isobuild/bundler.js');
@@ -237,7 +237,7 @@ _.extend(AppProcess.prototype, {
 
     var attach;
     if (self.debugPort) {
-      attach = require("../inspector.js").start(self.debugPort, entryPoint);
+      attach = require('../inspector.js').start(self.debugPort, entryPoint);
 
       // If you do opts.push("--debug-brk", port) it doesn't work on Windows
       // for some reason

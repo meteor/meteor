@@ -314,7 +314,7 @@ function stop(debugPort) {
   }
 }
 
-require("./tool-env/cleanup.js").onExit(function killAll() {
+require('./tool-env/cleanup.js').onExit(function killAll() {
   for (var debugPort in debugEntries) {
     stop(debugPort);
   }

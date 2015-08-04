@@ -4,7 +4,7 @@
 var _ = require('underscore');
 var Fiber = require("fibers");
 
-var fiberHelpers = require('../fiber-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers.js');
 
 var cleanup = exports;
 _.extend(exports, {

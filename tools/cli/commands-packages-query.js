@@ -5,13 +5,13 @@ var _ = require('underscore');
 var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var catalog = require('../catalog/catalog.js');
-var Console = require("../console.js").Console;
+var Console = require('../console.js').Console;
 var files = require('../files.js');
 var isopackets = require('../tool-env/isopackets.js');
 var main = require('./main.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 var projectContextModule = require('../project-context.js');
-var utils = require('../utils.js');
+var utils = require('../utils/utils.js');
 var catalogUtils = require('../catalog/catalog-utils.js');
 var compiler = require('../isobuild/compiler.js');
 
