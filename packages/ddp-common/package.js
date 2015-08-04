@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'json', 'underscore', 'tracker',
+  api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
            'logging', 'retry'],
           ['client', 'server']);
 

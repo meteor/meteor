@@ -23,7 +23,7 @@ Npm.strip({
 Package.onUse(function (api) {
   api.use('npm-mongo', 'server');
 
-  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
+  api.use(['random', 'ejson', 'underscore', 'minimongo', 'logging',
            'ddp', 'tracker', 'diff-sequence', 'mongo-id'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);

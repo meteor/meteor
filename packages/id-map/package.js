@@ -5,6 +5,6 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.export('IdMap');
-  api.use(['underscore', 'json', 'ejson']);
+  api.use(['underscore', 'ejson']);
   api.addFiles([ 'id-map.js' ]);
 });
