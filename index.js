@@ -30,7 +30,5 @@ exports.setCacheDir = setCacheDir;
 
 exports.runtime = // Legacy name; prefer installRuntime.
 exports.installRuntime = function installRuntime() {
-  // Note that requiring this module installs global.babelHelpers.
-  require("babel-core/external-helpers");
-  return global.babelHelpers;
+  return require("./runtime.js");
 };
