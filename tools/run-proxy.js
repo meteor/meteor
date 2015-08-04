@@ -3,9 +3,16 @@ var Future = require('fibers/future');
 var runLog = require('./run-log.js');
 var isopackets = require('./isopackets.js');
 var errorAppConnection = null;
-var getLoadedPackages = function () {
-  return isopackets.load('ddp');
-};
+
+var getDDPConnectionToErrorApp = function () {
+  var DDP = isopackets.load('ddp')['ddp-client'].DDP;
+  // XXX Check if connection is alive before restarting a DDP conn
+  if (!errorAppConnection || errorAppConnection.status() !== "connected")
+    errorAppConnection = DDP.connect('localhost:8600');
+  if (!errorAppConnection.status() === "connected") {
+    throw new Meteor.Error("Failed to connect to error app");
+  }
+}
 
 // options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
@@ -178,16 +185,8 @@ _.extend(Proxy.prototype, {
 
       var c = self.httpQueue.shift();
       if (self.mode === "errorpage") {
-        // XXX serve an app that shows the logs nicely and that also
-        // knows how to reload when the server comes back up
-        /*
-        c.res.writeHead(200, {'Content-Type': 'text/plain'});
-        c.res.write("Your app is crashing. Here's the latest log.\n\n");
-
-        _.each(runLog.getLog(), function (item) {
-          c.res.write(item.message + "\n");
-        });
-        c.res.end(); */
+        // Serve error app, showing logs nicely and reloads
+        // when server comes back up
         self.proxy.web(c.req, c.res, {
           target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
         })
@@ -226,28 +225,23 @@ _.extend(Proxy.prototype, {
   setMode: function (mode) {
     var self = this;
 
-    if (mode == "proxy") {
-      // Set Error Page to disconnect
-      var DDP = isopackets.load('ddp')['ddp-client'].DDP;
-      // XXX Check if connection is alive before restarting a DDP conn
-      if (!errorAppConnection || errorAppConnection.status() !== "connected")
-        errorAppConnection = DDP.connect('localhost:8600');
-      errorAppConnection.call('disconnectEveryone');
-    }
     self.mode = mode;
 
     self._tryHandleConnections();
 
-    if (mode == "errorpage") {
-      var DDP = isopackets.load('ddp')['ddp-client'].DDP;
-      // XXX Check if connection is alive before restarting a DDP conn
-      if (!errorAppConnection || errorAppConnection.status() !== "connected")
-        errorAppConnection = DDP.connect('localhost:8600');
-      var errorMessageToSend = "";
+    if (mode == "proxy") {
+      // Make error page disconnect all ddp connections to force client
+      // to refresh their connection and reload main app
+      getDDPConnectionToErrorApp();
+      errorAppConnection.call('disconnectEveryone');
+    } else if (mode == "errorpage") {
+      getDDPConnectionToErrorApp();
+      // Send over logs to error app
+      var errorMessage = "";
       _.each(runLog.getLog(), function(item) {
-        errorMessageToSend += item.message + " \n ";
+        errorMessage += item.message + " \n ";
       });
-      errorAppConnection.call('setErrorMessage', errorMessageToSend);
+      errorAppConnection.call('addErrorMessage', errorMessage);
     }
   }
 });

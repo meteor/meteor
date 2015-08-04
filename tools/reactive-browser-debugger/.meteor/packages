@@ -1,0 +1,10 @@
+# Meteor packages used by this project, one per line.
+# Check this file (and the other files in this directory) into your repository.
+#
+# 'meteor add' and 'meteor remove' will edit this file for you,
+# but you can also edit it by hand.
+
+meteor-platform
+standard-minifiers # JS/CSS minifiers run for production mode
+ecmascript # allows ECMAScript2015+ syntax by default
+reactive-var

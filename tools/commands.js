@@ -392,14 +392,16 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
-  var errorAppConfig = {};
-  errorAppConfig.projectContext = new projectContextModule.ProjectContext({
-    projectDir: '/Users/anubhavjain/Documents/playpen/' +
-      'reactive-browser-debugger',
-    allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: !options['no-lint']
-  });
-  errorAppConfig.appPort = 8600;
+  let errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
+    'reactive-browser-debugger');
+  let errorAppConfig = {
+    appPort: 8600,
+    projectContext: new projectContextModule.ProjectContext({
+      projectDir: errorAppPath,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: !options['no-lint']
+    })
+  };
 
   var runAll = require('./run-all.js');
   return runAll.run({
