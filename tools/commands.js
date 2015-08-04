@@ -468,7 +468,10 @@ main.registerCommand({
   requiresRelease: false,
   requiresApp: true,
   pretty: false,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  options: {
+    'local-dir': { type: String }
+  }
 }, function (options) {
   if (!options.appDir) {
     Console.error(
@@ -477,7 +480,8 @@ main.registerCommand({
     );
   } else {
     var projectContext = new projectContextModule.ProjectContext({
-      projectDir: options.appDir
+      projectDir: options.appDir,
+      projectLocalDir: options['local-dir']
     });
 
     // Convert to OS path here because shell/server.js doesn't know how to
