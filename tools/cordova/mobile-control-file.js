@@ -1,7 +1,7 @@
 import _ from 'underscore';
 import { Console } from '../console.js';
-import files from '../files.js';
-import isopackets from '../isopackets.js'
+import files from '../fs/files.js';
+import isopackets from '../tool-env/isopackets.js'
 
 // Hard-coded constants
 var iconIosSizes = {

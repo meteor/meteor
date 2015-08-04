@@ -1,8 +1,8 @@
 import _ from 'underscore';
 import { Console } from '../console.js';
 import buildmessage from '../buildmessage.js';
-import files from '../files.js';
-import utils from '../utils.js';
+import files from '../fs/files.js';
+import utils from '../utils/utils.js';
 
 // packages - list of strings
 export function filterCordovaPackages(packages) {

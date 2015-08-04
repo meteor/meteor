@@ -1,5 +1,5 @@
 import selftest from '../selftest.js';
-import utils from '../utils.js';
+import utils from '../utils/utils.js';
 import { parseServerOptionsForRunCommand } from '../commands.js';
 
 selftest.define('get mobile server argument for meteor run', ['cordova'], function () {

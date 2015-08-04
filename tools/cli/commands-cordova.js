@@ -4,7 +4,7 @@ import { Console } from '../console.js';
 import catalog from '../catalog/catalog.js';
 import { ProjectContext, PlatformList } from '../project-context.js';
 import buildmessage from '../buildmessage.js';
-import files from '../files.js';
+import files from '../fs/files.js';
 
 import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized } from '../cordova/platforms.js';
 import { createCordovaProjectIfNecessary } from '../cordova/project.js';

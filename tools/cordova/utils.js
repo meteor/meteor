@@ -1,7 +1,7 @@
 import _ from 'underscore';
-import files from '../files.js';
+import files from '../fs/files.js';
 import { Console } from '../console.js';
-import { execFileAsync, execFileSync } from '../utils.js';
+import { execFileAsync, execFileSync } from '../utils/utils.js';
 
 export function execFileAsyncOrThrow(file, args, opts, cb) {
   Console.debug('Running asynchronously: ', file, args);

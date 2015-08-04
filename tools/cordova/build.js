@@ -2,11 +2,11 @@ import _ from 'underscore';
 import util from 'util';
 import { Console } from '../console.js';
 import buildmessage from '../buildmessage.js';
-import files from '../files.js';
+import files from '../fs/files.js';
 import bundler from '../isobuild/bundler.js';
 import archinfo from '../archinfo.js';
-import release from '../release.js';
-import isopackets from '../isopackets.js'
+import release from '../packaging/release.js';
+import isopackets from '../tool-env/isopackets.js'
 
 import { createCordovaProjectIfNecessary } from './project.js';
 import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized,
