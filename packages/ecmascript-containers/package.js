@@ -1,13 +1,13 @@
 Package.describe({
   name: "ecmascript-containers",
-  version: "0.1.2",
+  version: "0.1.3",
   summary: "Polyfills for ECMAScript 2015 Map and Set",
   git: "https://github.com/meteor/ecmascript-containers",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "ecmascript-containers": "0.1.2"
+  "ecmascript-containers": "0.1.3"
 });
 
 Package.onUse(function(api) {
