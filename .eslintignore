@@ -14,8 +14,6 @@ tools/
 !tools/tool-env/*.js
 
 # Below, files that have yet to be converted to match the linter
-tools/archinfo.js
-tools/auth-client.js
 tools/auth.js
 tools/buildmessage.js
 tools/cleanup.js
