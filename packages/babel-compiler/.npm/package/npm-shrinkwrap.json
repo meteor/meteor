@@ -1,10 +1,10 @@
 {
   "dependencies": {
     "meteor-babel": {
-      "version": "0.5.2",
+      "version": "0.5.4",
       "dependencies": {
         "babel-core": {
-          "version": "5.8.3",
+          "version": "5.8.20",
           "dependencies": {
             "babel-plugin-constant-folding": {
               "version": "1.0.1"
@@ -28,7 +28,7 @@
               "version": "1.0.1"
             },
             "babel-plugin-proto-to-assign": {
-              "version": "1.0.3"
+              "version": "1.0.4"
             },
             "babel-plugin-react-constant-elements": {
               "version": "1.0.3"
@@ -57,7 +57,7 @@
               "version": "1.1.6"
             },
             "babylon": {
-              "version": "5.8.3"
+              "version": "5.8.20"
             },
             "bluebird": {
               "version": "2.9.34"
@@ -93,7 +93,7 @@
               }
             },
             "core-js": {
-              "version": "0.9.18"
+              "version": "1.0.1"
             },
             "debug": {
               "version": "2.2.0",
@@ -166,6 +166,9 @@
             "js-tokens": {
               "version": "1.0.1"
             },
+            "json5": {
+              "version": "0.4.0"
+            },
             "line-numbers": {
               "version": "0.2.0",
               "dependencies": {
@@ -219,7 +222,7 @@
               "version": "0.1.6"
             },
             "regenerator": {
-              "version": "0.8.34",
+              "version": "0.8.35",
               "dependencies": {
                 "commoner": {
                   "version": "0.10.3",
@@ -325,16 +328,13 @@
                   }
                 },
                 "esprima-fb": {
-                  "version": "13001.1.0-dev-harmony-fb"
+                  "version": "15001.1.0-dev-harmony-fb"
                 },
                 "recast": {
-                  "version": "0.10.18",
+                  "version": "0.10.24",
                   "dependencies": {
-                    "esprima-fb": {
-                      "version": "14001.1.0-dev-harmony-fb"
-                    },
                     "ast-types": {
-                      "version": "0.8.2"
+                      "version": "0.8.5"
                     }
                   }
                 },
@@ -347,13 +347,13 @@
               "version": "1.2.0",
               "dependencies": {
                 "recast": {
-                  "version": "0.10.21",
+                  "version": "0.10.26",
                   "dependencies": {
                     "esprima-fb": {
                       "version": "15001.1.0-dev-harmony-fb"
                     },
                     "ast-types": {
-                      "version": "0.8.3"
+                      "version": "0.8.7"
                     }
                   }
                 },
@@ -416,13 +416,13 @@
                 }
               }
             },
-            "strip-json-comments": {
-              "version": "1.0.2"
-            },
             "to-fast-properties": {
               "version": "1.0.1"
             },
             "trim-right": {
+              "version": "1.0.1"
+            },
+            "try-resolve": {
               "version": "1.0.1"
             }
           }

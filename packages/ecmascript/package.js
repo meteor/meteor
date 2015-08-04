@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.1.3-plugins.1',
+  version: '0.1.3-plugins.2',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
@@ -13,7 +13,7 @@ Package.registerBuildPlugin({
 
 Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
-  api.imply('babel-runtime@0.1.2');
+  api.imply('babel-runtime@0.1.3');
   api.imply('promise@0.4.1');
 });
 

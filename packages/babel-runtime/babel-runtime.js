@@ -1,8 +1,50 @@
 var hasOwn = Object.prototype.hasOwnProperty;
 
+function canDefineNonEnumerableProperties() {
+  var testObj = {};
+  var testPropName = "t";
+
+  try {
+    Object.defineProperty(testObj, testPropName, {
+      enumerable: false,
+      value: testObj
+    });
+
+    for (var k in testObj) {
+      if (k === testPropName) {
+        return false;
+      }
+    }
+  } catch (e) {
+    return false;
+  }
+
+  return testObj[testPropName] === testObj;
+}
+
 // The name `babelHelpers` is hard-coded in Babel.  Otherwise we would make it
 // something capitalized and more descriptive, like `BabelRuntime`.
 babelHelpers = {
+  // Meteor-specific runtime helper for wrapping the object of for-in
+  // loops, so that inherited Array methods defined by es5-shim can be
+  // ignored in browsers where they cannot be defined as non-enumerable.
+  sanitizeForInObject: canDefineNonEnumerableProperties()
+    ? function (value) { return value; }
+    : function (obj) {
+      if (Array.isArray(obj)) {
+        var newObj = {};
+        var keys = Object.keys(obj);
+        var keyCount = keys.length;
+        for (var i = 0; i < keyCount; ++i) {
+          var key = keys[i];
+          newObj[key] = obj[key];
+        }
+        return newObj;
+      }
+
+      return obj;
+    },
+
   // es6.templateLiterals
   // Constructs the object passed to the tag function in a tagged
   // template literal.
