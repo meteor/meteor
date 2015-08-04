@@ -280,7 +280,7 @@ function doRunCommand (options) {
   }
 
   options.httpProxyPort = options['http-proxy-port'];
-  
+
   var projectContextOptions = {
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update']
@@ -292,11 +292,6 @@ function doRunCommand (options) {
     // on each other.
     var testRunnerAppDir =
       options['test-app-path'] || files.mkdtemp('meteor-test-run');
-    files.cp_r(
-      files.pathJoin(options.appDir, '.meteor'),
-      files.pathJoin(testRunnerAppDir, '.meteor'),
-      {ignore: [/^local$/, /^\.id$/]}
-    );
     // Also copy the existing build and isopacks to speed up the initial start
     files.cp_r(
       files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
@@ -306,10 +301,8 @@ function doRunCommand (options) {
       files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
       files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks')
     );
-    projectContextOptions.projectMeteorDir = files.pathJoin(
-      testRunnerAppDir,
-      '.meteor'
-    );
+    projectContextOptions.projectLocalDir = files.pathJoin(
+      testRunnerAppDir, '.meteor', 'local');
   }
   var projectContext = new projectContextModule.ProjectContext(
     projectContextOptions

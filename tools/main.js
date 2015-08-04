@@ -795,9 +795,7 @@ Fiber(function () {
   var releaseName, appReleaseFile;
   if (appDir) {
     appReleaseFile = new projectContextModule.ReleaseFile({
-      // TODO: This checks the wrong file for `meteor --test-app`
-      //       but it shouldn't matter in this case.
-      projectMeteorDir: files.pathJoin(appDir, '.meteor')
+      projectDir: appDir
     });
     // This is what happens if the file exists and is empty. This really
     // shouldn't happen unless the user did it manually.
