@@ -392,9 +392,9 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
-  let errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
-    'reactive-browser-debugger');
-  let errorAppConfig = {
+  const errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
+    'development-error-app');
+  const errorAppConfig = {
     appPort: require('./utils.js').randomPort(),
     appHost: appHost,
     projectContext: new projectContextModule.ProjectContext({
