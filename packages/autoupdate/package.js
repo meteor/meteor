@@ -25,10 +25,10 @@ Package.onUse(function (api) {
     'underscore'
   ], ['client', 'server']);
 
-  api.use('reload', 'client', {weak: true});
+  api.use('reload', 'client');
 
   api.use(['http', 'random'], 'web.cordova');
-  
+
   api.addFiles('autoupdate_server.js', 'server');
   api.addFiles('autoupdate_client.js', 'web.browser');
   api.addFiles('autoupdate_cordova.js', 'web.cordova');
