@@ -6,7 +6,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'logging', 'retry'],
+           'retry'],
           ['client', 'server']);
 
   api.addFiles('namespace.js');

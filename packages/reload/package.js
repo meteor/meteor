@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'logging'], 'client');
+  api.use(['underscore'], 'client');
   api.export('Reload', 'client');
   api.addFiles('reload.js', 'client');
   api.addFiles('deprecated.js', 'client');

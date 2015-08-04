@@ -10,9 +10,9 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'logging', 'retry', 'mongo-id', 'diff-sequence'],
-          ['client', 'server']);
+  api.use(['check', 'random', 'ejson', 'underscore',
+           'retry', 'mongo-id', 'diff-sequence'],
+          'server');
 
   // common functionality
   api.use('ddp-common', 'server'); // heartbeat
@@ -37,7 +37,7 @@ Package.onUse(function (api) {
 
   // we depend on LocalCollection._diffObjects, _applyChanges,
   // _idParse, _idStringify.
-  api.use('minimongo', ['client', 'server']);
+  api.use('minimongo', 'server');
 
   api.export('DDPServer', 'server');
 
