@@ -385,6 +385,18 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
+  const errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
+    '..', 'development-error-app');
+  const errorAppConfig = {
+    appPort: require('../utils/utils.js').randomPort(),
+    appHost: appHost,
+    projectContext: new projectContextModule.ProjectContext({
+      projectDir: errorAppPath,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: !options['no-lint']
+    })
+  };
+
   var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,
@@ -404,7 +416,8 @@ function doRunCommand (options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: mobileServer,
     once: options.once,
-    extraRunners: runners
+    extraRunners: runners,
+    errorAppConfig: errorAppConfig
   });
 }
 

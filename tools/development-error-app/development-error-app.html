@@ -1,0 +1,26 @@
+<head>
+  <title>Error Log</title>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>Errors Log</h1>
+        {{#if refreshing}}
+          <p> App is currently refreshing </p>
+        {{/if}}
+    </header>
+
+    <ul>
+      {{#each errors}}
+        {{> err}}
+      {{/each}}
+    </ul>
+  </div>
+</body>
+
+<template name="err">
+  <li>
+    <pre class="text">{{text}}</pre>
+  </li>
+</template>
