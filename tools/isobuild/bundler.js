@@ -939,6 +939,9 @@ _.extend(Target.prototype, {
     } else {
       if (_.has(self.cordovaDependencies, name)) {
         var existingVersion = self.cordovaDependencies[name];
+
+        if (existingVersion === version) { return; }
+
         self.cordovaDependencies[name] = packageVersionParser.
           lessThan(existingVersion, version) ? version : existingVersion;
       } else {
