@@ -394,7 +394,8 @@ function doRunCommand (options) {
       projectDir: errorAppPath,
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: !options['no-lint']
-    })
+    }),
+    runErrorApp: options.production ? false : true
   };
 
   var runAll = require('../runners/run-all.js');
