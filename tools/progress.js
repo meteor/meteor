@@ -10,7 +10,6 @@
 ///
 
 var _ = require('underscore');
-var Future = require('fibers/future');
 
 var Progress = function (options) {
   var self = this;

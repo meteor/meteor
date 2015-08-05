@@ -152,7 +152,6 @@ var util = require('util');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var sourcemap = require('source-map');
 
 var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
@@ -163,7 +162,6 @@ var files = require('../fs/files.js');
 var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var watch = require('../fs/watch.js');
-var runLog = require('../run-log.js');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var packageVersionParser = require('../packaging/package-version-parser.js');
@@ -564,7 +562,6 @@ _.extend(Target.prototype, {
     var self = this;
     buildmessage.assertInCapture();
 
-    var packageMap = self.packageMap;
     var isopackCache = self.isopackCache;
 
     buildmessage.enterJob("linking the program", function () {
@@ -2004,8 +2001,6 @@ exports.bundle = function ({
   hasCachedBundle
 }) {
   buildOptions = buildOptions || {};
-
-  var appDir = projectContext.projectDir;
 
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs = buildOptions.webArchs ||

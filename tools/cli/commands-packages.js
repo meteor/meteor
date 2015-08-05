@@ -4,17 +4,11 @@ var files = require('../fs/files.js');
 var buildmessage = require('../buildmessage.js');
 var auth = require('../auth.js');
 var config = require('../config.js');
-var Future = require('fibers/future');
-var runLog = require('../run-log.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var archinfo = require('../archinfo.js');
-var PackageSource = require('../isobuild/package-source.js');
-var bundler = require('../isobuild/bundler.js');
 var compiler = require('../isobuild/compiler.js');
 var catalog = require('../catalog/catalog.js');
 var catalogRemote = require('../catalog/catalog-remote.js');
-var stats = require('../stats.js');
 var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('../console.js').Console;
@@ -58,32 +52,11 @@ var refreshOfficialCatalogOrDie = function (options) {
   }
 };
 
-// XXX: To formatters.js ?
-var formatAsList = function (list, options) {
-  options = options || {};
-  var formatter = options.formatter || _.identity;
-  return _.map(list, formatter).join(", ");
-};
-
 var removeIfEndsWith = function (s, suffix) {
   if (s.endsWith(suffix)) {
     return s.substring(0, s.length - suffix.length);
   }
   return s;
-};
-
-var formatArchitecture = function (s) {
-  while (true) {
-    var original = s;
-
-    // Remove well-known suffixes
-    s = removeIfEndsWith(s, "+web.cordova");
-    s = removeIfEndsWith(s, "+web.browser");
-
-    if (original === s) {
-      return s;
-    }
-  }
 };
 
 // Internal use only. Makes sure that your Meteor install is totally good to go
@@ -1038,12 +1011,11 @@ main.registerCommand({
           packages: relConf.packages
         };
 
-        var uploadInfo;
         if (relConf.patchFrom) {
-          uploadInfo = packageClient.callPackageServerBM(
+          packageClient.callPackageServerBM(
             conn, 'createPatchReleaseVersion', record, relConf.patchFrom);
         } else {
-          uploadInfo = packageClient.callPackageServerBM(
+          packageClient.callPackageServerBM(
             conn, 'createReleaseVersion', record);
         }
       });
@@ -1433,7 +1405,6 @@ var maybeUpdateRelease = function (options) {
     }
   }
 
-  var solutionReleaseRecord = null;
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.official.getReleaseVersion(
       releaseTrack, versionToTry);
@@ -1455,7 +1426,6 @@ var maybeUpdateRelease = function (options) {
     }
 
     // Yay, it worked!
-    solutionReleaseRecord = releaseRecord;
     return true;
   });
 

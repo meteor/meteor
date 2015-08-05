@@ -94,11 +94,6 @@ Command.prototype.evaluateOption = function (optionName, options) {
 // as subcommands of "--".
 var commands = {};
 
-// map from full command name ('deploy' or 'admin grant') to
-// - description: one-line help message, for use in command list
-// - usage: full usage help. ends with a newline but no blank lines
-var messages = {};
-
 // Exception to throw from a command to bail out and show command
 // usage information.
 main.ShowUsage = function ShowUsage() {
@@ -299,7 +294,6 @@ require('./commands-packages-query.js');
 // - name (entry name, typically a command name)
 // - body (contents of body, trimmed to end with a newline but no blank lines)
 var loadHelp = function () {
-  var ret = [];
   var dirname = files.convertToStandardPath(__dirname);
   var raw = files.readFile(files.pathJoin(dirname, 'help.txt'), 'utf8');
   return _.map(raw.split(/^>>>/m).slice(1), function (r) {
@@ -333,7 +327,6 @@ var longHelp = exports.longHelp = function (commandName) {
   var commandList = null;
   if (! (node instanceof Command)) {
     commandList = '';
-    var items = [];
     var commandsWanted = {};
 
     _.each(node, function (n, shortName) {

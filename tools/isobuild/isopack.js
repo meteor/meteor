@@ -9,7 +9,6 @@ var watch = require('../fs/watch.js');
 var files = require('../fs/files.js');
 var isopackets = require('../tool-env/isopackets.js');
 var colonConverter = require('../utils/colon-converter.js');
-var linterPluginModule = require('./linter-plugin.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;

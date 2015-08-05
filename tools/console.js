@@ -80,7 +80,6 @@ if (! process.env.METEOR_COLOR) {
   chalk.enabled = false;
 }
 
-var STATUSLINE_MAX_LENGTH = 60;  // XXX unused?
 var STATUS_MAX_LENGTH = 40;
 
 var PROGRESS_MAX_WIDTH = 40;

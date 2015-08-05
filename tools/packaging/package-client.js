@@ -1,6 +1,5 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
-var child_process = require('child_process');
 
 var config = require('../config.js');
 var httpHelpers = require('../utils/http-helpers.js');

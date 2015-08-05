@@ -95,7 +95,7 @@ exports.printReport = function () {
 
   var summary = {};
   var summarize = function (inv, depth) {
-    var padding = (new Array(depth*2 + 1)).join(' ');
+    // var padding = (new Array(depth*2 + 1)).join(' ');
     // console.log(padding + inv.name + " [" + inv.selfTime + "]");
     if (! (inv.name in summary))
       summary[inv.name] = { name: inv.name, time: 0, ours: inv.isOurCode(),

@@ -2,7 +2,6 @@
 /// exits.
 
 var _ = require('underscore');
-var Fiber = require("fibers");
 
 var fiberHelpers = require('../utils/fiber-helpers.js');
 

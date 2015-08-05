@@ -916,6 +916,7 @@ _.extend(AppRunner.prototype, {
 
         if (!runResult.watchSet)
           throw Error("watching for changes with no watchSet?");
+        // XXX reference to watcher is lost later?
         var watcher = new watch.Watcher({
           watchSet: runResult.watchSet,
           onChange: function () {

@@ -5,7 +5,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 var runLog = require('../run-log.js');
-var url = require('url');
 
 // options: listenPort, listenHost, onFailure
 var HttpProxy = function (options) {
@@ -173,7 +172,6 @@ _.extend(HttpProxy.prototype, {
       var req = c.req;
       var targetUrl = req.url;
       runLog.log("Proxy request: " + req.method + " " +req.url);
-      var newUrl = req.url
       self.proxy.web(c.req, c.res, {
         target: targetUrl
       });

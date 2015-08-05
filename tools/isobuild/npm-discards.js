@@ -1,7 +1,6 @@
 var assert = require("assert");
 var files = require('../fs/files.js');
 var _ = require("underscore");
-var hasOwn = Object.prototype.hasOwnProperty;
 
 // This class encapsulates a structured specification of files and
 // directories that should be stripped from the node_modules directories

@@ -3,7 +3,6 @@ var utils = require('./utils/utils.js');
 var files = require('./fs/files.js');
 var config = require('./config.js');
 var httpHelpers = require('./utils/http-helpers.js');
-var archinfo = require('./archinfo.js');
 var fiberHelpers = require('./utils/fiber-helpers.js');
 var querystring = require('querystring');
 var url = require('url');

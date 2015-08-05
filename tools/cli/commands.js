@@ -13,13 +13,9 @@ var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../archinfo.js');
 var catalog = require('../catalog/catalog.js');
 var stats = require('../stats.js');
-var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
-var execFileSync = require('../utils/utils.js').execFileSync;
 var Console = require('../console.js').Console;
 var projectContextModule = require('../project-context.js');
-var colonConverter = require('../utils/colon-converter.js');
-var PackageSource = require('../isobuild/package-source.js');
 
 var release = require('../packaging/release.js');
 

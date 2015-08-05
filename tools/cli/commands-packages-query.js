@@ -2,7 +2,6 @@
 // contained in the Meteor Package Server. They also deal with presenting this
 // to the user in various human or machine-readable ways.
 var _ = require('underscore');
-var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var catalog = require('../catalog/catalog.js');
 var Console = require('../console.js').Console;
