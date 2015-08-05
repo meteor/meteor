@@ -249,7 +249,7 @@ class Runner {
       extraRunner.stop();
     });
     self.appRunner.stop();
-    if (errorAppConfig.runErrorApp)
+    if (self.errorAppConfig.runErrorApp)
       self.errorAppRunner.stop();
     self.selenium && self.selenium.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a
