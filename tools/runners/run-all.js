@@ -118,7 +118,6 @@ class Runner {
 
     if (errorAppConfig.runErrorApp) {
       self.errorAppRunner = new AppRunner({
-        ...optionsForAppRunner,
         projectContext: errorAppConfig.projectContext,
         port: errorAppConfig.appPort,
         listenHost: appHost,
