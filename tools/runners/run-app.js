@@ -896,7 +896,7 @@ _.extend(AppRunner.prototype, {
         }
 
         crashCount ++;
-        if (crashCount < 3)
+        if (crashCount < 1)
           continue;
 
         if (self.watchForChanges) {

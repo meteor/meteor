@@ -1,6 +1,9 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
+var runLog = require('../run-log.js');
+var isopackets = require('../tool-env/isopackets.js');
+var errorAppConnection = null;
 
 // options: listenPort, proxyToPort, proxyToHost, onFailure
 var Proxy = function (options) {
@@ -11,6 +14,8 @@ var Proxy = function (options) {
   // note: run-all.js updates proxyToPort directly
   self.proxyToPort = options.proxyToPort;
   self.proxyToHost = options.proxyToHost || '127.0.0.1';
+  self.proxyToErrorPort = options.proxyToErrorPort;
+  self.proxyToErrorApp = options.proxyToErrorApp || '127.0.0.1';
   self.onFailure = options.onFailure || function () {};
 
   self.mode = "hold";
@@ -172,16 +177,12 @@ _.extend(Proxy.prototype, {
 
       var c = self.httpQueue.shift();
       if (self.mode === "errorpage") {
-        // XXX serve an app that shows the logs nicely and that also
-        // knows how to reload when the server comes back up
-        c.res.writeHead(200, {'Content-Type': 'text/plain'});
-        c.res.write("Your app is crashing. Here's the latest log.\n\n");
-
-        _.each(runLog.getLog(), function (item) {
-          c.res.write(item.message + "\n");
+        // Serve error app, showing logs nicely and reloads
+        // when server comes back up
+        self.proxy.web(c.req, c.res, {
+          target: 'http://' + self.proxyToErrorApp + ':' +
+            self.proxyToErrorPort
         });
-
-        c.res.end();
       } else {
         self.proxy.web(c.req, c.res, {
           target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
@@ -190,13 +191,19 @@ _.extend(Proxy.prototype, {
     }
 
     while (self.websocketQueue.length) {
-      if (self.mode !== "proxy")
+      if (self.mode === "hold")
         break;
 
       var c = self.websocketQueue.shift();
-      self.proxy.ws(c.req, c.socket, c.head, {
-        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
-      });
+      if (self.mode === "errorpage") {
+        self.proxy.ws(c.req, c.socket, c.head, {
+          target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
+        });
+      } else {
+        self.proxy.ws(c.req, c.socket, c.head, {
+          target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
+        });
+      }
     }
   },
 
@@ -209,8 +216,44 @@ _.extend(Proxy.prototype, {
   // The initial mode is "hold".
   setMode: function (mode) {
     var self = this;
+
+    if (self.mode === "errorpage" && mode === "hold") {
+      self.getDDPConnectionToErrorApp();
+      errorAppConnection.call('isAppRefreshing', true);
+    }
+
     self.mode = mode;
     self._tryHandleConnections();
+
+    if (mode == "proxy") {
+      // Make error page disconnect all ddp connections to force client
+      // to refresh their connection and reload main app
+      self.getDDPConnectionToErrorApp();
+      errorAppConnection.call('isAppRefreshing', false);
+      errorAppConnection.call('disconnectEveryone');
+    } else if (mode == "errorpage") {
+      self.getDDPConnectionToErrorApp();
+      // Send over logs to error app
+      var errorMessage = "";
+      _.each(runLog.getLog(), function(item) {
+        errorMessage += item.message + " \n ";
+      });
+      errorAppConnection.call('isAppRefreshing', false);
+      errorAppConnection.call('addErrorMessage', errorMessage);
+    }
+  },
+
+  getDDPConnectionToErrorApp: function () {
+    var self = this;
+    var DDP = isopackets.load('ddp')['ddp-client'].DDP;
+    // Check if connection is alive before creating new DDP connection
+    if (!errorAppConnection || errorAppConnection.status() !== "connected")
+      errorAppConnection = DDP.connect(
+        self.proxyToErrorApp + ':' + self.proxyToErrorPort);
+    if (!(errorAppConnection.status() === "disconnected")) {
+      // Throw an error because this should never be the case
+      // throw new Error("Unable to connect to development-error-app");
+    }
   }
 });
 
