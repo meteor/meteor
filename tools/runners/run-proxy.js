@@ -16,6 +16,7 @@ var Proxy = function (options) {
   self.proxyToHost = options.proxyToHost || '127.0.0.1';
   self.proxyToErrorPort = options.proxyToErrorPort;
   self.proxyToErrorApp = options.proxyToErrorApp || '127.0.0.1';
+  self.runErrorApp = options.runErrorApp;
   self.onFailure = options.onFailure || function () {};
 
   self.mode = "hold";
@@ -177,12 +178,23 @@ _.extend(Proxy.prototype, {
 
       var c = self.httpQueue.shift();
       if (self.mode === "errorpage") {
-        // Serve error app, showing logs nicely and reloads
-        // when server comes back up
-        self.proxy.web(c.req, c.res, {
-          target: 'http://' + self.proxyToErrorApp + ':' +
-            self.proxyToErrorPort
-        });
+        if (self.runErrorApp) {
+          // Serve error app, showing logs nicely and reloads
+          // when server comes back up
+          self.proxy.web(c.req, c.res, {
+            target: 'http://' + self.proxyToErrorApp + ':' +
+              self.proxyToErrorPort
+          });
+        } else {
+          c.res.writeHead(200, {'Content-Type': 'text/plain'});
+          c.res.write("Your app is crashing. Here's the latest log.\n\n");
+
+          _.each(runLog.getLog(), function (item) {
+            c.res.write(item.message + "\n");
+          });
+
+          c.res.end();
+        }
       } else {
         self.proxy.web(c.req, c.res, {
           target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
@@ -191,15 +203,22 @@ _.extend(Proxy.prototype, {
     }
 
     while (self.websocketQueue.length) {
-      if (self.mode === "hold")
-        break;
+      if (self.runErrorApp) {
+        if (self.mode === "hold")
+          break;
 
-      var c = self.websocketQueue.shift();
-      if (self.mode === "errorpage") {
-        self.proxy.ws(c.req, c.socket, c.head, {
-          target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
-        });
-      } else {
+        var c = self.websocketQueue.shift();
+        if (self.mode === "errorpage") {
+          self.proxy.ws(c.req, c.socket, c.head, {
+            target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
+          });
+        }
+      }
+      else {
+        if (self.mode !== "proxy")
+          break;
+
+        var c = self.websocketQueue.shift();
         self.proxy.ws(c.req, c.socket, c.head, {
           target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
         });
@@ -217,30 +236,35 @@ _.extend(Proxy.prototype, {
   setMode: function (mode) {
     var self = this;
 
-    if (self.mode === "errorpage" && mode === "hold") {
-      self.getDDPConnectionToErrorApp();
-      errorAppConnection.call('isAppRefreshing', true);
+    if (self.runErrorApp) {
+      if (self.mode === "errorpage" && mode === "hold") {
+        self.getDDPConnectionToErrorApp();
+        errorAppConnection.call('isAppRefreshing', true);
+      }
     }
 
     self.mode = mode;
     self._tryHandleConnections();
 
-    if (mode == "proxy") {
-      // Make error page disconnect all ddp connections to force client
-      // to refresh their connection and reload main app
-      self.getDDPConnectionToErrorApp();
-      errorAppConnection.call('isAppRefreshing', false);
-      errorAppConnection.call('disconnectEveryone');
-    } else if (mode == "errorpage") {
-      self.getDDPConnectionToErrorApp();
-      // Send over logs to error app
-      var errorMessage = "";
-      _.each(runLog.getLog(), function(item) {
-        errorMessage += item.message + " \n ";
-      });
-      errorAppConnection.call('isAppRefreshing', false);
-      errorAppConnection.call('addErrorMessage', errorMessage);
+    if (self.runErrorApp) {
+      if (mode == "proxy") {
+        // Make error page disconnect all ddp connections to force client
+        // to refresh their connection and reload main app
+        self.getDDPConnectionToErrorApp();
+        errorAppConnection.call('isAppRefreshing', false);
+        errorAppConnection.call('disconnectEveryone');
+      } else if (mode == "errorpage") {
+        self.getDDPConnectionToErrorApp();
+        // Send over logs to error app
+        var errorMessage = "";
+        _.each(runLog.getLog(), function(item) {
+          errorMessage += item.message + " \n ";
+        });
+        errorAppConnection.call('isAppRefreshing', false);
+        errorAppConnection.call('addErrorMessage', errorMessage);
+      }
     }
+
   },
 
   getDDPConnectionToErrorApp: function () {
