@@ -193,7 +193,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("client connected: 1");
     run.match("jsVar: undefined");
 
-    s.write(".meteor/packages", "meteor-platform \n my-package");
+    s.write(".meteor/packages", "meteor-base \n my-package");
     run.match(/my-package.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
@@ -206,7 +206,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("packageVar: bar");
 
     // Add appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "meteor-platform \n appcache");
+    s.write(".meteor/packages", "meteor-base \n appcache");
     run.match(/appcache.*added,/);
     run.match("server restarted");
     run.match("client connected: 0");
@@ -222,7 +222,7 @@ selftest.define("javascript hot code push", function (options) {
     run.match("jsVar: bar");
 
     // Remove appcache and ensure that the browser still reloads.
-    s.write(".meteor/packages", "meteor-platform");
+    s.write(".meteor/packages", "meteor-base");
     run.match(/appcache.*removed from your project/);
     run.match("server restarted");
     run.match("client connected: 0");

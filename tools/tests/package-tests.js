@@ -35,7 +35,7 @@ var randomizedReleaseName = function (username) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    meteor-platform (ie: name), in which case this will match any
+//    meteor-base (ie: name), in which case this will match any
 //    version of that package as long as it is included.
 //
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
@@ -67,7 +67,7 @@ var checkPackages = selftest.markStack(function(sand, packages) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    meteor-platform (ie: name), in which case this will match any
+//    meteor-base (ie: name), in which case this will match any
 //    version of that package as long as it is included. This is for packages
 //    external to the app, since we don't want this test to fail when we push a
 //    new version.
@@ -187,7 +187,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("running at");
   run.match("localhost");
   // Add the local package 'say-something'. It should print a message.
-  s.write(".meteor/packages", "meteor-platform \n say-something");
+  s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
   run.match("initial");
 
@@ -199,7 +199,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("another");
 
   // Add a local package depends-on-plugin.
-  s.write(".meteor/packages", "meteor-platform \n depends-on-plugin");
+  s.write(".meteor/packages", "meteor-base \n depends-on-plugin");
   run.waitSecs(2);
   run.match("foobar");
 
@@ -226,13 +226,13 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("restarted");
 
   // Switch back to say-something for a moment.
-  s.write(".meteor/packages", "meteor-platform \n say-something");
+  s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
   run.match("another");
   run.stop();
 
   s.rename('packages/say-something', 'packages/shout-something');
-  s.write(".meteor/packages", "meteor-platform \n shout-something");
+  s.write(".meteor/packages", "meteor-base \n shout-something");
   s.cd("packages/shout-something", function () {
     s.write("foo.js", "console.log(\"louder\");");
   });
@@ -294,7 +294,7 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base"]);
+                ["meteor-base", "accounts-base"]);
 
   // Adding the nonexistent version now should still say "no such
   // version". Regression test for
@@ -312,26 +312,26 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
+                ["meteor-base", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
   run.match(/depends-on-plugin.*added,/);
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base",
+                ["meteor-base", "accounts-base",
                  "say-something@1.0.0", "depends-on-plugin"]);
 
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "say-something",  "meteor-platform",
+                 "say-something",  "meteor-base",
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
   run.match("say-something: removed dependency");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "meteor-platform",
+                 "meteor-base",
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
@@ -341,10 +341,10 @@ selftest.define("add packages to app", [], function () {
 
   checkVersions(s,
                 ["accounts-base",
-                 "meteor-platform"]);
+                 "meteor-base"]);
   run = s.run("list");
   run.match("accounts-base");
-  run.match("meteor-platform");
+  run.match("meteor-base");
 
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
@@ -387,7 +387,7 @@ selftest.define("add packages client archs", function (options) {
     var outerRun = s.run("add", "say-something-client-targets");
     outerRun.match(/say-something-client-targets.*added,/);
     outerRun.expectExit(0);
-    checkPackages(s, ["meteor-platform", "say-something-client-targets"]);
+    checkPackages(s, ["meteor-base", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
@@ -616,7 +616,7 @@ selftest.define("talk to package server with expired or no accounts token",
   run.write("testtest\n");
   run.waitSecs(15);
   // The 'test' user should not be a maintainer of
-  // meteor-platform. So this command should fail.
+  // meteor-base. So this command should fail.
   run.matchErr("You are not an authorized maintainer");
   run.expectExit(1);
 
@@ -766,9 +766,9 @@ selftest.define("show unknown version of package", function () {
   var s = new Sandbox();
 
   // This version doesn't exist and is unlikely to exist.
-  var run = s.run("show", "meteor-platform@0.123.456");
+  var run = s.run("show", "meteor-base@0.123.456");
   run.waitSecs(5);
-  run.matchErr("meteor-platform@0.123.456: not found");
+  run.matchErr("meteor-base@0.123.456: not found");
   run.expectExit(1);
 
   // This package exists in the server (we need it to publish the tool), but is

@@ -113,8 +113,18 @@ var tropohouseIsopackCache = null;
 var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   // We need the tool in order to run from the fake warehouse at all.
   "meteor-tool",
+
   // We need the packages in the skeleton app in order to test 'meteor create'.
-  "meteor-platform", "autopublish", "insecure", "standard-minifiers",
+  'meteor-base',
+  'mobile-experience',
+  'mongo',
+  'blaze-html-templates',
+  'session',
+  'jquery',
+  'tracker',
+  "autopublish",
+  "insecure",
+  "standard-minifiers",
   "es5-shim"
 ];
 
