@@ -51,6 +51,10 @@ li .text {
   margin-left: 10px;
 }
 
+#title, #status {
+  display: inline;
+}
+
 
 @media (max-width: 600px) {
   li {
