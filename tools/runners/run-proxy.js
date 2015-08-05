@@ -213,8 +213,7 @@ _.extend(Proxy.prototype, {
             target: 'http://' + self.proxyToErrorApp + ':' + self.proxyToErrorPort
           });
         }
-      }
-      else {
+      } else {
         if (self.mode !== "proxy")
           break;
 

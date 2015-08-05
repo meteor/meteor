@@ -10,6 +10,27 @@ if (Meteor.isServer) {
   Meteor.publish("refreshing", function () {
     return Refreshing.find();
   });
+
+  Meteor.methods({
+    addErrorMessage: function (errMsg) {
+      Errors.insert({
+        text: errMsg,
+        createdAt: new Date()
+      });
+    },
+
+    disconnectEveryone: function () {
+      var self = this;
+      _.each(Meteor.server.sessions, function (session) {
+        if (self.connection.id !== session.id)
+          session.connectionHandle.close();
+      });
+    },
+
+    isAppRefreshing: function (bool) {
+      Refreshing.upsert({_id: 'is-app-refreshing'}, {value: bool});
+    }
+  });
 }
 
 if (Meteor.isClient) {
@@ -29,27 +50,3 @@ if (Meteor.isClient) {
   });
 }
 
-Meteor.methods({
-  addErrorMessage: function (errMsg) {
-    if (this.isSimulation)
-      return;
-    Errors.insert({
-      text: errMsg,
-      createdAt: new Date()
-    });
-  },
-
-  disconnectEveryone: function () {
-    var self = this;
-    _.each(Meteor.server.sessions, function (session) {
-      if (self.connection.id !== session.id)
-        session.connectionHandle.close();
-    });
-  },
-
-  isAppRefreshing: function (bool) {
-    if (this.isSimulation)
-      return;
-    Refreshing.upsert({_id: 'is-app-refreshing'}, {value: bool});
-  }
-});
