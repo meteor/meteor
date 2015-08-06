@@ -7,5 +7,5 @@ Package.onUse(function (api) {
   api.addFiles('package-server.js', 'server');
   api.addFiles('.jshintrc');
 
-  api.use('jshint');
+  api.use(['jshint', 'minimongo']);
 });
