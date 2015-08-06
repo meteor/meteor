@@ -1040,12 +1040,12 @@ main.registerCommand({
       Console.info("Skipping git tag: bad format for git.");
     } else {
       Console.info("Creating git tag " + gitTag);
-      files.runGitInCheckout('tag', gitTag);
+      utils.runGitInCheckout('tag', gitTag);
       var fail = false;
       try {
         Console.info(
           "Pushing git tag (this should fail if you are not from MDG)");
-        files.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
+        utils.runGitInCheckout('push', 'git@github.com:meteor/meteor.git',
                              'refs/tags/' + gitTag);
       } catch (err) {
         Console.error(

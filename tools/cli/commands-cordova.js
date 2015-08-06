@@ -1966,11 +1966,11 @@ _.extend(IOS.prototype, {
       //Console.info(
       //  "Launching Xcode installer;",
       //  "please choose 'Get Xcode' to install Xcode");
-      //files.run('/usr/bin/xcodebuild', '--install');
+      //utils.execFileSync('/usr/bin/xcodebuild', ['--install']);
 
       // XXX: Any way to open direct in AppStore (rather than in browser)?
       // Yes: macappstores://itunes.apple.com/us/app/xcode/id497799835
-      files.run('open', 'https://itunes.apple.com/us/app/xcode/id497799835?mt=12');
+      utils.execFileSync('open', ['https://itunes.apple.com/us/app/xcode/id497799835?mt=12']);
     });
   },
 
@@ -2098,7 +2098,7 @@ _.extend(Android.prototype, {
     var self = this;
 
     if (Host.isMac()) {
-      var kexts = files.run('kextstat');
+      var kexts = utils.execFileSync('kextstat').stdout;
       var found = _.any(kexts.split('\n'), function (line) {
         if (line.indexOf('com.intel.kext.intelhaxm') != -1) {
           Console.debug("Found com.intel.kext.intelhaxm: ", found);
@@ -2144,7 +2144,7 @@ _.extend(Android.prototype, {
       Console.info(
         "Launching HAXM installer;",
         "we recommend allocating 1024MB of RAM (or more)");
-      files.run('open', filepath);
+      utils.execFileSync('open', [filepath]);
 
       return;
     }
@@ -2537,7 +2537,7 @@ _.extend(Android.prototype, {
     var self = this;
 
     if (Host.isMac()) {
-      var javaHomes = files.run('/usr/libexec/java_home');
+      var javaHomes = utils.execFileSync('/usr/libexec/java_home').stdout;
 
       if (javaHomes) {
         javaHomes = javaHomes.trim();
@@ -3255,7 +3255,7 @@ var capitalize = function (s) {
 
 // XXX: Move to Console (?)
 var openUrl = function (url) {
-  files.run('open', url);
+  utils.execFileSync('open', [url]);
 };
 
 main.registerCommand({

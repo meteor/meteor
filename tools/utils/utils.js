@@ -119,10 +119,10 @@ exports.printPackageList = function (items, options) {
 // that make sense to users (eg, the name they manually gave their
 // computer on OS X, which might contain spaces) over names that have
 // any particular technical significance (eg, might resolve in DNS).
-exports.getHost = function () {
+exports.getHost = function (...args) {
   var ret;
   var attempt = function () {
-    var output = files.run.apply(null, arguments);
+    var output = exports.execFileSync(args[0], args.slice(1)).stdout;
     if (output) {
       ret = output.trim();
     }
@@ -533,6 +533,15 @@ exports.execFileAsync = function (file, args, opts) {
   eachline(p.stderr, logOutput);
 
   return p;
+};
+
+
+exports.runGitInCheckout = function (...args) {
+  args.unshift(
+    '--git-dir=' +
+    files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
+
+  return exports.execFileSync('git', args).stdout;
 };
 
 exports.Throttled = function (options) {

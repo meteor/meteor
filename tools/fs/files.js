@@ -846,49 +846,6 @@ files.symlinkOverSync = function (linkText, file) {
   });
 };
 
-// Run a program synchronously and, assuming it returns success (0),
-// return whatever it wrote to stdout, as a string. Otherwise (if it
-// did not exit gracefully and return 0) return null. As node has
-// chosen not to provide a synchronous binding of wait(2), this
-// function must be called from inside a fiber.
-//
-// `command` is the command to run. (We use node's
-// child_process.execFile, which appears to take the liberty of
-// searching your path using some mechanism.) Any additional arguments
-// should be strings and will be passed as arguments to `command`. It
-// is not necessary to pass `command` twice to set argv[0] as it is
-// with the traditional POSIX execl(2).
-//
-// XXX 'files' is not the ideal place for this but it'll do for now
-files.run = function (command, ...args) {
-  var Future = require('fibers/future');
-  var future = new Future;
-
-  var child_process = require("child_process");
-  child_process.execFile(
-    command, args, {}, function (error, stdout, stderr) {
-      if (! (error === null || error.code === 0)) {
-        future.return(null);
-      } else {
-        future.return(stdout);
-      }
-    });
-  return future.wait();
-};
-
-files.runGitInCheckout = function (...args) {
-  args.unshift(
-    'git', '--git-dir=' +
-    files.convertToOSPath(files.pathJoin(files.getCurrentToolsDir(), '.git')));
-
-  var ret = files.run.apply(files, args);
-  if (ret === null) {
-    // XXX files.run really ought to give us some actual context
-    throw new Error("error running git " + args[2]);
-  }
-  return ret;
-};
-
 // Return the result of evaluating `code` using
 // `runInThisContext`. `code` will be wrapped in a closure. You can
 // pass additional values to bind in the closure in `options.symbols`,

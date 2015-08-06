@@ -139,7 +139,7 @@ main.registerCommand({
   }
 
   if (release.current.isCheckout()) {
-    var gitLog = files.runGitInCheckout(
+    var gitLog = utils.runGitInCheckout(
       'log',
       '--format=%h%d', '-n 1').trim();
     Console.error("Unreleased, running from a checkout at " + gitLog);

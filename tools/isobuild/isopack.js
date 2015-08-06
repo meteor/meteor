@@ -9,6 +9,7 @@ var watch = require('../fs/watch.js');
 var files = require('../fs/files.js');
 var isopackets = require('../tool-env/isopackets.js');
 var colonConverter = require('../utils/colon-converter.js');
+var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
 var Console = require('../console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;
@@ -1562,7 +1563,7 @@ _.extend(Isopack.prototype, {
   _writeTool: Profile("Isopack#_writeTool", function (builder) {
     var self = this;
 
-    var pathsToCopy = files.runGitInCheckout(
+    var pathsToCopy = utils.runGitInCheckout(
       'ls-tree',
       '-r',
       '--name-only',
@@ -1655,7 +1656,7 @@ _.extend(Isopack.prototype, {
       });
     });
 
-    var gitSha = files.runGitInCheckout('rev-parse', 'HEAD');
+    var gitSha = utils.runGitInCheckout('rev-parse', 'HEAD');
     builder.reserve('isopackets', {directory: true});
     builder.write('.git_version.txt', {data: new Buffer(gitSha, 'utf8')});
 

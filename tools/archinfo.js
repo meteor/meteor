@@ -1,6 +1,7 @@
 var _ = require('underscore');
-var files = require('./fs/files.js');
 var os = require('os');
+
+var utils = require('./utils/utils.js');
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by
@@ -129,7 +130,7 @@ var _host = null; // memoize
 var host = function () {
   if (! _host) {
     var run = function (...args) {
-      var result = files.run.apply(null, args);
+      var result = utils.execFileSync(args[0], args.slice(1)).stdout;
       if (! result)
         throw new Error("can't get arch with " + args.join(" ") + "?");
       return result.replace(/\s*$/, ''); // trailing whitespace
