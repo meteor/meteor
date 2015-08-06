@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
 selftest.define("minifiers can't register non-js/non-css extensions", [], function () {

@@ -8,7 +8,7 @@ var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
 var isopackets = require('../tool-env/isopackets.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 
 var auth = exports;
 

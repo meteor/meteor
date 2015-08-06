@@ -5,14 +5,14 @@ var util = require('util');
 var auth = require('../meteor-services/auth.js');
 var files = require('../fs/files.js');
 var config = require('../meteor-services/config.js');
-var selftest = require('../selftest.js');
-var testUtils = require('../test-utils.js');
+var selftest = require('../tool-testing/selftest.js');
+var testUtils = require('../tool-testing/test-utils.js');
 var stats = require('../meteor-services/stats.js');
 var tropohouseModule = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
 var Sandbox = selftest.Sandbox;
 var projectContextModule = require('../project-context.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 
 var testStatsServer = 'https://test-package-stats.meteor.com';
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;

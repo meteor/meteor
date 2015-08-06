@@ -1,4 +1,4 @@
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var isopackets = require('../tool-env/isopackets.js');
 
 var phantomjs = require('phantomjs');

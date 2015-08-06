@@ -2,7 +2,7 @@
 
 var _ = require('underscore');
 var files = require('./fs/files.js');
-var Console = require('./console.js').Console;
+var Console = require('./console/console.js').Console;
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).

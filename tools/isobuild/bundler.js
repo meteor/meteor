@@ -159,8 +159,8 @@ var Builder = require('./builder.js');
 var compilerPluginModule = require('./compiler-plugin.js');
 
 var files = require('../fs/files.js');
-var archinfo = require('../archinfo.js');
-var buildmessage = require('../buildmessage.js');
+var archinfo = require('../utils/archinfo.js');
+var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch.js');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile.js').Profile;

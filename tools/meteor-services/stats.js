@@ -6,7 +6,7 @@ var files = require('../fs/files.js');
 var auth = require('./auth.js');
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 
 // The name of the package that you add to your app to opt out of
 // sending stats.

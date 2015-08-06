@@ -1,7 +1,7 @@
 var _ = require('underscore');
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require('../test-utils.js');
+var testUtils = require('../tool-testing/test-utils.js');
 var config = require('../meteor-services/config.js');
 
 // XXX need to make sure that mother doesn't clean up:

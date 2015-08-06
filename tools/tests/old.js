@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var Run = selftest.Run;
 var files = require('../fs/files.js');

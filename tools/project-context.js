@@ -1,11 +1,11 @@
 var assert = require("assert");
 var _ = require('underscore');
 
-var archinfo = require('./archinfo.js');
-var buildmessage = require('./buildmessage.js');
+var archinfo = require('./utils/archinfo.js');
+var buildmessage = require('./utils/buildmessage.js');
 var catalog = require('./catalog/catalog.js');
 var catalogLocal = require('./catalog/catalog-local.js');
-var Console = require('./console.js').Console;
+var Console = require('./console/console.js').Console;
 var files = require('./fs/files.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
 var isopackets = require('./tool-env/isopackets.js');

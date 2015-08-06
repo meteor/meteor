@@ -263,7 +263,7 @@ _.extend(exports.PackageMapDelta.prototype, {
       displayItems.push({ name: name, description: description });
     });
 
-    var Console = require('../console.js').Console;
+    var Console = require('../console/console.js').Console;
 
     Console.info();
     Console.info(options.title);

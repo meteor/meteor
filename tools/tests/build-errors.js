@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
 // This test was originally written to test the behavior of parse-stack.js when

@@ -1,7 +1,7 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
 var child_process = require('child_process');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 
 var processes = exports;
 

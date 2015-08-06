@@ -1,9 +1,9 @@
 var _= require('underscore');
 
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files.js');
-var testUtils = require('../test-utils.js');
+var testUtils = require('../tool-testing/test-utils.js');
 var utils = require('../utils/utils.js');
 var packageClient = require('../packaging/package-client.js');
 var catalog = require('../catalog/catalog.js');

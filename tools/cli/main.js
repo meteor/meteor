@@ -6,14 +6,14 @@ var assert = require("assert");
 var _ = require('underscore');
 var Fiber = require('fibers');
 var Future = require('fibers/future');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var files = require('../fs/files.js');
 var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
 var catalog = require('../catalog/catalog.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
 
 var main = exports;
@@ -393,7 +393,7 @@ var springboard = function (rel, options) {
   if (process.env.METEOR_DEBUG_SPRINGBOARD)
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
 
-  var archinfo = require('../archinfo.js');
+  var archinfo = require('../utils/archinfo.js');
   var isopack = require('../isobuild/isopack.js');
 
   var toolsPkg = rel.getToolsPackage();

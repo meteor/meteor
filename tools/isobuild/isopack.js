@@ -1,8 +1,8 @@
 var compiler = require('./compiler.js');
-var archinfo = require('../archinfo.js');
+var archinfo = require('../utils/archinfo.js');
 var _ = require('underscore');
 var linker = require('./linker.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var Builder = require('./builder.js');
 var bundler = require('./bundler.js');
 var watch = require('../fs/watch.js');
@@ -11,7 +11,7 @@ var isopackets = require('../tool-env/isopackets.js');
 var colonConverter = require('../utils/colon-converter.js');
 var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;
 
 var rejectBadPath = function (p) {

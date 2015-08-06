@@ -1,4 +1,4 @@
-import selftest from '../selftest.js';
+import selftest from '../tool-testing/selftest.js';
 import { parse, markBottom } from '../utils/parse-stack.js';
 import _ from 'underscore';
 import Fiber from 'fibers';

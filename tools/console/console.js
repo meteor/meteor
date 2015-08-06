@@ -60,11 +60,11 @@ var Fiber = require('fibers');
 var Future = require('fibers/future');
 var readline = require('readline');
 var util = require('util');
-var buildmessage = require('./buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 // XXX: Are we happy with chalk (and its sub-dependencies)?
 var chalk = require('chalk');
-var cleanup = require('./tool-env/cleanup.js');
-var utils = require('./utils/utils.js');
+var cleanup = require('../tool-env/cleanup.js');
+var utils = require('../utils/utils.js');
 var wordwrap = require('wordwrap');
 
 var PROGRESS_DEBUG = !!process.env.METEOR_PROGRESS_DEBUG;

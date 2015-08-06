@@ -5,22 +5,22 @@ var child_process = require('child_process');
 var phantomjs = require('phantomjs');
 var webdriver = require('browserstack-webdriver');
 
-var files = require('./fs/files.js');
-var utils = require('./utils/utils.js');
-var parseStack = require('./utils/parse-stack.js');
-var Console = require('./console.js').Console;
-var archinfo = require('./archinfo.js');
-var config = require('./meteor-services/config.js');
-var buildmessage = require('./buildmessage.js');
+var files = require('../fs/files.js');
+var utils = require('../utils/utils.js');
+var parseStack = require('../utils/parse-stack.js');
+var Console = require('../console/console.js').Console;
+var archinfo = require('../utils/archinfo.js');
+var config = require('../meteor-services/config.js');
+var buildmessage = require('../utils/buildmessage.js');
 
-var catalog = require('./catalog/catalog.js');
-var catalogRemote = require('./catalog/catalog-remote.js');
-var isopackCacheModule = require('./isobuild/isopack-cache.js');
-var isopackets = require('./tool-env/isopackets.js');
+var catalog = require('../catalog/catalog.js');
+var catalogRemote = require('../catalog/catalog-remote.js');
+var isopackCacheModule = require('../isobuild/isopack-cache.js');
+var isopackets = require('../tool-env/isopackets.js');
 
-var tropohouseModule = require('./packaging/tropohouse.js');
-var packageMapModule = require('./packaging/package-map.js');
-var release = require('./packaging/release.js');
+var tropohouseModule = require('../packaging/tropohouse.js');
+var packageMapModule = require('../packaging/package-map.js');
+var release = require('../packaging/release.js');
 
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
@@ -176,7 +176,7 @@ var newSelfTestCatalog = function () {
   if (! files.inCheckout())
     throw Error("Only can build packages from a checkout");
 
-  var catalogLocal = require('./catalog/catalog-local.js');
+  var catalogLocal = require('../catalog/catalog-local.js');
   var selfTestCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },
@@ -1105,7 +1105,7 @@ var Run = function (execPath, options) {
   self.fakeMongoPort = null;
   self.fakeMongoConnection = null;
   if (options.fakeMongo) {
-    self.fakeMongoPort = require('./utils/utils.js').randomPort();
+    self.fakeMongoPort = require('../utils/utils.js').randomPort();
     self.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = self.fakeMongoPort;
   }
 

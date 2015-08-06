@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var utils = require('../utils/utils.js');
 
 selftest.define('subset generator', function () {

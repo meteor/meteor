@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var Fiber = require('fibers');
 var fiberHelpers = require('../utils/fiber-helpers.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 
 var Updater = function () {
   var self = this;

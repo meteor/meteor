@@ -6,12 +6,12 @@
 
 var files = require('../fs/files.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var config = require('./config.js');
 var auth = require('./auth.js');
 var _ = require('underscore');
 var stats = require('./stats.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:

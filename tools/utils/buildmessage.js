@@ -1,10 +1,10 @@
 var Fiber = require('fibers');
 var Future = require('fibers/future');
 var _ = require('underscore');
-var files = require('./fs/files.js');
-var parseStack = require('./utils/parse-stack.js');
-var fiberHelpers = require('./utils/fiber-helpers.js');
-var Progress = require('./progress.js').Progress;
+var files = require('../fs/files.js');
+var parseStack = require('./parse-stack.js');
+var fiberHelpers = require('./fiber-helpers.js');
+var Progress = require('../console/progress.js').Progress;
 
 var debugBuild = !!process.env.METEOR_DEBUG_BUILD;
 

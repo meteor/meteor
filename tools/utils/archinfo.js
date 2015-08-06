@@ -1,7 +1,7 @@
 var _ = require('underscore');
 var os = require('os');
 
-var utils = require('./utils/utils.js');
+var utils = require('./utils.js');
 
 /* Meteor's current architecture scheme defines the following virtual
  * machine types, which are defined by specifying what is promised by

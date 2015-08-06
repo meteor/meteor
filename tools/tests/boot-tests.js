@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 
 selftest.define("boot utils", function (options) {
   var bootUtils = require('../static-assets/server/boot-utils.js');

@@ -4,13 +4,13 @@ var util = require('util');
 var path = require('path');
 var chalk = require('chalk');
 var files = require('../fs/files.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var projectContextModule = require('../project-context.js');
 var Future = require('fibers/future');
 var utils = require('../utils/utils.js');
-var archinfo = require('../archinfo.js');
+var archinfo = require('../utils/archinfo.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var processes = require('../utils/processes.js');
 var catalog = require('../catalog/catalog.js');
 

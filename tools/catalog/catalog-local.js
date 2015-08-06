@@ -1,5 +1,5 @@
 var _ = require('underscore');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var files = require('../fs/files.js');
 var watch = require('../fs/watch.js');
 var PackageSource = require('../isobuild/package-source.js');

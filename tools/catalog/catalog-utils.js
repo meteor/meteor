@@ -30,7 +30,7 @@ exports.displayRelease = function (track, version, options) {
 // If we have failed to update the catalog, informs the user and advises them to
 // go online for up to date inforation.
 exports.explainIfRefreshFailed = function () {
-  var Console = require('../console.js').Console;
+  var Console = require('../console/console.js').Console;
   var catalog = require('./catalog.js');
   if (catalog.official.offline || catalog.refreshFailed) {
     Console.info("Your package catalog may be out of date.\n" +

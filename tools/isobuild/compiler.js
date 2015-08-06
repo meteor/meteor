@@ -1,12 +1,12 @@
 var _ = require('underscore');
 
-var archinfo = require('../archinfo.js');
-var buildmessage = require('../buildmessage.js');
+var archinfo = require('../utils/archinfo.js');
+var buildmessage = require('../utils/buildmessage.js');
 var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
 var meteorNpm = require('./meteor-npm.js');
 var watch = require('../fs/watch.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var files = require('../fs/files.js');
 var colonConverter = require('../utils/colon-converter.js');
 var linterPluginModule = require('./linter-plugin.js');

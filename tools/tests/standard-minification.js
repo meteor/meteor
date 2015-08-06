@@ -1,4 +1,4 @@
-import selftest, {Sandbox} from '../selftest.js';
+import selftest, {Sandbox} from '../tool-testing/selftest.js';
 
 selftest.define('standard-minifiers - CSS splitting', function (options) {
   const s = new Sandbox({

@@ -2,12 +2,12 @@ var _ = require("underscore");
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var archinfo = require('../archinfo.js');
+var archinfo = require('../utils/archinfo.js');
 var catalog = require('../catalog/catalog.js');
 var Isopack = require('../isobuild/isopack.js').Isopack;
 var config = require('../meteor-services/config.js');
-var buildmessage = require('../buildmessage.js');
-var Console = require('../console.js').Console;
+var buildmessage = require('../utils/buildmessage.js');
+var Console = require('../console/console.js').Console;
 var colonConverter = require('../utils/colon-converter.js');
 
 exports.Tropohouse = function (root, options) {

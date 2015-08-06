@@ -8,7 +8,7 @@ var bundler = require('../../isobuild/bundler.js');
 var isopackets = require('../../tool-env/isopackets.js');
 var release = require('../../packaging/release.js');
 var catalog = require('../../catalog/catalog.js');
-var buildmessage = require('../../buildmessage.js');
+var buildmessage = require('../../utils/buildmessage.js');
 var projectContextModule = require('../../project-context.js');
 
 var lastTmpDir = null;

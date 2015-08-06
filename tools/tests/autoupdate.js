@@ -1,7 +1,7 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var config = require('../meteor-services/config.js');
 var catalogRemote = require('../catalog/catalog-remote.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var Sandbox = selftest.Sandbox;
 
 var DEFAULT_RELEASE_TRACK = catalogRemote.DEFAULT_TRACK;

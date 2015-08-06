@@ -1,5 +1,5 @@
 var auth = require('./auth.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var ServiceConnection = require('./service-connection.js');
 var httpHelpers = require('../utils/http-helpers.js');
 

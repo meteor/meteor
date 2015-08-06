@@ -1,5 +1,5 @@
-var archinfo = require('../archinfo.js');
-var buildmessage = require('../buildmessage.js');
+var archinfo = require('../utils/archinfo.js');
+var buildmessage = require('../utils/buildmessage.js');
 var files = require('../fs/files.js');
 var _ = require('underscore');
 import utils from '../utils/utils.js';

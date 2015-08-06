@@ -5,8 +5,8 @@ var os = require('os');
 var url = require('url');
 
 var fiberHelpers = require('./fiber-helpers.js');
-var archinfo = require('../archinfo.js');
-var buildmessage = require('../buildmessage.js');
+var archinfo = require('./archinfo.js');
+var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 
@@ -111,7 +111,7 @@ exports.printPackageList = function (items, options) {
   };
   rows = _.sortBy(rows, alphaSort);
 
-  var Console = require('../console.js').Console;
+  var Console = require('../console/console.js').Console;
   return Console.printTwoColumns(rows, options);
 };
 
@@ -289,7 +289,7 @@ exports.validatePackageNameOrExit = function (packageName, options) {
   } catch (e) {
     if (!e.versionParserError)
       throw e;
-    var Console = require('../console.js').Console;
+    var Console = require('../console/console.js').Console;
     Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
     // this file

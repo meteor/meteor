@@ -1,7 +1,7 @@
 var main = require('./main.js');
 var _ = require('underscore');
 var files = require('../fs/files.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var utils = require('../utils/utils.js');
@@ -11,7 +11,7 @@ var catalog = require('../catalog/catalog.js');
 var catalogRemote = require('../catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
 var catalogUtils = require('../catalog/catalog-utils.js');

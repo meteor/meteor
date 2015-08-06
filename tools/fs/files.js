@@ -19,7 +19,7 @@ var sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js
 
 var utils = require('../utils/utils.js');
 var cleanup = require('../tool-env/cleanup.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var watch = require('./watch.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var colonConverter = require('../utils/colon-converter.js');

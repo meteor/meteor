@@ -1,6 +1,6 @@
 var _ = require('underscore');
 
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
 var files = require('../fs/files.js');
 var isopackModule = require('./isopack.js');

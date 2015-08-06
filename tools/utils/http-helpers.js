@@ -12,7 +12,7 @@ var files = require('../fs/files.js');
 var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var release = require('../packaging/release.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 
 
 // Helper that tracks bytes written to a writable

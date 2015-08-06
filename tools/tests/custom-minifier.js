@@ -1,4 +1,4 @@
-import selftest, {Sandbox} from '../selftest.js';
+import selftest, {Sandbox} from '../tool-testing/selftest.js';
 
 selftest.define('custom minifier - devel vs prod', function (options) {
   const s = new Sandbox({

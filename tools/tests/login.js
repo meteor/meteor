@@ -1,6 +1,6 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require('../test-utils.js');
+var testUtils = require('../tool-testing/test-utils.js');
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;
 var loginTimeoutSecs = 2;

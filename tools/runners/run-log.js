@@ -1,6 +1,6 @@
 var _ = require('underscore');
-var isopackets = require('./tool-env/isopackets.js');
-var Console = require('./console.js').Console;
+var isopackets = require('../tool-env/isopackets.js');
+var Console = require('../console/console.js').Console;
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
 // writes to standard output (and standard error, if rawLogs is set), and allows

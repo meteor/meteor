@@ -1,9 +1,9 @@
 var assert = require("assert");
 var _ = require("underscore");
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var compiler = require('./compiler.js');
-var archinfo = require('../archinfo.js');
+var archinfo = require('../utils/archinfo.js');
 var files = require('../fs/files.js');
 var catalog = require('../catalog/catalog.js');
 

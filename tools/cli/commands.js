@@ -2,19 +2,19 @@ var main = require('./main.js');
 var _ = require('underscore');
 var files = require('../fs/files.js');
 var deploy = require('../meteor-services/deploy.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 var auth = require('../meteor-services/auth.js');
 var authClient = require('../meteor-services/auth-client.js');
 var config = require('../meteor-services/config.js');
 var Future = require('fibers/future');
-var runLog = require('../run-log.js');
+var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
-var archinfo = require('../archinfo.js');
+var archinfo = require('../utils/archinfo.js');
 var catalog = require('../catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var cordova = require('./commands-cordova.js');
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 
 var release = require('../packaging/release.js');
@@ -1925,7 +1925,7 @@ main.registerCommand({
     return 1;
   }
 
-  var selftest = require('../selftest.js');
+  var selftest = require('../tool-testing/selftest.js');
 
   // Auto-detect whether to skip 'net' tests, unless --force-online is passed.
   var offline = false;

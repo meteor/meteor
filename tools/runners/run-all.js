@@ -3,11 +3,11 @@ const Fiber = require('fibers');
 const Future = require('fibers/future');
 
 const files = require('../fs/files.js');
-const buildmessage = require('../buildmessage.js');
-const runLog = require('../run-log.js');
+const buildmessage = require('../utils/buildmessage.js');
+const runLog = require('./run-log.js');
 const release = require('../packaging/release.js');
 
-const Console = require('../console.js').Console;
+const Console = require('../console/console.js').Console;
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;

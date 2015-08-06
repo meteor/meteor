@@ -1,4 +1,4 @@
-import selftest from '../selftest.js';
+import selftest from '../tool-testing/selftest.js';
 import { findAssignedGlobals } from '../isobuild/js-analyze.js';
 
 selftest.define('findAssignedGlobals', () => {
