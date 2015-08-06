@@ -936,7 +936,7 @@ _.extend(PhantomClient.prototype, {
     var phantomPath = phantomjs.path;
 
     var scriptPath = files.pathJoin(files.getCurrentToolsDir(), "tools",
-      "phantom", "open-url.js");
+      "tool-testing", "phantom", "open-url.js");
     self.process = child_process.execFile(phantomPath, ["--load-images=no",
       files.convertToOSPath(scriptPath), self.url],
       {}, function (error, stdout, stderr) {
