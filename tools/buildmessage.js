@@ -433,7 +433,13 @@ var error = function (message, options) {
 
   if ('useMyCaller' in info) {
     if (info.useMyCaller) {
-      info.stack = parseStack.parse(new Error()).slice(2);
+      const {
+        insideFiber,
+        outsideFiber
+      } = parseStack.parse(new Error());
+
+      // Concatenate and get rid of lines about Future and buildmessage
+      info.stack = outsideFiber.concat(insideFiber).slice(2);
       if (typeof info.useMyCaller === 'number') {
         info.stack = info.stack.slice(info.useMyCaller);
       }

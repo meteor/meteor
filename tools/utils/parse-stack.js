@@ -38,9 +38,10 @@ export function parse(err) {
   const outsideFiber = parseStackFrames(frames);
   const insideFiber = parseStackFrames(frames.slice(indexOfFiberSplit + 1));
 
-  // Put the frames below the split at the top of the printed stack trace, since
-  // they are more likely to contain the code that actually threw the error.
-  return insideFiber.concat(outsideFiber);
+  return {
+    insideFiber,
+    outsideFiber
+  };
 }
 
 // Decorator. Mark the point at which a stack trace returned by

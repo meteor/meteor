@@ -1805,7 +1805,7 @@ var runTests = function (options) {
       testList.notifyFailed(test);
 
       if (failure instanceof TestFailure) {
-        var frames = parseStack.parse(failure);
+        var frames = parseStack.parse(failure).outsideFiber;
         var relpath = files.pathRelative(files.getCurrentToolsDir(),
                                          frames[0].file);
         Console.rawError("  => " + failure.reason + " at " +
