@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor Reactive Templating library",
-  version: '2.1.3-plugins.0'
+  version: '2.1.3-anubhav.0'
 });
 
 Package.onUse(function (api) {

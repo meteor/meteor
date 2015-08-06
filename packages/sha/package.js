@@ -1,6 +1,6 @@
 Package.describe({
   summary: "SHA256 implementation",
-  version: "1.0.4-plugins.0"
+  version: "1.0.4-anubhav.0"
 });
 
 Package.onUse(function (api) {
