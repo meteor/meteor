@@ -1,7 +1,7 @@
 {
- "track": "PLUGINS-PREVIEW",
- "version": "2",
+ "track": "ANUBHAV-ERROR-APP-TEST",
+ "version": "1",
  "recommended": false,
  "official": false,
- "description": "Preview release for new plugin APIs"
+ "description": "Test release for development error app"
 }
