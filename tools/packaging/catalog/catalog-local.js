@@ -1,9 +1,9 @@
 var _ = require('underscore');
-var buildmessage = require('../utils/buildmessage.js');
-var files = require('../fs/files.js');
-var watch = require('../fs/watch.js');
-var PackageSource = require('../isobuild/package-source.js');
-import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../isobuild/compiler.js';
+var buildmessage = require('../../utils/buildmessage.js');
+var files = require('../../fs/files.js');
+var watch = require('../../fs/watch.js');
+var PackageSource = require('../../isobuild/package-source.js');
+import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from '../../isobuild/compiler.js';
 
 // LocalCatalog represents packages located in the application's
 // package directory, other package directories specified via an

@@ -12,7 +12,7 @@ var warehouse = require('../packaging/warehouse.js');
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
 var projectContextModule = require('../project-context.js');
-var catalog = require('../catalog/catalog.js');
+var catalog = require('../packaging/catalog/catalog.js');
 var buildmessage = require('../utils/buildmessage.js');
 var httpHelpers = require('../utils/http-helpers.js');
 
@@ -967,7 +967,7 @@ Fiber(function () {
       // Let's do some processing here. If the user/release file specified a
       // track, we need to display that correctly, and if they didn't, we should
       // make it clear that we are talking about the default track.
-      var catalogUtils = require('../catalog/catalog-utils.js');
+      var catalogUtils = require('../packaging/catalog/catalog-utils.js');
       var trackAndVersion = catalogUtils.splitReleaseName(releaseName);
       var displayRelease = catalogUtils.displayRelease(
         trackAndVersion[0], trackAndVersion[1]);

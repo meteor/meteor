@@ -1586,13 +1586,15 @@ _.extend(Isopack.prototype, {
       /^tools\/[^\/]+\.js$/, // General tools files
       /^tools\/isobuild\/[^\/]+\.js$/, // Isobuild files
       /^tools\/cli\/[^\/]+\.js$/, // CLI files
-      /^tools\/catalog\/[^\/]+\.js$/, // Catalog files
       /^tools\/tool-env\/[^\/]+\.js$/, // Tool initiation and clean up
       /^tools\/runners\/[^\/]+\.js$/, // Parts of tool process
       /^tools\/packaging\/[^\/]+\.js$/,
+      /^tools\/packaging\/catalog\/[^\/]+\.js$/,
       /^tools\/utils\/[^\/]+\.js$/,
       /^tools\/fs\/[^\/]+\.js$/,
       /^tools\/meteor-services\/[^\/]+\.js$/,
+      /^tools\/tool-testing\/[^\/]+\.js$/,
+      /^tools\/console\/[^\/]+\.js$/,
       // We don't support running self-test from an install anymore
     ];
 

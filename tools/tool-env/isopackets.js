@@ -204,7 +204,7 @@ var newIsopacketBuildingCatalog = function () {
   if (! files.inCheckout())
     throw Error("No need to build isopackets unless in checkout!");
 
-  var catalogLocal = require('../catalog/catalog-local.js');
+  var catalogLocal = require('../packaging/catalog/catalog-local.js');
   var isopacketCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },

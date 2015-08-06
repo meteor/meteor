@@ -2,16 +2,16 @@ var Future = require('fibers/future');
 var _ = require('underscore');
 var sqlite3 = require('sqlite3');
 
-var files = require('../fs/files.js');
-var utils = require('../utils/utils.js');
-var buildmessage = require('../utils/buildmessage.js');
-var config = require('../meteor-services/config.js');
-var archinfo = require('../utils/archinfo.js');
-var Console = require('../console/console.js').Console;
+var files = require('../../fs/files.js');
+var utils = require('../../utils/utils.js');
+var buildmessage = require('../../utils/buildmessage.js');
+var config = require('../../meteor-services/config.js');
+var archinfo = require('../../utils/archinfo.js');
+var Console = require('../../console/console.js').Console;
 
-var tropohouse = require('../packaging/tropohouse.js');
-var packageClient = require('../packaging/package-client.js');
-var VersionParser = require('../packaging/package-version-parser.js');
+var tropohouse = require('../tropohouse.js');
+var packageClient = require('../package-client.js');
+var VersionParser = require('../package-version-parser.js');
 
 
 // XXX: Rationalize these flags.  Maybe use the logger?

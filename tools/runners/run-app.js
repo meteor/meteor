@@ -10,7 +10,7 @@ var runLog = require('./run-log.js');
 var stats = require('../meteor-services/stats.js');
 var cordova = require('../cli/commands-cordova.js');
 var Console = require('../console/console.js').Console;
-var catalog = require('../catalog/catalog.js');
+var catalog = require('../packaging/catalog/catalog.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var release = require('../packaging/release.js');
 

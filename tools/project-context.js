@@ -3,8 +3,8 @@ var _ = require('underscore');
 
 var archinfo = require('./utils/archinfo.js');
 var buildmessage = require('./utils/buildmessage.js');
-var catalog = require('./catalog/catalog.js');
-var catalogLocal = require('./catalog/catalog-local.js');
+var catalog = require('./packaging/catalog/catalog.js');
+var catalogLocal = require('./packaging/catalog/catalog-local.js');
 var Console = require('./console/console.js').Console;
 var files = require('./fs/files.js');
 var isopackCacheModule = require('./isobuild/isopack-cache.js');
@@ -1265,7 +1265,7 @@ _.extend(exports.ReleaseFile.prototype, {
 
     self.unnormalizedReleaseName = lines[0];
 
-    const catalogUtils = require('./catalog/catalog-utils.js');
+    const catalogUtils = require('./packaging/catalog/catalog-utils.js');
     var parts = catalogUtils.splitReleaseName(self.unnormalizedReleaseName);
     self.fullReleaseName = parts[0] + '@' + parts[1];
     self.displayReleaseName = catalogUtils.displayRelease(parts[0], parts[1]);

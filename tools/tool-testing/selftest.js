@@ -13,8 +13,8 @@ var archinfo = require('../utils/archinfo.js');
 var config = require('../meteor-services/config.js');
 var buildmessage = require('../utils/buildmessage.js');
 
-var catalog = require('../catalog/catalog.js');
-var catalogRemote = require('../catalog/catalog-remote.js');
+var catalog = require('../packaging/catalog/catalog.js');
+var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopackCacheModule = require('../isobuild/isopack-cache.js');
 var isopackets = require('../tool-env/isopackets.js');
 
@@ -176,7 +176,7 @@ var newSelfTestCatalog = function () {
   if (! files.inCheckout())
     throw Error("Only can build packages from a checkout");
 
-  var catalogLocal = require('../catalog/catalog-local.js');
+  var catalogLocal = require('../packaging/catalog/catalog-local.js');
   var selfTestCatalog = new catalogLocal.LocalCatalog;
   var messages = buildmessage.capture(
     { title: "scanning local core packages" },

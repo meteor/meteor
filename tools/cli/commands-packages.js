@@ -7,14 +7,14 @@ var config = require('../meteor-services/config.js');
 var utils = require('../utils/utils.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var compiler = require('../isobuild/compiler.js');
-var catalog = require('../catalog/catalog.js');
-var catalogRemote = require('../catalog/catalog-remote.js');
+var catalog = require('../packaging/catalog/catalog.js');
+var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
 var cordova = require('./commands-cordova.js');
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
-var catalogUtils = require('../catalog/catalog-utils.js');
+var catalogUtils = require('../packaging/catalog/catalog-utils.js');
 
 var release = require('../packaging/release.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');

@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
 var runLog = require('../runners/run-log.js');
-var catalog = require('../catalog/catalog.js');
+var catalog = require('./catalog/catalog.js');
 var archinfo = require('../utils/archinfo.js');
 var isopack = require('../isobuild/isopack.js');
 var buildmessage = require('../utils/buildmessage.js');
@@ -108,7 +108,7 @@ var maybeShowBanners = function () {
   if (release.forced)
     return;
 
-  const catalogUtils = require('../catalog/catalog-utils.js');
+  const catalogUtils = require('./catalog/catalog-utils.js');
 
   // Didn't print a banner? Maybe we have a patch release to recommend.
   var track = release.current.getReleaseTrack();

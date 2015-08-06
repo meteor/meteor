@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
 var files = require('../fs/files.js');
-var catalog = require('../catalog/catalog.js');
+var catalog = require('./catalog/catalog.js');
 
 var release = exports;
 
@@ -122,7 +122,7 @@ _.extend(Release.prototype, {
 
   getDisplayName: function (options) {
     var self = this;
-    const catalogUtils = require('../catalog/catalog-utils.js');
+    const catalogUtils = require('./catalog/catalog-utils.js');
     return catalogUtils.displayRelease(
       self.getReleaseTrack(),
       self.getReleaseVersion(),

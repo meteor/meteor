@@ -12,7 +12,7 @@ var archinfo = require('../utils/archinfo.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var Console = require('../console/console.js').Console;
 var processes = require('../utils/processes.js');
-var catalog = require('../catalog/catalog.js');
+var catalog = require('../packaging/catalog/catalog.js');
 
 var tropohouse = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
