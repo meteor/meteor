@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '1.4.32-plugins.0_1',
+  version: '1.4.39_1',
   documentation: null
 });
 
@@ -13,7 +13,7 @@ Npm.depends({
   // publish-for-arch dance every time we make a Meteor release.
   // XXX move the npm dependency into a non-core versioned package and allow
   //     it to use C++ bson
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/634759e6326dc19a228df66ddb309285532f3b8a"
+  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/9c7441e87fbec059dc0b70bbb70734404b994d71"
 });
 
 Package.onUse(function (api) {
