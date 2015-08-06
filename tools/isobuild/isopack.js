@@ -1591,6 +1591,7 @@ _.extend(Isopack.prototype, {
       /^tools\/packaging\/[^\/]+\.js$/,
       /^tools\/utils\/[^\/]+\.js$/,
       /^tools\/fs\/[^\/]+\.js$/,
+      /^tools\/meteor-services\/[^\/]+\.js$/,
       // We don't support running self-test from an install anymore
     ];
 

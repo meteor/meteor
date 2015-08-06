@@ -1,7 +1,7 @@
 var isopackets = require('./tool-env/isopackets.js');
-var config = require('./config.js');
+var config = require('./meteor-services/config.js');
 var utils = require('./utils/utils.js');
-var auth = require('./auth.js');
+var auth = require('./meteor-services/auth.js');
 var selftest = require('./selftest.js');
 
 var randomString = function (charsCount) {

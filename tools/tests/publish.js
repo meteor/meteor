@@ -2,7 +2,7 @@ var _ = require('underscore');
 var utils = require('../utils/utils.js');
 var testUtils = require('../test-utils.js');
 var selftest = require('../selftest.js');
-var stats = require('../stats.js');
+var stats = require('../meteor-services/stats.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files.js');
 

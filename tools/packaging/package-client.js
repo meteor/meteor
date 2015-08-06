@@ -1,14 +1,14 @@
 var Future = require('fibers/future');
 var _ = require('underscore');
 
-var config = require('../config.js');
+var config = require('../meteor-services/config.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var release = require('./release.js');
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var buildmessage = require('../buildmessage.js');
 var compiler = require('../isobuild/compiler.js');
-var authClient = require('../auth-client.js');
+var authClient = require('../meteor-services/auth-client.js');
 var catalog = require('../catalog/catalog.js');
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');

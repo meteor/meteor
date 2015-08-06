@@ -10,7 +10,7 @@ var utils = require('./utils/utils.js');
 var parseStack = require('./utils/parse-stack.js');
 var Console = require('./console.js').Console;
 var archinfo = require('./archinfo.js');
-var config = require('./config.js');
+var config = require('./meteor-services/config.js');
 var buildmessage = require('./buildmessage.js');
 
 var catalog = require('./catalog/catalog.js');

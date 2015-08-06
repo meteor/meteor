@@ -5,7 +5,7 @@ var sqlite3 = require('sqlite3');
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
 var buildmessage = require('../buildmessage.js');
-var config = require('../config.js');
+var config = require('../meteor-services/config.js');
 var archinfo = require('../archinfo.js');
 var Console = require('../console.js').Console;
 

@@ -2,12 +2,12 @@ var _ = require('underscore');
 var os = require('os');
 var util = require('util');
 
-var auth = require('../auth.js');
+var auth = require('../meteor-services/auth.js');
 var files = require('../fs/files.js');
-var config = require('../config.js');
+var config = require('../meteor-services/config.js');
 var selftest = require('../selftest.js');
 var testUtils = require('../test-utils.js');
-var stats = require('../stats.js');
+var stats = require('../meteor-services/stats.js');
 var tropohouseModule = require('../packaging/tropohouse.js');
 var release = require('../packaging/release.js');
 var Sandbox = selftest.Sandbox;

@@ -1,7 +1,7 @@
 var url = require('url');
-var files = require('./fs/files.js');
+var files = require('../fs/files.js');
 var _ = require('underscore');
-var tropohouse = require('./packaging/tropohouse.js');
+var tropohouse = require('../packaging/tropohouse.js');
 
 // A few functions in the `meteor` tool talk to MDG servers: primarily
 // checking for updates, logging into your Meteor account, and

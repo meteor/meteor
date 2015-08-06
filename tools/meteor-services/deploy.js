@@ -4,14 +4,14 @@
 // prompt for password
 // send RPC with or without password as required
 
-var files = require('./fs/files.js');
-var httpHelpers = require('./utils/http-helpers.js');
-var buildmessage = require('./buildmessage.js');
+var files = require('../fs/files.js');
+var httpHelpers = require('../utils/http-helpers.js');
+var buildmessage = require('../buildmessage.js');
 var config = require('./config.js');
 var auth = require('./auth.js');
 var _ = require('underscore');
 var stats = require('./stats.js');
-var Console = require('./console.js').Console;
+var Console = require('../console.js').Console;
 
 // Make a synchronous RPC to the "classic" MDG deploy API. The deploy
 // API has the following contract:
@@ -397,7 +397,7 @@ var bundleAndDeploy = function (options) {
   });
 
   if (! messages.hasMessages()) {
-    var bundler = require('./isobuild/bundler.js');
+    var bundler = require('../isobuild/bundler.js');
 
     var bundleResult = bundler.bundle({
       projectContext: options.projectContext,

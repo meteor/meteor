@@ -1,5 +1,5 @@
 var selftest = require('../selftest.js');
-var config = require('../config.js');
+var config = require('../meteor-services/config.js');
 var catalogRemote = require('../catalog/catalog-remote.js');
 var buildmessage = require('../buildmessage.js');
 var Sandbox = selftest.Sandbox;

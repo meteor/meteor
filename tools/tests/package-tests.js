@@ -475,7 +475,7 @@ selftest.define("update server package data unit test",
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
 
   var rC = require('../catalog/catalog-remote.js');
-  var config = require('../config.js');
+  var config = require('../meteor-services/config.js');
   var packageStorage = new rC.RemoteCatalog();
   var packageStorageFile = config.getPackageStorage({
     root: packageStorageFileDir,

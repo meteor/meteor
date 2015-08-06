@@ -1,14 +1,14 @@
 var _ = require('underscore');
-var utils = require('./utils/utils.js');
-var files = require('./fs/files.js');
+var utils = require('../utils/utils.js');
+var files = require('../fs/files.js');
 var config = require('./config.js');
-var httpHelpers = require('./utils/http-helpers.js');
-var fiberHelpers = require('./utils/fiber-helpers.js');
+var httpHelpers = require('../utils/http-helpers.js');
+var fiberHelpers = require('../utils/fiber-helpers.js');
 var querystring = require('querystring');
 var url = require('url');
 var Future = require('fibers/future');
-var isopackets = require('./tool-env/isopackets.js');
-var Console = require('./console.js').Console;
+var isopackets = require('../tool-env/isopackets.js');
+var Console = require('../console.js').Console;
 
 var auth = exports;
 

@@ -9,8 +9,8 @@ var _ = require('underscore');
 var Future = require('fibers/future');
 
 var files = require('../fs/files.js');
-var auth = require('../auth.js');
-var config = require('../config.js');
+var auth = require('../meteor-services/auth.js');
+var config = require('../meteor-services/config.js');
 var release = require('../packaging/release.js');
 var Console = require('../console.js').Console;
 

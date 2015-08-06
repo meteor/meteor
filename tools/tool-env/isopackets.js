@@ -7,7 +7,7 @@ var isopackCacheModule = require('../isobuild/isopack-cache.js');
 
 var buildmessage = require('../buildmessage.js');
 var files = require('../fs/files.js');
-var config = require('../config.js');
+var config = require('../meteor-services/config.js');
 var watch = require('../fs/watch.js');
 var Console = require('../console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');

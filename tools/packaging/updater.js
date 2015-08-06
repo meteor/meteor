@@ -6,7 +6,7 @@ var archinfo = require('../archinfo.js');
 var isopack = require('../isobuild/isopack.js');
 var buildmessage = require('../buildmessage.js');
 var Console = require('../console.js').Console;
-var auth = require('../auth.js');
+var auth = require('../meteor-services/auth.js');
 var files = require('../fs/files.js');
 
 var tropohouse = require('./tropohouse.js');
