@@ -609,8 +609,11 @@ _.extend(PackageSource.prototype, {
           } else if (key === "prodOnly") {
             self.prodOnly = !!value;
           } else {
-          // Do nothing. We might want to add some keys later, and we should err
-          // on the side of backwards compatibility.
+            // Do nothing. We might want to add some keys later, and we should err
+            // on the side of backwards compatibility.
+          }
+          if (self.debugOnly && self.prodOnly) {
+            buildmessage.error("Package can't have both debugOnly and prodOnly set.");
           }
         });
       },
