@@ -1133,27 +1133,7 @@ main.registerCommand({
       versionAddendum = "+";
       anyBuiltLocally = true;
     } else if (mapInfo.kind === 'versioned') {
-      // Check to see if there are later versions available.
-      // If we are not using an rc for this package, then we are not going to
-      // update to an rc. But if we are using a pre-release version, then we
-      // care about other pre-release versions, and might want to update to a
-      // newer one.
-      var latest;
-      if (/-/.test(mapInfo.version)) {
-        latest = catalog.official.getLatestVersion(packageName);
-      } else {
-        latest = catalog.official.getLatestMainlineVersion(packageName);
-      }
-      if (! latest) {
-        // Shouldn't happen: we've chosen a published version of this package,
-        // so there has to be at least one in our database!
-        throw Error("no latest record for package where we have a version? " +
-                    packageName);
-      }
-      if (mapInfo.version !== latest.version &&
-          // If we're currently running a prerelease, "latest" may be older than
-          // what we're at, so don't tell us we're outdated!
-          packageVersionParser.lessThan(mapInfo.version, latest.version)) {
+      if (getNewerVersion(packageName, mapInfo.version, catalog.official)) {
         versionAddendum = "*";
         newVersionsAvailable = true;
       }
@@ -1198,6 +1178,40 @@ main.registerCommand({
   return 0;
 });
 
+var getNewerVersion = function (packageName, curVersion, whichCatalog) {
+  // Check to see if there are later versions available, returning the
+  // latest version if there are.
+  //
+  // If we are not using an rc for this package, then we are not going to
+  // update to an rc. But if we are using a pre-release version, then we
+  // care about other pre-release versions, and might want to update to a
+  // newer one.
+  //
+  // We depend on the fact that `curVersion` is in the database to know
+  // that we'll find something when we look in the catalog.
+  var latest;
+  if (/-/.test(curVersion)) {
+    latest = whichCatalog.getLatestVersion(packageName);
+  } else {
+    latest = whichCatalog.getLatestMainlineVersion(packageName);
+  }
+  if (! latest) {
+    // Shouldn't happen: we've chosen a published version of this package,
+    // so there has to be at least one in our database!
+    throw Error("no latest record for package where we have a version? " +
+                packageName);
+  }
+
+  var latestVersion = latest.version;
+  if (curVersion !== latestVersion &&
+      // If we're currently running a prerelease, "latest" may be older than
+      // what we're at, so don't tell us we're outdated!
+      packageVersionParser.lessThan(curVersion, latestVersion)) {
+    return latestVersion;
+  } else {
+    return null;
+  }
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // update
@@ -1618,7 +1632,7 @@ main.registerCommand({
       "Your top-level dependencies are at their latest compatible versions.");
   }
 
-  if (! options.args.length) {
+  if (!options.args.length) {
     // Generate and print info about what is NOT at the latest version.
     var topLevelPkgSet = {};
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
@@ -1629,8 +1643,8 @@ main.registerCommand({
     projectContext.packageMap.eachPackage(function (name, info) {
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
-      var latestVersion = catalog.getLatestMainlineVersion(name).version;
-      if (selectedVersion !== latestVersion) {
+      var latestVersion = getNewerVersion(name, selectedVersion, catalog);
+      if (latestVersion) {
         var rec = { name: name, selectedVersion: selectedVersion,
                     latestVersion: latestVersion };
         if (_.has(topLevelPkgSet, name)) {
