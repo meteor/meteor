@@ -30,7 +30,9 @@ export function parse(err) {
 
   if (indexOfFiberSplit === -1) {
     // This is a normal stack trace, not a split fiber stack trace
-    return parseStackFrames(frames);
+    return {
+      outsideFiber: parseStackFrames(frames)
+    }
   }
 
   // If this is a split stack trace from a future, parse the frames above and
