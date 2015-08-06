@@ -1,5 +1,6 @@
 var Console = require('./console.js').Console;
 var isopackets = require("./isopackets.js");
+var files = require('./files.js');
 
 var phantomjs = require('phantomjs');
 var child_process = require('child_process');
@@ -124,11 +125,15 @@ var runVelocity = function (url) {
 
       function visitWithPhantom (url) {
         var phantomScript = "require('webpage').create().open('" + url + "');";
+        var tempDir = files.mkdtemp('phantomjs-');
+        var phantomScriptPath = files.pathJoin(tempDir, 'visit-mirror.js');
+        files.writeFile(phantomScriptPath, phantomScript, 'utf8');
         var browserProcess = child_process.execFile(
           '/bin/bash',
           ['-c',
-           ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
-            phantomScript + "\nEND\n")]);
+          ("exec " + phantomjs.path + " " + files.convertToOSPath(phantomScriptPath))
+          ]
+        );
         var prependPhantomJSOutput = function (data) {
           return data.toString().replace(/^(.+)$/gm, '[PhantomJS] $1');
         };
