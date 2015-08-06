@@ -34,6 +34,10 @@ set SAVE_DEV_BUNDLE_TARBALL=t
 You can also run `./meteor --get-ready` to install all npm dependencies for the
 tool.
 
+Usually, the `meteor` script can download a new dev-bundle without any
+dependencies installed, but on Windows, it requires `7z` to be in the path for
+unpacking of a tarball. (Get 7-zip [here](http://www.7-zip.org/))
+
 ## Testing
 
 Since the tool is a node app, it is not testable with general Meteor testing
@@ -58,7 +62,7 @@ To run all tests, run the following:
 ./meteor --get-ready
 
 # set the multiplier for time-outs
-SET TIMEOUT_SCALE_FACTOR=3
+set TIMEOUT_SCALE_FACTOR=3
 
 # run the tests
 ./meteor self-test
