@@ -4,6 +4,4 @@
 # but you can also edit it by hand.
 
 meteor-base
-autopublish
-insecure
 jquery
