@@ -67,10 +67,8 @@ It's hard to see the `newClientAvailable` reactive variable when the
 client automatically reloads.  Remove the `reload` package so you can
 see the variable without having the client also reload.
 
-    $ meteor remove meteor-platform
-    $ meteor add meteor webapp logging tracker session ddp
-    $ meteor add mongo templating handlebars check underscore
-    $ meteor add jquery random ejson autoupdate spacebars
+    $ meteor remove hot-code-push
+    $ meteor add autoupdate
 
 Add to leaderboard.js:
 
