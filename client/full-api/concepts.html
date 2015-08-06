@@ -735,11 +735,13 @@ Additionally, [`meteor list`](#meteorlist) will tell you what
 packages your project is using, and [`meteor update`](#meteorupdate)
 will update them to the newest versions when possible.
 
-By default all apps include the `meteor-platform` package. This
-automatically pulls in the packages that make up the core Meteor
-stack. If you want to build your own custom stack, just remove
-`meteor-platform` from your app and add back in whichever of the standard
-packages you want to keep.
+By default all apps include the `meteor-base` package. This pulls in the
+packages that make up the core of the Meteor stack. Most apps will have this
+package.
+
+All new apps also start with a set of packages that allow a friendly development
+experience. For more information about these packages, check out the comments in
+the [packages file](https://github.com/meteor/meteor/blob/master/tools/skel/.meteor/packages).
 
 Meteor uses a single-loading packaging system, meaning that it loads just one
 version of every package. Before adding or upgrading to a particular version of
