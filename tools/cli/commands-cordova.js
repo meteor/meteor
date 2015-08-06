@@ -353,7 +353,7 @@ var getBundle = function (projectContext, bundlePath, options) {
       // XXX can we ask it not to create the server arch?
       serverArch: archinfo.host(),
       webArchs: [WEB_ARCH_NAME],
-      includeDebug: !! options.debug
+      buildMode: options.debug ? 'development' : 'production',
     }
   });
 

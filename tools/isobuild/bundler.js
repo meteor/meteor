@@ -411,8 +411,9 @@ class Target {
     arch,
     // projectContextModule.CordovaPluginsFile object
     cordovaPluginsFile,
-    // whenever to include packages marked debugOnly in this target
-    includeDebug,
+    // 'development' or 'production'; determines whether debugOnly
+    //  and prodOnly packages are included; defaults to 'production'
+    buildMode,
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir
     // ... see subclasses for additional options
@@ -458,12 +459,7 @@ class Target {
     // A mapping from Cordova plugin name to Cordova plugin version number.
     this.cordovaDependencies = this.cordovaPluginsFile ? {} : null;
 
-    // For the todos sample app:
-    // false: 99.6 KB / 316 KB
-    // vs
-    // true: 99 KB / 315 KB
-
-    this.includeDebug = includeDebug;
+    this.buildMode = buildMode || 'production';
 
     this.bundlerCacheDir = bundlerCacheDir;
   }
@@ -559,7 +555,10 @@ class Target {
         if (typeof p === 'string') {
           p = isopackCache.getIsopack(p);
         }
-        if (p.debugOnly && ! this.includeDebug) {
+        if (p.debugOnly && this.buildMode !== 'development') {
+          return;
+        }
+        if (p.prodOnly && this.buildMode !== 'production') {
           return;
         }
         const unibuild = p.getUnibuildAtArch(this.arch);
@@ -592,7 +591,8 @@ class Target {
           dependencies: unibuild.uses,
           arch: this.arch,
           isopackCache: isopackCache,
-          skipDebugOnly: ! this.includeDebug
+          skipDebugOnly: this.buildMode !== 'development',
+          skipProdOnly: this.buildMode !== 'production'
         }, addToGetsUsed);
       }.bind(this);
 
@@ -655,7 +655,8 @@ class Target {
           isopackCache: isopackCache,
           skipUnordered: true,
           acceptableWeakPackages: this.usedPackages,
-          skipDebugOnly: ! this.includeDebug
+          skipDebugOnly: this.buildMode !== 'development',
+          skipProdOnly: this.buildMode !== 'production',
         }, processUnibuild);
         this.unibuilds.push(unibuild);
         delete needed[unibuild.id];
@@ -994,7 +995,7 @@ class ClientTarget extends Target {
     if (! archinfo.matches(this.arch, 'web'))
       throw new Error('ClientTarget targeting something that isn\'t a client?');
   }
-  
+
   // Minify the CSS in this target
   minifyCss(minifierDef, minifyMode) {
     // Avoid circular deps from top-level import.
@@ -1968,7 +1969,8 @@ Find out more about Meteor at meteor.com.
  *     ('development'/'production', defaults to 'development')
  *   - serverArch: the server architecture to target (string, default
  *     archinfo.host())
- *   - includeDebug: include packages marked debugOnly (boolean, default false)
+ *   - buildMode: string, 'development'/'production', governs inclusion of
+ *     debugOnly and prodOnly packages, default 'production'
  *   - webArchs: array of 'web.*' options to build (defaults to
  *     projectContext.platformList.getWebArchs())
  *   - warnings: a MessageSet of linting messages or null if linting
@@ -2012,6 +2014,7 @@ exports.bundle = function ({
   var webArchs = buildOptions.webArchs ||
         projectContext.platformList.getWebArchs();
   const minifyMode = buildOptions.minifyMode || 'development';
+  const buildMode = buildOptions.buildMode || 'production';
 
   var releaseName =
     release.current.isCheckout() ? "none" : release.current.name;
@@ -2033,6 +2036,10 @@ exports.bundle = function ({
   if (! release.usingRightReleaseForApp(projectContext))
     throw new Error("running wrong release for app?");
 
+  if (! _.contains(['development', 'production'], buildMode)) {
+    throw new Error('Unrecognized build mode: ' + buildMode);
+  }
+
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
@@ -2045,7 +2052,7 @@ exports.bundle = function ({
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
-        includeDebug: buildOptions.includeDebug,
+        buildMode: buildOptions.buildMode
       });
 
       client.make({
@@ -2066,7 +2073,7 @@ exports.bundle = function ({
         isopackCache: projectContext.isopackCache,
         arch: serverArch,
         releaseName: releaseName,
-        includeDebug: buildOptions.includeDebug
+        buildMode: buildOptions.buildMode
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;

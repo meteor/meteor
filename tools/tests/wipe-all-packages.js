@@ -28,6 +28,7 @@ selftest.define("wipe all packages", function () {
       published: null,
       isTest: false,
       debugOnly: false,
+      prodOnly: false,
       containsPlugins: false
     };
   };
@@ -146,4 +147,3 @@ selftest.define("wipe all packages", function () {
     selftest.expectTrue(contents.length === 0);
   });
 });
-

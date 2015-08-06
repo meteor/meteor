@@ -349,6 +349,10 @@ var PackageSource = function () {
   // for production builds.
   self.debugOnly = false;
 
+  // A package marked prodOnly is ONLY picked up by the bundler for production
+  // builds.
+  self.prodOnly = false;
+
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
   // built copies of all known isopackets.
@@ -544,9 +548,11 @@ _.extend(PackageSource.prototype, {
        * @param {String} options.documentation Optional Filepath to
        * documentation. Set to 'README.md' by default. Set this to null to submit
        * no documentation.
-       * @param {String} options.debugOnly A package with this flag set to true
+       * @param {Boolean} options.debugOnly A package with this flag set to true
        * will not be bundled into production builds. This is useful for packages
        * meant to be used in development only.
+       * @param {Boolean} options.prodOnly A package with this flag set to true
+       * will ONLY be bundled into production builds.
        */
       describe: function (options) {
         _.each(options, function (value, key) {
@@ -598,11 +604,35 @@ _.extend(PackageSource.prototype, {
               buildmessage.error(
                 "trying to initialize a nonexistent base package " + value);
             }
+            // `debugOnly` and `prodOnly` are boolean flags you can put on a
+            // package, currently undocumented.  when set to true, they cause
+            // a package's code to be only included (i.e. linked into the bundle)
+            // in dev mode or prod mode (`meteor --production`), and excluded
+            // otherwise.
+            //
+            // Notes:
+            //
+            // * These flags do not affect which packages or which versions are
+            //   are selected by the version solver.
+            //
+            // * These flags CAN cause different package load orders in
+            //   development and production!  We should probably fix this.
+            //   Basically, packages that are excluded from the build using
+            //   these flags are also excluded fro the build order calculation,
+            //   and that's the problem
+            //
+            // * We should consider publicly documenting these flags, since they
+            //   are effectively part of the public API.
           } else if (key === "debugOnly") {
             self.debugOnly = !!value;
+          } else if (key === "prodOnly") {
+            self.prodOnly = !!value;
           } else {
-          // Do nothing. We might want to add some keys later, and we should err
-          // on the side of backwards compatibility.
+            // Do nothing. We might want to add some keys later, and we should err
+            // on the side of backwards compatibility.
+          }
+          if (self.debugOnly && self.prodOnly) {
+            buildmessage.error("Package can't have both debugOnly and prodOnly set.");
           }
         });
       },
@@ -1037,6 +1067,18 @@ _.extend(PackageSource.prototype, {
       _.each(api.uses[label], doNotDepOnSelf);
       _.each(api.implies[label], doNotDepOnSelf);
     });
+
+    // Cause packages that use `prodOnly` to automatically depend on the
+    // `isobuild:prod-only` feature package, which will cause an error
+    // when a package using `prodOnly` is run by a version of the tool
+    // that doesn't support the feature.  The choice of 'os' architecture
+    // is arbitrary, as the version solver combines the dependencies of all
+    // arches.
+    if (self.prodOnly) {
+      api.uses['os'].push({
+        package: 'isobuild:prod-only', constraint: '1.0.0'
+      });
+    }
 
     // If we have specified some release, then we should go through the
     // dependencies and fill in the unspecified constraints with the versions in

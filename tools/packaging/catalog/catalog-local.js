@@ -319,6 +319,7 @@ _.extend(LocalCatalog.prototype, {
             published: null,
             isTest: packageSource.isTest,
             debugOnly: packageSource.debugOnly,
+            prodOnly: packageSource.prodOnly,
             containsPlugins: packageSource.containsPlugins()
           }
         };

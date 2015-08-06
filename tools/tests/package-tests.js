@@ -263,8 +263,7 @@ selftest.define("change packages during hot code push", [], function () {
 });
 
 // Add packages through the command line. Make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list. Make
-// sure that debugOnly packages don't show up in production mode.
+// changes is reflected in .meteor/packages, .meteor/versions and list.
 selftest.define("add packages to app", [], function () {
   var s = new Sandbox();
   var run;
@@ -352,15 +351,25 @@ selftest.define("add packages to app", [], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
+});
 
-  // Add a debugOnly package. It should work during a normal run, but print
+selftest.define("add debugOnly and prodOnly packages", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+    // Add a debugOnly package. It should work during a normal run, but print
   // nothing in production mode.
   run = s.run("add", "debug-only");
   run.match("debug-only");
   run.expectExit(0);
 
   s.mkdir("server");
-  s.write("server/debug.js",
+  s.write("server/exit-test.js",
           "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
 
   run = s.run("--once");
@@ -370,7 +379,38 @@ selftest.define("add packages to app", [], function () {
   run = s.run("--once", "--production");
   run.waitSecs(15);
   run.expectExit(235);
+
+  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  run = s.run("add", "prod-only");
+  run.match("prod-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js", // overwrite
+          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(234);
 });
+
+selftest.define("add package with both debugOnly and prodOnly", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Add an app with a package with prodOnly and debugOnly set (an error)
+  s.createApp("myapp", "debug-only-test", {dontPrepareApp: true});
+  s.cd("myapp");
+  run = s.run("--prepare-app");
+  run.waitSecs(20);
+  run.matchErr("can't have both debugOnly and prodOnly");
+  run.expectExit(1);
+});
+
 
 // Add a package that adds files to specific client architectures.
 selftest.define("add packages client archs", function (options) {
