@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Good defaults for the mobile status bar",
-  version: "1.0.4-plugins.0"
+  version: "1.0.4-anubhav.0"
 });
 
 Package.onUse(function(api) {

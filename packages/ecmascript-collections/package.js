@@ -1,6 +1,6 @@
 Package.describe({
   name: "ecmascript-collections",
-  version: "0.1.4",
+  version: "0.1.4-anubhav.0",
   summary: "Polyfills for ECMAScript 2015 Map and Set",
   git: "https://github.com/meteor/ecmascript-collections",
   documentation: "README.md"

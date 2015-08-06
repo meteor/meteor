@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '1.4.32-plugins.0_1',
+  version: '1.4.32-anubhav.0_1',
   documentation: null
 });
 
