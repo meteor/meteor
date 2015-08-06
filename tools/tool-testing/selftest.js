@@ -607,8 +607,8 @@ _.extend(Sandbox.prototype, {
   createApp: function (to, template, options) {
     var self = this;
     options = options || {};
-    files.cp_r(files.pathJoin(files.convertToStandardPath(__dirname), 'tests',
-                 'apps', template),
+    files.cp_r(files.pathJoin(
+      files.convertToStandardPath(__dirname), '..', 'tests', 'apps', template),
                files.pathJoin(self.cwd, to),
                { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
@@ -652,7 +652,7 @@ _.extend(Sandbox.prototype, {
     var self = this;
     var packagePath = files.pathJoin(self.cwd, packageDir);
     var templatePackagePath = files.pathJoin(
-      files.convertToStandardPath(__dirname), 'tests', 'packages', template);
+      files.convertToStandardPath(__dirname), '..', 'tests', 'packages', template);
     files.cp_r(templatePackagePath, packagePath);
 
     _.each(files.readdir(packagePath), function (file) {
@@ -1494,7 +1494,7 @@ var getAllTests = function () {
 
   // Load all files in the 'tests' directory that end in .js. They
   // are supposed to then call define() to register their tests.
-  var testdir = files.pathJoin(__dirname, 'tests');
+  var testdir = files.pathJoin(__dirname, '..', 'tests');
   var filenames = files.readdir(testdir);
   _.each(filenames, function (n) {
     if (! n.match(/^[^.].*\.js$/)) // ends in '.js', doesn't start with '.'

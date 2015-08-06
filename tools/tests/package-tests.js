@@ -6,7 +6,7 @@ var files = require('../fs/files.js');
 var testUtils = require('../tool-testing/test-utils.js');
 var utils = require('../utils/utils.js');
 var packageClient = require('../packaging/package-client.js');
-var catalog = require('../catalog/catalog.js');
+var catalog = require('../packaging/catalog/catalog.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
@@ -474,7 +474,7 @@ selftest.define("update server package data unit test",
 
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
 
-  var rC = require('../catalog/catalog-remote.js');
+  var rC = require('../packaging/catalog/catalog-remote.js');
   var config = require('../meteor-services/config.js');
   var packageStorage = new rC.RemoteCatalog();
   var packageStorageFile = config.getPackageStorage({

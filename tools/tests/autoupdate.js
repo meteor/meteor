@@ -1,6 +1,6 @@
 var selftest = require('../tool-testing/selftest.js');
 var config = require('../meteor-services/config.js');
-var catalogRemote = require('../catalog/catalog-remote.js');
+var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var buildmessage = require('../utils/buildmessage.js');
 var Sandbox = selftest.Sandbox;
 
