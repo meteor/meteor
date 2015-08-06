@@ -481,7 +481,7 @@ class Target {
   // - addCacheBusters: if true, make all files cacheable by adding
   //   unique query strings to their URLs. unlikely to be of much use
   //   on server targets.
-  make({packages, minifyMode, addCacheBusters}) {
+  make({packages, minifyMode, addCacheBusters, minifiers}) {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob("building for " + this.arch, () => {
@@ -515,7 +515,6 @@ class Target {
       // later!
       if (this instanceof ClientTarget) {
         var minifiersByExt = {};
-        var minifiers = minifiers;
         ['js', 'css'].forEach(function (ext) {
           minifiersByExt[ext] = _.find(minifiers, function (minifier) {
             return minifier && _.contains(minifier.extensions, ext);
