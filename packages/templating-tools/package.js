@@ -3,6 +3,9 @@ Package.describe({
   version: '1.0.0',
   // Brief, one-line summary of the package.
   summary: 'Tools to scan HTML and compile tags when building a templating package',
+  version: '0.0.2-plugins.0',
+  // Brief, one-line summary of the package.
+  summary: 'Tools used in templating',
   // URL to the Git repository containing the source code for this package.
   git: 'https://github.com/meteor/meteor',
   // By default, Meteor will default to using README.md for documentation.
