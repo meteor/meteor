@@ -26,6 +26,6 @@ Package.onUse(function(api) {
     'livedata', // XXX COMPAT WITH PACKAGES BUILT FOR 0.9.0.
 
     // Push code changes to the client and automatically reload the page
-    'autoupdate'
+    'hot-code-push'
   ]);
 });

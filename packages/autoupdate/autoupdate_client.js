@@ -138,7 +138,10 @@ Autoupdate._retrySubscription = function () {
           }
           else if (doc._id === 'version' && doc.version !== autoupdateVersion) {
             handle && handle.stop();
-            Package.reload.Reload._reload();
+
+            if (Package.reload) {
+              Package.reload.Reload._reload();
+            }
           }
         };
 

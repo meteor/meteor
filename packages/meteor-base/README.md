@@ -7,5 +7,5 @@ It comes with the following packages:
 1. [`meteor`](https://atmospherejs.com/meteor/meteor) - Super basic stuff about the programming environment, and a handler for the `css` file type.
 2. [`webapp`](https://atmospherejs.com/meteor/webapp) - The actual web server that handles connections, serves files, etc.
 3. [`underscore`](https://atmospherejs.com/meteor/underscore) - A library with lots of useful utilities that most of Meteor is built on.
-4. [`autoupdate`](https://atmospherejs.com/meteor/autoupdate) - Refreshes the client automatically when the server has new code.
+4. [`hot-code-push`](https://atmospherejs.com/meteor/hot-code-push) - Refresh the client automatically when the server has new code.
 5. [`ddp`](https://atmospherejs.com/meteor/ddp) - A protocol for communicating between the client and server. This is what enables `Meteor.methods`, `Meteor.publish`, `Meteor.subscribe`, etc.
