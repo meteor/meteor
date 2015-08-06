@@ -8,12 +8,18 @@ Package.describe({
   documentation: 'README.md'
 });
 
+Npm.depends({
+  "gc-profiler": "1.2.0"
+});
+
 Package.onUse(function(api) {
   api.use('ecmascript');
   api.addFiles('benchmark.js', 'server');
   api.addFiles('benchmark_collection.js', 'client');
-  api.export('measureDuration', 'server');
-  api.export('getDurations', 'client');
+  api.export('measure');
+  api.export('measureDuration');
+  api.export('getDurations');
+  api.export('Timer');
 });
 
 Package.onTest(function(api) {

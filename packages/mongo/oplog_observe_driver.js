@@ -202,8 +202,7 @@ _.extend(OplogObserveDriver.prototype, {
   _measure: function (f) {
     var self = this;
     return function () {
-      f();
-//      measureDuration(self._cursorDescStr(), f);
+      measureDuration(self._cursorDescStr(), f, {entireTime: true});
     };
   },
   _cursorDescStr: function () {

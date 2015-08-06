@@ -82,7 +82,11 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
 Meteor.bindEnvironment = function (func, onException, _this) {
-  var stackTrace = new Error().stack.split('\n').splice(2, 3).join(" ");
+  if (Fiber.current.overrideMeasureId) {
+    throw new Error("Can't nest \"entireTime\" measures");
+  }
+
+  var measureId = Fiber.current.overrideMeasureId || new Error().stack.split('\n').splice(2, 3).join(" ");
   Meteor._nodeCodeMustBeInFiber();
 
   var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
@@ -108,8 +112,8 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         // Need to clone boundValues in case two fibers invoke this
         // function at the same time
         Fiber.current._meteor_dynamics = _.clone(boundValues);
-        if (global.measureDuration) {
-          global.measureDuration(stackTrace, function () {
+        if (false && global.measureDuration) {
+          global.measureDuration(measureId, function () {
             var ret = func.apply(_this, args);
           });
         } else {

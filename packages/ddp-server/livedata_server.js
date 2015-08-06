@@ -158,7 +158,7 @@ _.extend(SessionCollectionView.prototype, {
 
   added: function (subscriptionHandle, id, fields) {
     var self = this;
-/*    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () { */
+    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {
       var docView = self.documents[id];
       var added = false;
       if (!docView) {
@@ -176,12 +176,12 @@ _.extend(SessionCollectionView.prototype, {
         self.callbacks.added(self.collectionName, id, changeCollector);
       else
         self.callbacks.changed(self.collectionName, id, changeCollector);
-/*    } );*/
+    }, {entireTime: true});
   },
 
   changed: function (subscriptionHandle, id, changed) {
     var self = this;
-    /*Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () { */
+    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {
       var changedResult = {};
       var docView = self.documents[id];
       if (!docView)
@@ -193,12 +193,12 @@ _.extend(SessionCollectionView.prototype, {
           docView.changeField(subscriptionHandle, key, value, changedResult);
       });
       self.callbacks.changed(self.collectionName, id, changedResult);
-/*    });*/
+   }, {entireTime: true});
   },
 
   removed: function (subscriptionHandle, id) {
     var self = this;
-    /*Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {*/
+    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {
       var docView = self.documents[id];
       if (!docView) {
         var err = new Error("Removed nonexistent document " + id);
@@ -219,7 +219,7 @@ _.extend(SessionCollectionView.prototype, {
 
         self.callbacks.changed(self.collectionName, id, changed);
       }
-/*    )*/
+    }, {entireTime: true});
   }
 });
 
@@ -541,7 +541,7 @@ _.extend(Session.prototype, {
       }
 
       Fiber(function () {
-//        measureDuration("incoming ddp message", () => {
+        measureDuration("incoming ddp message", () => {
           var blocked = true;
 
           var unblock = function () {
@@ -557,7 +557,7 @@ _.extend(Session.prototype, {
             self.sendError('Bad request', msg);
 
           unblock(); // in case the handler didn't already do it
-//        });
+        });
       }).run();
     };
 
