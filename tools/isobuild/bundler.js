@@ -1164,6 +1164,16 @@ class ClientTarget extends Target {
 // A JsImage can be loaded into its own new JavaScript virtual
 // machine, or it can be loaded into an existing virtual machine as a
 // plugin.
+
+// In real life, JsImage is usually a representation for two things:
+// 1. A server program of an App that contains all client programs as
+// well (as they are served by the server program to the browsers).
+// 2. A built Build Plugin program - a piece of software built out of
+// a Build Plugin that is ran during the build process of other
+// targets.
+// Usually, a Build Plugin is a piece of software that is very similar
+// to a server-only app: it has some code, it uses Meteor packages,
+// and sometimes it is written in a language that compiles to JS.
 class JsImage {
   constructor() {
     // Array of objects with keys:
