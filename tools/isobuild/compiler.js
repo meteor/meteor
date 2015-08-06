@@ -4,7 +4,6 @@ var archinfo = require('../archinfo.js');
 var buildmessage = require('../buildmessage.js');
 var bundler = require('./bundler.js');
 var isopack = require('./isopack.js');
-var linker = require('./linker.js');
 var meteorNpm = require('./meteor-npm.js');
 var watch = require('../fs/watch.js');
 var Console = require('../console.js').Console;
