@@ -5,8 +5,8 @@ var tropohouse = require('./packaging/tropohouse.js');
 
 // A few functions in the `meteor` tool talk to MDG servers: primarily
 // checking for updates, logging into your Meteor account, and
-// deploying apps to the MDG free hosting sandbox. (One day package
-// publishing will also be on this list too.) These functions need
+// deploying apps to the MDG free hosting sandbox, publishing packages,
+// getting an ssh access to a build farm. These functions need
 // configuration.
 //
 // The idea is that eventually, the `meteor` will take only one
