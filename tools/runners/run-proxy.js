@@ -256,11 +256,15 @@ _.extend(Proxy.prototype, {
         self.getDDPConnectionToErrorApp();
         // Send over logs to error app
         var errorMessage = "";
+        const errorStartTime = runLog.getLog()[0].time;
         _.each(runLog.getLog(), function(item) {
           errorMessage += item.message + " \n ";
         });
         errorAppConnection.call('isAppRefreshing', false);
-        errorAppConnection.call('addErrorMessage', errorMessage);
+        errorAppConnection.call(
+          'addErrorMessage',
+          errorMessage,
+          errorStartTime);
       }
     }
 

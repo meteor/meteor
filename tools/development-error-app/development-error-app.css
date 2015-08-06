@@ -45,6 +45,7 @@ li {
   list-style: none;
   padding: 15px;
   border-bottom: #eee solid 1px;
+  overflow-x: scroll;
 }
 
 li .text {
@@ -53,6 +54,10 @@ li .text {
 
 #title, #status {
   display: inline;
+}
+
+li .errorTime {
+  float: left;
 }
 
 

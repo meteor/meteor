@@ -12,9 +12,10 @@ if (Meteor.isServer) {
   });
 
   Meteor.methods({
-    addErrorMessage: function (errMsg) {
+    addErrorMessage: function (errMsg, errTime) {
       Errors.insert({
         text: errMsg,
+        time: errTime,
         createdAt: new Date()
       });
     },
