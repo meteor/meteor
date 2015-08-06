@@ -81,6 +81,12 @@ export default class CordovaProject {
 
   // Platforms
 
+  async checkRequirements(platforms = null) {
+    this.chdirToProjectRoot();
+    superspawn.setEnv(this.env());
+    return await cordova.raw.requirements(platforms, this.defaultOptions);
+  }
+
   getInstalledPlatforms() {
     return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
   }

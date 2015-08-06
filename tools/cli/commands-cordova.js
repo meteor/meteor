@@ -6,14 +6,14 @@ import { ProjectContext, PlatformList } from '../project-context.js';
 import buildmessage from '../buildmessage.js';
 import files from '../fs/files.js';
 
-import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized } from '../cordova/platforms.js';
+import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized, checkPlatformRequirements } from '../cordova/platforms.js';
 import { createCordovaProjectIfNecessary } from '../cordova/project.js';
 
 function createProjectContext(appDir) {
   const projectContext = new ProjectContext({
     projectDir: appDir
   });
-  main.captureAndExit('=> Errors while initializing project:', function () {
+  main.captureAndExit('=> Errors while initializing project:', () => {
     // We're just reading metadata here; we don't need to resolve constraints.
     projectContext.readProjectMetadata();
   });
@@ -35,34 +35,39 @@ main.registerCommand({
 
   const projectContext = createProjectContext(options.appDir);
 
-  var platforms = options.args;
-  var currentPlatforms = projectContext.platformList.getPlatforms();
+  const platformsToAdd = options.args;
+  let installedPlatforms = projectContext.platformList.getPlatforms();
 
-  main.captureAndExit('', 'adding platforms', function () {
-    _.each(platforms, function (platform) {
-      if (_.contains(currentPlatforms, platform)) {
+  main.captureAndExit('', 'adding platforms', () => {
+    for (platform of platformsToAdd) {
+      if (_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is already added`);
       } else if (!_.contains(AVAILABLE_PLATFORMS, platform)) {
         buildmessage.error(`${platform}: no such platform`);
       }
-    });
-  });
+    }
 
-  buildmessage.enterJob({ title: 'adding platforms' }, function () {
-    projectContext.platformList.write(currentPlatforms.concat(platforms));
+    if (buildmessage.jobHasMessages()) return;
 
     const cordovaProject = createCordovaProjectIfNecessary(projectContext);
-    ensureCordovaPlatformsAreSynchronized(cordovaProject, projectContext);
+
+    installedPlatforms = installedPlatforms.concat(platformsToAdd)
+    ensureCordovaPlatformsAreSynchronized(cordovaProject, installedPlatforms);
+
+    if (buildmessage.jobHasMessages()) return;
+
+    projectContext.platformList.write(installedPlatforms);
+
+    for (platform of platformsToAdd) {
+      Console.info(`${platform}: added platform`);
+      checkPlatformRequirements(cordovaProject, platform);
+    }
   });
 
   // If this was the first Cordova platform, we may need to rebuild all of the
   // local packages to add the web.cordova unibuild to the IsopackCache.
-  main.captureAndExit('=> Errors while initializing project:', function () {
+  main.captureAndExit('=> Errors while initializing project:', () => {
     projectContext.prepareProjectForBuild();
-  });
-
-  _.each(platforms, function (platform) {
-    Console.info(`${platform}: added platform`);
   });
 });
 
@@ -76,32 +81,34 @@ main.registerCommand({
 }, function (options) {
   const projectContext = createProjectContext(options.appDir);
 
-  var platforms = projectContext.platformList.getPlatforms();
-  var changed = false;
-  _.each(options.args, function (platform) {
-    // Explain why we can't remove server or browser platforms
-    if (_.contains(PlatformList.DEFAULT_PLATFORMS, platform)) {
-      Console.warn(`${platform}: cannot remove platform in this version of Meteor`);
-      return;
+  const platformsToRemove = options.args;
+  let installedPlatforms = projectContext.platformList.getPlatforms();
+
+  main.captureAndExit('', 'removing platforms', () => {
+    for (platform of platformsToRemove) {
+      // Explain why we can't remove server or browser platforms
+      if (_.contains(PlatformList.DEFAULT_PLATFORMS, platform)) {
+        buildmessage.error(`${platform}: cannot remove platform in this version of Meteor`);
+      } else if (!_.contains(installedPlatforms, platform)) {
+        buildmessage.error(`${platform}: platform is not in this project`);
+      }
     }
 
-    if (_.contains(platforms, platform)) {
+    if (buildmessage.jobHasMessages()) return;
+
+    installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
+
+    const cordovaProject = createCordovaProjectIfNecessary(projectContext);
+    ensureCordovaPlatformsAreSynchronized(cordovaProject, installedPlatforms);
+
+    if (buildmessage.jobHasMessages()) return;
+
+    projectContext.platformList.write(installedPlatforms);
+
+    for (platform of platformsToRemove) {
       Console.info(`${platform}: removed platform`);
-      platforms = _.without(platforms, platform);
-      changed = true;
-      return;
     }
-
-    Console.error(`${platform}: platform is not in this project`);
   });
-
-  if (!changed) {
-    return;
-  }
-  projectContext.platformList.write(platforms);
-
-  const cordovaProject = createCordovaProjectIfNecessary(projectContext);
-  ensureCordovaPlatformsAreSynchronized(cordovaProject, projectContext);
 
   // If this was the last Cordova platform, we may need to rebuild all of the
   // local packages to remove the web.cordova unibuild from the IsopackCache.
@@ -117,9 +124,9 @@ main.registerCommand({
 }, function (options) {
   const projectContext = createProjectContext(options.appDir);
 
-  var platforms = projectContext.platformList.getPlatforms();
+  const installedPlatforms = projectContext.platformList.getPlatforms();
 
-  Console.rawInfo(platforms.join('\n') + '\n');
+  Console.rawInfo(installedPlatforms.join('\n') + '\n');
 });
 
 main.registerCommand({

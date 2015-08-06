@@ -1,7 +1,9 @@
 import _ from 'underscore';
+import chalk from 'chalk';
 import main from '../cli/main.js';
 import { Console } from '../console.js';
-import { PlatformList } from '../project-context.js';
+import { ProjectContext, PlatformList } from '../project-context.js';
+import buildmessage from '../buildmessage.js';
 
 export const AVAILABLE_PLATFORMS = PlatformList.DEFAULT_PLATFORMS.concat(
   ['android', 'ios']);
@@ -33,27 +35,63 @@ export function platformsForTargets(targets) {
 
 // Ensures that the Cordova platforms are synchronized with the app-level
 // platforms.
-export function ensureCordovaPlatformsAreSynchronized(cordovaProject, projectContext) {
-  Console.debug('Ensuring that platforms in cordova build project are in sync');
-  var platforms = projectContext.platformList.getCordovaPlatforms();
-  var installedPlatforms = cordovaProject.getInstalledPlatforms();
+export function ensureCordovaPlatformsAreSynchronized(cordovaProject, platforms) {
+  // Filter out the default platforms, leaving the Cordova platforms
+  platforms = _.difference(platforms, PlatformList.DEFAULT_PLATFORMS);
+  const installedPlatforms = cordovaProject.getInstalledPlatforms();
 
-  _.each(platforms, function (platform) {
-    if (_.contains(installedPlatforms, platform))
-      return;
-    Console.debug(`The platform is not in the Cordova project: ${platform}'`);
-    Console.debug(`Adding a platform: ${platform}`);
-    Promise.await(cordovaProject.addPlatform(platform));
-  });
+  for (platform of platforms) {
+    if (_.contains(installedPlatforms, platform)) continue;
 
-  _.each(installedPlatforms, function (platform) {
+    buildmessage.enterJob(`Adding platform: ${platform}`, () => {
+      Promise.await(cordovaProject.addPlatform(platform));
+    });
+  }
+
+  for (platform of installedPlatforms) {
     if (!_.contains(platforms, platform) &&
         _.contains(AVAILABLE_PLATFORMS, platform)) {
-      Console.debug(`Removing a platform: ${platform}`);
-      Promise.await(cordovaProject.removePlatform(platform));
+      buildmessage.enterJob(`Removing platform: ${platform}`, () => {
+        Promise.await(cordovaProject.removePlatform(platform));
+      });
     }
-  });
+  }
 };
+
+export function checkPlatformRequirements(cordovaProject, platform) {
+  const requirements = Promise.await(cordovaProject.checkRequirements([platform]));
+  let platformRequirements = requirements[platform];
+
+  if (!platformRequirements) {
+    Console.warn("Could not check platform requirements");
+    return;
+  }
+
+  // We don't use ios-deploy, but open Xcode to run on a device instead
+  platformRequirements = _.reject(platformRequirements, requirement => requirement.id === 'ios-deploy');
+
+  const satisifed = _.every(platformRequirements, requirement => requirement.installed);
+
+  if (!satisifed) {
+    Console.info(`Make sure all installation requirements are satisfied
+  before running or building for ${displayNameForPlatform(platform)}:`);
+    for (requirement of platformRequirements) {
+      const name = requirement.name;
+      if (requirement.installed) {
+        Console.success(name);
+      } else {
+        const reason = requirement.metadata && requirement.metadata.reason;
+        if (reason) {
+          Console.failInfo(`${name}: ${reason}`);
+        } else {
+          Console.failInfo(name);
+        }
+      }
+    }
+  }
+
+  return satisifed;
+}
 
 // Filter out unsupported Cordova platforms, and exit if platform hasn't been
 // added to the project yet

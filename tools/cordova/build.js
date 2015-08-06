@@ -54,7 +54,8 @@ export function buildCordovaProject(projectContext, platforms, options) {
       cordovaProject,
       options.host);
 
-    ensureCordovaPlatformsAreSynchronized(cordovaProject, projectContext);
+    ensureCordovaPlatformsAreSynchronized(cordovaProject,
+      projectContext.platformList.getPlatforms());
 
     ensureCordovaPluginsAreSynchronized(cordovaProject, getCordovaDependenciesFromStar(
       bundle.starManifest));
