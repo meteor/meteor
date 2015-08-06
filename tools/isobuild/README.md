@@ -34,13 +34,19 @@ time-line:
    packages, and then put everything together.
 3. The Builder is ran to write the output files to disk.
 4. While all the building was done, a WatchSet of the whole app is collected.
-   It's returned to the caller. Also, a `star.json` file is written.
+   It's returned to the caller. Also, files `star.json` and `program.json` are
+   written.
 
 ### Compiler
 
 Takes care of compiling an individual package and returning an Isopack.
 
+Compiler has a dependency on Bundler, as it needs to bundle the build plugins
+used to compile the input package source.
 
+Compiler runs various compiler batch plugins and "source handlers" (the
+old-style build plugins) on the source. If there is a need to build any build
+plugins to use them, it would recursively build those.
 
 ### Bundler
 
@@ -68,7 +74,8 @@ of global variables
 - add a special file called "global-imports" that explicitly puts all used
   packages' symbols into the global namespace
 - write compiled files to the right location with multiple Builder's
-- write a `star.json` file with metadata for the "star" (the app)
+- write a `star.json` file with metadata for the "star" (the app) and a
+  `program.json` file for every target
 
 ### Builder
 
@@ -117,3 +124,28 @@ linked module's dependencies are and what exports they provide for the module:
 Historically, Meteor used to ship "prelinked" files in packages and then "link"
 them in the bundle time. Starting with Meteor 1.2 and Batch Plugins API, Meteor
 distributes source files, so they are "fullLinked" in bunlde time together.
+
+## Batch Build Plugins
+
+In Meteor 1.2, the new Build Plugin APIs have been introduced. You can read more
+about them here: [wiki](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+
+The Build Plugins APIs register compilers, minifiers and linters. All of them
+are applied on different stages of the build process. Compilers are used by
+Compiler and Isopack methods. Linters are ran per Unibuild in
+`compiler.lint` and for the App in Bundler. Minifiers are ran by Bundler on its
+last stage.
+
+## WatchSet
+
+WatchSets are collected throughout the build process. The idea is: the WatchSet
+represents all the files that participate in the build process and also this
+list is used to notice any changes for rebuilds.
+
+Working on the Isobuild codebase, it is important to understand the common usage
+pattern: the common WatchSet is passed down to functions as an argument. The
+functions on the bottom, add files to the WatchSet, mutating the passed
+argument.
+
+In the end, the final WatchSet that contains merged information about every used
+file, is returned to the caller.
