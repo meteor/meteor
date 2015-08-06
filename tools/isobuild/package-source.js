@@ -604,6 +604,25 @@ _.extend(PackageSource.prototype, {
               buildmessage.error(
                 "trying to initialize a nonexistent base package " + value);
             }
+            // `debugOnly` and `prodOnly` are boolean flags you can put on a
+            // package, currently undocumented.  when set to true, they cause
+            // a package's code to be only included (i.e. linked into the bundle)
+            // in dev mode or prod mode (`meteor --production`), and excluded
+            // otherwise.
+            //
+            // Notes:
+            //
+            // * These flags do not affect which packages or which versions are
+            //   are selected by the version solver.
+            //
+            // * These flags CAN cause different package load orders in
+            //   development and production!  We should probably fix this.
+            //   Basically, packages that are excluded from the build using
+            //   these flags are also excluded fro the build order calculation,
+            //   and that's the problem
+            //
+            // * We should consider publicly documenting these flags, since they
+            //   are effectively part of the public API.
           } else if (key === "debugOnly") {
             self.debugOnly = !!value;
           } else if (key === "prodOnly") {
