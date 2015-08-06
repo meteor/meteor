@@ -1,6 +1,6 @@
 Package.describe({
   name: 'rate-limit',
-  version: '0.0.1-plugins.0',
+  version: '1.0.0',
   // Brief, one-line summary of the package.
   summary: 'An algorithm for rate limiting anything',
   // URL to the Git repository containing the source code for this package.
