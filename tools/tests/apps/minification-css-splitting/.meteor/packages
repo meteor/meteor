@@ -7,3 +7,4 @@ meteor-base
 standard-minifiers
 stylus
 autoupdate
+blaze-html-templates
