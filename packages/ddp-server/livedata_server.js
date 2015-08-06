@@ -18,6 +18,16 @@ var SessionDocumentView = function () {
   self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
 };
 
+if (false && Package.benchmark) {
+  measureDuration = function (id, fn) {
+    return Package.benchmark.measureDuration(id, fn);
+  };
+} else {
+  measureDuration = function (id, fn) {
+    fn();
+  }
+}
+
 _.extend(SessionDocumentView.prototype, {
 
   getFields: function () {
@@ -158,7 +168,7 @@ _.extend(SessionCollectionView.prototype, {
 
   added: function (subscriptionHandle, id, fields) {
     var self = this;
-    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {
+    measureDuration(descForSubHandle(subscriptionHandle), function () {
       var docView = self.documents[id];
       var added = false;
       if (!docView) {
@@ -181,7 +191,7 @@ _.extend(SessionCollectionView.prototype, {
 
   changed: function (subscriptionHandle, id, changed) {
     var self = this;
-    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {
+    measureDuration(descForSubHandle(subscriptionHandle), function () {
       var changedResult = {};
       var docView = self.documents[id];
       if (!docView)
@@ -198,7 +208,7 @@ _.extend(SessionCollectionView.prototype, {
 
   removed: function (subscriptionHandle, id) {
     var self = this;
-    Package.benchmark.measureDuration(descForSubHandle(subscriptionHandle), function () {
+    measureDuration(descForSubHandle(subscriptionHandle), function () {
       var docView = self.documents[id];
       if (!docView) {
         var err = new Error("Removed nonexistent document " + id);
