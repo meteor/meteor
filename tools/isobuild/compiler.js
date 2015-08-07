@@ -645,7 +645,11 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
     arch: whichArch,
     isopackCache: isopackCache,
     skipUnordered: true,
-    skipDebugOnly: true
+    // don't import symbols from debugOnly and prodOnly packages, because
+    // if the package is not linked it will cause a runtime error.
+    // the code must access them with `Package["my-package"].MySymbol`.
+    skipDebugOnly: true,
+    skipProdOnly: true,
   }, (unibuild) => {
     if (unibuild.pkg.name === inputSourceArch.pkg.name)
       return;
