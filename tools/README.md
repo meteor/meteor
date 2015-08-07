@@ -132,3 +132,10 @@ When the release is published (with `./meteor publish-release --from-checkout`),
 the files committed into Git are copied in a compiled form into the built
 package (Isopack). You can find the list of copied sub-trees in
 `Isopack#_writeTool`.
+
+
+### Buildmessage
+
+Throughout the code-base, there is an extensive use of `buildmessage`, which is
+a custom try/catch/finally system with recovery. See
+[`/tools/utils/buildmessage.md`](utils/buildmessage.md) for more details.
