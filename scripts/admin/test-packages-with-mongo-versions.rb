@@ -1,5 +1,9 @@
 #! /usr/bin/env ruby
 
+# This script downloads and installs any number of versions of Mongo, and runs
+# the console version of test-packages on them. The test output is stored in a
+# directory called "mongo-test-output" in the root of your checkout.
+
 require 'tmpdir'
 
 mongo_install_urls = {
