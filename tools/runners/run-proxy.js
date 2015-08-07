@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var Future = require('fibers/future');
 var runLog = require('./run-log.js');
-var runLog = require('../run-log.js');
 var isopackets = require('../tool-env/isopackets.js');
 var errorAppConnection = null;
 
