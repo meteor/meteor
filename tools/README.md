@@ -108,3 +108,27 @@ Currently, debugging the tool with `node-inspector` is only possible if you edit
 the `meteor` bash/batch script and add the `--debug` or `--debug-brk` flag to
 the node call. Note that `node-inspector` should be compatible with the `node`
 version in the `dev_bundle`.
+
+
+## Development
+
+The entry-point of the tools code is in `index.js`.
+
+### Devel vs Prod environment
+
+The Meteor Tool code has two modes of running:
+
+- from local checkout for development
+- from a production release installed by running
+`curl -L https://install.meteor.com | sh` or a Windows installer.
+
+There are two different `meteor` / `meteor.bat` starting scripts in development
+and production. The production one is written by the packaging code.
+
+In addition to that, the checkout version stores its own catalog (`.meteor` dir)
+and the production version keeps it in `~/.meteor`.
+
+When the release is published (with `./meteor publish-release --from-checkout`),
+the files committed into Git are copied in a compiled form into the built
+package (Isopack). You can find the list of copied sub-trees in
+`Isopack#_writeTool`.
