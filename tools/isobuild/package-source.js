@@ -258,7 +258,7 @@ var SourceArch = function (pkg, options) {
   // strings).
   self.declaredExports = options.declaredExports || null;
 
-  // Symbols that in this architecture should be package scoped. List of symbols
+  // Symbols that in this architecture should be package-scoped. List of symbols
   // (as strings).
   self.declaredPckgscopes = options.declaredPckgscopes || null;
 
@@ -1531,7 +1531,7 @@ _.extend(PackageSource.prototype, {
     });
    },
 
-  // Returns an array of objects, representing this package's scope
+  // Returns an array of objects, representing this package-scoped
   // objects. Each object has the following keys:
   //  - name: name (ex: "Accounts")
   //  - arch: an array of strings representing architectures for which this

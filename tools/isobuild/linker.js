@@ -695,7 +695,7 @@ var getFooter = function (options) {
 // declaredExports: an array of symbols that the module exports. Symbols are
 // {name,testOnly} pairs.
 //
-// declaredPckgscopes: an array of symbols that have the module as scope..
+// declaredPckgscopes: an array of symbols with package-scope.
 //
 // imports: a map from imported symbol to the name of the package that it is
 // imported from

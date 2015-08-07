@@ -205,6 +205,18 @@ _.extend(InputFile.prototype, {
   },
 
   /**
+   * @summary Returns a list of symbols declared as pckg scope in this target.
+   * The result of `api.pckgscope('symbol')` calls in target's control file such
+   * as package.js.
+   * @memberof InputFile
+   * @returns {String[]}
+   */
+  getDeclaredPckgscopes: function () {
+    var self = this;
+    return self._resourceSlot.packageSourceBatch.unibuild.declaredPckgscopes;
+  },
+
+  /**
    * @summary Returns a relative path that can be used to form error messages or
    * other display properties. Can be used as an input to a source map.
    * @memberof InputFile
@@ -556,6 +568,7 @@ _.extend(PackageSourceBatch.prototype, {
             ".js"),
       name: self.unibuild.pkg.name || null,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
+      declaredPckgscopes: _.pluck(self.unibuild.declaredPckgscopes, 'name'),
       imports: imports,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',

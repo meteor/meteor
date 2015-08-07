@@ -66,12 +66,12 @@ class CoffeeCompiler extends CachingCompiler {
       return null;
     }
 
-    const stripped = stripExportedVars(
+    const stripped = stripExportedAndPckgscopedVars(
       output.js,
-      inputFile.getDeclaredExports().map(e => e.name));
-    const sourceWithMap = addSharedHeader(
-      stripped, JSON.parse(output.v3SourceMap));
-    return sourceWithMap;
+      inputFile.getDeclaredExports().map(e => e.name).concat(
+        inputFile.getDeclaredPckgscopes().map(e => e.name)
+      ));
+    return {source:stripped, sourceMap: JSON.parse(output.v3SourceMap)};
   }
 
   addCompileResult(inputFile, sourceWithMap) {
@@ -90,8 +90,8 @@ class CoffeeCompiler extends CachingCompiler {
   }
 }
 
-function stripExportedVars(source, exports) {
-  if (!exports || !exports.length)
+function stripExportedAndPckgscopedVars(source, varsIn) {
+  if (!varsIn || !varsIn.length)
     return source;
   const lines = source.split("\n");
 
@@ -140,7 +140,7 @@ function stripExportedVars(source, exports) {
       }
     }
 
-    let vars = match[1].split(', ').filter(v => exports.indexOf(v) === -1);
+    let vars = match[1].split(', ').filter(v => varsIn.indexOf(v) === -1);
     if (vars.length) {
       replaceLine("var " + vars.join(', ') + match[2]);
     } else {
@@ -155,43 +155,4 @@ function stripExportedVars(source, exports) {
   }
 
   return lines.join('\n');
-}
-
-function addSharedHeader(source, sourceMap) {
-  // We want the symbol "share" to be visible to all CoffeeScript files in the
-  // package (and shared between them), but not visible to JavaScript
-  // files. (That's because we don't want to introduce two competing ways to
-  // make package-local variables into JS ("share" vs assigning to non-var
-  // variables).) The following hack accomplishes that: "__coffeescriptShare"
-  // will be visible at the package level and "share" at the file level.  This
-  // should work both in "package" mode where __coffeescriptShare will be added
-  // as a var in the package closure, and in "app" mode where it will end up as
-  // a global.
-  //
-  // This ends in a newline to make the source map easier to adjust.
-  const header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
-                  "? __coffeescriptShare : {}; " +
-                  "var share = __coffeescriptShare;\n");
-
-  // If the file begins with "use strict", we need to keep that as the first
-  // statement.
-  const processedSource = source.replace(/^(?:((['"])use strict\2;)\n)?/, (match, useStrict) => {
-    if (match) {
-      // There's a "use strict"; we keep this as the first statement and insert
-      // our header at the end of the line that it's on. This doesn't change
-      // line numbers or the part of the line that previous may have been
-      // annotated, so we don't need to update the source map.
-      return useStrict + "  " + header;
-    } else {
-      // There's no use strict, so we can just add the header at the very
-      // beginning. This adds a line to the file, so we update the source map to
-      // add a single un-annotated line to the beginning.
-      sourceMap.mappings = ";" + sourceMap.mappings;
-      return header;
-    }
-  });
-  return {
-    source: processedSource,
-    sourceMap: sourceMap
-  };
 }

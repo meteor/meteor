@@ -35,6 +35,8 @@ rest of this section will explain the specific API commands in greater detail.
       api.use('iron:router@1.0.0');
       // Give users of this package access to the Templating package.
       api.imply('templating')
+      // Make the scope of EmailIntern internal to this package.
+      api.pckgscope('EmailIntern', 'server');
       // Export the object 'Email' to packages or apps that use this package.
       api.export('Email', 'server');
       // Specify the source code for the package.
