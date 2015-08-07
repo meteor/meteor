@@ -539,7 +539,11 @@ _.extend(PackageSourceBatch.prototype, {
       arch: bundleArch,
       isopackCache: isopackCache,
       skipUnordered: true,
-      skipDebugOnly: true
+      // don't import symbols from debugOnly and prodOnly packages, because
+      // if the package is not linked it will cause a runtime error.
+      // the code must access them with `Package["my-package"].MySymbol`.
+      skipDebugOnly: true,
+      skipProdOnly: true,
     }, addImportsForUnibuild);
 
     // Run the linker.

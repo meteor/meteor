@@ -615,6 +615,10 @@ _.extend(PackageSource.prototype, {
             // * These flags do not affect which packages or which versions are
             //   are selected by the version solver.
             //
+            // * When you use a debugOnly or prodOnly package, its exports are
+            //   not imported for you.  You have to access them using
+            //   `Package["my-package"].MySymbol`.
+            //
             // * These flags CAN cause different package load orders in
             //   development and production!  We should probably fix this.
             //   Basically, packages that are excluded from the build using
