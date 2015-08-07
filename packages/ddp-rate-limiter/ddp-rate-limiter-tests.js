@@ -1,9 +1,10 @@
 // Test that we do hit the default login rate limit.
 // XXX Removed to fix testing as other packages currently hit the default rate
 // limit.
-/*
 testAsyncMulti("ddp rate limiter - default rate limit", [
   function (test, expect) {
+    // Add in the default rate limiter rule
+    Meteor.call('addDefaultAccountsRateLimitRule');
     _.extend(this, createTestUser(test, expect));
   },
   function (test, expect) {
@@ -27,9 +28,10 @@ testAsyncMulti("ddp rate limiter - default rate limit", [
   },
   function (test, expect) {
     Meteor.call("removeUserByUsername", this.username, expect(function () {}));
+    // Remove the default rate limiter rule
+    Meteor.call('removeDefaultAccountsRateLimitRule');
   }
 ]);
-*/
 
 testAsyncMulti("ddp rate limiter - matchers get passed correct arguments", [
   function (test, expect) {

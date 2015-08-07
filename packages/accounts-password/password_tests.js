@@ -1,5 +1,5 @@
 Accounts._noConnectionCloseDelayForTest = true;
-
+Accounts.removeDefaultRateLimit();
 if (Meteor.isServer) {
   Meteor.methods({
     getUserId: function () {

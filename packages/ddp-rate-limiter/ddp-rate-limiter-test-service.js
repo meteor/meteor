@@ -63,6 +63,12 @@ Meteor.methods({
   },
   'a-method-that-is-not-rate-limited': function () {
     return "not-rate-limited";
+  },
+  addDefaultAccountsRateLimitRule: function () {
+    Accounts.addDefaultRateLimit();
+  },
+  removeDefaultAccountsRateLimitRule: function () {
+    return Accounts.removeDefaultRateLimit();
   }
 });
 
