@@ -48,7 +48,7 @@ Template.listsShow.helpers({
 
 var editList = function(list, template) {
   Session.set(EDITING_KEY, true);
-  
+
   // force the template to redraw based on the reactive change
   Tracker.flush();
   template.$('.js-edit-form input[type=text]').focus();
@@ -64,7 +64,7 @@ var deleteList = function(list) {
   if (! list.userId && Lists.find({userId: {$exists: false}}).count() === 1) {
     return alert("Sorry, you cannot delete the final public list!");
   }
-  
+
   var message = "Are you sure you want to delete the list " + list.name + "?";
   if (confirm(message)) {
     // we must remove each item individually from the client
@@ -101,7 +101,7 @@ Template.listsShow.events({
   'click .js-cancel': function() {
     Session.set(EDITING_KEY, false);
   },
-  
+
   'keydown input[type=text]': function(event) {
     // ESC
     if (27 === event.which) {
@@ -109,7 +109,7 @@ Template.listsShow.events({
       $(event.target).blur();
     }
   },
-  
+
   'blur input[type=text]': function(event, template) {
     // if we are still editing (we haven't just clicked the cancel button)
     if (Session.get(EDITING_KEY))
@@ -120,7 +120,7 @@ Template.listsShow.events({
     event.preventDefault();
     saveList(this, template);
   },
-  
+
   // handle mousedown otherwise the blur handler above will swallow the click
   // on iOS, we still require the click event so handle both
   'mousedown .js-cancel, click .js-cancel': function(event) {
@@ -139,19 +139,19 @@ Template.listsShow.events({
 
     event.target.selectedIndex = 0;
   },
-  
+
   'click .js-edit-list': function(event, template) {
     editList(this, template);
   },
-  
+
   'click .js-toggle-list-privacy': function(event, template) {
     toggleListPrivacy(this, template);
   },
-  
+
   'click .js-delete-list': function(event, template) {
     deleteList(this, template);
   },
-  
+
   'click .js-todo-add': function(event, template) {
     template.$('.js-todo-new input').focus();
   },
@@ -162,7 +162,7 @@ Template.listsShow.events({
     var $input = $(event.target).find('[type=text]');
     if (! $input.val())
       return;
-    
+
     Todos.insert({
       listId: this._id,
       text: $input.val(),

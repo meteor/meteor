@@ -14,9 +14,13 @@ Package.onUse(function(api) {
     "fastclick",
 
     // A nicer appearance for the status bar in PhoneGap/Cordova apps
-    "mobile-status-bar",
-
-    // Show a nice splash image while your PhoneGap/Cordova app's UI is loading
-    "launch-screen"
+    "mobile-status-bar"
   ], "web.cordova");
+
+  api.imply([
+    // Show a nice splash image while your PhoneGap/Cordova app's UI is loading.
+    // Doesn't do anything without Cordova, but we include it everywhere so you
+    // don't need a ton of if statements around your LaunchScreen calls.
+    "launch-screen"
+  ]);
 });
