@@ -702,7 +702,7 @@ class Target {
       const unibuild = sourceBatch.unibuild;
 
       if (this.cordovaDependencies) {
-        _.each(unibuild.pkg.cordovaDependencies, function (version, name) {
+        _.each(unibuild.pkg.cordovaDependencies, (version, name) => {
           this._addCordovaDependency(
             name,
             version,
@@ -938,7 +938,7 @@ class Target {
     if (! this.cordovaDependencies)
       return;
 
-    this.cordovaPluginsFile.getPluginVersions().forEach((version, name) => {
+    _.each(this.cordovaPluginsFile.getPluginVersions(), (version, name) => {
       this._addCordovaDependency(
         name, version, true /* override any existing version */);
     });
