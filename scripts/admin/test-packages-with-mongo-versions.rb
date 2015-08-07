@@ -34,7 +34,7 @@ puts "Putting output in: #{path_to_output}/"
       `mkdir -p db`
 
       pid = fork do
-        exec "./mongodb-osx-x86_64-#{mongo_version}/bin/mongod --dbpath db --port 12345"
+        exec "./mongodb-osx-x86_64-#{mongo_version}/bin/mongod --dbpath db --port #{mongo_port}"
       end
 
       sleep(3)
