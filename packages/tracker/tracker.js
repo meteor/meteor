@@ -413,8 +413,10 @@ Tracker.Dependency.prototype.depend = function (computation) {
  */
 Tracker.Dependency.prototype.changed = function () {
   var self = this;
-  for (var id in self._dependentsById)
-    self._dependentsById[id].invalidate();
+  for (var id in self._dependentsById) {
+    var dependent = self._dependentsById[id];
+    if (dependent) dependent.invalidate();
+  }
 };
 
 // http://docs.meteor.com/#dependency_hasdependents
