@@ -149,3 +149,8 @@ argument.
 
 In the end, the final WatchSet that contains merged information about every used
 file, is returned to the caller.
+
+
+## New Feature: Package Scope
+to be done
+
