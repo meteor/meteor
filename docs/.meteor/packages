@@ -4,7 +4,6 @@
 # but you can also edit it by hand.
 
 meteor-platform
-standard-minifiers
 jquery
 underscore
 showdown
