@@ -272,10 +272,6 @@ var runCommandOptions = {
     // undocumented: intended for automated testing (eg, cli-test.sh),
     // not end-user use. #Once
     once: { type: Boolean },
-    // With --clean, meteor cleans the application directory and uses the
-    // bundled assets only. Encapsulates the behavior of once (does not rerun)
-    // and does not monitor for file changes. Not for end-user use.
-    clean: { type: Boolean},
     // Don't run linter on rebuilds
     'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
@@ -326,11 +322,6 @@ function doRunCommand(options) {
     let cordovaProject;
     // will asynchronously start mobile emulators/devices
     try {
-      // --clean encapsulates the behavior of once
-      if (options.clean) {
-        options.once = true;
-      }
-
       Console.debug('Will compile mobile builds');
       // Run the constraint solver and build local packages.
       // XXX This code should be part of the main runner loop so that we can

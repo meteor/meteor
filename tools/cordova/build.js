@@ -174,7 +174,6 @@ function generateCordovaBoilerplate(projectContext, clientDir, options) {
     ROOT_URL_PATH_PREFIX: '',
     DDP_DEFAULT_CONNECTION_URL: mobileServer,
     autoupdateVersionCordova: version,
-    cleanCache: options.clean,
     appId: projectContext.appIdentifier
   };
 
