@@ -261,7 +261,6 @@ var runCommandOptions = {
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
     'app-port': { type: String },
-    'http-proxy-port': { type: String },
     'debug-port': { type: String },
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
@@ -297,8 +296,6 @@ function doRunCommand(options) {
   const { serverUrl, mobileServerUrl } =
     parseServerOptionsForRunCommand(options);
 
-  options.httpProxyPort = options['http-proxy-port'];
-
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
@@ -332,12 +329,6 @@ function doRunCommand(options) {
       // --clean encapsulates the behavior of once
       if (options.clean) {
         options.once = true;
-      }
-
-      // For this release; we won't force-enable the httpProxy
-      if (false) { //!options.httpProxyPort) {
-        console.log('Forcing http proxy on port 3002 for mobile');
-        options.httpProxyPort = '3002';
       }
 
       Console.debug('Will compile mobile builds');
@@ -413,7 +404,6 @@ function doRunCommand(options) {
     projectContext: projectContext,
     proxyPort: serverUrl.port,
     proxyHost: serverUrl.host,
-    httpProxyPort: options.httpProxyPort,
     appPort: appPort,
     appHost: appHost,
     debugPort: options['debug-port'],
@@ -1404,7 +1394,6 @@ main.registerCommand({
   maxArgs: Infinity,
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
-    'http-proxy-port': { type: String },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
@@ -1456,8 +1445,6 @@ main.registerCommand({
 
   const { serverUrl, mobileServerUrl } =
     parseServerOptionsForRunCommand(options);
-
-  options.httpProxyPort = options['http-proxy-port'];
 
   // Find any packages mentioned by a path instead of a package name. We will
   // load them explicitly into the catalog.
@@ -1536,11 +1523,6 @@ main.registerCommand({
 
   if (! _.isEmpty(mobileTargets)) {
     var runners = [];
-    // For this release; we won't force-enable the httpProxy
-    if (false) { //!options.httpProxyPort) {
-      console.log('Forcing http proxy on port 3002 for mobile');
-      options.httpProxyPort = '3002';
-    }
 
     var platforms = platformsForTargets(mobileTargets);
     projectContext.platformList.write(platforms);
@@ -1669,7 +1651,6 @@ var runTestAppForPackages = function (projectContext, options) {
     return runAll.run({
       projectContext: projectContext,
       proxyPort: options.port,
-      httpProxyPort: options.httpProxyPort,
       debugPort: options['debug-port'],
       disableOplog: options['disable-oplog'],
       settingsFile: options.settings,

@@ -175,7 +175,6 @@ function generateCordovaBoilerplate(projectContext, clientDir, options) {
     DDP_DEFAULT_CONNECTION_URL: mobileServer,
     autoupdateVersionCordova: version,
     cleanCache: options.clean,
-    httpProxyPort: options.httpProxyPort,
     appId: projectContext.appIdentifier
   };
 

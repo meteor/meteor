@@ -11,7 +11,6 @@ const Console = require('../console/console.js').Console;
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
-const HttpProxy = require('./run-httpproxy.js').HttpProxy;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const Updater = require('./run-updater.js').Updater;
@@ -23,7 +22,6 @@ class Runner {
     banner,
     disableOplog,
     extraRunners,
-    httpProxyPort,
     mongoUrl,
     onFailure,
     oplogUrl,
@@ -71,13 +69,6 @@ class Runner {
       proxyToHost: appHost,
       onFailure
     });
-
-    self.httpProxy = null;
-    if (httpProxyPort) {
-      self.httpProxy = new HttpProxy({
-        listenPort: httpProxyPort
-      });
-    }
 
     self.mongoRunner = null;
     if (mongoUrl) {
@@ -140,14 +131,6 @@ class Runner {
 
     if (! self.stopped) {
       self.updater.start();
-    }
-
-    // print the banner only once we've successfully bound the port
-    if (! self.stopped && self.httpProxy) {
-      self.httpProxy.start();
-      if (! self.quiet) {
-        runLog.log("Started http proxy.", { arrow: true });
-      }
     }
 
     _.forEach(self.extraRunners, function (extraRunner) {
@@ -219,7 +202,6 @@ class Runner {
 
     self.stopped = true;
     self.proxy.stop();
-    self.httpProxy && self.httpProxy.stop();
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
     _.forEach(self.extraRunners, function (extraRunner) {
