@@ -833,31 +833,31 @@ _.extend(AppRunner.prototype, {
   _fiber: function () {
     var self = this;
 
-    var crashCount = 0;
-    var crashTimer = null;
+    // var crashCount = 0;
+    // var crashTimer = null;
     var firstRun = true;
 
     while (true) {
 
-      var resetCrashCount = function () {
-        crashTimer = setTimeout(function () {
-          crashCount = 0;
-        }, 3000);
-      };
+      // var resetCrashCount = function () {
+      //   crashTimer = setTimeout(function () {
+      //     crashCount = 0;
+      //   }, 3000);
+      // };
 
       var runResult = self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun)
             runLog.logRestart();
         },
-        beforeRun: resetCrashCount,
+        // beforeRun: resetCrashCount,
         firstRun: firstRun
       });
       firstRun = false;
 
-      clearTimeout(crashTimer);
-      if (runResult.outcome !== "terminated")
-        crashCount = 0;
+      // clearTimeout(crashTimer);
+      // if (runResult.outcome !== "terminated")
+      //   crashCount = 0;
 
       var wantExit = self.onRunEnd ? !self.onRunEnd(runResult) : false;
       if (wantExit || self.exitFuture || runResult.outcome === "stopped")
@@ -895,9 +895,9 @@ _.extend(AppRunner.prototype, {
           // explanation should already have been logged
         }
 
-        crashCount ++;
-        if (crashCount < 1)
-          continue;
+        // crashCount ++;
+        // if (crashCount < 1)
+        //   continue;
 
         if (self.watchForChanges) {
           runLog.log("Your application is crashing. " +
@@ -945,6 +945,11 @@ _.extend(AppRunner.prototype, {
       self.startFuture['return']();
 
     self.fiber = null;
+  },
+
+  restart: function() {
+    self.stop();
+    self.start();
   }
 });
 

@@ -387,16 +387,31 @@ function doRunCommand (options) {
 
   const errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
     '..', 'development-error-app');
-  const errorAppConfig = {
-    appPort: require('../utils/utils.js').randomPort(),
-    appHost: appHost,
-    projectContext: new projectContextModule.ProjectContext({
+
+  const errorAppContext = new projectContextModule.ProjectContext({
       projectDir: errorAppPath,
       allowIncompatibleUpdate: options['allow-incompatible-update'],
       lintAppAndLocalPackages: !options['no-lint']
-    }),
+  });
+
+  main.captureAndExit("=> Errors while initializing error app:", function () {
+    // We're just reading metadata here --- we'll wait to do the full build
+    // preparation until after we've started listening on the proxy, etc.
+    errorAppContext.readProjectMetadata();
+  });
+
+  main.captureAndExit("=> Errors while initializing error app:", function () {
+        errorAppContext.prepareProjectForBuild();
+  });
+  errorAppContext.packageMapDelta.displayOnConsole();
+
+  const errorAppConfig = {
+    appPort: require('../utils/utils.js').randomPort(),
+    appHost: appHost,
+    projectContext: errorAppContext ,
     runErrorApp: options.production ? false : true
   };
+
 
   var runAll = require('../runners/run-all.js');
   return runAll.run({

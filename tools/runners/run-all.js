@@ -115,6 +115,17 @@ class Runner {
     });
 
     self.errorAppConfig = errorAppConfig;
+    // self.errorAppMongoRunner = new MongoRunner({
+    //   appDir: errorAppConfig.projectContext.projectDir,
+    //   port: parseInt(errorAppConfig.appPort, 10) + 1,
+    //   onFailure,
+    //   // For testing mongod failover, run with 3 mongod if the env var is
+    //   // set. Note that data is not preserved from one run to the next.
+    //   multiple: !!process.env.METEOR_TEST_MULTIPLE_MONGOD_REPLSET
+    // });
+
+    // errorAppMongoUrl = self.errorAppMongoRunner.mongoUrl();
+    // errorAppOplogUrl = disableOplog ? null : self.errorAppMongoRunner.oplogUrl();
 
     if (errorAppConfig && errorAppConfig.runErrorApp) {
       self.errorAppRunner = new AppRunner({
