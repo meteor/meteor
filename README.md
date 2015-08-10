@@ -15,5 +15,6 @@ example,
 [here](https://github.com/meteor/promise/blob/1e52f297b02ea83e7fb48ba4c2b17d3b4503c001/test/tests.js#L2-L5)
 is how it's done in the test code for this repository.
 
-If you'd like to use this package in a [Meteor](https://www.meteor.com/) project, a much simpler
-approach is simply to run `meteor add [promise](https://atmospherejs.com/meteor/promise)`.
+If you'd like to use this [package](https://atmospherejs.com/meteor/promise)
+in a [Meteor](https://www.meteor.com/) project, a much simpler
+approach is simply to run `meteor add promise`.
