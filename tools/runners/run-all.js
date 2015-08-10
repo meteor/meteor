@@ -193,9 +193,10 @@ class Runner {
 
     if (! self.stopped) {
       buildmessage.enterJob({ title: "starting your app" }, function () {
-        if (self.errorAppConfig && self.errorAppConfig.runErrorApp)
+        if (self.errorAppConfig && self.errorAppConfig.runErrorApp){
           self.errorAppRunner.start();
-        runLog.log('Started error app.', {arrow: true});
+          // runLog.log('Started error app.', {arrow: true});
+        }
         self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped)

@@ -241,7 +241,7 @@ selftest.define("update during run", ["checkout"], function () {
   s.cd("myapp");
 
   // If the app version changes, we exit with an error message.
-  run = s.run();
+  run = s.run('--disable-crash-app');
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(10);
   run.match('localhost:3000');
@@ -281,7 +281,7 @@ selftest.define("update during run", ["checkout"], function () {
   s.cd("myapp");
 
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v1');
-  run = s.run();
+  run = s.run('--disable-crash-app');
   run.tellMongo(MONGO_LISTENING);
   run.waitSecs(2);
   run.match('localhost:3000');

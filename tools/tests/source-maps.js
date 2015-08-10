@@ -41,13 +41,13 @@ selftest.define("source maps from an app", ['checkout'], function () {
 
   s.cd("myapp");
   s.set("METEOR_TEST_TMP", files.convertToOSPath(files.mkdtemp()));  // XXX why?
-  run = s.run("run");
+  run = s.run("run", '--disable-crash-app');
   run.waitSecs(10);
   run.match(matchPathRegexp('at throw\\.js:3\\b'));
   run.stop();
 
   s.set('THROW_FROM_PACKAGE', 't');
-  run = s.run('run');
+  run = s.run('run', '--disable-crash-app');
   run.waitSecs(10);
   run.match(matchPathRegexp('packages/throwing-package/thrower\\.js:2\\b'));
   run.stop();
@@ -97,7 +97,7 @@ selftest.define("source maps from a build plugin implementation", ['checkout'], 
   });
 
   s.cd("myapp");
-  var run = s.run("run");
+  var run = s.run("run", '--disable-crash-app');
   run.waitSecs(10);
   // XXX This is wrong! The path on disk is
   // packages/build-plugin/build-plugin.js, but at some point we switched to the

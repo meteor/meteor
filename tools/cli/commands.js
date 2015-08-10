@@ -213,7 +213,9 @@ var runCommandOptions = {
     'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    // Whether we should run the errors app shown when an app is crashing
+    'disable-crash-app': {type: Boolean}
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -409,7 +411,7 @@ function doRunCommand (options) {
     appPort: require('../utils/utils.js').randomPort(),
     appHost: appHost,
     projectContext: errorAppContext ,
-    runErrorApp: options.production ? false : true
+    runErrorApp: ! options['disable-crash-app'] && ! options.production
   };
 
 

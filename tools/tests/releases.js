@@ -71,7 +71,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
   s.cd('myapp2', function () {
     s.write(".meteor/release", "strange");
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'not-found');
-    run = s.run();
+    run = s.run('--disable-crash-app');
     run.matchErr("uses Meteor strange");
 
     run.matchErr(/don't\s+have\s+it\s+either/);
@@ -79,7 +79,7 @@ selftest.define("springboard", ['checkout', 'net'], function () {
 
     // You're offline and project asks for non-cached release.
     s.set('METEOR_TEST_FAIL_RELEASE_DOWNLOAD', 'offline');
-    run = s.run();
+    run = s.run('--disable-crash-app');
     run.matchErr("offline");
     run.matchErr(/it\s+uses\s+Meteor\s+strange/);
     run.matchErr(/don't have that version/);
@@ -238,19 +238,19 @@ selftest.define("unknown release", [], function () {
 
   // METEOR in the release file.
   s.write('.meteor/release', DEFAULT_RELEASE_TRACK + "@0.9-bad");
-  run = s.run();
+  run = s.run('--disable-crash-app');
   run.matchErr(
     /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9-bad,\s+but/);
 
   // No METEOR in the release file.
   s.write('.meteor/release', "0.9.x-bad");
-  run = s.run();
+  run = s.run('--disable-crash-app');
   run.matchErr(
     /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+0.9.x-bad,\s+but/);
 
   // Non-standard track
   s.write('.meteor/release', "FOO@bad");
-  run = s.run();
+  run = s.run('--disable-crash-app');
   run.matchErr(
     /This\s+project\s+says\s+that\s+it\s+uses\s+Meteor\s+release\s+FOO@bad,\s+but/);
 
