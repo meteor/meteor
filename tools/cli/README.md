@@ -29,6 +29,15 @@ main.registerCommand({
 });
 ```
 
+This command will handle the following examples:
+
+```bash
+meteor some-command --long-option
+meteor some-command -s
+meteor some-command -s --with-string "some value"
+meteor some-command -s -w "some value"
+```
+
 Note: don't pick a short key for an option unless it is very common to use it. 
 The commands parser makes sure the same short key for an option is used
 consistently for the same kind of option across all commands. So two commands A
