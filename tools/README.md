@@ -48,8 +48,8 @@ used.
 and is rather an end-to-end testing tool (not a unit-testing tool). Albeit, it
 is often used for testing individual functions.
 
-Besides monitoring the process output, "self test" is capable of moching the
-package catalog, running from template apps.
+Besides monitoring the process output, "self test" is capable of mocking the
+package catalog and running from template apps.
 
 The asserting syntax of "self test" is rather unusual since it operates on the
 process's stdout/stderr output after the process has run (not in real-time).
