@@ -5,6 +5,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('underscore', ['client', 'server']);
+  api.use('ecmascript', ['client', 'server']);
   api.use('ddp-rate-limiter');
   api.use('localstorage', 'client');
   api.use('tracker', 'client');
