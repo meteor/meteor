@@ -916,19 +916,21 @@ main.registerCommand({
                   catalog.official.getBuildWithPreciseBuildArchitectures(
                     oldVersionRecord, isopk.buildArchitectures());
 
-            // If the version number mentioned in package.js exists, but there's
-            // no build of this architecture, then either the old version was
-            // only semi-published, or you've added some platform-specific
-            // dependencies but haven't bumped the version number yet; either
-            // way, you should probably bump the version number.
-            var somethingChanged = ! existingBuild;
+            var somethingChanged;
 
-            if (!somethingChanged) {
+            if (! existingBuild) {
+              // If the version number mentioned in package.js exists,
+              // but there's no build of this architecture, then
+              // either the old version was only semi-published, or
+              // you've added some platform-specific dependencies but
+              // haven't bumped the version number yet; either way,
+              // you should probably bump the version number.
+              somethingChanged = true;
+            } else {
               // Save the isopack, just to get its hash.
               var bundleBuildResult = packageClient.bundleBuild(isopk);
-              if (bundleBuildResult.treeHash !== existingBuild.build.treeHash) {
-                somethingChanged = true;
-              }
+              somethingChanged =
+                (bundleBuildResult.treeHash !== existingBuild.build.treeHash);
             }
 
             if (somethingChanged) {
