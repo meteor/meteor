@@ -470,7 +470,7 @@ DocsData = {
   "Ap.config": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 110,
+    "lineno": 112,
     "locus": "Anywhere",
     "longname": "Ap.config",
     "memberof": "Ap",
@@ -608,7 +608,7 @@ DocsData = {
   "Ap.onLogin": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 240,
+    "lineno": 242,
     "locus": "Anywhere",
     "longname": "Ap.onLogin",
     "memberof": "Ap",
@@ -631,7 +631,7 @@ DocsData = {
   "Ap.onLoginFailure": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 249,
+    "lineno": 251,
     "locus": "Anywhere",
     "longname": "Ap.onLoginFailure",
     "memberof": "Ap",
@@ -677,7 +677,7 @@ DocsData = {
   "Ap.userId": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 39,
+    "lineno": 41,
     "locus": "Anywhere but publish functions",
     "longname": "Ap.userId",
     "memberof": "Ap",
@@ -4151,20 +4151,11 @@ DocsData = {
         }
       },
       {
-        "description": "<p>If true, forces the user to approve the app's permissions, even if previously approved. Currently only supported with Google.</p>",
-        "name": "forceApprovalPrompt",
+        "description": "<p>Provide additional parameters to the authentication uri. Currently only supported with Google {@url https://developers.google.com/identity/protocols/OpenIDConnect#authenticationuriparameters}.</p>",
+        "name": "loginUrlParameters",
         "type": {
           "names": [
-            "Boolean"
-          ]
-        }
-      },
-      {
-        "description": "<p>String of the kind of prompt(s) to always show. Valid options are &quot;consent&quot;, &quot;none&quot;, &quot;select_account&quot; or a combination. i.e. &quot;select_account+consent&quot;. Currently only supported with Google.</p>",
-        "name": "prompt",
-        "type": {
-          "names": [
-            "String"
+            "Object"
           ]
         }
       },
@@ -4180,6 +4171,15 @@ DocsData = {
       {
         "description": "<p>Login style (&quot;popup&quot; or &quot;redirect&quot;, defaults to the login service configuration).  The &quot;popup&quot; style opens the login page in a separate popup window, which is generally preferred because the Meteor application doesn't need to be reloaded.  The &quot;redirect&quot; style redirects the Meteor application's window to the login page, and the login service provider redirects back to the Meteor application which is then reloaded.  The &quot;redirect&quot; style can be used in situations where a popup window can't be opened, such as in a mobile UIWebView.  The &quot;redirect&quot; style however relies on session storage which isn't available in Safari private mode, so the &quot;popup&quot; style will be forced if session storage can't be used.</p>",
         "name": "loginStyle",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>If using &quot;redirect&quot; login style, the user will be returned to this URL after authorisation has been completed.</p>",
+        "name": "redirectUrl",
         "type": {
           "names": [
             "String"
@@ -4572,7 +4572,7 @@ DocsData = {
   "Meteor.user": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 59,
+    "lineno": 61,
     "locus": "Anywhere but publish functions",
     "longname": "Meteor.user",
     "memberof": "Meteor",
@@ -4704,7 +4704,7 @@ DocsData = {
   "Mongo.Collection#allow": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 776,
+    "lineno": 782,
     "locus": "Server",
     "longname": "Mongo.Collection#allow",
     "memberof": "Mongo.Collection",
@@ -4754,7 +4754,7 @@ DocsData = {
   "Mongo.Collection#deny": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 788,
+    "lineno": 794,
     "locus": "Server",
     "longname": "Mongo.Collection#deny",
     "memberof": "Mongo.Collection",
@@ -4989,7 +4989,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 416,
+    "lineno": 422,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5022,7 +5022,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 645,
+    "lineno": 651,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5035,7 +5035,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 657,
+    "lineno": 663,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5048,7 +5048,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 440,
+    "lineno": 446,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5081,7 +5081,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 426,
+    "lineno": 432,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5151,7 +5151,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 602,
+    "lineno": 608,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5213,7 +5213,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 679,
+    "lineno": 685,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -5335,7 +5335,7 @@ DocsData = {
   "Mongo.Cursor#observe": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 299,
+    "lineno": 303,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observe",
     "memberof": "Mongo.Cursor",
@@ -5358,7 +5358,7 @@ DocsData = {
   "Mongo.Cursor#observeChanges": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 311,
+    "lineno": 315,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observeChanges",
     "memberof": "Mongo.Cursor",
@@ -5381,7 +5381,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 672,
+    "lineno": 678,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
@@ -5515,7 +5515,16 @@ DocsData = {
         "name": "debugOnly",
         "type": {
           "names": [
-            "String"
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>A package with this flag set to true\nwill ONLY be bundled into production builds.</p>",
+        "name": "prodOnly",
+        "type": {
+          "names": [
+            "Boolean"
           ]
         }
       }
@@ -6625,10 +6634,10 @@ DocsData = {
     "summary": "- Inside an `onCreated`, `onRendered`, or `onDestroyed` callback, returns\nthe data context of the template.\n- Inside an event handler, returns the data context of the template on which\nthis event handler was defined.\n- Inside a helper, returns the data context of the DOM node where the helper\nwas used.\n\nEstablishes a reactive dependency on the result."
   },
   "Template.dynamic": {
-    "filepath": "spacebars/dynamic.js",
+    "filepath": "templating/dynamic.js",
     "istemplate": "true",
     "kind": "function",
-    "lineno": 1,
+    "lineno": 3,
     "locus": "Templates",
     "longname": "Template.dynamic",
     "memberof": "Template",
@@ -6645,7 +6654,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Optional. The data context in which to include the template.</p>",
+        "description": "<p>Optional. The data context in which to include the\ntemplate.</p>",
         "name": "data",
         "optional": true,
         "type": {
