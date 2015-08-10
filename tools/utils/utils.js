@@ -121,7 +121,7 @@ exports.printPackageList = function (items, options) {
 // any particular technical significance (eg, might resolve in DNS).
 exports.getHost = function (...args) {
   var ret;
-  var attempt = function () {
+  var attempt = function (...args) {
     var output = exports.execFileSync(args[0], args.slice(1)).stdout;
     if (output) {
       ret = output.trim();
