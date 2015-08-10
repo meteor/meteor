@@ -486,7 +486,7 @@ var exception = function (error) {
       column: error.column
     });
   } else {
-    var stack = parseStack.parse(error);
+    var stack = parseStack.parse(error).outsideFiber;
     var locus = stack[0];
     currentJob.get().addMessage({
       message: message,
