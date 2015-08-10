@@ -82,6 +82,9 @@ You can also run a particular file, or list all tests matching certain
 pattern, run with phantom or browserstack.
 See more at `./meteor help self-test`.
 
+If you want to learn how to write a self-test, see the `tool-testing`
+subdirectory.
+
 
 ## Profiling
 
