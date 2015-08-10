@@ -3,57 +3,44 @@
 // @param options {Object} an object with fields:
 // - connection {Object} Optional DDP connection to reuse.
 // - ddpUrl {String} Optional URL for creating a new DDP connection.
-AccountsCommon = class AccountsCommon {
-  constructor(options) {
-    // Currently this is read directly by packages like accounts-password
-    // and accounts-ui-unstyled.
-    this._options = {};
+AccountsCommon = function _AccountsCommon(options) {
+  // Currently this is read directly by packages like accounts-password
+  // and accounts-ui-unstyled.
+  this._options = {};
 
-    // Note that setting this.connection = null causes this.users to be a
-    // LocalCollection, which is not what we want.
-    this.connection = undefined;
-    this._initConnection(options || {});
+  // Note that setting this.connection = null causes this.users to be a
+  // LocalCollection, which is not what we want.
+  this.connection = undefined;
+  this._initConnection(options || {});
 
-    // There is an allow call in accounts_server.js that restricts writes to
-    // this collection.
-    this.users = new Mongo.Collection("users", {
-      _preventAutopublish: true,
-      connection: this.connection
-    });
+  // There is an allow call in accounts_server.js that restricts writes to
+  // this collection.
+  this.users = new Mongo.Collection("users", {
+    _preventAutopublish: true,
+    connection: this.connection
+  });
 
-    // Callback exceptions are printed with Meteor._debug and ignored.
-    this._onLoginHook = new Hook({
-      bindEnvironment: false,
-      debugPrintExceptions: "onLogin callback"
-    });
+  // Callback exceptions are printed with Meteor._debug and ignored.
+  this._onLoginHook = new Hook({
+    bindEnvironment: false,
+    debugPrintExceptions: "onLogin callback"
+  });
 
-    this._onLoginFailureHook = new Hook({
-      bindEnvironment: false,
-      debugPrintExceptions: "onLoginFailure callback"
-    });
-  }
-
-
-  /**
-   * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
-   * @locus Anywhere but publish functions
-   */
-  userId() {
-    throw new Error("userId method not implemented");
-  }
-
-  /**
-   * @summary Register a callback to be called after a login attempt succeeds.
-   * @memberof Accounts
-   * @locus Anywhere
-   * @param {Function} func The callback to be called when login is successful.
-   */
-  onLogin(func) {
-    return this._onLoginHook.register(func);
-  }
-}
+  this._onLoginFailureHook = new Hook({
+    bindEnvironment: false,
+    debugPrintExceptions: "onLoginFailure callback"
+  });
+};
 
 var Ap = AccountsCommon.prototype;
+
+/**
+ * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
+ * @locus Anywhere but publish functions
+ */
+Ap.userId = function () {
+  throw new Error("userId method not implemented");
+};
 
 Ap.user = function () {
   var userId = this.userId();
@@ -245,6 +232,15 @@ Ap._tokenExpiresSoon = function (when) {
   if (minLifetimeMs > minLifetimeCapMs)
     minLifetimeMs = minLifetimeCapMs;
   return new Date() > (new Date(when) - minLifetimeMs);
+};
+
+/**
+ * @summary Register a callback to be called after a login attempt succeeds.
+ * @locus Anywhere
+ * @param {Function} func The callback to be called when login is successful.
+ */
+Ap.onLogin = function (func) {
+  return this._onLoginHook.register(func);
 };
 
 /**

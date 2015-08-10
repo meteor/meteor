@@ -127,8 +127,6 @@ var toc = [
       {name: "{{loggingIn}}", id: "template_loggingin"},
       {type: "spacer"},
 
-      {instance: "Accounts", name: "userId", id: "accounts_userId"},
-
       "Accounts.config",
       "Accounts.ui.config",
       "Accounts.validateNewUser",

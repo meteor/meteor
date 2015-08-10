@@ -9,29 +9,6 @@ DocsData = {
     "scope": "global",
     "summary": "The namespace for all server-side accounts-related methods."
   },
-  "Accounts.AccountsCommon#onLogin": {
-    "filepath": "accounts-base/accounts_common.js",
-    "kind": "function",
-    "lineno": 51,
-    "locus": "Anywhere",
-    "longname": "Accounts.AccountsCommon#onLogin",
-    "memberof": "Accounts",
-    "name": "AccountsCommon#onLogin",
-    "options": [],
-    "params": [
-      {
-        "description": "<p>The callback to be called when login is successful.</p>",
-        "name": "func",
-        "type": {
-          "names": [
-            "function"
-          ]
-        }
-      }
-    ],
-    "scope": "static",
-    "summary": "Register a callback to be called after a login attempt succeeds."
-  },
   "Accounts.changePassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
@@ -490,23 +467,10 @@ DocsData = {
     "scope": "static",
     "summary": "Marks the user's email address as verified. Logs the user in afterwards."
   },
-  "AccountsCommon#userId": {
-    "filepath": "accounts-base/accounts_common.js",
-    "kind": "function",
-    "lineno": 41,
-    "locus": "Anywhere but publish functions",
-    "longname": "AccountsCommon#userId",
-    "memberof": "AccountsCommon",
-    "name": "userId",
-    "options": [],
-    "params": [],
-    "scope": "instance",
-    "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source."
-  },
   "Ap.config": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 125,
+    "lineno": 112,
     "locus": "Anywhere",
     "longname": "Ap.config",
     "memberof": "Ap",
@@ -641,10 +605,33 @@ DocsData = {
     "scope": "static",
     "summary": "Register a function to call when an account enrollment link is\nclicked in an email sent by\n[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
   },
+  "Ap.onLogin": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 242,
+    "locus": "Anywhere",
+    "longname": "Ap.onLogin",
+    "memberof": "Ap",
+    "name": "onLogin",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called when login is successful.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Register a callback to be called after a login attempt succeeds."
+  },
   "Ap.onLoginFailure": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 255,
+    "lineno": 251,
     "locus": "Anywhere",
     "longname": "Ap.onLoginFailure",
     "memberof": "Ap",
@@ -686,6 +673,19 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Register a function to call when a reset password link is clicked\nin an email sent by\n[`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+  },
+  "Ap.userId": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 41,
+    "locus": "Anywhere but publish functions",
+    "longname": "Ap.userId",
+    "memberof": "Ap",
+    "name": "userId",
+    "options": [],
+    "params": [],
+    "scope": "static",
+    "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source."
   },
   "Ap.validateLoginAttempt": {
     "filepath": "accounts-base/accounts_server.js",
@@ -4572,7 +4572,7 @@ DocsData = {
   "Meteor.user": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 74,
+    "lineno": 61,
     "locus": "Anywhere but publish functions",
     "longname": "Meteor.user",
     "memberof": "Meteor",
