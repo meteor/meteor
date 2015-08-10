@@ -136,6 +136,10 @@ Compiler and Isopack methods. Linters are ran per Unibuild in
 `compiler.lint` and for the App in Bundler. Minifiers are ran by Bundler on its
 last stage.
 
+The previous generation of build plugins (File Handlers) used to run on package
+publish (i.e., built before published). In the world of Build Plugins, they are
+compiled as part of the bundle process.
+
 ## WatchSet
 
 WatchSets are collected throughout the build process. The idea is: the WatchSet
