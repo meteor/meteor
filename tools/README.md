@@ -139,3 +139,9 @@ package (Isopack). You can find the list of copied sub-trees in
 Throughout the code-base, there is an extensive use of `buildmessage`, which is
 a custom try/catch/finally system with recovery. See
 [`/tools/utils/buildmessage.md`](utils/buildmessage.md) for more details.
+
+
+## More information
+
+For more information about a particular part of Meteor Tool, see subdirectories'
+README.md files and the top-level intro comments in the bigger files.
