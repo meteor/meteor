@@ -6,7 +6,7 @@ import Future from 'fibers/future';
 
 selftest.define("parse-stack - parse stack traces without fibers", () => {
   const err = new Error();
-  const parsedStack = parse(err);
+  const parsedStack = parse(err).outsideFiber;
 
   selftest.expectEqual(_.last(parsedStack[0].file.split("/")),
     "parse-stack-test.js");
@@ -15,7 +15,7 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
 
   markBottom(() => {
     const markedErr = new Error();
-    const parsedStack = parse(markedErr);
+    const parsedStack = parse(markedErr).outsideFiber;
 
     // The stack trace should only contain this one function since we marked the
     // bottom
@@ -28,8 +28,8 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
 selftest.define("parse-stack - parse stack traces with fibers", () => {
   const parsedStack = parse({ stack: exampleStackTrace });
 
-  selftest.expectEqual(parsedStack[0].file, "template-compiler.js");
-  selftest.expectEqual(_.last(parsedStack).file, "template-compiler.js");
+  selftest.expectEqual(parsedStack.insideFiber[0].file, "template-compiler.js");
+  selftest.expectEqual(_.last(parsedStack.outsideFiber).file, "template-compiler.js");
 });
 
 // XXX I don't know how to actually create one of the crazy fiber stack traces
