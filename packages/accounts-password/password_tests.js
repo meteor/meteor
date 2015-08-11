@@ -272,17 +272,17 @@ if (Meteor.isClient) (function () {
     createUserStep,
     logoutStep,
     function (test, expect) {
-      this.otherUserName = 'Adalovelace' + this.randomSuffix;
-      addSkipCaseInsensitiveChecksForTest(this.otherUserName, test, expect);
+      this.otherUsername = 'Adalovelace' + this.randomSuffix;
+      addSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     // Create another user with a username that only differs in case
     function (test, expect) {
       Accounts.createUser(
-        { username: this.otherUserName, password: this.password },
-        loggedInAs(this.otherUserName, test, expect));
+        { username: this.otherUsername, password: this.password },
+        loggedInAs(this.otherUsername, test, expect));
     },
     function (test, expect) {
-      removeSkipCaseInsensitiveChecksForTest(this.otherUserName, test, expect);
+      removeSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     // We shouldn't be able to log in with the username in lower case
     function (test, expect) {
@@ -351,10 +351,10 @@ in case", [
     logoutStep,
     // Create another user
     function (test, expect) {
-      var otherUserName = 'alanturing' + this.randomSuffix;
+      var otherUsername = 'alanturing' + this.randomSuffix;
       Accounts.createUser(
-        { username: otherUserName, password: 'password' },
-        loggedInAs(otherUserName, test, expect));
+        { username: otherUsername, password: 'password' },
+        loggedInAs(otherUsername, test, expect));
     },
     // We should not be able to change the username to one that only
     // differs in case from an existing one
@@ -408,20 +408,20 @@ in case", [
     createUserStep,
     logoutStep,
     function (test, expect) {
-      this.otherUserName = 'AdaLovelace' + Random.id(10);
+      this.otherUsername = 'AdaLovelace' + Random.id(10);
       this.otherEmail =  "ADA-intercept@lovelace.com" + this.randomSuffix;
       addSkipCaseInsensitiveChecksForTest(this.otherEmail, test, expect);
     },
     // Create another user with an email that only differs in case
     function (test, expect) {
       Accounts.createUser(
-        { username: this.otherUserName,
+        { username: this.otherUsername,
           email: this.otherEmail,
           password: this.password },
-        loggedInAs(this.otherUserName, test, expect));
+        loggedInAs(this.otherUsername, test, expect));
     },
     function (test, expect) {
-      removeSkipCaseInsensitiveChecksForTest(this.otherUserName, test, expect);
+      removeSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     logoutStep,
     // We shouldn't be able to log in with the email in lower case
