@@ -2,7 +2,6 @@ var assert = require("assert");
 var MeteorPromise = typeof Promise === "function"
   ? Promise : require("promise");
 var fiberPool = require("./fiber_pool.js").makePool();
-var clone = require("node-v8-clone").clone;
 
 // Replace MeteorPromise.prototype.then with a wrapper that ensures the
 // onResolved and onRejected callbacks always run in a Fiber.
@@ -43,11 +42,32 @@ function cloneFiberOwnProperties(fiber) {
     var dynamics = {};
 
     Object.keys(fiber).forEach(function (key) {
-      dynamics[key] = clone(fiber[key], true);
+      dynamics[key] = shallowClone(fiber[key]);
     });
 
     return dynamics;
   }
+}
+
+function shallowClone(value) {
+  if (Array.isArray(value)) {
+    return value.slice(0);
+  }
+
+  if (value && typeof value === "object") {
+    var copy = Object.create(Object.getPrototypeOf(value));
+    var keys = Object.keys(value);
+    var keyCount = keys.length;
+
+    for (var i = 0; i < keyCount; ++i) {
+      var key = keys[i];
+      copy[key] = value[key];
+    }
+
+    return copy;
+  }
+
+  return value;
 }
 
 // Yield the current Fiber until the given Promise has been fulfilled.
