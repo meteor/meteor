@@ -318,6 +318,43 @@ Accounts.registerLoginHandler("password", function (options) {
 /// CHANGING
 ///
 
+// Let the user change their own username
+Meteor.methods({changeUsername: function (newUsername) {
+  check(newUsername, NonEmptyString);
+
+  if (!this.userId)
+    throw new Meteor.Error(401, "Must be logged in");
+
+  var user = Meteor.users.findOne(this.userId);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  var oldUsername = user.username;
+
+  // Check if there is no other user with a username only differing
+  // in case.
+  var performCaseInsensitiveCheck = function () {
+    if (newUsername &&
+      Meteor.users.find(selectorForFastCaseInsensitiveLookup(
+        "username", newUsername)).count() > 1) {
+          throw new Meteor.Error(403, "Username already exists.");
+    }
+  }
+
+  // Perform a case insensitive check before update
+  performCaseInsensitiveCheck();
+  Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
+  // Perform another check after update, in case a matching user has been
+  // inserted in the meantime
+  try {
+    performCaseInsensitiveCheck();
+  } catch (ex) {
+    // Undo update if the check fails
+    Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
+    throw ex;
+  }
+}});
+
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).

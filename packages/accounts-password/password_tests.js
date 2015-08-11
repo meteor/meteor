@@ -313,6 +313,38 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
+  testAsyncMulti("passwords - change username", [
+    createUserStep,
+    // We should be able to change the username
+    function (test, expect) {
+      var newUsername = 'adalovelace' + this.randomSuffix;
+      Accounts.changeUsername(newUsername,
+        loggedInAs(newUsername, test, expect));
+    }
+  ]);
+
+  testAsyncMulti("passwords - change username when there are multiple matches", [
+    createUserStep,
+    logoutStep,
+    // Create another user
+    function (test, expect) {
+      var otherUserName = 'alanturing' + this.randomSuffix;
+      Accounts.createUser(
+        { username: otherUserName, password: 'password' },
+        loggedInAs(otherUserName, test, expect));
+    },
+    // We should not be able to change the username to one that only
+    // differs in case from an existing one
+    function (test, expect) {
+      var newUsername = 'adalovelace' + this.randomSuffix;
+      Accounts.changeUsername(newUsername,
+        expectError(
+          new Meteor.Error(403, "Username already exists."),
+          test,
+          expect));
+    }
+  ]);
+
   testAsyncMulti("passwords - logging in with case insensitive email", [
     createUserStep,
     logoutStep,
