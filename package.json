@@ -26,10 +26,10 @@
   },
   "license": "MIT",
   "dependencies": {
-    "promise": "7.0.3"
+    "promise": "7.0.4"
   },
   "devDependencies": {
-    "fibers": "1.0.5",
+    "fibers": "1.0.6",
     "mocha": "~2.2.4",
     "webpack": "~1.8.11"
   }
