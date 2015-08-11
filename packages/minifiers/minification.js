@@ -59,7 +59,9 @@ MinifyAst = function(node) {
         // nested rules
         var nested = 0;
         _.each(rule.rules, function (nestedRule) {
-          nested += nestedRule.selectors.length;
+          if (nestedRule.selectors) {
+            nested += nestedRule.selectors.length;
+          }
         });
 
         if (current.selectors + nested > LIMIT) {
@@ -202,5 +204,3 @@ traverse.declaration = function(node, last) {
   return emit(node.property + ':' + value, node.position)
          + (last ? '' : emit(';'));
 };
-
-
