@@ -439,7 +439,7 @@ var error = function (message, options) {
       } = parseStack.parse(new Error());
 
       // Concatenate and get rid of lines about Future and buildmessage
-      info.stack = outsideFiber.concat(insideFiber).slice(2);
+      info.stack = outsideFiber.concat(insideFiber || []).slice(2);
       if (typeof info.useMyCaller === 'number') {
         info.stack = info.stack.slice(info.useMyCaller);
       }

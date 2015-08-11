@@ -15,12 +15,19 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
 
   markBottom(() => {
     const markedErr = new Error();
-    const parsedStack = parse(markedErr).outsideFiber;
+
+    const {
+      outsideFiber,
+      insideFiber
+    } = parse(markedErr);
+
+    // Don't return an empty array
+    selftest.expectEqual(insideFiber, undefined);
 
     // The stack trace should only contain this one function since we marked the
     // bottom
-    selftest.expectEqual(parsedStack.length, 1);
-    selftest.expectEqual(_.last(parsedStack[0].file.split("/")),
+    selftest.expectEqual(outsideFiber.length, 1);
+    selftest.expectEqual(_.last(outsideFiber[0].file.split("/")),
       "parse-stack-test.js");
   })();
 });
