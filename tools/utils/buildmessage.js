@@ -92,7 +92,7 @@ _.extend(Job.prototype, {
           // If a nontrivial stack trace (more than just the file and line
           // we already complained about), print it.
           var where = "";
-          if (frame && frame.file) {
+          if (frame.file) {
             where += frame.file;
             if (frame.line) {
               where += ":" + frame.line;
@@ -102,11 +102,11 @@ _.extend(Job.prototype, {
             }
           }
 
-          if (frame && ! frame.func && ! where)
+          if (! frame.func && ! where)
             return; // that's a pretty lame stack frame
 
           line += "  at ";
-          if (frame && frame.func)
+          if (frame.func)
             line += frame.func + " (" + where + ")\n";
           else
             line += where + "\n";
@@ -439,7 +439,7 @@ var error = function (message, options) {
       } = parseStack.parse(new Error());
 
       // Concatenate and get rid of lines about Future and buildmessage
-      info.stack = outsideFiber.concat(insideFiber).slice(2);
+      info.stack = outsideFiber.concat(insideFiber || []).slice(2);
       if (typeof info.useMyCaller === 'number') {
         info.stack = info.stack.slice(info.useMyCaller);
       }
