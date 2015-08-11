@@ -330,7 +330,7 @@ _.extend(exports, {
     var body = result.body;
 
     if (response.statusCode >= 400 && response.statusCode < 600)
-      throw body;
+      throw body || ('Could not get '+ response.request.href + ', server returned ['+response.statusCode+']');
     else
       return body;
   }
