@@ -110,8 +110,6 @@ var findUserFromQuery = function (query) {
       // No match if multiple candidates are found
       if (candidateUsers.length === 1) {
         user = candidateUsers[0];
-      } else {
-        console.error('Found multiple users with ' + fieldName + ' = ' + fieldValue + ' only differing in case. Requiring case sensitive login.');
       }
     }
   }
