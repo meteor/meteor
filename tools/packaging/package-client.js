@@ -355,6 +355,7 @@ var bundleBuild = function (isopack) {
 
   var buildTarball = files.pathJoin(tempDir, packageTarName + '.tgz');
 
+  console.log(tarInputDir);
   files.createTarball(tarInputDir, buildTarball);
 
   var tarballHash = files.fileHash(buildTarball);
