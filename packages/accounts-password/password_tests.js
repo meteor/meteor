@@ -2,9 +2,6 @@ Accounts._noConnectionCloseDelayForTest = true;
 Accounts.removeDefaultRateLimit();
 if (Meteor.isServer) {
   Meteor.methods({
-    getUserId: function () {
-      return this.userId;
-    },
     getResetToken: function () {
       var token = Meteor.users.findOne(this.userId).services.password.reset;
       return token;
@@ -48,14 +45,18 @@ if (Meteor.isClient) (function () {
   };
   var logoutStep = function (test, expect) {
     Meteor.logout(expect(function (error) {
-      test.equal(error, undefined);
+      if (error) {
+        test.fail(error.message);
+      }
       test.equal(Meteor.user(), null);
     }));
   };
   var loggedInAs = function (someUsername, test, expect) {
     return expect(function (error) {
-      test.equal(error, undefined);
-      test.equal(Meteor.user().username, someUsername);
+      if (error) {
+        test.fail(error.message);
+      }
+      test.equal(Meteor.userId() && Meteor.user().username, someUsername);
     });
   };
   var expectError = function (expectedError, test, expect) {
@@ -74,17 +75,23 @@ if (Meteor.isClient) (function () {
   };
   var invalidateLoginsStep = function (test, expect) {
     Meteor.call("testInvalidateLogins", 'fail', expect(function (error) {
-      test.isFalse(error);
+      if (error) {
+        test.fail(error.message);
+      }
     }));
   };
   var hideActualLoginErrorStep = function (test, expect) {
     Meteor.call("testInvalidateLogins", 'hide', expect(function (error) {
-      test.isFalse(error);
+      if (error) {
+        test.fail(error.message);
+      }
     }));
   };
   var validateLoginsStep = function (test, expect) {
     Meteor.call("testInvalidateLogins", false, expect(function (error) {
-      test.isFalse(error);
+      if (error) {
+        test.fail(error.message);
+      }
     }));
   };
 
