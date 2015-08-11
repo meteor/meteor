@@ -2,6 +2,7 @@ var assert = require("assert");
 var MeteorPromise = typeof Promise === "function"
   ? Promise : require("promise");
 var fiberPool = require("./fiber_pool.js").makePool();
+var clone = require("node-v8-clone").clone;
 
 // Replace MeteorPromise.prototype.then with a wrapper that ensures the
 // onResolved and onRejected callbacks always run in a Fiber.
@@ -10,27 +11,43 @@ MeteorPromise.prototype.then = function (onResolved, onRejected) {
   var Promise = this.constructor;
 
   if (typeof Promise.Fiber === "function") {
+    var fiber = Promise.Fiber.current;
+    var dynamics = cloneFiberOwnProperties(fiber);
+
     return es6PromiseThen.call(
       this,
-      wrapCallback(onResolved, Promise),
-      wrapCallback(onRejected, Promise)
+      wrapCallback(onResolved, Promise, dynamics),
+      wrapCallback(onRejected, Promise, dynamics)
     );
   }
 
   return es6PromiseThen.call(this, onResolved, onRejected);
 };
 
-function wrapCallback(callback, Promise) {
-  var fiber = Promise.Fiber.current;
-  var dynamics = fiber && fiber._meteorDynamics;
+function wrapCallback(callback, Promise, dynamics) {
+  if (! callback) {
+    return callback;
+  }
 
-  return callback && function (arg) {
+  return function (arg) {
     return fiberPool.run({
       callback: callback,
       args: [arg], // Avoid dealing with arguments objects.
       dynamics: dynamics
     }, Promise);
   };
+}
+
+function cloneFiberOwnProperties(fiber) {
+  if (fiber) {
+    var dynamics = {};
+
+    Object.keys(fiber).forEach(function (key) {
+      dynamics[key] = clone(fiber[key], true);
+    });
+
+    return dynamics;
+  }
 }
 
 // Yield the current Fiber until the given Promise has been fulfilled.
@@ -100,7 +117,7 @@ MeteorPromise.asyncApply = function (
     callback: fn,
     context: context,
     args: args,
-    dynamics: fiber && fiber._meteorDynamics
+    dynamics: cloneFiberOwnProperties(fiber)
   }, Promise);
 };
 

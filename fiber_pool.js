@@ -21,9 +21,13 @@ function FiberPool(targetFiberCount) {
         // execute an entry.
         assert.strictEqual(fiberStack.indexOf(fiber), -1);
 
-        // Set the dynamic environment of this Fiber as if entry.callback
-        // had been wrapped by Meteor.bindEnvironment.
-        fiber._meteorDynamics = entry.dynamics || undefined;
+        if (entry.dynamics) {
+          // Restore the dynamic environment of this fiber as if
+          // entry.callback had been wrapped by Meteor.bindEnvironment.
+          Object.keys(entry.dynamics).forEach(function (key) {
+            fiber[key] = entry.dynamics[key];
+          });
+        }
 
         try {
           entry.resolve(entry.callback.apply(
@@ -34,9 +38,11 @@ function FiberPool(targetFiberCount) {
           entry.reject(error);
         }
 
-        // Not strictly necessary, but it seems wise not to let this
-        // property remain accessible on fibers waiting in the pool.
-        delete fiber._meteorDynamics;
+        // Remove all own properties of the fiber before returning it to
+        // the pool.
+        Object.keys(fiber).forEach(function (key) {
+          delete fiber[key];
+        });
 
         if (fiberStack.length < targetFiberCount) {
           fiberStack.push(fiber);

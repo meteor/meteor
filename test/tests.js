@@ -177,3 +177,33 @@ describe("FiberPool", function () {
     });
   });
 });
+
+describe("dynamic environment", function () {
+  it("should be restored to cloned values", Promise.async(function () {
+    var fiber = Fiber.current;
+    assert.ok(fiber instanceof Fiber);
+
+    var asdf = fiber._asdf = [1, /* hole */, 3];
+    var expected = new Error("expected");
+    var promise = Promise.resolve(asdf).then(function (asdf) {
+      var fiber = Fiber.current;
+      assert.notStrictEqual(asdf, fiber._asdf);
+      assert.deepEqual(asdf, fiber._asdf);
+      fiber._asdf.push(4);
+      throw expected;
+    }).catch(function (error) {
+      assert.strictEqual(error, expected);
+      var fiber = Fiber.current;
+      assert.notStrictEqual(asdf, fiber._asdf);
+      assert.deepEqual(asdf, fiber._asdf);
+      assert.strictEqual(asdf.length, 3);
+    });
+
+    // Own properties should have been cloned when .then and .catch were
+    // called, so deleting this property here should have no impact on the
+    // behavior of the callbacks.
+    delete fiber._asdf;
+
+    return promise;
+  }));
+});

@@ -26,7 +26,8 @@
   },
   "license": "MIT",
   "dependencies": {
-    "promise": "7.0.3"
+    "promise": "7.0.3",
+    "node-v8-clone": "0.6.2"
   },
   "devDependencies": {
     "fibers": "1.0.5",
