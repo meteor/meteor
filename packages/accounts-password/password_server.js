@@ -162,6 +162,25 @@ var generateCasePermutationsForString = function (string) {
   return permutations;
 }
 
+var checkForCaseInsensitiveDuplicates = function (fieldName, displayName, fieldValue, ownUserId) {
+  if (fieldValue &&
+    // Some tests need the ability to add users with the same case insensitive
+    // value, hence the _skipCaseInsensitiveChecksForTest check
+    !_.has(Accounts._skipCaseInsensitiveChecksForTest, fieldValue)) {
+    var matchedUsers = Meteor.users.find(
+      selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)).fetch();
+
+    if (matchedUsers.length > 0 &&
+      // If we don't have a userId yet, any match we find is a duplicate
+      (!ownUserId ||
+      // Otherwise, check to see if there are multiple matches or a match
+      // that is not us
+      (matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId))) {
+      throw new Meteor.Error(403, displayName + " already exists.");
+    }
+  }
+};
+
 // XXX maybe this belongs in the check package
 var NonEmptyString = Match.Where(function (x) {
   check(x, String);
@@ -331,26 +350,15 @@ Meteor.methods({changeUsername: function (newUsername) {
 
   var oldUsername = user.username;
 
-  // Check if there is no other user with a username only differing
-  // in case.
-  var checkForCaseInsensitiveDuplicates = function () {
-    var matchedUsers = Meteor.users.find(
-      selectorForFastCaseInsensitiveLookup("username", newUsername)).fetch();
-    if (matchedUsers.length > 0 &&
-      (matchedUsers.length > 1 || matchedUsers[0]._id !== user._id)) {
-      throw new Meteor.Error(403, "Username already exists.");
-    }
-  }
-
   // Perform a case insensitive check fro duplicates before update
-  checkForCaseInsensitiveDuplicates();
+  checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
 
   Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
 
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    checkForCaseInsensitiveDuplicates();
+    checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
   } catch (ex) {
     // Undo update if the check fails
     Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
@@ -821,20 +829,8 @@ Meteor.methods({addEmail: function (newEmail) {
     return;
   }
 
-  // Check if there is no other user with an email address only differing
-  // in case.
-  var checkForCaseInsensitiveDuplicates = function () {
-    var matchedUsers = Meteor.users.find(
-      selectorForFastCaseInsensitiveLookup("emails.address", newEmail)).fetch();
-
-    if (matchedUsers.length > 0 &&
-      (matchedUsers.length > 1 || matchedUsers[0]._id !== user._id)) {
-      throw new Meteor.Error(403, "Email already exists.");
-    }
-  }
-
   // Perform a case insensitive check for duplicates before update
-  checkForCaseInsensitiveDuplicates();
+  checkForCaseInsensitiveDuplicates('emails.address', 'Email', newEmail, user._id);
 
   Meteor.users.update({_id: user._id},
     {$addToSet: {emails: {address: newEmail, verified: false}}});
@@ -842,7 +838,7 @@ Meteor.methods({addEmail: function (newEmail) {
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    checkForCaseInsensitiveDuplicates();
+    checkForCaseInsensitiveDuplicates('emails.address', 'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
     Meteor.users.update({_id: user._id},
@@ -900,34 +896,16 @@ var createUser = function (options) {
   if (email)
     user.emails = [{address: email, verified: false}];
 
-  // Check if there is no other user with a username or email only differing
-  // in case.
-  var performCaseInsensitiveCheck = function () {
-    // Some tests need the ability to add users with the same case insensitive
-    // username or email, hence the _skipCaseInsensitiveChecksForTest check
-
-    if (username &&
-      !_.has(Accounts._skipCaseInsensitiveChecksForTest, username) &&
-      Meteor.users.find(selectorForFastCaseInsensitiveLookup(
-        "username", username)).count() > 1) {
-          throw new Meteor.Error(403, "Username already exists.");
-    }
-
-    if (email &&
-      !_.has(Accounts._skipCaseInsensitiveChecksForTest, email) &&
-      Meteor.users.find(selectorForFastCaseInsensitiveLookup(
-        "emails.address", email)).count() > 1) {
-        throw new Meteor.Error(403, "Email already exists.");
-    }
-  }
-
   // Perform a case insensitive check before insert
-  performCaseInsensitiveCheck();
+  checkForCaseInsensitiveDuplicates('username', 'Username', username);
+  checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
+
   var userId = Accounts.insertUserDoc(options, user);
   // Perform another check after insert, in case a matching user has been
   // inserted in the meantime
   try {
-    performCaseInsensitiveCheck();
+    checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
+    checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
   } catch (ex) {
     // Remove inserted user if the check fails
     Meteor.users.remove(userId);
