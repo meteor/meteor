@@ -5,9 +5,14 @@ makeErrorByStatus = function(statusCode, content) {
     return str.length > length ? str.slice(0, length) + '...' : str;
   };
 
+  // this solution is not browser compatible
+  // var contentToCheck = typeof Buffer != "undefined" && content instanceof Buffer ? content.toString() : content;
+  var contentToCheck = typeof content == "string" ? content : content.toString();
+  
   var message = "failed [" + statusCode + "]";
-  if (content)
-    message += " " + truncate(content.replace(/\n/g, " "), MAX_LENGTH);
+
+  if (contentToCheck)
+    message += " " + truncate(contentToCheck.replace(/\n/g, " "), MAX_LENGTH);
 
   return new Error(message);
 };
