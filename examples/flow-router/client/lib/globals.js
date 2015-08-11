@@ -1,0 +1,2 @@
+// The application
+App = {};

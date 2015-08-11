@@ -1,0 +1,25 @@
+<template name="mainLayout">
+  {{> header}}
+
+  {{#if currentUser}}
+    {{#if notVerified}}
+      {{> awaitingVerification}}
+    {{else}}
+      {{> Template.dynamic template=content}}
+    {{/if}}
+  {{else}}
+    {{#if loggingIn}}
+      {{> loading}}
+    {{else}}
+      {{> signin}}
+    {{/if}}
+  {{/if}}
+
+  <div id="log"></div>
+</template>
+
+<template name="noHeaderLayout">
+  {{> Template.dynamic template=content}}
+
+  <div id="log"></div>
+</template>

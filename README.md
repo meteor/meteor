@@ -364,11 +364,12 @@ The only difference between the example apps is which routing package is used.
 View the `meteor-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
  
 
-_Iron Router_
+_Iron Router or Flow Router_
 
-Run locally:
   1. `git clone https://github.com/alanning/meteor-roles.git`
-  2. `cd meteor-roles/examples/iron-router`
+  2. either
+    * `cd meteor-roles/examples/iron-router` or
+    * `cd meteor-roles/examples/flow-router`
   3. `meteor`
   4. point browser to `http://localhost:3000`
 
@@ -376,7 +377,6 @@ Run locally:
 
 _Mini-Pages or Router_
 
-Run locally:
   1. install [Meteorite][1]
   2. `git clone https://github.com/alanning/meteor-roles.git`
   3. either
