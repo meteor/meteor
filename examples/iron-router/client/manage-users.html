@@ -1,0 +1,34 @@
+<template name="manageUsers">
+  <div class="manage-users row">
+    <div class="offset4 span8">
+
+      <p class="note">
+        Only Admins and those with the 'manage-users' role
+        will see this page in their nav menu.
+      </p>
+
+      <h2>Manage Users</h2>
+
+      <br />
+
+      <h3>Current Users</h3>
+
+      {{#if Template.subscriptionsReady}}
+        <!-- This is displayed when all data is ready. -->
+        {{> userList}}
+      {{else}}
+        Loading...
+      {{/if}}
+
+      {{> securityNote}}
+    </div>
+  </div>
+</template>
+
+<template name="userList">
+  <ul>
+    {{#each users}}
+    <li>{{email}} - Roles: {{roles}}</li>
+    {{/each}}
+  </ul>
+</template>

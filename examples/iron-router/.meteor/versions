@@ -3,6 +3,7 @@ accounts-password@1.1.1
 accounts-ui@1.1.5
 accounts-ui-unstyled@1.1.7
 alanning:roles@1.2.13
+alanning:trace@0.0.2
 autoupdate@1.2.1
 base64@1.0.3
 binary-heap@1.0.3

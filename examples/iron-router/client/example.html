@@ -74,7 +74,7 @@
               <a href="#" class="dropdown-toggle" data-toggle="dropdown">{{displayName}}<b class="caret"></b></a>
               <ul class="dropdown-menu">
                 {{#if isInRole 'admin,manage-users'}}
-                <li><a href="/manage">Manage Users</a></li>
+                <li><a href="/manageUsers">Manage Users</a></li>
                 {{/if}}
                 <li><a class="signout" href="/signout">Sign out</a></li>
               </ul>
@@ -105,47 +105,6 @@
         <p>This application is an example app for the <a href="https://github.com/alanning/meteor-roles"><em>meteor-roles</em></a> smart package.</p>
       </div>
           
-      {{> securityNote}}
-    </div>
-  </div>
-</template>
-
-<template name="secrets">
-  <div class="secrets row">
-    <div class="offset4 span8">
-
-      <p class="note">Only Admins and those with the 'view-secrets' role will see this page in their header nav.</p>
-
-      <h2>Secrets!</h2>
-
-      <ul>
-      {{#each secrets}}
-        <li><p>{{secret}}</p></li>
-      {{/each}}
-      </ul>
-
-      {{> securityNote}}
-    </div>
-  </div>
-</template>
-
-<template name="manage">
-  <div class="manage-users row">
-    <div class="offset4 span8">
-
-      <p class="note">Only Admins and those with the 'manage-users' role will see this page in their nav menu.</p>
-
-      <h2>Manage Users</h2>
-
-      <br />
-
-      <h3>Current Users</h3>
-      <ul>
-      {{#each users}}
-      <li>{{email}} - Roles: {{roles}}</li>
-      {{/each}}
-      </ul>
-
       {{> securityNote}}
     </div>
   </div>

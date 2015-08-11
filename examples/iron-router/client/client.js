@@ -1,6 +1,4 @@
-;(function () {
-
-  "use strict";
+"use strict";
 
 
 ////////////////////////////////////////////////////////////////////
@@ -55,18 +53,7 @@ $(document).on('touchstart.dropdown.data-api', '.dropdown-menu', function (e) {
 // Subscriptions
 //
 
-Deps.autorun(function () {
-  // register dependency on user so subscriptions
-  // will update once user has logged in
-  var user = Meteor.user();
-
-  // secrets
-  Meteor.subscribe('secrets');
-
-  // users, for manage-users page
-  Meteor.subscribe('users');
-});
-
+// NOTE: Subscriptions are handled at the template level.
 
 
 
@@ -89,31 +76,11 @@ Template.header.helpers({
   }
 });
 
-Template.secrets.helpers({
-  secrets: function () {
-    return Meteor.secrets.find();
-  }
-});
-
 Template.noteOfTheDay.helpers({
   note: function () {
     return "Greetings " + displayName() + "!";
   }
 });
-
-Template.manage.helpers({
-  users: function () {
-    return Meteor.users.find();
-  },
-  email: function () {
-    return this.emails[0].address;
-  },
-  roles: function () {
-    if (!this.roles) return '<none>';
-    return this.roles.join(',');
-  }
-});
-
 
 
 
@@ -163,6 +130,3 @@ function openCloseNav (e) {
     nav.height('auto');
   }
 }
-
-
-}());

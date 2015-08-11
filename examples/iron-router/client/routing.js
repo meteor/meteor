@@ -79,19 +79,16 @@ Router.route('/', {
   template: 'start',
   before: [filters.authenticate, filters.testFilter]
 })
-
 Router.route('/start', {
   before: [filters.authenticate, filters.testFilter]
 })
 
+Router.route('/secrets', {
+  before: filters.authenticate
+})
+Router.route('/manageUsers', {
+  before: filters.authenticate
+})
+
 Router.route('/signin')
-
-Router.route('secrets', {
-  before: filters.authenticate
-})
-
-Router.route('manage', {
-  before: filters.authenticate
-})
-
-Router.route('signout', App.signout)
+Router.route('/signout', App.signout)
