@@ -2,9 +2,6 @@ Accounts._noConnectionCloseDelayForTest = true;
 Accounts.removeDefaultRateLimit();
 if (Meteor.isServer) {
   Meteor.methods({
-    getUserId: function () {
-      return this.userId;
-    },
     getResetToken: function () {
       var token = Meteor.users.findOne(this.userId).services.password.reset;
       return token;
@@ -48,14 +45,29 @@ if (Meteor.isClient) (function () {
   };
   var logoutStep = function (test, expect) {
     Meteor.logout(expect(function (error) {
-      test.equal(error, undefined);
+      if (error) {
+        test.fail(error.message);
+      }
       test.equal(Meteor.user(), null);
     }));
   };
   var loggedInAs = function (someUsername, test, expect) {
     return expect(function (error) {
-      test.equal(error, undefined);
-      test.equal(Meteor.user().username, someUsername);
+      if (error) {
+        test.fail(error.message);
+      }
+      test.equal(Meteor.userId() && Meteor.user().username, someUsername);
+    });
+  };
+  var loggedInUserHasEmail = function (someEmail, test, expect) {
+    return expect(function (error) {
+      if (error) {
+        test.fail(error.message);
+      }
+      var user = Meteor.user();
+      test.isTrue(user && _.some(user.emails, function(email) {
+        return email.address === someEmail;
+      }));
     });
   };
   var expectError = function (expectedError, test, expect) {
@@ -74,17 +86,23 @@ if (Meteor.isClient) (function () {
   };
   var invalidateLoginsStep = function (test, expect) {
     Meteor.call("testInvalidateLogins", 'fail', expect(function (error) {
-      test.isFalse(error);
+      if (error) {
+        test.fail(error.message);
+      }
     }));
   };
   var hideActualLoginErrorStep = function (test, expect) {
     Meteor.call("testInvalidateLogins", 'hide', expect(function (error) {
-      test.isFalse(error);
+      if (error) {
+        test.fail(error.message);
+      }
     }));
   };
   var validateLoginsStep = function (test, expect) {
     Meteor.call("testInvalidateLogins", false, expect(function (error) {
-      test.isFalse(error);
+      if (error) {
+        test.fail(error.message);
+      }
     }));
   };
 
@@ -206,7 +224,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username with non-ASCII characters", [
+  testAsyncMulti("passwords - logging in with case insensitive username " +
+      "with non-ASCII characters", [
     function (test, expect) {
       // Hack because Tinytest does not clean the database between tests/runs
       this.randomSuffix = Random.id(10);
@@ -226,7 +245,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username should escape regex special characters", [
+  testAsyncMulti("passwords - logging in with case insensitive username " +
+      "should escape regex special characters", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a regex expression for the username
@@ -238,7 +258,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username should require a match of the full string", [
+  testAsyncMulti("passwords - logging in with case insensitive username " +
+     "should require a match of the full string", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a partial match for the username
@@ -250,21 +271,22 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive username when there are multiple matches", [
+  testAsyncMulti("passwords - logging in with case insensitive username when " +
+      "there are multiple matches", [
     createUserStep,
     logoutStep,
     function (test, expect) {
-      this.otherUserName = 'Adalovelace' + this.randomSuffix;
-      addSkipCaseInsensitiveChecksForTest(this.otherUserName, test, expect);
+      this.otherUsername = 'Adalovelace' + this.randomSuffix;
+      addSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     // Create another user with a username that only differs in case
     function (test, expect) {
       Accounts.createUser(
-        { username: this.otherUserName, password: this.password },
-        loggedInAs(this.otherUserName, test, expect));
+        { username: this.otherUsername, password: this.password },
+        loggedInAs(this.otherUsername, test, expect));
     },
     function (test, expect) {
-      removeSkipCaseInsensitiveChecksForTest(this.otherUserName, test, expect);
+      removeSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     // We shouldn't be able to log in with the username in lower case
     function (test, expect) {
@@ -282,7 +304,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - creating users with the same case insensitive username", [
+  testAsyncMulti("passwords - creating users with the same case insensitive " +
+      "username", [
     createUserStep,
     logoutStep,
     // Attempting to create another user with a username that only differs in
@@ -318,7 +341,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email should escape regex special characters", [
+  testAsyncMulti("passwords - logging in with case insensitive email should " +
+      "escape regex special characters", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a regex expression for the email
@@ -330,7 +354,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email should require a match of the full string", [
+  testAsyncMulti("passwords - logging in with case insensitive email should " +
+     "require a match of the full string", [
     createUserStep,
     logoutStep,
     // We shouldn't be able to log in with a partial match for the email
@@ -342,24 +367,25 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - logging in with case insensitive email when there are multiple matches", [
+  testAsyncMulti("passwords - logging in with case insensitive email when " +
+      "there are multiple matches", [
     createUserStep,
     logoutStep,
     function (test, expect) {
-      this.otherUserName = 'AdaLovelace' + Random.id(10);
+      this.otherUsername = 'AdaLovelace' + Random.id(10);
       this.otherEmail =  "ADA-intercept@lovelace.com" + this.randomSuffix;
       addSkipCaseInsensitiveChecksForTest(this.otherEmail, test, expect);
     },
     // Create another user with an email that only differs in case
     function (test, expect) {
       Accounts.createUser(
-        { username: this.otherUserName,
+        { username: this.otherUsername,
           email: this.otherEmail,
           password: this.password },
-        loggedInAs(this.otherUserName, test, expect));
+        loggedInAs(this.otherUsername, test, expect));
     },
     function (test, expect) {
-      removeSkipCaseInsensitiveChecksForTest(this.otherUserName, test, expect);
+      removeSkipCaseInsensitiveChecksForTest(this.otherUsername, test, expect);
     },
     logoutStep,
     // We shouldn't be able to log in with the email in lower case
@@ -378,7 +404,8 @@ if (Meteor.isClient) (function () {
     }
   ]);
 
-  testAsyncMulti("passwords - creating users with the same case insensitive email", [
+  testAsyncMulti("passwords - creating users with the same case insensitive " +
+      "email", [
     createUserStep,
     logoutStep,
     // Attempting to create another user with an email that only differs in
@@ -1229,7 +1256,8 @@ if (Meteor.isServer) (function () {
     });
   });
 
-  // XXX would be nice to test Accounts.config({forbidClientAccountCreation: true})
+  // XXX would be nice to test
+  // Accounts.config({forbidClientAccountCreation: true})
 
   Tinytest.addAsync(
     'passwords - login token observes get cleaned up',
@@ -1295,7 +1323,8 @@ if (Meteor.isServer) (function () {
 
       Accounts.sendResetPasswordEmail(userId, email);
 
-      var resetPasswordEmailOptions = Meteor.call("getInterceptedEmails", email)[0];
+      var resetPasswordEmailOptions =
+        Meteor.call("getInterceptedEmails", email)[0];
 
       var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
       var match = resetPasswordEmailOptions.text.match(re);
@@ -1312,4 +1341,164 @@ if (Meteor.isServer) (function () {
         Meteor.call("login", {user: {username: username}, password: "new-password"});
       }, /Incorrect password/);
     });
+
+  // We should be able to change the username
+  Tinytest.add("passwords - change username", function (test) {
+    var username = Random.id();
+    var userId = Accounts.createUser({
+      username: username
+    });
+
+    test.isTrue(userId);
+
+    var newUsername = Random.id();
+    Accounts.setUsername(userId, newUsername);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
+
+    // Test findUserByUsername as well while we're here
+    test.equal(Accounts.findUserByUsername(newUsername)._id, userId);
+  });
+
+  Tinytest.add("passwords - change username to a new one only differing " +
+      "in case", function (test) {
+    var username = Random.id() + "user";
+    var userId = Accounts.createUser({
+      username: username.toUpperCase()
+    });
+
+    test.isTrue(userId);
+
+    var newUsername = username.toLowerCase();
+    Accounts.setUsername(userId, newUsername);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).username, newUsername);
+  });
+
+  // We should not be able to change the username to one that only
+  // differs in case from an existing one
+  Tinytest.add("passwords - change username should fail when there are " +
+      "existing users with a username only differing in case", function (test) {
+    var username = Random.id() + "user";
+    var usernameUpper = username.toUpperCase();
+
+    var userId1 = Accounts.createUser({
+      username: username
+    });
+
+    var user2OriginalUsername = Random.id();
+    var userId2 = Accounts.createUser({
+      username: user2OriginalUsername
+    });
+
+    test.isTrue(userId1);
+    test.isTrue(userId2);
+
+    test.throws(function () {
+      Accounts.setUsername(userId2, usernameUpper);
+    }, /Username already exists/);
+
+    test.equal(Accounts._findUserByQuery({id: userId2}).username,
+      user2OriginalUsername);
+  });
+
+  Tinytest.add("passwords - add email", function (test) {
+    var origEmail = Random.id() + "@turing.com";
+    var userId = Accounts.createUser({
+      email: origEmail
+    });
+
+    var newEmail = Random.id() + "@turing.com";
+    Accounts.addEmail(userId, newEmail);
+
+    var thirdEmail = Random.id() + "@turing.com";
+    Accounts.addEmail(userId, thirdEmail, true);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+      { address: origEmail, verified: false },
+      { address: newEmail, verified: false },
+      { address: thirdEmail, verified: true }
+    ]);
+
+    // Test findUserByEmail as well while we're here
+    test.equal(Accounts.findUserByEmail(origEmail)._id, userId);
+  });
+
+  Tinytest.add("passwords - add email when the user has an existing email " +
+      "only differing in case", function (test) {
+    var origEmail = Random.id() + "@turing.com";
+    var userId = Accounts.createUser({
+      email: origEmail
+    });
+
+    var newEmail = Random.id() + "@turing.com";
+    Accounts.addEmail(userId, newEmail);
+
+    var thirdEmail = origEmail.toUpperCase();
+    Accounts.addEmail(userId, thirdEmail, true);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+      { address: thirdEmail, verified: true },
+      { address: newEmail, verified: false }
+    ]);
+  });
+
+  Tinytest.add("passwords - add email should fail when there is an existing " +
+      "user with an email only differing in case", function (test) {
+    var user1Email = Random.id() + "@turing.com";
+    var userId1 = Accounts.createUser({
+      email: user1Email
+    });
+
+    var user2Email = Random.id() + "@turing.com";
+    var userId2 = Accounts.createUser({
+      email: user2Email
+    });
+
+    var dupEmail = user1Email.toUpperCase();
+    test.throws(function () {
+      Accounts.addEmail(userId2, dupEmail);
+    }, /Email already exists/);
+
+    test.equal(Accounts._findUserByQuery({id: userId1}).emails, [
+      { address: user1Email, verified: false }
+    ]);
+
+    test.equal(Accounts._findUserByQuery({id: userId2}).emails, [
+      { address: user2Email, verified: false }
+    ]);
+  });
+
+  Tinytest.add("passwords - remove email", function (test) {
+    var origEmail = Random.id() + "@turing.com";
+    var userId = Accounts.createUser({
+      email: origEmail
+    });
+
+    var newEmail = Random.id() + "@turing.com";
+    Accounts.addEmail(userId, newEmail);
+
+    var thirdEmail = Random.id() + "@turing.com";
+    Accounts.addEmail(userId, thirdEmail, true);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+      { address: origEmail, verified: false },
+      { address: newEmail, verified: false },
+      { address: thirdEmail, verified: true }
+    ]);
+
+    Accounts.removeEmail(userId, newEmail);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+      { address: origEmail, verified: false },
+      { address: thirdEmail, verified: true }
+    ]);
+
+    Accounts.removeEmail(userId, origEmail);
+
+    test.equal(Accounts._findUserByQuery({id: userId}).emails, [
+      { address: thirdEmail, verified: true }
+    ]);
+  });
+
 }) ();

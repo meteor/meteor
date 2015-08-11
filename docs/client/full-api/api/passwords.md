@@ -31,9 +31,10 @@ id.
 
 On the client, you must pass `password` and at least one of `username` or
 `email` &mdash; enough information for the user to be able to log in again
-later. If there are existing users with a username or email only differing in case, `createUser` will fail. On the server, you do not need to specify `password`, but the user will
-not be able to log in until it has a password (eg, set with
-[`Accounts.setPassword`](#accounts_setpassword)).
+later. If there are existing users with a username or email only differing in
+case, `createUser` will fail. On the server, you do not need to specify
+`password`, but the user will not be able to log in until it has a password (eg,
+set with [`Accounts.setPassword`](#accounts_setpassword)).
 
 To create an account without a password on the server and still let the
 user pick their own password, call `createUser` with the `email` option
@@ -47,6 +48,35 @@ override this behavior, use [`Accounts.onCreateUser`](#accounts_oncreateuser).
 This function is only used for creating users with passwords. The external
 service login flows do not use this function.
 
+### Managing usernames and emails
+
+Instead of modifying documents in the [`Meteor.users`](#meteor_users) collection
+directly, use these convenience functions which correctly check for case
+insensitive duplicates before updates.
+
+{{> autoApiBox "Accounts.setUsername"}}
+
+{{> autoApiBox "Accounts.addEmail"}}
+
+By default, an email address is added with `{ verified: false }`. Use
+[`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail) to send an
+email with a link the user can use verify their email address.
+
+{{> autoApiBox "Accounts.removeEmail"}}
+
+{{> autoApiBox "Accounts.verifyEmail"}}
+
+This function accepts tokens passed into the callback registered with
+[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink).
+
+{{> autoApiBox "Accounts.findUserByUsername"}}
+
+{{> autoApiBox "Accounts.findUserByEmail"}}
+
+### Managing passwords
+
+Use the below functions to initiate password changes or resets from the server
+or the client.
 
 {{> autoApiBox "Accounts.changePassword"}}
 
@@ -70,10 +100,9 @@ This function accepts tokens passed into the callbacks registered with
 
 {{> autoApiBox "Accounts.setPassword"}}
 
-{{> autoApiBox "Accounts.verifyEmail"}}
 
-This function accepts tokens passed into the callback registered with
-[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink).
+
+<h3 id="sending-emails"><span>Sending emails</span></h3>
 
 {{> autoApiBox "Accounts.sendResetPasswordEmail"}}
 
