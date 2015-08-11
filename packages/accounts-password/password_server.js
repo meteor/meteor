@@ -77,13 +77,18 @@ var checkPassword = Accounts._checkPassword;
 /// LOGIN
 ///
 
-// Attempts to find a user from a user query.
-// First tries to match username or email case sensitively; if that fails, it
-// tries case insensitively; but if more than one user matches the case
-// insensitive search, it returns null
-// @param query {Object} with one of `id`, `username`, or `email`.
-// @returns A user if found, else null
-var findUserFromQuery = function (query) {
+/**
+ * @summary Finds the user with the specified username or email.
+ * First tries to match username or email case sensitively; if that fails, it
+ * tries case insensitively; but if more than one user matches the case
+ * insensitive search, it returns null.
+ * @locus Server
+ * @param {Object} query
+ *   An object with a single key: `email`, `username` or `id`.
+ *   Username or email match in a case insensitive manner.
+ * @returns {Object} A user if found, else null
+ */
+Accounts.findUser = function (query) {
   var user = null;
 
   if (query.id) {
@@ -227,7 +232,7 @@ Accounts.registerLoginHandler("password", function (options) {
   });
 
 
-  var user = findUserFromQuery(options.user);
+  var user = Accounts.findUser(options.user);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
@@ -293,7 +298,7 @@ Accounts.registerLoginHandler("password", function (options) {
     password: passwordValidator
   });
 
-  var user = findUserFromQuery(options.user);
+  var user = Accounts.findUser(options.user);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
