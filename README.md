@@ -55,9 +55,9 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 
 Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign to a user and can check for later.
 
-You can have traditional roles like, "admin" or "webmaster", or you can assign more granular permissions such as, "view-secrets" or "manage-users".  Often times more granular is actually better because you are able to handle all those pesky edge cases that come up in real life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
+You can have traditional roles like, "admin" or "webmaster", or you can assign more granular permissions such as, "view-secrets", "users.view", or "users.manage".  Often times more granular is actually better because you are able to handle all those pesky edge cases that come up in real-life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
 
-Sometimes its useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  Users can have one set of permissions in group A and another set of permissions in group B.  The next section gives an example of this using soccer/football teams as groups.
+Sometimes its useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is clearer.  Users can have one set of permissions in group A and another set of permissions in group B.  The next section gives an example of this using soccer/football teams as groups.
 
 <br />
 
@@ -91,7 +91,7 @@ Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real-madrid.com')
 <em>Note: See the `addUsersToRoles` [documentation](http://alanning.github.io/meteor-roles/classes/Roles.html) for restrictions on group names.</em>
 
 
-†† `Meteor.roles` is not published by default.  Here's how you would publish it to every client without needing a subscription:
+†† The `Meteor.roles` collection is currently only for convenience on the UI-side and is not used functionally within this package.  In the future it may be used to support role hierarchies.  Since it is not currently required, it is not automatically published to the client.  Here's how you would publish it to every client without needing a subscription:
 
 ```js
 // in server/publish.js
