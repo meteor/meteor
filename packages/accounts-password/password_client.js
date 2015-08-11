@@ -286,3 +286,26 @@ Accounts.verifyEmail = function(token, callback) {
     methodArguments: [token],
     userCallback: callback});
 };
+
+/**
+ * @summary Add an email address for the current user. Must be logged in.
+ * The operation will fail if there is an existing user with an email only
+ * differing in case.
+ * @locus Anywhere
+ * @param {String} newEmail A new email for the user.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
+Accounts.addEmail = function (newEmail, callback) {
+  if (!Meteor.user()) {
+    callback && callback(new Error("Must be logged in to change email."));
+    return;
+  }
+
+  check(newEmail, String);
+  if (!newEmail) {
+    callback && callback(new Meteor.Error(400, "Email may not be empty"));
+    return;
+  }
+
+  Accounts.connection.call("addEmail", newEmail, callback);
+};

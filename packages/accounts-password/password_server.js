@@ -333,21 +333,24 @@ Meteor.methods({changeUsername: function (newUsername) {
 
   // Check if there is no other user with a username only differing
   // in case.
-  var performCaseInsensitiveCheck = function () {
-    if (newUsername &&
-      Meteor.users.find(selectorForFastCaseInsensitiveLookup(
-        "username", newUsername)).count() > 1) {
-          throw new Meteor.Error(403, "Username already exists.");
+  var checkForCaseInsensitiveDuplicates = function () {
+    var matchedUsers = Meteor.users.find(
+      selectorForFastCaseInsensitiveLookup("username", newUsername)).fetch();
+    if (matchedUsers.length > 0 &&
+      (matchedUsers.length > 1 || matchedUsers[0]._id !== user._id)) {
+      throw new Meteor.Error(403, "Username already exists.");
     }
   }
 
-  // Perform a case insensitive check before update
-  performCaseInsensitiveCheck();
+  // Perform a case insensitive check fro duplicates before update
+  checkForCaseInsensitiveDuplicates();
+
   Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
+
   // Perform another check after update, in case a matching user has been
   // inserted in the meantime
   try {
-    performCaseInsensitiveCheck();
+    checkForCaseInsensitiveDuplicates();
   } catch (ex) {
     // Undo update if the check fails
     Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
@@ -793,6 +796,60 @@ Meteor.methods({verifyEmail: function (token) {
   );
 }});
 
+// Add an email address for the current user
+Meteor.methods({addEmail: function (newEmail) {
+  check(newEmail, NonEmptyString);
+
+  if (!this.userId)
+    throw new Meteor.Error(401, "Must be logged in");
+
+  var user = Meteor.users.findOne(this.userId);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  // Allow users to change their own email to a version with a different case
+  var caseInsensitiveRegExp =
+    new RegExp('^' + Meteor._escapeRegExp(newEmail) + '$', 'i');
+  var didUpdateOwnEmail = _.find(user.emails, function(email, index) {
+    if (caseInsensitiveRegExp.test(email.address)) {
+      Meteor.users.update({_id: user._id, 'emails.address': email.address},
+        {$set: {'emails.$.address': newEmail}});
+      return true;
+    }
+  });
+  if (didUpdateOwnEmail) {
+    return;
+  }
+
+  // Check if there is no other user with an email address only differing
+  // in case.
+  var checkForCaseInsensitiveDuplicates = function () {
+    var matchedUsers = Meteor.users.find(
+      selectorForFastCaseInsensitiveLookup("emails.address", newEmail)).fetch();
+
+    if (matchedUsers.length > 0 &&
+      (matchedUsers.length > 1 || matchedUsers[0]._id !== user._id)) {
+      throw new Meteor.Error(403, "Email already exists.");
+    }
+  }
+
+  // Perform a case insensitive check for duplicates before update
+  checkForCaseInsensitiveDuplicates();
+
+  Meteor.users.update({_id: user._id},
+    {$addToSet: {emails: {address: newEmail, verified: false}}});
+
+  // Perform another check after update, in case a matching user has been
+  // inserted in the meantime
+  try {
+    checkForCaseInsensitiveDuplicates();
+  } catch (ex) {
+    // Undo update if the check fails
+    Meteor.users.update({_id: user._id},
+      {$pull: {emails: {address: newEmail}}});
+    throw ex;
+  }
+}});
 
 
 ///

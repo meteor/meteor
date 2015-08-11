@@ -59,6 +59,17 @@ if (Meteor.isClient) (function () {
       test.equal(Meteor.userId() && Meteor.user().username, someUsername);
     });
   };
+  var loggedInUserHasEmail = function (someEmail, test, expect) {
+    return expect(function (error) {
+      if (error) {
+        test.fail(error.message);
+      }
+      var user = Meteor.user();
+      test.isTrue(user && _.some(user.emails, function(email) {
+        return email.address === someEmail;
+      }));
+    });
+  };
   var expectError = function (expectedError, test, expect) {
     return expect(function (actualError) {
       test.equal(actualError && actualError.error, expectedError.error);
@@ -317,13 +328,25 @@ if (Meteor.isClient) (function () {
     createUserStep,
     // We should be able to change the username
     function (test, expect) {
+      var newUsername = 'alanturing' + this.randomSuffix;
+      Accounts.changeUsername(newUsername,
+        loggedInAs(newUsername, test, expect));
+    }
+  ]);
+
+  testAsyncMulti("passwords - change username to a new one only differing \
+in case", [
+    createUserStep,
+    // We should be able to change the username
+    function (test, expect) {
       var newUsername = 'adalovelace' + this.randomSuffix;
       Accounts.changeUsername(newUsername,
         loggedInAs(newUsername, test, expect));
     }
   ]);
 
-  testAsyncMulti("passwords - change username when there are multiple matches", [
+  testAsyncMulti("passwords - change username should fail when there are \
+    existing users with a username only differing in case", [
     createUserStep,
     logoutStep,
     // Create another user
@@ -439,6 +462,77 @@ if (Meteor.isClient) (function () {
           test.equal(result, 0);
         })
       );
+    }
+  ]);
+
+  testAsyncMulti("passwords - add email", [
+    createUserStep,
+    // We should be able to add an email address
+    function (test, expect) {
+      this.newEmail = "alan-intercept@turing.com" + this.randomSuffix;
+      Accounts.addEmail(this.newEmail,
+        loggedInUserHasEmail(this.newEmail, test, expect));
+    },
+    // Make sure we still have the old email as well
+    function (test, expect) {
+      test.equal(Meteor.user().emails, [
+        { address: this.email, verified: false },
+        { address: this.newEmail, verified: false }
+      ]);
+    }
+  ]);
+
+  testAsyncMulti("passwords - add email when the user has an existing email \
+only differing in case", [
+    createUserStep,
+    // Add another email to make sure the update only affects the matching one
+    function (test, expect) {
+      this.otherEmail = "alan-intercept@turing.com" + this.randomSuffix;
+      Accounts.addEmail(this.otherEmail,
+        loggedInUserHasEmail(this.otherEmail, test, expect));
+    },
+    // We should be able to change the email address
+    function (test, expect) {
+      this.newEmail = "ada-intercept@lovelace.com" + this.randomSuffix;
+      Accounts.addEmail(this.newEmail,
+        loggedInUserHasEmail(this.newEmail, test, expect));
+    },
+    // Make sure we have both the old email and the changed one
+    function (test, expect) {
+      test.equal(Meteor.user().emails, [
+        { address: this.newEmail, verified: false },
+        { address: this.otherEmail, verified: false }
+      ]);
+    }
+  ]);
+
+  testAsyncMulti("passwords - add email should fail when there is an existing \
+user with an email only differing in case", [
+    createUserStep,
+    logoutStep,
+    // Create another user
+    function (test, expect) {
+      var otherUsername = "alanturing" + this.randomSuffix;
+      this.otherEmail = "alan-intercept@turing.com" + this.randomSuffix;
+      Accounts.createUser(
+        { username: otherUsername, email: this.otherEmail, password: 'password' },
+        loggedInAs(otherUsername, test, expect));
+    },
+    // We should not be able to add an email if it only
+    // differs in case from an existing one
+    function (test, expect) {
+      this.newEmail = "ada-intercept@lovelace.com" + this.randomSuffix;
+      Accounts.addEmail(this.newEmail,
+        expectError(
+          new Meteor.Error(403, "Email already exists."),
+          test,
+          expect));
+    },
+    // Make sure we still have the old email
+    function (test, expect) {
+      test.equal(Meteor.user().emails, [
+        { address: this.otherEmail, verified: false }
+      ]);
     }
   ]);
 
