@@ -851,6 +851,20 @@ Meteor.methods({addEmail: function (newEmail) {
   }
 }});
 
+// Remove an email address for the current user
+Meteor.methods({removeEmail: function (email) {
+  check(email, NonEmptyString);
+
+  if (!this.userId)
+    throw new Meteor.Error(401, "Must be logged in");
+
+  var user = Meteor.users.findOne(this.userId);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  Meteor.users.update({_id: user._id},
+    {$pull: {emails: {address: email}}});
+}});
 
 ///
 /// CREATING USERS

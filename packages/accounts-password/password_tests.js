@@ -536,6 +536,26 @@ user with an email only differing in case", [
     }
   ]);
 
+  testAsyncMulti("passwords - remove email", [
+    createUserStep,
+    // Add a new email address
+    function (test, expect) {
+      this.newEmail = "alan-intercept@turing.com" + this.randomSuffix;
+      Accounts.addEmail(this.newEmail,
+        loggedInUserHasEmail(this.newEmail, test, expect));
+    },
+    // Remove the old email address
+    function (test, expect) {
+      Accounts.removeEmail(this.email, loggedInAs(this.username, test, expect));
+    },
+    // Make sure we only have the new email
+    function (test, expect) {
+      test.equal(Meteor.user().emails, [
+        { address: this.newEmail, verified: false }
+      ]);
+    }
+  ]);
+
   testAsyncMulti("passwords - changing passwords", [
     function (test, expect) {
       // setup

@@ -309,3 +309,24 @@ Accounts.addEmail = function (newEmail, callback) {
 
   Accounts.connection.call("addEmail", newEmail, callback);
 };
+
+/**
+ * @summary Remove an email address for the current user. Must be logged in.
+ * @locus Client
+ * @param {String} email The email address to remove.
+ * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ */
+Accounts.removeEmail = function (email, callback) {
+ if (!Meteor.user()) {
+   callback && callback(new Error("Must be logged in to change email."));
+   return;
+ }
+
+ check(email, String);
+ if (!email) {
+   callback && callback(new Meteor.Error(400, "Email may not be empty"));
+   return;
+ }
+
+ Accounts.connection.call("removeEmail", email, callback);
+};
