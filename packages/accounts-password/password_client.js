@@ -134,7 +134,7 @@ Accounts.createUser = function (options, callback) {
  * @summary Change the current user's username. Must be logged in.
  * The operation will fail if there is an existing user with a username only
  * differing in case.
- * @locus Anywhere
+ * @locus Client
  * @param {String} newUsername A new username for the user.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
@@ -290,14 +290,15 @@ Accounts.verifyEmail = function(token, callback) {
 /**
  * @summary Add an email address for the current user. Must be logged in.
  * The operation will fail if there is an existing user with an email only
- * differing in case.
- * @locus Anywhere
+ * differing in case. If the current user has an existing email only differing
+ * in case however, we replace it.
+ * @locus Client
  * @param {String} newEmail A new email for the user.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.addEmail = function (newEmail, callback) {
   if (!Meteor.user()) {
-    callback && callback(new Error("Must be logged in to change email."));
+    callback && callback(new Error("Must be logged in to add email."));
     return;
   }
 
@@ -318,7 +319,7 @@ Accounts.addEmail = function (newEmail, callback) {
  */
 Accounts.removeEmail = function (email, callback) {
  if (!Meteor.user()) {
-   callback && callback(new Error("Must be logged in to change email."));
+   callback && callback(new Error("Must be logged in to remove email."));
    return;
  }
 
