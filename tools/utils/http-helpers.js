@@ -326,13 +326,17 @@ _.extend(exports, {
       throw new files.OfflineError(e);
     }
 
-    var response = result.response;
-    var body = result.body;
+    const response = result.response;
+    const body = result.body;
+    const href = response.request.href;
 
-    if (response.statusCode >= 400 && response.statusCode < 600)
-      throw body || ('Could not get '+ response.request.href + ', server returned ['+response.statusCode+']');
-    else
+    if (response.statusCode >= 400 && response.statusCode < 600) {
+      throw Error(
+        body ||
+          `Could not get ${href}; server returned [${response.statusCode}]`);
+    } else {
       return body;
+    }
   }
 
 });
