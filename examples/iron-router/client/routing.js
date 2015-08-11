@@ -1,9 +1,4 @@
-;(function () {
-
-  //AuthenticateController = {};
-
-  "use strict";
-
+"use strict"
 
 
 ////////////////////////////////////////////////////////////////////
@@ -12,13 +7,13 @@
 
 // override with mini-pages navigate method
 Meteor.navigateTo = function (path) {
-  Router.go(path);
-};
+  Router.go(path)
+}
 
 function emailVerified (user) {
   return _.some(user.emails, function (email) {
-    return email.verified;
-  });
+    return email.verified
+  })
 }
 
 var filters = {
@@ -28,41 +23,36 @@ var filters = {
    * email verified
    */
   authenticate: function () {
-    var user;
+    var user
 
     if (Meteor.loggingIn()) {
 
-      console.log('filter: loading');
-      this.render('loading');
-      this.layout = 'layout_no_header';
-      this.stop();
+      console.log('[authenticate filter] loading')
+      this.layout('layout_no_header')
+      this.render('loading')
 
     } else {
 
-      user = Meteor.user();
+      user = Meteor.user()
 
       if (!user) {
-
-        console.log('filter: signin');
-        this.render('signin');
-        this.layout = 'layout_no_header';
-        this.stop();
+        console.log('[authenticate filter] signin')
+        this.layout('layout_no_header')
+        this.render('signin')
         return
       }
 
       if (!emailVerified(user)) {
-
-        console.log('filter: awaiting-verification');
-        this.render('awaiting-verification');
-        this.layout = 'layout';
-        this.stop();
-
-      } else {
-
-        console.log('filter: done');
-        this.layout = 'layout';
-
+        console.log('[authenticate filter] awaiting-verification')
+        this.layout('layout')
+        this.render('awaiting-verification')
+        return
       }
+
+      console.log('[authenticate filter] done')
+      this.layout('layout')
+
+      this.next()
     }
   },  // end authenticate
 
@@ -71,49 +61,37 @@ var filters = {
    * use-case
    */
   testFilter: function () {
-    console.log('test filter')
+    console.log('[test filter]')
+    this.next()
   }
 
-};  // end filters
-
-//AuthenticateController = RouteController.extend({
-//  before: authenticate
-//});
+}  // end filters
 
 
 Router.configure({
   layout: 'layout',
   loadingTemplate: 'loading',
   notFoundTemplate: 'not_found'
-});
+})
 
-Router.map(function () {
-  this.route('start', {
-    path: '/',
-    before: [filters.authenticate, filters.testFilter]
-  });
-  this.route('start', {
-    before: [filters.authenticate, filters.testFilter]
-  });
 
-  this.route('signin');
+Router.route('/', {
+  template: 'start',
+  before: [filters.authenticate, filters.testFilter]
+})
 
-  this.route('secrets', {
-    //controller: 'AuthenticateController'
-    before: filters.authenticate
-  });
+Router.route('/start', {
+  before: [filters.authenticate, filters.testFilter]
+})
 
-  this.route('manage', {
-    before: filters.authenticate
-  });
+Router.route('/signin')
 
-  this.route('signout', App.signout);
+Router.route('secrets', {
+  before: filters.authenticate
+})
 
-  // why is this necessary when notFoundTemplate is
-  // set in Router.configure?
-  this.route('*', {
-    template: 'not_found'
-  });
-});
+Router.route('manage', {
+  before: filters.authenticate
+})
 
-}());
+Router.route('signout', App.signout)

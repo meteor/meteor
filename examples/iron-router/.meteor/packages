@@ -3,11 +3,10 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 
-preserve-inputs
+meteor-platform
 accounts-password
 accounts-ui
 bootstrap
-roles
 spiderable
-standard-app-packages
-iron-router
+alanning:roles
+iron:router

@@ -8,13 +8,13 @@
 <template name="layout">
   {{> header}}
 
-  {{{yield}}}
+  {{> yield}}
 
   <div id="log"></div>
 </template>
 
 <template name="layout_no_header">
-  {{{yield}}}
+  {{> yield}}
 
   <div id="log"></div>
 </template>
@@ -23,7 +23,7 @@
   <div class="signin">
     <div class="login-form">
       <h1>Sign In</h1>
-      {{loginButtons}}
+      {{> loginButtons}}
     </div>
 
     <div class="example-users">

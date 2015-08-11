@@ -358,11 +358,24 @@ The `examples` directory contains Meteor apps which show off the following featu
 * 'Sign-in required' app with up-front login page using `accounts-ui`
 * Client-side routing
 
-The only difference between the two example apps is the routing packages used: one uses `meteor-router` and the other uses `meteor-mini-pages`.
-(If anyone wants to update the iron-router example, that would be a big help!)
+
+The only difference between the example apps is which routing package is used.
 
 View the `meteor-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
-  
+ 
+
+_Iron Router_
+
+Run locally:
+  1. `git clone https://github.com/alanning/meteor-roles.git`
+  2. `cd meteor-roles/examples/iron-router`
+  3. `meteor`
+  4. point browser to `http://localhost:3000`
+
+<br />
+
+_Mini-Pages or Router_
+
 Run locally:
   1. install [Meteorite][1]
   2. `git clone https://github.com/alanning/meteor-roles.git`
@@ -374,8 +387,6 @@ Run locally:
   6. point browser to `http://localhost:3000`
 
 <br />
-
-
 
 
 <a name="testing">
