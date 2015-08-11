@@ -929,7 +929,6 @@ main.registerCommand({
             } else {
               // Save the isopack, just to get its hash.
               var bundleBuildResult = packageClient.bundleBuild(isopk);
-              console.log(existingBuild.build);
               somethingChanged =
                 (bundleBuildResult.treeHash !== existingBuild.build.treeHash);
             }
