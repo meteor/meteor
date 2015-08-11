@@ -7,6 +7,11 @@
     <header>
       <h1 id="title">Errors Log</h1>
         {{#if refreshing}}
+          <div class="small progress">
+            <div>
+            "Loading..."
+            </div>
+          </div>
           <p id="status"> App is currently refreshing </p>
         {{/if}}
     </header>
@@ -21,7 +26,7 @@
 
 <template name="err">
   <li>
-    <p class="errorTime">{{time}}</p>
+    <pre class="errorTime">{{time}}</pre>
     <br />
     <pre class="text">{{text}}</pre>
   </li>

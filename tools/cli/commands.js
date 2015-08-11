@@ -388,7 +388,7 @@ function doRunCommand (options) {
   }
 
   const errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
-    '..', 'development-error-app');
+    '../static-assets', 'development-error-app');
 
   const errorAppContext = new projectContextModule.ProjectContext({
       projectDir: errorAppPath,
