@@ -371,6 +371,10 @@ Meteor.methods({changeUsername: function (newUsername) {
   }
 }});
 
+Accounts.changeUsername = function (newUsername, callback) {
+  return Accounts.connection.call("changeUsername", newUsername, callback);
+}
+
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
 // `digest` and `algorithm` (representing the SHA256 of the password).
@@ -852,6 +856,10 @@ Meteor.methods({addEmail: function (newEmail) {
   }
 }});
 
+Accounts.addEmail = function (newEmail, callback) {
+  return Accounts.connection.call("addEmail", newEmail, callback);
+}
+
 // Remove an email address for the current user
 Meteor.methods({removeEmail: function (email) {
   check(email, NonEmptyString);
@@ -866,6 +874,10 @@ Meteor.methods({removeEmail: function (email) {
   Meteor.users.update({_id: user._id},
     {$pull: {emails: {address: email}}});
 }});
+
+Accounts.removeEmail = function (email, callback) {
+  return Accounts.connection.call("removeEmail", email, callback);
+}
 
 ///
 /// CREATING USERS

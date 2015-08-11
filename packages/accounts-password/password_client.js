@@ -134,7 +134,7 @@ Accounts.createUser = function (options, callback) {
  * @summary Change the current user's username. Must be logged in.
  * The operation will fail if there is an existing user with a username only
  * differing in case.
- * @locus Client
+ * @locus Anywhere
  * @param {String} newUsername A new username for the user.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
@@ -292,7 +292,7 @@ Accounts.verifyEmail = function(token, callback) {
  * The operation will fail if there is an existing user with an email only
  * differing in case. If the current user has an existing email only differing
  * in case however, we replace it.
- * @locus Client
+ * @locus Anywhere
  * @param {String} newEmail A new email for the user.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
@@ -313,7 +313,7 @@ Accounts.addEmail = function (newEmail, callback) {
 
 /**
  * @summary Remove an email address for the current user. Must be logged in.
- * @locus Client
+ * @locus Anywhere
  * @param {String} email The email address to remove.
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
