@@ -351,10 +351,10 @@ in case", [
     logoutStep,
     // Create another user
     function (test, expect) {
-      var otherUsername = 'alanturing' + this.randomSuffix;
+      this.otherUsername = 'alanturing' + this.randomSuffix;
       Accounts.createUser(
-        { username: otherUsername, password: 'password' },
-        loggedInAs(otherUsername, test, expect));
+        { username: this.otherUsername, password: 'password' },
+        loggedInAs(this.otherUsername, test, expect));
     },
     // We should not be able to change the username to one that only
     // differs in case from an existing one
@@ -365,6 +365,10 @@ in case", [
           new Meteor.Error(403, "Username already exists."),
           test,
           expect));
+    },
+    // Make sure we still have our old username
+    function (test, expect) {
+      test.equal(Meteor.userId() && Meteor.user().username, this.otherUsername);
     }
   ]);
 
