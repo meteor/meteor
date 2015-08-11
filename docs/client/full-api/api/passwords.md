@@ -47,6 +47,30 @@ override this behavior, use [`Accounts.onCreateUser`](#accounts_oncreateuser).
 This function is only used for creating users with passwords. The external
 service login flows do not use this function.
 
+<h3 id="managing-username-and-emails"><span>Managing username and emails</span></h3>
+
+Instead of modifying documents in the [`Meteor.users`](#meteor_users) collection directly, use these convenience functions to correctly check for case insensitive duplicates before updates.
+
+{{> autoApiBox "Accounts.changeUsername"}}
+
+{{> autoApiBox "Accounts.addEmail"}}
+
+An email address is added with `{ verified: false }`. Use
+[`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail) to send an email with a link the user can use verify their email address.
+
+{{> autoApiBox "Accounts.removeEmail"}}
+
+{{> autoApiBox "Accounts.verifyEmail"}}
+
+This function accepts tokens passed into the callback registered with
+[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink).
+
+{{> autoApiBox "Accounts.findUser"}}
+
+
+
+
+<h3 id="managing-password"><span>Managing password</span></h3>
 
 {{> autoApiBox "Accounts.changePassword"}}
 
@@ -70,10 +94,9 @@ This function accepts tokens passed into the callbacks registered with
 
 {{> autoApiBox "Accounts.setPassword"}}
 
-{{> autoApiBox "Accounts.verifyEmail"}}
 
-This function accepts tokens passed into the callback registered with
-[`Accounts.onEmailVerificationLink`](#Accounts-onEmailVerificationLink).
+
+<h3 id="sending-emails"><span>Sending emails</span></h3>
 
 {{> autoApiBox "Accounts.sendResetPasswordEmail"}}
 

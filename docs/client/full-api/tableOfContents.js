@@ -157,11 +157,19 @@ var toc = [
 
     {name: "Passwords", id: "accounts_passwords"}, [
       "Accounts.createUser",
+      {type: "spacer"},
+
+      {name: "Accounts.changeUsername", id: "Accounts-changeUsername"},
+      {name: "Accounts.addEmail", id: "Accounts-addEmail"},
+      {name: "Accounts.removeEmail", id: "Accounts-removeEmail"},
+      {name: "Accounts.verifyEmail", id: "accounts-verifyEmail"},
+      {name: "Accounts.findUser", id: "Accounts-findUser"},
+      {type: "spacer"},
+
       "Accounts.changePassword",
       "Accounts.forgotPassword",
       "Accounts.resetPassword",
       "Accounts.setPassword",
-      "Accounts.verifyEmail",
       {type: "spacer"},
 
       "Accounts.sendResetPasswordEmail",

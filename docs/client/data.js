@@ -9,10 +9,43 @@ DocsData = {
     "scope": "global",
     "summary": "The namespace for all server-side accounts-related methods."
   },
+  "Accounts.addEmail": {
+    "filepath": "accounts-password/password_client.js",
+    "kind": "function",
+    "lineno": 299,
+    "locus": "Anywhere",
+    "longname": "Accounts.addEmail",
+    "memberof": "Accounts",
+    "name": "addEmail",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>A new email for the user.</p>",
+        "name": "newEmail",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "name": "callback",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Add an email address for the current user. Must be logged in.\nThe operation will fail if there is an existing user with an email only\ndiffering in case. If the current user has an existing email only differing\nin case however, we replace it."
+  },
   "Accounts.changePassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 150,
+    "lineno": 171,
     "locus": "Client",
     "longname": "Accounts.changePassword",
     "memberof": "Accounts",
@@ -50,6 +83,39 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Change the current user's password. Must be logged in."
+  },
+  "Accounts.changeUsername": {
+    "filepath": "accounts-password/password_client.js",
+    "kind": "function",
+    "lineno": 141,
+    "locus": "Anywhere",
+    "longname": "Accounts.changeUsername",
+    "memberof": "Accounts",
+    "name": "changeUsername",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>A new username for the user.</p>",
+        "name": "newUsername",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "name": "callback",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Change the current user's username. Must be logged in.\nThe operation will fail if there is an existing user with a username only\ndiffering in case."
   },
   "Accounts.createUser": {
     "filepath": "accounts-password/password_client.js",
@@ -131,10 +197,43 @@ DocsData = {
     "scope": "static",
     "summary": "Options to customize emails sent from the Accounts system."
   },
+  "Accounts.findUser": {
+    "filepath": "accounts-password/password_server.js",
+    "kind": "function",
+    "lineno": 91,
+    "locus": "Server",
+    "longname": "Accounts.findUser",
+    "memberof": "Accounts",
+    "name": "findUser",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>An object with a single key: <code>email</code>, <code>username</code> or <code>id</code>.\n  Username or email match in a case insensitive manner.</p>",
+        "name": "query",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "description": "<p>A user if found, else null</p>",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Finds the user with the specified username or email.\nFirst tries to match username or email case sensitively; if that fails, it\ntries case insensitively; but if more than one user matches the case\ninsensitive search, it returns null."
+  },
   "Accounts.forgotPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 212,
+    "lineno": 233,
     "locus": "Client",
     "longname": "Accounts.forgotPassword",
     "memberof": "Accounts",
@@ -242,10 +341,43 @@ DocsData = {
     "scope": "static",
     "summary": "Register a function to call when a reset password link is clicked\nin an email sent by\n[`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
   },
+  "Accounts.removeEmail": {
+    "filepath": "accounts-password/password_client.js",
+    "kind": "function",
+    "lineno": 320,
+    "locus": "Anywhere",
+    "longname": "Accounts.removeEmail",
+    "memberof": "Accounts",
+    "name": "removeEmail",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The email address to remove.</p>",
+        "name": "email",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "name": "callback",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Remove an email address for the current user. Must be logged in."
+  },
   "Accounts.resetPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 232,
+    "lineno": 253,
     "locus": "Client",
     "longname": "Accounts.resetPassword",
     "memberof": "Accounts",
@@ -287,7 +419,7 @@ DocsData = {
   "Accounts.sendEnrollmentEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 509,
+    "lineno": 564,
     "locus": "Server",
     "longname": "Accounts.sendEnrollmentEmail",
     "memberof": "Accounts",
@@ -320,7 +452,7 @@ DocsData = {
   "Accounts.sendResetPasswordEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 444,
+    "lineno": 499,
     "locus": "Server",
     "longname": "Accounts.sendResetPasswordEmail",
     "memberof": "Accounts",
@@ -353,7 +485,7 @@ DocsData = {
   "Accounts.sendVerificationEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 648,
+    "lineno": 703,
     "locus": "Server",
     "longname": "Accounts.sendVerificationEmail",
     "memberof": "Accounts",
@@ -386,7 +518,7 @@ DocsData = {
   "Accounts.setPassword": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 396,
+    "lineno": 451,
     "locus": "Server",
     "longname": "Accounts.setPassword",
     "memberof": "Accounts",
@@ -506,7 +638,7 @@ DocsData = {
   "Accounts.verifyEmail": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 259,
+    "lineno": 280,
     "locus": "Client",
     "longname": "Accounts.verifyEmail",
     "memberof": "Accounts",
@@ -3540,7 +3672,7 @@ DocsData = {
   "HTTP.del": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 78,
+    "lineno": 82,
     "locus": "Anywhere",
     "longname": "HTTP.del",
     "memberof": "HTTP",
@@ -3583,7 +3715,7 @@ DocsData = {
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 45,
+    "lineno": 49,
     "locus": "Anywhere",
     "longname": "HTTP.get",
     "memberof": "HTTP",
@@ -3626,7 +3758,7 @@ DocsData = {
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 56,
+    "lineno": 60,
     "locus": "Anywhere",
     "longname": "HTTP.post",
     "memberof": "HTTP",
@@ -3669,7 +3801,7 @@ DocsData = {
   "HTTP.put": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 67,
+    "lineno": 71,
     "locus": "Anywhere",
     "longname": "HTTP.put",
     "memberof": "HTTP",
