@@ -32,7 +32,7 @@ LocalCollection.wrapTransform = function (transform) {
       throw new Error("transform must return object");
     }
 
-    if (_.has(transformed, '_id')) {
+    if (transformed._id)) {
       if (!EJSON.equals(transformed._id, id)) {
         throw new Error("transformed document can't have different _id");
       }
