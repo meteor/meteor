@@ -5,8 +5,6 @@ makeErrorByStatus = function(statusCode, content) {
     return str.length > length ? str.slice(0, length) + '...' : str;
   };
 
-  // this solution is not browser compatible
-  // var contentToCheck = typeof Buffer != "undefined" && content instanceof Buffer ? content.toString() : content;
   var contentToCheck = typeof content == "string" ? content : content.toString();
   
   var message = "failed [" + statusCode + "]";
