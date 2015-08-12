@@ -118,7 +118,6 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
     _.each(sourceProcessorsWithSlots, function (data, id) {
       var sourceProcessor = data.sourceProcessor;
       var resourceSlots = data.resourceSlots;
-      // XXX HERE
 
       var jobTitle = [
         "processing files with ",
