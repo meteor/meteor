@@ -101,7 +101,7 @@ JsHintLinter.prototype.processFilesForPackage = function (files, options) {
       errors = jshint.errors;
       reportErrors(file, errors);
     }
-    cache[cacheKey] = { hash: file.getSourceHash(), errors: errors };
+    cache.files[cacheKey] = { hash: file.getSourceHash(), errors: errors };
   });
 
   function reportErrors(file, errors) {
