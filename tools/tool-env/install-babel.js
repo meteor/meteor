@@ -2,10 +2,27 @@
 // transpiled by Babel
 
 function babelRegister() {
-  require('meteor-babel/register')({
-    babelOptions: require('meteor-babel').getDefaultOptions(
+  var meteorBabel = require('meteor-babel');
+  var configure = require('meteor-babel/register');
+
+  // It's potentially important that this call to configure comes before
+  // we require fs/files.js, just in case the features enabled here are
+  // used by fs/files.js.
+  configure({
+    babelOptions: meteorBabel.getDefaultOptions(
       require('./babel-features.js')
     )
+  });
+
+  // This require must come after the require("meteor-babel/register")
+  // call above so that fs/files.js will be transpiled by meteor-babel.
+  var files = require("../fs/files.js");
+  var toolEnvPath = files.convertToStandardPath(__dirname);
+  var toolsPath = files.pathDirname(toolEnvPath);
+  var meteorPath = files.pathDirname(toolsPath);
+
+  configure({
+    sourceMapRootPath: meteorPath
   });
 }
 
