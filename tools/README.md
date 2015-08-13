@@ -112,6 +112,13 @@ the `meteor` bash/batch script and add the `--debug` or `--debug-brk` flag to
 the node call. Note that `node-inspector` should be compatible with the `node`
 version in the `dev_bundle`.
 
+The node call should look like this after the change (if using `--debug-brk`
+flag): `exec "$DEV_BUNDLE/bin/node" --debug-brk "$METEOR" "$@"`.
+
+Next, start `node-inspector` from your checkout by going to
+`path/to/your/meteor/dev_bundle/lib/node_modules/node-inspector/bin` and running `inspector.js`.
+This will tell you the URL of the node inspector. If used with `--
+debug-brk`, the script will pause on the first line.
 
 ## Development
 
