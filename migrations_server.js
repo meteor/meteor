@@ -112,7 +112,7 @@ Migrations._migrateTo = function(version, rerun) {
     return;
   }
 
-  if (control.locked) {
+  if (control.locked === true) {
     console.log('Not migrating, control is locked.');
     return;
   }
