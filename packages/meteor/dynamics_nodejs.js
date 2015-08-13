@@ -110,7 +110,7 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         // note: callback-hook currently relies on the fact that if onException
         // throws and you were originally calling the wrapped callback from
         // within a Fiber, the wrapped call throws.
-        onException(e);
+        onException(e.stack || e.message);
       } finally {
         Fiber.current._meteor_dynamics = savedValues;
       }
