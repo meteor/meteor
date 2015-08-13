@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows you to define and run db migrations.",
-  version: "0.7.4",
+  version: "0.7.6",
   name: "percolate:migrations",
   git: "https://github.com/percolatestudio/meteor-migrations.git"
 });

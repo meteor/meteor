@@ -32,7 +32,7 @@ mobile-status-bar@1.0.2
 mongo@1.0.11
 observe-sequence@1.0.4
 ordered-dict@1.0.2
-percolate:migrations@0.7.2
+percolate:migrations@0.7.4
 random@1.0.2
 reactive-dict@1.0.5
 reactive-var@1.0.4
