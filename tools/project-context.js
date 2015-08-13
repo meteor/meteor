@@ -901,6 +901,10 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   addConstraints: function (constraintsToAdd) {
     var self = this;
     _.each(constraintsToAdd, function (constraintToAdd) {
+      if (! constraintToAdd.package) {
+        throw new Error("Expected PackageConstraint: " + constraintToAdd);
+      }
+
       var lineRecord;
       if (! _.has(self._constraintMap, constraintToAdd.package)) {
         lineRecord = {
@@ -919,6 +923,17 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       lineRecord.constraint = constraintToAdd;
       self._modified = true;
     });
+  },
+
+  // Like addConstraints, but takes an array of package name strings
+  // to add with no version constraint
+  addPackages: function (packagesToAdd) {
+    this.addConstraints(_.map(packagesToAdd, function (packageName) {
+      // make sure packageName is valid (and doesn't, for example,
+      // contain an '@' sign)
+      utils.validatePackageName(packageName);
+      return utils.parsePackageConstraint(packageName);
+    }));
   },
 
   // The packages in packagesToRemove are expected to actually be in the file;

@@ -50,7 +50,6 @@ var ISOPACKETS = {
   'ddp': ['ddp-client'],
   'mongo': ['npm-mongo'],
   'ejson': ['ejson'],
-  'minifiers': ['minifiers'],
   'constraint-solver': ['constraint-solver'],
   'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],

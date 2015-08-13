@@ -138,9 +138,9 @@ OplogObserveDriver = function (options) {
   // XXX ordering w.r.t. everything else?
   self._stopHandles.push(listenAll(
     self._cursorDescription, function (notification) {
-      // If we're not in a write fence, we don't have to do anything.
+      // If we're not in a pre-fire write fence, we don't have to do anything.
       var fence = DDPServer._CurrentWriteFence.get();
-      if (!fence)
+      if (!fence || fence.fired)
         return;
 
       if (fence._oplogObserveDrivers) {

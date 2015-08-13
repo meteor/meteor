@@ -129,7 +129,7 @@ var upgradersByName = {
 
   "1.2.0-standard-minifiers-package": function (projectContext) {
     // Minifiers are extracted into a new package called "standard-minifiers"
-    projectContext.projectConstraintsFile.addConstraints(
+    projectContext.projectConstraintsFile.addPackages(
       ['standard-minifiers']);
     projectContext.projectConstraintsFile.writeIfModified();
   },
@@ -141,7 +141,7 @@ var upgradersByName = {
     if (packagesFile.getConstraint('meteor-platform')) {
       packagesFile.removePackages(['meteor-platform']);
 
-      packagesFile.addConstraints([
+      packagesFile.addPackages([
         // These packages replace meteor-platform in newly created apps
         'meteor-base',
         'mobile-experience',
@@ -159,7 +159,7 @@ var upgradersByName = {
         'ejson',
         'spacebars',
         'check',
-      ].map((pkgName) => {return {package: pkgName}}));
+      ]);
 
       packagesFile.writeIfModified();
     }

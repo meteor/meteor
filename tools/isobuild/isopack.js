@@ -994,6 +994,10 @@ _.extend(Isopack.prototype, {
             // It's a shame to have to calculate the hash here instead of having
             // it on disk, but this only runs for legacy packages anyway.
             hash: watch.sha1(data),
+            // Legacy prelink files definitely don't have a source processor!
+            // They were created by an Isobuild that didn't even know about
+            // source processors!
+            usesDefaultSourceProcessor: true,
             legacyPrelink: {
               packageVariables: unibuildJson.packageVariables || []
             }
