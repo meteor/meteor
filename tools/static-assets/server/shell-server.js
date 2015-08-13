@@ -265,6 +265,17 @@ function getTerminalWidth() {
 var evalCommandPromise = Promise.resolve();
 
 function evalCommand(command, context, filename, callback) {
+  if (Package.ecmascript) {
+    try {
+      command = command.replace(/^\(|\)$/g, "");
+      command = Package.ecmascript.ECMAScript.compileForShell(command);
+    } catch (error) {
+      // If there was an error compiling the original command, there's a
+      // chance it didn't need to be compiled at all, so we might as well
+      // let vm.runInThisContext try to evaluate it.
+    }
+  }
+
   evalCommandPromise.then(function () {
     callback(null, vm.runInThisContext(command, filename));
   }).catch(callback);
