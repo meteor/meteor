@@ -6,5 +6,6 @@ var babelOptions = require("../options").getDefaults({
 });
 
 require("../register")({
+  sourceMapRootPath: require("path").dirname(__dirname),
   babelOptions: babelOptions
 });

@@ -8,7 +8,11 @@ var meteorBabel = require("./index.js");
 var util = require("./util.js");
 
 var config = {
-  babelOptions: require("./options").getDefaults()
+  sourceMapRootPath: null,
+  babelOptions: require("./options").getDefaults({
+    modules: true,
+    meteorAsyncAwait: true
+  })
 };
 
 exports = module.exports = function reconfigure(newConfig) {
@@ -16,6 +20,8 @@ exports = module.exports = function reconfigure(newConfig) {
     // Sanitize config values and prevent circular references.
     config[key] = JSON.parse(JSON.stringify(newConfig[key]));
   });
+
+  return reconfigure;
 };
 
 require.extensions[".js"] = function(module, filename) {
@@ -78,6 +84,20 @@ function getBabelResult(filename) {
   }
 
   if (babelOptions.sourceMap) {
+    if (config.sourceMapRootPath) {
+      var relativePath = path.relative(
+        config.sourceMapRootPath,
+        filename
+      );
+
+      if (relativePath.slice(0, 2) !== "..") {
+        // If the given filename is a path contained within
+        // config.sourceMapRootPath, use the relative path but prepend a
+        // '/' so that source maps work more reliably.
+        filename = "/" + relativePath;
+      }
+    }
+
     babelOptions.filename = filename;
     babelOptions.sourceFileName = filename;
     babelOptions.sourceMapName = filename + ".map";
