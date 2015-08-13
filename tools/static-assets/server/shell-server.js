@@ -5,12 +5,15 @@ var fs = require("fs");
 var net = require("net");
 var tty = require("tty");
 var vm = require("vm");
-var Fiber = require("fibers");
 var _ = require("underscore");
 var INFO_FILE_MODE = 0600; // Only the owner can read or write.
 var EXITING_MESSAGE =
   // Exported so that ./client.js can know what to expect.
   exports.EXITING_MESSAGE = "Shell exiting...";
+
+var Promise = require("meteor-promise");
+// Only require("fibers") if somehow Promise.Fiber is not yet defined.
+Promise.Fiber = Promise.Fiber || require("fibers");
 
 // Invoked by the server process to listen for incoming connections from
 // shell clients. Each connection gets its own REPL instance.
@@ -256,23 +259,15 @@ function getTerminalWidth() {
   }
 }
 
-// Shell commands need to be executed in fibers in case they call into
-// code that yields.
+// Shell commands need to be executed in a Fiber in case they call into
+// code that yields. Using a Promise is an even better idea, since it runs
+// its callbacks in Fibers drawn from a pool, so the Fibers are recycled.
+var evalCommandPromise = Promise.resolve();
+
 function evalCommand(command, context, filename, callback) {
-  Fiber(function() {
-    try {
-      var result = vm.runInThisContext(command, filename);
-    } catch (error) {
-      if (process.domain) {
-        process.domain.emit("error", error);
-        process.domain.exit();
-      } else {
-        callback(error);
-      }
-      return;
-    }
-    callback(null, result);
-  }).run();
+  evalCommandPromise.then(function () {
+    callback(null, vm.runInThisContext(command, filename));
+  }).catch(callback);
 }
 
 // This function allows a persistent history of shell commands to be saved
