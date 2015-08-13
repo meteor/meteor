@@ -20,6 +20,10 @@ describe("Babel", function() {
     assert.strictEqual(this, self);
   });
 
+  it("es6.literals", () => {
+    assert.strictEqual(0o777, 511);
+  });
+
   it(`es6.templateLiterals`, () => {
     let second = 2;
 

@@ -13,6 +13,7 @@ exports.getDefaults = function getDefaults(features) {
       "es3.propertyLiterals",
       "es3.memberExpressionLiterals",
       "es6.arrowFunctions",
+      "es6.literals",
       "es6.templateLiterals",
       "es6.classes",
       "es6.constants",
