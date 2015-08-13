@@ -4,10 +4,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use([
-    'check',
-    'ejson'
-  ], 'server');
+  api.use('check');
+  api.use('underscore');
 
   api.use('routepolicy', 'server');
   api.use('webapp', 'server');
@@ -16,7 +14,7 @@ Package.onUse(function (api) {
   api.use('reload', 'client');
   api.use('base64', 'client');
 
-  api.use(['underscore', 'service-configuration', 'logging'], 'server');
+  api.use(['service-configuration', 'logging'], 'server');
 
   api.use('oauth-encryption', 'server', {weak: true});
 
@@ -54,4 +52,3 @@ Package.onTest(function (api) {
 Cordova.depends({
     'cordova-plugin-inappbrowser': '1.0.0'
 });
-
