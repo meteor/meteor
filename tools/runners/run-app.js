@@ -896,7 +896,7 @@ _.extend(AppRunner.prototype, {
         }
 
         crashCount ++;
-        if (crashCount < 2)
+        if (crashCount < 1)
           continue;
 
         if (self.watchForChanges) {
@@ -948,6 +948,7 @@ _.extend(AppRunner.prototype, {
   },
 
   restart: function() {
+    var self = this;
     self.stop();
     self.start();
   }
