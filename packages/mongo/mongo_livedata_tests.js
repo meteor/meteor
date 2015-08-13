@@ -3100,3 +3100,97 @@ Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) 
   test.isTrue(rawDb);
   test.isTrue(rawDb.admin);
 });
+
+if (Meteor.isServer) {
+  Tinytest.add("mongo-livedata - update/remove don't accept an array as a selector #4804", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    _.times(10, function () {
+      collection.insert({ data: "Hello" });
+    });
+
+    test.equal(collection.find().count(), 10);
+
+    // Test several array-related selectors
+    _.each([[], [1, 2, 3], [{}]], function (selector) {
+      test.throws(function () {
+        collection.remove(selector);
+      });
+
+      test.throws(function () {
+        collection.update(selector, {$set: 5});
+      });
+    });
+    
+    test.equal(collection.find().count(), 10);
+  });
+}
+
+// This is a regression test for https://github.com/meteor/meteor/issues/4839.
+// Prior to fixing the issue (but after applying
+// https://github.com/meteor/meteor/pull/4694), doing a Mongo write from a
+// timeout that ran after a method body (invoked via the client) would throw an
+// error "fence has already activated -- too late to add a callback" and not
+// properly call the Mongo write's callback.  In this test:
+//  - The client invokes a method (fenceOnBeforeFireError1) which
+//    - Starts an observe on a query
+//    - Creates a timeout (which shares a write fence with the method)
+//    - Lets the method return (firing the write fence)
+//  - The timeout runs and does a Mongo write. This write is inside a write
+//    fence (because timeouts preserve the fence, see dcd26415) but the write
+//    fence already fired.
+//  - The Mongo write's callback confirms that there is no error. This was
+//    not the case before fixing the bug!  (Note that the observe was necessary
+//    for the error to occur, because the error was thrown from the observe's
+//    crossbar listener callback).  It puts the confirmation into a Future.
+//  - The client invokes another method which reads the confirmation from
+//    the future. (Well, the invocation happened earlier but the use of the
+//    Future sequences it so that the confirmation only gets read at this point.)
+if (Meteor.isClient) {
+  testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
+    function (test, expect) {
+      var self = this;
+      self.nonce = Random.id();
+      Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
+        test.isFalse(err);
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
+        function (err, success) {
+          test.isFalse(err);
+          test.isTrue(success);
+        }
+      ));
+    }
+  ]);
+} else {
+  var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
+  var Future = Npm.require('fibers/future');
+  var futuresByNonce = {};
+  Meteor.methods({
+    fenceOnBeforeFireError1: function (nonce) {
+      futuresByNonce[nonce] = new Future;
+      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
+            .observeChanges({added: function (){}});
+      Meteor.setTimeout(function () {
+        fenceOnBeforeFireErrorCollection.insert(
+          {nonce: nonce},
+          function (err, result) {
+            var success = !err && result;
+            futuresByNonce[nonce].return(success);
+            observe.stop();
+          }
+        );
+      }, 10);
+    },
+    fenceOnBeforeFireError2: function (nonce) {
+      try {
+        return futuresByNonce[nonce].wait();
+      } finally {
+        delete futuresByNonce[nonce];
+      }
+    }
+  });
+}

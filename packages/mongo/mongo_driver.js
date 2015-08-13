@@ -306,7 +306,16 @@ var writeCallback = function (write, refresh, callback) {
   return function (err, result) {
     if (! err) {
       // XXX We don't have to run this on error, right?
-      refresh();
+      try {
+        refresh();
+      } catch (refreshErr) {
+        if (callback) {
+          callback(refreshErr);
+          return;
+        } else {
+          throw refreshErr;
+        }
+      }
     }
     write.committed();
     if (callback)
