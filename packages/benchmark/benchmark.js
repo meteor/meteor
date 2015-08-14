@@ -1,49 +1,12 @@
-var nextTimerId = 0;
+Durations = {
 
-var runningTimer = null;
-
-Timer = class Timer {
-  start() {
-    if (!this.id)
-      this.id = nextTimerId++;
-//    console.trace("start", this.id);
-
-    if (runningTimer) {
-      console.trace("timer already running");
-    }
-    runningTimer = this;
-
-    if (this.startTime) {
-      console.trace("already running");
-    }
-    if (!this._total) {
-      this._total = 0;
-    }
-    this.startTime = process.hrtime();
-  }
-  stop() {
-//    console.trace("stop", this.id);
-
-    if (!runningTimer) {
-      console.trace("no timer is even running");
-    }
-    if (runningTimer !== this) {
-      console.trace("not the running timer");
-    }
-    if (!this.startTime) {
-      console.trace("not running");
-    }
-    var durationHrtime = process.hrtime(this.startTime);
-    delete this.startTime;
-    runningTimer = null;
-    this._total += durationHrtime[0] * 1000 + durationHrtime[1] / 1000000;
-  }
-  total() {
-    return this._total;
-  }
 };
 
 var Durations = null;
+
+getDurations = function () {
+  return Durations.durations;
+};
 
 var durationForId = {};
 var totalDuration = 0;
@@ -102,89 +65,14 @@ Meteor.defer(() => {
 });
 
 var Fiber = Npm.require("fibers");
-var trueYield = Fiber.yield;
 
-measure = function (id, duration) {
-  if (Durations) {
-    Durations.add(id, duration);
-    Durations.add("accounted", duration);
-  }
-};
-
-// opts:
-// - entireTime: calls to `Meteor.bindEnvironment` don't generate a new id
-measureDuration = function (id, fn, opts) {
-//  fn();
-//  return;
-
-  var timerToStartOnceDone = runningTimer;
-//  console.log("timetToStartOnceDone stop", runningTimer && runningTimer.id); 
-  timerToStartOnceDone && timerToStartOnceDone.stop();
-
-//  opts = opts || {};
-
-  var timer = new Timer;
-/*
-  if (Fiber.current.overrideMeasureId) {
-    throw new Error("Can't nest \"entireTime\" measures");
-  }
-
-  if (opts.entireTime) {
-    Fiber.current.overrideMeasureId = id;
-  }
-*/
-//  var currentFiberRun = Fiber.current.run.bind(Fiber.current);
-/*
-  Fiber.current.run = function () {
-    if (runningTimer)
-      runningTimer.stop();
-
-    timer.start();
-    currentFiberRun();
-  };
-*/
-  timer.start();
-
-  var origFiberYield = Fiber.yield;
-  var newFiberYield = function () {
-    timer.stop();
-    console.log("before yield");
-    Fiber.yield = trueYield;
-    try {
-      origFiberYield();
-    } finally {
-      Fiber.yield = newFiberYield;
-      console.log("after yield");
-      timer.start();
-    }
-  };
-  Fiber.yield = newFiberYield;
-
-  try {
-    return fn();
-  } finally {
-    if (timer.startTime)
-      console.log(">>> would have failed here stopping timer");
-    else
-      timer.stop();
-
-    Fiber.yield = origFiberYield;
-
-    timerToStartOnceDone && timerToStartOnceDone.start();
 
 /*
-    if (id !== "sub(\"durations\")") {
-      measure(id, timer.total());
-    }
-*/
-//    Fiber.current.run = currentFiberRun;
-//    delete Fiber.current.overrideMeasureId;
-  }
-};
-
 var profiler = Npm.require('gc-profiler');
 profiler.on('gc', function (info) {
   if (Durations) {
     measure("gc", info.duration);
   }
 });
+
+*/

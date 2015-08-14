@@ -20,6 +20,7 @@ Package.onUse(function(api) {
   api.export('measureDuration');
   api.export('getDurations');
   api.export('Timer');
+  api.export('getDurations');
 });
 
 Package.onTest(function(api) {

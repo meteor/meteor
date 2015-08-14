@@ -200,6 +200,7 @@ OplogObserveDriver = function (options) {
 
 _.extend(OplogObserveDriver.prototype, {
   _measure: function (f) {
+    return f;
     var self = this;
     return function () {
       measureDuration(self._cursorDescStr(), f, {entireTime: true});
