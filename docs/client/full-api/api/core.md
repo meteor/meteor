@@ -18,7 +18,8 @@ authentication mechanisms, should be kept in the `server` directory.
 
 On a server, the function will run as soon as the server process is
 finished starting. On a client, the function will run as soon as the DOM
-is ready.
+is ready. Code in `Meteor.startup` is guaranteed access to globals; code
+outside it is not.
 
 The `startup` callbacks are called in the same order as the calls to
 `Meteor.startup` were made.
