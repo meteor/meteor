@@ -217,10 +217,13 @@ describe("exceptions", function () {
       throw expected;
     });
 
-    domain.on("error", function (error) {
+    function onError(error) {
       assert.strictEqual(error, expected);
       done();
-    });
+    }
+
+    domain.on("error", onError);
+    process.on("uncaughtException", onError);
 
     domain.run(function () {
       fiber.run();

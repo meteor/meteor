@@ -94,27 +94,12 @@ function await(promise) {
   // The overridden es6PromiseThen function is adequate here because these
   // two callbacks do not need to run in a Fiber.
   es6PromiseThen.call(promise, function (result) {
-    soon(fiber.run.bind(fiber, result));
+    process.nextTick(fiber.run.bind(fiber, result));
   }, function (error) {
-    soon(fiber.throwInto.bind(fiber, error));
+    process.nextTick(fiber.throwInto.bind(fiber, error));
   });
 
   return Fiber.yield();
-}
-
-function soon(fn) {
-  process.nextTick(function () {
-    try {
-      fn();
-    } catch (error) {
-      if (process.domain) {
-        process.domain.emit("error", error);
-        process.domain.exit();
-      } else {
-        throw error;
-      }
-    }
-  });
 }
 
 MeteorPromise.awaitAll = function (args) {
