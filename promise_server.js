@@ -94,9 +94,9 @@ function await(promise) {
   // The overridden es6PromiseThen function is adequate here because these
   // two callbacks do not need to run in a Fiber.
   es6PromiseThen.call(promise, function (result) {
-    fiber.run(result);
+    process.nextTick(fiber.run.bind(fiber, result));
   }, function (error) {
-    fiber.throwInto(error);
+    process.nextTick(fiber.throwInto.bind(fiber, error));
   });
 
   return Fiber.yield();

@@ -207,3 +207,23 @@ describe("dynamic environment", function () {
     return promise;
   }));
 });
+
+describe("exceptions", function () {
+  it("should be thrown", function (done) {
+    var domain = require("domain").create();
+    var expected = new Error("expected");
+    var fiber = new Fiber(function () {
+      Promise.await("asdf");
+      throw expected;
+    });
+
+    domain.on("error", function (error) {
+      assert.strictEqual(error, expected);
+      done();
+    });
+
+    domain.run(function () {
+      fiber.run();
+    });
+  });
+});
