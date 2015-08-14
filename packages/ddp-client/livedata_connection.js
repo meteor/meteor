@@ -323,9 +323,9 @@ var Connection = function (url, options) {
   };
 
   if (Meteor.isServer) {
-    self._stream.on('message', Meteor.bindEnvironment(onMessage, Meteor._debug));
-    self._stream.on('reset', Meteor.bindEnvironment(onReset, Meteor._debug));
-    self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, Meteor._debug));
+    self._stream.on('message', Meteor.bindEnvironment(onMessage, "handling DDP message"));
+    self._stream.on('reset', Meteor.bindEnvironment(onReset, "handling DDP reset"));
+    self._stream.on('disconnect', Meteor.bindEnvironment(onDisconnect, "handling DDP disconnect"));
   } else {
     self._stream.on('message', onMessage);
     self._stream.on('reset', onReset);
