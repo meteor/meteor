@@ -1,6 +1,10 @@
 var assert = require("assert");
+
 var MeteorPromise = typeof Promise === "function"
-  ? Promise : require("promise");
+  // See https://github.com/then/promise#usage for an explanation of why
+  // we require promise/domains here.
+  ? Promise : require("promise/domains");
+
 var fiberPool = require("./fiber_pool.js").makePool();
 
 // Replace MeteorPromise.prototype.then with a wrapper that ensures the
