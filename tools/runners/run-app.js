@@ -948,7 +948,8 @@ _.extend(AppRunner.prototype, {
   },
 
   restart: function() {
-    var self = this;
+    // var self = this;
+    // XXX This is where the error will be thrown because I forgot to define self
     self.stop();
     self.start();
   }
