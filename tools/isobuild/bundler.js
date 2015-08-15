@@ -1838,6 +1838,10 @@ var writeSiteArchive = Profile(
       file: files.pathJoin(files.getDevBundle(), '.bundle_version.txt')
     });
 
+    builder.write('.node_version.txt', {
+      data: new Buffer(process.version + '\n', 'utf8')
+    });
+
     // Affordances for standalone use
     if (targets.server) {
       // add program.json as the first argument after "node main.js" to the boot script.
