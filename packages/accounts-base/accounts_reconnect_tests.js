@@ -54,6 +54,7 @@ if (Meteor.isClient) {
     }
 
     function failTest() {
+      onLoginStopper.stop();
       test.fail('Issue #4970 has occured.');
       Meteor.call('getConnectionUserId', checkFinalState);
     }
