@@ -296,7 +296,7 @@ password-based users or from an external service login flow. `options` may come
 from an untrusted client so make sure to validate any values you read from
 it. The `user` argument is created on the server and contains a
 proposed user object with all the automatically generated fields
-required for the user to log in.
+required for the user to log in, including the `_id`.
 
 The function should return the user document (either the one passed in or a
 newly-created object) with whatever modifications are desired. The returned
