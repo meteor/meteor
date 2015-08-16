@@ -137,7 +137,9 @@ Ap.callLoginMethod = function (options) {
   // will occur before the callback from the resume login call.)
   var onResultReceived = function (err, result) {
     if (err || !result || !result.token) {
-      self.connection.onReconnect = null;
+      // Leave onReconnect alone if there was an error, so that if the user was
+      // already logged in they will still get logged in on reconnect.
+      // See issue #4970.
     } else {
       self.connection.onReconnect = function () {
         reconnected = true;
