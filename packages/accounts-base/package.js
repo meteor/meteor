@@ -69,9 +69,11 @@ Package.onTest(function (api) {
     'test-helpers',
     'oauth-encryption',
     'underscore',
-    'ddp'
+    'ddp',
+    'accounts-password'
   ]);
 
   api.addFiles('accounts_tests.js', 'server');
   api.addFiles("accounts_url_tests.js", "client");
+  api.addFiles("accounts_reconnect_tests.js");
 });
