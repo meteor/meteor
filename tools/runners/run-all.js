@@ -21,7 +21,7 @@ class Runner {
     appPort,
     banner,
     disableOplog,
-    extraRunners,
+    cordovaRunner,
     mongoUrl,
     onFailure,
     oplogUrl,
@@ -60,8 +60,6 @@ class Runner {
       self.rootUrl = 'http://localhost:' + listenPort + '/';
     }
 
-    self.extraRunners = extraRunners ? extraRunners.slice(0) : [];
-
     self.proxy = new Proxy({
       listenPort,
       listenHost: proxyHost,
@@ -99,6 +97,7 @@ class Runner {
       rootUrl: self.rootUrl,
       proxy: self.proxy,
       noRestartBanner: self.quiet,
+      cordovaRunner: cordovaRunner
     });
 
     self.selenium = null;
@@ -114,11 +113,6 @@ class Runner {
   start() {
     const self = this;
 
-    // XXX: Include all runners, and merge parallel-launch patch
-    _.each(self.extraRunners, function (runner) {
-      runner && runner.prestart && runner.prestart();
-    });
-
     self.proxy.start();
 
     // print the banner only once we've successfully bound the port
@@ -132,17 +126,6 @@ class Runner {
     if (! self.stopped) {
       self.updater.start();
     }
-
-    _.forEach(self.extraRunners, function (extraRunner) {
-      if (! self.stopped) {
-        const title = extraRunner.title;
-        buildmessage.enterJob({ title: "starting " + title }, function () {
-          extraRunner.start();
-        });
-        if (! self.quiet && ! self.stopped)
-          runLog.log("Started " + title + ".",  { arrow: true });
-      }
-    });
 
     if (! self.stopped) {
       buildmessage.enterJob({ title: "starting your app" }, function () {
@@ -204,9 +187,6 @@ class Runner {
     self.proxy.stop();
     self.updater.stop();
     self.mongoRunner && self.mongoRunner.stop();
-    _.forEach(self.extraRunners, function (extraRunner) {
-      extraRunner.stop();
-    });
     self.appRunner.stop();
     self.selenium && self.selenium.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a

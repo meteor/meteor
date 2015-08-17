@@ -11,7 +11,6 @@ var catalog = require('../packaging/catalog/catalog.js');
 var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
 var updater = require('../packaging/updater.js');
-import { filterCordovaPackages } from '../cordova/plugins.js';
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
@@ -23,6 +22,8 @@ var updater = require('../packaging/updater.js');
 var packageMapModule = require('../packaging/package-map.js');
 var packageClient = require('../packaging/package-client.js');
 var tropohouse = require('../packaging/tropohouse.js');
+
+import * as cordova from '../cordova';
 
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if
@@ -1810,14 +1811,14 @@ main.registerCommand({
 
   var exitCode = 0;
 
-  var filteredPackages = filterCordovaPackages(options.args);
-  var pluginsToAdd = filteredPackages.plugins;
+  const { plugins: pluginsToAdd, packages: packagesToAdd } =
+    cordova.splitPluginsAndPackages(options.args);
 
   if (pluginsToAdd.length) {
-    var plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    var changed = false;
-    _.each(pluginsToAdd, function (pluginSpec) {
-      var parts = pluginSpec.split('@');
+    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+    let changed = false;
+    for (pluginSpec of pluginsToAdd) {
+      let parts = pluginSpec.split('@');
       if (parts.length !== 2) {
         Console.error(
           pluginSpec + ': exact version or tarball url is required');
@@ -1831,13 +1832,11 @@ main.registerCommand({
         changed = true;
         Console.info("added cordova plugin " + parts[0]);
       }
-    });
+    }
     changed && projectContext.cordovaPluginsFile.write(plugins);
   }
 
-  var args = filteredPackages.rest;
-
-  if (_.isEmpty(args))
+  if (_.isEmpty(packagesToAdd))
     return exitCode;
 
   // Messages that we should print if we make any changes, but that don't count
@@ -1849,7 +1848,7 @@ main.registerCommand({
   // them -- add should be an atomic operation regardless of the package
   // order.
   var messages = buildmessage.capture(function () {
-    _.each(args, function (packageReq) {
+    _.each(packagesToAdd, function (packageReq) {
       buildmessage.enterJob("adding package " + packageReq, function () {
         var constraint = utils.parsePackageConstraint(packageReq, {
           useBuildmessage: true
@@ -1993,16 +1992,16 @@ main.registerCommand({
   });
 
   // Special case on reserved package namespaces, such as 'cordova'
-  var filteredPackages = filterCordovaPackages(options.args);
-  var pluginsToRemove = filteredPackages.plugins;
+  const { plugins: pluginsToRemove, packages }  =
+    cordova.splitPluginsAndPackages(options.args);
 
-  var exitCode = 0;
+  let exitCode = 0;
 
   // Update the plugins list
   if (pluginsToRemove.length) {
-    var plugins = projectContext.cordovaPluginsFile.getPluginVersions();
-    var changed = false;
-    _.each(pluginsToRemove, function (pluginName) {
+    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+    let changed = false;
+    for (pluginName of pluginsToRemove) {
       if (/@/.test(pluginName)) {
         Console.error(pluginName + ": do not specify version constraints.");
         exitCode = 1;
@@ -2015,21 +2014,19 @@ main.registerCommand({
                       " is not in this project.");
         exitCode = 1;
       }
-    });
+    }
     changed && projectContext.cordovaPluginsFile.write(plugins);
   }
 
-  var args = filteredPackages.rest;
-
-  if (_.isEmpty(args))
+  if (_.isEmpty(packages))
     return exitCode;
 
   // For each package name specified, check if we already have it and warn the
   // user. Because removing each package is a completely atomic operation that
   // has no chance of failure, this is just a warning message, it doesn't cause
   // us to stop.
-  var packagesToRemove = [];
-  _.each(args, function (packageName) {
+  let packagesToRemove = [];
+  _.each(packages, function (packageName) {
     if (/@/.test(packageName)) {
       Console.error(packageName + ": do not specify version constraints.");
       exitCode = 1;

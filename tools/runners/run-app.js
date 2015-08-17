@@ -8,11 +8,12 @@ var bundler = require('../isobuild/bundler.js');
 var buildmessage = require('../utils/buildmessage.js');
 var runLog = require('./run-log.js');
 var stats = require('../meteor-services/stats.js');
-import { getCordovaDependenciesFromStar } from '../cordova/build.js';
 var Console = require('../console/console.js').Console;
 var catalog = require('../packaging/catalog/catalog.js');
 var Profile = require('../tool-env/profile.js').Profile;
 var release = require('../packaging/release.js');
+import * as cordova from '../cordova';
+import { CordovaBuilder } from '../cordova/builder.js';
 
 // Parse out s as if it were a bash command line.
 var bashParse = function (s) {
@@ -351,6 +352,7 @@ var AppRunner = function (options) {
   self.buildOptions = options.buildOptions;
   self.rootUrl = options.rootUrl;
   self.mobileServerUrl = options.mobileServerUrl;
+  self.cordovaRunner = options.cordovaRunner;
   self.settingsFile = options.settingsFile;
   self.debugPort = options.debugPort;
   self.proxy = options.proxy;
@@ -362,14 +364,6 @@ var AppRunner = function (options) {
     options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
   self.omitPackageMapDeltaDisplayOnFirstRun =
     options.omitPackageMapDeltaDisplayOnFirstRun;
-
-  // Keep track of the app's Cordova plugins and platforms. If the set
-  // of plugins or platforms changes from one run to the next, we just
-  // exit, because we don't yet have a way to, for example, get the new
-  // plugins to the mobile clients or stop a running client on a
-  // platform that has been removed.
-  self.cordovaPlugins = null;
-  self.cordovaPlatforms = null;
 
   self.fiber = null;
   self.startFuture = null;
@@ -449,7 +443,7 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (options) {
     var self = this;
     options = options || {};
-    var firstRun = options.firstRun;
+    const firstRun = options.firstRun;
 
     Console.enableProgressDisplay(true);
 
@@ -620,32 +614,6 @@ _.extend(AppRunner.prototype, {
       };
     }
 
-    firstRun = false;
-
-    var platforms = self.projectContext.platformList.getCordovaPlatforms();
-    platforms.sort();
-    if (self.cordovaPlatforms &&
-        ! _.isEqual(self.cordovaPlatforms, platforms)) {
-      return {
-        outcome: 'outdated-cordova-platforms'
-      };
-    }
-    // XXX This is racy --- we should get this from the pre-runner build, not
-    // from the first runner build.
-    self.cordovaPlatforms = platforms;
-
-    var plugins = getCordovaDependenciesFromStar(
-      bundleResult.starManifest);
-
-    if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
-      return {
-        outcome: 'outdated-cordova-plugins'
-      };
-    }
-    // XXX This is racy --- we should get this from the pre-runner build, not
-    // from the first runner build.
-    self.cordovaPlugins = plugins;
-
     var serverWatchSet = bundleResult.serverWatchSet;
     serverWatchSet.merge(settingsWatchSet);
 
@@ -657,6 +625,41 @@ _.extend(AppRunner.prototype, {
     if (! canRefreshClient) {
       // Restart server on client changes if we can't refresh the client.
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
+    }
+
+    const cordovaRunner = self.cordovaRunner;
+    if (cordovaRunner) {
+      if (firstRun) {
+        const plugins = cordova.pluginsFromStarManifest(bundleResult.starManifest);
+        const { settingsFile, mobileServerUrl } = self;
+        const messages = buildmessage.capture(() => {
+          cordovaRunner.prepareProject(bundlePath, plugins,
+            { settingsFile, mobileServerUrl });
+          cordovaRunner.printWarningsIfNeeded();
+          cordovaRunner.startRunTargets();
+        });
+
+        if (messages.hasMessages()) {
+          return {
+            outcome: 'bundle-fail',
+            errors: messages,
+            watchSet: combinedWatchSetForBundleResult(bundleResult)
+          };
+        }
+      } else {
+        // If the set of Cordova of platforms or plugins changes from one run
+        // to the next, we just exit, because we don't yet have a way to,
+        // for example, get the new plugins to the mobile clients or stop a
+        // running client on a platform that has been removed.
+
+        if (cordovaRunner.havePlatformsChanged()) {
+          return { outcome: 'outdated-cordova-platforms' };
+        }
+
+        if (cordovaRunner.havePluginsChanged()) {
+          return { outcome: 'outdated-cordova-plugins' };
+        }
+      }
     }
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
@@ -700,7 +703,7 @@ _.extend(AppRunner.prototype, {
     });
 
     // Empty self._beforeStartFutures and await its elements.
-    if (options.firstRun && self._beforeStartFuture) {
+    if (firstRun && self._beforeStartFuture) {
       var stopped = self._beforeStartFuture.wait();
       if (stopped) {
         return true;

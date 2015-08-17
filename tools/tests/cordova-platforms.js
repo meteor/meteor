@@ -13,7 +13,7 @@ selftest.define("add cordova platforms", ["cordova"], function () {
   run = s.run("run", "android");
   run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform android");
-  run.expectExit(2);
+  run.expectExit(1);
 
   run = s.run("install-sdk", "android");
   run.waitSecs(90); // Big downloads
@@ -26,12 +26,12 @@ selftest.define("add cordova platforms", ["cordova"], function () {
 
   run = s.run("remove-platform", "foo");
   run.matchErr("foo: platform is not");
-  run.expectExit(0);
+  run.expectExit(1);
 
   run = s.run("remove-platform", "android");
   run.match("removed");
   run = s.run("run", "android");
   run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform android");
-  run.expectExit(2);
+  run.expectExit(1);
 });

@@ -6,8 +6,8 @@ import { ProjectContext, PlatformList } from '../project-context.js';
 import buildmessage from '../utils/buildmessage.js';
 import files from '../fs/files.js';
 
-import { AVAILABLE_PLATFORMS, ensureCordovaPlatformsAreSynchronized, checkPlatformRequirements } from '../cordova/platforms.js';
-import { createCordovaProjectIfNecessary } from '../cordova/project.js';
+import * as cordova from '../cordova';
+import { CordovaProject } from '../cordova/project.js';
 
 function createProjectContext(appDir) {
   const projectContext = new ProjectContext({
@@ -42,17 +42,18 @@ main.registerCommand({
     for (platform of platformsToAdd) {
       if (_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is already added`);
-      } else if (!_.contains(AVAILABLE_PLATFORMS, platform)) {
+      } else if (!_.contains(cordova.AVAILABLE_PLATFORMS, platform)) {
         buildmessage.error(`${platform}: no such platform`);
       }
     }
 
     if (buildmessage.jobHasMessages()) return;
 
-    const cordovaProject = createCordovaProjectIfNecessary(projectContext);
+    const cordovaProject = new CordovaProject(projectContext);
 
     installedPlatforms = installedPlatforms.concat(platformsToAdd)
-    ensureCordovaPlatformsAreSynchronized(cordovaProject, installedPlatforms);
+    const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
+    cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
     if (buildmessage.jobHasMessages()) return;
 
@@ -60,7 +61,7 @@ main.registerCommand({
 
     for (platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
-      checkPlatformRequirements(cordovaProject, platform);
+      cordovaProject.checkPlatformRequirements(platform);
     }
   });
 
@@ -96,10 +97,11 @@ main.registerCommand({
 
     if (buildmessage.jobHasMessages()) return;
 
-    installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
+    const cordovaProject = new CordovaProject(projectContext);
 
-    const cordovaProject = createCordovaProjectIfNecessary(projectContext);
-    ensureCordovaPlatformsAreSynchronized(cordovaProject, installedPlatforms);
+    installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
+    const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
+    cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
     if (buildmessage.jobHasMessages()) return;
 

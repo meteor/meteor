@@ -20,7 +20,7 @@ var utils = exports;
 // undefined} or something like that.
 //
 // 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
-var parseUrl = function (str, defaults) {
+exports.parseUrl = function (str, defaults) {
   // XXX factor this out into a {type: host/port}?
 
   defaults = defaults || {};
@@ -52,7 +52,16 @@ var parseUrl = function (str, defaults) {
   };
 };
 
-var ipAddress = function () {
+// 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
+exports.formatUrl = function (url, defaults) {
+  let string = url.protocol + url.host;
+  if (url.port) {
+    string += `:${url.port}`;
+  }
+  return string;
+}
+
+exports.ipAddress = function () {
   let defaultRoute;
   // netroute is not available on Windows
   if (false) {
@@ -100,9 +109,6 @@ exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
 };
 
-exports.parseUrl = parseUrl;
-
-exports.ipAddress = ipAddress;
 
 exports.hasScheme = function (str) {
   return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);

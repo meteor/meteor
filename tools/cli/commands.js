@@ -13,13 +13,14 @@ var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
-import { platformsForTargets } from '../cordova/platforms.js';
-import { buildCordovaProject } from '../cordova/build.js';
-import { buildCordovaRunners } from '../cordova/run.js';
 var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
-
 var release = require('../packaging/release.js');
+
+import * as cordova from '../cordova';
+import { CordovaProject } from '../cordova/project.js';
+import { CordovaRunner } from '../cordova/runner.js';
+import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
 // The architecture used by MDG's hosted servers; it's the architecture used by
 // 'meteor deploy'.
@@ -72,78 +73,77 @@ var showInvalidArchMsg = function (arch) {
 // Utility functions to parse options in run/build/test-packages commands
 
 export function parseServerOptionsForRunCommand(options) {
-  const serverUrl = parsePortOption(options.port);
+  const parsedServerUrl = parsePortOption(options.port);
 
   // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
   const mobileServerOption = options['mobile-server'] || options['mobile-port'];
-  let mobileServerUrl;
+  let parsedMobileServerUrl;
   if (mobileServerOption) {
-    mobileServerUrl = parseMobileServerOption(mobileServerOption);
+    parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
   } else {
-    mobileServerUrl = mobileServerUrlForServerUrl(serverUrl,
+    parsedMobileServerUrl = detectMobileServerUrl(parsedServerUrl,
       isRunOnDeviceRequested(options));
   }
 
-  return { serverUrl, mobileServerUrl };
+  return { parsedServerUrl, parsedMobileServerUrl };
 }
 
 function parsePortOption(portOption) {
-  let serverUrl;
+  let parsedServerUrl;
   try {
-    serverUrl = utils.parseUrl(portOption);
-  } catch (err) {
+    parsedServerUrl = utils.parseUrl(portOption);
+  } catch (error) {
     if (options.verbose) {
       Console.rawError(
-        `Error while parsing --port option: ${err.stack} \n`);
+        `Error while parsing --port option: ${error.stack} \n`);
     } else {
-      Console.error(err.message);
+      Console.error(error.message);
     }
     throw new main.ExitWithCode(1);
   }
 
-  if (!serverUrl.port) {
+  if (!parsedServerUrl.port) {
     Console.error("--port must include a port.");
     throw new main.ExitWithCode(1);
   }
 
-  return serverUrl;
+  return parsedServerUrl;
 }
 
 function parseMobileServerOption(mobileServerOption,
   optionName = 'mobile-server') {
-  let mobileServerUrl;
+  let parsedMobileServerUrl;
   try {
-    mobileServerUrl = utils.parseUrl(mobileServerOption, {
-      protocol: 'http://'
-    });
-  } catch (err) {
+    parsedMobileServerUrl = utils.parseUrl(mobileServerOption, {
+      protocol: 'http://'});
+  } catch (error) {
     if (options.verbose) {
       Console.rawError(
-        `Error while parsing --${optionName} option: ${err.stack} \n`);
+        `Error while parsing --${optionName} option: ${error.stack} \n`);
     } else {
-      Console.error(err.message);
+      Console.error(error.message);
     }
     throw new main.ExitWithCode(1);
   }
 
-  if (!mobileServerUrl.host) {
-    Console.error(`--${optionName} must specify a hostname.`);
+  if (!parsedMobileServerUrl.host) {
+    Console.error(`--${optionName} must include a hostname.`);
     throw new main.ExitWithCode(1);
   }
 
-  return mobileServerUrl;
+  return parsedMobileServerUrl;
 }
 
-function mobileServerUrlForServerUrl(serverUrl, isRunOnDeviceRequested) {
+function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
   // If we are running on a device, use the auto-detected IP
   if (isRunOnDeviceRequested) {
     let myIp;
     try {
       myIp = utils.ipAddress();
-  } catch (err) {
+  } catch (error) {
     Console.error(
 `Error detecting IP address for mobile app to connect to:
-${err.message}
+${error.message}
 Please specify the address that the mobile app should connect
 to with --mobile-server.`);
     throw new main.ExitWithCode(1);
@@ -151,14 +151,14 @@ to with --mobile-server.`);
     return {
       protocol: 'http://',
       host: myIp,
-      port: serverUrl.port
+      port: parsedServerUrl.port
     };
   } else {
     // We are running a simulator, use localhost
     return {
       protocol: 'http://',
       host: 'localhost',
-      port: serverUrl.port
+      port: parsedServerUrl.port
     };
   }
 }
@@ -166,9 +166,26 @@ to with --mobile-server.`);
 // Is a run on a device requested?
 // XXX This shouldn't be hard-coded
 function isRunOnDeviceRequested(options) {
-  return !!_.intersection(options.args,
-    ['ios-device', 'android-device']).length;
+  return !_.isEmpty(_.intersection(options.args,
+    ['ios-device', 'android-device']));
 }
+
+function parseRunTargets(targets) {
+  return targets.map((target) => {
+    const targetParts = target.split('-');
+    const platform = targetParts[0];
+    const isDevice = targetParts[1] === 'device';
+
+    if (platform == 'ios') {
+      return new iOSRunTarget(isDevice);
+    } else if (platform == 'android') {
+      return new AndroidRunTarget(isDevice);
+    } else {
+      Console.error(`Unknown run target: ${target}`);
+      throw new main.ExitWithCode(1);
+    }
+  });
+};
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -289,7 +306,7 @@ main.registerCommand(_.extend(
 function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
-  const { serverUrl, mobileServerUrl } =
+  const { parsedServerUrl, parsedMobileServerUrl } =
     parseServerOptionsForRunCommand(options);
 
   var projectContext = new projectContextModule.ProjectContext({
@@ -310,47 +327,6 @@ function doRunCommand(options) {
                   release.current.getDisplayName(),
                   projectContext.releaseFile.displayReleaseName);
       console.log();
-    }
-  }
-
-  var runners = [];
-  // If additional args were specified, then also start a mobile build.
-  // XXX We should defer this work until after the proxy is listening!
-  //     eg, move it into a CordovaBuildRunner or something.
-
-  if (options.args.length) {
-    let cordovaProject;
-    // will asynchronously start mobile emulators/devices
-    try {
-      Console.debug('Will compile mobile builds');
-      // Run the constraint solver and build local packages.
-      // XXX This code should be part of the main runner loop so that we can
-      //     wait on a fix, just like in the non-Cordova case!  (That would also
-      //     move the build after the proxy listen.)
-      main.captureAndExit("=> Errors while initializing project:", function () {
-        projectContext.prepareProjectForBuild();
-      });
-      projectContext.packageMapDelta.displayOnConsole();
-
-      let targets = options.args;
-      var platforms = platformsForTargets(targets);
-      cordovaProject = buildCordovaProject(projectContext, platforms, _.extend({
-        debug: !options.production
-      }, options, {
-        protocol: mobileServerUrl.protocol,
-        host: mobileServerUrl.host,
-        port: mobileServerUrl.port
-      }));
-
-      runners = runners.concat(
-        buildCordovaRunners(projectContext, cordovaProject, targets, options));
-    } catch (err) {
-      if (err instanceof main.ExitWithCode) {
-        throw err;
-      } else {
-        Console.printError(err, 'Error while running for mobile platforms');
-        return 1;
-      }
     }
   }
 
@@ -379,22 +355,30 @@ function doRunCommand(options) {
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
     options.once = true;
-    const serverUrlString = "http://" + (serverUrl.host || "localhost") +
-          ":" + serverUrl.port;
+    const serverUrlForVelocity =
+    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
     const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlString);
+    velocity.runVelocity(serverUrlForVelocity);
   }
 
-  let mobileServerUrlString = mobileServerUrl.protocol + mobileServerUrl.host;
-  if (mobileServerUrl.port) {
-    mobileServerUrlString += `:${mobileServerUrl.port}`;
+  // Additional args are interpreted as run targets
+  const runTargets = parseRunTargets(options.args);
+
+  let cordovaRunner;
+
+  if (!_.isEmpty(runTargets)) {
+    main.captureAndExit('', 'initializing Cordova project', () => {
+      const cordovaProject = new CordovaProject(projectContext);
+      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+      cordovaRunner.checkPlatformsForRunTargets();
+    });
   }
 
   var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,
-    proxyPort: serverUrl.port,
-    proxyHost: serverUrl.host,
+    proxyPort: parsedServerUrl.port,
+    proxyHost: parsedServerUrl.host,
     appPort: appPort,
     appHost: appHost,
     debugPort: options['debug-port'],
@@ -406,9 +390,9 @@ function doRunCommand(options) {
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
-    mobileServerUrl: mobileServerUrlString,
+    mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
     once: options.once,
-    extraRunners: runners
+    cordovaRunner: cordovaRunner
   });
 }
 
@@ -833,41 +817,34 @@ var buildCommand = function (options) {
     options.settings = options['mobile-settings'];
   }
 
-  var mobilePlatforms = [];
-  if (! options._serverOnly) {
-    mobilePlatforms = projectContext.platformList.getCordovaPlatforms();
-  }
+  const appName = files.pathBasename(options.appDir);
 
-  if (!_.isEmpty(mobilePlatforms) && !options._serverOnly) {
-    // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-    const mobileServerOption = options.server || options["mobile-port"];
-    if (!mobileServerOption) {
-      // For Cordova builds, require '--server'.
-      // XXX better error message?
-      Console.error(
-        "Supply the server hostname and port in the --server option " +
-          "for mobile app builds.");
-      return 1;
+  let cordovaPlatforms;
+  let parsedMobileServerUrl;
+  if (!options._serverOnly) {
+    cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+
+    if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
+      cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
+      Console.warn("Currently, it is only possible to build iOS apps on an OS X system.");
     }
-    const mobileServerUrl = parseMobileServerOption(mobileServerOption,
-      'server');
 
-    var cordovaSettings = {};
-
-    try {
-      cordovaProject =
-        buildCordovaProject(projectContext, mobilePlatforms, _.extend({},
-          options, {
-            protocol: mobileServerUrl.protocol,
-            host: mobileServerUrl.host,
-            port: mobileServerUrl.port
-        }));
-    } catch (err) {
-      if (err instanceof main.ExitWithCode)
-         throw err;
-      Console.printError(err, "Error while building for mobile platforms");
-      return 1;
+    if (!_.isEmpty(cordovaPlatforms)) {
+      // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
+      const mobileServerOption = options.server || options["mobile-port"];
+      if (!mobileServerOption) {
+        // For Cordova builds, require '--server'.
+        // XXX better error message?
+        Console.error(
+          "Supply the server hostname and port in the --server option " +
+            "for mobile app builds.");
+        return 1;
+      }
+      parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
+        'server');
     }
+  } else {
+    cordovaPlatforms = [];
   }
 
   var buildDir = projectContext.getProjectLocalDirectory('build_tar');
@@ -875,7 +852,7 @@ var buildCommand = function (options) {
 
   // Unless we're just making a tarball, warn if people try to build inside the
   // app directory.
-  if (options.directory || ! _.isEmpty(mobilePlatforms)) {
+  if (options.directory || ! _.isEmpty(cordovaPlatforms)) {
     var relative = files.pathRelative(options.appDir, outputPath);
     // We would like the output path to be outside the app directory, which
     // means the first step to getting there is going up a level.
@@ -913,7 +890,7 @@ var buildCommand = function (options) {
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
       serverArch: bundleArch,
-      buildMode: options.debug ? 'development' : 'production'
+      buildMode: options.debug ? 'development' : 'production',
     }
   });
   if (bundleResult.errors) {
@@ -926,54 +903,72 @@ var buildCommand = function (options) {
     files.mkdir_p(outputPath);
 
   if (! options.directory) {
-    try {
-      var outputTar = options._serverOnly ? outputPath :
-        files.pathJoin(outputPath, cordovaProject.appName + '.tar.gz');
+    main.captureAndExit('', 'creating server tarball', () => {
+      try {
+        var outputTar = options._serverOnly ? outputPath :
+          files.pathJoin(outputPath, appName + '.tar.gz');
 
-      files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
-    } catch (err) {
-      Console.error("Errors during tarball creation:");
-      Console.error(err.message);
-      files.rm_recursive(buildDir);
-      return 1;
-    }
+        files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
+      } catch (err) {
+        buildmessage.exception(err);
+        files.rm_recursive(buildDir);
+      }
+    });
   }
 
-  // Copy over the Cordova builds AFTER we bundle so that they are not included
-  // in the main bundle.
-  !options._serverOnly && _.each(mobilePlatforms, function (platformName) {
-    var buildPath = files.pathJoin(
-      projectContext.getProjectLocalDirectory('cordova-build'),
-      'platforms', platformName);
-    var platformPath = files.pathJoin(outputPath, platformName);
+  if (!_.isEmpty(cordovaPlatforms)) {
+    let cordovaProject;
 
-    if (platformName === 'ios') {
-      if (process.platform !== 'darwin') return;
-      files.cp_r(buildPath, files.pathJoin(platformPath, 'project'));
-      files.writeFile(
-        files.pathJoin(platformPath, 'README'),
-        "This is an auto-generated XCode project for your iOS application.\n\n" +
-        "Instructions for publishing your iOS app to App Store can be found at:\n" +
-          "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
-        "utf8");
-    } else if (platformName === 'android') {
-      files.cp_r(buildPath, files.pathJoin(platformPath, 'project'));
-      var apkPath = findApkPath(files.pathJoin(buildPath, 'build'), options.debug);
-      files.copyFile(apkPath, files.pathJoin(platformPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
-      files.writeFile(
-        files.pathJoin(platformPath, 'README'),
-        "This is an auto-generated Gradle project for your Android application.\n\n" +
-        "Instructions for publishing your Android app to Play Store can be found at:\n" +
-          "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
-        "utf8");
-    }
-  });
+    main.captureAndExit('', () => {
+      buildmessage.enterJob({ title: "preparing Cordova project"}, () => {
+        cordovaProject = new CordovaProject(projectContext, appName);
+
+        const plugins = cordova.pluginsFromStarManifest(
+          bundleResult.starManifest);
+
+        cordovaProject.prepare(bundlePath, plugins,
+          { settingsFile: options.settings,
+            mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+      });
+
+      for (platform of cordovaPlatforms) {
+        buildmessage.enterJob({ title: `building Cordova project for \
+${cordova.displayNameForPlatform(platform)}`}, () => {
+          let buildOptions = [];
+          if (!options.debug) buildOptions.push('--release');
+          cordovaProject.build([platform], buildOptions);
+
+          const buildPath = files.pathJoin(
+            projectContext.getProjectLocalDirectory('cordova-build'),
+            'platforms', platform);
+          const platformOutputPath = files.pathJoin(outputPath, platform);
+
+          if (platform === 'ios') {
+            files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+            files.writeFile(
+              files.pathJoin(platformOutputPath, 'README'),
+              "This is an auto-generated XCode project for your iOS application.\n\n" +
+              "Instructions for publishing your iOS app to App Store can be found at:\n" +
+                "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
+              "utf8");
+          } else if (platform === 'android') {
+            files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+            const apkPath = files.pathJoin(buildPath, 'build', 'outputs', 'apk',
+              options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
+            files.copyFile(apkPath, files.pathJoin(platformOutputPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+            files.writeFile(
+              files.pathJoin(platformOutputPath, 'README'),
+              "This is an auto-generated Gradle project for your Android application.\n\n" +
+              "Instructions for publishing your Android app to Play Store can be found at:\n" +
+                "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
+              "utf8");
+          }
+        });
+      }
+    });
+  }
 
   files.rm_recursive(buildDir);
-};
-
-var findApkPath = function (dirPath, debug) {
-  return files.pathJoin(dirPath, 'outputs', 'apk', debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1434,7 +1429,7 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
-  const { serverUrl, mobileServerUrl } =
+  const { parsedServerUrl, parsedMobileServerUrl } =
     parseServerOptionsForRunCommand(options);
 
   // Find any packages mentioned by a path instead of a package name. We will
@@ -1505,59 +1500,32 @@ main.registerCommand({
   // runner, once the proxy is listening. The changes we made were persisted to
   // disk, so projectContext.reset won't make us forget anything.
 
-  var mobileOptions = ['ios', 'ios-device', 'android', 'android-device'];
-  var mobileTargets = [];
-  _.each(mobileOptions, function (option) {
-    if (options[option])
-      mobileTargets.push(option);
-  });
+  const runTargets = parseRunTargets(_.intersection(
+    Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
 
-  if (! _.isEmpty(mobileTargets)) {
-    var runners = [];
+  let cordovaRunner;
 
-    var platforms = platformsForTargets(mobileTargets);
-    projectContext.platformList.write(platforms);
-
-    // Run the constraint solver and build local packages.
-    // XXX This code should be part of the main runner loop so that we can
-    //     wait on a fix, just like in the non-Cordova case!  (That would also
-    //     move the build after the proxy listen.)
-    main.captureAndExit("=> Errors while initializing project:", function () {
-      projectContext.prepareProjectForBuild();
+  if (!_.isEmpty(runTargets)) {
+    main.captureAndExit('', 'initializing Cordova project', () => {
+      const cordovaProject = new CordovaProject(projectContext);
+      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+      projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
+      cordovaRunner.checkPlatformsForRunTargets();
     });
-    // No need to display the PackageMapDelta here, since it would include all
-    // of the packages!
-
-    try {
-      const cordovaProject = buildCordovaProject(projectContext, platforms,
-        _.extend({}, options, {
-          debug: ! options.production
-        }, {
-          protocol: mobileServerUrl.protocol,
-          host: mobileServerUrl.host,
-          port: mobileServerUrl.port
-        }));
-      runners = runners.concat(buildCordovaRunners(projectContext,
-        cordovaProject, mobileTargets, options));
-    } catch (err) {
-      if (err instanceof main.ExitWithCode) {
-        throw err;
-      } else {
-        Console.printError(err, 'Error while testing for mobile platforms');
-        return 1;
-      }
-    }
-    options.extraRunners = runners;
   }
+
+  options.cordovaRunner = cordovaRunner;
 
   if (options.velocity) {
-    const serverUrlString = "http://" + (parsedUrl.host || "localhost") +
-          ":" + parsedUrl.port;
+    const serverUrlForVelocity =
+    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
     const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlString);
+    velocity.runVelocity(serverUrlForVelocity);
   }
 
-  return runTestAppForPackages(projectContext, options);
+  return runTestAppForPackages(projectContext, _.extend(
+    options,
+    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
 });
 
 // Returns the "local-test:*" package names for the given package names (or for
@@ -1650,11 +1618,12 @@ var runTestAppForPackages = function (projectContext, options) {
       rootUrl: process.env.ROOT_URL,
       mongoUrl: process.env.MONGO_URL,
       oplogUrl: process.env.MONGO_OPLOG_URL,
+      mobileServerUrl: options.mobileServerUrl,
       once: options.once,
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],
-      extraRunners: options.extraRunners,
+      cordovaRunner: options.cordovaRunner,
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
       // changes and reload, though, it's fine to display them.
