@@ -27,6 +27,9 @@ export class iOSRunTarget extends CordovaRunTarget {
     // ios-deploy is super buggy, so we just open Xcode and let the user
     // start the app themselves.
     if (this.isDevice) {
+      // Make sure we prepare the platform, which is normally done as part of
+      // running
+      this.cordovaProject.prepareForPlatform(this.platform);
       openXcodeProject(files.pathJoin(cordovaProject.projectRoot,
         'platforms', 'ios', `${cordovaProject.appName}.xcodeproj`));
     } else {

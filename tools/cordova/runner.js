@@ -70,18 +70,7 @@ export class CordovaRunner {
   }
 
   prepareProject(bundlePath, plugins, options) {
-    this.cordovaProject.prepare(bundlePath, plugins, options);
-  }
-
-  build() {
-    buildmessage.assertInCapture();
-
-    buildmessage.enterJob(
-      { title: `building Cordova project for platforms: \
-${this.platformsForRunTargets}` },
-      () => {
-      this.cordovaProject.build(this.platformsForRunTargets, this.options);
-    });
+    this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
   }
 
   startRunTargets() {

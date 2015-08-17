@@ -24,7 +24,7 @@ function loadDependenciesFromCordovaPackageIfNeeded() {
   events.on('results', logIfVerbose);
   events.on('log', logIfVerbose);
   events.on('warn', log);
-  events.on('verbose', logIfVerbose);
+  // events.on('verbose', logIfVerbose);
 }
 
 function logIfVerbose(...args) {
@@ -53,44 +53,54 @@ export class CordovaProject {
     this.createIfNeeded();
   }
 
-  // Creating
-
   createIfNeeded() {
-    buildmessage.assertInCapture();
-
     if (!files.exists(this.projectRoot)) {
-      buildmessage.enterJob({ title: "creating Cordova project" }, () => {
-        files.mkdir_p(files.pathDirname(this.projectRoot));
-        // Cordova app identifiers have to look like Java namespaces.
-        // Change weird characters (especially hyphens) into underscores.
-        const appId = 'com.meteor.userapps.' + this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
+      files.mkdir_p(files.pathDirname(this.projectRoot));
+      // Cordova app identifiers have to look like Java namespaces.
+      // Change weird characters (especially hyphens) into underscores.
+      const appId = 'com.meteor.userapps.' + this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
 
-        // Don't set cwd to project root in runCommands because it doesn't exist yet
-        this.runCommands(async () => {
-          await cordova.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
-        }, this.defaultEnvWithPathsAdded(), null);
-      });
+      Console.debug('Creating Cordova project');
+
+      // Don't set cwd to project root in runCommands because it doesn't exist yet
+      this.runCommands(async () => {
+        await cordova.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
+      }, undefined, null);
     }
   }
 
   // Preparing
 
-  prepare(bundlePath, plugins, options = {}) {
+  prepareFromAppBundle(bundlePath, plugins, options = {}) {
     assert(bundlePath);
     assert(plugins);
 
-    Console.debug('Preparing Cordova project');
+    Console.debug('Preparing Cordova project from app bundle');
 
     const builder = new CordovaBuilder(this, bundlePath, plugins, options);
     builder.start();
   }
 
-  // Building
+  prepareForPlatform(platform) {
+    assert(platform);
 
-  build(platforms = this.installedPlatforms, options = [], extraPaths) {
-    const env = this.defaultEnvWithPathsAdded(...extraPaths);
     const commandOptions = _.extend(this.defaultOptions,
-      { platforms: platforms, options: options });
+      { platforms: [platform] });
+
+    Console.debug('Preparing Cordova project', commandOptions);
+
+    this.runCommands(async () => {
+      await cordova.raw.prepare(commandOptions);
+    });
+  }
+
+  // Building (includes prepare)
+
+  buildForPlatform(platform, options = [], extraPaths) {
+    assert(platform);
+
+    const commandOptions = _.extend(this.defaultOptions,
+      { platforms: [platform], options: options });
 
     Console.debug('Building Cordova project', commandOptions);
 
@@ -99,7 +109,7 @@ export class CordovaProject {
     });
   }
 
-  // Running
+  // Running (incudes build)
 
   async run(platform, isDevice, options = [], extraPaths) {
     options.push(isDevice ? '--device' : '--emulator');
@@ -200,6 +210,8 @@ before running or building for ${displayNameForPlatform(platform)}:`);
   // Ensures that the Cordova platforms are synchronized with the app-level
   // platforms.
   ensurePlatformsAreSynchronized(platforms = this.cordovaPlatformsInApp) {
+    buildmessage.assertInCapture();
+
     const installedPlatforms = this.installedPlatforms;
 
     for (platform of platforms) {

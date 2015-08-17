@@ -367,7 +367,7 @@ function doRunCommand(options) {
   let cordovaRunner;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'initializing Cordova project', () => {
+    main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext);
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
@@ -920,49 +920,51 @@ var buildCommand = function (options) {
     let cordovaProject;
 
     main.captureAndExit('', () => {
-      buildmessage.enterJob({ title: "preparing Cordova project"}, () => {
+      buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
         cordovaProject = new CordovaProject(projectContext, appName);
 
         const plugins = cordova.pluginsFromStarManifest(
           bundleResult.starManifest);
 
-        cordovaProject.prepare(bundlePath, plugins,
+        cordovaProject.prepareFromAppBundle(bundlePath, plugins,
           { settingsFile: options.settings,
             mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
       });
 
       for (platform of cordovaPlatforms) {
-        buildmessage.enterJob({ title: `building Cordova project for \
-${cordova.displayNameForPlatform(platform)}`}, () => {
-          let buildOptions = [];
-          if (!options.debug) buildOptions.push('--release');
-          cordovaProject.build([platform], buildOptions);
+        buildmessage.enterJob(
+          { title: `building Cordova project for \
+${cordova.displayNameForPlatform(platform)}` },
+          () => {
+            let buildOptions = [];
+            if (!options.debug) buildOptions.push('--release');
+            cordovaProject.buildForPlatform(platform, buildOptions);
 
-          const buildPath = files.pathJoin(
-            projectContext.getProjectLocalDirectory('cordova-build'),
-            'platforms', platform);
-          const platformOutputPath = files.pathJoin(outputPath, platform);
+            const buildPath = files.pathJoin(
+              projectContext.getProjectLocalDirectory('cordova-build'),
+              'platforms', platform);
+            const platformOutputPath = files.pathJoin(outputPath, platform);
 
-          if (platform === 'ios') {
-            files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
-            files.writeFile(
-              files.pathJoin(platformOutputPath, 'README'),
-              "This is an auto-generated XCode project for your iOS application.\n\n" +
-              "Instructions for publishing your iOS app to App Store can be found at:\n" +
-                "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
-              "utf8");
-          } else if (platform === 'android') {
-            files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
-            const apkPath = files.pathJoin(buildPath, 'build', 'outputs', 'apk',
-              options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
-            files.copyFile(apkPath, files.pathJoin(platformOutputPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
-            files.writeFile(
-              files.pathJoin(platformOutputPath, 'README'),
-              "This is an auto-generated Gradle project for your Android application.\n\n" +
-              "Instructions for publishing your Android app to Play Store can be found at:\n" +
-                "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
-              "utf8");
-          }
+            if (platform === 'ios') {
+              files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+              files.writeFile(
+                files.pathJoin(platformOutputPath, 'README'),
+                "This is an auto-generated XCode project for your iOS application.\n\n" +
+                "Instructions for publishing your iOS app to App Store can be found at:\n" +
+                  "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
+                "utf8");
+            } else if (platform === 'android') {
+              files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+              const apkPath = files.pathJoin(buildPath, 'build', 'outputs', 'apk',
+                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
+              files.copyFile(apkPath, files.pathJoin(platformOutputPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+              files.writeFile(
+                files.pathJoin(platformOutputPath, 'README'),
+                "This is an auto-generated Gradle project for your Android application.\n\n" +
+                "Instructions for publishing your Android app to Play Store can be found at:\n" +
+                  "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
+                "utf8");
+            }
         });
       }
     });
@@ -1506,7 +1508,7 @@ main.registerCommand({
   let cordovaRunner;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'initializing Cordova project', () => {
+    main.captureAndExit('', 'preparing Cordova project', () => {
       const cordovaProject = new CordovaProject(projectContext);
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
