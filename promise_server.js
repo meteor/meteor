@@ -91,12 +91,20 @@ function await(promise) {
     "Cannot await without a Fiber"
   );
 
+  var run = fiber.run;
+  var throwInto = fiber.throwInto;
+
+  if (process.domain) {
+    run = process.domain.bind(run);
+    throwInto = process.domain.bind(throwInto);
+  }
+
   // The overridden es6PromiseThen function is adequate here because these
   // two callbacks do not need to run in a Fiber.
   es6PromiseThen.call(promise, function (result) {
-    process.nextTick(fiber.run.bind(fiber, result));
+    process.nextTick(run.bind(fiber, result));
   }, function (error) {
-    process.nextTick(fiber.throwInto.bind(fiber, error));
+    process.nextTick(throwInto.bind(fiber, error));
   });
 
   return Fiber.yield();

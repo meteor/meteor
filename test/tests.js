@@ -208,8 +208,8 @@ describe("dynamic environment", function () {
   }));
 });
 
-describe("exceptions", function () {
-  xit("should be thrown", function (done) {
+describe("uncaught exceptions", function () {
+  it("should be emitted via process.domain", function (done) {
     var domain = require("domain").create();
     var expected = new Error("expected");
     var fiber = new Fiber(function () {
@@ -223,7 +223,6 @@ describe("exceptions", function () {
     }
 
     domain.on("error", onError);
-    process.on("uncaughtException", onError);
 
     domain.run(function () {
       fiber.run();
