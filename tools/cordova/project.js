@@ -133,7 +133,7 @@ export class CordovaProject {
       return false;
     }
 
-    const installedPlatforms = this.installedPlatforms;
+    const installedPlatforms = this.listInstalledPlatforms();
     const inProject = _.contains(installedPlatforms, platform);
     if (!inProject) {
       Console.warn(`Please add the ${displayNameForPlatform(platform)} \
@@ -181,11 +181,11 @@ before running or building for ${displayNameForPlatform(platform)}:`);
     return satisfied;
   }
 
-  get installedPlatforms() {
+  listInstalledPlatforms() {
     return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
   }
 
-  updatePlatforms(platforms = this.installedPlatforms) {
+  updatePlatforms(platforms = this.listInstalledPlatforms()) {
     this.runCommands(async () => {
       await cordova.raw.platform('update', platforms, this.defaultOptions);
     });
@@ -212,7 +212,7 @@ before running or building for ${displayNameForPlatform(platform)}:`);
   ensurePlatformsAreSynchronized(platforms = this.cordovaPlatformsInApp) {
     buildmessage.assertInCapture();
 
-    const installedPlatforms = this.installedPlatforms;
+    const installedPlatforms = this.listInstalledPlatforms();
 
     for (platform of platforms) {
       if (_.contains(installedPlatforms, platform)) continue;
