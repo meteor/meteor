@@ -16,7 +16,6 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-github`, `accounts-google`, `accounts-meetup`,
 `accounts-twitter`, or `accounts-weibo`.
 
-
 {{> autoApiBox "Meteor.user"}}
 
 Retrieves the user record for the current user from
@@ -117,7 +116,6 @@ Users are by default allowed to specify their own `profile` field with
 their user document:
 
     Meteor.users.deny({update: function () { return true; }});
-
 
 {{> autoApiBox "Meteor.loggingIn"}}
 
@@ -239,7 +237,6 @@ the externally-accessible URL, not the URL inside your proxy).
 
 {{> autoApiBox "loggingIn"}}
 
-{{> autoApiBox "Accounts.config"}}
 {{> autoApiBox "Accounts.ui.config"}}
 
 Example:
@@ -255,7 +252,64 @@ Example:
       passwordSignupFields: 'USERNAME_AND_OPTIONAL_EMAIL'
     });
 
-{{> autoApiBox "Accounts.validateNewUser"}}
+<h2 id="advanced_accounts_api"><span>Accounts (multi-server)</span></h2>
+
+The `accounts-base` package exports two constructors, called
+`AccountsClient` and `AccountsServer`, which are used to create the
+`Accounts` object that is available on the client and the server,
+respectively.
+
+This predefined `Accounts` object (along with similar convenience methods
+of `Meteor`, such as [`Meteor.logout`](#meteor_logout)) is sufficient to
+implement most accounts-related logic in Meteor apps. Nevertheless, these
+two constructors can be instantiated more than once, to create multiple
+independent connections between different accounts servers and their
+clients, in more complicated authentication situations.
+
+{{> autoApiBox "AccountsClient" }}
+
+At most one of `options.connection` and `options.ddpUrl` should be
+provided in any instantiation of `AccountsClient`. If neither is provided,
+`Meteor.connection` will be used as the `.connection` property of the
+`AccountsClient` instance.
+
+Note that `AccountsClient` is currently available only on the client, due
+to its use of browser APIs such as `window.localStorage`. In principle,
+though, it might make sense to establish a client connection from one
+server to another remote accounts server. Please [let us
+know](https://github.com/meteor/meteor/wiki/Contributing-to-Meteor#feature-requests)
+if you find yourself needing this server-to-server functionality.
+
+{{> autoApiBox "AccountsServer" }}
+
+The `AccountsClient` and `AccountsServer` classes share a common
+superclass, `AccountsCommon`. Methods defined on
+`AccountsCommon.prototype` will be available on both the client and the
+server, via the predefined `Accounts` object (most common) or any custom
+`accountsClientOrServer` object created using the `AccountsClient` or
+`AccountsServer` constructors (less common).
+
+Here are a few of those methods:
+
+{{> autoApiBox "AccountsCommon#userId" }}
+
+{{> autoApiBox "AccountsCommon#user" }}
+
+{{> autoApiBox "AccountsCommon#config"}}
+
+These methods are defined on `AccountsClient.prototype`, and are thus
+available only on the client:
+
+{{> autoApiBox "AccountsClient#loggingIn"}}
+
+{{> autoApiBox "AccountsClient#logout"}}
+
+{{> autoApiBox "AccountsClient#logoutOtherClients"}}
+
+These methods are defined on `AccountsServer.prototype`, and are thus
+available only on the server:
+
+{{> autoApiBox "AccountsServer#validateNewUser"}}
 
 This can be called multiple times. If any of the functions return `false` or
 throw an error, the new user creation is aborted. To set a specific error
@@ -283,7 +337,7 @@ the [`Accounts.validateLoginAttempt`](#accounts_validateloginattempt)
 callbacks. If these callbacks succeed but those fail, the user will still be
 created but the connection will not be logged in as that user.
 
-{{> autoApiBox "Accounts.onCreateUser"}}
+{{> autoApiBox "AccountsServer#onCreateUser"}}
 
 Use this when you need to do more than simply accept or reject new user
 creation. With this function you can programatically control the
@@ -321,7 +375,7 @@ Example:
     });
 
 
-{{> autoApiBox "Accounts.validateLoginAttempt"}}
+{{> autoApiBox "AccountsServer#validateLoginAttempt"}}
 
 Call `validateLoginAttempt` with a callback to be called on login
 attempts.  It returns an object with a single method, `stop`.  Calling
@@ -387,12 +441,12 @@ to fail, and should start with
       return false;
 
 
-{{> autoApiBox "Accounts.onLogin"}}
+{{> autoApiBox "AccountsCommon#onLogin"}}
 
-See description of [Accounts.onLoginFailure](#accounts_onloginfailure)
+See description of [AccountsCommon#onLoginFailure](#accounts_onloginfailure)
 for details.
 
-{{> autoApiBox "Accounts.onLoginFailure"}}
+{{> autoApiBox "AccountsCommon#onLoginFailure"}}
 
 Either the `onLogin` or the `onLoginFailure` callbacks will be called
 for each login attempt. The `onLogin` callbacks are called after the
