@@ -1,10 +1,10 @@
 {
   "dependencies": {
     "meteor-babel": {
-      "version": "0.5.4",
+      "version": "0.5.7",
       "dependencies": {
         "babel-core": {
-          "version": "5.8.20",
+          "version": "5.8.22",
           "dependencies": {
             "babel-plugin-constant-folding": {
               "version": "1.0.1"
@@ -57,7 +57,7 @@
               "version": "1.1.6"
             },
             "babylon": {
-              "version": "5.8.20"
+              "version": "5.8.22"
             },
             "bluebird": {
               "version": "2.9.34"
@@ -110,7 +110,7 @@
                   "version": "4.0.1"
                 },
                 "minimist": {
-                  "version": "1.1.2"
+                  "version": "1.1.3"
                 }
               }
             },
@@ -146,7 +146,7 @@
                   }
                 },
                 "is-nan": {
-                  "version": "1.1.0",
+                  "version": "1.2.1",
                   "dependencies": {
                     "define-properties": {
                       "version": "1.1.1",
@@ -178,7 +178,7 @@
               }
             },
             "lodash": {
-              "version": "3.10.0"
+              "version": "3.10.1"
             },
             "minimatch": {
               "version": "2.0.10",
@@ -347,13 +347,13 @@
               "version": "1.2.0",
               "dependencies": {
                 "recast": {
-                  "version": "0.10.26",
+                  "version": "0.10.29",
                   "dependencies": {
                     "esprima-fb": {
-                      "version": "15001.1.0-dev-harmony-fb"
+                      "version": "15001.1001.0-dev-harmony-fb"
                     },
                     "ast-types": {
-                      "version": "0.8.7"
+                      "version": "0.8.9"
                     }
                   }
                 },
@@ -364,7 +364,7 @@
                   "version": "0.2.0"
                 },
                 "regjsparser": {
-                  "version": "0.1.4",
+                  "version": "0.1.5",
                   "dependencies": {
                     "jsesc": {
                       "version": "0.5.0"
@@ -429,9 +429,6 @@
         },
         "convert-source-map": {
           "version": "1.1.1"
-        },
-        "meteor-async-await": {
-          "version": "0.1.1"
         }
       }
     }
