@@ -1406,6 +1406,10 @@ Fiber(function () {
     } else if (e instanceof main.ExitWithCode) {
       process.exit(e.code);
     } else {
+      Console.rawError(
+        "(main.js) Exception:",
+        e && e.stack || e
+      );
       throw e;
     }
   }
