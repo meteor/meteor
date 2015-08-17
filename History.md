@@ -207,9 +207,9 @@ message for more details.
 
 * Allow adding local Cordova plugins with `file://` URIs. #4229
 
-* Automatically set default values for `'android-versionCode'` and
-  `'ios-CFBundleVersion'` options of Cordova project. (The feature is helpful to
-  use with tooling such as TestFlight.) #4048
+* Allow specifying a `buildNumber` in `App.info`, which is used to set the
+  `android-versionCode` and `ios-CFBundleVersion` in the `config.xml` of the
+  Cordova project. #4048
 
 ### Other bug fixes and improvements
 

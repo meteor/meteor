@@ -88,11 +88,10 @@ export class CordovaBuilder {
   }
 
   initalizeDefaults() {
-    const defaultBuildNumber = (Date.now() % 1000000).toString();
     this.metadata = {
       id: 'com.id' + this.projectContext.appIdentifier,
       version: '0.0.1',
-      buildNumber: defaultBuildNumber,
+      buildNumber: undefined,
       name: this.cordovaProject.appName,
       description: 'New Meteor Mobile App',
       author: 'A Meteor Developer',
