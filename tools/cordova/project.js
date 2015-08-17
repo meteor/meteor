@@ -19,7 +19,7 @@ function loadDependenciesFromCordovaPackageIfNeeded() {
   if (typeof Cordova !== 'undefined') return;
 
   ({ Cordova } = isopackets.load('cordova-support').cordova);
-  ({ cordova, events, CordovaError, superspawn, cordova_util, PluginInfoProvider } = Cordova);
+  ({ cordova, events, CordovaError, superspawn, cordova_util } = Cordova);
 
   events.on('results', logIfVerbose);
   events.on('log', logIfVerbose);
@@ -230,61 +230,66 @@ before running or building for ${displayNameForPlatform(platform)}:`);
 
   // Plugins
 
-  get installedPlugins() {
-    const pluginInfoProvider = new PluginInfoProvider();
-    const plugins = pluginInfoProvider.getAllWithinSearchPath(
-      files.convertToOSPath(this.pluginsDir));
-    return _.object(plugins.map(plugin => {
-      return [ plugin.id, plugin.version ];
+  listInstalledPlugins() {
+    const pluginsMetadata = JSON.parse(files.readFile(
+      files.pathJoin(this.pluginsDir, 'fetch.json'), 'utf8'));
+    const installedPlugins = _.object(_.map(pluginsMetadata, (metadata, name) => {
+      const source = metadata.source;
+      let version;
+      if (source.type === 'registry') {
+        version = source.id.split('@')[1];
+      } else if (source.type === 'git') {
+        version = `${source.url}#${source.ref}`;
+      } else if (source.type === 'local') {
+        version = source.path;
+      }
+      return [name, version];
     }));
+    return installedPlugins;
+  }
+
+  convertToGitUrl(url) {
+    // Matches GitHub tarball URLs, like:
+    // https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2
+    const match =
+      url.match(/^https?:\/\/github.com\/(.+?)\/(.+?)\/tarball\/([0-9a-f]{40})/);
+    if (match) {
+        const [,organization,repository,sha] = match;
+      // Convert them to a Git URL
+      return `https://github.com/${organization}/${repository}.git#${sha}`;
+    } else if (/\.git/.test(url)) {
+      return url;
+    } else {
+      throw new Error(`Meteor no longer supports installing Cordova plugins \
+from tarball URLs. Cordova requires a Git URL to install from.`);
+    }
+  }
+
+  targetForPlugin(name, version) {
+    if (!version) {
+      return name;
+    }
+
+    if (utils.isUrlWithSha(version)) {
+      return this.convertToGitUrl(version);
+    } else if (utils.isUrlWithFileScheme(version)) {
+      // Strip file:// and compute the relative path from plugin to corodova-build
+      return files.convertToOSPath(this.resolveCordovaLocalPluginPath(version));
+    } else {
+      return `${name}@${version}`;
+    }
   }
 
   addPlugin(name, version, config) {
-    let pluginTarget;
-    if (version && utils.isUrlWithSha(version)) {
-      pluginTarget = files.convertToOSPath(this.fetchCordovaPluginFromShaUrl(version, name));
-    } else if (version && utils.isUrlWithFileScheme(version)) {
-      // Strip file:// and compute the relative path from plugin to corodova-build
-      pluginTarget = files.convertToOSPath(this.getCordovaLocalPluginPath(version));
-    } else {
-      pluginTarget = version ? `${name}@${version}` : name;
-    }
+    Console.debug('Adding Cordova plugin', name);
 
-    Console.debug('Adding a Cordova plugin', pluginTarget);
+    const target = this.targetForPlugin(name, version);
 
-    let additionalArgs = [];
-    _.each(config || {}, (value, variable) => {
-      additionalArgs.push('--variable');
-      additionalArgs.push(variable + '=' + value);
-    });
-    pluginTarget.concat(additionalArgs)
+    // TODO Pass config attributes to Cordova command
 
     this.runCommands(async () => {
-      await cordova.raw.plugin('add', pluginTarget, this.defaultOptions);
+      await cordova.raw.plugin('add', target, this.defaultOptions);
     });
-
-    if (utils.isUrlWithSha(version)) {
-      Console.debug('Adding plugin to the tarball plugins lock', name);
-      let lock = this.getTarballPluginsLock(this.projectRoot);
-      lock[name] = version;
-      this.writeTarballPluginsLock(this.projectRoot, lock);
-    }
-  }
-
-  removePlugin(plugin, isFromTarballUrl = false) {
-    Console.debug('Removing a Cordova plugin', plugin);
-
-    this.runCommands(async () => {
-      await cordova.raw.plugin('rm', plugin, this.defaultOptions);
-    });
-
-    if (isFromTarballUrl) {
-      Console.debug('Removing plugin from the tarball plugins lock', plugin);
-      // also remove from tarball-url-based plugins lock
-      let lock = getTarballPluginsLock(this.projectRoot);
-      delete lock[name];
-      writeTarballPluginsLock(this.projectRoot, lock);
-    }
   }
 
   removePlugins(pluginsToRemove) {
@@ -293,84 +298,13 @@ before running or building for ${displayNameForPlatform(platform)}:`);
     if (_.isEmpty(pluginsToRemove)) return;
 
     this.runCommands(async () => {
-      await cordova.raw.plugin('rm', Object.keys(pluginsToRemove), this.defaultOptions);
+      await cordova.raw.plugin('rm', pluginsToRemove, this.defaultOptions);
     });
-  }
-
-  getTarballPluginsLock() {
-    Console.debug('Will check for cordova-tarball-plugins.json' +
-               ' for tarball-url-based plugins previously installed.');
-
-    var tarballPluginsLock;
-    try {
-      var text = files.readFile(files.convertToOSPath(this.tarballPluginsLockPath), 'utf8');
-      tarballPluginsLock = JSON.parse(text);
-
-      Console.debug('The tarball plugins lock:', tarballPluginsLock);
-    } catch (err) {
-      if (err.code !== 'ENOENT')
-        throw err;
-
-      Console.debug('The tarball plugins file was not found.');
-      tarballPluginsLock = {};
-    }
-
-    return tarballPluginsLock;
-  }
-
-  writeTarballPluginsLock(tarballPluginsLock) {
-    Console.debug('Will write cordova-tarball-plugins.json');
-
-    var tarballPluginsLockPath =
-      files.pathJoin(this.projectRoot, 'cordova-tarball-plugins.json');
-
-    files.writeFile(
-      tarballPluginsLockPath,
-      JSON.stringify(tarballPluginsLock),
-      'utf8'
-    );
-  }
-
-  fetchCordovaPluginFromShaUrl(urlWithSha, pluginName) {
-    Console.debug('Fetching a Cordova plugin tarball from url:', urlWithSha);
-    var pluginPath = files.pathJoin(this.localPluginsDir, pluginName);
-
-    var pluginTarball = buildmessage.enterJob("downloading Cordova plugin", () => {
-      return httpHelpers.getUrl({
-        url: urlWithSha,
-        encoding: null,
-        // Needed to follow GitHub tarball redirect
-        followAllRedirects: true,
-        progress: buildmessage.getCurrentProgressTracker()
-      });
-    });
-
-    Console.debug('Create a folder for the plugin', pluginPath);
-    files.rm_recursive(pluginPath);
-    files.extractTarGz(pluginTarball, pluginPath);
-
-    var actualPluginName = '';
-    try {
-      var xmlPath = files.pathJoin(pluginPath, 'plugin.xml');
-      var xmlContent = files.readFile(xmlPath, 'utf8');
-
-      actualPluginName = xmlContent.match(/<plugin[^>]+>/)[0].match(/\sid="([^"]+)"/)[1];
-    } catch (err) {
-      throw new Error(
-        pluginName + ': Failed to parse the plugin from tarball');
-    }
-
-    if (actualPluginName !== pluginName)
-      throw new Error(pluginName +
-                      ': The plugin from tarball has a different name - ' +
-                      actualPluginName);
-
-    return pluginPath;
   }
 
   // Strips the file:// from the path and if a relative path was used, it translates it to a relative path to the
   // cordova-build directory instead of meteor project directory.
-  getCordovaLocalPluginPath(pluginPath) {
+  resolveCordovaLocalPluginPath(pluginPath) {
     pluginPath = pluginPath.substr("file://".length);
     if (utils.isPathRelative(pluginPath)) {
       return path.relative(
@@ -384,36 +318,37 @@ before running or building for ${displayNameForPlatform(platform)}:`);
   // Ensures that the Cordova plugins are synchronized with the app-level
   // plugins.
   ensurePluginsAreSynchronized(plugins, pluginsConfiguration = {}) {
+    assert(plugins);
+
     buildmessage.assertInCapture();
 
-    Console.debug('Ensuring Cordova plugins are synchronized', plugins,
-      pluginsConfiguration);
-
-    var installedPlugins = this.installedPlugins;
+    const installedPlugins = this.listInstalledPlugins();
 
     // Due to the dependency structure of Cordova plugins, it is impossible to
     // upgrade the version on an individual Cordova plugin. Instead, whenever a
     // new Cordova plugin is added or removed, or its version is changed,
     // we just reinstall all of the plugins.
-    var shouldReinstallPlugins = false;
+    let shouldReinstallAllPlugins = false;
 
     // Iterate through all of the plugins and find if any of them have a new
     // version. Additionally check if we have plugins installed from local path.
-    var pluginsFromLocalPath = {};
+    const pluginsFromLocalPath = {};
     _.each(plugins, (version, name) => {
       // Check if plugin is installed from local path
-      let pluginFromLocalPath = utils.isUrlWithFileScheme(version);
-      if (pluginFromLocalPath) {
-        pluginsFromLocalPath[name] = version;
-      }
+      const isPluginFromLocalPath = utils.isUrlWithFileScheme(version);
 
-      // XXX there is a hack here that never updates a package if you are
-      // trying to install it from a URL, because we can't determine if
-      // it's the right version or not
-      if (!_.has(installedPlugins, name) ||
-        (installedPlugins[name] !== version && !pluginFromLocalPath)) {
-        // The version of the plugin has changed, or we do not contain a plugin.
-        shouldReinstallPlugins = true;
+      if (isPluginFromLocalPath) {
+        pluginsFromLocalPath[name] = version;
+      } else {
+        if (utils.isUrlWithSha(version)) {
+          version = this.convertToGitUrl(version);
+        }
+
+        if (!_.has(installedPlugins, name) ||
+          installedPlugins[name] !== version) {
+          // We do not have the plugin installed or the version has changed.
+          shouldReinstallAllPlugins = true;
+        }
       }
     });
 
@@ -425,32 +360,34 @@ before running or building for ${displayNameForPlatform(platform)}:`);
     // set of plugins.
     _.each(installedPlugins, (version, name) => {
       if (!_.has(plugins, name)) {
-        shouldReinstallPlugins = true;
+        shouldReinstallAllPlugins = true;
       }
     });
 
-    if (shouldReinstallPlugins || !_.isEmpty(pluginsFromLocalPath)) {
+    if (shouldReinstallAllPlugins || !_.isEmpty(pluginsFromLocalPath)) {
       buildmessage.enterJob({ title: "installing Cordova plugins"}, () => {
-        installedPlugins = this.installedPlugins;
-
-        if (shouldReinstallPlugins) {
-          this.removePlugins(installedPlugins);
+        let pluginsToRemove;
+        if (shouldReinstallAllPlugins) {
+          pluginsToRemove = Object.keys(installedPlugins);
         } else {
-          this.removePlugins(pluginsFromLocalPath);
+          // Only try to remove plugins that are currently installed
+          pluginsToRemove = _.intersection(
+            Object.keys(pluginsFromLocalPath),
+            Object.keys(installedPlugins));
         }
 
-        // Now install necessary plugins.
-        var pluginsInstalled, pluginsToInstall;
+        this.removePlugins(pluginsToRemove);
 
-        if (shouldReinstallPlugins) {
-          pluginsInstalled = 0;
+        // Now install necessary plugins.
+
+        if (shouldReinstallAllPlugins) {
           pluginsToInstall = plugins;
         } else {
-          pluginsInstalled = _.size(installedPlugins);
           pluginsToInstall = pluginsFromLocalPath;
         }
 
-        var pluginsCount = _.size(plugins);
+        const pluginsCount = _.size(pluginsToInstall);
+        let pluginsInstalled = 0;
 
         buildmessage.reportProgress({ current: 0, end: pluginsCount });
         _.each(pluginsToInstall, (version, name) => {
