@@ -12,7 +12,7 @@ var catalogRemote = require('../packaging/catalog/catalog-remote.js');
 var isopack = require('../isobuild/isopack.js');
 var updater = require('../packaging/updater.js');
 import { filterCordovaPackages } from '../cordova/plugins.js';
-var Console = require('../console.js').Console;
+var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
 var catalogUtils = require('../packaging/catalog/catalog-utils.js');
