@@ -34,6 +34,7 @@ class Runner {
     rootUrl,
     selenium,
     seleniumBrowser,
+    errorAppConfig,
     ...optionsForAppRunner
   }) {
     const self = this;
@@ -69,7 +70,11 @@ class Runner {
       listenHost: proxyHost,
       proxyToPort: self.appPort,
       proxyToHost: appHost,
-      onFailure
+      proxyToErrorPort: errorAppConfig ? errorAppConfig.appPort : '',
+      proxyToErrorHost: errorAppConfig ? errorAppConfig.appHost : '',
+      runErrorApp: errorAppConfig ? errorAppConfig.runErrorApp : false,
+      onFailure,
+      runner: self
     });
 
     self.httpProxy = null;
@@ -109,6 +114,21 @@ class Runner {
       proxy: self.proxy,
       noRestartBanner: self.quiet,
     });
+
+    self.errorAppConfig = errorAppConfig;
+
+    if (errorAppConfig && errorAppConfig.runErrorApp) {
+      self.errorAppRunner = new AppRunner({
+        projectContext: errorAppConfig.projectContext,
+        port: errorAppConfig.appPort,
+        listenHost: appHost,
+        mongoUrl: '',
+        oplogUrl: '',
+        rootUrl: self.rootUrl,
+        proxy: self.proxy,
+        noRestartBanner: self.quiet
+      });
+    }
 
     self.selenium = null;
     if (selenium) {
@@ -163,6 +183,10 @@ class Runner {
 
     if (! self.stopped) {
       buildmessage.enterJob({ title: "starting your app" }, function () {
+        if (self.errorAppConfig && self.errorAppConfig.runErrorApp){
+          self.errorAppRunner.start();
+          // runLog.log('Started error app.', {arrow: true});
+        }
         self.appRunner.start();
       });
       if (! self.quiet && ! self.stopped)
@@ -226,6 +250,8 @@ class Runner {
       extraRunner.stop();
     });
     self.appRunner.stop();
+    if (self.errorAppConfig && self.errorAppConfig.runErrorApp)
+      self.errorAppRunner.stop();
     self.selenium && self.selenium.stop();
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?

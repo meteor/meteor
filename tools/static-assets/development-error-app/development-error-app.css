@@ -1,0 +1,127 @@
+/* CSS declarations go here */
+
+body {
+  font-family: sans-serif;
+  background-color: white;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+
+  padding: 0;
+  margin: 0;
+
+  font-size: 14px;
+}
+
+.container {
+  margin: 0 auto;
+  min-height: 100%;
+  background: white;
+}
+
+header {
+  background: #d2edf4;
+  padding: 20px 15px 15px 15px;
+  position: relative;
+}
+
+h1 {
+  font-size: 1.5em;
+  margin: 0;
+  margin-bottom: 10px;
+  display: inline-block;
+  margin-right: 1em;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  background: white;
+}
+
+li {
+  position: relative;
+  list-style: none;
+  padding: 15px;
+  border-bottom: #eee solid 1px;
+  overflow-x: scroll;
+}
+
+li .text {
+  margin-left: 10px;
+}
+
+#title, #status {
+  display: inline;
+}
+
+li .errorTime {
+  float: left;
+}
+
+
+@media (max-width: 600px) {
+  li {
+    padding: 12px 15px;
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(1turn); }
+}
+
+.progress {
+  position: relative;
+  display: inline-block;
+  width: 5em;
+  height: 5em;
+  margin: 0 .5em;
+  font-size: 12px;
+  text-indent: 999em;
+  overflow: hidden;
+  animation: spin 1s infinite steps(8);
+}
+
+.small.progress {
+  font-size: 3px;
+}
+
+.large.progress {
+  font-size: 24px;
+}
+
+.progress:before,
+.progress:after,
+.progress > div:before,
+.progress > div:after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 2.25em; /* (container width - part width)/2  */
+  width: .5em;
+  height: 1.5em;
+  border-radius: .2em;
+  background: #548ba6;
+  box-shadow: 0 3.5em #eee; /* container height - part height */
+  transform-origin: 50% 2.5em; /* container height / 2 */
+}
+
+.progress:before {
+  background: #6d9cb3;
+}
+
+.progress:after {
+  transform: rotate(-45deg);
+  background: #3c7a9a;
+}
+
+.progress > div:before {
+  transform: rotate(-90deg);
+  background: #246a8d;
+}
+
+.progress > div:after {
+  transform: rotate(-135deg);
+  background: #85acc0;
+}

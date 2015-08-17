@@ -896,7 +896,7 @@ _.extend(AppRunner.prototype, {
         }
 
         crashCount ++;
-        if (crashCount < 3)
+        if (crashCount < 1)
           continue;
 
         if (self.watchForChanges) {
@@ -945,6 +945,12 @@ _.extend(AppRunner.prototype, {
       self.startFuture['return']();
 
     self.fiber = null;
+  },
+
+  restart: function() {
+    var self = this;
+    self.stop();
+    self.start();
   }
 });
 

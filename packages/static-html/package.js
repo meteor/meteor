@@ -1,5 +1,6 @@
 Package.describe({
   version: '1.0.0',
+  version: '0.0.2-plugins.0',
   // Brief, one-line summary of the package.
   summary: 'Define static page content in .html files',
   git: 'https://github.com/meteor/meteor',

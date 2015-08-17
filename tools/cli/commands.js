@@ -213,7 +213,9 @@ var runCommandOptions = {
     'no-lint': { type: Boolean },
     // Allow the version solver to make breaking changes to the versions
     // of top-level dependencies.
-    'allow-incompatible-update': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean },
+    // Whether we should run the errors app shown when an app is crashing
+    'disable-crash-app': {type: Boolean}
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -385,6 +387,34 @@ function doRunCommand (options) {
     mobileServer = mobileServer + ":" + parsedMobileServer.port;
   }
 
+  const errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
+    '../static-assets', 'development-error-app');
+
+  const errorAppContext = new projectContextModule.ProjectContext({
+      projectDir: errorAppPath,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: !options['no-lint']
+  });
+
+  main.captureAndExit("=> Errors while initializing error app:", function () {
+    // We're just reading metadata here --- we'll wait to do the full build
+    // preparation until after we've started listening on the proxy, etc.
+    errorAppContext.readProjectMetadata();
+  });
+
+  main.captureAndExit("=> Errors while initializing error app:", function () {
+        errorAppContext.prepareProjectForBuild();
+  });
+  errorAppContext.packageMapDelta.displayOnConsole();
+
+  const errorAppConfig = {
+    appPort: require('../utils/utils.js').randomPort(),
+    appHost: appHost,
+    projectContext: errorAppContext ,
+    runErrorApp: ! options['disable-crash-app'] && ! options.production
+  };
+
+
   var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,
@@ -404,7 +434,8 @@ function doRunCommand (options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: mobileServer,
     once: options.once,
-    extraRunners: runners
+    extraRunners: runners,
+    errorAppConfig: errorAppConfig
   });
 }
 

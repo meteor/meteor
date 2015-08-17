@@ -55,7 +55,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     // require('../utils/utils.js').sleepMs(1000*10000)
 
     // Run it and see the banner for the current version.
-    run = s.run("--port", "21000");
+    run = s.run("--port", "21000", "--disable-crash-app");
     run.waitSecs(30);
     run.match("New hotness v2 being downloaded");
     run.match("running at");
@@ -63,7 +63,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     // We won't see the banner a second time, or any other message about
     // updating since we are at the latest recommended release.
-    run = s.run("--port", "21000");
+    run = s.run("--port", "21000", "--disable-crash-app");
     run.waitSecs(5);
     run.match("running at");
     run.forbidAll("hotness");
@@ -86,7 +86,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     run.expectExit(0);
 
     // We do see a boring prompt though.
-    run = s.run("--port", "22000");
+    run = s.run("--port", "22000", "--disable-crash-app");
     run.waitSecs(5);
     run.match("v2");
     run.forbidAll("hotness");
@@ -95,7 +95,7 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     // .. unless we explicitly forced this release. Then, no prompt.
     s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@somethingelse');
-    run = s.run("--release", "v1", "--port", "23000");
+    run = s.run("--release", "v1", "--port", "23000", "--disable-crash-app");
     run.waitSecs(5);
     run.match("running at");
     run.forbidAll("hotness");
@@ -132,7 +132,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     // have that version).
     recommend(s, "v3");
     s.write('.meteor/release', DEFAULT_RELEASE_TRACK + '@v2');
-    run = s.run("--port", "26000");
+    run = s.run("--port", "26000", "--disable-crash-app");
     run.match("Meteor v3 is available");
     run.match("meteor update");
     run.stop();

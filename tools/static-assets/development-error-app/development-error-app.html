@@ -1,0 +1,37 @@
+<head>
+  <title>Error Log</title>
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1 id="title">Errors Log</h1>
+        {{#if refreshing}}
+          <div class="small progress">
+            <div>
+            "Loading..."
+            </div>
+          </div>
+          <p id="status"> App is currently refreshing </p>
+        {{/if}}
+    </header>
+      {{> restart}}
+    <ul>
+      {{#each errors}}
+        {{> err}}
+      {{/each}}
+    </ul>
+  </div>
+</body>
+
+<template name="err">
+  <li>
+    <pre class="errorTime">{{time}}</pre>
+    <br />
+    <pre class="text">{{text}}</pre>
+  </li>
+</template>
+
+<template name="restart">
+  <button class='refresh-button'>Refresh</button>
+</template>
