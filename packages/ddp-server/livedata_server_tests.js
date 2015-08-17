@@ -156,3 +156,59 @@ Tinytest.addAsync(
     );
   }
 );
+
+Meteor.methods({
+  testResolvedPromise(arg) {
+    const invocation1 = DDP._CurrentInvocation.get();
+    return new Promise.resolve(arg).then(result => {
+      const invocation2 = DDP._CurrentInvocation.get();
+      // This equality holds because Promise callbacks are bound to the
+      // dynamic environment where .then was called.
+      if (invocation1 !== invocation2) {
+        throw new Meteor.Error("invocation mismatch");
+      }
+      return result + " after waiting";
+    });
+  },
+
+  testRejectedPromise(arg) {
+    return new Promise.resolve(arg).then(result => {
+      throw new Meteor.Error(result + " raised Meteor.Error");
+    });
+  }
+});
+
+Tinytest.addAsync(
+  "livedata server - waiting for Promise",
+  (test, onComplete) => makeTestConnection(test, (clientConn, serverConn) => {
+    test.equal(
+      clientConn.call("testResolvedPromise", "clientConn.call"),
+      "clientConn.call after waiting"
+    );
+
+    const clientCallPromise = new Promise(
+      (resolve, reject) => clientConn.call(
+        "testResolvedPromise",
+        "clientConn.call with callback",
+        (error, result) => error ? reject(error) : resolve(result)
+      )
+    );
+
+    const clientCallRejectedPromise = new Promise(resolve => {
+      clientConn.call(
+        "testRejectedPromise",
+        "with callback",
+        (error, result) => resolve(error.message)
+      );
+    });
+
+    Promise.all([
+      clientCallPromise,
+      clientCallRejectedPromise,
+    ]).then(results => test.equal(results, [
+      "clientConn.call with callback after waiting",
+      "[with callback raised Meteor.Error]",
+    ]), error => test.fail(error))
+      .then(onComplete);
+  })
+);

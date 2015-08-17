@@ -675,7 +675,7 @@ _.extend(Session.prototype, {
         randomSeed: randomSeed
       });
 
-      try {
+      const promise = new Promise((resolve, reject) => {
         // XXX It'd be better if we could hook into method handlers better but
         // for now, we need to check if the ddp-rate-limiter exists since we
         // have a weak requirement for the ddp-rate-limiter package to be added
@@ -692,34 +692,51 @@ _.extend(Session.prototype, {
           DDPRateLimiter._increment(rateLimiterInput);
           var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
           if (!rateLimitResult.allowed) {
-            throw new Meteor.Error(
+            reject(new Meteor.Error(
               "too-many-requests",
               DDPRateLimiter.getErrorMessage(rateLimitResult),
-              {timeToReset: rateLimitResult.timeToReset});
+              {timeToReset: rateLimitResult.timeToReset}
+            ));
+            return;
           }
         }
 
-        var result = DDPServer._CurrentWriteFence.withValue(fence, function () {
-          return DDP._CurrentInvocation.withValue(invocation, function () {
-            return maybeAuditArgumentChecks(
-              handler, invocation, msg.params, "call to '" + msg.method + "'");
-          });
-        });
-      } catch (e) {
-        var exception = e;
+        resolve(DDPServer._CurrentWriteFence.withValue(
+          fence,
+          () => DDP._CurrentInvocation.withValue(
+            invocation,
+            () => maybeAuditArgumentChecks(
+              handler, invocation, msg.params,
+              "call to '" + msg.method + "'"
+            )
+          )
+        ));
+      });
+
+      function finish() {
+        fence.arm();
+        unblock();
       }
 
-      fence.arm(); // we're done adding writes to the fence
-      unblock(); // unblock, if the method hasn't done it already
+      const payload = {
+        msg: "result",
+        id: msg.id
+      };
 
-      exception = wrapInternalException(
-        exception, "while invoking method '" + msg.method + "'");
-
-      // send response and add to cache
-      var payload =
-        exception ? {error: exception} : (result !== undefined ?
-                                          {result: result} : {});
-      self.send(_.extend({msg: 'result', id: msg.id}, payload));
+      promise.then((result) => {
+        finish();
+        if (result !== undefined) {
+          payload.result = result;
+        }
+        self.send(payload);
+      }, (exception) => {
+        finish();
+        payload.error = wrapInternalException(
+          exception,
+          `while invoking method '${msg.method}'`
+        );
+        self.send(payload);
+      });
     }
   },
 
