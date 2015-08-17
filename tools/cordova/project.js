@@ -102,19 +102,16 @@ export class CordovaProject {
   // Running
 
   async run(platform, isDevice, options = [], extraPaths) {
+    options.push(isDevice ? '--device' : '--emulator');
+
     const env = this.defaultEnvWithPathsAdded(...extraPaths);
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform], options: options });
 
     Console.debug('Running Cordova project', commandOptions);
 
-
     this.runCommands(async () => {
-      if (isDevice) {
-        await cordova.raw.run(commandOptions);
-      } else {
-        await cordova.raw.emulate(commandOptions);
-      }
+      await cordova.raw.run(commandOptions);
     }, env);
   }
 
