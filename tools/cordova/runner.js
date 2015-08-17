@@ -91,7 +91,9 @@ ${this.platformsForRunTargets}` },
       buildmessage.enterJob(
         { title: `starting ${runTarget.title}` },
         () => {
-          // Do not await the returned promise
+          // Do not await the returned promise so run targets can start
+          // in parallel
+          // XXX Find a way to have concurrent progress displays
           runTarget.start(this.cordovaProject);
 
           if (!buildmessage.jobHasMessages()) {
