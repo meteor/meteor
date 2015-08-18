@@ -68,40 +68,71 @@ exports.httpRedirect = "HTTP/1.1 307 Temporary Redirect";
 //
 // When we deploy to Galaxy, we need to specify a Mongo URL and wait a little
 // longer for the app to spin up.
-exports.createAndDeployApp =  function (sandbox, settings, deployOpts) {
-  settings = settings || {};
-  deployOpts = deployOpts || {};
+//
+// Options:
+//   - settings: app settings, NOT including mandatory galaxy settings
+//     such as MONGO_URL
+//   - appName: app name to use; will be generated randomly if not
+//     provided
+//   - templateApp: the name of the template app to use. defaults to
+//    'simple-app'
+//   - useOldSettings: don't make a new settings object this app! This is a
+//     redeploy, so reuse the settings that Galaxy has saved.
+//
+exports.createAndDeployApp =  function (sandbox, options) {
+  options = options || {};
+  var settings = options.settings;
+  var appName = options.appName || testUtils.randomAppName();
 
-  // Generate an app name manually. We need this for Galaxy settings.
-  var appName = testUtils.randomAppName();
+  // The simple app contains standart app packages and some small bits of code
+  // so that we can check that it is being served correctly. Let's use that as
+  // our default.
+  var templateApp = options.templateApp || 'simple-app';
 
   // Create the new galaxy settings.
   var galaxySettings = {};
   galaxySettings[appName] = {
     env: {
+      // XXX: Right now, all the galaxy test apps use the same mongo. This is
+      // actually kind of super awkward... but generating and destroying new DBs
+      // seems like it is introducing a bit too much complexity at this stage.
       "MONGO_URL": process.env.APP_MONGO
     }
   };
+  if (! options.useOldSettings) {
+    // Add all the settings together and write them out. Let user settings
+    // override ours.
+    var allSettings = _.extend(galaxySettings, settings);
+    var settingsFile = "settings-" + appName + ".json";
+    sandbox.write(settingsFile, JSON.stringify(allSettings));
 
-  // Add all the settings together and write them out.
-  var allSettings = _.extend(galaxySettings, settings);
-  var settingsFile = "settings-" + appName + ".json";
-  sandbox.write(settingsFile, JSON.stringify(allSettings));
-
-  // Add the settings & app name to deploy options
-  var galaxyDeploySettings = _.extend({
-    settingsFile: "../" + settingsFile,
-    appName: appName,
-    // The simple app contains standart app packages and some small bits of code
-    // so that we can check that it is being served correctly.
-    templateApp: 'simple-app'
-  }, deployOpts);
-
-  testUtils.createAndDeployApp(sandbox, galaxyDeploySettings);
+    testUtils.createAndDeployApp(sandbox, {
+      settingsFile: "../" + settingsFile,
+      appName: appName,
+      templateApp: templateApp
+    });
+  } else {
+    testUtils.createAndDeployApp(sandbox, {
+      appName: appName,
+      templateApp: templateApp
+    });
+  }
 
   // Galaxy might take a while to spin up an app.
-  utils.sleepMs(9000);
+  utils.sleepMs(20000);
 
   return appName + "." + process.env.DEPLOY_HOSTNAME;
 
+};
+
+// Cleanup the app by deleting it from Galaxy.
+//
+// XXX: We should also clean out its Mongo, but we don't, since, currently, that
+// doesn't apply.
+exports.cleanUpApp = function (sandbox, appName) {
+  testUtils.cleanUpApp(sandbox, appName);
+
+  // Galaxy might take a while to spin up an app, though it should be fairly
+  // quick.
+  utils.sleepMs(10000);
 };
