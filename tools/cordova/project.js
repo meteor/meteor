@@ -47,8 +47,6 @@ export class CordovaProject {
     this.appName = appName;
 
     this.pluginsDir = files.pathJoin(this.projectRoot, 'plugins');
-    this.localPluginsDir = files.pathJoin(this.projectRoot, 'local-plugins');
-    this.tarballPluginsLockPath = files.pathJoin(this.projectRoot, 'cordova-tarball-plugins.json');
 
     this.createIfNeeded();
   }
