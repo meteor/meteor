@@ -1383,7 +1383,7 @@ wrapFsFunc("rename", [0, 1]);
 if (process.platform === "win32") {
   var rename = files.rename;
 
-  files.rename = function (from, to) {
+  function rename_win_old_(from, to) {
     // retries are necessarily only on Windows, because the rename call can fail
     // with EBUSY, which means the file is "busy"
     var maxTries = 10;
@@ -1400,6 +1400,65 @@ if (process.platform === "win32") {
     if (! success) {
       files.cp_r(from, to);
       files.rm_recursive(from);
+    }
+  }
+
+  function sleep(ms) {
+    var future = new Future;
+    setTimeout(function() {
+      future.return();
+    }, ms);
+    return future;
+  }
+
+  function rename_win_new_(from, to, options) {
+    var retries = 0;
+    var firsterr = null;
+
+    while(retries <= options.maxBusyTries) {
+      try {
+        rename(from, to);
+
+        return;
+
+      } catch (err) {
+        if(err.code !== 'EPERM')
+          throw err;
+
+        if(!firsterr)
+          firsterr = err;
+      }
+    
+      if (retries >= options.cprThreshold) 
+        try {
+          files.cp_r(from, to);
+          files.rm_recursive(from);
+
+          return;
+
+        } catch (err) {
+          if(err.code !== 'EPERM')
+            throw err;
+        }
+
+
+      retries++;
+      var time = retries * 100;
+      
+      // try again, with the same exact callback as this one.
+      sleep(time).wait();
+    }
+    
+    throw firsterr;
+  }
+
+  files.rename = function (from, to) {
+    if (Fiber.current && Fiber.yield && ! Fiber.yield.disallowed) {
+      var f = rename_win_new_.future();
+      var fut = f(from, to, { maxBusyTries: 4, cprThreshold: 3 }, 0);
+      fut.wait();
+    } else {
+      rename_win_old_(from, to);
     }
   };
 }
