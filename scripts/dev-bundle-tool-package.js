@@ -64,7 +64,7 @@ var packageJson = {
     // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
     // We can't download the tarball from GitHub because the package.json is
     // in a subdirectory
-    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-2cdb558d908c2771903e99708fffcb410151cb00.tar.gz",
+    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-b0760f0b45c77a39057dc3940f86252c3ef4c393.tar.gz",
     "ios-sim": "4.1.1",
   }
 };

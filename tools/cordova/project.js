@@ -476,7 +476,10 @@ from Cordova project`, async () => {
       process.chdir(files.convertToOSPath(cwd));
     }
 
-    superspawn.setDefaultEnv(env);
+    const oldEnv = process.env;
+    if (env) {
+      process.env = env;
+    }
 
     try {
       return Promise.await(asyncFunc());
@@ -500,6 +503,9 @@ running again with the --verbose option to help diagnose the issue.)"),
     } finally {
       if (oldCwd) {
         process.chdir(oldCwd);
+      }
+      if (oldEnv) {
+        process.env = oldEnv;
       }
     }
   }
