@@ -646,8 +646,10 @@ _.extend(AppRunner.prototype, {
           };
         }
 
-        cordovaRunner.printWarningsIfNeeded();
-        cordovaRunner.startRunTargets();
+        buildmessage.capture(() => {
+          cordovaRunner.printWarningsIfNeeded();
+          cordovaRunner.startRunTargets();
+        });
       } else {
         // If the set of Cordova of platforms or plugins changes from one run
         // to the next, we just exit, because we don't yet have a way to,
