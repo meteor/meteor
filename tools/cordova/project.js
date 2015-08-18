@@ -71,10 +71,25 @@ export class CordovaProject {
     assert(bundlePath);
     assert(plugins);
 
+    buildmessage.assertInCapture();
+
     Console.debug('Preparing Cordova project from app bundle');
 
-    const builder = new CordovaBuilder(this, bundlePath, plugins, options);
-    builder.start();
+    buildmessage.enterJob({ title: `preparing Cordova project` }, () => {
+      const builder = new CordovaBuilder(this, bundlePath, options);
+
+      builder.processControlFile();
+
+      if (buildmessage.jobHasMessages()) return;
+
+      builder.writeConfigXmlAndCopyResources();
+      builder.copyWWW();
+      builder.copyBuildOverride();
+
+      this.ensurePlatformsAreSynchronized();
+      this.ensurePluginsAreSynchronized(plugins,
+        builder.pluginsConfiguration);
+    })
   }
 
   prepareForPlatform(platform) {

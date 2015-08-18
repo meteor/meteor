@@ -53,40 +53,21 @@ const launchAndroidSizes = {
 };
 
 export class CordovaBuilder {
-  constructor(cordovaProject, bundlePath, plugins, options) {
+  constructor(cordovaProject, bundlePath, options) {
     this.cordovaProject = cordovaProject;
 
     this.bundlePath = bundlePath;
-    this.plugins = plugins;
     this.options = options;
 
     this.resourcesPath = files.pathJoin(
       this.cordovaProject.projectRoot,
       'resources');
+
+    this.initalizeDefaults();
   }
 
   get projectContext() {
     return this.cordovaProject.projectContext;
-  }
-
-  start() {
-    buildmessage.assertInCapture();
-
-    buildmessage.enterJob({ title: `preparing Cordova project` }, () => {
-      this.initalizeDefaults();
-
-      this.processControlFile();
-
-      if (buildmessage.jobHasMessages()) return;
-
-      this.writeConfigXmlAndCopyResources();
-      this.copyWWW();
-      this.copyBuildOverride();
-
-      this.cordovaProject.ensurePlatformsAreSynchronized();
-      this.cordovaProject.ensurePluginsAreSynchronized(this.plugins,
-        this.pluginsConfiguration);
-    });
   }
 
   initalizeDefaults() {
@@ -187,7 +168,7 @@ export class CordovaBuilder {
 
     if (files.exists(controlFilePath)) {
       Console.debug('Processing mobile-config.js');
-      
+
       buildmessage.enterJob({ title: `processing mobile-config.js` }, () => {
         const code = files.readFile(controlFilePath, 'utf8');
 
