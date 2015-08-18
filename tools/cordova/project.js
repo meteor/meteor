@@ -310,7 +310,7 @@ from Cordova project`, async () => {
         const [,organization,repository,sha] = match;
       // Convert them to a Git URL
       return `https://github.com/${organization}/${repository}.git#${sha}`;
-    } else if (/\.git/.test(url)) {
+    } else if (/\.git#[0-9a-f]{40}/.test(url)) {
       return url;
     } else {
       buildmessage.error(`Meteor no longer supports installing Cordova plugins \
