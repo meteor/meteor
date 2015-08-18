@@ -34,13 +34,7 @@ export class iOSRunTarget extends CordovaRunTarget {
       openXcodeProject(files.pathJoin(cordovaProject.projectRoot,
         'platforms', 'ios'));
     } else {
-      // Add the ios-sim bin path so Cordova can find it
-      const iosSimBinPath = files.convertToOSPath(
-        files.pathJoin(files.getCurrentToolsDir(),
-        'tools/node_modules/ios-sim/bin'));
-
-      await cordovaProject.run(this.platform, this.isDevice, undefined,
-        [iosSimBinPath]);
+      await cordovaProject.run(this.platform, this.isDevice, undefined);
 
       // Bring iOS Simulator to front
       child_process.spawn('osascript', ['-e',

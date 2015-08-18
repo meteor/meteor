@@ -457,7 +457,13 @@ from Cordova project`, async () => {
 
   get defaultPaths() {
     const nodeBinDir = files.getCurrentNodeBinDir();
-    return [nodeBinDir];
+
+    // Add the ios-sim bin path so Cordova can find it
+    const iosSimBinPath =
+      files.pathJoin(files.getDevBundle(),
+      'lib/node_modules/ios-sim/bin');
+
+    return [nodeBinDir, iosSimBinPath];
   }
 
   runCommands(title, asyncFunc, env = this.defaultEnvWithPathsAdded(),
