@@ -300,14 +300,15 @@ a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
     }
   }
 
-  addPlugin(name, version, config) {
+  addPlugin(name, version, config = {}) {
     const target = this.targetForPlugin(name, version);
     if (target) {
-      // TODO Pass config attributes to Cordova command
+      const commandOptions = _.extend(this.defaultOptions,
+        { cli_variables: config });
 
       this.runCommands(`adding plugin ${target} \
 to Cordova project`, async () => {
-        await cordova.raw.plugin('add', target, this.defaultOptions);
+        await cordova.raw.plugin('add', [target], commandOptions);
       });
     }
   }
