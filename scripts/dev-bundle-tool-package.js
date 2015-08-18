@@ -58,7 +58,14 @@ var packageJson = {
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     pathwatcher: "4.1.0",
-    'lru-cache': '2.6.4'
+    'lru-cache': '2.6.4',
+    // We use our own branch because cordova-lib does not respect a silent
+    // option and doesn't allow us to pass in our own env.
+    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
+    // We can't download the tarball from GitHub because the package.json is
+    // in a subdirectory
+    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-2cdb558d908c2771903e99708fffcb410151cb00.tar.gz",
+    "ios-sim": "4.1.1",
   }
 };
 

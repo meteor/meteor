@@ -12,20 +12,18 @@ import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
 
+import { cordova as cordova_lib, events as cordova_events, CordovaError }
+  from 'cordova-lib';
+import cordova_util from 'cordova-lib/src/cordova/util.js';
+import superspawn from 'cordova-lib/src/cordova/superspawn.js';
+import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
+
 import { AVAILABLE_PLATFORMS, displayNameForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
-function loadDependenciesFromCordovaPackageIfNeeded() {
-  if (typeof Cordova !== 'undefined') return;
-
-  ({ Cordova } = isopackets.load('cordova-support').cordova);
-  ({ cordova, events, CordovaError, superspawn, cordova_util, PluginInfoProvider } = Cordova);
-
-  events.on('results', logIfVerbose);
-  events.on('log', logIfVerbose);
-  events.on('warn', log);
-  // events.on('verbose', logIfVerbose);
-}
+cordova_events.on('results', logIfVerbose);
+cordova_events.on('log', logIfVerbose);
+cordova_events.on('warn', log);
 
 function logIfVerbose(...args) {
   if (Console.verbose) {
@@ -38,9 +36,8 @@ function log(...args) {
 }
 
 export class CordovaProject {
-  constructor(projectContext, appName = files.pathBasename(projectContext.projectDir)) {
-    loadDependenciesFromCordovaPackageIfNeeded();
-
+  constructor(projectContext,
+    appName = files.pathBasename(projectContext.projectDir)) {
     this.projectContext = projectContext;
 
     this.projectRoot = projectContext.getProjectLocalDirectory('cordova-build');
@@ -60,7 +57,7 @@ export class CordovaProject {
 
       // Don't set cwd to project root in runCommands because it doesn't exist yet
       this.runCommands('creating Cordova project', async () => {
-        await cordova.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
+        await cordova_lib.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
       }, undefined, null);
     }
   }
@@ -100,7 +97,7 @@ export class CordovaProject {
 
     this.runCommands(`preparing Cordova project for platform \
 ${displayNameForPlatform(platform)}`, async () => {
-      await cordova.raw.prepare(commandOptions);
+      await cordova_lib.raw.prepare(commandOptions);
     });
   }
 
@@ -114,7 +111,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
     this.runCommands(`building Cordova project for platform \
 ${displayNameForPlatform(platform)}`, async () => {
-      await cordova.raw.build(commandOptions);
+      await cordova_lib.raw.build(commandOptions);
     });
   }
 
@@ -129,7 +126,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
     this.runCommands(`running Cordova project for platform \
 ${displayNameForPlatform(platform)} with options ${options}`, async () => {
-      await cordova.raw.run(commandOptions);
+      await cordova_lib.raw.run(commandOptions);
     }, env);
   }
 
@@ -153,7 +150,7 @@ platform to your project first.`);
     const allRequirements = this.runCommands(`checking Cordova \
 requirements for platform ${displayNameForPlatform(platform)}`,
       async () => {
-        return await cordova.raw.requirements([platform], this.defaultOptions);
+        return await cordova_lib.raw.requirements([platform], this.defaultOptions);
       });
     let requirements = allRequirements && allRequirements[platform];
     if (!requirements) {
@@ -197,21 +194,21 @@ before running or building for ${displayNameForPlatform(platform)}:`);
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
     this.runCommands(`updating Cordova project for platforms \
 ${displayNamesForPlatforms(platform)}`, async () => {
-      await cordova.raw.platform('update', platforms, this.defaultOptions);
+      await cordova_lib.raw.platform('update', platforms, this.defaultOptions);
     });
   }
 
   addPlatform(platform) {
     this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
 to Cordova project`, async () => {
-      await cordova.raw.platform('add', platform, this.defaultOptions);
+      await cordova_lib.raw.platform('add', platform, this.defaultOptions);
     });
   }
 
   removePlatform(platform) {
     this.runCommands(`removing platform ${displayNameForPlatform(platform)} \
 from Cordova project`, async () => {
-      await cordova.raw.platform('rm', platform, this.defaultOptions);
+      await cordova_lib.raw.platform('rm', platform, this.defaultOptions);
     });
   }
 
@@ -323,7 +320,7 @@ a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
 
       this.runCommands(`adding plugin ${target} \
 to Cordova project`, async () => {
-        await cordova.raw.plugin('add', [target], commandOptions);
+        await cordova_lib.raw.plugin('add', [target], commandOptions);
       });
     }
   }
@@ -333,7 +330,7 @@ to Cordova project`, async () => {
 
     this.runCommands(`removing plugins ${plugins} \
 from Cordova project`, async () => {
-      await cordova.raw.plugin('rm', plugins, this.defaultOptions);
+      await cordova_lib.raw.plugin('rm', plugins, this.defaultOptions);
     });
   }
 
@@ -465,7 +462,7 @@ from Cordova project`, async () => {
       process.chdir(files.convertToOSPath(cwd));
     }
 
-    superspawn.setEnv(env);
+    superspawn.setDefaultEnv(env);
 
     try {
       return Promise.await(asyncFunc());
@@ -475,7 +472,6 @@ from Cordova project`, async () => {
         Console.error();
         const consoleOptions = Console.options({ indent: 3 });
         Console.error(`While ${title}:`, consoleOptions);
-        Console.error();
         const errorMessage = Console.verbose ? (error.stack || error.message) :
           error.message;
         Console.error(errorMessage, consoleOptions);

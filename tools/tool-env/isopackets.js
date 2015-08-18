@@ -51,7 +51,7 @@ var ISOPACKETS = {
   'mongo': ['npm-mongo'],
   'ejson': ['ejson'],
   'constraint-solver': ['constraint-solver'],
-  'cordova-support': ['cordova', 'boilerplate-generator', 'logging', 'webapp-hashing',
+  'cordova-support': ['boilerplate-generator', 'logging', 'webapp-hashing',
                       'xmlbuilder'],
   'logging': ['logging']
 };
