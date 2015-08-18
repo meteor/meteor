@@ -29,9 +29,10 @@ export class iOSRunTarget extends CordovaRunTarget {
     if (this.isDevice) {
       // Make sure we prepare the platform, which is normally done as part of
       // running
-      this.cordovaProject.prepareForPlatform(this.platform);
+      cordovaProject.prepareForPlatform(this.platform);
+
       openXcodeProject(files.pathJoin(cordovaProject.projectRoot,
-        'platforms', 'ios', `${cordovaProject.appName}.xcodeproj`));
+        'platforms', 'ios'));
     } else {
       // Add the cordova package npm bin path so Cordova can find ios-sim
       const cordovaBinPath = files.convertToOSPath(
@@ -49,19 +50,23 @@ export class iOSRunTarget extends CordovaRunTarget {
   }
 }
 
-function openXcodeProject(projectPath) {
-  child_process.execFile('open', [projectPath], undefined,
+function openXcodeProject(projectDir) {
+  const projectFilename =  files.readdir(projectDir).filter((entry) =>
+    { return entry.match(/\.xcodeproj$/i) })[0];
+
+  if (!projectFilename) {
+    printFailure(`Couldn't find your Xcode project in directory \
+'${files.convertToOSPath(projectDir)}'`);
+    return;
+  }
+
+  const projectFilePath = files.pathJoin(projectDir, projectFilename);
+
+  child_process.execFile('open', [projectFilePath], undefined,
     (error, stdout, stderr) => {
     if (error) {
-      Console.error();
-      Console.error(chalk.green(`Failed to open your project in Xcode:
-${error.message}`));
-      Console.error(
-        chalk.green("Instructions for running your app on an iOS device: ") +
-        Console.url("https://github.com/meteor/meteor/wiki/" +
-          "How-to-run-your-app-on-an-iOS-device")
-      );
-      Console.error();
+      printFailure(`Failed to open your project in Xcode:
+  ${error.message}`);
     } else {
       Console.info();
       Console.info(
@@ -76,6 +81,17 @@ ${error.message}`));
       Console.info();
     }
   });
+
+  function printFailure(message) {
+    Console.error();
+    Console.error(message);
+    Console.error(
+      chalk.green("Instructions for running your app on an iOS device: ") +
+      Console.url("https://github.com/meteor/meteor/wiki/" +
+        "How-to-run-your-app-on-an-iOS-device")
+    );
+    Console.error();
+  }
 }
 
 export class AndroidRunTarget extends CordovaRunTarget {
