@@ -853,22 +853,14 @@ _.extend(AppRunner.prototype, {
         }, 3000);
       };
 
-      try {
-        var runResult = self._runOnce({
-          onListen: function () {
-            if (! self.noRestartBanner && ! firstRun)
-              runLog.logRestart();
-          },
-          beforeRun: resetCrashCount,
-          firstRun: firstRun
-        });
-      } catch (error) {
-        Console.rawError(
-          "(run-app.js) Exception:",
-          error && error.stack || error
-        );
-        process.exit(1);
-      }
+      var runResult = self._runOnce({
+        onListen: function () {
+          if (! self.noRestartBanner && ! firstRun)
+            runLog.logRestart();
+        },
+        beforeRun: resetCrashCount,
+        firstRun: firstRun
+      });
       firstRun = false;
 
       clearTimeout(crashTimer);
