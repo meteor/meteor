@@ -19,7 +19,7 @@ function loadDependenciesFromCordovaPackageIfNeeded() {
   if (typeof Cordova !== 'undefined') return;
 
   ({ Cordova } = isopackets.load('cordova-support').cordova);
-  ({ cordova, events, CordovaError, superspawn, cordova_util } = Cordova);
+  ({ cordova, events, CordovaError, superspawn, cordova_util, PluginInfoProvider } = Cordova);
 
   events.on('results', logIfVerbose);
   events.on('log', logIfVerbose);
@@ -229,9 +229,21 @@ before running or building for ${displayNameForPlatform(platform)}:`);
   // Plugins
 
   listInstalledPlugins() {
-    const pluginsMetadata = JSON.parse(files.readFile(
+    const pluginInfoProvider = new PluginInfoProvider();
+    const installedPlugins = pluginInfoProvider.getAllWithinSearchPath(
+      files.convertToOSPath(this.pluginsDir));
+    const fetchedPlugins = this.listFetchedPlugins();
+    return _.object(installedPlugins.map(plugin => {
+      const id = plugin.id;
+      const version = fetchedPlugins[id] || plugin.version;
+      return [id, version];
+    }));
+  }
+
+  listFetchedPlugins() {
+    const fetchedPluginsMetadata = JSON.parse(files.readFile(
       files.pathJoin(this.pluginsDir, 'fetch.json'), 'utf8'));
-    const installedPlugins = _.object(_.map(pluginsMetadata, (metadata, name) => {
+    return _.object(_.map(fetchedPluginsMetadata, (metadata, name) => {
       const source = metadata.source;
       let version;
       if (source.type === 'registry') {
@@ -243,7 +255,6 @@ before running or building for ${displayNameForPlatform(platform)}:`);
       }
       return [name, version];
     }));
-    return installedPlugins;
   }
 
   convertToGitUrl(url) {
