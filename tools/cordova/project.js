@@ -58,10 +58,8 @@ export class CordovaProject {
       // Change weird characters (especially hyphens) into underscores.
       const appId = 'com.meteor.userapps.' + this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
 
-      Console.debug('Creating Cordova project');
-
       // Don't set cwd to project root in runCommands because it doesn't exist yet
-      this.runCommands(async () => {
+      this.runCommands('creating Cordova project', async () => {
         await cordova.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
       }, undefined, null);
     }
@@ -85,9 +83,8 @@ export class CordovaProject {
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform] });
 
-    Console.debug('Preparing Cordova project', commandOptions);
-
-    this.runCommands(async () => {
+    this.runCommands(`preparing Cordova project for platform \
+${displayNameForPlatform(platform)}`, async () => {
       await cordova.raw.prepare(commandOptions);
     });
   }
@@ -100,9 +97,8 @@ export class CordovaProject {
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform], options: options });
 
-    Console.debug('Building Cordova project', commandOptions);
-
-    this.runCommands(async () => {
+    this.runCommands(`building Cordova project for platform \
+${displayNameForPlatform(platform)}`, async () => {
       await cordova.raw.build(commandOptions);
     });
   }
@@ -116,9 +112,8 @@ export class CordovaProject {
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform], options: options });
 
-    Console.debug('Running Cordova project', commandOptions);
-
-    this.runCommands(async () => {
+    this.runCommands(`running Cordova project for platform \
+${displayNameForPlatform(platform)} with options ${options}`, async () => {
       await cordova.raw.run(commandOptions);
     }, env);
   }
@@ -140,7 +135,8 @@ platform to your project first.`);
       return false;
     }
 
-    const allRequirements = this.runCommands(
+    const allRequirements = this.runCommands(`checking Cordova \
+requirements for platform ${displayNameForPlatform(platform)}`,
       async () => {
         return await cordova.raw.requirements([platform], this.defaultOptions);
       });
@@ -184,19 +180,22 @@ before running or building for ${displayNameForPlatform(platform)}:`);
   }
 
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
-    this.runCommands(async () => {
+    this.runCommands(`updating Cordova project for platforms \
+${displayNamesForPlatforms(platform)}`, async () => {
       await cordova.raw.platform('update', platforms, this.defaultOptions);
     });
   }
 
   addPlatform(platform) {
-    this.runCommands(async () => {
+    this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
+to Cordova project`, async () => {
       await cordova.raw.platform('add', platform, this.defaultOptions);
     });
   }
 
   removePlatform(platform) {
-    this.runCommands(async () => {
+    this.runCommands(`removing platform ${displayNameForPlatform(platform)} \
+from Cordova project`, async () => {
       await cordova.raw.platform('rm', platform, this.defaultOptions);
     });
   }
@@ -269,8 +268,10 @@ before running or building for ${displayNameForPlatform(platform)}:`);
     } else if (/\.git/.test(url)) {
       return url;
     } else {
-      throw new Error(`Meteor no longer supports installing Cordova plugins \
-from tarball URLs. Cordova requires a Git URL to install from.`);
+      buildmessage.error(`Meteor no longer supports installing Cordova plugins \
+from arbitrary tarball URLs. You can either add a plugin from a Git URL with \
+a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
+      return null;
     }
   }
 
@@ -300,24 +301,23 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
   }
 
   addPlugin(name, version, config) {
-    Console.debug('Adding Cordova plugin', name);
-
     const target = this.targetForPlugin(name, version);
+    if (target) {
+      // TODO Pass config attributes to Cordova command
 
-    // TODO Pass config attributes to Cordova command
-
-    this.runCommands(async () => {
-      await cordova.raw.plugin('add', target, this.defaultOptions);
-    });
+      this.runCommands(`adding plugin ${target} \
+to Cordova project`, async () => {
+        await cordova.raw.plugin('add', target, this.defaultOptions);
+      });
+    }
   }
 
-  removePlugins(pluginsToRemove) {
-    Console.debug('Removing Cordova plugins', pluginsToRemove);
+  removePlugins(plugins) {
+    if (_.isEmpty(plugins)) return;
 
-    if (_.isEmpty(pluginsToRemove)) return;
-
-    this.runCommands(async () => {
-      await cordova.raw.plugin('rm', pluginsToRemove, this.defaultOptions);
+    this.runCommands(`removing plugins ${plugins} \
+from Cordova project`, async () => {
+      await cordova.raw.plugin('rm', plugins, this.defaultOptions);
     });
   }
 
@@ -339,50 +339,50 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
 
     buildmessage.assertInCapture();
 
-    const installedPlugins = this.listInstalledPlugins();
+    buildmessage.enterJob({ title: "installing Cordova plugins"}, () => {
+      const installedPlugins = this.listInstalledPlugins();
 
-    // Due to the dependency structure of Cordova plugins, it is impossible to
-    // upgrade the version on an individual Cordova plugin. Instead, whenever a
-    // new Cordova plugin is added or removed, or its version is changed,
-    // we just reinstall all of the plugins.
-    let shouldReinstallAllPlugins = false;
+      // Due to the dependency structure of Cordova plugins, it is impossible to
+      // upgrade the version on an individual Cordova plugin. Instead, whenever a
+      // new Cordova plugin is added or removed, or its version is changed,
+      // we just reinstall all of the plugins.
+      let shouldReinstallAllPlugins = false;
 
-    // Iterate through all of the plugins and find if any of them have a new
-    // version. Additionally check if we have plugins installed from local path.
-    const pluginsFromLocalPath = {};
-    _.each(plugins, (version, name) => {
-      // Check if plugin is installed from local path
-      const isPluginFromLocalPath = utils.isUrlWithFileScheme(version);
+      // Iterate through all of the plugins and find if any of them have a new
+      // version. Additionally check if we have plugins installed from local path.
+      const pluginsFromLocalPath = {};
+      _.each(plugins, (version, name) => {
+        // Check if plugin is installed from local path
+        const isPluginFromLocalPath = utils.isUrlWithFileScheme(version);
 
-      if (isPluginFromLocalPath) {
-        pluginsFromLocalPath[name] = version;
-      } else {
-        if (utils.isUrlWithSha(version)) {
-          version = this.convertToGitUrl(version);
+        if (isPluginFromLocalPath) {
+          pluginsFromLocalPath[name] = version;
+        } else {
+          if (utils.isUrlWithSha(version)) {
+            version = this.convertToGitUrl(version);
+          }
+
+          if (!_.has(installedPlugins, name) ||
+            installedPlugins[name] !== version) {
+            // We do not have the plugin installed or the version has changed.
+            shouldReinstallAllPlugins = true;
+          }
         }
+      });
 
-        if (!_.has(installedPlugins, name) ||
-          installedPlugins[name] !== version) {
-          // We do not have the plugin installed or the version has changed.
+      if (!_.isEmpty(pluginsFromLocalPath)) {
+        Console.debug('Reinstalling Cordova plugins added from the local path');
+      }
+
+      // Check to see if we have any installed plugins that are not in the current
+      // set of plugins.
+      _.each(installedPlugins, (version, name) => {
+        if (!_.has(plugins, name)) {
           shouldReinstallAllPlugins = true;
         }
-      }
-    });
+      });
 
-    if (!_.isEmpty(pluginsFromLocalPath)) {
-      Console.debug('Reinstalling Cordova plugins added from the local path');
-    }
-
-    // Check to see if we have any installed plugins that are not in the current
-    // set of plugins.
-    _.each(installedPlugins, (version, name) => {
-      if (!_.has(plugins, name)) {
-        shouldReinstallAllPlugins = true;
-      }
-    });
-
-    if (shouldReinstallAllPlugins || !_.isEmpty(pluginsFromLocalPath)) {
-      buildmessage.enterJob({ title: "installing Cordova plugins"}, () => {
+      if (shouldReinstallAllPlugins || !_.isEmpty(pluginsFromLocalPath)) {
         let pluginsToRemove;
         if (shouldReinstallAllPlugins) {
           pluginsToRemove = Object.keys(installedPlugins);
@@ -410,14 +410,16 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
         _.each(pluginsToInstall, (version, name) => {
           this.addPlugin(name, version, pluginsConfiguration[name]);
 
+          if (buildmessage.jobHasMessages()) return;
+
           buildmessage.reportProgress({
             current: ++pluginsInstalled,
             end: pluginsCount
           });
         });
-      });
-    }
-  };
+      }
+    });
+  }
 
   // Cordova commands support
 
@@ -437,8 +439,11 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
     return [nodeBinDir];
   }
 
-  runCommands(asyncFunc, env = this.defaultEnvWithPathsAdded(),
+  runCommands(title, asyncFunc, env = this.defaultEnvWithPathsAdded(),
     cwd = this.projectRoot) {
+    // Capitalize title for debug output
+    Console.debug(title[0].toUpperCase() + title.slice(1));
+
     const oldCwd = process.cwd();
     if (cwd) {
       process.chdir(files.convertToOSPath(cwd));
@@ -450,9 +455,18 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
       return Promise.await(asyncFunc());
     } catch (error) {
       if (error instanceof CordovaError) {
-        Console.error(`cordova: ${error.message}`);
-        Console.error(chalk.green("Try running again with the --verbose option \
-to help diagnose the issue."));
+        Console.arrowError('Errors executing Cordova commands:');
+        Console.error();
+        const consoleOptions = Console.options({ indent: 3 });
+        Console.error(`While ${title}:`, consoleOptions);
+        Console.error();
+        const errorMessage = Console.verbose ? (error.stack || error.message) :
+          error.message;
+        Console.error(errorMessage, consoleOptions);
+        Console.error(chalk.green("(If the error message contains suggestions \
+for a fix, note that this may not apply to the Meteor integration. You can try \
+running again with the --verbose option to help diagnose the issue.)"),
+          consoleOptions);
         throw new main.ExitWithCode(1);
       } else {
         throw error;

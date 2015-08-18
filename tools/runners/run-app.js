@@ -630,13 +630,12 @@ _.extend(AppRunner.prototype, {
     const cordovaRunner = self.cordovaRunner;
     if (cordovaRunner) {
       if (firstRun) {
-        const plugins = cordova.pluginsFromStarManifest(bundleResult.starManifest);
+        const plugins =
+          cordova.pluginsFromStarManifest(bundleResult.starManifest);
         const { settingsFile, mobileServerUrl } = self;
         const messages = buildmessage.capture(() => {
           cordovaRunner.prepareProject(bundlePath, plugins,
             { settingsFile, mobileServerUrl });
-          cordovaRunner.printWarningsIfNeeded();
-          cordovaRunner.startRunTargets();
         });
 
         if (messages.hasMessages()) {
@@ -646,6 +645,9 @@ _.extend(AppRunner.prototype, {
             watchSet: combinedWatchSetForBundleResult(bundleResult)
           };
         }
+
+        cordovaRunner.printWarningsIfNeeded();
+        cordovaRunner.startRunTargets();
       } else {
         // If the set of Cordova of platforms or plugins changes from one run
         // to the next, we just exit, because we don't yet have a way to,

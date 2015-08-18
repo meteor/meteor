@@ -13,6 +13,11 @@ export function displayNameForPlatform(platform) {
   return PLATFORM_TO_DISPLAY_NAME_MAP[platform] || platform;
 };
 
+export function displayNamesForPlatforms(platforms) {
+  return platforms.map((platform) =>
+    displayNameForPlatform(platform)).join(', ');
+}
+
 export function filterPlatforms(platforms) {
   return _.intersection(platforms, AVAILABLE_PLATFORMS);
 }
