@@ -16,7 +16,7 @@ var ready = function() {
         // Cordova indicates that all the cordova plugins files have been loaded
         // and plugins are ready to be used when the "deviceready" callback
         // fires. Even though we wait for the "deviceready" event, plugins
-        // have been observed to still not be not ready (likely a Cordova bug).
+        // have been observed to still not be ready (likely a Cordova bug).
         // We check the availability of the Cordova-Update plugin (the only
         // plugin that we always include for sure) and retry a bit later if it
         // is nowhere to be found. Experiments have found that either all
