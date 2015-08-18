@@ -56,10 +56,16 @@ export class CordovaProject {
       const appId = 'com.meteor.userapps.' +
         this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
 
+      const templatePath = files.convertToOSPath(files.pathJoin(
+        files.getCurrentToolsDir(),
+        'tools/node_modules/cordova-app-hello-world'));
+
+      const config = { lib: { www: { url: templatePath } } };
+
       // Don't set cwd to project root in runCommands because it doesn't exist yet
       this.runCommands('creating Cordova project', async () => {
         await cordova_lib.raw.create(files.convertToOSPath(this.projectRoot),
-          appId, this.appName);
+          appId, this.appName, config);
       }, undefined, null);
     }
   }
