@@ -282,8 +282,18 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
     if (utils.isUrlWithSha(version)) {
       return this.convertToGitUrl(version);
     } else if (utils.isUrlWithFileScheme(version)) {
-      // Strip file:// and compute the relative path from plugin to corodova-build
-      return files.convertToOSPath(this.resolveCordovaLocalPluginPath(version));
+      // Strip file:// and resolve the path relative to the cordova-build
+      // directory
+      const pluginPath = this.resolveLocalPluginPath(version);
+      // We need to check if the directory exists ourselves because Cordova
+      // will try to install from npm (and fail with an unhelpful error message)
+      // if the directory is not found
+      if (!cordova_util.isDirectory(pluginPath)) {
+        buildmessage.error(`Couldn't find local directory \
+'${pluginPath}'. (Attempting to install plugin ${name}).`);
+        return null;
+      }
+      return files.convertToOSPath(pluginPath);
     } else {
       return `${name}@${version}`;
     }
@@ -313,12 +323,10 @@ from tarball URLs. Cordova requires a Git URL to install from.`);
 
   // Strips the file:// from the path and if a relative path was used, it translates it to a relative path to the
   // cordova-build directory instead of meteor project directory.
-  resolveCordovaLocalPluginPath(pluginPath) {
+  resolveLocalPluginPath(pluginPath) {
     pluginPath = pluginPath.substr("file://".length);
     if (utils.isPathRelative(pluginPath)) {
-      return path.relative(
-        this.projectRoot,
-        path.resolve(this.projectContext.projectDir, pluginPath));
+      return path.resolve(this.projectContext.projectDir, pluginPath);
     } else {
       return pluginPath;
     }
