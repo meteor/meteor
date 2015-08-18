@@ -291,7 +291,7 @@ a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
       // if the directory is not found
       if (!cordova_util.isDirectory(pluginPath)) {
         buildmessage.error(`Couldn't find local directory \
-'${pluginPath}'. (Attempting to install plugin ${name}).`);
+'${files.convertToOSPath(pluginPath)}'. (Attempting to install plugin ${name}).`);
         return null;
       }
       return files.convertToOSPath(pluginPath);
