@@ -9,18 +9,16 @@ Package.describe({
 });
 
 Npm.depends({
-  "gc-profiler": "1.2.0"
+  "gc-profiler": "1.2.0",
+  "meteor-profiler": "https://github.com/meteor/meteor-profiler/tarball/4661b89672d9f275ce6c58aac15cc2619f91f6e2"
 });
 
 Package.onUse(function(api) {
   api.use('ecmascript');
-  api.addFiles('benchmark.js', 'server');
-  api.addFiles('benchmark_collection.js', 'client');
-  api.export('measure');
-  api.export('measureDuration');
-  api.export('getDurations');
-  api.export('Timer');
-  api.export('getDurations');
+  api.export('Profile');
+
+  api.addFiles("profile.js", "server");
+  api.addFiles("patch_fibers.js", "server");
 });
 
 Package.onTest(function(api) {

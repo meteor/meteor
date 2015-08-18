@@ -191,20 +191,14 @@ OplogObserveDriver = function (options) {
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
 
-  // xcxc use `self._measure` here once it supports yielding, but
-  // count it differently as "initial query"
-  Meteor.defer(finishIfNeedToPollQuery(function () {
+  Meteor.defer(Profile(self._cursorDescStr(), Profile("initial query", finishIfNeedToPollQuery(function () {
     self._runInitialQuery();
-  }));
+  }))));
 };
 
 _.extend(OplogObserveDriver.prototype, {
   _measure: function (f) {
-    return f;
-    var self = this;
-    return function () {
-      measureDuration(self._cursorDescStr(), f, {entireTime: true});
-    };
+    return Profile(this._cursorDescStr(), f);
   },
   _cursorDescStr: function () {
     return [

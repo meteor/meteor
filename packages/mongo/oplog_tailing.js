@@ -95,12 +95,10 @@ _.extend(OplogHandle.prototype, {
     self._readyFuture.wait();
 
     var originalCallback = callback;
-    callback = Meteor.bindEnvironment(function (notification) {
-      measureDuration("oplog", function () {
-        // XXX can we avoid this clone by making oplog.js careful?
-        originalCallback(EJSON.clone(notification));
-      });
-    }, function (err) {
+    callback = Meteor.bindEnvironment(Profile("oplog", function (notification) {
+      // XXX can we avoid this clone by making oplog.js careful?
+      originalCallback(EJSON.clone(notification));
+    }), function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
     });
 

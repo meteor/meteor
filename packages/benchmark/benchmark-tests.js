@@ -1,4 +1,5 @@
 var Fiber = Npm.require('fibers');
+var Profile = Npm.require("meteor-profiler").Profile;
 
 function sleep(ms) {
   var fiber = Fiber.current;
@@ -9,38 +10,56 @@ function sleep(ms) {
 };
 
 function busySleep(ms) {
-  var start = +new Date;
-  while ((+new Date) - start < ms) {}
+  var startHrTime = process.hrtime();
+  for (;;) {
+    var durationHrTime = process.hrtime(startHrTime);
+    if (durationHrTime[0] * 1000 + durationHrTime[1] / 1000000 >= ms) {
+      break;
+    }
+  }
 };
 
-Tinytest.add('measure without yielding', function (test) {
+Tinytest.add('server cpu benchmarking - measure without yielding', (test) => {
   const BASE_SLEEP = 100;
-  measureDuration("foo1", () => {
+  Profile.time("foo1", () => {
     busySleep(BASE_SLEEP);
   });
-
-  console.log(getDurations());
 });
 
 
-Tinytest.add('measure with single yield', function (test) {
+Tinytest.add('server cpu benchmarking - measure with single yield', (test) => {
   const BASE_SLEEP = 100;
 
-  measureDuration("foo2", () => {
+  Profile.time("foo2", () => {
     busySleep(BASE_SLEEP);
     sleep(BASE_SLEEP * 2);
     busySleep(BASE_SLEEP * 4);
   });
-
-  console.log(getDurations());
 });
 
 
-Tinytest.add('nested measure inside new fiber', function (test) {
+Tinytest.add('server cpu benchmarking - partially overlapping fibers', (test) => {
+  const BASE_SLEEP = 100;
+  Profile.time("foo4", () => {
+    busySleep(BASE_SLEEP);
+
+    Fiber(() => {
+      busySleep(BASE_SLEEP * 2);
+
+      Profile.time("bar4", () => {
+        busySleep(BASE_SLEEP * 4);
+        sleep(BASE_SLEEP * 8);
+        busySleep(BASE_SLEEP * 16);
+      });
+    }).run();
+  });
+});
+
+Tinytest.add('server cpu benchmarking - nested measure inside new fiber', (test) => {
   // we sleep at multiples of 2^n of this so that when we get counts
   // we'll know how to group them
   const BASE_SLEEP = 1;
-  measureDuration("foo3", () => {
+  Profile.time("foo3", () => {
     busySleep(BASE_SLEEP);
     sleep(BASE_SLEEP * 2);
     busySleep(BASE_SLEEP * 4);
@@ -50,7 +69,7 @@ Tinytest.add('nested measure inside new fiber', function (test) {
       sleep(BASE_SLEEP * 16);
       busySleep(BASE_SLEEP * 32);
 
-      measureDuration("bar3", () => {
+      Profile.time("bar3", () => {
         busySleep(BASE_SLEEP * 64);
         sleep(BASE_SLEEP * 128);
         busySleep(BASE_SLEEP * 256);
@@ -65,7 +84,5 @@ Tinytest.add('nested measure inside new fiber', function (test) {
     sleep(BASE_SLEEP * 8192);
     busySleep(BASE_SLEEP * 16384);
   });
-
-  console.log(getDurations());
 });
 

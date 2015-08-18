@@ -18,16 +18,6 @@ var SessionDocumentView = function () {
   self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
 };
 
-if (false && Package.benchmark) {
-  measureDuration = function (id, fn) {
-    return Package.benchmark.measureDuration(id, fn);
-  };
-} else {
-  measureDuration = function (id, fn) {
-    fn();
-  }
-}
-
 _.extend(SessionDocumentView.prototype, {
 
   getFields: function () {
@@ -166,71 +156,65 @@ _.extend(SessionCollectionView.prototype, {
     self.callbacks.changed(self.collectionName, id, fields);
   },
 
-  added: function (subscriptionHandle, id, fields) {
+  added: Profile(descForSubHandle, function (subscriptionHandle, id, fields) {
     var self = this;
-    measureDuration(descForSubHandle(subscriptionHandle), function () {
-      var docView = self.documents[id];
-      var added = false;
-      if (!docView) {
-        added = true;
-        docView = new SessionDocumentView();
-        self.documents[id] = docView;
-      }
-      docView.existsIn[subscriptionHandle] = true;
-      var changeCollector = {};
-      _.each(fields, function (value, key) {
-        docView.changeField(
-          subscriptionHandle, key, value, changeCollector, true);
-      });
-      if (added)
-        self.callbacks.added(self.collectionName, id, changeCollector);
+    var docView = self.documents[id];
+    var added = false;
+    if (!docView) {
+      added = true;
+      docView = new SessionDocumentView();
+      self.documents[id] = docView;
+    }
+    docView.existsIn[subscriptionHandle] = true;
+    var changeCollector = {};
+    _.each(fields, function (value, key) {
+      docView.changeField(
+        subscriptionHandle, key, value, changeCollector, true);
+    });
+    if (added)
+      self.callbacks.added(self.collectionName, id, changeCollector);
+    else
+      self.callbacks.changed(self.collectionName, id, changeCollector);
+  }),
+
+  changed: Profile(descForSubHandle, function (subscriptionHandle, id, changed) {
+    var self = this;
+    var changedResult = {};
+    var docView = self.documents[id];
+    if (!docView)
+      throw new Error("Could not find element with id " + id + " to change");
+    _.each(changed, function (value, key) {
+      if (value === undefined)
+        docView.clearField(subscriptionHandle, key, changedResult);
       else
-        self.callbacks.changed(self.collectionName, id, changeCollector);
-    }, {entireTime: true});
-  },
+        docView.changeField(subscriptionHandle, key, value, changedResult);
+    });
+    self.callbacks.changed(self.collectionName, id, changedResult);
+  }),
 
-  changed: function (subscriptionHandle, id, changed) {
+  removed: Profile(descForSubHandle, function (subscriptionHandle, id) {
     var self = this;
-    measureDuration(descForSubHandle(subscriptionHandle), function () {
-      var changedResult = {};
-      var docView = self.documents[id];
-      if (!docView)
-        throw new Error("Could not find element with id " + id + " to change");
-      _.each(changed, function (value, key) {
-        if (value === undefined)
-          docView.clearField(subscriptionHandle, key, changedResult);
-        else
-          docView.changeField(subscriptionHandle, key, value, changedResult);
+    var docView = self.documents[id];
+    if (!docView) {
+      var err = new Error("Removed nonexistent document " + id);
+      throw err;
+    }
+    delete docView.existsIn[subscriptionHandle];
+    if (_.isEmpty(docView.existsIn)) {
+      // it is gone from everyone
+      self.callbacks.removed(self.collectionName, id);
+      delete self.documents[id];
+    } else {
+      var changed = {};
+      // remove this subscription from every precedence list
+      // and record the changes
+      _.each(docView.dataByKey, function (precedenceList, key) {
+        docView.clearField(subscriptionHandle, key, changed);
       });
-      self.callbacks.changed(self.collectionName, id, changedResult);
-   }, {entireTime: true});
-  },
 
-  removed: function (subscriptionHandle, id) {
-    var self = this;
-    measureDuration(descForSubHandle(subscriptionHandle), function () {
-      var docView = self.documents[id];
-      if (!docView) {
-        var err = new Error("Removed nonexistent document " + id);
-        throw err;
-      }
-      delete docView.existsIn[subscriptionHandle];
-      if (_.isEmpty(docView.existsIn)) {
-        // it is gone from everyone
-        self.callbacks.removed(self.collectionName, id);
-        delete self.documents[id];
-      } else {
-        var changed = {};
-        // remove this subscription from every precedence list
-        // and record the changes
-        _.each(docView.dataByKey, function (precedenceList, key) {
-          docView.clearField(subscriptionHandle, key, changed);
-        });
-
-        self.callbacks.changed(self.collectionName, id, changed);
-      }
-    }, {entireTime: true});
-  }
+      self.callbacks.changed(self.collectionName, id, changed);
+    }
+  })
 });
 
 /******************************************************************************/
@@ -550,25 +534,23 @@ _.extend(Session.prototype, {
         return;
       }
 
-      Fiber(function () {
-        measureDuration("incoming ddp message", () => {
-          var blocked = true;
+      Fiber(Profile("incoming ddp message", function () {
+        var blocked = true;
 
-          var unblock = function () {
-            if (!blocked)
-              return; // idempotent
-            blocked = false;
-            processNext();
-          };
+        var unblock = function () {
+          if (!blocked)
+            return; // idempotent
+          blocked = false;
+          processNext();
+        };
 
-          if (_.has(self.protocol_handlers, msg.msg))
-            self.protocol_handlers[msg.msg].call(self, msg, unblock);
-          else
-            self.sendError('Bad request', msg);
+        if (_.has(self.protocol_handlers, msg.msg))
+          self.protocol_handlers[msg.msg].call(self, msg, unblock);
+        else
+          self.sendError('Bad request', msg);
 
-          unblock(); // in case the handler didn't already do it
-        });
-      }).run();
+        unblock(); // in case the handler didn't already do it
+      })).run();
     };
 
     processNext();

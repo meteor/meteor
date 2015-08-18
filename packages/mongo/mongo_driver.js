@@ -1083,48 +1083,46 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
 
   var stopped = false;
   var lastTS = undefined;
-  var loop = function () {
-    measureDuration("oplog", function () {
-      while (true) {
-        if (stopped)
-          return;
-        try {
-          var doc = cursor._nextObject();
-        } catch (err) {
-          // There's no good way to figure out if this was actually an error
-          // from Mongo. Ah well. But either way, we need to retry the cursor
-          // (unless the failure was because the observe got stopped).
-          doc = null;
-        }
-        // Since cursor._nextObject can yield, we need to check again to see if
-        // we've been stopped before calling the callback.
-        if (stopped)
-          return;
-        if (doc) {
-          // If a tailable cursor contains a "ts" field, use it to recreate the
-          // cursor on error. ("ts" is a standard that Mongo uses internally for
-          // the oplog, and there's a special flag that lets you do binary search
-          // on it instead of needing to use an index.)
-          lastTS = doc.ts;
-          docCallback(doc);
-        } else {
-          var newSelector = _.clone(cursorDescription.selector);
-          if (lastTS) {
-            newSelector.ts = {$gt: lastTS};
-          }
-          cursor = self._createSynchronousCursor(new CursorDescription(
-            cursorDescription.collectionName,
-            newSelector,
-            cursorDescription.options));
-          // Mongo failover takes many seconds.  Retry in a bit.  (Without this
-          // setTimeout, we peg the CPU at 100% and never notice the actual
-          // failover.
-          Meteor.setTimeout(loop, 100);
-          break;
-        }
+  var loop = Profile("oplog", function () {
+    while (true) {
+      if (stopped)
+        return;
+      try {
+        var doc = cursor._nextObject();
+      } catch (err) {
+        // There's no good way to figure out if this was actually an error
+        // from Mongo. Ah well. But either way, we need to retry the cursor
+        // (unless the failure was because the observe got stopped).
+        doc = null;
       }
-    });
-  };
+      // Since cursor._nextObject can yield, we need to check again to see if
+      // we've been stopped before calling the callback.
+      if (stopped)
+        return;
+      if (doc) {
+        // If a tailable cursor contains a "ts" field, use it to recreate the
+        // cursor on error. ("ts" is a standard that Mongo uses internally for
+        // the oplog, and there's a special flag that lets you do binary search
+        // on it instead of needing to use an index.)
+        lastTS = doc.ts;
+        docCallback(doc);
+      } else {
+        var newSelector = _.clone(cursorDescription.selector);
+        if (lastTS) {
+          newSelector.ts = {$gt: lastTS};
+        }
+        cursor = self._createSynchronousCursor(new CursorDescription(
+          cursorDescription.collectionName,
+          newSelector,
+          cursorDescription.options));
+        // Mongo failover takes many seconds.  Retry in a bit.  (Without this
+        // setTimeout, we peg the CPU at 100% and never notice the actual
+        // failover.
+        Meteor.setTimeout(loop, 100);
+        break;
+      }
+    }
+  });
 
   Meteor.defer(loop);
 
