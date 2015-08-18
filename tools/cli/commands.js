@@ -826,7 +826,8 @@ var buildCommand = function (options) {
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
-      Console.warn("Currently, it is only possible to build iOS apps on an OS X system.");
+      Console.warn("Currently, it is only possible to build iOS apps \
+on an OS X system.");
     }
 
     if (!_.isEmpty(cordovaPlatforms)) {
@@ -947,6 +948,7 @@ ${cordova.displayNameForPlatform(platform)}` },
 
             if (platform === 'ios') {
               files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+              
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
                 "This is an auto-generated XCode project for your iOS application.\n\n" +
@@ -955,9 +957,13 @@ ${cordova.displayNameForPlatform(platform)}` },
                 "utf8");
             } else if (platform === 'android') {
               files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+
               const apkPath = files.pathJoin(buildPath, 'build', 'outputs', 'apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
-              files.copyFile(apkPath, files.pathJoin(platformOutputPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+
+              files.copyFile(apkPath, files.pathJoin(platformOutputPath,
+                options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
                 "This is an auto-generated Gradle project for your Android application.\n\n" +

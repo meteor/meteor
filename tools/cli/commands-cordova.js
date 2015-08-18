@@ -57,6 +57,7 @@ main.registerCommand({
 
     if (buildmessage.jobHasMessages()) return;
 
+    // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
 
     for (platform of platformsToAdd) {
@@ -89,7 +90,8 @@ main.registerCommand({
     for (platform of platformsToRemove) {
       // Explain why we can't remove server or browser platforms
       if (_.contains(PlatformList.DEFAULT_PLATFORMS, platform)) {
-        buildmessage.error(`${platform}: cannot remove platform in this version of Meteor`);
+        buildmessage.error(`${platform}: cannot remove platform in this \
+version of Meteor`);
       } else if (!_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is not in this project`);
       }
@@ -105,6 +107,7 @@ main.registerCommand({
 
     if (buildmessage.jobHasMessages()) return;
 
+    // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
 
     for (platform of platformsToRemove) {
@@ -151,6 +154,8 @@ main.registerCommand({
     return 1;
   }
 
+  // TODO
+
   return 0;
 });
 
@@ -165,6 +170,8 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
+  // TODO
+
   return 0;
 });
 
@@ -177,6 +184,8 @@ main.registerCommand({
   maxArgs: 1,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
+
+  // TODO
 
   return 0;
 });

@@ -82,7 +82,7 @@ export class CordovaBuilder {
       website: 'n/a'
     };
 
-    // set some defaults different from the Phonegap/Cordova defaults
+    // Set some defaults different from the Cordova defaults
     this.additionalConfiguration = {
       'webviewbounce': false,
       'DisallowOverscroll': true,
@@ -150,7 +150,8 @@ export class CordovaBuilder {
     };
 
     const setLaunchscreen = (size, name) => {
-      this.imagePaths.splash[name] = files.pathJoin(launchScreensPath, size + '.png');
+      this.imagePaths.splash[name] =
+        files.pathJoin(launchScreensPath, `${size}.png`);
     };
 
     _.each(iconsIosSizes, setIcon);
@@ -189,7 +190,7 @@ export class CordovaBuilder {
 
     let config = XmlBuilder.create('widget');
 
-    // set the root attributes
+    // Set the root attributes
     _.each({
       id: this.metadata.id,
       version: this.metadata.version,
@@ -203,7 +204,7 @@ export class CordovaBuilder {
       }
     });
 
-    // set the metadata
+    // Set the metadata
     config.element('name').txt(this.metadata.name);
     config.element('description').txt(this.metadata.description);
     config.element('author', {
@@ -211,7 +212,7 @@ export class CordovaBuilder {
       email: this.metadata.email
     }).txt(this.metadata.author);
 
-    // set the additional configuration preferences
+    // Set the additional configuration preferences
     _.each(this.additionalConfiguration, (value, key) => {
       config.element('preference', {
         name: key,
@@ -219,7 +220,7 @@ export class CordovaBuilder {
       });
     });
 
-    // load from index.html by default
+    // Load from index.html by default
     config.element('content', { src: 'index.html' });
 
     // Copy all the access rules
@@ -240,13 +241,13 @@ export class CordovaBuilder {
 
     Console.debug('Copying resources for mobile apps');
 
-    // add icons and launch screens to config and copy the files on fs
     this.configureAndCopyImages(iconsIosSizes, iosPlatformElement, 'icon');
     this.configureAndCopyImages(iconsAndroidSizes, androidPlatformElement, 'icon');
     this.configureAndCopyImages(launchIosSizes, iosPlatformElement, 'splash');
     this.configureAndCopyImages(launchAndroidSizes, androidPlatformElement, 'splash');
 
     Console.debug('Writing new config.xml');
+
     const configXmlPath = files.pathJoin(this.cordovaProject.projectRoot, 'config.xml');
     const formattedXmlConfig = config.end({ pretty: true });
     files.writeFile(configXmlPath, formattedXmlConfig, 'utf8');
@@ -264,7 +265,8 @@ export class CordovaBuilder {
 
       // XXX special case for Android
       if (androidMatch) {
-        attributes.density = androidMatch[2].substr(0, 4) + '-' + androidMatch[1];
+        attributes.density =
+          androidMatch[2].substr(0, 4) + '-' + androidMatch[1];
       }
 
       return attributes;
@@ -288,12 +290,12 @@ export class CordovaBuilder {
       const filename = name + '.' + tag + '.' + extension;
       const src = files.pathJoin('resources', filename);
 
-      // copy the file to the build folder with a standardized name
+      // Copy the file to the build folder with a standardized name
       files.copyFile(
         files.pathResolve(this.projectContext.projectDir, suppliedPath),
         files.pathJoin(this.resourcesPath, filename));
 
-      // set it to the xml tree
+      // Set it to the xml tree
       xmlElement.element(tag, imageAttributes(name, width, height, src));
 
       // XXX reuse one size for other dimensions
@@ -363,7 +365,8 @@ export class CordovaBuilder {
       configDummy.PUBLIC_SETTINGS = publicSettings;
     }
 
-    const { WebAppHashing } = isopackets.load('cordova-support')['webapp-hashing'];
+    const { WebAppHashing } =
+      isopackets.load('cordova-support')['webapp-hashing'];
     const calculatedHash =
       WebAppHashing.calculateClientHash(manifest, null, configDummy);
 
@@ -385,7 +388,8 @@ export class CordovaBuilder {
     if (publicSettings)
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
 
-    const { Boilerplate } = isopackets.load('cordova-support')['boilerplate-generator'];
+    const { Boilerplate } =
+      isopackets.load('cordova-support')['boilerplate-generator'];
     const boilerplate = new Boilerplate(CORDOVA_ARCH, manifest, {
       urlMapper: _.identity,
       pathMapper: (path) => files.convertToOSPath(

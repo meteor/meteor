@@ -44,8 +44,8 @@ export class CordovaRunner {
   }
 
   printWarningsIfNeeded() {
-    // OAuth2 packages don't work so well with any mobile platform except the iOS
-    // simulator. Print a warning and direct users to the wiki page for help.
+    // OAuth2 packages don't work so well with any mobile platform except the
+    // iOS Simulator. Print a warning and direct users to the wiki page for help.
     if (this.projectContext.packageMap.getInfo('oauth2')) {
       Console.warn();
       Console.labelWarn(
@@ -59,7 +59,7 @@ export class CordovaRunner {
           "OAuth-for-mobile-Meteor-clients."));
     }
 
-    // If we are targeting the remote devices, warn about ports and same network
+    // If we are targeting remote devices, warn about ports and same network.
     if (_.findWhere(this.runTargets, { isDevice: true })) {
       Console.warn();
       Console.labelWarn(
@@ -100,10 +100,12 @@ export class CordovaRunner {
   }
 
   havePlatformsChanged() {
+    // TODO
     return false;
   }
 
   havePluginsChanged() {
+    // TODO
     return false;
   }
 }

@@ -53,11 +53,13 @@ export class CordovaProject {
       files.mkdir_p(files.pathDirname(this.projectRoot));
       // Cordova app identifiers have to look like Java namespaces.
       // Change weird characters (especially hyphens) into underscores.
-      const appId = 'com.meteor.userapps.' + this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
+      const appId = 'com.meteor.userapps.' +
+        this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
 
       // Don't set cwd to project root in runCommands because it doesn't exist yet
       this.runCommands('creating Cordova project', async () => {
-        await cordova_lib.raw.create(files.convertToOSPath(this.projectRoot), appId, this.appName);
+        await cordova_lib.raw.create(files.convertToOSPath(this.projectRoot),
+          appId, this.appName);
       }, undefined, null);
     }
   }
@@ -134,7 +136,8 @@ ${displayNameForPlatform(platform)} with options ${options}`, async () => {
 
   checkPlatformRequirements(platform) {
     if (platform === 'ios' && process.platform !== 'darwin') {
-      Console.warn("Currently, it is only possible to build iOS apps on an OS X system.");
+      Console.warn("Currently, it is only possible to build iOS apps \
+on an OS X system.");
       return false;
     }
 
@@ -150,7 +153,8 @@ platform to your project first.`);
     const allRequirements = this.runCommands(`checking Cordova \
 requirements for platform ${displayNameForPlatform(platform)}`,
       async () => {
-        return await cordova_lib.raw.requirements([platform], this.defaultOptions);
+        return await cordova_lib.raw.requirements([platform],
+          this.defaultOptions);
       });
     let requirements = allRequirements && allRequirements[platform];
     if (!requirements) {
@@ -163,9 +167,12 @@ ${displayNameForPlatform(platform)}`);
     }
 
     // We don't use ios-deploy, but open Xcode to run on a device instead
-    requirements = _.reject(requirements, requirement => requirement.id === 'ios-deploy');
+    requirements = _.reject(requirements,
+      requirement => requirement.id === 'ios-deploy');
 
-    const satisfied = _.every(requirements, requirement => requirement.installed);
+    const satisfied = _.every(requirements,
+      requirement => requirement.installed);
+
     if (!satisfied) {
       Console.info();
       Console.info(`Make sure all installation requirements are satisfied \
@@ -268,6 +275,32 @@ from Cordova project`, async () => {
     }));
   }
 
+  targetForPlugin(name, version) {
+    if (!version) {
+      return name;
+    }
+
+    if (utils.isUrlWithSha(version)) {
+      return this.convertToGitUrl(version);
+    } else if (utils.isUrlWithFileScheme(version)) {
+      // Strip file:// and resolve the path relative to the cordova-build
+      // directory
+      const pluginPath = this.resolveLocalPluginPath(version);
+      // We need to check if the directory exists ourselves because Cordova
+      // will try to install from npm (and fail with an unhelpful error message)
+      // if the directory is not found
+      if (!cordova_util.isDirectory(pluginPath)) {
+        buildmessage.error(`Couldn't find local directory \
+'${files.convertToOSPath(pluginPath)}'. \
+(Attempting to install plugin ${name}).`);
+        return null;
+      }
+      return files.convertToOSPath(pluginPath);
+    } else {
+      return `${name}@${version}`;
+    }
+  }
+
   convertToGitUrl(url) {
     // Matches GitHub tarball URLs, like:
     // https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2
@@ -287,28 +320,14 @@ a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
     }
   }
 
-  targetForPlugin(name, version) {
-    if (!version) {
-      return name;
-    }
-
-    if (utils.isUrlWithSha(version)) {
-      return this.convertToGitUrl(version);
-    } else if (utils.isUrlWithFileScheme(version)) {
-      // Strip file:// and resolve the path relative to the cordova-build
-      // directory
-      const pluginPath = this.resolveLocalPluginPath(version);
-      // We need to check if the directory exists ourselves because Cordova
-      // will try to install from npm (and fail with an unhelpful error message)
-      // if the directory is not found
-      if (!cordova_util.isDirectory(pluginPath)) {
-        buildmessage.error(`Couldn't find local directory \
-'${files.convertToOSPath(pluginPath)}'. (Attempting to install plugin ${name}).`);
-        return null;
-      }
-      return files.convertToOSPath(pluginPath);
+  // Strips file:// and resolves the path relative to the cordova-build
+  // directory
+  resolveLocalPluginPath(pluginPath) {
+    pluginPath = pluginPath.substr("file://".length);
+    if (utils.isPathRelative(pluginPath)) {
+      return path.resolve(this.projectContext.projectDir, pluginPath);
     } else {
-      return `${name}@${version}`;
+      return pluginPath;
     }
   }
 
@@ -332,17 +351,6 @@ to Cordova project`, async () => {
 from Cordova project`, async () => {
       await cordova_lib.raw.plugin('rm', plugins, this.defaultOptions);
     });
-  }
-
-  // Strips the file:// from the path and if a relative path was used, it translates it to a relative path to the
-  // cordova-build directory instead of meteor project directory.
-  resolveLocalPluginPath(pluginPath) {
-    pluginPath = pluginPath.substr("file://".length);
-    if (utils.isPathRelative(pluginPath)) {
-      return path.resolve(this.projectContext.projectDir, pluginPath);
-    } else {
-      return pluginPath;
-    }
   }
 
   // Ensures that the Cordova plugins are synchronized with the app-level
