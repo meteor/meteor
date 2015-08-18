@@ -627,9 +627,18 @@ _.extend(AppRunner.prototype, {
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
     }
 
+    // Atomically (1) see if we've been stop()'d, (2) if not, create a
+    // future that can be used to stop() us once we start running.
+    if (self.exitFuture)
+      return { outcome: 'stopped' };
+    if (self.runFuture)
+      throw new Error("already have future?");
+    var runFuture = self.runFuture = new Future;
+
     const cordovaRunner = self.cordovaRunner;
+    // Run Cordova apps
     if (cordovaRunner) {
-      if (firstRun) {
+      if (!cordovaRunner.started) {
         const plugins =
           cordova.pluginsFromStarManifest(bundleResult.starManifest);
         const { settingsFile, mobileServerUrl } = self;
@@ -665,14 +674,6 @@ _.extend(AppRunner.prototype, {
         }
       }
     }
-
-    // Atomically (1) see if we've been stop()'d, (2) if not, create a
-    // future that can be used to stop() us once we start running.
-    if (self.exitFuture)
-      return { outcome: 'stopped' };
-    if (self.runFuture)
-      throw new Error("already have future?");
-    var runFuture = self.runFuture = new Future;
 
     // Run the program
     options.beforeRun && options.beforeRun();

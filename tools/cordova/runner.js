@@ -10,6 +10,8 @@ export class CordovaRunner {
   constructor(cordovaProject, runTargets) {
     this.cordovaProject = cordovaProject;
     this.runTargets = runTargets;
+
+    this.started = false;
   }
 
   get projectContext() {
@@ -76,6 +78,8 @@ export class CordovaRunner {
   startRunTargets() {
     buildmessage.assertInCapture();
 
+    this.started = false;
+
     for (runTarget of this.runTargets) {
       buildmessage.enterJob(
         { title: `starting ${runTarget.title}` },
@@ -91,6 +95,8 @@ export class CordovaRunner {
         }
       );
     }
+
+    this.started = true;
   }
 
   havePlatformsChanged() {
