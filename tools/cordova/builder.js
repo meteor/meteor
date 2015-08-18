@@ -77,6 +77,8 @@ export class CordovaBuilder {
 
       this.processControlFile();
 
+      if (buildmessage.jobHasMessages()) return;
+
       this.writeConfigXmlAndCopyResources();
       this.copyWWW();
       this.copyBuildOverride();
@@ -184,17 +186,20 @@ export class CordovaBuilder {
 
 
     if (files.exists(controlFilePath)) {
-      const code = files.readFile(controlFilePath, 'utf8');
+      Console.debug('Processing mobile-config.js');
+      
+      buildmessage.enterJob({ title: `processing mobile-config.js` }, () => {
+        const code = files.readFile(controlFilePath, 'utf8');
 
-      try {
-        Console.debug('Running the mobile control file');
-        files.runJavaScript(code, {
-          filename: 'mobile-config.js',
-          symbols: { App: App(this) }
-        });
-      } catch (error) {
-        throw new Error('Error reading mobile-config.js:' + error.stack);
-      }
+        try {
+          files.runJavaScript(code, {
+            filename: 'mobile-config.js',
+            symbols: { App: App(this) }
+          });
+        } catch (error) {
+          buildmessage.exception(error);
+        }
+      });
     }
   }
 
