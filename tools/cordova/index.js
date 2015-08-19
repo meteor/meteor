@@ -18,6 +18,9 @@ export function displayNamesForPlatforms(platforms) {
     displayNameForPlatform(platform)).join(', ');
 }
 
+// This filters the Cordova platforms from a list of app-level platforms.
+// Right now, the only other platforms are the default browser and server
+// platforms.
 export function filterPlatforms(platforms) {
   return _.intersection(platforms, AVAILABLE_PLATFORMS);
 }
