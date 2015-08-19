@@ -1,7 +1,6 @@
 [
   "Accounts",
   "Accounts",
-  "Accounts",
   "Accounts.changePassword",
   "Accounts.createUser",
   "Accounts.emailTemplates",
@@ -26,6 +25,7 @@
   "AccountsClient#onLoginFailure",
   "AccountsClient#user",
   "AccountsClient#userId",
+  "AccountsCommon",
   "AccountsCommon#config",
   "AccountsCommon#onLogin",
   "AccountsCommon#onLoginFailure",

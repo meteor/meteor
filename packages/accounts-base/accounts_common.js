@@ -1,7 +1,7 @@
 /**
  * @summary Super-constructor for AccountsClient and AccountsServer.
  * @locus Anywhere
- * @class Accounts
+ * @class AccountsCommon
  * @instancename accountsClientOrServer
  * @param options {Object} an object with fields:
  * - connection {Object} Optional DDP connection to reuse.
