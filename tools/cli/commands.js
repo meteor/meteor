@@ -914,8 +914,7 @@ on an OS X system.");
       for (platform of cordovaPlatforms) {
         buildmessage.enterJob(
           { title: `building Cordova project for \
-${cordova.displayNameForPlatform(platform)}` },
-          () => {
+${cordova.displayNameForPlatform(platform)}` }, () => {
             let buildOptions = [];
             if (!options.debug) buildOptions.push('--release');
             cordovaProject.buildForPlatform(platform, buildOptions);
@@ -925,19 +924,19 @@ ${cordova.displayNameForPlatform(platform)}` },
               'platforms', platform);
             const platformOutputPath = files.pathJoin(outputPath, platform);
 
+            files.cp_r(buildPath,
+              files.pathJoin(platformOutputPath, 'project'));
+
             if (platform === 'ios') {
-              files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
-              
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
-                "This is an auto-generated XCode project for your iOS application.\n\n" +
-                "Instructions for publishing your iOS app to App Store can be found at:\n" +
-                  "https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n",
-                "utf8");
-            } else if (platform === 'android') {
-              files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
+`This is an auto-generated XCode project for your iOS application.
 
-              const apkPath = files.pathJoin(buildPath, 'build', 'outputs', 'apk',
+Instructions for publishing your iOS app to App Store can be found at:
+https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
+`, "utf8");
+            } else if (platform === 'android') {
+              const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
@@ -945,10 +944,11 @@ ${cordova.displayNameForPlatform(platform)}` },
 
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
-                "This is an auto-generated Gradle project for your Android application.\n\n" +
-                "Instructions for publishing your Android app to Play Store can be found at:\n" +
-                  "https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n",
-                "utf8");
+`This is an auto-generated Gradle project for your Android application.
+
+Instructions for publishing your Android app to Play Store can be found at:
+https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store
+`, "utf8");
             }
         });
       }
