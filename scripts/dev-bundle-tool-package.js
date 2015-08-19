@@ -61,9 +61,9 @@ var packageJson = {
     'lru-cache': '2.6.4',
     // We use our own branch because cordova-lib does not respect a silent
     // option and doesn't allow us to pass in our own env.
-    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
     // We can't download the tarball from GitHub because the package.json is
     // in a subdirectory
+    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
     "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-b0760f0b45c77a39057dc3940f86252c3ef4c393.tar.gz",
     "ios-sim": "4.1.1",
   }
