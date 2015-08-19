@@ -209,7 +209,9 @@ message for more details.
 
 * Allow specifying a `buildNumber` in `App.info`, which is used to set the
   `android-versionCode` and `ios-CFBundleVersion` in the `config.xml` of the
-  Cordova project. #4048
+  Cordova project. The build number is used to differentiate between
+  different versions of the app, and should be incremented before distributing
+  a built app to stores or testing services. #4048
 
 ### Other bug fixes and improvements
 
