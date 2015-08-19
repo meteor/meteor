@@ -118,6 +118,21 @@ their user document:
 
     Meteor.users.deny({update: function () { return true; }});
 
+If you want to remove the logged-in user from the `Meteor.users` collection (for
+example to implement a "Delete My Account" feature), you first need to log him out.
+Failing to do so will cause unnecessary DDP workload and temporarily out-of-date 
+`this.userId` in methods and publish functions. Here is an example of server-side 
+method:
+
+    // Server
+    Meteor.methods({
+      deleteMyAccount: function() {
+        check(this.userId, String);
+        var id = this.userId;
+        Meteor.call('logout');     // at this point, this.userId is null
+        Meteor.users.remove(id);
+      }
+    });
 
 {{> autoApiBox "Meteor.loggingIn"}}
 
@@ -126,11 +141,17 @@ animation while the login request is being processed.
 
 {{> autoApiBox "Meteor.logout"}}
 
+On the server, calling `Meteor.call('logout')` will log the user out immediately 
+and set `this.userId` to `null`.
+
 {{> autoApiBox "Meteor.logoutOtherClients"}}
 
 For example, when called in a user's browser, connections in that browser
 remain logged in, but any other browsers or DDP clients logged in as that user
 will be logged out.
+
+On the server, you can achieve the same by calling `Meteor.call('logoutOtherClients')`.
+
 
 {{> autoApiBox "Meteor.loginWithPassword"}}
 
