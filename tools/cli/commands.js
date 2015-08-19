@@ -119,14 +119,14 @@ function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
     let myIp;
     try {
       myIp = utils.ipAddress();
-  } catch (error) {
-    Console.error(
+    } catch (error) {
+      Console.error(
 `Error detecting IP address for mobile app to connect to:
 ${error.message}
 Please specify the address that the mobile app should connect
 to with --mobile-server.`);
-    throw new main.ExitWithCode(1);
-  }
+      throw new main.ExitWithCode(1);
+    }
     return {
       protocol: 'http://',
       host: myIp,
