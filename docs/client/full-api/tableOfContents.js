@@ -130,7 +130,7 @@ var toc = [
       "Accounts.ui.config"
     ],
 
-    {name: "Advanced Accounts", id: "advanced_accounts_api"}, [
+    {name: "Accounts (multi-server)", id: "advanced_accounts_api"}, [
       "AccountsClient",
       "AccountsServer",
       {type: "spacer"},
