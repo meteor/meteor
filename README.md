@@ -10,6 +10,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 * [Contributors](#user-content-contributors)
 * [Authorization](#user-content-authorization)
 * [Permissions vs roles](#user-content-naming)
+* [What are "groups"?](#groups)
 * [Changes to default Meteor](#user-content-changes)
 * [Installation](#user-content-installing)
 * [Usage examples](#user-content-usage)
@@ -51,13 +52,43 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 <br />
 
 <a name="naming">
-### What's in a name...
+### Permissions vs roles  (or What's in a name...)
 
-Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign to a user and can check for later.
+Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign on a user and which you can check for later.
 
 You can have traditional roles like, "admin" or "webmaster", or you can assign more granular permissions such as, "view-secrets", "users.view", or "users.manage".  Often times more granular is actually better because you are able to handle all those pesky edge cases that come up in real-life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
 
-Sometimes its useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is clearer.  Users can have one set of permissions in group A and another set of permissions in group B.  The next section gives an example of this using soccer/football teams as groups.
+<br />
+
+<a name="groups">
+### What are "groups"?
+
+Sometimes its useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is more clear.  Users can have one set of permissions in group A and another set of permissions in group B.  Let's go through an example of this using soccer/football teams as groups.
+
+```
+Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester-united.com')
+Roles.addUsersToRoles(joesUserId, ['player','goalie'], 'real-madrid.com')
+
+Roles.userIsInRole(joesUserId, 'manage-team', 'manchester-united.com')  // => true
+Roles.userIsInRole(joesUserId, 'manage-team', 'real-madrid.com')  // => false
+```
+
+In this example we can see that Joe manages Manchester United and plays for Real Madrid.  By using groups, we can assign permissions independently and make sure that they don't get mixed up between groups.
+
+NOTE: If you use groups for _ANY_ of your users, you should use groups for _ALL_ of your users.  This is due to how the roles package stores the roles internally in the database.  In roles 2.0, you won't need to worry about this anymore, we'll have a default group that will hold roles not assigned to a specific group.
+
+Now, let's take a look at how to use the Global Group.  Say we want to give Joe permission to do something across all of our groups.  That's what the Global Group is for:
+
+```
+Roles.addUsersToRoles(joesUserId, 'super-admin', Roles.GLOBAL_GROUP)
+
+if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.com')) {
+
+  // True!  Even though Joe doesn't manage Real Madrid, he is 'super-admin' in
+  // the Global Group so this check succeeds.
+
+}
+```
 
 <br />
 
