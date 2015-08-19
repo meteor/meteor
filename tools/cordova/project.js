@@ -57,8 +57,8 @@ export class CordovaProject {
         this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
 
       const templatePath = files.convertToOSPath(files.pathJoin(
-        files.getCurrentToolsDir(),
-        'tools/node_modules/cordova-app-hello-world'));
+        files.getDevBundle(),
+        'lib/node_modules/cordova-app-hello-world'));
 
       const config = { lib: { www: { url: templatePath } } };
 
