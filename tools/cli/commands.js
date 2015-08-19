@@ -89,18 +89,7 @@ export function parseServerOptionsForRunCommand(options) {
 }
 
 function parsePortOption(portOption) {
-  let parsedServerUrl;
-  try {
-    parsedServerUrl = utils.parseUrl(portOption);
-  } catch (error) {
-    if (options.verbose) {
-      Console.rawError(
-        `Error while parsing --port option: ${error.stack} \n`);
-    } else {
-      Console.error(error.message);
-    }
-    throw new main.ExitWithCode(1);
-  }
+  let parsedServerUrl = utils.parseUrl(portOption);
 
   if (!parsedServerUrl.port) {
     Console.error("--port must include a port.");
@@ -112,19 +101,9 @@ function parsePortOption(portOption) {
 
 function parseMobileServerOption(mobileServerOption,
   optionName = 'mobile-server') {
-  let parsedMobileServerUrl;
-  try {
-    parsedMobileServerUrl = utils.parseUrl(mobileServerOption, {
-      protocol: 'http://'});
-  } catch (error) {
-    if (options.verbose) {
-      Console.rawError(
-        `Error while parsing --${optionName} option: ${error.stack} \n`);
-    } else {
-      Console.error(error.message);
-    }
-    throw new main.ExitWithCode(1);
-  }
+  let parsedMobileServerUrl = utils.parseUrl(
+    mobileServerOption,
+    { protocol: 'http://' });
 
   if (!parsedMobileServerUrl.host) {
     Console.error(`--${optionName} must include a hostname.`);
