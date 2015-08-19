@@ -215,11 +215,6 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   // configuration for android.
   run.expectExit(1);
 
-  // When one plugin installation fails, we uninstall all the plugins
-  // (legend has it that Cordova can get in a weird inconsistent state
-  // if we don't do this).
-  checkCordovaPlugins(s, []);
-
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
