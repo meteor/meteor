@@ -64,8 +64,7 @@ exports.formatUrl = function (url, defaults) {
 exports.ipAddress = function () {
   let defaultRoute;
   // netroute is not available on Windows
-  if (false) {
-  // if (process.platform !== "win32") {
+  if (process.platform !== "win32") {
     const netroute = require('netroute');
     const info = netroute.getInfo();
     defaultRoute = _.findWhere(info.IPv4 || [], { destination: "0.0.0.0" });
