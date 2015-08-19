@@ -17,8 +17,7 @@ var copyFile = function(from, to, sand) {
   sand.write(to, contents);
 };
 
-var localCordova = files.pathJoin(files.getCurrentToolsDir(), "tools",
-  "cordova-scripts", "cordova.sh");
+var localCordova = files.pathJoin(files.getDevBundle(), 'lib/node_modules/cordova/bin/cordova');
 
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
@@ -26,12 +25,13 @@ var localCordova = files.pathJoin(files.getCurrentToolsDir(), "tools",
 //
 // sand: a sandbox, that has the main app directory as its cwd.
 var getCordovaPluginsList = function(sand) {
+  var env = files.currentEnvWithPathsAdded(files.getCurrentNodeBinDir());
+  env.METEOR_WAREHOUSE_DIR = sand.warehouse;
+
   var lines = selftest.execFileSync(localCordova, ['plugins'],
     {
       cwd: files.pathJoin(sand.cwd, '.meteor', 'local', 'cordova-build'),
-      env: {
-        METEOR_WAREHOUSE_DIR: sand.warehouse
-      }
+      env: env
     }).split("\n");
   if (lines[0].match(/No plugins/)) {
     lines = [];

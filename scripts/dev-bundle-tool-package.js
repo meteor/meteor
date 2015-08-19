@@ -65,6 +65,8 @@ var packageJson = {
     // in a subdirectory
     // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
     "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-b0760f0b45c77a39057dc3940f86252c3ef4c393.tar.gz",
+    // Also include the Cordova CLI because it is used in tests
+    "cordova": "5.2.0",
     "ios-sim": "4.1.1",
   }
 };
