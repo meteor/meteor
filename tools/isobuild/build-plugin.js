@@ -41,9 +41,11 @@ _.extend(exports.SourceProcessor.prototype, {
           // If we have a disk cache directory and the plugin wants it, use it.
           if (self.isopack.pluginCacheDir &&
               self.userPlugin.setDiskCacheDirectory) {
-            const markedMethod = buildmessage.markBoundary(
-              self.userPlugin.setDiskCacheDirectory.bind(self.userPlugin));
-            markedMethod(self.isopack.pluginCacheDir);
+            buildmessage.markBoundary(function () {
+              self.userPlugin.setDiskCacheDirectory(
+                files.convertToOSPath(self.isopack.pluginCacheDir)
+              );
+            })();
           }
         } catch (e) {
           buildmessage.exception(e);
