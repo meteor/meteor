@@ -5,8 +5,8 @@ from the CLI.
 
 It hooks into the following commands:
 
-* `cli/commands.js`: `meteor run/test-packages/build` `cli/commands-cordova.js`:
-* `meteor add-platform/remove-platform/list-platforms`
+* `cli/commands.js`: `meteor run/test-packages/build`
+* `cli/commands-cordova.js`: `meteor add-platform/remove-platform/list-platforms`
 * `cli/commands-packages.js`: `meteor add/remove cordova:<plugin>`
 
 These commands call into functionality provided by the classes under `cordova/`
