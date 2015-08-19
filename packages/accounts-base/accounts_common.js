@@ -13,9 +13,12 @@ AccountsCommon = function _AccountsCommon(options) {
   this.connection = undefined;
   this._initConnection(options || {});
 
+  // Allows for configuring the collection name.
+  this.usersCollectionName = Meteor.settings.public.usersCollectionName || "users";
+
   // There is an allow call in accounts_server.js that restricts writes to
   // this collection.
-  this.users = new Mongo.Collection("users", {
+  this.users = new Mongo.Collection(this.usersCollectionName, {
     _preventAutopublish: true,
     connection: this.connection
   });
