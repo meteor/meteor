@@ -174,18 +174,3 @@ main.registerCommand({
 
   return 0;
 });
-
-main.registerCommand({
-  name: 'android-launch',
-  options: {
-    verbose: { type: Boolean, short: "v" }
-  },
-  minArgs: 0,
-  maxArgs: 1,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-
-  // TODO
-
-  return 0;
-});
