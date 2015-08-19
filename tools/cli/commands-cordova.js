@@ -9,6 +9,17 @@ import files from '../fs/files.js';
 import * as cordova from '../cordova';
 import { CordovaProject } from '../cordova/project.js';
 
+function displayNameForHostPlatform(platform = process.platform) {
+  switch (platform) {
+    case 'darwin':
+      return "Mac";
+    case 'linux':
+      return "Linux";
+    case 'win32':
+      return "Windows";
+  }
+}
+
 function createProjectContext(appDir) {
   const projectContext = new ProjectContext({
     projectDir: appDir
@@ -145,16 +156,25 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
-  var platform = options.args[0];
-  platform = platform.trim().toLowerCase();
+  const platform = options.args[0];
 
-  if (platform != "android" && platform != "ios") {
+  if (!_.contains(cordova.AVAILABLE_PLATFORMS, platform)) {
     Console.warn(`Unknown platform: ${platform}`);
-    Console.info("Valid platforms are: android, ios");
+    Console.info(`Valid platforms are: \
+${cordova.AVAILABLE_PLATFORMS.join(', ')}`);
     return 1;
   }
 
-  // TODO
+  const hostPlatformName = displayNameForHostPlatform();
+
+  if (hostPlatformName) {
+    const page = `Mobile-Dev-Install:-${cordova.displayNameForPlatform(platform)}-on-${hostPlatformName}`;
+    const url = `https://github.com/meteor/meteor/wiki/${page}`;
+    Console.info("Please follow the instructions here:");
+    Console.info(Console.url(url));
+  } else {
+    Console.info("We don't have installation instructions for your platform");
+  }
 
   return 0;
 });
