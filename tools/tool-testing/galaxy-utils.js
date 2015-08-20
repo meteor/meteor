@@ -1,4 +1,3 @@
-// Utilities for testing against Galaxy.
 var _ = require('underscore');
 var process = require('process');
 var selftest = require('../tool-testing/selftest.js');
@@ -6,6 +5,8 @@ var Run = selftest.Run;
 var testUtils = require('../tool-testing/test-utils.js');
 var files = require('../fs/files.js');
 var utils = require('../utils/utils.js');
+var authClient = require('../meteor-services/auth-client.js');
+var auth = require('../meteor-services/auth.js');
 
 // Run curl with the given specifications. Return an instance of Run.
 var runCurl = function (/*args*/) {
@@ -21,7 +22,7 @@ var runCurl = function (/*args*/) {
 // against a Galaxy (DEPLOY_HOSTNAME, username & password). An extra safety
 // check to avoid strange errors, deploying/calling random methods on Mother,
 // etc.
-exports.sanityCheck = function () {
+exports.sanityCheck = selftest.markStack(function () {
   if (! process.env.DEPLOY_HOSTNAME ) {
     selftest.fail("Please specify a DEPLOY_HOSTNAME to test against Galaxy.\n");
   }
@@ -35,34 +36,43 @@ exports.sanityCheck = function () {
     selftest.fail(
       "Please provide an APP_MONGO url to use for deployed apps.\n");
    }
-};
+});
 
 // Login to Galaxy with environment-variable credentials passed in by the user.
 //
 // Unlike the normal `meteor deploy` Galaxy is not yet publically available, so
 // we don't want to use the publically-accessible test account here.
-exports.loginToGalaxy = function (sandbox) {
+exports.loginToGalaxy = selftest.markStack(function (sandbox) {
   var user = process.env.GALAXY_USERNAME;
   var pass = process.env.GALAXY_PASSWORD;
   testUtils.login(sandbox, user, pass);
-};
+});
 
 // Curl an app running on Galaxy. Automatically follow redirects.
 //
 // Dealing with DNS on Galaxy can be complicated. The standard way to ensure
 // that we hit the right app on the right Galaxy is to curl the galaxy origin,
 // with the host header set to our query app.
-exports.curlToGalaxy = function (url) {
+exports.curlToGalaxy = selftest.markStack(function (url) {
   var hostHeader = "host: " + url;
   var galaxyOrigin = process.env.DEPLOY_HOSTNAME;
   return runCurl("-vLH", hostHeader, galaxyOrigin);
-};
+});
 
 // String we expect to hit on 200 OK.
 exports.httpOK = "HTTP/1.1 200 OK";
 
 // String we expect to hit when using SSL.
 exports.httpRedirect = "HTTP/1.1 307 Temporary Redirect";
+
+// We expect containers to take some time to startup.
+//
+// In the future, we can use this function to poll whether the containers have
+// started and maybe our tests will be faster.
+exports.waitForContainers = selftest.markStack(function () {
+  var waitTime = 1000 * 10 * utils.timeoutScaleFactor;
+  utils.sleepMs(waitTime);
+});
 
 // Deploy an app against a Galaxy
 //
@@ -79,7 +89,7 @@ exports.httpRedirect = "HTTP/1.1 307 Temporary Redirect";
 //   - useOldSettings: don't make a new settings object this app! This is a
 //     redeploy, so reuse the settings that Galaxy has saved.
 //
-exports.createAndDeployApp =  function (sandbox, options) {
+exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   options = options || {};
   var settings = options.settings;
   var appName = options.appName || testUtils.randomAppName();
@@ -119,20 +129,110 @@ exports.createAndDeployApp =  function (sandbox, options) {
   }
 
   // Galaxy might take a while to spin up an app.
-  utils.sleepMs(20000);
+  exports.waitForContainers();
 
   return appName + "." + process.env.DEPLOY_HOSTNAME;
 
-};
+});
 
 // Cleanup the app by deleting it from Galaxy.
 //
-// XXX: We should also clean out its Mongo, but we don't, since, currently, that
-// doesn't apply.
-exports.cleanUpApp = function (sandbox, appName) {
+// XXX: We should also clean out its Mongo, but we don't, since, currently, none
+// of our apps actually put any records into it.
+exports.cleanUpApp = selftest.markStack(function (sandbox, appName) {
   testUtils.cleanUpApp(sandbox, appName);
 
   // Galaxy might take a while to spin up an app, though it should be fairly
   // quick.
-  utils.sleepMs(10000);
+  exports.waitForContainers();
+});
+
+//////////////////////////////////////////////////////////////////////////////
+//  We want to test some of the server-side functionality that doesn't actually
+//  have a command-line API right now. Below functionas are going to use the
+//  tool's ability to make a DDP client and connect to the server to call
+//  methods directly.
+////////////////////////////////////////////////////////////////////////////////
+
+// Returns a logged in connection to GalaxyAPI
+exports.loggedInGalaxyAPIConnection = selftest.markStack(function () {
+  // The credentials of the user might not be the credentials of the galaxytester.
+  auth.doInteractivePasswordLogin({
+    username: process.env.GALAXY_USERNAME,
+    password: process.env.GALAXY_PASSWORD
+  });
+  var galaxyDomain = process.env.DEPLOY_HOSTNAME;
+  var galaxyUrl = "https://" + galaxyDomain;
+  return authClient.loggedInConnection(
+    galaxyUrl,
+    galaxyDomain,
+    "galaxy-api"
+  );
+});
+
+// If the connection has disconnected, close it and open a new one. (workaround
+// for the fact that connections in the tool do not reconnect)
+exports.renewConnection = selftest.markStack(function (conn) {
+  if (!conn.connected) {
+    conn.close();
+    conn = exports.loggedInGalaxyAPIConnection();
+  }
+  return conn;
+});
+
+// Given a connection, makes a call to Galaxy API.
+exports.callGalaxyAPI = function (conn, ...args) {
+  conn = exports.renewConnection(conn);
+  return conn.call(...args);
 };
+
+// Gets app record from Galaxy API by name.
+//
+// This method will create and manage its own connection.
+exports.getAppRecordByName = selftest.markStack(function (appName) {
+  var conn = exports.loggedInGalaxyAPIConnection();
+  var appRecord = {};
+  conn.connection.registerStore('apps', {
+    update: function (msg) {
+      if (msg.msg === 'added' && msg.fields &&
+          msg.fields.hostname === appName) {
+        appRecord = _.extend({ _id: msg.id }, msg.fields);
+      }
+    }
+  });
+  conn.subscribeAndWait("apps");
+  // If we can't find the app, fail the test right now.
+  if (_.isEmpty(appRecord)) {
+    selftest.fail("Cannot find app: ", appName);
+  }
+  conn.close();
+  return appRecord;
+});
+
+
+// Get container statuses for the given app ID.
+//
+// This method will create and manage its own connection.
+exports.getAppContainerStatuses = selftest.markStack(function (appId, appName) {
+  var conn = exports.loggedInGalaxyAPIConnection();
+
+  var containers = [];
+  var statuses = "/app/containerStatuses";
+  conn.connection.registerStore(statuses, {
+    update: function (msg) {
+      if (msg.msg === 'added' && msg.fields &&
+          msg.fields.appId === appId) {
+        containers.push(_.extend({ _id: msg.id }, msg.fields));
+      }
+    }
+  });
+  conn.subscribeAndWait(statuses, appName);
+  conn.close();
+  return containers;
+});
+
+// Close and logout.
+exports.closeGalaxyConnection = selftest.markStack(function (conn) {
+  auth.logoutCommand();
+  conn.close();
+});

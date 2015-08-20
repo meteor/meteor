@@ -4,8 +4,20 @@ var testUtils = require('../tool-testing/test-utils.js');
 var galaxyUtils = require('../tool-testing/galaxy-utils.js');
 var Sandbox = selftest.Sandbox;
 
-// XXX: There is currently no cleanup function in self-test, I will get to it if
-// I have time.
+// XXX: There is currently no cleanup function in self-test, but it would be
+// nice to have.
+
+// Check if a given app is running. Curl that appname and see that it returns
+// some text.
+var checkAppIsRunning = selftest.markStack(function (appName, text) {
+return true;
+  // Test that the app is actually running on Galaxy.
+  var run = galaxyUtils.curlToGalaxy(appName);
+  run.waitSecs(5);
+  run.matchErr(galaxyUtils.httpOK);
+  run.match(text);
+  run.expectExit(0);
+});
 
 // Deploy a simple app to Galaxy.
 selftest.define('galaxy deploy - simple', ['galaxy'], function () {
@@ -19,11 +31,21 @@ selftest.define('galaxy deploy - simple', ['galaxy'], function () {
    var appName = galaxyUtils.createAndDeployApp(s);
 
   // Test that the app is actually running on Galaxy.
-  var run = galaxyUtils.curlToGalaxy(appName);
-  run.waitSecs(5);
-  run.matchErr(galaxyUtils.httpOK);
-  run.match("Hello");
+  checkAppIsRunning(appName, "Hello");
+
+  // Edit the app. Use words that are unlikely to show up in (for example)
+  // boilerplate 404 text.
+  var newText =
+    "<head> second </head>" + "\n" +
+    "<body> deploying rocks! </body>";
+  s.write("simple.html", newText);
+
+  // Let's use normal deploy here.
+  var run = s.run("deploy", appName);
+  run.waitSecs(15);
   run.expectExit(0);
+  galaxyUtils.waitForContainers();
+  checkAppIsRunning(appName, "rocks!");
 
   // Delete our deployed app.
   galaxyUtils.cleanUpApp(s, appName);
@@ -37,6 +59,7 @@ selftest.define('galaxy deploy - simple', ['galaxy'], function () {
   testUtils.logout(s);
 });
 
+// Deploy an app with some public settings to galaxy, check that everything works.
 selftest.define('galaxy deploy - settings', ['galaxy'], function () {
   galaxyUtils.sanityCheck();
   var s = new Sandbox;
@@ -56,11 +79,7 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
   });
 
   // Test that the app is actually running on Galaxy.
-  var run = galaxyUtils.curlToGalaxy(appName);
-  run.waitSecs(5);
-  run.matchErr(galaxyUtils.httpOK);
-  run.match("Hello");
-  run.expectExit(0);
+  checkAppIsRunning(appName, "Hello");
 
   // Test that the public settins appear in the HTTP response body.
   testUtils.checkForSettings(appName, settings, 10);
@@ -80,27 +99,143 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
   settings['public'].a = 'c';
   s.cd('..');
   galaxyUtils.createAndDeployApp(s, {
-    templateApp: 'standard-app',
+    templateApp: 'simple-app',
     appName: appName,
     settings: settings
   });
-  testUtils.checkForSettings(appName, settings, 10);
+  checkAppIsRunning(appName, "Hello");
 
   galaxyUtils.cleanUpApp(s, appName);
   testUtils.logout(s);
 });
 
 
+// Rescale the app and check status.
+selftest.define('galaxy deploy - rescale', ['galaxy'], function () {
+  galaxyUtils.sanityCheck();
+  var s = new Sandbox;
 
+  // Login with a valid Galaxy account
+  galaxyUtils.loginToGalaxy(s);
 
-// Tests that we want to have on Galaxy:
-//  - deploy and add SSL cert
-//  - rescale
-//  - deploy app multiple times, see that it updates
-//  - rescale & cert
-//  - destroy an app on galaxy
+  // Deploy an app.
+  var appName = galaxyUtils.createAndDeployApp(s);
+  checkAppIsRunning(appName, "Hello");
 
-// Infrastructure setup
-//  - Read & set variable for deploy_hostname
-//  - Read & set variables for username & password
-//  - use DDP & such for great justice
+  // Call into the Galaxy API DDP methods to rescale containers. The method
+  // signature is:
+  //    setContainerCount: function(appId, containerCount)
+  var conn = galaxyUtils.loggedInGalaxyAPIConnection();
+  var appRecord = galaxyUtils.getAppRecordByName(appName);
+  galaxyUtils.callGalaxyAPI(conn, "setContainerCount", appRecord._id, 5);
+  galaxyUtils.waitForContainers();
+  checkAppIsRunning(appName, "Hello");
+
+  // The most basic check -- how many containers does Galaxy API think that it
+  // should run?
+  appRecord = galaxyUtils.getAppRecordByName(appName);
+  selftest.expectEqual(appRecord.containerCount, 5);
+
+  // More throughly: check that as far as we know, containers are actually
+  // running (or the scheduler is lying to GalaxyAPI and claiming that they are
+  // running). This API is even more internal, but it is unlikely to change for
+  // now.
+  // XXX: This subscription is not yet worth checking on staging, when it is, uncomment.
+  /// var containers = galaxyUtils.getAppContainerStatuses(appRecord._id, appName);
+  // selftest.equals(containers.length, 5);
+
+  // Now, scale down the app.
+  galaxyUtils.callGalaxyAPI(conn, "setContainerCount", appRecord._id, 1);
+  galaxyUtils.waitForContainers();
+  checkAppIsRunning(appName, "Hello");
+
+  // Delete the app.
+  galaxyUtils.cleanUpApp(s, appName);
+
+  // Check that no containers are running.
+  conn = galaxyUtils.renewConnection(conn);
+  // XXX: This subscription is not yet worth checking on staging, when it is, uncomment.
+  // containers = galaxyUtils.getAppContainerStatuses(appRecord._id, appName);
+  // selftest.expectEqual(0, containers.length);
+
+  // Logout.
+  galaxyUtils.closeGalaxyConnection(conn);
+  testUtils.logout(s);
+});
+
+// Upload an app, allocate it a self-signed cert, check that we get https
+// redirection.
+selftest.define('galaxy self-signed cert', ['galaxy'], function () {
+  galaxyUtils.sanityCheck();
+  var s = new Sandbox;
+
+  // Login with a valid Galaxy account
+  galaxyUtils.loginToGalaxy(s);
+
+  // Deploy an app. Check that it is running.
+  var appName = galaxyUtils.createAndDeployApp(s);
+  checkAppIsRunning(appName, "Hello");
+
+  // Force SSL.
+  var run = s.run("add", "force-ssl");
+  run.waitSecs(5);
+  run.expectExit(0);
+  run = s.run("deploy", appName);
+  run.waitSecs(30);
+  run.expectExit(0);
+  galaxyUtils.waitForContainers();
+
+  // Create a signed certificate for the app.
+  //  createSelfSignedCertificateForApp: function (appId, options) {
+  var appRecord = galaxyUtils.getAppRecordByName(appName);
+  var conn = galaxyUtils.loggedInGalaxyAPIConnection();
+  var certIds = _.map(_.range(0, 15), function () {
+    return galaxyUtils.callGalaxyAPI(
+      conn, "createSelfSignedCertificateForApp", appRecord._id);
+  });
+
+  // Activate a certificate in the middle -- not the first or the last.
+  galaxyUtils.callGalaxyAPI(
+    conn, "activateCertificateForApp", certIds[3], appRecord._id);
+  // Check that we are getting a re-direct.
+  galaxyUtils.waitForContainers();
+  run = galaxyUtils.curlToGalaxy(appName);
+  run.waitSecs(5);
+  run.matchErr("SSL");
+  run.expectExit(60);
+
+  // Remove the un-activated certificates
+  _.each(_.range(0, 15), function (i) {
+    if (i !== 3) {
+      galaxyUtils.callGalaxyAPI(
+        conn, "removeCertificateFromApp", certIds[i], appRecord._id);
+    }
+  });
+  // Check that we are still getting a re-direct.
+  run = galaxyUtils.curlToGalaxy(appName);
+  run.waitSecs(5);
+  run.matchErr("SSL");
+  run.expectExit(60);
+
+  // Clean up.
+  galaxyUtils.cleanUpApp(s, appName);
+  testUtils.logout(s);
+  galaxyUtils.closeGalaxyConnection(conn);
+});
+
+// Unauthorized users cannot deploy to Galaxy.
+selftest.define('unauthorized deploy', ['galaxy'], function () {
+  var sandbox = new Sandbox;
+  // This is the test user. The test user is not currently authorized to deploy
+  // to Galaxy. Sorry, test user! :( Hopefully, someday.
+  testUtils.login(sandbox, 'test', 'testtest');
+
+  var appName = testUtils.randomAppName();
+  sandbox.createApp(appName, 'empty');
+  sandbox.cd(appName);
+  var run = sandbox.run("deploy", appName);
+  run.waitSecs(90);
+  run.matchErr("Error deploying");
+  run.matchErr("is not authorized");
+  run.expectExit(1);
+});
