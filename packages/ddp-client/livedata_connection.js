@@ -787,15 +787,7 @@ _.extend(Connection.prototype, {
     // while because of a wait method).
     args = EJSON.clone(args);
 
-    // Lazily allocate method ID once we know that it'll be needed.
-    var methodId = (function () {
-      var id;
-      return function () {
-        if (id === undefined)
-          id = '' + (self._nextMethodId++);
-        return id;
-      };
-    })();
+    const methodId = self._makeLazyMethodIdGetter();
 
     var enclosing = DDP._CurrentInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
@@ -956,6 +948,16 @@ _.extend(Connection.prototype, {
     }
 
     return options.returnStubValue ? stubReturnValue : undefined;
+  },
+
+  _makeLazyMethodIdGetter() {
+    let id;
+    return () => {
+      if (id === undefined) {
+        id = String(this._nextMethodId++);
+      }
+      return id;
+    };
   },
 
   _enqueueMethodInvoker(methodInvoker, wait) {
