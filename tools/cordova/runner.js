@@ -84,10 +84,7 @@ export class CordovaRunner {
       buildmessage.enterJob(
         { title: `starting ${runTarget.title}` },
         () => {
-          // Do not await the returned promise so run targets can start
-          // in parallel
-          // XXX Find a way to have concurrent progress displays
-          runTarget.start(this.cordovaProject);
+          Promise.await(runTarget.start(this.cordovaProject));
 
           if (!buildmessage.jobHasMessages()) {
             runLog.log(`Started ${runTarget.title}.`, { arrow: true });
