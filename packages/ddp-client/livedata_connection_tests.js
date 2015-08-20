@@ -1983,6 +1983,98 @@ if (Meteor.isClient) {
   });
 }
 
+Meteor.methods({
+  resolveAsync(arg) {
+    return Promise.resolve(arg).then(
+      result => result + " resolved"
+    );
+  },
+
+  rejectAsync(arg) {
+    const error = new Meteor.Error(arg + " rejected");
+    error.expected = true;
+    return Promise.reject(error);
+  },
+
+  callerAsync(arg) {
+    return Promise.all([
+      Meteor.call("calleeSync", arg * 10),
+      Meteor.callAsync("calleeAsync", arg * 100)
+    ]).then(results => {
+      let sum = 0;
+      results.forEach(n => sum += n);
+      return sum + arg;
+    });
+  },
+
+  calleeSync(arg) {
+    return arg * 2;
+  },
+
+  calleeAsync(arg) {
+    return Promise.resolve(arg * 3);
+  }
+});
+
+Meteor.isClient && Meteor.methods({
+  inconsistentStubAsync(arg) {
+    return Promise.resolve(arg + " from stub");
+  }
+});
+
+Meteor.isServer && Meteor.methods({
+  inconsistentStubAsync(arg) {
+    return Promise.resolve(arg + " from server");
+  }
+});
+
+Tinytest.addAsync("livedata stub - callAsync", (test, onComplete) => {
+  Promise.all([
+    new Promise((resolve, reject) => {
+      Meteor.call("resolveAsync", "call", (error, result) => {
+        error ? reject(error) : resolve(result);
+      });
+    }),
+
+    Meteor.callAsync("resolveAsync", "callAsync"),
+    Meteor.applyAsync("resolveAsync", ["applyAsync"]),
+
+    Meteor.callAsync(
+      "rejectAsync", "callAsync"
+    ).catch(error => error.message),
+
+    Meteor.applyAsync(
+      "rejectAsync", ["applyAsync"]
+    ).catch(error => error.message),
+
+    Meteor.callAsync("callerAsync", 3),
+
+    Meteor.callAsync("inconsistentStubAsync", "callAsync"),
+    Meteor.applyAsync("inconsistentStubAsync", ["applyAsync"], {
+      returnStubValue: true
+    }),
+  ]).then(results => {
+    test.equal(results, [
+      "call resolved",
+
+      "callAsync resolved",
+      "applyAsync resolved",
+
+      "[callAsync rejected]",
+      "[applyAsync rejected]",
+
+      963,
+
+      "callAsync from server",
+      "applyAsync from " + (
+        Meteor.isServer ? "server" : "stub"
+      )
+    ]);
+
+    onComplete();
+  }, error => test.fail(error));
+});
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag

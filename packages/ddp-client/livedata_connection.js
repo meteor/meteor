@@ -1035,6 +1035,91 @@ _.extend(Connection.prototype, {
     }
   },
 
+  callAsync(name, ...args) {
+    return this.applyAsync(name, args);
+  },
+
+  applyAsync(name, args, options = {}) {
+    // Keep our args safe from mutation (eg if we don't send the message for a
+    // while because of a wait method).
+    args = EJSON.clone(args);
+
+    const methodId = this._makeLazyMethodIdGetter();
+    const enclosing = DDP._CurrentInvocation.get();
+    const alreadyInSimulation = enclosing && enclosing.isSimulation;
+    const randomSeedGenerator =
+      this._makeRandomSeedGenerator(enclosing, name);
+
+    const stubResult = this._simulateMethod({
+      name, args, methodId, randomSeedGenerator
+    });
+
+    const stubPromise = Promise.resolve(stubResult && stubResult.promise);
+
+    // If we're in a simulation, stop and return the result we have,
+    // rather than going on to do an RPC. If there was no stub, the value
+    // of afterStubPromise will end up being undefined.
+    if (alreadyInSimulation) {
+      return stubPromise;
+    }
+
+    // At this point we're definitely doing an RPC, and we're going to
+    // return the value of the RPC to the caller.
+
+    // Send the RPC. Note that on the client, it is important that the
+    // stub have finished before we send the RPC, so that we know we have
+    // a complete list of which local documents the stub wrote.
+    var message = {
+      msg: 'method',
+      method: name,
+      params: args,
+      id: methodId()
+    };
+
+    // Send the randomSeed only if we used it
+    if (randomSeedGenerator.seed) {
+      message.randomSeed = randomSeedGenerator.seed;
+    }
+
+    const rpcPromise = new Promise((resolve, reject) => {
+      this._enqueueMethodInvoker(new MethodInvoker({
+        methodId: methodId(),
+        callback: (error, result) => {
+          error ? reject(error) : resolve(result);
+        },
+        connection: this,
+        onResultReceived: options.onResultReceived,
+        wait: !!options.wait,
+        message: message
+      }), options.wait);
+    });
+
+    return stubPromise.then(
+      result => options.returnStubValue ? result : rpcPromise,
+      exception => {
+        // If an exception occurred in a stub, and we're ignoring it
+        // because we're doing an RPC and want to use what the server
+        // returns instead, log it so the developer knows
+        // (unless they explicitly ask to see the error).
+        if (options.throwStubExceptions) {
+          throw exception;
+        }
+
+        // Tests can set the 'expected' flag on an exception so it won't
+        // go to log.
+        if (! exception.expected) {
+          Meteor._debug(
+            `Exception while simulating the effect of invoking '${name}'`,
+            exception,
+            exception.stack
+          );
+        }
+
+        return rpcPromise;
+      }
+    );
+  },
+
   // Before calling a method stub, prepare all stores to track changes and allow
   // _retrieveAndStoreOriginals to get the original versions of changed
   // documents.

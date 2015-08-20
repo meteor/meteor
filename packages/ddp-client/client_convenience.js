@@ -42,18 +42,24 @@ if (Meteor.isClient) {
     }
   };
 
-  Meteor.connection =
+  const conn = Meteor.connection =
     DDP.connect(ddpUrl, {
       onDDPVersionNegotiationFailure: onDDPVersionNegotiationFailure
     });
 
   // Proxy the public methods of Meteor.connection so they can
   // be called directly on Meteor.
-  _.each(['subscribe', 'methods', 'call', 'apply', 'status', 'reconnect',
-          'disconnect'],
-         function (name) {
-           Meteor[name] = _.bind(Meteor.connection[name], Meteor.connection);
-         });
+  _.each([
+    'subscribe',
+    'methods',
+    'call', 'callAsync',
+    'apply', 'applyAsync',
+    'status',
+    'reconnect',
+    'disconnect'
+  ], name => {
+    Meteor[name] = conn[name].bind(conn);
+  });
 } else {
   // Never set up a default connection on the server. Don't even map
   // subscribe/call/etc onto Meteor.

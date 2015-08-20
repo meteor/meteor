@@ -52,6 +52,7 @@ Package.onTest(function (api) {
     'ecmascript',
     'underscore',
     'tinytest',
+    'ecmascript',
     'random',
     'tracker',
     'reactive-var',
