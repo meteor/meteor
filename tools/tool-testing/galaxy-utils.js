@@ -16,18 +16,23 @@ var runCurl = function (/*args*/) {
   });
 };
 
+// Some constants.
+var GALAXY_USERNAME = process.env.GALAXY_USERNAME;
+var GALAXY_PASSWORD = process.env.GALAXY_PASSWORD;
+var GALAXY_URL = process.env.GALAXY_URL;
+
 // Fail if the test is obviously not set up for using Galaxy.
 //
 // Make sure that we have at least set all of the variables that we need to run
-// against a Galaxy (DEPLOY_HOSTNAME, username & password). An extra safety
+// against a Galaxy (GALAXY_URL, username & password). An extra safety
 // check to avoid strange errors, deploying/calling random methods on Mother,
 // etc.
 exports.sanityCheck = selftest.markStack(function () {
-  if (! process.env.DEPLOY_HOSTNAME ) {
-    selftest.fail("Please specify a DEPLOY_HOSTNAME to test against Galaxy.\n");
+  if (! GALAXY_URL ) {
+    selftest.fail("Please specify a GALAXY_URL to test against Galaxy.\n");
   }
-  if (! process.env.GALAXY_USERNAME ||
-      ! process.env.GALAXY_PASSWORD) {
+  if (! GALAXY_USERNAME ||
+      ! GALAXY_PASSWORD) {
     selftest.fail(
       "Can't use test account with Galaxy. " +
        "Please specify GALAXY_USERNAME and GALAXY_PASSWORD.\n");
@@ -43,8 +48,8 @@ exports.sanityCheck = selftest.markStack(function () {
 // Unlike the normal `meteor deploy` Galaxy is not yet publically available, so
 // we don't want to use the publically-accessible test account here.
 exports.loginToGalaxy = selftest.markStack(function (sandbox) {
-  var user = process.env.GALAXY_USERNAME;
-  var pass = process.env.GALAXY_PASSWORD;
+  var user = GALAXY_USERNAME;
+  var pass = GALAXY_PASSWORD;
   testUtils.login(sandbox, user, pass);
 });
 
@@ -55,7 +60,7 @@ exports.loginToGalaxy = selftest.markStack(function (sandbox) {
 // with the host header set to our query app.
 exports.curlToGalaxy = selftest.markStack(function (url) {
   var hostHeader = "host: " + url;
-  var galaxyOrigin = process.env.DEPLOY_HOSTNAME;
+  var galaxyOrigin = GALAXY_URL;
   return runCurl("-vLH", hostHeader, galaxyOrigin);
 });
 
@@ -131,7 +136,7 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   // Galaxy might take a while to spin up an app.
   exports.waitForContainers();
 
-  return appName + "." + process.env.DEPLOY_HOSTNAME;
+  return appName + "." + GALAXY_URL;
 
 });
 
@@ -158,10 +163,10 @@ exports.cleanUpApp = selftest.markStack(function (sandbox, appName) {
 exports.loggedInGalaxyAPIConnection = selftest.markStack(function () {
   // The credentials of the user might not be the credentials of the galaxytester.
   auth.doInteractivePasswordLogin({
-    username: process.env.GALAXY_USERNAME,
-    password: process.env.GALAXY_PASSWORD
+    username: GALAXY_USERNAME,
+    password: GALAXY_PASSWORD
   });
-  var galaxyDomain = process.env.DEPLOY_HOSTNAME;
+  var galaxyDomain = GALAXY_URL;
   var galaxyUrl = "https://" + galaxyDomain;
   return authClient.loggedInConnection(
     galaxyUrl,
