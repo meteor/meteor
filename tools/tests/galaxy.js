@@ -10,7 +10,6 @@ var Sandbox = selftest.Sandbox;
 // Check if a given app is running. Curl that appname and see that it returns
 // some text.
 var checkAppIsRunning = selftest.markStack(function (appName, text) {
-return true;
   // Test that the app is actually running on Galaxy.
   var run = galaxyUtils.curlToGalaxy(appName);
   run.waitSecs(5);
