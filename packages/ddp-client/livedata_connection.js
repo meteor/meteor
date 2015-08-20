@@ -1,9 +1,3 @@
-if (Meteor.isServer) {
-  var path = Npm.require('path');
-  var Fiber = Npm.require('fibers');
-  var Future = Npm.require(path.join('fibers', 'future'));
-}
-
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
 // Options:
@@ -676,27 +670,32 @@ _.extend(Connection.prototype, {
   // options:
   // - onLateError {Function(error)} called if an error was received after the ready event.
   //     (errors received before ready cause an error to be thrown)
-  _subscribeAndWait: function (name, args, options) {
-    var self = this;
-    var f = new Future();
-    var ready = false;
-    var handle;
+  _subscribeAndWait(name, args, options) {
     args = args || [];
-    args.push({
-      onReady: function () {
-        ready = true;
-        f['return']();
-      },
-      onError: function (e) {
-        if (!ready)
-          f['throw'](e);
-        else
-          options && options.onLateError && options.onLateError(e);
-      }
+
+    const promise = new Promise((resolve, reject) => {
+      let ready = false;
+
+      args.push({
+        onReady() {
+          ready = true;
+          resolve();
+        },
+
+        onError(e) {
+          if (! ready) {
+            reject(e);
+          } else if (options && options.onLateError) {
+            options.onLateError(e);
+          }
+        }
+      });
     });
 
-    handle = self.subscribe.apply(self, [name].concat(args));
-    f.wait();
+    const handle = this.subscribe(name, ...args);
+
+    promise.await();
+
     return handle;
   },
 
@@ -918,8 +917,11 @@ _.extend(Connection.prototype, {
       } else {
         // On the server, make the function synchronous. Throw on
         // errors, return on success.
-        var future = new Future;
-        callback = future.resolver();
+        var promise = new Promise((resolve, reject) => {
+          callback = (error, result) => {
+            error ? reject(error) : resolve(result);
+          };
+        });
       }
     }
     // Send the RPC. Note that on the client, it is important that the
@@ -966,9 +968,10 @@ _.extend(Connection.prototype, {
 
     // If we're using the default callback on the server,
     // block waiting for the result.
-    if (future) {
-      return future.wait();
+    if (promise) {
+      return promise.await();
     }
+
     return options.returnStubValue ? stubReturnValue : undefined;
   },
 
