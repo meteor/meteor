@@ -123,18 +123,22 @@ ${displayNameForPlatform(platform)}`, async () => {
     });
   }
 
-  // Running (incudes build)
+  // Running
 
   async run(platform, isDevice, options = [], extraPaths) {
     options.push(isDevice ? '--device' : '--emulator');
 
     const env = this.defaultEnvWithPathsAdded(...extraPaths);
-    const commandOptions = _.extend(this.defaultOptions,
-      { platforms: [platform], options: options });
 
     this.runCommands(`running Cordova project for platform \
 ${displayNameForPlatform(platform)} with options ${options}`, async () => {
-      await cordova_lib.raw.run(commandOptions);
+      const command = files.convertToOSPath(files.pathJoin(
+        this.projectRoot, 'platforms', platform, 'cordova', 'run'));
+      return await superspawn.spawn(command, options, {
+          stdio: !Console.verbose ? 'pipe' : 'inherit',
+          printCommand: !!Console.verbose,
+          chmod: true
+      });
     }, env);
   }
 
@@ -490,22 +494,29 @@ from Cordova project`, async () => {
     try {
       return Promise.await(asyncFunc());
     } catch (error) {
+      Console.arrowError('Errors executing Cordova commands:');
+      Console.error();
+      const consoleOptions = Console.options({ indent: 3 });
+      Console.error(`While ${title}:`, consoleOptions);
+
       if (error instanceof CordovaError) {
-        Console.arrowError('Errors executing Cordova commands:');
-        Console.error();
-        const consoleOptions = Console.options({ indent: 3 });
-        Console.error(`While ${title}:`, consoleOptions);
+        // Only print the message for errors thrown by cordova-lib, because
+        // these are meant for end-user consumption.
+        // But warn that they may not completely apply to our situation.
+        // (We do print the stack trace if we are in verbose mode.)
         const errorMessage = Console.verbose ? (error.stack || error.message) :
           error.message;
         Console.error(errorMessage, consoleOptions);
-        Console.error(chalk.green("(If the error message contains suggestions \
+        Console.error(chalk.green(`(If the error message contains suggestions \
 for a fix, note that this may not apply to the Meteor integration. You can try \
-running again with the --verbose option to help diagnose the issue.)"),
+running again with the --verbose option to help diagnose the issue.)`),
           consoleOptions);
-        throw new main.ExitWithCode(1);
       } else {
-        throw error;
-      }
+        // Print stack trace for other errors by default, because the message
+        // usually does not give us enough information to know what is going on
+        Console.error(error && error.stack || error, consoleOptions);
+      };
+      throw new main.ExitWithCode(1);
     } finally {
       if (oldCwd) {
         process.chdir(oldCwd);

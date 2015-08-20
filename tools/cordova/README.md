@@ -64,9 +64,10 @@ to compile app. Includes everything done in the prepare stage. It is used for
 
 * `async project.run(platform, isDevice, options = [], extraPaths)`
 
-Similar to `cordova run <target>`. Uses platform-specific mechanisms to run the
-built app on a device or emulator/simulator. Includes everything done in the
-prepare and build stages. It is used for `meteor run/test-packages`.
+Similar to `cordova run <target>`, except that it doesn't include prepare, so
+you'll have to make sure `project.prepareForPlatform()` is called before.
+Uses platform-specific mechanisms to run the built app on a device or
+emulator/simulator. It is used for `meteor run/test-packages`.
 
 ### Managing platforms
 

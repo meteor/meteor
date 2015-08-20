@@ -73,6 +73,10 @@ export class CordovaRunner {
 
   prepareProject(bundlePath, plugins, options) {
     this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
+
+    for (platform of this.platformsForRunTargets) {
+      this.cordovaProject.prepareForPlatform(platform);
+    }
   }
 
   startRunTargets() {
