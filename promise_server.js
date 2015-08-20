@@ -1,11 +1,9 @@
 var assert = require("assert");
-
-var MeteorPromise = typeof Promise === "function"
-  // See https://github.com/then/promise#usage for an explanation of why
-  // we require promise/domains here.
-  ? Promise : require("promise/domains");
-
 var fiberPool = require("./fiber_pool.js").makePool();
+
+// See https://github.com/then/promise#usage for an explanation of why we
+// require promise/domains here.
+var MeteorPromise = require("promise/domains");
 
 // Replace MeteorPromise.prototype.then with a wrapper that ensures the
 // onResolved and onRejected callbacks always run in a Fiber.
