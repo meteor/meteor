@@ -19,7 +19,7 @@ var runCurl = function (/*args*/) {
 // Some constants.
 var GALAXY_USERNAME = process.env.GALAXY_USERNAME;
 var GALAXY_PASSWORD = process.env.GALAXY_PASSWORD;
-var GALAXY_URL = process.env.GALAXY_URL;
+var GALAXY_URL = process.env.DEPLOY_HOSTNAME;
 
 // Fail if the test is obviously not set up for using Galaxy.
 //
