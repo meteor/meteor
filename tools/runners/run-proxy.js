@@ -16,7 +16,6 @@ var Proxy = function (options) {
   self.proxyToErrorApp = options.proxyToErrorApp || '127.0.0.1';
   self.runErrorApp = options.runErrorApp;
   self.onFailure = options.onFailure || function () {};
-  self.runner = options.runner;
 
   self.mode = "hold";
   self.httpQueue = []; // keys: req, res
@@ -264,34 +263,6 @@ _.extend(Proxy.prototype, {
           'addErrorMessage',
           errorMessage,
           errorStartTime);
-
-        var callRestart = function () {
-          self.runner.appRunner.restart();
-        }
-        errorAppConnection.registerStore('restart-button', {
-          update: function (msg) {
-            console.log('msg: ', msg);
-            if (msg.fields.value)
-              callRestart();
-          },
-          beginUpdate: function () {
-            console.log("begin update");
-          },
-          endUpdate: function () {
-            console.log("end update");
-          },
-          saveOriginals: function () {
-            console.log("save originals");
-          },
-          retrieveOriginals: function () {
-            console.log('retrieve originals');
-          }
-        });
-        errorAppConnection.subscribe('restart-button', {
-          onReady: function () { console.log("onReady And the Itemns actually Arrive", arguments); },
-          onError: function () { console.log("onError", arguments); }
-        });
-
       }
     }
 

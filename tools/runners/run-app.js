@@ -945,12 +945,6 @@ _.extend(AppRunner.prototype, {
       self.startFuture['return']();
 
     self.fiber = null;
-  },
-
-  restart: function() {
-    var self = this;
-    self.stop();
-    self.start();
   }
 });
 

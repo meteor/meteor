@@ -15,7 +15,6 @@
           <p id="status"> App is currently refreshing </p>
         {{/if}}
     </header>
-      {{> restart}}
     <ul>
       {{#each errors}}
         {{> err}}
@@ -30,8 +29,4 @@
     <br />
     <pre class="text">{{text}}</pre>
   </li>
-</template>
-
-<template name="restart">
-  <button class='refresh-button'>Refresh</button>
 </template>

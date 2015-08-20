@@ -73,8 +73,7 @@ class Runner {
       proxyToErrorPort: errorAppConfig ? errorAppConfig.appPort : '',
       proxyToErrorHost: errorAppConfig ? errorAppConfig.appHost : '',
       runErrorApp: errorAppConfig ? errorAppConfig.runErrorApp : false,
-      onFailure,
-      runner: self
+      onFailure
     });
 
     self.httpProxy = null;
