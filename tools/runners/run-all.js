@@ -15,6 +15,7 @@ const HttpProxy = require('./run-httpproxy.js').HttpProxy;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const Updater = require('./run-updater.js').Updater;
+const ErrorAppRunner = require('./run-error-app.js').ErrorAppRunner;
 
 class Runner {
   constructor({
@@ -113,11 +114,11 @@ class Runner {
       proxy: self.proxy,
       noRestartBanner: self.quiet,
     });
-
+    // errorAppConfig.runErrorApp = false;
     self.errorAppConfig = errorAppConfig;
 
     if (errorAppConfig && errorAppConfig.runErrorApp) {
-      self.errorAppRunner = new AppRunner({
+      self.errorAppRunner = new ErrorAppRunner({
         projectContext: errorAppConfig.projectContext,
         port: errorAppConfig.appPort,
         listenHost: appHost,
