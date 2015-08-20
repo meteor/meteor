@@ -1,13 +1,13 @@
 Package.describe({
   name: "promise",
-  version: "0.4.6-plugins.0",
+  version: "0.4.8-plugins.0",
   summary: "ECMAScript 2015 Promise polyfill with Fiber support",
   git: "https://github.com/meteor/promise",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "meteor-promise": "0.4.6"
+  "meteor-promise": "0.4.8"
 });
 
 Package.onUse(function(api) {
@@ -19,10 +19,6 @@ Package.onUse(function(api) {
     ".npm/package/node_modules/meteor-promise/promise.bundle.js",
     "client"
   );
-
-  // The promise.bundle.js file defines the Promise constructor globally,
-  // so here we assign the global value to the exported package variable.
-  api.addFiles("export_globals.js", "client");
 
   api.export("Promise");
 });
