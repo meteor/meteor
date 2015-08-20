@@ -792,23 +792,8 @@ _.extend(Connection.prototype, {
     var enclosing = DDP._CurrentInvocation.get();
     var alreadyInSimulation = enclosing && enclosing.isSimulation;
 
-    // Lazily generate a randomSeed, only if it is requested by the stub.
-    // The random streams only have utility if they're used on both the client
-    // and the server; if the client doesn't generate any 'random' values
-    // then we don't expect the server to generate any either.
-    // Less commonly, the server may perform different actions from the client,
-    // and may in fact generate values where the client did not, but we don't
-    // have any client-side values to match, so even here we may as well just
-    // use a random seed on the server.  In that case, we don't pass the
-    // randomSeed to save bandwidth, and we don't even generate it to save a
-    // bit of CPU and to avoid consuming entropy.
-    var randomSeed = null;
-    var randomSeedGenerator = function () {
-      if (randomSeed === null) {
-        randomSeed = DDPCommon.makeRpcSeed(enclosing, name);
-      }
-      return randomSeed;
-    };
+    const randomSeedGenerator =
+      self._makeRandomSeedGenerator(enclosing, name);
 
     // Run the stub, if we have one. The stub is supposed to make some
     // temporary writes to the database to give the user a smooth experience
@@ -832,7 +817,7 @@ _.extend(Connection.prototype, {
         isSimulation: true,
         userId: self.userId(),
         setUserId: setUserId,
-        randomSeed: function () { return randomSeedGenerator(); }
+        randomSeed: randomSeedGenerator
       });
 
       if (!alreadyInSimulation)
@@ -927,8 +912,8 @@ _.extend(Connection.prototype, {
     };
 
     // Send the randomSeed only if we used it
-    if (randomSeed !== null) {
-      message.randomSeed = randomSeed;
+    if (randomSeedGenerator.seed) {
+      message.randomSeed = randomSeedGenerator.seed;
     }
 
     self._enqueueMethodInvoker(new MethodInvoker({
@@ -957,6 +942,25 @@ _.extend(Connection.prototype, {
         id = String(this._nextMethodId++);
       }
       return id;
+    };
+  },
+
+  _makeRandomSeedGenerator(invocation, name) {
+    // Lazily generate a randomSeed, only if it is requested by the stub.
+    // The random streams only have utility if they're used on both the client
+    // and the server; if the client doesn't generate any 'random' values
+    // then we don't expect the server to generate any either.
+    // Less commonly, the server may perform different actions from the client,
+    // and may in fact generate values where the client did not, but we don't
+    // have any client-side values to match, so even here we may as well just
+    // use a random seed on the server.  In that case, we don't pass the
+    // randomSeed to save bandwidth, and we don't even generate it to save a
+    // bit of CPU and to avoid consuming entropy.
+    return function randomSeedGenerator() {
+      return randomSeedGenerator.seed || (
+        randomSeedGenerator.seed =
+          DDPCommon.makeRpcSeed(invocation, name)
+      );
     };
   },
 
