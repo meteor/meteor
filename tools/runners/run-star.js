@@ -51,10 +51,10 @@ var getNodeOptionsFromEnvironment = function () {
 var AppProcess = function (options) {
   var self = this;
 
-  self.projectContext = options.projectContext;
+  // self.projectContext = options.projectContext;
   self.bundlePath = options.bundlePath;
   self.port = options.port;
-  self.listenHost = options.listenHost;
+  self.listenHosxt = options.listenHost;
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
@@ -136,11 +136,11 @@ _.extend(AppProcess.prototype, {
     // When the parent process exits (i.e. the server is shutting down and
     // not merely restarting), make sure to disconnect any still-connected
     // shell clients.
-    require('../tool-env/cleanup.js').onExit(function() {
-      require('../static-assets/server/shell-server.js').disable(
-        self.projectContext.getMeteorShellDirectory()
-      );
-    });
+    // require('../tool-env/cleanup.js').onExit(function() {
+    //   require('../static-assets/server/shell-server.js').disable(
+    //     self.projectContext.getMeteorShellDirectory()
+    //   );
+    // });
   },
 
   _maybeCallOnExit: function (code, signal) {
@@ -192,7 +192,7 @@ _.extend(AppProcess.prototype, {
     } else {
       delete env.BIND_IP;
     }
-    env.APP_ID = self.projectContext.appIdentifier;
+    // env.APP_ID = self.projectContext.appIdentifier;
 
     // Display errors from (eg) the NPM connect module over the network.
     env.NODE_ENV = 'development';
@@ -201,12 +201,12 @@ _.extend(AppProcess.prototype, {
     env.HTTP_FORWARDED_COUNT =
       "" + ((parseInt(process.env['HTTP_FORWARDED_COUNT']) || 0) + 1);
 
-    var shellDir = self.projectContext.getMeteorShellDirectory();
-    files.mkdir_p(shellDir);
+    // var shellDir = self.projectContext.getMeteorShellDirectory();
+    // files.mkdir_p(shellDir);
 
-    // We need to convert to OS path here because the running app doesn't
-    // have access to path translation functions
-    env.METEOR_SHELL_DIR = files.convertToOSPath(shellDir);
+    // // We need to convert to OS path here because the running app doesn't
+    // // have access to path translation functions
+    // env.METEOR_SHELL_DIR = files.convertToOSPath(shellDir);
 
     env.METEOR_PARENT_PID =
       process.env.METEOR_BAD_PARENT_PID_FOR_TEST ? "foobar" : process.pid;
@@ -266,10 +266,10 @@ _.extend(AppProcess.prototype, {
 });
 
 ///////////////////////////////////////////////////////////////////////////////
-// AppRunner
+// StarRunner
 ///////////////////////////////////////////////////////////////////////////////
 
-// Given an app, bundle and run the app. If the app's source changes,
+// Given a star, run the app. If the app's source changes,
 // kill, rebundle, and rerun it. If the app dies, restart it, unless
 // it dies repeatedly immediately after being started, in which case
 // wait for source changes to restart.
@@ -338,24 +338,26 @@ _.extend(AppProcess.prototype, {
 //
 // - watchSet: for runs in which there's a reason to wait for file changes
 //      ('bundle-fail' and 'terminated'), the WatchSet to wait on.
-var AppRunner = function (options) {
+var StarRunner = function (options) {
   var self = this;
 
-  self.projectContext = options.projectContext;
-
+  // self.projectContext = options.projectContext;
+  self.bundlePath = options.bundlePath;
   // note: run-all.js updates port directly
   self.port = options.port;
   self.listenHost = options.listenHost;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
-  self.buildOptions = options.buildOptions;
+  // self.buildOptions = options.buildOptions;
   self.rootUrl = options.rootUrl;
   self.mobileServerUrl = options.mobileServerUrl;
   self.settingsFile = options.settingsFile;
   self.debugPort = options.debugPort;
   self.proxy = options.proxy;
-  self.watchForChanges =
-    options.watchForChanges === undefined ? true : options.watchForChanges;
+  // XXX setting this to false but may want to have what was before (below)
+  self.watchForChanges = false;
+  // self.watchForChanges =
+  //   options.watchForChanges === undefined ? true : options.watchForChanges;
   self.onRunEnd = options.onRunEnd;
   self.noRestartBanner = options.noRestartBanner;
   self.recordPackageUsage =
@@ -368,8 +370,8 @@ var AppRunner = function (options) {
   // exit, because we don't yet have a way to, for example, get the new
   // plugins to the mobile clients or stop a running client on a
   // platform that has been removed.
-  self.cordovaPlugins = null;
-  self.cordovaPlatforms = null;
+  // self.cordovaPlugins = null;
+  // self.cordovaPlatforms = null;
 
   self.fiber = null;
   self.startFuture = null;
@@ -386,7 +388,7 @@ var AppRunner = function (options) {
   self._refreshing = false;
 };
 
-_.extend(AppRunner.prototype, {
+_.extend(StarRunner.prototype, {
   // Start the app running, and restart it as necessary. Returns
   // immediately.
   start: function () {
@@ -456,151 +458,151 @@ _.extend(AppRunner.prototype, {
     runLog.clearLog();
     self.proxy.setMode("hold");
 
-    // Bundle up the app
-    var bundlePath = self.projectContext.getProjectLocalDirectory('build');
+    // // Bundle up the app
+    // var bundlePath = self.projectContext.getProjectLocalDirectory('build');
 
-    // Cache the server target because the server will not change inside
-    // a single invocation of _runOnce().
-    var cachedServerWatchSet;
+    // // Cache the server target because the server will not change inside
+    // // a single invocation of _runOnce().
+    // var cachedServerWatchSet;
 
-    // Builders saved from previous iterations
-    var builders = {};
+    // // Builders saved from previous iterations
+    // var builders = {};
 
-    var bundleApp = function () {
-      if (! firstRun) {
-        // If the build fails in a way that could be fixed by a refresh, allow
-        // it even if we refreshed previously, since that might have been a
-        // little while ago.
-        catalog.triedToRefreshRecently = false;
+    // var bundleApp = function () {
+    //   if (! firstRun) {
+    //     // If the build fails in a way that could be fixed by a refresh, allow
+    //     // it even if we refreshed previously, since that might have been a
+    //     // little while ago.
+    //     catalog.triedToRefreshRecently = false;
 
-        // If this isn't the first time we've run, we need to reset the project
-        // context since everything we have cached may have changed.
-        // XXX We can try to be a little less conservative here:
-        // - Don't re-build the whole local catalog if we know which local
-        //   packages have changed.  (This one might be a little trickier due
-        //   to how the WatchSets are laid out.  Might be possible to avoid
-        //   re-building the local catalog at all if packages didn't change
-        //   at all, though.)
-        self.projectContext.reset({}, {
-          // Don't forget all Isopack objects; just make sure to check that they
-          // are up to date.
-          softRefreshIsopacks: true,
-          // Don't forget the package map we calculated last time, even if we
-          // didn't write it to disk (because, eg, we're not running with a
-          // release that matches the app's release).  While we will still check
-          // our constraints, we will use the map we calculated last time as the
-          // previous solution (not what's on disk). Package deltas should be
-          // shown from the previous solution.
-          preservePackageMap: true
-        });
-        var messages = buildmessage.capture(function () {
-          self.projectContext.readProjectMetadata();
-        });
-        if (messages.hasMessages()) {
-          return {
-            runResult: {
-              outcome: 'bundle-fail',
-              errors: messages,
-              watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
-            }
-          };
-        }
-      }
+    //     // If this isn't the first time we've run, we need to reset the project
+    //     // context since everything we have cached may have changed.
+    //     // XXX We can try to be a little less conservative here:
+    //     // - Don't re-build the whole local catalog if we know which local
+    //     //   packages have changed.  (This one might be a little trickier due
+    //     //   to how the WatchSets are laid out.  Might be possible to avoid
+    //     //   re-building the local catalog at all if packages didn't change
+    //     //   at all, though.)
+    //     self.projectContext.reset({}, {
+    //       // Don't forget all Isopack objects; just make sure to check that they
+    //       // are up to date.
+    //       softRefreshIsopacks: true,
+    //       // Don't forget the package map we calculated last time, even if we
+    //       // didn't write it to disk (because, eg, we're not running with a
+    //       // release that matches the app's release).  While we will still check
+    //       // our constraints, we will use the map we calculated last time as the
+    //       // previous solution (not what's on disk). Package deltas should be
+    //       // shown from the previous solution.
+    //       preservePackageMap: true
+    //     });
+    //     var messages = buildmessage.capture(function () {
+    //       self.projectContext.readProjectMetadata();
+    //     });
+    //     if (messages.hasMessages()) {
+    //       return {
+    //         runResult: {
+    //           outcome: 'bundle-fail',
+    //           errors: messages,
+    //           watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
+    //         }
+    //       };
+    //     }
+    //   }
 
-      // Check to make sure we're running the right version of Meteor.
-      var wrongRelease = ! release.usingRightReleaseForApp(self.projectContext);
-      if (wrongRelease) {
-        return {
-          runResult: {
-            outcome: 'wrong-release',
-            displayReleaseNeeded:
-              self.projectContext.releaseFile.displayReleaseName
-          }
-        };
-      }
+    //   // Check to make sure we're running the right version of Meteor.
+    //   var wrongRelease = ! release.usingRightReleaseForApp(self.projectContext);
+    //   if (wrongRelease) {
+    //     return {
+    //       runResult: {
+    //         outcome: 'wrong-release',
+    //         displayReleaseNeeded:
+    //           self.projectContext.releaseFile.displayReleaseName
+    //       }
+    //     };
+    //   }
 
-      messages = buildmessage.capture(function () {
-        self.projectContext.prepareProjectForBuild();
-      });
-      if (messages.hasMessages()) {
-        return {
-          runResult: {
-            outcome: 'bundle-fail',
-            errors: messages,
-            watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
-          }
-        };
-      }
+    //   messages = buildmessage.capture(function () {
+    //     self.projectContext.prepareProjectForBuild();
+    //   });
+    //   if (messages.hasMessages()) {
+    //     return {
+    //       runResult: {
+    //         outcome: 'bundle-fail',
+    //         errors: messages,
+    //         watchSet: self.projectContext.getProjectAndLocalPackagesWatchSet()
+    //       }
+    //     };
+    //   }
 
-      // Show package changes... unless it's the first time in test-packages.
-      if (!(self.omitPackageMapDeltaDisplayOnFirstRun && firstRun)) {
-        self.projectContext.packageMapDelta.displayOnConsole();
-      }
+    //   // Show package changes... unless it's the first time in test-packages.
+    //   if (!(self.omitPackageMapDeltaDisplayOnFirstRun && firstRun)) {
+    //     self.projectContext.packageMapDelta.displayOnConsole();
+    //   }
 
-      if (self.recordPackageUsage) {
-        stats.recordPackages({
-          what: "sdk.run",
-          projectContext: self.projectContext
-        });
-      }
+    //   if (self.recordPackageUsage) {
+    //     stats.recordPackages({
+    //       what: "sdk.run",
+    //       projectContext: self.projectContext
+    //     });
+    //   }
 
-      var bundleResult = Profile.run("Rebuild App", function () {
-        var includeNodeModules = 'symlink';
+    //   var bundleResult = Profile.run("Rebuild App", function () {
+    //     var includeNodeModules = 'symlink';
 
-        // On Windows we cannot symlink node_modules. Copying them is too slow.
-        // Instead receive the NODE_PATH env that we need to set and set it
-        // later on running.
-        if (process.platform === 'win32') {
-          includeNodeModules = 'reference-directly';
-        }
+    //     // On Windows we cannot symlink node_modules. Copying them is too slow.
+    //     // Instead receive the NODE_PATH env that we need to set and set it
+    //     // later on running.
+    //     if (process.platform === 'win32') {
+    //       includeNodeModules = 'reference-directly';
+    //     }
 
-        var bundleResult = bundler.bundle({
-          projectContext: self.projectContext,
-          outputPath: bundlePath,
-          includeNodeModules: includeNodeModules,
-          buildOptions: self.buildOptions,
-          hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: builders
-        });
+    //     var bundleResult = bundler.bundle({
+    //       projectContext: self.projectContext,
+    //       outputPath: bundlePath,
+    //       includeNodeModules: includeNodeModules,
+    //       buildOptions: self.buildOptions,
+    //       hasCachedBundle: !! cachedServerWatchSet,
+    //       previousBuilders: builders
+    //     });
 
-        // save new builders with their caches
-        ({builders} = bundleResult);
+    //     // save new builders with their caches
+    //     ({builders} = bundleResult);
 
-        return bundleResult;
-      });
+    //     return bundleResult;
+    //   });
 
-      // Keep the server watch set from the initial bundle, because subsequent
-      // bundles will not contain a server target.
-      if (cachedServerWatchSet) {
-        bundleResult.serverWatchSet = cachedServerWatchSet;
-      } else {
-        cachedServerWatchSet = bundleResult.serverWatchSet;
-      }
+    //   // Keep the server watch set from the initial bundle, because subsequent
+    //   // bundles will not contain a server target.
+    //   if (cachedServerWatchSet) {
+    //     bundleResult.serverWatchSet = cachedServerWatchSet;
+    //   } else {
+    //     cachedServerWatchSet = bundleResult.serverWatchSet;
+    //   }
 
-      if (bundleResult.errors) {
-        return {
-          runResult: {
-            outcome: 'bundle-fail',
-            errors: bundleResult.errors,
-            watchSet: combinedWatchSetForBundleResult(bundleResult)
-          }
-        };
-      } else {
-        return { bundleResult: bundleResult };
-      }
-    };
+    //   if (bundleResult.errors) {
+    //     return {
+    //       runResult: {
+    //         outcome: 'bundle-fail',
+    //         errors: bundleResult.errors,
+    //         watchSet: combinedWatchSetForBundleResult(bundleResult)
+    //       }
+    //     };
+    //   } else {
+    //     return { bundleResult: bundleResult };
+    //   }
+    // };
 
-    var combinedWatchSetForBundleResult = function (br) {
-      var watchSet = br.serverWatchSet.clone();
-      watchSet.merge(br.clientWatchSet);
-      return watchSet;
-    };
+    // var combinedWatchSetForBundleResult = function (br) {
+    //   var watchSet = br.serverWatchSet.clone();
+    //   watchSet.merge(br.clientWatchSet);
+    //   return watchSet;
+    // };
 
     var bundleResult;
-    var bundleResultOrRunResult = bundleApp();
-    if (bundleResultOrRunResult.runResult)
-      return bundleResultOrRunResult.runResult;
-    bundleResult = bundleResultOrRunResult.bundleResult;
+    // var bundleResultOrRunResult = bundleApp();
+    // if (bundleResultOrRunResult.runResult)
+    //   return bundleResultOrRunResult.runResult;
+    // bundleResult = bundleResultOrRunResult.bundleResult;
 
     // Read the settings file, if any
     var settings = null;
@@ -622,42 +624,42 @@ _.extend(AppRunner.prototype, {
 
     firstRun = false;
 
-    var platforms = self.projectContext.platformList.getCordovaPlatforms();
-    platforms.sort();
-    if (self.cordovaPlatforms &&
-        ! _.isEqual(self.cordovaPlatforms, platforms)) {
-      return {
-        outcome: 'outdated-cordova-platforms'
-      };
-    }
-    // XXX This is racy --- we should get this from the pre-runner build, not
-    // from the first runner build.
-    self.cordovaPlatforms = platforms;
+    // var platforms = self.projectContext.platformList.getCordovaPlatforms();
+    // platforms.sort();
+    // if (self.cordovaPlatforms &&
+    //     ! _.isEqual(self.cordovaPlatforms, platforms)) {
+    //   return {
+    //     outcome: 'outdated-cordova-platforms'
+    //   };
+    // }
+    // // XXX This is racy --- we should get this from the pre-runner build, not
+    // // from the first runner build.
+    // self.cordovaPlatforms = platforms;
 
-    var plugins = cordova.getCordovaDependenciesFromStar(
-      bundleResult.starManifest);
+    // var plugins = cordova.getCordovaDependenciesFromStar(
+    //   bundleResult.starManifest);
 
-    if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
-      return {
-        outcome: 'outdated-cordova-plugins'
-      };
-    }
-    // XXX This is racy --- we should get this from the pre-runner build, not
-    // from the first runner build.
-    self.cordovaPlugins = plugins;
+    // if (self.cordovaPlugins && ! _.isEqual(self.cordovaPlugins, plugins)) {
+    //   return {
+    //     outcome: 'outdated-cordova-plugins'
+    //   };
+    // }
+    // // XXX This is racy --- we should get this from the pre-runner build, not
+    // // from the first runner build.
+    // self.cordovaPlugins = plugins;
 
-    var serverWatchSet = bundleResult.serverWatchSet;
-    serverWatchSet.merge(settingsWatchSet);
+    // var serverWatchSet = bundleResult.serverWatchSet;
+    // serverWatchSet.merge(settingsWatchSet);
 
-    // We only can refresh the client without restarting the server if the
-    // client contains the 'autoupdate' package.
-    var canRefreshClient = self.projectContext.packageMap &&
-          self.projectContext.packageMap.getInfo('autoupdate');
+    // // We only can refresh the client without restarting the server if the
+    // // client contains the 'autoupdate' package.
+    // var canRefreshClient = self.projectContext.packageMap &&
+    //       self.projectContext.packageMap.getInfo('autoupdate');
 
-    if (! canRefreshClient) {
-      // Restart server on client changes if we can't refresh the client.
-      serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
-    }
+    // if (! canRefreshClient) {
+    //   // Restart server on client changes if we can't refresh the client.
+    //   serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
+    // }
 
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
     // future that can be used to stop() us once we start running.
@@ -671,7 +673,7 @@ _.extend(AppRunner.prototype, {
     options.beforeRun && options.beforeRun();
     var appProcess = new AppProcess({
       projectContext: self.projectContext,
-      bundlePath: bundlePath,
+      bundlePath: self.bundlePath,
       port: self.port,
       listenHost: self.listenHost,
       rootUrl: self.rootUrl,
@@ -682,8 +684,8 @@ _.extend(AppRunner.prototype, {
         self._runFutureReturn({
           outcome: 'terminated',
           code: code,
-          signal: signal,
-          watchSet: combinedWatchSetForBundleResult(bundleResult)
+          signal: signal
+          // watchSet: combinedWatchSetForBundleResult(bundleResult)
         });
       },
       debugPort: self.debugPort,
@@ -694,7 +696,7 @@ _.extend(AppRunner.prototype, {
           self.startFuture['return']();
       },
       nodeOptions: getNodeOptionsFromEnvironment(),
-      nodePath: _.map(bundleResult.nodePath, files.convertToOSPath),
+      nodePath: _.map('/Users/anubhavjain/Documents/git/meteor/dev_bundle/bin/node', files.convertToOSPath),
       settings: settings,
       ipcPipe: self.watchForChanges
     });
@@ -708,56 +710,40 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
-    // function maybePrintLintWarnings(bundleResult) {
-    //   if (! (self.projectContext.lintAppAndLocalPackages &&
-    //          bundleResult.warnings)) {
-    //     return;
-    //   }
-    //   if (bundleResult.warnings.hasMessages()) {
-    //     const formattedMessages = bundleResult.warnings.formatMessages();
-    //     runLog.log(
-    //       `Linted your app.\n\n${ formattedMessages }`,
-    //       { arrow: true });
-    //   } else {
-    //     runLog.log('Linted your app. No linting errors.',
-    //                { arrow: true });
-    //   }
-    // }
-    // maybePrintLintWarnings(bundleResult);
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the
     // state of the world at the time of bundling, in the form of
     // hashes and lists of matching files in each directory.
-    // var serverWatcher;
-    // var clientWatcher;
+    var serverWatcher;
+    var clientWatcher;
 
-    // if (self.watchForChanges) {
-    //   serverWatcher = new watch.Watcher({
-    //     watchSet: serverWatchSet,
-    //     onChange: function () {
-    //       self._runFutureReturn({
-    //         outcome: 'changed'
-    //       });
-    //     }
-    //   });
-    // }
+    if (self.watchForChanges) {
+      serverWatcher = new watch.Watcher({
+        watchSet: serverWatchSet,
+        onChange: function () {
+          self._runFutureReturn({
+            outcome: 'changed'
+          });
+        }
+      });
+    }
 
-    // var setupClientWatcher = function () {
-    //   clientWatcher && clientWatcher.stop();
-    //   clientWatcher = new watch.Watcher({
-    //      watchSet: bundleResult.clientWatchSet,
-    //      onChange: function () {
-    //       var outcome = watch.isUpToDate(serverWatchSet)
-    //                   ? 'changed-refreshable' // only a client asset has changed
-    //                   : 'changed'; // both a client and server asset changed
-    //       self._runFutureReturn({ outcome: outcome });
-    //      }
-    //   });
-    // };
-    // if (self.watchForChanges && canRefreshClient) {
-    //   setupClientWatcher();
-    // }
+    var setupClientWatcher = function () {
+      clientWatcher && clientWatcher.stop();
+      clientWatcher = new watch.Watcher({
+         watchSet: bundleResult.clientWatchSet,
+         onChange: function () {
+          var outcome = watch.isUpToDate(serverWatchSet)
+                      ? 'changed-refreshable' // only a client asset has changed
+                      : 'changed'; // both a client and server asset changed
+          self._runFutureReturn({ outcome: outcome });
+         }
+      });
+    };
+    if (self.watchForChanges && canRefreshClient) {
+      setupClientWatcher();
+    }
 
     Console.enableProgressDisplay(false);
 
@@ -765,49 +751,49 @@ _.extend(AppRunner.prototype, {
     // source file to change. Or, for stop() to be called.
     var ret = runFuture.wait();
 
-    try {
-      while (ret.outcome === 'changed-refreshable') {
-        if (! canRefreshClient)
-          throw Error("Can't refresh client?");
+    // try {
+    //   // while (ret.outcome === 'changed-refreshable') {
+    //   //   if (! canRefreshClient)
+    //   //     throw Error("Can't refresh client?");
 
-        // We stay in this loop as long as only refreshable assets have changed.
-        // When ret.refreshable becomes false, we restart the server.
-        bundleResultOrRunResult = bundleApp();
-        if (bundleResultOrRunResult.runResult)
-          return bundleResultOrRunResult.runResult;
-        bundleResult = bundleResultOrRunResult.bundleResult;
+    //   //   // We stay in this loop as long as only refreshable assets have changed.
+    //   //   // When ret.refreshable becomes false, we restart the server.
+    //   //   bundleResultOrRunResult = bundleApp();
+    //   //   if (bundleResultOrRunResult.runResult)
+    //   //     return bundleResultOrRunResult.runResult;
+    //   //   bundleResult = bundleResultOrRunResult.bundleResult;
 
-        maybePrintLintWarnings(bundleResult);
+    //   //   maybePrintLintWarnings(bundleResult);
 
-        var oldFuture = self.runFuture = new Future;
+    //   //   var oldFuture = self.runFuture = new Future;
 
-        // Notify the server that new client assets have been added to the
-        // build.
-        self._refreshing = true;
-        appProcess.proc.send({ refresh: 'client' });
-        self._refreshing = false;
+    //   //   // Notify the server that new client assets have been added to the
+    //   //   // build.
+    //   //   self._refreshing = true;
+    //   //   appProcess.proc.send({ refresh: 'client' });
+    //   //   self._refreshing = false;
 
-        // Establish a watcher on the new files.
-        setupClientWatcher();
+    //   //   // Establish a watcher on the new files.
+    //   //   setupClientWatcher();
 
-        runLog.logClientRestart();
+    //   //   runLog.logClientRestart();
 
-        // Wait until another file changes.
-        ret = oldFuture.wait();
-      }
-    } finally {
-      self.runFuture = null;
+    //   //   // Wait until another file changes.
+    //   //   ret = oldFuture.wait();
+    //   // }
+    // } finally {
+    //   self.runFuture = null;
 
-      if (ret.outcome === 'changed') {
-        runLog.logTemporary("=> Server modified -- restarting...");
-      }
+    //   if (ret.outcome === 'changed') {
+    //     runLog.logTemporary("=> Server modified -- restarting...");
+    //   }
 
-      self.proxy.setMode("hold");
-      appProcess.stop();
+    //   self.proxy.setMode("hold");
+    //   appProcess.stop();
 
-      serverWatcher && serverWatcher.stop();
-      clientWatcher && clientWatcher.stop();
-    }
+    //   serverWatcher && serverWatcher.stop();
+    //   clientWatcher && clientWatcher.stop();
+    // }
 
     return ret;
   },
@@ -945,15 +931,9 @@ _.extend(AppRunner.prototype, {
       self.startFuture['return']();
 
     self.fiber = null;
-  },
-
-  restart: function() {
-    var self = this;
-    self.stop();
-    self.start();
   }
 });
 
 ///////////////////////////////////////////////////////////////////////////////
 
-exports.AppRunner = AppRunner;
+exports.StarRunner = StarRunner;

@@ -15,6 +15,7 @@ const HttpProxy = require('./run-httpproxy.js').HttpProxy;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const Updater = require('./run-updater.js').Updater;
+const StarRunner = require('./run-star.js').StarRunner;
 
 class Runner {
   constructor({
@@ -118,8 +119,8 @@ class Runner {
     self.errorAppConfig = errorAppConfig;
 
     if (errorAppConfig && errorAppConfig.runErrorApp) {
-      self.errorAppRunner = new AppRunner({
-        projectContext: errorAppConfig.projectContext,
+      self.errorAppRunner = new StarRunner({
+        bundlePath: files.pathJoin('isopacks', 'error_app'),
         port: errorAppConfig.appPort,
         listenHost: appHost,
         mongoUrl: '',
