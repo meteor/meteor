@@ -36,12 +36,11 @@ function log(...args) {
 }
 
 export class CordovaProject {
-  constructor(projectContext,
-    appName = files.pathBasename(projectContext.projectDir)) {
+  constructor(projectContext, options = {}) {
     this.projectContext = projectContext;
 
     this.projectRoot = projectContext.getProjectLocalDirectory('cordova-build');
-    this.appName = appName;
+    this.options = options;
 
     this.pluginsDir = files.pathJoin(this.projectRoot, 'plugins');
 
@@ -49,30 +48,55 @@ export class CordovaProject {
   }
 
   createIfNeeded() {
+    buildmessage.assertInJob();
+
     if (!files.exists(this.projectRoot)) {
+      // We create a temporary directory with a generated config.xml
+      // to use as a template for creating the Cordova project
+      // This way, we are not dependent on the contents of
+      // cordova-app-hello-world but we base our initial project state on
+      // our own defaults and optionally a mobile-config.js
+
+      const templatePath = files.mkdtemp('cordova-template-');
+
+      // If we don't create an empty hooks directory, cordova-lib will attempt
+      // to install one from a hardcoded path to cordova-app-hello-world
+      files.mkdir_p(files.pathJoin(templatePath, 'hooks'));
+
+      // If we don't create an empty www directory, cordova-lib will get
+      // confused
+      files.mkdir_p(files.pathJoin(templatePath, 'www'));
+
+      const builder = new CordovaBuilder(this.projectContext, templatePath,
+        { mobileServerUrl, settingsFile } = this.options);
+
+      builder.processControlFile();
+
+      if (buildmessage.jobHasMessages()) return;
+
+      // Don't copy resources (they will be copied as part of the prepare)
+      builder.writeConfigXmlAndCopyResources(false);
+
+      // Create the Cordova project root directory
       files.mkdir_p(files.pathDirname(this.projectRoot));
-      // Cordova app identifiers have to look like Java namespaces.
-      // Change weird characters (especially hyphens) into underscores.
-      const appId = 'com.meteor.userapps.' +
-        this.appName.replace(/[^a-zA-Z\d_$.]/g, '_');
 
-      const templatePath = files.convertToOSPath(files.pathJoin(
-        files.getDevBundle(),
-        'lib/node_modules/cordova-app-hello-world'));
+      const config = { lib:
+        { www: { url: files.convertToOSPath(templatePath) } } };
 
-      const config = { lib: { www: { url: templatePath } } };
-
-      // Don't set cwd to project root in runCommands because it doesn't exist yet
+      // Don't set cwd to project root in runCommands because it doesn't
+      // exist yet
       this.runCommands('creating Cordova project', async () => {
+        // No need to pass in appName and appId because these are set from
+        // the generated config.xml
         await cordova_lib.raw.create(files.convertToOSPath(this.projectRoot),
-          appId, this.appName, config);
+          undefined, undefined, config);
       }, undefined, null);
     }
   }
 
   // Preparing
 
-  prepareFromAppBundle(bundlePath, plugins, options = {}) {
+  prepareFromAppBundle(bundlePath, plugins) {
     assert(bundlePath);
     assert(plugins);
 
@@ -81,14 +105,15 @@ export class CordovaProject {
     Console.debug('Preparing Cordova project from app bundle');
 
     buildmessage.enterJob({ title: `preparing Cordova project` }, () => {
-      const builder = new CordovaBuilder(this, bundlePath, options);
+      const builder = new CordovaBuilder(this.projectContext, this.projectRoot,
+        { mobileServerUrl, settingsFile } = this.options);
 
       builder.processControlFile();
 
       if (buildmessage.jobHasMessages()) return;
 
       builder.writeConfigXmlAndCopyResources();
-      builder.copyWWW();
+      builder.copyWWW(bundlePath);
       builder.copyBuildOverride();
 
       this.ensurePlatformsAreSynchronized();
@@ -269,8 +294,14 @@ from Cordova project`, async () => {
   }
 
   listFetchedPlugins() {
+    const fetchJsonPath = files.pathJoin(this.pluginsDir, 'fetch.json');
+
+    if (!files.exists(fetchJsonPath)) {
+      return {};
+    }
+
     const fetchedPluginsMetadata = JSON.parse(files.readFile(
-      files.pathJoin(this.pluginsDir, 'fetch.json'), 'utf8'));
+      fetchJsonPath, 'utf8'));
     return _.object(_.map(fetchedPluginsMetadata, (metadata, name) => {
       const source = metadata.source;
       let version;

@@ -53,21 +53,16 @@ const launchAndroidSizes = {
 };
 
 export class CordovaBuilder {
-  constructor(cordovaProject, bundlePath, options) {
-    this.cordovaProject = cordovaProject;
-
-    this.bundlePath = bundlePath;
+  constructor(projectContext, projectRoot, options) {
+    this.projectContext = projectContext;
+    this.projectRoot = projectRoot;
     this.options = options;
 
     this.resourcesPath = files.pathJoin(
-      this.cordovaProject.projectRoot,
+      this.projectRoot,
       'resources');
 
     this.initalizeDefaults();
-  }
-
-  get projectContext() {
-    return this.cordovaProject.projectContext;
   }
 
   initalizeDefaults() {
@@ -75,7 +70,7 @@ export class CordovaBuilder {
       id: 'com.id' + this.projectContext.appIdentifier,
       version: '0.0.1',
       buildNumber: undefined,
-      name: this.cordovaProject.appName,
+      name: files.pathBasename(this.projectContext.projectDir),
       description: 'New Meteor Mobile App',
       author: 'A Meteor Developer',
       email: 'n/a',
@@ -89,7 +84,9 @@ export class CordovaBuilder {
       'deployment-target': '7.0'
     };
 
-    if (this.projectContext.packageMap.getInfo('launch-screen')) {
+    const packageMap = this.projectContext.packageMap;
+
+    if (packageMap && packageMap.getInfo('launch-screen')) {
       this.additionalConfiguration.AutoHideSplashScreen = false;
       this.additionalConfiguration.SplashScreen = 'screen';
       this.additionalConfiguration.SplashScreenDelay = 10000;
@@ -185,7 +182,7 @@ export class CordovaBuilder {
     }
   }
 
-  writeConfigXmlAndCopyResources() {
+  writeConfigXmlAndCopyResources(shouldCopyResources = true) {
     const { XmlBuilder } = isopackets.load('cordova-support')['xmlbuilder'];
 
     let config = XmlBuilder.create('widget');
@@ -235,20 +232,22 @@ export class CordovaBuilder {
     const iosPlatformElement = config.element('platform', { name: 'ios' });
     const androidPlatformElement = config.element('platform', { name: 'android' });
 
-    // Prepare the resources folder
-    files.rm_recursive(this.resourcesPath);
-    files.mkdir_p(this.resourcesPath);
+    if (shouldCopyResources) {
+      // Prepare the resources folder
+      files.rm_recursive(this.resourcesPath);
+      files.mkdir_p(this.resourcesPath);
 
-    Console.debug('Copying resources for mobile apps');
+      Console.debug('Copying resources for mobile apps');
 
-    this.configureAndCopyImages(iconsIosSizes, iosPlatformElement, 'icon');
-    this.configureAndCopyImages(iconsAndroidSizes, androidPlatformElement, 'icon');
-    this.configureAndCopyImages(launchIosSizes, iosPlatformElement, 'splash');
-    this.configureAndCopyImages(launchAndroidSizes, androidPlatformElement, 'splash');
+      this.configureAndCopyImages(iconsIosSizes, iosPlatformElement, 'icon');
+      this.configureAndCopyImages(iconsAndroidSizes, androidPlatformElement, 'icon');
+      this.configureAndCopyImages(launchIosSizes, iosPlatformElement, 'splash');
+      this.configureAndCopyImages(launchAndroidSizes, androidPlatformElement, 'splash');
+    }
 
     Console.debug('Writing new config.xml');
 
-    const configXmlPath = files.pathJoin(this.cordovaProject.projectRoot, 'config.xml');
+    const configXmlPath = files.pathJoin(this.projectRoot, 'config.xml');
     const formattedXmlConfig = config.end({ pretty: true });
     files.writeFile(configXmlPath, formattedXmlConfig, 'utf8');
   }
@@ -320,8 +319,8 @@ export class CordovaBuilder {
     });
   }
 
-  copyWWW() {
-    const wwwPath = files.pathJoin(this.cordovaProject.projectRoot, 'www');
+  copyWWW(bundlePath) {
+    const wwwPath = files.pathJoin(this.projectRoot, 'www');
 
     // Remove existing www
     files.rm_recursive(wwwPath);
@@ -331,7 +330,7 @@ export class CordovaBuilder {
     files.mkdir_p(applicationPath);
 
     // Copy Cordova arch program from bundle to www/application
-    const programPath = files.pathJoin(this.bundlePath, 'programs', CORDOVA_ARCH);
+    const programPath = files.pathJoin(bundlePath, 'programs', CORDOVA_ARCH);
     files.cp_r(programPath, applicationPath);
 
     const bootstrapPage = this.generateBootstrapPage(applicationPath);
@@ -410,7 +409,7 @@ export class CordovaBuilder {
     if (files.exists(buildOverridePath) &&
       files.stat(buildOverridePath).isDirectory()) {
       Console.debug('Copying over the cordova-build-override directory');
-      files.cp_r(buildOverridePath, this.cordovaProject.projectRoot);
+      files.cp_r(buildOverridePath, this.projectRoot);
     }
   }
 }

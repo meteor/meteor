@@ -347,7 +347,10 @@ function doRunCommand(options) {
 
   if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext);
+      cordovaProject = new CordovaProject(projectContext, {
+        settingsFile: options.settings,
+        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
     });
@@ -901,14 +904,14 @@ on an OS X system.");
 
     main.captureAndExit('', () => {
       buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
-        cordovaProject = new CordovaProject(projectContext, appName);
+        cordovaProject = new CordovaProject(projectContext, {
+          settingsFile: options.settings,
+          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
         const plugins = cordova.pluginsFromStarManifest(
           bundleResult.starManifest);
 
-        cordovaProject.prepareFromAppBundle(bundlePath, plugins,
-          { settingsFile: options.settings,
-            mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+        cordovaProject.prepareFromAppBundle(bundlePath, plugins);
       });
 
       for (platform of cordovaPlatforms) {
@@ -1493,8 +1496,11 @@ main.registerCommand({
   let cordovaRunner;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext);
+    main.captureAndExit('', () => {
+      cordovaProject = new CordovaProject(projectContext, {
+        settingsFile: options.settings,
+        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
       cordovaRunner.checkPlatformsForRunTargets();
