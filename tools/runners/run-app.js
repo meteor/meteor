@@ -645,6 +645,9 @@ _.extend(AppRunner.prototype, {
         const messages = buildmessage.capture(() => {
           cordovaRunner.prepareProject(bundlePath, plugins,
             { settingsFile, mobileServerUrl });
+
+          cordovaRunner.printWarningsIfNeeded();
+          cordovaRunner.startRunTargets();
         });
 
         if (messages.hasMessages()) {
@@ -654,11 +657,6 @@ _.extend(AppRunner.prototype, {
             watchSet: combinedWatchSetForBundleResult(bundleResult)
           };
         }
-
-        buildmessage.capture(() => {
-          cordovaRunner.printWarningsIfNeeded();
-          cordovaRunner.startRunTargets();
-        });
       } else {
         // If the set of Cordova of platforms or plugins changes from one run
         // to the next, we just exit, because we don't yet have a way to,

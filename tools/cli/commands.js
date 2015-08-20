@@ -916,7 +916,7 @@ on an OS X system.");
 
       for (platform of cordovaPlatforms) {
         buildmessage.enterJob(
-          { title: `building Cordova project for \
+          { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
             let buildOptions = [];
             if (!options.debug) buildOptions.push('--release');
@@ -1496,7 +1496,7 @@ main.registerCommand({
   let cordovaRunner;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', () => {
+    main.captureAndExit('', 'preparing Cordova project', () => {
       cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });

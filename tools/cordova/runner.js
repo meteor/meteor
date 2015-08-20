@@ -72,11 +72,15 @@ export class CordovaRunner {
   }
 
   prepareProject(bundlePath, plugins, options) {
-    this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
+    buildmessage.assertInCapture();
+    
+    buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
+      this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
 
-    for (platform of this.platformsForRunTargets) {
-      this.cordovaProject.prepareForPlatform(platform);
-    }
+      for (platform of this.platformsForRunTargets) {
+        this.cordovaProject.prepareForPlatform(platform);
+      }
+    });
   }
 
   startRunTargets() {
@@ -85,16 +89,17 @@ export class CordovaRunner {
     this.started = false;
 
     for (runTarget of this.runTargets) {
-      buildmessage.enterJob(
-        { title: `starting ${runTarget.title}` },
-        () => {
+      buildmessage.enterJob({ title: `starting ${runTarget.title}` }, () => {
+        try {
           Promise.await(runTarget.start(this.cordovaProject));
 
           if (!buildmessage.jobHasMessages()) {
             runLog.log(`Started ${runTarget.title}.`, { arrow: true });
           }
+        } catch (error) {
+          buildmessage.exception(error);
         }
-      );
+      });
     }
 
     this.started = true;

@@ -100,26 +100,24 @@ export class CordovaProject {
     assert(bundlePath);
     assert(plugins);
 
-    buildmessage.assertInCapture();
+    buildmessage.assertInJob();
 
     Console.debug('Preparing Cordova project from app bundle');
 
-    buildmessage.enterJob({ title: `preparing Cordova project` }, () => {
-      const builder = new CordovaBuilder(this.projectContext, this.projectRoot,
-        { mobileServerUrl, settingsFile } = this.options);
+    const builder = new CordovaBuilder(this.projectContext, this.projectRoot,
+      { mobileServerUrl, settingsFile } = this.options);
 
-      builder.processControlFile();
+    builder.processControlFile();
 
-      if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) return;
 
-      builder.writeConfigXmlAndCopyResources();
-      builder.copyWWW(bundlePath);
-      builder.copyBuildOverride();
+    builder.writeConfigXmlAndCopyResources();
+    builder.copyWWW(bundlePath);
+    builder.copyBuildOverride();
 
-      this.ensurePlatformsAreSynchronized();
-      this.ensurePluginsAreSynchronized(plugins,
-        builder.pluginsConfiguration);
-    })
+    this.ensurePlatformsAreSynchronized();
+    this.ensurePluginsAreSynchronized(plugins,
+      builder.pluginsConfiguration);
   }
 
   prepareForPlatform(platform) {
@@ -142,7 +140,7 @@ ${displayNameForPlatform(platform)}`, async () => {
     const commandOptions = _.extend(this.defaultOptions,
       { platforms: [platform], options: options });
 
-    this.runCommands(`building Cordova project for platform \
+    this.runCommands(`building Cordova app for platform \
 ${displayNameForPlatform(platform)}`, async () => {
       await cordova_lib.raw.build(commandOptions);
     });
@@ -155,7 +153,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
     const env = this.defaultEnvWithPathsAdded(...extraPaths);
 
-    this.runCommands(`running Cordova project for platform \
+    this.runCommands(`running Cordova app for platform \
 ${displayNameForPlatform(platform)} with options ${options}`, async () => {
       const command = files.convertToOSPath(files.pathJoin(
         this.projectRoot, 'platforms', platform, 'cordova', 'run'));
