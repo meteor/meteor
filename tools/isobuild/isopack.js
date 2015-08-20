@@ -1685,7 +1685,7 @@ _.extend(Isopack.prototype, {
       ignore: devBundleIgnore,
       symlink: false
     });
-    console.log('about to build isopacket');
+
     // Build all of the isopackets now, so that no build step is required when
     // you're actually running meteor from a release in order to load packages.
     var isopacketBuildContext = isopackets.makeIsopacketBuildContext();
@@ -1702,7 +1702,7 @@ _.extend(Isopack.prototype, {
           isopacketBuildContext.isopackCache.buildLocalPackages(packages);
           if (buildmessage.jobHasMessages())
             return;
-          console.log('buiding stuff');
+
           var image = bundler.buildJsImage({
             name: "isopacket-" + isopacketName,
             packageMap: isopacketBuildContext.packageMap,
@@ -1716,40 +1716,7 @@ _.extend(Isopack.prototype, {
             builder.enter(files.pathJoin('isopackets', isopacketName)));
         });
       });
-
-      console.log("BUILTALL ISOPACKET");
-      var projectContextModule = require('../project-context.js');
-
-      // Build the crash app
-      buildmessage.enterJob({
-        title: "compiling crash app for the tool"
-      }, function () {
-        const errorAppPath = files.pathJoin(files.convertToStandardPath(__dirname),
-          '../static-assets', 'development-error-app');
-
-        const errorAppContext = new projectContextModule.ProjectContext({
-            projectDir: errorAppPath,
-            allowIncompatibleUpdate: true,
-            lintAppAndLocalPackages: false
-        });
-
-        // We're just reading metadata here --- we'll wait to do the full build
-        // preparation until after we've started listening on the proxy, etc.
-        errorAppContext.readProjectMetadata();
-
-        errorAppContext.prepareProjectForBuild();
-
-        errorAppContext.packageMapDelta.displayOnConsole();
-        var bundle = bundler.bundle({
-          projectContext: errorAppContext,
-          outputPath: files.pathJoin('isopacks', 'error_app')
-          // includeNodeModules: 'symlink'
-        });
-
-        console.log(bundle);
-      });
     });
-
     // This is a build step ... but it's one that only happens in development,
     // and similar to a isopacket load failure, it can just crash the app
     // instead of being handled nicely.

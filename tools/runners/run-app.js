@@ -708,56 +708,56 @@ _.extend(AppRunner.prototype, {
     }
 
     appProcess.start();
-    // function maybePrintLintWarnings(bundleResult) {
-    //   if (! (self.projectContext.lintAppAndLocalPackages &&
-    //          bundleResult.warnings)) {
-    //     return;
-    //   }
-    //   if (bundleResult.warnings.hasMessages()) {
-    //     const formattedMessages = bundleResult.warnings.formatMessages();
-    //     runLog.log(
-    //       `Linted your app.\n\n${ formattedMessages }`,
-    //       { arrow: true });
-    //   } else {
-    //     runLog.log('Linted your app. No linting errors.',
-    //                { arrow: true });
-    //   }
-    // }
-    // maybePrintLintWarnings(bundleResult);
+    function maybePrintLintWarnings(bundleResult) {
+      if (! (self.projectContext.lintAppAndLocalPackages &&
+             bundleResult.warnings)) {
+        return;
+      }
+      if (bundleResult.warnings.hasMessages()) {
+        const formattedMessages = bundleResult.warnings.formatMessages();
+        runLog.log(
+          `Linted your app.\n\n${ formattedMessages }`,
+          { arrow: true });
+      } else {
+        runLog.log('Linted your app. No linting errors.',
+                   { arrow: true });
+      }
+    }
+    maybePrintLintWarnings(bundleResult);
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the
     // state of the world at the time of bundling, in the form of
     // hashes and lists of matching files in each directory.
-    // var serverWatcher;
-    // var clientWatcher;
+    var serverWatcher;
+    var clientWatcher;
 
-    // if (self.watchForChanges) {
-    //   serverWatcher = new watch.Watcher({
-    //     watchSet: serverWatchSet,
-    //     onChange: function () {
-    //       self._runFutureReturn({
-    //         outcome: 'changed'
-    //       });
-    //     }
-    //   });
-    // }
+    if (self.watchForChanges) {
+      serverWatcher = new watch.Watcher({
+        watchSet: serverWatchSet,
+        onChange: function () {
+          self._runFutureReturn({
+            outcome: 'changed'
+          });
+        }
+      });
+    }
 
-    // var setupClientWatcher = function () {
-    //   clientWatcher && clientWatcher.stop();
-    //   clientWatcher = new watch.Watcher({
-    //      watchSet: bundleResult.clientWatchSet,
-    //      onChange: function () {
-    //       var outcome = watch.isUpToDate(serverWatchSet)
-    //                   ? 'changed-refreshable' // only a client asset has changed
-    //                   : 'changed'; // both a client and server asset changed
-    //       self._runFutureReturn({ outcome: outcome });
-    //      }
-    //   });
-    // };
-    // if (self.watchForChanges && canRefreshClient) {
-    //   setupClientWatcher();
-    // }
+    var setupClientWatcher = function () {
+      clientWatcher && clientWatcher.stop();
+      clientWatcher = new watch.Watcher({
+         watchSet: bundleResult.clientWatchSet,
+         onChange: function () {
+          var outcome = watch.isUpToDate(serverWatchSet)
+                      ? 'changed-refreshable' // only a client asset has changed
+                      : 'changed'; // both a client and server asset changed
+          self._runFutureReturn({ outcome: outcome });
+         }
+      });
+    };
+    if (self.watchForChanges && canRefreshClient) {
+      setupClientWatcher();
+    }
 
     Console.enableProgressDisplay(false);
 
@@ -896,7 +896,7 @@ _.extend(AppRunner.prototype, {
         }
 
         crashCount ++;
-        if (crashCount < 2)
+        if (crashCount < 1)
           continue;
 
         if (self.watchForChanges) {
