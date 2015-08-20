@@ -133,4 +133,4 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
-exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"
+exec "$DEV_BUNDLE/bin/node" ${TOOL_NODE_FLAGS} "$METEOR" "$@"
