@@ -8,11 +8,15 @@ MeteorPromise.prototype.then = function (onResolved, onRejected) {
       typeof Meteor.bindEnvironment === "function") {
     return es6PromiseThen.call(
       this,
-      onResolved && Meteor.bindEnvironment(onResolved),
-      onRejected && Meteor.bindEnvironment(onRejected)
+      onResolved && Meteor.bindEnvironment(onResolved, raise),
+      onRejected && Meteor.bindEnvironment(onRejected, raise)
     );
   }
   return es6PromiseThen.call(this, onResolved, onRejected);
 };
+
+function raise(exception) {
+  throw exception;
+}
 
 Promise = MeteorPromise;
