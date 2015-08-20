@@ -167,6 +167,9 @@ var Connection = function (url, options) {
   // reconnect.)
   self._resetStores = false;
 
+  // Number of method simulations (stubs) currently executing.
+  self._pendingSimulationCount = 0;
+
   // name -> array of updates for (yet to be created) collections
   self._updatesForUnknownStores = {};
   // if we're blocking a migration, the retry func
@@ -795,69 +798,30 @@ _.extend(Connection.prototype, {
     const randomSeedGenerator =
       self._makeRandomSeedGenerator(enclosing, name);
 
-    // Run the stub, if we have one. The stub is supposed to make some
-    // temporary writes to the database to give the user a smooth experience
-    // until the actual result of executing the method comes back from the
-    // server (whereupon the temporary writes to the database will be reversed
-    // during the beginUpdate/endUpdate process.)
-    //
-    // Normally, we ignore the return value of the stub (even if it is an
-    // exception), in favor of the real return value from the server. The
-    // exception is if the *caller* is a stub. In that case, we're not going
-    // to do a RPC, so we use the return value of the stub as our return
-    // value.
-
-    var stub = self._methodHandlers[name];
-    if (stub) {
-      var setUserId = function(userId) {
-        self.setUserId(userId);
-      };
-
-      var invocation = new DDPCommon.MethodInvocation({
-        isSimulation: true,
-        userId: self.userId(),
-        setUserId: setUserId,
-        randomSeed: randomSeedGenerator
-      });
-
-      if (!alreadyInSimulation)
-        self._saveOriginals();
-
-      try {
-        // Note that unlike in the corresponding server code, we never audit
-        // that stubs check() their arguments.
-        var stubReturnValue = DDP._CurrentInvocation.withValue(invocation, function () {
-          if (Meteor.isServer) {
-            // Because saveOriginals and retrieveOriginals aren't reentrant,
-            // don't allow stubs to yield.
-            return Meteor._noYieldsAllowed(function () {
-              // re-clone, so that the stub can't affect our caller's values
-              return stub.apply(invocation, EJSON.clone(args));
-            });
-          } else {
-            return stub.apply(invocation, EJSON.clone(args));
-          }
-        });
-      }
-      catch (e) {
-        var exception = e;
-      }
-
-      if (!alreadyInSimulation)
-        self._retrieveAndStoreOriginals(methodId());
-    }
+    const stubResult = self._simulateMethod({
+      name, args, methodId, randomSeedGenerator
+    });
 
     // If we're in a simulation, stop and return the result we have,
     // rather than going on to do an RPC. If there was no stub,
     // we'll end up returning undefined.
     if (alreadyInSimulation) {
-      if (callback) {
-        callback(exception, stubReturnValue);
-        return undefined;
+      if (! stubResult) {
+        // If there is no stubResult because there was no stub, but we are
+        // in a simulation, return nothing.
+        return;
       }
-      if (exception)
-        throw exception;
-      return stubReturnValue;
+
+      if (callback) {
+        callback(stubResult.exception, stubResult.returnValue);
+        return;
+      }
+
+      if (_.has(stubResult, "exception")) {
+        throw stubResult.exception;
+      }
+
+      return stubResult.returnValue;
     }
 
     // If an exception occurred in a stub, and we're ignoring it
@@ -867,12 +831,17 @@ _.extend(Connection.prototype, {
     //
     // Tests can set the 'expected' flag on an exception so it won't
     // go to log.
-    if (exception) {
+    if (stubResult && _.has(stubResult, "exception")) {
       if (options.throwStubExceptions) {
-        throw exception;
-      } else if (!exception.expected) {
-        Meteor._debug("Exception while simulating the effect of invoking '" +
-          name + "'", exception, exception.stack);
+        throw stubResult.exception;
+      }
+
+      if (! stubResult.exception.expected) {
+        Meteor._debug(
+          `Exception while simulating the effect of invoking '${name}'`,
+          stubResult.exception,
+          stubResult.exception.stack
+        );
       }
     }
 
@@ -932,7 +901,9 @@ _.extend(Connection.prototype, {
       return promise.await();
     }
 
-    return options.returnStubValue ? stubReturnValue : undefined;
+    if (options.returnStubValue) {
+      return stubResult && stubResult.returnValue;
+    }
   },
 
   _makeLazyMethodIdGetter() {
@@ -962,6 +933,82 @@ _.extend(Connection.prototype, {
           DDPCommon.makeRpcSeed(invocation, name)
       );
     };
+  },
+
+  _simulateMethod({ name, args, methodId, randomSeedGenerator }) {
+    const stub = this._methodHandlers[name];
+
+    // Run the stub, if we have one. The stub is supposed to make some
+    // temporary writes to the database to give the user a smooth experience
+    // until the actual result of executing the method comes back from the
+    // server (whereupon the temporary writes to the database will be reversed
+    // during the beginUpdate/endUpdate process.)
+    //
+    // Normally, we ignore the return value of the stub (even if it is an
+    // exception), in favor of the real return value from the server. The
+    // exception is if the *caller* is a stub. In that case, we're not going
+    // to do a RPC, so we use the return value of the stub as our return
+    // value.
+
+    if (stub) {
+      const enclosing = DDP._CurrentInvocation.get();
+      const alreadyInSimulation = enclosing && enclosing.isSimulation;
+      const invocation = new DDPCommon.MethodInvocation({
+        isSimulation: true,
+        userId: this.userId(),
+        setUserId: userId => this.setUserId(userId),
+        randomSeed: randomSeedGenerator
+      });
+
+      if (! alreadyInSimulation &&
+          this._pendingSimulationCount++ === 0) {
+        this._saveOriginals();
+      }
+
+      const finish = () => {
+        if (! alreadyInSimulation &&
+            --this._pendingSimulationCount === 0) {
+          this._retrieveAndStoreOriginals(methodId());
+        }
+      };
+
+      const result = {};
+
+      try {
+        result.returnValue = DDP._CurrentInvocation.withValue(
+          invocation,
+          // Note that unlike in the corresponding server code, we never
+          // audit that stubs check() their arguments.
+          () => stub.apply(
+            invocation,
+            // Re-clone, so that the stub can't affect our caller's values.
+            EJSON.clone(args)
+          )
+        );
+
+        result.promise = Promise.resolve(result.returnValue);
+
+      } catch (exception) {
+        result.exception = exception;
+        result.promise = Promise.reject(exception);
+      }
+
+      if (! alreadyInSimulation) {
+        if (result.promise === result.returnValue) {
+          // If result.promise and result.returnValue are the same object,
+          // then result.returnValue must have been a Promise, so we
+          // should wait for it to be fulfilled before unblocking the
+          // message buffer.
+          result.promise.done(finish, finish);
+        } else {
+          // If result.returnValue was not a Promise, then unblock the
+          // message buffer synchronously.
+          finish();
+        }
+      }
+
+      return result;
+    }
   },
 
   _enqueueMethodInvoker(methodInvoker, wait) {
@@ -1125,12 +1172,14 @@ _.extend(Connection.prototype, {
       self._userIdDeps.changed();
   },
 
-  // Returns true if we are in a state after reconnect of waiting for subs to be
-  // revived or early methods to finish their data, or we are waiting for a
-  // "wait" method to finish.
+  // Returns true if there are pending method simulations, or we are in a
+  // state after reconnect of waiting for subs to be revived or early
+  // methods to finish their data, or we are waiting for a "wait" method
+  // to finish.
   _waitingForQuiescence: function () {
     var self = this;
-    return (! _.isEmpty(self._subsBeingRevived) ||
+    return (self._pendingSimulationCount > 0 ||
+            ! _.isEmpty(self._subsBeingRevived) ||
             ! _.isEmpty(self._methodsBlockingQuiescence));
   },
 
