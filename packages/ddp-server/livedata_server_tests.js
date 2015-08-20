@@ -194,6 +194,16 @@ Tinytest.addAsync(
       )
     );
 
+    const serverCallAsyncPromise = Meteor.server.callAsync(
+      "testResolvedPromise",
+      "Meteor.server.callAsync"
+    );
+
+    const serverApplyAsyncPromise = Meteor.server.applyAsync(
+      "testResolvedPromise",
+      ["Meteor.server.applyAsync"]
+    );
+
     const clientCallRejectedPromise = new Promise(resolve => {
       clientConn.call(
         "testRejectedPromise",
@@ -205,9 +215,13 @@ Tinytest.addAsync(
     Promise.all([
       clientCallPromise,
       clientCallRejectedPromise,
+      serverCallAsyncPromise,
+      serverApplyAsyncPromise
     ]).then(results => test.equal(results, [
       "clientConn.call with callback after waiting",
       "[with callback raised Meteor.Error]",
+      "Meteor.server.callAsync after waiting",
+      "Meteor.server.applyAsync after waiting"
     ]), error => test.fail(error))
       .then(onComplete);
   })
