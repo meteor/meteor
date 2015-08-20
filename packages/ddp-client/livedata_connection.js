@@ -939,7 +939,7 @@ _.extend(Connection.prototype, {
       message.randomSeed = randomSeed;
     }
 
-    var methodInvoker = new MethodInvoker({
+    self._enqueueMethodInvoker(new MethodInvoker({
       methodId: methodId(),
       callback: callback,
       connection: self,
@@ -947,24 +947,7 @@ _.extend(Connection.prototype, {
       wait: !!options.wait,
       message: message,
       noRetry: !!options.noRetry
-    });
-
-    if (options.wait) {
-      // It's a wait method! Wait methods go in their own block.
-      self._outstandingMethodBlocks.push(
-        {wait: true, methods: [methodInvoker]});
-    } else {
-      // Not a wait method. Start a new block if the previous block was a wait
-      // block, and add it to the last block of methods.
-      if (_.isEmpty(self._outstandingMethodBlocks) ||
-          _.last(self._outstandingMethodBlocks).wait)
-        self._outstandingMethodBlocks.push({wait: false, methods: []});
-      _.last(self._outstandingMethodBlocks).methods.push(methodInvoker);
-    }
-
-    // If we added it to the first block, send it out now.
-    if (self._outstandingMethodBlocks.length === 1)
-      methodInvoker.sendMessage();
+    }), options.wait);
 
     // If we're using the default callback on the server,
     // block waiting for the result.
@@ -973,6 +956,30 @@ _.extend(Connection.prototype, {
     }
 
     return options.returnStubValue ? stubReturnValue : undefined;
+  },
+
+  _enqueueMethodInvoker(methodInvoker, wait) {
+    if (wait) {
+      // It's a wait method! Wait methods go in their own block.
+      this._outstandingMethodBlocks.push({
+        wait: true,
+        methods: [methodInvoker]
+      });
+    } else {
+      // Not a wait method. Start a new block if the previous block was a wait
+      // block, and add it to the last block of methods.
+      let lastBlock = _.last(this._outstandingMethodBlocks);
+      if (! lastBlock || lastBlock.wait) {
+        lastBlock = { wait: false, methods: [] };
+        this._outstandingMethodBlocks.push(lastBlock);
+      }
+      lastBlock.methods.push(methodInvoker);
+    }
+
+    // If we added it to the first block, send it out now.
+    if (this._outstandingMethodBlocks.length === 1) {
+      methodInvoker.sendMessage();
+    }
   },
 
   // Before calling a method stub, prepare all stores to track changes and allow
