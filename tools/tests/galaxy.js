@@ -44,7 +44,7 @@ selftest.define('galaxy deploy - simple', ['galaxy'], function () {
   run.waitSecs(15);
   run.expectExit(0);
   galaxyUtils.waitForContainers();
-  checkAppIsRunning(appName, "rocks!");
+  checkAppIsRunning(appName, "second");
 
   // Delete our deployed app.
   galaxyUtils.cleanUpApp(s, appName);
