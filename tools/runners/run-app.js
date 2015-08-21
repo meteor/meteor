@@ -362,6 +362,7 @@ var AppRunner = function (options) {
     options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
   self.omitPackageMapDeltaDisplayOnFirstRun =
     options.omitPackageMapDeltaDisplayOnFirstRun;
+  self.errorApp = options.errorApp === undefined ? false: options.errorApp;
 
   // Keep track of the app's Cordova plugins and platforms. If the set
   // of plugins or platforms changes from one run to the next, we just
@@ -454,7 +455,8 @@ _.extend(AppRunner.prototype, {
     Console.enableProgressDisplay(true);
 
     runLog.clearLog();
-    self.proxy.setMode("hold");
+    if (! self.errorApp)
+      self.proxy.setMode("hold");
 
     // Bundle up the app
     var bundlePath = self.projectContext.getProjectLocalDirectory('build');
@@ -688,7 +690,8 @@ _.extend(AppRunner.prototype, {
       },
       debugPort: self.debugPort,
       onListen: function () {
-        self.proxy.setMode("proxy");
+        if (! self.errorApp)
+          self.proxy.setMode("proxy");
         options.onListen && options.onListen();
         if (self.startFuture)
           self.startFuture['return']();
@@ -801,8 +804,8 @@ _.extend(AppRunner.prototype, {
       if (ret.outcome === 'changed') {
         runLog.logTemporary("=> Server modified -- restarting...");
       }
-
-      self.proxy.setMode("hold");
+      if (! self.errorApp)
+        self.proxy.setMode("hold");
       appProcess.stop();
 
       serverWatcher && serverWatcher.stop();
@@ -923,7 +926,9 @@ _.extend(AppRunner.prototype, {
             self._watchFutureReturn();
           }
         });
-        self.proxy.setMode("errorpage");
+
+        if (! self.errorApp)
+          self.proxy.setMode("errorpage");
         // If onChange wasn't called synchronously (clearing watchFuture), wait
         // on it.
         self.watchFuture && self.watchFuture.wait();

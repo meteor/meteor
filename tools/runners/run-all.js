@@ -15,7 +15,6 @@ const HttpProxy = require('./run-httpproxy.js').HttpProxy;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const Updater = require('./run-updater.js').Updater;
-const ErrorAppRunner = require('./run-error-app.js').ErrorAppRunner;
 
 class Runner {
   constructor({
@@ -118,7 +117,7 @@ class Runner {
     self.errorAppConfig = errorAppConfig;
 
     if (errorAppConfig && errorAppConfig.runErrorApp) {
-      self.errorAppRunner = new ErrorAppRunner({
+      self.errorAppRunner = new AppRunner({
         projectContext: errorAppConfig.projectContext,
         port: errorAppConfig.appPort,
         listenHost: appHost,
@@ -126,7 +125,8 @@ class Runner {
         oplogUrl: '',
         rootUrl: self.rootUrl,
         proxy: self.proxy,
-        noRestartBanner: self.quiet
+        noRestartBanner: self.quiet,
+        errorApp: true
       });
     }
 
