@@ -75,7 +75,9 @@ exports.httpRedirect = "HTTP/1.1 307 Temporary Redirect";
 // In the future, we can use this function to poll whether the containers have
 // started and maybe our tests will be faster.
 exports.waitForContainers = selftest.markStack(function () {
-  var waitTime = 1000 * 10 * utils.timeoutScaleFactor;
+  // We are not spinning up any containers in mock mode, so don't wait too long.
+  var waitTime = process.env.GALAXY_MOCK_MODE ?
+    1000 : 1000 * 10 * utils.timeoutScaleFactor;
   utils.sleepMs(waitTime);
 });
 
@@ -240,4 +242,10 @@ exports.getAppContainerStatuses = selftest.markStack(function (appId, appName) {
 exports.closeGalaxyConnection = selftest.markStack(function (conn) {
   auth.logoutCommand();
   conn.close();
+});
+
+
+// Ignore HTTP checks in mock mode
+exports.ignoreHttpChecks = selftest.markStack(function () {
+  return !! process.env.GALAXY_MOCK_MODE;
 });

@@ -10,6 +10,11 @@ var Sandbox = selftest.Sandbox;
 // Check if a given app is running. Curl that appname and see that it returns
 // some text.
 var checkAppIsRunning = selftest.markStack(function (appName, text) {
+  // Ignore HTTP checks, and that's what this is.
+  if (galaxyUtils.ignoreHttpChecks()) {
+    return true;
+   }
+
   // Test that the app is actually running on Galaxy.
   var run = galaxyUtils.curlToGalaxy(appName);
   run.waitSecs(5);
@@ -50,10 +55,12 @@ selftest.define('galaxy deploy - simple', ['galaxy'], function () {
   galaxyUtils.cleanUpApp(s, appName);
 
   // Test that the app is no longer running.
-  run = galaxyUtils.curlToGalaxy(appName);
-  run.waitSecs(5);
-  run.matchErr("404");
-  run.expectExit(0);
+  if (! galaxyUtils.ignoreHttpChecks()) {
+    run = galaxyUtils.curlToGalaxy(appName);
+    run.waitSecs(5);
+    run.matchErr("404");
+    run.expectExit(0);
+  }
 
   testUtils.logout(s);
 });
@@ -81,7 +88,9 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
   checkAppIsRunning(appName, "Hello");
 
   // Test that the public settins appear in the HTTP response body.
-  testUtils.checkForSettings(appName, settings, 10);
+  if (! galaxyUtils.ignoreHttpChecks()) {
+    testUtils.checkForSettings(appName, settings, 10);
+  }
 
   // Re-deploy without settings and check that the settings still
   // appear.
@@ -91,7 +100,9 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
     appName: appName,
     useOldSettings: true
   });
-  testUtils.checkForSettings(appName, settings, 10);
+  if (! galaxyUtils.ignoreHttpChecks()) {
+    testUtils.checkForSettings(appName, settings, 10);
+  }
 
   // Re-deploy with new settings and check that the settings get
   // updated.
@@ -198,10 +209,12 @@ selftest.define('galaxy self-signed cert', ['galaxy'], function () {
     conn, "activateCertificateForApp", certIds[3], appRecord._id);
   // Check that we are getting a re-direct.
   galaxyUtils.waitForContainers();
-  run = galaxyUtils.curlToGalaxy(appName);
-  run.waitSecs(5);
-  run.matchErr("SSL");
-  run.expectExit(60);
+  if (! galaxyUtils.ignoreHttpChecks()) {
+    run = galaxyUtils.curlToGalaxy(appName);
+    run.waitSecs(5);
+    run.matchErr("SSL");
+    run.expectExit(60);
+  }
 
   // Remove the un-activated certificates
   _.each(_.range(0, 15), function (i) {
@@ -211,10 +224,12 @@ selftest.define('galaxy self-signed cert', ['galaxy'], function () {
     }
   });
   // Check that we are still getting a re-direct.
-  run = galaxyUtils.curlToGalaxy(appName);
-  run.waitSecs(5);
-  run.matchErr("SSL");
-  run.expectExit(60);
+  if (! galaxyUtils.ignoreHttpChecks()) {
+    run = galaxyUtils.curlToGalaxy(appName);
+    run.waitSecs(5);
+    run.matchErr("SSL");
+    run.expectExit(60);
+  }
 
   // Clean up.
   galaxyUtils.cleanUpApp(s, appName);
