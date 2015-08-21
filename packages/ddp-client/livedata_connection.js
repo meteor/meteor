@@ -1039,7 +1039,17 @@ _.extend(Connection.prototype, {
     return this.applyAsync(name, args);
   },
 
-  applyAsync(name, args, options = {}) {
+  applyAsync(name, args, {
+    onResultReceived,
+    returnStubValue = false,
+    // Note that the default value of options.throwStubExceptions for
+    // Connection#applyAsync is different from Connection#apply. Unless
+    // the caller explicitly disables options.throwStubExceptions,
+    // exceptions thrown by stubs will be exposed to the calling code, and
+    // will prevent the RPC from being sent to the server.
+    throwStubExceptions = true,
+    wait = false,
+  } = {}) {
     // Keep our args safe from mutation (eg if we don't send the message for a
     // while because of a wait method).
     args = EJSON.clone(args);
@@ -1089,19 +1099,19 @@ _.extend(Connection.prototype, {
 
       return rpcPromise = new Promise((resolve, reject) => {
         this._enqueueMethodInvoker(new MethodInvoker({
+          message,
+          onResultReceived,
           methodId: methodId(),
-          callback: (error, result) => {
+          callback(error, result) {
             error ? reject(error) : resolve(result);
           },
           connection: this,
-          onResultReceived: options.onResultReceived,
-          wait: !!options.wait,
-          message: message
-        }), options.wait);
+          wait: !! wait
+        }), wait);
       })
     }
 
-    if (options.throwStubExceptions === false) {
+    if (! throwStubExceptions) {
       // If we explicitly don't care about stub exceptions, then we can go
       // ahead and send the RPC without waiting on the stub.
       ensureRPCSent();
@@ -1109,12 +1119,12 @@ _.extend(Connection.prototype, {
 
     return stubPromise.then(result => {
       const rpcPromise = ensureRPCSent();
-      return options.returnStubValue ? result : rpcPromise;
+      return returnStubValue ? result : rpcPromise;
     }, exception => {
         // If an exception occurred in the stub, and we did not explicitly
         // pass options.throwStubExceptions === false, then abort the RPC
         // and throw the stub exception instead.
-        if (options.throwStubExceptions !== false) {
+        if (throwStubExceptions) {
           throw exception;
         }
 
