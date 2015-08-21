@@ -1066,42 +1066,55 @@ _.extend(Connection.prototype, {
     // At this point we're definitely doing an RPC, and we're going to
     // return the value of the RPC to the caller.
 
-    // Send the RPC. Note that on the client, it is important that the
-    // stub have finished before we send the RPC, so that we know we have
-    // a complete list of which local documents the stub wrote.
-    var message = {
-      msg: 'method',
-      method: name,
-      params: args,
-      id: methodId()
-    };
+    let rpcPromise;
+    const ensureRPCSent = () => {
+      if (rpcPromise) {
+        return rpcPromise;
+      }
 
-    // Send the randomSeed only if we used it
-    if (randomSeedGenerator.seed) {
-      message.randomSeed = randomSeedGenerator.seed;
+      // Send the RPC. Note that on the client, it is important that the
+      // stub have finished before we send the RPC, so that we know we have
+      // a complete list of which local documents the stub wrote.
+      const message = {
+        msg: 'method',
+        method: name,
+        params: args,
+        id: methodId()
+      };
+
+      // Send the randomSeed only if we used it
+      if (randomSeedGenerator.seed) {
+        message.randomSeed = randomSeedGenerator.seed;
+      }
+
+      return rpcPromise = new Promise((resolve, reject) => {
+        this._enqueueMethodInvoker(new MethodInvoker({
+          methodId: methodId(),
+          callback: (error, result) => {
+            error ? reject(error) : resolve(result);
+          },
+          connection: this,
+          onResultReceived: options.onResultReceived,
+          wait: !!options.wait,
+          message: message
+        }), options.wait);
+      })
     }
 
-    const rpcPromise = new Promise((resolve, reject) => {
-      this._enqueueMethodInvoker(new MethodInvoker({
-        methodId: methodId(),
-        callback: (error, result) => {
-          error ? reject(error) : resolve(result);
-        },
-        connection: this,
-        onResultReceived: options.onResultReceived,
-        wait: !!options.wait,
-        message: message
-      }), options.wait);
-    });
+    if (options.throwStubExceptions === false) {
+      // If we explicitly don't care about stub exceptions, then we can go
+      // ahead and send the RPC without waiting on the stub.
+      ensureRPCSent();
+    }
 
-    return stubPromise.then(
-      result => options.returnStubValue ? result : rpcPromise,
-      exception => {
-        // If an exception occurred in a stub, and we're ignoring it
-        // because we're doing an RPC and want to use what the server
-        // returns instead, log it so the developer knows
-        // (unless they explicitly ask to see the error).
-        if (options.throwStubExceptions) {
+    return stubPromise.then(result => {
+      const rpcPromise = ensureRPCSent();
+      return options.returnStubValue ? result : rpcPromise;
+    }, exception => {
+        // If an exception occurred in the stub, and we did not explicitly
+        // pass options.throwStubExceptions === false, then abort the RPC
+        // and throw the stub exception instead.
+        if (options.throwStubExceptions !== false) {
           throw exception;
         }
 
@@ -1115,7 +1128,7 @@ _.extend(Connection.prototype, {
           );
         }
 
-        return rpcPromise;
+        return ensureRPCSent();
       }
     );
   },
