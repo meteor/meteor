@@ -25,6 +25,7 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use("tinytest");
+  api.use("check");
   api.use("ecmascript-collections");
   api.addFiles("collections-tests.js");
 });
