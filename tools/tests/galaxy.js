@@ -9,18 +9,29 @@ var Sandbox = selftest.Sandbox;
 
 // Check if a given app is running. Curl that appname and see that it returns
 // some text.
-var checkAppIsRunning = selftest.markStack(function (appName, text) {
-  // Ignore HTTP checks, and that's what this is.
-  if (galaxyUtils.ignoreHttpChecks()) {
-    return true;
-   }
+//
+//  - appUrl: the URL at which the app is (theoretically) running. For example
+//    "xxx.galaxy.meteor.com"
+//  - checks: what to check for. Following options:
+//    - text: text in the HTTP response of the app
+//    - containerNum: number of containers GalaxyAPI thinks is running
+var checkAppIsRunning = selftest.markStack(function (appUrl, checks) {
+  var containerNum = checks.containerNum || 1;
+  var text = checks.text;
 
-  // Test that the app is actually running on Galaxy.
-  var run = galaxyUtils.curlToGalaxy(appName);
-  run.waitSecs(5);
-  run.matchErr(galaxyUtils.httpOK);
-  run.match(text);
-  run.expectExit(0);
+  // Check that GalaxyAPI thinks that we are running the correct containers.
+  var appRecord = galaxyUtils.getAppRecordByName(appUrl);
+  selftest.expectEqual(appRecord.containerCount, containerNum);
+
+  // Ignore HTTP checks, and that's what this is.
+  if (! galaxyUtils.ignoreHttpChecks()) {
+    // Test that the app is actually running on Galaxy.
+    var run = galaxyUtils.curlToGalaxy(appUrl);
+    run.waitSecs(5);
+    run.matchErr(galaxyUtils.httpOK);
+    run.match(text);
+    run.expectExit(0);
+  }
 });
 
 // Deploy a simple app to Galaxy.
@@ -139,12 +150,7 @@ selftest.define('galaxy deploy - rescale', ['galaxy'], function () {
   var appRecord = galaxyUtils.getAppRecordByName(appName);
   galaxyUtils.callGalaxyAPI(conn, "setContainerCount", appRecord._id, 5);
   galaxyUtils.waitForContainers();
-  checkAppIsRunning(appName, "Hello");
-
-  // The most basic check -- how many containers does Galaxy API think that it
-  // should run?
-  appRecord = galaxyUtils.getAppRecordByName(appName);
-  selftest.expectEqual(appRecord.containerCount, 5);
+  checkAppIsRunning(appName, "Hello", 5);
 
   // More throughly: check that as far as we know, containers are actually
   // running (or the scheduler is lying to GalaxyAPI and claiming that they are
@@ -157,7 +163,7 @@ selftest.define('galaxy deploy - rescale', ['galaxy'], function () {
   // Now, scale down the app.
   galaxyUtils.callGalaxyAPI(conn, "setContainerCount", appRecord._id, 1);
   galaxyUtils.waitForContainers();
-  checkAppIsRunning(appName, "Hello");
+  checkAppIsRunning(appName, "Hello", 1);
 
   // Delete the app.
   galaxyUtils.cleanUpApp(s, appName);
