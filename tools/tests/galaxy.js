@@ -14,14 +14,14 @@ var Sandbox = selftest.Sandbox;
 //    "xxx.galaxy.meteor.com"
 //  - checks: what to check for. Following options:
 //    - text: text in the HTTP response of the app
-//    - containerNum: number of containers GalaxyAPI thinks is running
+//    - containerCount: number of containers GalaxyAPI thinks is running
 var checkAppIsRunning = selftest.markStack(function (appUrl, checks) {
-  var containerNum = checks.containerNum || 1;
+  var containerCount = checks.containerCount || 1;
   var text = checks.text;
 
   // Check that GalaxyAPI thinks that we are running the correct containers.
   var appRecord = galaxyUtils.getAppRecordByName(appUrl);
-  selftest.expectEqual(appRecord.containerCount, containerNum);
+  selftest.expectEqual(appRecord.containerCount, containerCount);
 
   // Ignore HTTP checks, and that's what this is.
   if (! galaxyUtils.ignoreHttpChecks()) {
@@ -46,7 +46,7 @@ selftest.define('galaxy deploy - simple', ['galaxy'], function () {
    var appName = galaxyUtils.createAndDeployApp(s);
 
   // Test that the app is actually running on Galaxy.
-  checkAppIsRunning(appName, "Hello");
+  checkAppIsRunning(appName, { text: "Hello" });
 
   // Edit the app. Use words that are unlikely to show up in (for example)
   // boilerplate 404 text.
@@ -60,12 +60,13 @@ selftest.define('galaxy deploy - simple', ['galaxy'], function () {
   run.waitSecs(15);
   run.expectExit(0);
   galaxyUtils.waitForContainers();
-  checkAppIsRunning(appName, "second");
+  checkAppIsRunning(appName, { text: "second" });
 
   // Delete our deployed app.
   galaxyUtils.cleanUpApp(s, appName);
 
   // Test that the app is no longer running.
+  // Check that GalaxyAPI thinks that we are running the correct containers.
   if (! galaxyUtils.ignoreHttpChecks()) {
     run = galaxyUtils.curlToGalaxy(appName);
     run.waitSecs(5);
@@ -96,7 +97,7 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
   });
 
   // Test that the app is actually running on Galaxy.
-  checkAppIsRunning(appName, "Hello");
+  checkAppIsRunning(appName, { text: "Hello" });
 
   // Test that the public settins appear in the HTTP response body.
   if (! galaxyUtils.ignoreHttpChecks()) {
@@ -124,7 +125,7 @@ selftest.define('galaxy deploy - settings', ['galaxy'], function () {
     appName: appName,
     settings: settings
   });
-  checkAppIsRunning(appName, "Hello");
+  checkAppIsRunning(appName, { text: "Hello" });
 
   galaxyUtils.cleanUpApp(s, appName);
   testUtils.logout(s);
@@ -141,7 +142,7 @@ selftest.define('galaxy deploy - rescale', ['galaxy'], function () {
 
   // Deploy an app.
   var appName = galaxyUtils.createAndDeployApp(s);
-  checkAppIsRunning(appName, "Hello");
+  checkAppIsRunning(appName, { text: "Hello" });
 
   // Call into the Galaxy API DDP methods to rescale containers. The method
   // signature is:
@@ -150,7 +151,7 @@ selftest.define('galaxy deploy - rescale', ['galaxy'], function () {
   var appRecord = galaxyUtils.getAppRecordByName(appName);
   galaxyUtils.callGalaxyAPI(conn, "setContainerCount", appRecord._id, 5);
   galaxyUtils.waitForContainers();
-  checkAppIsRunning(appName, "Hello", 5);
+  checkAppIsRunning(appName, { text: "Hello", containerCount : 5 });
 
   // More throughly: check that as far as we know, containers are actually
   // running (or the scheduler is lying to GalaxyAPI and claiming that they are
@@ -163,7 +164,7 @@ selftest.define('galaxy deploy - rescale', ['galaxy'], function () {
   // Now, scale down the app.
   galaxyUtils.callGalaxyAPI(conn, "setContainerCount", appRecord._id, 1);
   galaxyUtils.waitForContainers();
-  checkAppIsRunning(appName, "Hello", 1);
+  checkAppIsRunning(appName, { text: "Hello", containerCount : 1 });
 
   // Delete the app.
   galaxyUtils.cleanUpApp(s, appName);
@@ -190,7 +191,7 @@ selftest.define('galaxy self-signed cert', ['galaxy'], function () {
 
   // Deploy an app. Check that it is running.
   var appName = galaxyUtils.createAndDeployApp(s);
-  checkAppIsRunning(appName, "Hello");
+  checkAppIsRunning(appName, { text: "Hello" });
 
   // Force SSL.
   var run = s.run("add", "force-ssl");
@@ -215,6 +216,10 @@ selftest.define('galaxy self-signed cert', ['galaxy'], function () {
     conn, "activateCertificateForApp", certIds[3], appRecord._id);
   // Check that we are getting a re-direct.
   galaxyUtils.waitForContainers();
+  appRecord = galaxyUtils.getAppRecordByName(appName);
+  selftest.expectEqual(appRecord.containerCount, 1);
+  var activeCert = appRecord["activeCertificateId"];
+  selftest.expectEqual(activeCert, certIds[3]);
   if (! galaxyUtils.ignoreHttpChecks()) {
     run = galaxyUtils.curlToGalaxy(appName);
     run.waitSecs(5);
@@ -229,7 +234,10 @@ selftest.define('galaxy self-signed cert', ['galaxy'], function () {
         conn, "removeCertificateFromApp", certIds[i], appRecord._id);
     }
   });
-  // Check that we are still getting a re-direct.
+  // Check that we are still getting a re-direct and GalaxyAPI thinks that we
+  // are using the same cert.
+  appRecord = galaxyUtils.getAppRecordByName(appName);
+  selftest.expectEqual(appRecord["activeCertificateId"], activeCert);
   if (! galaxyUtils.ignoreHttpChecks()) {
     run = galaxyUtils.curlToGalaxy(appName);
     run.waitSecs(5);
