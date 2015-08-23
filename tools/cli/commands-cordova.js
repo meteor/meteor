@@ -76,12 +76,6 @@ main.registerCommand({
       cordovaProject.checkPlatformRequirements(platform);
     }
   });
-
-  // If this was the first Cordova platform, we may need to rebuild all of the
-  // local packages to add the web.cordova unibuild to the IsopackCache.
-  main.captureAndExit('=> Errors while initializing project:', () => {
-    projectContext.prepareProjectForBuild();
-  });
 });
 
 // Remove one or more Cordova platforms
@@ -124,12 +118,6 @@ version of Meteor`);
     for (platform of platformsToRemove) {
       Console.info(`${platform}: removed platform`);
     }
-  });
-
-  // If this was the last Cordova platform, we may need to rebuild all of the
-  // local packages to remove the web.cordova unibuild from the IsopackCache.
-  main.captureAndExit('=> Errors while initializing project:', function () {
-    projectContext.prepareProjectForBuild();
   });
 });
 
