@@ -5,6 +5,7 @@ import child_process from 'child_process';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
 import files from '../fs/files.js';
+import { execFileSync, execFileAsync } from '../utils/processes.js';
 
 export class CordovaRunTarget {
   get title() {
@@ -56,25 +57,24 @@ function openXcodeProject(projectDir) {
 
   const projectFilePath = files.pathJoin(projectDir, projectFilename);
 
-  child_process.execFile('open', [projectFilePath], undefined,
-    (error, stdout, stderr) => {
-    if (error) {
-      printFailure(`Failed to open your project in Xcode:
-  ${error.message}`);
-    } else {
-      Console.info();
-      Console.info(
-        chalk.green(
-          "Your project has been opened in Xcode so that you can run your " +
-          "app on an iOS device. For further instructions, visit this " +
-          "wiki page: ") +
-        Console.url(
-          "https://github.com/meteor/meteor/wiki/" +
-          "How-to-run-your-app-on-an-iOS-device"
-      ));
-      Console.info();
-    }
-  });
+  try {
+    execFileSync('open', [projectFilePath]);
+
+    Console.info();
+    Console.info(
+      chalk.green(
+        "Your project has been opened in Xcode so that you can run your " +
+        "app on an iOS device. For further instructions, visit this " +
+        "wiki page: ") +
+      Console.url(
+        "https://github.com/meteor/meteor/wiki/" +
+        "How-to-run-your-app-on-an-iOS-device"
+    ));
+    Console.info();
+  } catch (error) {
+    printFailure(`Failed to open your project in Xcode:
+${error.message}`);
+  }
 
   function printFailure(message) {
     Console.error();
