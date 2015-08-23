@@ -1,123 +1,144 @@
-var Future = require('fibers/future');
-var _ = require('underscore');
-var child_process = require('child_process');
-var Console = require('../console/console.js').Console;
+import _ from 'underscore';
+import child_process from 'child_process';
 
-var processes = exports;
+// The execFileSync function is meant to resemble the similarly-named Node 0.12
+// synchronous process creation API, but instead of being fully blocking it
+// uses a promise-based implementation. You can also use
+// execFileAsync directly, which returns a promise.
+// Some functionality is currently missing but could be added when the need
+// arises (e.g. support for timeout, maxBuffer, and encoding options).
+// Eventually, these versions should replace the ones in tools/utils/utils.js
+// and tools/tool-testing/selftest.js.
 
-var RunCommand = function (command, args, options) {
-  var self = this;
+/**
+ * @summary Executes a command synchronously, returning either the captured
+ * stdout output or throwing an error containing the stderr output as part of
+ * the message. In addition, the error will contain fields pid, stderr, stdout,
+ * status and signal.
+ * @param {String} command The command to run
+ * @param {Array} [args] List of string arguments
+ * @param {Object} [options]
+ * @param {Object} [options.cwd] Current working directory of the child process
+ * @param {Object} [options.env] Environment key-value pairs
+ * @param {Array|String} [options.stdio] Child's stdio configuration.
+ * (Default: 'pipe') Specifying anything else than 'pipe' will disallow
+ * capture.
+ * @param {String} [options.waitForClose] Whether to wait for the child process
+ * streams to close or to resolve the promise when the child process exits.
+ * @returns {String} The stdout from the command
+ */
+export function execFileSync(command, args, options) {
+  return Promise.await(execFileAsync(command, args, options));
+}
 
-  var defaultOptions = {};
-  // Make stdin,stdout & stderr pipes (not shared)
-  defaultOptions.stdio = ['pipe', 'pipe', 'pipe'];
-  defaultOptions.env = process.env;
-  defaultOptions.checkExitCode = true;
-
-  options = _.extend(defaultOptions, options);
-
-  self.command = command;
-  self.args = args;
-  self.options = options;
-
-  self.exitFuture = new Future();
-  self.exitCode = undefined;
-
-  self.stdout = '';
-  self.stderr = '';
-};
-
-_.extend(RunCommand.prototype, {
-  start: function () {
-    var self = this;
-    if (self.process) {
-      throw new Error("Process already started");
-    }
-    if (Console.isDebugEnabled()) {
-      var envString = '';
-      var defaultEnv = process.env;
-      if (self.options.env) {
-        _.each(self.options.env, function (v,k) {
-          var defaultV = defaultEnv[k];
-          if (v !== defaultV) {
-            envString += k + "=" + v + " ";
-          }
-        });
-      }
-      Console.debug("Running command", envString, self.command, self.args.join(' '));
-    }
-
-    self.process = child_process.spawn( self.command,
-                                        self.args,
-                                        self.options);
-    self.process.on('close', function (exitCode) {
-      self.exitCode = exitCode;
-
-      if (self.options.checkExitCode && exitCode != 0) {
-        console.log("Unexpected exit code", exitCode, "from", self.command, self.args, "\nstdout:\n", self.stdout, "\nstderr:\n", self.stderr);
-      }
-
-      self.exitFuture.isResolved() || self.exitFuture['return'](exitCode);
-    });
-
-    self.process.on('error', function (err) {
-      Console.debug("Error while running command", err);
-      self.exitError = err;
-      self.exitFuture.isResolved() || self.exitFuture['throw'](err);
-    });
-
-    self.process.stdout.on('data', function (data) {
-      self.stdout = self.stdout + data;
-      if (self.options.pipeOutput) {
-        Console.rawInfo(data);
-      }
-      if (self.options.onStdout) {
-        self.options.onStdout(data);
-      }
-    });
-
-    self.process.stderr.on('data', function (data) {
-      self.stderr = self.stderr + data;
-      if (self.options.pipeOutput) {
-        Console.rawError(data);
-      }
-      if (self.options.onStderr) {
-        self.options.onStderr(data);
-      }
-    });
-
-    self.stdin = self.process.stdin;
-
-    if (self.options.stdin) {
-      self.stdin.write(self.options.stdin);
-    }
-
-    if (self.options.detached) {
-      self.process.unref();
-    }
-  },
-
-  waitForExit: function () {
-    var self = this;
-    return self.exitFuture.wait();
-  },
-
-  kill: function () {
-    var self = this;
-    self.process.kill();
-  },
-
-  run: function () {
-    var self = this;
-
-    self.start();
-    if (self.options.detached) {
-      Console.debug("run called on detached process; won't wait");
-      return undefined;
-    }
-    self.waitForExit();
-    return { stdout: self.stdout, stderr: self.stderr, exitCode: self.exitCode };
+/**
+ * @summary Executes a command asynchronously, returning a promise that will
+ * either be resolved to the captured stdout output or be rejected with an
+ * error containing the stderr output as part of the message. In addition,
+ * the error will contain fields pid, stderr, stdout, status and signal.
+ * @param {String} command The command to run
+ * @param {Array} [args] List of string arguments
+ * @param {Object} [options]
+ * @param {Object} [options.cwd] Current working directory of the child process
+ * @param {Object} [options.env] Environment key-value pairs
+ * @param {Array|String} [options.stdio] Child's stdio configuration.
+ * (Default: 'pipe') Specifying anything else than 'pipe' will disallow
+ * capture.
+ * @param {String} [options.waitForClose] Whether to wait for the child process
+ * streams to close or to resolve the promise when the child process exits.
+ * @returns {Promise<String>}
+ */
+export function execFileAsync(command, args,
+  options = { waitForClose: true }) {
+  // args is optional, so if it's not an array we interpret it as options
+  if (!Array.isArray(args)) {
+    args = [];
+    options = _.extend(options, args);
   }
-});
 
-exports.RunCommand = RunCommand;
+  // The child process close event is emitted when the stdio streams
+  // have all terminated. If those streams are shared with other
+  // processes, that means we won't receive a 'close' until all processes
+  // have exited, so we may want to respond to 'exit' instead.
+  // (The downside of responding to 'exit' is that the streams may not be
+  // fully flushed, so we could miss captured output. Only use this
+  // option when needed.)
+  const exitEvent = options.waitForClose ? 'close' : 'exit';
+
+  return new Promise((resolve, reject) => {
+    const child = child_process.spawn(command, args,
+      { cwd, env, stdio } = options);
+
+    let capturedStdout = '';
+    if (child.stdout) {
+      child.stdout.setEncoding('utf8');
+      child.stdout.on('data', (data) => {
+        capturedStdout += data;
+      });
+    }
+
+    let capturedStderr = '';
+    if (child.stderr) {
+      child.stderr.setEncoding('utf8');
+      child.stderr.on('data', (data) => {
+        capturedStderr += data;
+      });
+    }
+
+    const errorCallback = (error) => {
+      // Make sure we only receive one type of callback
+      child.removeListener(exitEvent, exitCallback);
+
+      // Trim captured output to get rid of excess whitespace
+      capturedStdout = capturedStdout.trim();
+      capturedStderr = capturedStderr.trim();
+
+      _.extend(error, {
+        pid: child.pid,
+        stdout: capturedStdout,
+        stderr: capturedStderr,
+      });
+
+      // Set a more informative error message on ENOENT, that includes the
+      // command we attempted to execute
+      if (error.code === 'ENOENT') {
+        error.message = `Could not find command '${command}'`;
+      }
+
+      reject(error);
+    };
+    child.on('error', errorCallback);
+
+    const exitCallback = (code, signal) => {
+      // Make sure we only receive one type of callback
+      child.removeListener('error', errorCallback);
+
+      // Trim captured output to get rid of excess whitespace
+      capturedStdout = capturedStdout.trim();
+      capturedStderr = capturedStderr.trim();
+
+      if (code === 0) {
+        resolve(capturedStdout);
+      } else {
+        let errorMessage = `Command failed: ${command}`;
+        if (args) {
+          errorMessage += ` ${args.join(' ')}`;
+        }
+        errorMessage += `\n${capturedStderr}`;
+
+        const error = new Error(errorMessage);
+
+        _.extend(error, {
+          pid: child.pid,
+          stdout: capturedStdout,
+          stderr: capturedStderr,
+          status: code,
+          signal: signal
+        });
+
+        reject(error);
+      }
+    };
+    child.on(exitEvent, exitCallback);
+  });
+}
