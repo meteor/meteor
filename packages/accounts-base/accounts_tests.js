@@ -123,7 +123,7 @@ Tinytest.add('accounts - insertUserDoc username', function (test) {
       {profile: {name: 'Foo Bar'}},
       userIn
     );
-  });
+  }, 'Username already exists.');
 
   // cleanup
   Meteor.users.remove(userId);
@@ -156,20 +156,20 @@ Tinytest.add('accounts - insertUserDoc email', function (test) {
       {profile: {name: 'Foo Bar'}},
       userIn
     );
-  });
+  }, 'Email already exists.');
 
   // now with only one of them.
   test.throws(function () {
     Accounts.insertUserDoc(
       {}, {emails: [{address: email1}]}
     );
-  });
+  }, 'Email already exists.');
 
   test.throws(function () {
     Accounts.insertUserDoc(
       {}, {emails: [{address: email2}]}
     );
-  });
+  }, 'Email already exists.');
 
 
   // a third email works.
