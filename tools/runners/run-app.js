@@ -638,9 +638,10 @@ _.extend(AppRunner.prototype, {
     const cordovaRunner = self.cordovaRunner;
     // Run Cordova apps
     if (cordovaRunner) {
+      const plugins =
+        cordova.pluginsFromStarManifest(bundleResult.starManifest);
+
       if (!cordovaRunner.started) {
-        const plugins =
-          cordova.pluginsFromStarManifest(bundleResult.starManifest);
         const { settingsFile, mobileServerUrl } = self;
         const messages = buildmessage.capture(() => {
           cordovaRunner.prepareProject(bundlePath, plugins,
@@ -658,16 +659,16 @@ _.extend(AppRunner.prototype, {
           };
         }
       } else {
-        // If the set of Cordova of platforms or plugins changes from one run
+        // If the set of Cordova platforms or plugins changes from one run
         // to the next, we just exit, because we don't yet have a way to,
         // for example, get the new plugins to the mobile clients or stop a
         // running client on a platform that has been removed.
 
-        if (cordovaRunner.havePlatformsChanged()) {
+        if (cordovaRunner.havePlatformsChangedSinceLastRun()) {
           return { outcome: 'outdated-cordova-platforms' };
         }
 
-        if (cordovaRunner.havePluginsChanged()) {
+        if (cordovaRunner.havePluginsChangedSinceLastRun(plugins)) {
           return { outcome: 'outdated-cordova-plugins' };
         }
       }

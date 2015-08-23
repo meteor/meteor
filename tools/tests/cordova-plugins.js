@@ -110,6 +110,20 @@ var checkUserPlugins = function(sand, plugins) {
   selftest.expectEqual(plugins.length, i);
 };
 
+var startAppOnAndroidEmulator = function (s) {
+  var run = s.run("run", "android", "--verbose");
+  // Building and running the app on the Android Emulator can take a long time.
+  run.waitSecs(240);
+  run.match("Started app on Android Emulator");
+  return run;
+}
+
+var addPlatform = function (s, platform) {
+  var run = s.run("add-platform", "android");
+  run.waitSecs(15);
+  run.match("added platform");
+}
+
 // Add plugins to an app. Change the contents of the plugins and their
 // dependencies, make sure that the app still refreshes.
 selftest.define("change cordova plugins", ["cordova"], function () {
@@ -315,30 +329,17 @@ selftest.define("remove cordova plugins", ['cordova'], function () {
 
 });
 
-selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"], function () {
+selftest.define("meteor exits when cordova platforms it is currently running \
+are removed", ["slow", "cordova"], function () {
   var s = new Sandbox();
   var run;
 
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  addPlatform(s, "android");
 
-  // Add a platform via command line
-  var platformRun = s.run("add-platform", "android");
-  platformRun.waitSecs(90); // Huge download
-  platformRun.match("added platform");
-
-  run.waitSecs(60);
-  run.matchErr("Your app's platforms have changed");
-  run.matchErr("Restart meteor");
-  run.expectExit(254);
-
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   // Remove a platform via command line
   platformRun = s.run("remove-platform", "android");
@@ -350,24 +351,10 @@ selftest.define("meteor exits when cordova platforms change", ["slow", "cordova"
   run.matchErr("Restart meteor");
   run.expectExit(254);
 
-  // Add a platform in .meteor/platforms
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
-
-  var platforms = s.read(files.pathJoin(".meteor", "platforms"));
-  platforms = platforms + "\nandroid";
-  s.write(files.pathJoin(".meteor", "platforms"), platforms);
-
-  run.waitSecs(60);
-  run.matchErr("Your app's platforms have changed");
-  run.matchErr("Restart meteor");
-  run.expectExit(254);
+  addPlatform(s, "android");
 
   // Remove a platform in .meteor/platforms
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   platforms = s.read(files.pathJoin(".meteor", "platforms"));
   platforms = platforms.replace(/android/g, "");
@@ -493,26 +480,21 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
 
-  run = s.run("add-platform", "android");
-  run.waitSecs(90); // Huge download
-  run.match("added platform");
+  addPlatform(s, "android");
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   // First add a plugin directly.
   var pluginRun = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
   pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
+
   run.waitSecs(60);
   run.matchErr("Your app's Cordova plugins have changed");
   run.matchErr("Restart meteor");
   run.expectExit(254);
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   // This shouldn't cause an exit because it contains the same plugin
   // that we're already using.
@@ -537,9 +519,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run.matchErr("Restart meteor");
   run.expectExit(254);
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("remove", "contains-cordova-plugin");
   pluginRun.waitSecs(30);
@@ -549,9 +529,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run.matchErr("Restart meteor");
   run.expectExit(254);
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("remove", "cordova:org.apache.cordova.camera");
   pluginRun.waitSecs(30);
@@ -563,9 +541,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
 
   // Adding and removing just a Meteor package that contains plugins
   // should also cause the tool to exit.
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("add", "contains-cordova-plugin");
   pluginRun.waitSecs(30);
@@ -575,9 +551,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run.matchErr("Restart meteor");
   run.expectExit(254);
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("remove", "contains-cordova-plugin");
   pluginRun.waitSecs(30);
@@ -593,9 +567,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
 
-  run = s.run();
-  run.waitSecs(30);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("add", "contains-camera-cordova-plugin");
   pluginRun.waitSecs(30);

@@ -73,7 +73,7 @@ export class CordovaRunner {
 
   prepareProject(bundlePath, plugins, options) {
     buildmessage.assertInCapture();
-    
+
     buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
       this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
 
@@ -81,6 +81,9 @@ export class CordovaRunner {
         this.cordovaProject.prepareForPlatform(platform);
       }
     });
+
+    this.platforms = this.platformsForRunTargets;
+    this.plugins = plugins;
   }
 
   startRunTargets() {
@@ -90,14 +93,10 @@ export class CordovaRunner {
 
     for (runTarget of this.runTargets) {
       buildmessage.enterJob({ title: `starting ${runTarget.title}` }, () => {
-        try {
-          Promise.await(runTarget.start(this.cordovaProject));
+        Promise.await(runTarget.start(this.cordovaProject));
 
-          if (!buildmessage.jobHasMessages()) {
-            runLog.log(`Started ${runTarget.title}.`, { arrow: true });
-          }
-        } catch (error) {
-          buildmessage.exception(error);
+        if (!buildmessage.jobHasMessages()) {
+          runLog.log(`Started ${runTarget.title}.`, { arrow: true });
         }
       });
     }
@@ -105,13 +104,17 @@ export class CordovaRunner {
     this.started = true;
   }
 
-  havePlatformsChanged() {
-    // TODO
-    return false;
+  havePlatformsChangedSinceLastRun() {
+    const platformsForRunTargets = this.platformsForRunTargets;
+    if (!platformsForRunTargets) return false;
+
+    const cordovaPlatformsInApp = this.cordovaProject.cordovaPlatformsInApp;
+
+    return !_.isEqual(platformsForRunTargets,
+      _.intersection(platformsForRunTargets, cordovaPlatformsInApp));
   }
 
-  havePluginsChanged() {
-    // TODO
-    return false;
+  havePluginsChangedSinceLastRun(plugins) {
+    return this.plugins && !_.isEqual(this.plugins, plugins);
   }
 }
