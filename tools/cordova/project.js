@@ -11,6 +11,7 @@ import { Console } from '../console/console.js';
 import buildmessage from '../utils/buildmessage.js';
 import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
+import { execFileSync, execFileAsync } from '../utils/processes.js';
 
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
@@ -153,16 +154,17 @@ ${displayNameForPlatform(platform)}`, async () => {
 
     const env = this.defaultEnvWithPathsAdded(...extraPaths);
 
+    const command = files.convertToOSPath(files.pathJoin(
+      this.projectRoot, 'platforms', platform, 'cordova', 'run'));
+
     this.runCommands(`running Cordova app for platform \
-${displayNameForPlatform(platform)} with options ${options}`, async () => {
-      const command = files.convertToOSPath(files.pathJoin(
-        this.projectRoot, 'platforms', platform, 'cordova', 'run'));
-      return await superspawn.spawn(command, options, {
-          stdio: !Console.verbose ? 'pipe' : 'inherit',
-          printCommand: !!Console.verbose,
-          chmod: true
-      });
-    }, env);
+${displayNameForPlatform(platform)} with options ${options}`,
+    execFileAsync(command, options, {
+      env: env,
+      cwd: this.projectRoot,
+      stdio: Console.verbose ? 'inherit' : 'pipe',
+      waitForClose: false })
+    );
   }
 
   // Platforms
@@ -505,7 +507,7 @@ from Cordova project`, async () => {
     return [nodeBinDir, iosSimBinPath];
   }
 
-  runCommands(title, asyncFunc, env = this.defaultEnvWithPathsAdded(),
+  runCommands(title, promiseOrAsyncFunction, env = this.defaultEnvWithPathsAdded(),
     cwd = this.projectRoot) {
     // Capitalize title for debug output
     Console.debug(title[0].toUpperCase() + title.slice(1));
@@ -521,7 +523,9 @@ from Cordova project`, async () => {
     }
 
     try {
-      return Promise.await(asyncFunc());
+      const promise = (typeof promiseOrAsyncFunction === 'function') ?
+        promiseOrAsyncFunction() : promiseOrAsyncFunction;
+      return Promise.await(promise);
     } catch (error) {
       Console.arrowError('Errors executing Cordova commands:');
       Console.error();
@@ -543,14 +547,15 @@ running again with the --verbose option to help diagnose the issue.)`),
       } else {
         // Print stack trace for other errors by default, because the message
         // usually does not give us enough information to know what is going on
-        Console.error(error && error.stack || error, consoleOptions);
+        const errorMessage = error && error.stack || error;
+        Console.error(errorMessage, consoleOptions);
       };
       throw new main.ExitWithCode(1);
     } finally {
-      if (oldCwd) {
+      if (cwd && oldCwd) {
         process.chdir(oldCwd);
       }
-      if (oldEnv) {
+      if (env && oldEnv) {
         process.env = oldEnv;
       }
     }
