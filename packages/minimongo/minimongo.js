@@ -221,14 +221,21 @@ LocalCollection.Cursor.prototype.fetch = function () {
  * @locus Anywhere
  * @returns {Number}
  */
-LocalCollection.Cursor.prototype.count = function () {
+LocalCollection.Cursor.prototype.count = function (applySkipLimit) {
   var self = this;
+  // Have to respect `applySkipLimit`, so we remove limit if `applySkipLimit` is not true
+  // and then restore the limit once we've got the count
+  var originalLimit = self.limit;
+  if(!applySkipLimit) self.limit = undefined;
 
   if (self.reactive)
     self._depend({added: true, removed: true},
                  true /* allow the observe to be unordered */);
 
-  return self._getRawObjects({ordered: true}).length;
+  var count = self._getRawObjects({ordered: true}).length;
+  self.limit = originalLimit;
+
+  return count;
 };
 
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {
