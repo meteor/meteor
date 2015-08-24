@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.8-plugins.0',
+  version: '1.0.8-plugins.1',
   documentation: null
 });
 
@@ -14,7 +14,7 @@ Package.onUse(function (api) {
   api.use('session');
   api.use('reload');
 
-  api.use(['blaze', 'templating', 'spacebars',
+  api.use(['webapp', 'blaze', 'templating', 'spacebars',
            'ddp', 'tracker'], 'client');
 
   api.addFiles('diff_match_patch_uncompressed.js', 'client');
