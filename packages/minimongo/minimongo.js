@@ -223,10 +223,14 @@ LocalCollection.Cursor.prototype.fetch = function () {
  */
 LocalCollection.Cursor.prototype.count = function (applySkipLimit) {
   var self = this;
-  // Have to respect `applySkipLimit`, so we remove limit if `applySkipLimit` is not true
-  // and then restore the limit once we've got the count
+  // Have to respect `applySkipLimit`, so we remove limit & skip if `applySkipLimit`
+  // is not true and then restore limit & skip once we've got the count
   var originalLimit = self.limit;
-  if(!applySkipLimit) self.limit = undefined;
+  var originalSkip = self.skip;
+  if(!applySkipLimit){
+    self.limit = undefined;
+    self.skip = undefined;
+  }
 
   if (self.reactive)
     self._depend({added: true, removed: true},
@@ -234,6 +238,7 @@ LocalCollection.Cursor.prototype.count = function (applySkipLimit) {
 
   var count = self._getRawObjects({ordered: true}).length;
   self.limit = originalLimit;
+  self.skip = originalSkip;
 
   return count;
 };
