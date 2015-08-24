@@ -19,7 +19,7 @@ import cordova_util from 'cordova-lib/src/cordova/util.js';
 import superspawn from 'cordova-lib/src/cordova/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
 
-import { AVAILABLE_PLATFORMS, displayNameForPlatform } from './index.js';
+import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
 cordova_events.on('results', logIfVerbose);
@@ -235,7 +235,7 @@ before running or building for ${displayNameForPlatform(platform)}:`);
 
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
     this.runCommands(`updating Cordova project for platforms \
-${displayNamesForPlatforms(platform)}`, async () => {
+${displayNamesForPlatforms(platforms)}`, async () => {
       await cordova_lib.raw.platform('update', platforms, this.defaultOptions);
     });
   }
