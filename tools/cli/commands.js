@@ -72,7 +72,7 @@ var showInvalidArchMsg = function (arch) {
 
 // Utility functions to parse options in run/build/test-packages commands
 
-export function parseServerOptionsForRunCommand(options) {
+export function parseServerOptionsForRunCommand(options, runTargets) {
   const parsedServerUrl = parsePortOption(options.port);
 
   // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
@@ -81,8 +81,10 @@ export function parseServerOptionsForRunCommand(options) {
   if (mobileServerOption) {
     parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
   } else {
+    const isRunOnDeviceRequested = _.any(runTargets,
+      runTarget => runTarget.isDevice);
     parsedMobileServerUrl = detectMobileServerUrl(parsedServerUrl,
-      isRunOnDeviceRequested(options));
+      isRunOnDeviceRequested);
   }
 
   return { parsedServerUrl, parsedMobileServerUrl };
@@ -142,14 +144,7 @@ to with --mobile-server.`);
   }
 }
 
-// Is a run on a device requested?
-// XXX This shouldn't be hard-coded
-function isRunOnDeviceRequested(options) {
-  return !_.isEmpty(_.intersection(options.args,
-    ['ios-device', 'android-device']));
-}
-
-function parseRunTargets(targets) {
+export function parseRunTargets(targets) {
   return targets.map((target) => {
     const targetParts = target.split('-');
     const platform = targetParts[0];
@@ -285,8 +280,11 @@ main.registerCommand(_.extend(
 function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
+  // Additional args are interpreted as run targets
+  const runTargets = parseRunTargets(options.args);
+
   const { parsedServerUrl, parsedMobileServerUrl } =
-    parseServerOptionsForRunCommand(options);
+    parseServerOptionsForRunCommand(options, runTargets);
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
@@ -339,9 +337,6 @@ function doRunCommand(options) {
     const velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrlForVelocity);
   }
-
-  // Additional args are interpreted as run targets
-  const runTargets = parseRunTargets(options.args);
 
   let cordovaRunner;
 
@@ -1419,8 +1414,11 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
+  const runTargets = parseRunTargets(_.intersection(
+    Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
+
   const { parsedServerUrl, parsedMobileServerUrl } =
-    parseServerOptionsForRunCommand(options);
+    parseServerOptionsForRunCommand(options, runTargets);
 
   // Find any packages mentioned by a path instead of a package name. We will
   // load them explicitly into the catalog.
@@ -1489,9 +1487,6 @@ main.registerCommand({
   // The rest of the projectContext preparation process will happen inside the
   // runner, once the proxy is listening. The changes we made were persisted to
   // disk, so projectContext.reset won't make us forget anything.
-
-  const runTargets = parseRunTargets(_.intersection(
-    Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
 
   let cordovaRunner;
 

@@ -1,6 +1,6 @@
 import selftest from '../tool-testing/selftest.js';
 import utils from '../utils/utils.js';
-import { parseServerOptionsForRunCommand } from '../cli/commands.js';
+import { parseServerOptionsForRunCommand, parseRunTargets } from '../cli/commands.js';
 
 selftest.define('get mobile server argument for meteor run', ['cordova'], function () {
   // on emulator
@@ -22,16 +22,14 @@ selftest.define('get mobile server argument for meteor run', ['cordova'], functi
   // meteor run -p 3000 on device
   // => mobile server should be <detected ip>:3000
   selftest.expectEqual(parseServerOptionsForRunCommand({
-    port: "3000",
-    args: ["ios-device"]
-  }).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
+    port: "3000"
+  }, parseRunTargets(["ios-device"])).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
 
   // meteor run -p example.com:3000 on device
   // => mobile server should be <detected ip>:3000
   selftest.expectEqual(parseServerOptionsForRunCommand({
-    port: "example.com:3000",
-    args: ["android-device"]
-  }).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
+    port: "example.com:3000"
+  }, parseRunTargets(["android-device"])).parsedMobileServerUrl, { host: utils.ipAddress(), port: "3000", protocol: "http://" });
 
   // meteor run -p example.com:3000 --mobile-server 4000 => error, mobile
   // server must include a hostname
