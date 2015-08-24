@@ -21,7 +21,7 @@ function busySleep(ms) {
 
 Tinytest.add('server cpu benchmarking - measure without yielding', (test) => {
   const BASE_SLEEP = 100;
-  Profile.time("foo1", () => {
+  Profile.time("test1", () => {
     busySleep(BASE_SLEEP);
   });
 });
@@ -30,7 +30,7 @@ Tinytest.add('server cpu benchmarking - measure without yielding', (test) => {
 Tinytest.add('server cpu benchmarking - measure with single yield', (test) => {
   const BASE_SLEEP = 100;
 
-  Profile.time("foo2", () => {
+  Profile.time("test2", () => {
     busySleep(BASE_SLEEP);
     sleep(BASE_SLEEP * 2);
     busySleep(BASE_SLEEP * 4);
@@ -40,18 +40,18 @@ Tinytest.add('server cpu benchmarking - measure with single yield', (test) => {
 
 Tinytest.add('server cpu benchmarking - partially overlapping fibers', (test) => {
   const BASE_SLEEP = 100;
-  Profile.time("foo4", () => {
+  Profile.time("test3.a", () => {
     busySleep(BASE_SLEEP);
 
-    Fiber(() => {
+    Fiber(Profile("test3.a", () => {
       busySleep(BASE_SLEEP * 2);
 
-      Profile.time("bar4", () => {
+      Profile.time("test3.b", () => {
         busySleep(BASE_SLEEP * 4);
         sleep(BASE_SLEEP * 8);
         busySleep(BASE_SLEEP * 16);
       });
-    }).run();
+    })).run();
   });
 });
 
@@ -59,17 +59,17 @@ Tinytest.add('server cpu benchmarking - nested measure inside new fiber', (test)
   // we sleep at multiples of 2^n of this so that when we get counts
   // we'll know how to group them
   const BASE_SLEEP = 1;
-  Profile.time("foo3", () => {
+  Profile.time("test4.a", () => {
     busySleep(BASE_SLEEP);
     sleep(BASE_SLEEP * 2);
     busySleep(BASE_SLEEP * 4);
 
-    Fiber(() => {
+    Fiber(Profile("test4.a", () => {
       busySleep(BASE_SLEEP * 8);
       sleep(BASE_SLEEP * 16);
       busySleep(BASE_SLEEP * 32);
 
-      Profile.time("bar3", () => {
+      Profile.time("test4.b", () => {
         busySleep(BASE_SLEEP * 64);
         sleep(BASE_SLEEP * 128);
         busySleep(BASE_SLEEP * 256);
@@ -78,7 +78,7 @@ Tinytest.add('server cpu benchmarking - nested measure inside new fiber', (test)
       busySleep(BASE_SLEEP * 512);
       sleep(BASE_SLEEP * 1024);
       busySleep(BASE_SLEEP * 2048);
-    }).run();
+    })).run();
 
     busySleep(BASE_SLEEP * 4096);
     sleep(BASE_SLEEP * 8192);
