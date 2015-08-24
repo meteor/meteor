@@ -9,17 +9,6 @@ import files from '../fs/files.js';
 import * as cordova from '../cordova';
 import { CordovaProject } from '../cordova/project.js';
 
-function displayNameForHostPlatform(platform = process.platform) {
-  switch (platform) {
-    case 'darwin':
-      return "Mac";
-    case 'linux':
-      return "Linux";
-    case 'win32':
-      return "Windows";
-  }
-}
-
 function createProjectContext(appDir) {
   const projectContext = new ProjectContext({
     projectDir: appDir
@@ -153,11 +142,8 @@ ${cordova.AVAILABLE_PLATFORMS.join(', ')}`);
     return 1;
   }
 
-  const hostPlatformName = displayNameForHostPlatform();
-
-  if (hostPlatformName) {
-    const page = `Mobile-Dev-Install:-${cordova.displayNameForPlatform(platform)}-on-${hostPlatformName}`;
-    const url = `https://github.com/meteor/meteor/wiki/${page}`;
+  const url = cordova.installationInstructionsURLForPlatform(platform);
+  if (url) {
     Console.info("Please follow the instructions here:");
     Console.info(Console.url(url));
   } else {

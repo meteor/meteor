@@ -49,3 +49,24 @@ export function pluginsFromStarManifest(star) {
   var cordovaProgram = _.findWhere(star.programs, { arch: CORDOVA_ARCH });
   return cordovaProgram ? cordovaProgram.cordovaDependencies : {};
 }
+
+function displayNameForHostPlatform(platform = process.platform) {
+  switch (platform) {
+    case 'darwin':
+      return "Mac";
+    case 'linux':
+      return "Linux";
+    case 'win32':
+      return "Windows";
+  }
+}
+
+export function installationInstructionsURLForPlatform(platform) {
+  const hostPlatformName = displayNameForHostPlatform();
+
+  if (hostPlatformName) {
+    const page = `Mobile-Dev-Install:-${displayNameForPlatform(platform)}-on-${hostPlatformName}`;
+    const url = `https://github.com/meteor/meteor/wiki/${page}`;
+    return url;
+  }
+}

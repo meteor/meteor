@@ -3,6 +3,7 @@
 var _ = require('underscore');
 var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
+import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -163,6 +164,28 @@ var upgradersByName = {
 
       packagesFile.writeIfModified();
     }
+  },
+
+  "1.2.0-cordova-changes": function (projectContext) {
+    // Remove Cordova project directory to start afresh
+    // and avoid a broken project
+    files.rm_recursive(projectContext.getProjectLocalDirectory(
+       'cordova-build'));
+
+    // Don't display notice if the project has no Cordova platforms added
+    if (_.isEmpty(projectContext.platformList.getCordovaPlatforms())) return;
+
+    maybePrintNoticeHeader();
+
+    Console.info(
+`Meteor 1.2 includes changes to the Cordova integration. The bundled \
+Android tools have been removed and a system-wide install of the Android SDK \
+is now required. This should make it easier to keep the development toolchain \
+up to date and helps avoid some difficult to diagnose failures.
+If you don't have your own Android tools installed already, you can find \
+more information about installing the Android SDK for your platform here:`,
+Console.url(cordova.installationInstructionsURLForPlatform('android')),
+      Console.options({ bulletPoint: "1.2.0: " }));
   }
 
   ////////////
