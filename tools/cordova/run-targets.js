@@ -1,7 +1,9 @@
 import _ from 'underscore';
 import chalk from 'chalk';
 import child_process from 'child_process';
+import eachline from 'eachline';
 
+import isopackets from '../tool-env/isopackets.js';
 import runLog from '../runners/run-log.js';
 import { Console } from '../console/console.js';
 import files from '../fs/files.js';
@@ -133,13 +135,97 @@ export class AndroidRunTarget extends CordovaRunTarget {
       // Clear logs
       await execFileAsync('adb', [target, 'logcat', '-c']);
 
-      const filterExpressions = ['CordovaLog:I', 'chromium:I',
+      const filterExpressions = ['CordovaLog:D', 'chromium:I',
         'SystemWebViewClient:I', '*:S'];
+
+      const { Log } =
+          isopackets.load('cordova-support')['logging'];
+
+      const logStream = eachline((line) => {
+        const logEntry = logFromAndroidLogcatLine(Log, line);
+        if (logEntry) {
+          return `${logEntry}\n`;
+        }
+      });
+      logStream.pipe(process.stdout);
 
       // Asynchronously start tailing logs to stdout
       execFileAsync('adb', [target, 'logcat',
         ...filterExpressions],
-        { stdio: 'inherit' });
+        { destination: logStream });
     });
   }
 }
+
+function logFromAndroidLogcatLine(Log, line) {
+  // Ignore lines indicating beginning of logging
+  if (line.match(/^--------- beginning of /)) return null;
+
+  // Matches logcat brief format
+  // "I/Tag(  PID): message"
+  let match =
+    line.match(/^([A-Z])\/([^\(]*?)\(\s*(\d+)\): (.*)$/);
+
+  if (match) {
+    [, priority, tag, pid, message] = match;
+
+    if (tag === 'chromium') {
+      // Matches Chromium log format
+      // [INFO:CONSOLE(23)] "Bla!", source: http://meteor.local/app/mobileapp.js (23)
+      match = message.match(/^\[(.*):(.*)\((\d+)\)\] (.*)$/);
+
+      if (match) {
+        [, logLevel, filename, lineNumber, message] = match;
+
+        if (filename === 'CONSOLE') {
+          match = message.match(/^\"(.*)\", source: (.*) \((\d+)\)$/);
+
+          if (match) {
+            [, message, filename, lineNumber] = match;
+            return logFromConsoleOutput(Log, message, filename, lineNumber);
+          }
+        }
+      }
+    } else if (tag === 'CordovaLog') {
+      // http://meteor.local/mobileappold.js?3c198a97a802ad2c6eab52da0244245e30b964ed: Line 15 : Clicked!
+
+      match = message.match(/^(.*): Line (\d+) : (.*)$/);
+
+      if (match) {
+        [, filename, lineNumber, message] = match;
+        return logFromConsoleOutput(Log, message, filename, lineNumber);
+      }
+    }
+  }
+
+  if (Console.verbose) {
+    return Log.format(
+    Log.objFromText(line), { metaColor: 'green', color: true });
+  } else {
+    return null;
+  }
+};
+
+function logFromConsoleOutput(Log, message, filename, lineNumber) {
+  if (isDebugOutput(message) && !Console.verbose) return null;
+
+  filename = filename.replace(/\?.*$/, '');
+
+  return Log.format({
+    time: new Date,
+    level: 'info',
+    file: filename,
+    line: lineNumber,
+    message: message,
+    program: 'android'
+  }, {
+    metaColor: 'green',
+    color: true
+  });
+}
+
+function isDebugOutput(message) {
+  // Skip the debug output produced by Meteor components.
+  return /^METEOR CORDOVA DEBUG /.test(message) ||
+    /^HTTPD DEBUG /.test(message);
+};
