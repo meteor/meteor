@@ -197,7 +197,7 @@ requirements for platform ${displayNameForPlatform(platform)}`,
 ${displayNameForPlatform(platform)}`);
       return false;
     } else if (requirements instanceof CordovaError) {
-      Console.error(`cordova: ${requirements.message}`);
+      Console.error(`Cordova error: ${requirements.message}`);
       return false;
     }
 
@@ -539,7 +539,7 @@ from Cordova project`, async () => {
         // (We do print the stack trace if we are in verbose mode.)
         const errorMessage = Console.verbose ? (error.stack || error.message) :
           error.message;
-        Console.error(errorMessage, consoleOptions);
+        Console.error(`Cordova error: ${errorMessage}`, consoleOptions);
         Console.error(chalk.green(`(If the error message contains suggestions \
 for a fix, note that this may not apply to the Meteor integration. You can try \
 running again with the --verbose option to help diagnose the issue.)`),
