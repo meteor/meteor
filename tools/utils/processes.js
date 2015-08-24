@@ -23,6 +23,8 @@ import child_process from 'child_process';
  * @param {Array|String} [options.stdio] Child's stdio configuration.
  * (Default: 'pipe') Specifying anything else than 'pipe' will disallow
  * capture.
+ * @param {Writable} [options.destination] If specified, instead of capturing
+ * the output, the child process stdout will be piped to the destination stream.
  * @param {String} [options.waitForClose] Whether to wait for the child process
  * streams to close or to resolve the promise when the child process exits.
  * @returns {String} The stdout from the command
@@ -44,6 +46,8 @@ export function execFileSync(command, args, options) {
  * @param {Array|String} [options.stdio] Child's stdio configuration.
  * (Default: 'pipe') Specifying anything else than 'pipe' will disallow
  * capture.
+ * @param {Writable} [options.destination] If specified, instead of capturing
+ * the output, the child process stdout will be piped to the destination stream.
  * @param {String} [options.waitForClose] Whether to wait for the child process
  * streams to close or to resolve the promise when the child process exits.
  * @returns {Promise<String>}
@@ -71,10 +75,14 @@ export function execFileAsync(command, args,
 
     let capturedStdout = '';
     if (child.stdout) {
-      child.stdout.setEncoding('utf8');
-      child.stdout.on('data', (data) => {
-        capturedStdout += data;
-      });
+      if (options.destination) {
+        child.stdout.pipe(options.destination);
+      } else {
+        child.stdout.setEncoding('utf8');
+        child.stdout.on('data', (data) => {
+          capturedStdout += data;
+        });
+      }
     }
 
     let capturedStderr = '';
