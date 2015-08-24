@@ -5716,7 +5716,17 @@ DocsData = {
     "memberof": "Mongo.Cursor",
     "name": "count",
     "options": [],
-    "params": [],
+    "params": [
+      {
+        "description": "<p>Optional. Specifies whether to consider the effects of the <code>skip</code> and <code>limit</code> options. By default, the <code>count()</code> method ignores the effects of the <code>skip</code> and <code>limit</code> options. Set <code>applySkipLimit</code> to true to consider the effect of these options.</p>",
+        "name": "applySkipLimit",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+    ],
     "returns": [
       {
         "type": {
