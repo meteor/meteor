@@ -7,6 +7,10 @@ message for more details.
 
 ## v.NEXT
 
+* No longer include the `json` package by default, which contains code for
+  `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
+  natively was Internet Explorer 7.)
+
 ### Utilities
 
 * New `beforeSend` option to `HTTP.call` on the client allows you to directly
