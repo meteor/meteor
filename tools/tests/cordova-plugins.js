@@ -111,7 +111,7 @@ var checkUserPlugins = function(sand, plugins) {
 };
 
 var startAppOnAndroidEmulator = function (s) {
-  var run = s.run("run", "android", "--verbose");
+  var run = s.run("run", "android");
   // Building and running the app on the Android Emulator can take a long time.
   run.waitSecs(240);
   run.match("Started app on Android Emulator");
@@ -120,7 +120,9 @@ var startAppOnAndroidEmulator = function (s) {
 
 var addPlatform = function (s, platform) {
   var run = s.run("add-platform", "android");
-  run.waitSecs(15);
+  // Cordova may need to download cordova-android if it's not already
+  // cached (in ~/.cordova).
+  run.waitSecs(30);
   run.match("added platform");
 }
 
@@ -134,34 +136,27 @@ selftest.define("change cordova plugins", ["cordova"], function () {
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
   run = s.run();
-  run.waitSecs(5);
   run.match("myapp");
   run.match("proxy");
   run.match("MongoDB");
-  run.waitSecs(5);
   run.match("your app");
-  run.waitSecs(5);
   run.match("running at");
   run.match("localhost");
 
   // Add a local package contains-cordova-plugin.
   s.write(".meteor/packages", "meteor-base \n contains-cordova-plugin");
-  run.waitSecs(2);
   run.match("restarted");
 
   // Change something in the plugin.
   s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
-  run.waitSecs(2);
   run.match("restarted");
 
   // Introduce an error.
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
-  run.waitSecs(2);
   run.match("exact version");
 
   // Fix the error.
   s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
-  run.waitSecs(2);
   run.match("restarted");
 });
 
@@ -183,51 +178,44 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.matchErr("Please add the Android platform to your project first");
   run.match("meteor add-platform ");
 
-  run = s.run("add-platform", "android");
-  run.waitSecs(90); // Huge download
-  run.match("added platform");
+  run = addPlatform(s, 'android');
 
-  run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
-  run.waitSecs(5);
-  run.match("added cordova plugin org.apache.cordova.camera");
+  run = s.run("add", "cordova:cordova-plugin-camera@0.3.0");
+  run.match("Added Cordova plugin cordova-plugin-camera");
   run.expectExit(0);
 
-  run = s.run("add", "cordova:org.apache.cordova.file");
-  run.matchErr("exact version or tarball url");
+  run = s.run("add", "cordova:cordova-plugin-file");
+  run.matchErr("exact version");
   run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
   // build time.
   run = s.run("add", "cordova:foo@1.0.0");
-  run.waitSecs(5);
-  run.match("added cordova plugin foo");
+  run.match("Added Cordova plugin foo");
   run.expectExit(0);
 
   run = s.run("remove", "cordova:foo");
-  run.waitSecs(5);
-  run.match("removed cordova plugin foo");
+  run.match("Removed Cordova plugin foo");
   run.expectExit(0);
 
-  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+  checkUserPlugins(s, ["cordova-plugin-camera"]);
 
   run = s.run("add", "contains-cordova-plugin");
   run.match("added,");
   run.match("contains a cordova plugin");
   run.expectExit(0);
 
-  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+  checkUserPlugins(s, ["cordova-plugin-camera"]);
 
   run = s.run("list");
-  run.match("org.apache.cordova.camera");
+  run.match("cordova-plugin-camera");
 
   run = s.run("list-platforms");
   run.match("android");
 
   run = s.run("build", '../a', "--server", "localhost:3000");
   run.waitSecs(60);
-  // This fails because the FB plugin does not compile without additional
-  // configuration for android.
-  run.expectExit(1);
+  run.expectExit(0);
 
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
@@ -237,10 +225,10 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.waitSecs(60);
   run.expectExit(0);
 
-  checkCordovaPlugins(s, ["org.apache.cordova.camera"]);
+  checkCordovaPlugins(s, ["cordova-plugin-camera"]);
 
-  run = s.run("remove", "cordova:org.apache.cordova.camera");
-  run.match("removed");
+  run = s.run("remove", "cordova:cordova-plugin-camera");
+  run.match("Removed");
   run.expectExit(0);
 
   run = s.run("build", '../a', "--server", "localhost:3000");
@@ -249,17 +237,17 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
 
   checkCordovaPlugins(s, []);
 
-  run = s.run("add", "cordova:org.apache.cordova.device@0.2.11");
-  run.match("added");
+  run = s.run("add", "cordova:cordova-plugin-device@1.0.1");
+  run.match("Added");
   run.expectExit(0);
 
   run = s.run("build", '../a', "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
-  checkCordovaPlugins(s, ["org.apache.cordova.device"]);
+  checkCordovaPlugins(s, ["cordova-plugin-device"]);
 
-  run = s.run("remove", "cordova:org.apache.cordova.device");
-  run.match("removed");
+  run = s.run("remove", "cordova:cordova-plugin-device");
+  run.match("Removed");
   run.expectExit(0);
 
   run = s.run("add", "cordova:com.example.plugin@file://");
@@ -267,8 +255,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.expectExit(1);
 
   run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");
-  run.waitSecs(5);
-  run.match("added cordova plugin com.example.plugin");
+  run.match("Added Cordova plugin com.example.plugin");
   run.expectExit(0);
 
   checkUserPlugins(s, ["com.example.plugin"]);
@@ -285,7 +272,6 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.match("added,");
   run.match("contains an empty cordova plugin");
   run.expectExit(0);
-
 });
 
 selftest.define("remove cordova plugins", ['cordova'], function () {
@@ -294,36 +280,32 @@ selftest.define("remove cordova plugins", ['cordova'], function () {
 
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
-  run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
-  run.waitSecs(5);
+  run = s.run("add", "cordova:cordova-plugin-camera@0.3.0");
   run.expectExit(0);
 
-  checkUserPlugins(s, ["org.apache.cordova.camera"]);
+  checkUserPlugins(s, ["cordova-plugin-camera"]);
 
   // Removing a plugin that hasn't been added should say that it isn't
   // in this project.
   run = s.run("remove", "cordova:blahblah");
   run.matchErr("not in this project");
-  run.forbidAll("removed");
+  run.forbidAll("Removed");
   run.expectExit(1);
 
   run = s.run("remove", "cordova:blahblah",
-              "cordova:org.apache.cordova.camera");
-  run.waitSecs(5);
+              "cordova:cordova-plugin-camera");
   run.matchErr("not in this project");
-  run.match("removed");
+  run.match("Removed");
   run.expectExit(1);
   checkUserPlugins(s, []);
 
   run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");
-  run.waitSecs(5);
-  run.match("added cordova plugin com.example.plugin");
+  run.match("Added Cordova plugin com.example.plugin");
   run.expectExit(0);
   checkUserPlugins(s, ["com.example.plugin"]);
 
   run = s.run("remove", "cordova:com.example.plugin");
-  run.waitSecs(5);
-  run.match("removed");
+  run.match("Removed");
   run.expectExit(0);
   checkUserPlugins(s, []);
 
@@ -343,7 +325,6 @@ are removed", ["slow", "cordova"], function () {
 
   // Remove a platform via command line
   platformRun = s.run("remove-platform", "android");
-  platformRun.waitSecs(15);
   platformRun.match("removed platform");
 
   run.waitSecs(60);
@@ -373,9 +354,7 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   s.createApp("myapp", "package-tests");
   s.cd("myapp");
 
-  run = s.run("add-platform", "android");
-  run.waitSecs(90);
-  run.match("added platform");
+  run = addPlatform(s, 'android');
 
   var
     pluginPath          = '../cordova-local-plugin',
@@ -397,17 +376,13 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
 
   // Add the local cordova plugin
   run = s.run("add", "cordova:com.cordova.empty@file://../cordova-local-plugin");
-  run.waitSecs(60);
-  run.match("added cordova plugin com.cordova.empty");
+  run.match("Added Cordova plugin com.cordova.empty");
   run.expectExit(0);
 
   checkUserPlugins(s, ["com.cordova.empty"]);
 
   // Run meteor and check if the cordova android build have the plugin file.
-  // Using "android-device" because "android" would start the simulator.
-  run = s.run("run", "android-device");
-  run.waitSecs(60);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
   run.stop();
 
   selftest.expectTrue(
@@ -428,9 +403,7 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   );
 
   // Check if the local plugin will be refreshed
-  run = s.run("run", "android-device");
-  run.waitSecs(60);
-  run.match("Started your app");
+  run = startAppOnAndroidEmulator(s);
   run.stop();
 
   selftest.expectTrue(
@@ -485,8 +458,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run = startAppOnAndroidEmulator(s);
 
   // First add a plugin directly.
-  var pluginRun = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
-  pluginRun.waitSecs(30);
+  var pluginRun = s.run("add", "cordova:cordova-plugin-camera@1.0.0");
   pluginRun.expectExit(0);
 
   run.waitSecs(60);
@@ -499,20 +471,17 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   // This shouldn't cause an exit because it contains the same plugin
   // that we're already using.
   pluginRun = s.run("add", "contains-old-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.match("restarted");
 
   pluginRun = s.run("remove", "contains-old-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.match("restarted");
 
   // This exits because it contains a new plugin, facebookconnect.
   pluginRun = s.run("add", "contains-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.matchErr("Your app's Cordova plugins have changed");
@@ -522,7 +491,6 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("remove", "contains-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.matchErr("Your app's Cordova plugins have changed");
@@ -531,8 +499,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
 
   run = startAppOnAndroidEmulator(s);
 
-  pluginRun = s.run("remove", "cordova:org.apache.cordova.camera");
-  pluginRun.waitSecs(30);
+  pluginRun = s.run("remove", "cordova:cordova-plugin-camera");
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.matchErr("Your app's Cordova plugins have changed");
@@ -544,7 +511,6 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("add", "contains-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.matchErr("Your app's Cordova plugins have changed");
@@ -554,7 +520,6 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("remove", "contains-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
   run.waitSecs(60);
   run.matchErr("Your app's Cordova plugins have changed");
@@ -564,13 +529,11 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
   // Adding a package with a newer version of a plugin that we're
   // already using should also cause us to restart.
   pluginRun = s.run("add", "contains-old-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
 
   run = startAppOnAndroidEmulator(s);
 
   pluginRun = s.run("add", "contains-camera-cordova-plugin");
-  pluginRun.waitSecs(30);
   pluginRun.expectExit(0);
 
   run.matchErr("Your app's Cordova plugins have changed");
@@ -581,7 +544,7 @@ selftest.define("meteor exits when cordova plugins change", ["slow", "cordova"],
 var buildAndCheckPluginInStar = selftest.markStack(function (s, name, version) {
   var run = s.run(
     "build", '../a', "--server", "localhost:3000", "--directory");
-  run.waitSecs(90);
+  run.waitSecs(60);
   run.expectExit(0);
 
   var starJson = JSON.parse(s.read('../a/bundle/star.json'));
@@ -603,49 +566,42 @@ selftest.define("cordova plugins in star.json, direct and transitive", ["slow", 
   s.cd("myapp");
   s.set("METEOR_OFFLINE_CATALOG", "t");
 
-  run = s.run("add-platform", "android");
-  run.waitSecs(90); // Huge download
-  run.match("added platform");
+  run = addPlatform(s, 'android');
 
   // Add a direct dependency: it should appear in star.json after we
   // build.
-  run = s.run("add", "cordova:org.apache.cordova.camera@0.3.0");
-  run.waitSecs(30);
+  run = s.run("add", "cordova:cordova-plugin-camera@1.0.0");
   run.expectExit(0);
 
-  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.0");
+  buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.0.0");
 
   // Add a Cordova dependency from a package, at a newer version: the
   // plugin should appear in star.json at the version added in the
   // direct dependency, even though it's older than the version that the
   // package uses.
   run = s.run("add", "contains-camera-cordova-plugin");
-  run.waitSecs(30);
   run.expectExit(0);
 
-  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.0");
+  buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.0.0");
 
   // After removing the direct dependency, star.json should contain
-  // camera@0.3.0, the version used by the package.
-  run = s.run("remove", "cordova:org.apache.cordova.camera");
-  run.waitSecs(30);
+  // camera@1.2.0, the version used by the package.
+  run = s.run("remove", "cordova:cordova-plugin-camera");
   run.expectExit(0);
 
-  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.2");
+  buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.2.0");
 
   // If we add another package that uses an older version of the plugin,
   // the version in star.json shouldn't change.
   run = s.run("add", "contains-old-cordova-plugin");
-  run.waitSecs(30);
   run.expectExit(0);
 
-  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.2");
+  buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.2.0");
 
   // If we remove the package that uses a newer version, the version in
   // star.json should change.
   run = s.run("remove", "contains-camera-cordova-plugin");
-  run.waitSecs(30);
   run.expectExit(0);
 
-  buildAndCheckPluginInStar(s, "org.apache.cordova.camera", "0.3.0");
+  buildAndCheckPluginInStar(s, "cordova-plugin-camera", "1.0.0");
 });

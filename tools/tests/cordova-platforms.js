@@ -15,13 +15,11 @@ selftest.define("add cordova platforms", ["cordova"], function () {
   run.match("meteor add-platform android");
   run.expectExit(1);
 
-  run = s.run("install-sdk", "android");
-  run.waitSecs(90); // Big downloads
-  run.expectExit(0);
-
-  run = s.run("add-platform", "android");
-  run.waitSecs(90); // Huge download
-  run.match("added");
+  var run = s.run("add-platform", "android");
+  // Cordova may need to download cordova-android if it's not already
+  // cached (in ~/.cordova).
+  run.waitSecs(30);
+  run.match("added platform");
   run.expectExit(0);
 
   run = s.run("remove-platform", "foo");
