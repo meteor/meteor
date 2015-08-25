@@ -219,6 +219,9 @@ LocalCollection.Cursor.prototype.fetch = function () {
  * @method  count
  * @instance
  * @locus Anywhere
+ * @param {Boolean} [applySkipLimit] Optional. Specifies whether to consider the effects of the `skip` and `limit` options.
+ * By default, the `count()` method ignores the effects of the `skip` and `limit` options.
+ * Set `applySkipLimit` to true to consider the effect of these options.
  * @returns {Number}
  */
 LocalCollection.Cursor.prototype.count = function (applySkipLimit) {
@@ -227,7 +230,7 @@ LocalCollection.Cursor.prototype.count = function (applySkipLimit) {
   // is not true and then restore limit & skip once we've got the count
   var originalLimit = self.limit;
   var originalSkip = self.skip;
-  if(!applySkipLimit){
+  if (! applySkipLimit) {
     self.limit = undefined;
     self.skip = undefined;
   }

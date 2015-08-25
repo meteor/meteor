@@ -3540,7 +3540,7 @@ DocsData = {
   "HTTP.del": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 78,
+    "lineno": 82,
     "locus": "Anywhere",
     "longname": "HTTP.del",
     "memberof": "HTTP",
@@ -3583,7 +3583,7 @@ DocsData = {
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 45,
+    "lineno": 49,
     "locus": "Anywhere",
     "longname": "HTTP.get",
     "memberof": "HTTP",
@@ -3626,7 +3626,7 @@ DocsData = {
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 56,
+    "lineno": 60,
     "locus": "Anywhere",
     "longname": "HTTP.post",
     "memberof": "HTTP",
@@ -3669,7 +3669,7 @@ DocsData = {
   "HTTP.put": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 67,
+    "lineno": 71,
     "locus": "Anywhere",
     "longname": "HTTP.put",
     "memberof": "HTTP",
@@ -5718,14 +5718,15 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>Optional. Specifies whether to consider the effects of the <code>skip</code> and <code>limit</code> options. By default, the <code>count()</code> method ignores the effects of the <code>skip</code> and <code>limit</code> options. Set <code>applySkipLimit</code> to true to consider the effect of these options.</p>",
+        "description": "<p>Optional. Specifies whether to consider the effects of the <code>skip</code> and <code>limit</code> options.\nBy default, the <code>count()</code> method ignores the effects of the <code>skip</code> and <code>limit</code> options.\nSet <code>applySkipLimit</code> to true to consider the effect of these options.</p>",
         "name": "applySkipLimit",
+        "optional": true,
         "type": {
           "names": [
             "Boolean"
           ]
         }
-      },
+      }
     ],
     "returns": [
       {
@@ -5830,7 +5831,7 @@ DocsData = {
   "Mongo.Cursor#observe": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 303,
+    "lineno": 318,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observe",
     "memberof": "Mongo.Cursor",
@@ -5853,7 +5854,7 @@ DocsData = {
   "Mongo.Cursor#observeChanges": {
     "filepath": "minimongo/minimongo.js",
     "kind": "function",
-    "lineno": 315,
+    "lineno": 330,
     "locus": "Anywhere",
     "longname": "Mongo.Cursor#observeChanges",
     "memberof": "Mongo.Cursor",
