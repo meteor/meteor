@@ -621,22 +621,41 @@ main.registerCommand({
     throw new main.ShowUsage;
   var appPath = files.pathResolve(appPathAsEntered);
 
-  if (files.exists(appPath)) {
-    Console.error(appPath + ": Already exists");
-    return 1;
-  }
-
   if (files.findAppDir(appPath)) {
     Console.error(
       "You can't create a Meteor project inside another Meteor project.");
     return 1;
   }
 
+  var appName = files.pathBasename(options.appDir);
+
+  if (files.isCurrentDir(appPathAsEntered))
+    appName = files.pathBasename(files.cwd());
+
+
   var transform = function (x) {
     return x.replace(/~name~/g, files.pathBasename(appPath));
   };
 
+  var ignoreWhiteList = ['.txt', '.md', '.json', '.sh'];
+
+  var destinationEmpty = true;
+  if (files.exists(appPath)) {
+    destinationEmpty = !_.some(files.readdir(appPath), function (filePath) {
+      if (!filePath)
+        return false
+      return !files.isFileOfType(appPath, filePath, ignoreWhiteList);
+    });
+  }
+
   if (options.example) {
+    if (! destinationEmpty) {
+      Console.error("Example destination directory may only contain " +
+          "the following types of items: dot-files, extension-less files, or " +
+          "files with these extensions: " + ignoreWhiteList.join(', ') + "\n");
+      return 1;
+    }
+
     if (examples.indexOf(options.example) === -1) {
       Console.error(options.example + ": no such example.");
       Console.error();
@@ -654,6 +673,11 @@ main.registerCommand({
       });
     }
   } else {
+    var toIgnore = [/^local$/, /^\.id$/]
+    if (!destinationEmpty) {
+      toIgnore.push(/(\.html|\.js|\.css)/)
+    }
+
     files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
       transformFilename: function (f) {
         return transform(f);
@@ -664,7 +688,7 @@ main.registerCommand({
         else
           return contents;
       },
-      ignore: [/^local$/, /^\.id$/]
+      ignore: toIgnore
     });
   }
 
@@ -701,7 +725,7 @@ main.registerCommand({
   // in the template's versions file).
 
   {
-    var message = appPathAsEntered + ": created";
+    var message = appName + ": created";
     if (options.example && options.example !== appPathAsEntered)
       message += (" (from '" + options.example + "' template)");
     message += ".\n";
