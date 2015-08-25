@@ -1,4 +1,8 @@
 import _ from 'underscore';
+import assert from 'assert';
+
+import { oldToNew as oldToNewPluginIds, newToOld as newToOldPluginIds }
+  from 'cordova-registry-mapper';
 
 export const CORDOVA_ARCH = "web.cordova";
 
@@ -42,6 +46,30 @@ export function splitPluginsAndPackages(packages) {
   }
 
   return result;
+}
+
+export function newPluginId(id) {
+  return oldToNewPluginIds[id];
+}
+
+export function convertPluginsToNewIDs(plugins) {
+  assert(plugins);
+
+  return _.object(_.map(plugins, (version, id) => {
+    const newId = newPluginId(id);
+
+    if (newId) {
+      if (_.has(plugins, newId)) {
+        // The plugin has already been added using the new ID, so we do not
+        // overwrite the version.
+        return false;
+      } else {
+        return [newId, version];
+      }
+    } else {
+      return [id, version];
+    }
+  }));
 }
 
 // Returns the cordovaDependencies of the Cordova arch from a star manifest.

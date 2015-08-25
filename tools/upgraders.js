@@ -3,6 +3,7 @@
 var _ = require('underscore');
 var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
+import main from './cli/main.js';
 import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
@@ -171,6 +172,12 @@ var upgradersByName = {
     // and avoid a broken project
     files.rm_recursive(projectContext.getProjectLocalDirectory(
        'cordova-build'));
+
+    // Cordova plugin IDs have changed as part of moving to npm, so we convert
+    // old plugin IDs to new IDs
+    let plugins = projectContext.cordovaPluginsFile.getPluginVersions();
+    plugins = cordova.convertPluginsToNewIDs(plugins);
+    projectContext.cordovaPluginsFile.write(plugins);
 
     // Don't display notice if the project has no Cordova platforms added
     if (_.isEmpty(projectContext.platformList.getCordovaPlatforms())) return;
