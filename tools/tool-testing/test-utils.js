@@ -41,10 +41,8 @@ exports.createAndDeployApp = function (sandbox, options) {
   sandbox.createApp(name, options.templateApp || 'empty');
   sandbox.cd(name);
 
-  if (name.indexOf(".") === -1) {
-    name = name + "." + config.getDeployHostname();
-  }
-
+  name = config.getFullAppName(name);
+  
   var runArgs = ['deploy', name];
   if (options.settingsFile) {
     runArgs.push('--settings');
