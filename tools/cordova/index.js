@@ -89,7 +89,7 @@ function displayNameForHostPlatform(platform = process.platform) {
   }
 }
 
-export function installationInstructionsURLForPlatform(platform) {
+export function installationInstructionsUrlForPlatform(platform) {
   const hostPlatformName = displayNameForHostPlatform();
 
   if (hostPlatformName) {

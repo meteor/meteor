@@ -142,7 +142,7 @@ ${cordova.AVAILABLE_PLATFORMS.join(', ')}`);
     return 1;
   }
 
-  const url = cordova.installationInstructionsURLForPlatform(platform);
+  const url = cordova.installationInstructionsUrlForPlatform(platform);
   if (url) {
     Console.info("Please follow the instructions here:");
     Console.info(Console.url(url));

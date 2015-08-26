@@ -191,7 +191,7 @@ is now required. This should make it easier to keep the development toolchain \
 up to date and helps avoid some difficult to diagnose failures.
 If you don't have your own Android tools installed already, you can find \
 more information about installing the Android SDK for your platform here:`,
-Console.url(cordova.installationInstructionsURLForPlatform('android')),
+Console.url(cordova.installationInstructionsUrlForPlatform('android')),
       Console.options({ bulletPoint: "1.2.0: " }));
   }
 
