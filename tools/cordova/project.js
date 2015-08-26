@@ -312,7 +312,8 @@ from Cordova project`, async () => {
   }
 
   // There is no Cordova function to get the fetched plugin versions, so we
-  // just read in fetch.json and parse the format ourselves into a version
+  // have to read in fetch.json (a file managed by plugman, a semi-independent
+  // part of cordova-lib) and parse the format ourselves into a version
   // string suitable to be passed to targetForPlugin.
   // Note that a plugin can be fetched but not installed, so that's why we
   // still need a separate listInstalledPluginVersions.

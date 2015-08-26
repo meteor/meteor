@@ -52,8 +52,9 @@ exports.parseUrl = function (str, defaults) {
   };
 };
 
-// 'defaults' is an optional object with 'host', 'port', and 'protocol' keys.
-exports.formatUrl = function (url, defaults) {
+// 'url' is an object with 'host', 'port', and 'protocol' keys, such as
+// the return value of parseUrl.
+exports.formatUrl = function (url) {
   let string = url.protocol + url.host;
   if (url.port) {
     string += `:${url.port}`;
