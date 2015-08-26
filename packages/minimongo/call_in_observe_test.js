@@ -21,7 +21,7 @@ if (Meteor.isClient) {
       LocalCollection.find().observe({
         added: function () {
           Meteor.call("isRunningOnServer", function (err, res) {
-            test.isFalse(err);
+            test.equal(err, undefined);
             test.equal(res, true);
             done();
           });

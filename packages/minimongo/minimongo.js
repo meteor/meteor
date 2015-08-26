@@ -372,10 +372,6 @@ _.extend(LocalCollection.Cursor.prototype, {
         // be able to call `Meteor.call` within these wrapped
         // functions and actually end up calling a server method (as
         // opposed to just a client stub)
-        //
-        // XXX this shouldn't be necessary once #2315 is fixed (that
-        // is -- if we no longer run observe callbacks synchronously
-        // on Minimongo mutations).
         var wrapNotInMethodStub = function (f) {
           // It is strange that we refer to the `ddp` package directly
           // here. This pattern appears elsewhere in the code, but
