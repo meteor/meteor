@@ -40,6 +40,12 @@ function log(...args) {
 
 export class CordovaProject {
   constructor(projectContext, options = {}) {
+    if (process.platform === 'darwin') {
+      Console.warn(`Building mobile apps on a Windows system is not \
+yet supported.`);
+      throw new main.ExitWithCode(1);
+    }
+
     this.projectContext = projectContext;
 
     this.projectRoot = projectContext.getProjectLocalDirectory('cordova-build');
