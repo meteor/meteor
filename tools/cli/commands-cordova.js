@@ -164,7 +164,12 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
-  // TODO
+  Console.info(`You can launch the Android SDK Manager from within Android \
+Studio.
+See`, Console.url("http://developer.android.com/tools/help/sdk-manager.html"), `
+Alternatively, you can launch it by running the 'android' command.
+(This requires that you have set ANDROID_HOME and added ANDROID_HOME/tools \
+to your PATH.)`);
 
   return 0;
 });
