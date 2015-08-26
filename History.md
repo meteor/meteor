@@ -11,6 +11,10 @@ message for more details.
   `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
   natively was Internet Explorer 7.)
 
+* Let `Meteor.call` within `observe` call server methods. Fixes #907
+  (and accidentally also #2691)
+
+
 ### Utilities
 
 * New `beforeSend` option to `HTTP.call` on the client allows you to directly
