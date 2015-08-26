@@ -99,9 +99,9 @@ export class CordovaProject {
 
   // Preparing
 
-  prepareFromAppBundle(bundlePath, plugins) {
+  prepareFromAppBundle(bundlePath, pluginVersions) {
     assert(bundlePath);
-    assert(plugins);
+    assert(pluginVersions);
 
     buildmessage.assertInJob();
 
@@ -119,7 +119,7 @@ export class CordovaProject {
     builder.copyBuildOverride();
 
     this.ensurePlatformsAreSynchronized();
-    this.ensurePluginsAreSynchronized(plugins,
+    this.ensurePluginsAreSynchronized(pluginVersions,
       builder.pluginsConfiguration);
   }
 
