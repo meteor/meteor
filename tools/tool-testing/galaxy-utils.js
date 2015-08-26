@@ -202,7 +202,7 @@ exports.callGalaxyAPI = function (conn, ...args) {
 exports.getAppRecordByName = selftest.markStack(function (appName) {
   var conn = exports.loggedInGalaxyAPIConnection();
   var appRecord = {};
-  conn.connection.registerStore('apps', {
+  conn.connection.registerStore('app', {
     update: function (msg) {
       if (msg.msg === 'added' && msg.fields &&
           msg.fields.hostname === appName) {
