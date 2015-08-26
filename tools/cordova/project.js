@@ -20,7 +20,7 @@ import superspawn from 'cordova-lib/src/cordova/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
 
 import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
-  newPluginId, convertPluginsToNewIDs } from './index.js';
+  newPluginId, convertPluginVersionsToNewIDs } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
 cordova_events.on('results', logIfVerbose);
@@ -283,19 +283,29 @@ from Cordova project`, async () => {
 
   // Plugins
 
-  listInstalledPlugins() {
+  // Because PluginInfoProvider reads in the plugin versions from
+  // their plugin.xml, that only gives us the declared version and doesn't
+  // tell us if plugins have been fetched from a Git SHA URL or a local path.
+  // So we overwrite the declared versions with versions from
+  // listFetchedPluginVersions that do contain this information.
+  listInstalledPluginVersions() {
     const pluginInfoProvider = new PluginInfoProvider();
-    const installedPlugins = pluginInfoProvider.getAllWithinSearchPath(
+    const installedPluginVersions = pluginInfoProvider.getAllWithinSearchPath(
       files.convertToOSPath(this.pluginsDir));
-    const fetchedPlugins = this.listFetchedPlugins();
-    return _.object(installedPlugins.map(plugin => {
-      const id = plugin.id;
-      const version = fetchedPlugins[id] || plugin.version;
+    const fetchedPluginVersions = this.listFetchedPluginVersions();
+    return _.object(installedPluginVersions.map(pluginInfo => {
+      const id = pluginInfo.id;
+      const version = fetchedPluginVersions[id] || pluginInfo.version;
       return [id, version];
     }));
   }
 
-  listFetchedPlugins() {
+  // There is no Cordova function to get the fetched plugin versions, so we
+  // just read in fetch.json and parse the format ourselves into a version
+  // string suitable to be passed to targetForPlugin.
+  // Note that a plugin can be fetched but not installed, so that's why we
+  // still need a separate listInstalledPluginVersions.
+  listFetchedPluginVersions() {
     const fetchJsonPath = files.pathJoin(this.pluginsDir, 'fetch.json');
 
     if (!files.exists(fetchJsonPath)) {
@@ -312,13 +322,16 @@ from Cordova project`, async () => {
       } else if (source.type === 'git') {
         version = `${source.url}#${source.ref}`;
       } else if (source.type === 'local') {
-        version = source.path;
+        version = `file://${source.path}`;
       }
       return [id, version];
     }));
   }
 
+  // Construct a target suitable for 'cordova plugin add' from an id and
+  // version, converting or resolving a URL or path where needed.
   targetForPlugin(id, version) {
+    assert(id);
     assert(version);
 
     if (utils.isUrlWithSha(version)) {
@@ -342,6 +355,8 @@ from Cordova project`, async () => {
     }
   }
 
+  // Convert old-style GitHub tarball URLs to new Git URLs, and check if other
+  // Git URLs contain a SHA reference.
   convertToGitUrl(url) {
     // Matches GitHub tarball URLs, like:
     // https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2
@@ -351,6 +366,8 @@ from Cordova project`, async () => {
         const [, organization, repository, sha] = match;
       // Convert them to a Git URL
       return `https://github.com/${organization}/${repository}.git#${sha}`;
+    // We only support Git URLs with a SHA reference to guarantee repeatability
+    // of builds
     } else if (/\.git#[0-9a-f]{40}/.test(url)) {
       return url;
     } else {
@@ -385,6 +402,7 @@ to Cordova project`, async () => {
     }
   }
 
+  // plugins is an array of plugin IDs.
   removePlugins(plugins) {
     if (_.isEmpty(plugins)) return;
 
@@ -396,8 +414,8 @@ from Cordova project`, async () => {
 
   // Ensures that the Cordova plugins are synchronized with the app-level
   // plugins.
-  ensurePluginsAreSynchronized(plugins, pluginsConfiguration = {}) {
-    assert(plugins);
+  ensurePluginsAreSynchronized(pluginVersions, pluginsConfiguration = {}) {
+    assert(pluginVersions);
 
     buildmessage.assertInCapture();
 
@@ -407,7 +425,7 @@ from Cordova project`, async () => {
     // the old IDs.
     // To avoid attempts at duplicate installation, we check for old IDs here
     // and convert them to new IDs when needed.
-    plugins = convertPluginsToNewIDs(plugins);
+    pluginVersions = convertPluginVersionsToNewIDs(pluginVersions);
 
     // Also, we warn if any App.configurePlugin calls in mobile-config.js
     // need to be updated (and in the meantime we take care of the
@@ -426,19 +444,20 @@ mobile-config.js accordingly.`);
     }));
 
     buildmessage.enterJob({ title: "installing Cordova plugins"}, () => {
-      const installedPlugins = this.listInstalledPlugins();
+      const installedPluginVersions = this.listInstalledPluginVersions();
 
       // Due to the dependency structure of Cordova plugins, it is impossible to
-      // upgrade the version on an individual Cordova plugin. Instead, whenever a
-      // new Cordova plugin is added or removed, or its version is changed,
+      // upgrade the version on an individual Cordova plugin. Instead, whenever
+      // a new Cordova plugin is added or removed, or its version is changed,
       // we just reinstall all of the plugins.
       let shouldReinstallAllPlugins = false;
 
       // Iterate through all of the plugins and find if any of them have a new
-      // version. Additionally check if we have plugins installed from local path.
+      // version. Additionally, check if we have plugins installed from a local
+      // path.
       const pluginsFromLocalPath = {};
-      _.each(plugins, (version, id) => {
-        // Check if plugin is installed from local path
+      _.each(pluginVersions, (version, id) => {
+        // Check if plugin is installed from a local path.
         const isPluginFromLocalPath = utils.isUrlWithFileScheme(version);
 
         if (isPluginFromLocalPath) {
@@ -448,8 +467,8 @@ mobile-config.js accordingly.`);
             version = this.convertToGitUrl(version);
           }
 
-          if (!_.has(installedPlugins, id) ||
-            installedPlugins[id] !== version) {
+          if (!_.has(installedPluginVersions, id) ||
+            installedPluginVersions[id] !== version) {
             // We do not have the plugin installed or the version has changed.
             shouldReinstallAllPlugins = true;
           }
@@ -460,45 +479,46 @@ mobile-config.js accordingly.`);
         Console.debug('Reinstalling Cordova plugins added from the local path');
       }
 
-      // Check to see if we have any installed plugins that are not in the current
-      // set of plugins.
-      _.each(installedPlugins, (version, id) => {
-        if (!_.has(plugins, id)) {
+      // Check to see if we have any installed plugins that are not in the
+      // current set of plugins.
+      _.each(installedPluginVersions, (version, id) => {
+        if (!_.has(pluginVersions, id)) {
           shouldReinstallAllPlugins = true;
         }
       });
 
+      // We either reinstall all plugins or only those fetched from a local
+      // path.
       if (shouldReinstallAllPlugins || !_.isEmpty(pluginsFromLocalPath)) {
         let pluginsToRemove;
         if (shouldReinstallAllPlugins) {
-          pluginsToRemove = Object.keys(installedPlugins);
+          pluginsToRemove = Object.keys(installedPluginVersions);
         } else {
-          // Only try to remove plugins that are currently installed
+          // Only try to remove plugins that are currently installed.
           pluginsToRemove = _.intersection(
             Object.keys(pluginsFromLocalPath),
-            Object.keys(installedPlugins));
+            Object.keys(installedPluginVersions));
         }
 
         this.removePlugins(pluginsToRemove);
 
-        // Now install necessary plugins.
-
+        // Now install the necessary plugins.
         if (shouldReinstallAllPlugins) {
-          pluginsToInstall = plugins;
+          pluginVersionsToInstall = pluginVersions;
         } else {
-          pluginsToInstall = pluginsFromLocalPath;
+          pluginVersionsToInstall = pluginsFromLocalPath;
         }
 
-        const pluginsCount = _.size(pluginsToInstall);
-        let pluginsInstalled = 0;
+        const pluginsToInstallCount = _.size(pluginVersionsToInstall);
+        let installedPluginsCount = 0;
 
-        buildmessage.reportProgress({ current: 0, end: pluginsCount });
-        _.each(pluginsToInstall, (version, id) => {
+        buildmessage.reportProgress({ current: 0, end: pluginsToInstallCount });
+        _.each(pluginVersionsToInstall, (version, id) => {
           this.addPlugin(id, version, pluginsConfiguration[id]);
 
           buildmessage.reportProgress({
-            current: ++pluginsInstalled,
-            end: pluginsCount
+            current: ++installedPluginsCount,
+            end: pluginsToInstallCount
           });
         });
       }

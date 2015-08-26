@@ -52,14 +52,14 @@ export function newPluginId(id) {
   return oldToNewPluginIds[id];
 }
 
-export function convertPluginsToNewIDs(plugins) {
-  assert(plugins);
+export function convertPluginVersionsToNewIDs(pluginVersions) {
+  assert(pluginVersions);
 
-  return _.object(_.map(plugins, (version, id) => {
+  return _.object(_.map(pluginVersions, (version, id) => {
     const newId = newPluginId(id);
 
     if (newId) {
-      if (_.has(plugins, newId)) {
+      if (_.has(pluginVersions, newId)) {
         // The plugin has already been added using the new ID, so we do not
         // overwrite the version.
         return false;

@@ -111,7 +111,7 @@ installs and the plugins added as dependencies of packages through
 `Cordova.depends`). The `pluginsConfiguration` comes from `App.configurePlugin`
 calls in `meteor-config.js`.
 
-Uses methods `project.listInstalledPlugins()`, `project.addPlugin(name, version,
+Uses methods `project.listInstalledPluginVersions()`, `project.addPlugin(name, version,
 config)`, `project.removePlugins(plugins)` to call into Cordova.
 
 ## Running
