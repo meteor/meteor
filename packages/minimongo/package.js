@@ -46,4 +46,5 @@ Package.onTest(function (api) {
   api.addFiles('wrap_transform_tests.js');
   api.addFiles('minimongo_server_tests.js', 'server');
   api.addFiles('call_in_observe_test.js');
+  api.addFiles('settimeout_in_observe_test.js');
 });
