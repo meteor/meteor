@@ -107,13 +107,14 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   var templateApp = options.templateApp || 'simple-app';
 
   // Create the new galaxy settings.
-  var galaxySettings = {};
-  galaxySettings[appName] = {
-    env: {
-      // XXX: Right now, all the galaxy test apps use the same mongo. This is
-      // actually kind of super awkward... but generating and destroying new DBs
-      // seems like it is introducing a bit too much complexity at this stage.
-      "MONGO_URL": process.env.APP_MONGO
+  var galaxySettings = {
+    "galaxy.meteor.com" : {
+      env: {
+        // XXX: Right now, all the galaxy test apps use the same mongo. This is
+        // actually kind of super awkward... but generating and destroying new DBs
+        // seems like it is introducing a bit too much complexity at this stage.
+        "MONGO_URL": process.env.APP_MONGO
+      }
     }
   };
   if (! options.useOldSettings) {

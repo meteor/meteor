@@ -1570,8 +1570,8 @@ var getFilteredTests = function (options) {
   if (allTests.length) {
     var testState = readTestState();
 
-    // Add pseudo-tags 'non-matching', 'unchanged', and 'in other files'
-    // (but only so that we can then skip tests with those tags)
+    // Add pseudo-tags 'non-matching', 'unchanged', 'non-galaxy' and 'in other
+    // files' (but only so that we can then skip tests with those tags)
     allTests = allTests.map(function (test) {
       var newTags = [];
 
@@ -1584,7 +1584,8 @@ var getFilteredTests = function (options) {
         newTags.push('unchanged');
       }
 
-      // XXX Do we need this?
+      // We make sure to not run galaxy tests unless the user explicitly asks us
+      // to. Someday, this might not be the case.
       if ( _.indexOf(test.tags, "galaxy") === -1) {
         newTags.push('non-galaxy');
       }
@@ -1612,6 +1613,8 @@ var getFilteredTests = function (options) {
     tagsToSkip.push('checkout');
   }
   if (options.galaxyOnly) {
+    // We consider `galaxy` to imply `slow` and `net` since almost all galaxy
+    // tests involve deploying an app to a (probably) remote server.
     tagsToSkip.push('non-galaxy');
   } else {
     tagsToSkip.push('galaxy');
@@ -1620,9 +1623,6 @@ var getFilteredTests = function (options) {
     }
     if (! options.includeSlowTests) {
       tagsToSkip.push('slow');
-    }
-    if (! options.galaxyOnly) {
-      tagsToSkip.push('galaxy');
     }
   }
 
