@@ -2,10 +2,6 @@
 
 XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd358af0c63cb49666b760
 
-* Let `Meteor.call` within `observe` call server methods. Fixes #907
-  (and accidentally also #2691)
-
-
 ### Utilities
 
 * New `beforeSend` option to `HTTP.call` on the client allows you to directly

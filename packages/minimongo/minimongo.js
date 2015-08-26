@@ -367,31 +367,9 @@ _.extend(LocalCollection.Cursor.prototype, {
         if (self.collection.paused)
           return;
 
-        // Wrap a function as to not seem as if it's running as part
-        // of a method stub. One important consequence is that you'll
-        // be able to call `Meteor.call` within these wrapped
-        // functions and actually end up calling a server method (as
-        // opposed to just a client stub)
-        //
-        // XXX this shouldn't be necessary once #2315 is fixed (that
-        // is -- if we no longer run observe callbacks synchronously
-        // on Minimongo mutations).
-        var wrapNotInMethodStub = function (f) {
-          // It is strange that we refer to the `ddp` package directly
-          // here. This pattern appears elsewhere in the code, but
-          // should be abstracted away or re-thought.
-          if (Package.ddp) {
-            return function () {
-              Package.ddp.DDP._CurrentInvocation.withValue(null, f);
-            };
-          } else {
-            return f;
-          }
-        };
-
-       self.collection._observeQueue.queueTask(wrapNotInMethodStub(function () {
-         f.apply(context, args);
-       }));
+        self.collection._observeQueue.queueTask(function () {
+          f.apply(context, args);
+        });
       };
     };
     query.added = wrapCallback(options.added);
