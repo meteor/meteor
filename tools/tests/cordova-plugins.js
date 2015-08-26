@@ -180,7 +180,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
 
   run = addPlatform(s, 'android');
 
-  run = s.run("add", "cordova:cordova-plugin-camera@0.3.0");
+  run = s.run("add", "cordova:cordova-plugin-camera@1.2.0");
   run.match("Added Cordova plugin cordova-plugin-camera");
   run.expectExit(0);
 
@@ -217,6 +217,9 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.waitSecs(60);
   run.expectExit(0);
 
+  checkCordovaPlugins(s, ["cordova-plugin-camera",
+    "com.phonegap.plugins.facebookconnect"]);
+
   // Remove a plugin
   run = s.run("remove", "contains-cordova-plugin");
   run.match("removed");
@@ -224,8 +227,6 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run = s.run("build", '../a', "--server", "localhost:3000");
   run.waitSecs(60);
   run.expectExit(0);
-
-  checkCordovaPlugins(s, ["cordova-plugin-camera"]);
 
   run = s.run("remove", "cordova:cordova-plugin-camera");
   run.match("Removed");
@@ -251,7 +252,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.expectExit(0);
 
   run = s.run("add", "cordova:com.example.plugin@file://");
-  run.matchErr("exact version of dependency");
+  run.matchErr("exact version");
   run.expectExit(1);
 
   run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");
