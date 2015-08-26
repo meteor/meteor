@@ -29,8 +29,6 @@ var currentId = 0;
 // callbacks (and a ready() invocation) to the ObserveMultiplexer, and you stop
 // it by calling the stop() method.
 OplogObserveDriver = function (options) {
-  console.log("OplogObserveDriver");
-
   var self = this;
   self._usesOplog = true;  // tests look at this
 
@@ -153,7 +151,7 @@ OplogObserveDriver = function (options) {
       fence._oplogObserveDrivers = {};
       fence._oplogObserveDrivers[self._id] = self;
 
-      fence.onBeforeFire(function () {
+      fence.onBeforeFire(self._measure(function () {
         var drivers = fence._oplogObserveDrivers;
         delete fence._oplogObserveDrivers;
 
@@ -177,7 +175,7 @@ OplogObserveDriver = function (options) {
             driver._writesToCommitWhenWeReachSteady.push(write);
           }
         });
-      });
+      }));
     })
   ));
 
@@ -191,7 +189,7 @@ OplogObserveDriver = function (options) {
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
 
-  Meteor.defer(Profile(self._cursorDescStr(), Profile("initial query", finishIfNeedToPollQuery(function () {
+  Meteor.defer(self._measure(Profile("initial query", finishIfNeedToPollQuery(function () {
     self._runInitialQuery();
   }))));
 };
@@ -712,10 +710,10 @@ _.extend(OplogObserveDriver.prototype, {
 
       // Defer so that we don't yield.  We don't need finishIfNeedToPollQuery
       // here because SwitchedToQuery is not thrown in QUERYING mode.
-      Meteor.defer(function () {
+      Meteor.defer(self._measure(function () {
         self._runQuery();
         self._doneQuerying();
-      });
+      }));
     });
   },
 

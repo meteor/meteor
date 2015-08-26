@@ -249,7 +249,7 @@ _.extend(OplogHandle.prototype, {
     if (self._workerActive)
       return;
     self._workerActive = true;
-    Meteor.defer(function () {
+    Meteor.defer(Profile("_maybeStartWorker", function () {
       try {
         while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
@@ -311,7 +311,7 @@ _.extend(OplogHandle.prototype, {
       } finally {
         self._workerActive = false;
       }
-    });
+    }));
   },
   _setLastProcessedTS: function (ts) {
     var self = this;

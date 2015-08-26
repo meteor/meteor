@@ -19,6 +19,6 @@ Meteor.setInterval(() => {
       var totalMs = ((units[0] * 60 + units[1]) * 1000) + units[2] * 10;
       console.log("Total CPU time:", totalMs, "\n\n");
     });
-}, 5000);
+}, 10000);
 
 

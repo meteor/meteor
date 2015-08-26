@@ -489,7 +489,7 @@ _.extend(Session.prototype, {
   // way, but it's the easiest thing that's correct. (unsub needs to
   // be ordered against sub, methods need to be ordered against each
   // other.)
-  processMessage: function (msg_in) {
+  processMessage: Profile("process ddp message", function (msg_in) {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
@@ -507,9 +507,9 @@ _.extend(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Fiber(function () {
+      Fiber(Profile("ddp heartbeat", function () {
         self.heartbeat.messageReceived();
-      }).run();
+      })).run();
     }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
@@ -554,7 +554,7 @@ _.extend(Session.prototype, {
     };
 
     processNext();
-  },
+  }),
 
   protocol_handlers: {
     sub: function (msg) {
@@ -707,16 +707,20 @@ _.extend(Session.prototype, {
           () => DDP._CurrentInvocation.withValue(
             invocation,
             () => maybeAuditArgumentChecks(
-              handler, invocation, msg.params,
-              "call to '" + msg.method + "'"
-            )
+              Profile("actual method function call", handler),
+              invocation, msg.params, "call to '" + msg.method + "'");
           )
         ));
       });
 
       function finish() {
-        fence.arm();
-        unblock();
+        Profile.time("fence.arm()", () => {
+          fence.arm();
+        });
+
+        Profile.time("unblock()", () => {
+          unblock();
+        });
       }
 
       const payload = {
@@ -736,7 +740,9 @@ _.extend(Session.prototype, {
           exception,
           `while invoking method '${msg.method}'`
         );
-        self.send(payload);
+        Profile.time("send result", () => {
+          self.send(payload);
+        });
       });
     }
   },
@@ -1373,9 +1379,9 @@ Server = function (options) {
             sendError("Already connected", msg);
             return;
           }
-          Fiber(function () {
+          Fiber(Profile("handle new ddp connection", function () {
             self._handleConnect(socket, msg);
-          }).run();
+          })).run();
           return;
         }
 
@@ -1393,9 +1399,9 @@ Server = function (options) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Fiber(function () {
+        Fiber(Profile("close ddp connection", function () {
           socket._meteorSession.close();
-        }).run();
+        })).run();
       }
     });
   });
