@@ -39,11 +39,9 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use('minimongo', ['client', 'server']);
   api.use('test-helpers', 'client');
-  api.use('ddp'); // for testing interaction between `Meteor.call` and `observe`
   api.use(['tinytest', 'underscore', 'ejson', 'ordered-dict',
            'random', 'tracker', 'reactive-var', 'mongo-id']);
   api.addFiles('minimongo_tests.js', 'client');
   api.addFiles('wrap_transform_tests.js');
   api.addFiles('minimongo_server_tests.js', 'server');
-  api.addFiles('call_in_observe_test.js');
 });
