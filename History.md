@@ -1,10 +1,3 @@
-## batch-plugins
-
-Backwards-incompatible change: static assets in package.js files must
-be explicitly declared with `{isAsset: true}`.  See the batch-plugins merge
-message for more details.
-
-
 ## v.NEXT
 
 ### Utilities
@@ -25,20 +18,11 @@ message for more details.
   to fetch the user's emails. If no public email has been set, we use the
   primary email instead. We also store the complete list of emails. #4545
 
-
-### DDP
-
-* `sub.ready()` should return true inside that subscription's `onReady`
-  callback.  #4614
-
 ### Livequery
 
 * Improved server performance by reducing overhead of processing oplog after
   database writes. Improvements are most noticeable in case when a method is
   doing a lot of writes on collections with plenty of active observers.  #4694
-
-
-## in progress: v.1.1.1
 
 ### Blaze
 
@@ -88,6 +72,9 @@ message for more details.
   exceptions thrown by method stubs will be thrown instead of logged, and the
   method will not be invoked on the server.  #4202
 
+* `sub.ready()` should return true inside that subscription's `onReady`
+  callback.  #4614
+
 
 ### Isobuild
 
@@ -103,6 +90,10 @@ message for more details.
 
 * Ignore `node_modules` directories in apps instead of processing them as Meteor
   source code.  #4457 #4452
+
+* Static assets in package.js files must now be explicitly declared with
+  `{isAsset: true}`. Previously, any file that didn't have a source handler was
+  automatically registered as a server-side asset.
 
 ### Livequery
 
