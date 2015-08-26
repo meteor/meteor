@@ -20,6 +20,7 @@ var runCurl = function (/*args*/) {
 var GALAXY_USERNAME = process.env.GALAXY_USERNAME;
 var GALAXY_PASSWORD = process.env.GALAXY_PASSWORD;
 var GALAXY_URL = process.env.DEPLOY_HOSTNAME;
+var GALAXY_MOCK_MODE = process.env.GALAXY_MOCK_MODE;
 
 // Fail if the test is obviously not set up for using Galaxy.
 //
@@ -76,8 +77,7 @@ exports.httpRedirect = "HTTP/1.1 307 Temporary Redirect";
 // started and maybe our tests will be faster.
 exports.waitForContainers = selftest.markStack(function () {
   // We are not spinning up any containers in mock mode, so don't wait too long.
-  var waitTime = process.env.GALAXY_MOCK_MODE ?
-    1000 : 1000 * 10 * utils.timeoutScaleFactor;
+  var waitTime = GALAXY_MOCK_MODE ? 1000 : 1000 * 10 * utils.timeoutScaleFactor;
   utils.sleepMs(waitTime);
 });
 
@@ -117,6 +117,8 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
       }
     }
   };
+
+  var fullAppName;
   if (! options.useOldSettings) {
     // Add all the settings together and write them out. Let user settings
     // override ours.
@@ -124,13 +126,13 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
     var settingsFile = "settings-" + appName + ".json";
     sandbox.write(settingsFile, JSON.stringify(allSettings));
 
-    testUtils.createAndDeployApp(sandbox, {
+    fullAppName = testUtils.createAndDeployApp(sandbox, {
       settingsFile: "../" + settingsFile,
       appName: appName,
       templateApp: templateApp
     });
   } else {
-    testUtils.createAndDeployApp(sandbox, {
+    fullAppName = testUtils.createAndDeployApp(sandbox, {
       appName: appName,
       templateApp: templateApp
     });
@@ -139,7 +141,7 @@ exports.createAndDeployApp =  selftest.markStack(function (sandbox, options) {
   // Galaxy might take a while to spin up an app.
   exports.waitForContainers();
 
-  return appName + "." + GALAXY_URL;
+  return fullAppName;
 
 });
 
@@ -170,7 +172,7 @@ exports.loggedInGalaxyAPIConnection = selftest.markStack(function () {
     password: GALAXY_PASSWORD
   });
   var galaxyDomain = GALAXY_URL;
-  var galaxyUrl = "https://" + galaxyDomain;
+  var galaxyUrl = (GALAXY_MOCK_MODE ? "http://" : "https://") + galaxyDomain;
   return authClient.loggedInConnection(
     galaxyUrl,
     galaxyDomain,
@@ -208,7 +210,7 @@ exports.getAppRecordByName = selftest.markStack(function (appName) {
       }
     }
   });
-  conn.subscribeAndWait("apps");
+  conn.subscribeAndWait("/app", appName);
   // If we can't find the app, fail the test right now.
   if (_.isEmpty(appRecord)) {
     selftest.fail("Cannot find app: ", appName);
@@ -248,5 +250,5 @@ exports.closeGalaxyConnection = selftest.markStack(function (conn) {
 
 // Ignore HTTP checks in mock mode
 exports.ignoreHttpChecks = selftest.markStack(function () {
-  return !! process.env.GALAXY_MOCK_MODE;
+  return !! GALAXY_MOCK_MODE;
 });
