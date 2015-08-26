@@ -20,7 +20,8 @@ import superspawn from 'cordova-lib/src/cordova/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
 
 import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
-  newPluginId, convertPluginVersionsToNewIDs } from './index.js';
+  newPluginId, convertPluginVersionsToNewIDs,
+  installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
 cordova_events.on('results', logIfVerbose);
@@ -170,6 +171,9 @@ ${displayNameForPlatform(platform)} with options ${options}`,
 
   // Platforms
 
+  // Checks to see if the requirements for building and running on the
+  // specified Cordova platform are satisfied, printing
+  // installation instructions when needed.
   checkPlatformRequirements(platform) {
     if (platform === 'ios' && process.platform !== 'darwin') {
       Console.warn("Currently, it is only possible to build iOS apps \
@@ -212,8 +216,15 @@ ${displayNameForPlatform(platform)}`);
 
     if (!satisfied) {
       Console.info();
-      Console.info(`Make sure all installation requirements are satisfied \
-before running or building for ${displayNameForPlatform(platform)}:`);
+      Console.info(`Not all installation requirements are satisfied \
+for building and running apps for ${displayNameForPlatform(platform)}.`);
+      const url = installationInstructionsUrlForPlatform(platform);
+      if (url) {
+        Console.info("Please follow the instructions here:");
+        Console.info(Console.url(url));
+      }
+      Console.info();
+      Console.info("More details about the individual requirements:");
       for (requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
