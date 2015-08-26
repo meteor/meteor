@@ -8,7 +8,7 @@ With no arguments, 'meteor' runs the project in the current
 directory in local development mode. You can run it from the root
 directory of the project or from any subdirectory.
 
-Use 'meteor create <name>' to create a new Meteor project.
+Use 'meteor create <path>' to create a new Meteor project.
 
 Commands:
 {{commands}}
@@ -89,13 +89,14 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] <name>
-       meteor create [--release <release>] --example <example_name> [<name>]
+Usage: meteor create [--release <release>] <path>
+       meteor create [--release <release>] --example <example_name> [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
-Make a subdirectory named <name> and create a new Meteor app there.  You can
-also pass an absolute or relative path.
+Make a subdirectory named <path> if it doesn't exist and create a new Meteor app
+there. You can pass an absolute path, relative path, or '.' for the current
+directory.
 
 With the --package option, creates a Meteor package instead of an app. If you're
 in an app, the package will go in the app's top-level 'packages' directory;

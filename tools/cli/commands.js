@@ -592,32 +592,64 @@ main.registerCommand({
     return 1;
   }
 
-  var appName = files.pathBasename(options.appDir);
-
-  if (files.isCurrentDir(appPathAsEntered))
+  var appName;
+  if (appPathAsEntered === "." || appPathAsEntered === "./") {
+    // If trying to create in current directory
     appName = files.pathBasename(files.cwd());
+  } else {
+    appName = files.pathBasename(options.appDir);
+  }
 
 
   var transform = function (x) {
     return x.replace(/~name~/g, files.pathBasename(appPath));
   };
 
-  var ignoreWhiteList = ['.txt', '.md', '.json', '.sh'];
+  // These file extensions are usually metadata, not app code
+  var nonCodeFileExts = ['.txt', '.md', '.json', '.sh'];
 
-  var destinationEmpty = true;
+  var destinationHasCodeFiles = false;
+
+  // If the directory doesn't exist, it clearly doesn't have any source code
+  // inside itself
   if (files.exists(appPath)) {
-    destinationEmpty = !_.some(files.readdir(appPath), function (filePath) {
-      if (!filePath)
-        return false
-      return !files.isFileOfType(appPath, filePath, ignoreWhiteList);
+    destinationHasCodeFiles = _.any(files.readdir(appPath),
+        function thisPathCountsAsAFile(filePath) {
+      // We don't mind if there are hidden files or directories (this includes
+      // .git) and we don't need to check for .meteor here because the command
+      // will fail earlier
+      var isHidden = /^\./.test(filePath);
+      if (isHidden) {
+        // Not code
+        return false;
+      }
+
+      // We do mind if there are non-hidden directories, because we don't want
+      // to recursively check everything to do some crazy heuristic to see if
+      // we should try to creat an app.
+      var stats = files.stat(filePath);
+      if (stats.isDirectory()) {
+        // Could contain code
+        return true;
+      }
+
+      // Check against our file extension white list
+      var ext = files.pathExtname(filePath);
+      if (ext == '' || _.contains(nonCodeFileExts, ext)) {
+        return false;
+      }
+
+      // Everything not matched above is considered to be possible source code
+      return true;
     });
   }
 
   if (options.example) {
-    if (! destinationEmpty) {
-      Console.error("Example destination directory may only contain " +
-          "the following types of items: dot-files, extension-less files, or " +
-          "files with these extensions: " + ignoreWhiteList.join(', ') + "\n");
+    if (destinationHasCodeFiles) {
+      Console.error(`When creating an example app, the destination directory \
+can only contain dot-files or files with the following extensions: \
+${nonCodeFileExts.join(', ')}
+`);
       return 1;
     }
 
@@ -639,7 +671,9 @@ main.registerCommand({
     }
   } else {
     var toIgnore = [/^local$/, /^\.id$/]
-    if (!destinationEmpty) {
+    if (destinationHasCodeFiles) {
+      // If there is already source code in the directory, don't copy our
+      // skeleton app code over it. Just create the .meteor folder and metadata
       toIgnore.push(/(\.html|\.js|\.css)/)
     }
 
@@ -689,17 +723,30 @@ main.registerCommand({
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  {
-    var message = appName + ": created";
-    if (options.example && options.example !== appPathAsEntered)
-      message += (" (from '" + options.example + "' template)");
-    message += ".\n";
-    Console.info(message);
+  var appNameToDisplay = appPathAsEntered === "." ?
+    "current directory" : appPathAsEntered;
+
+  var message = `Created a new Meteor app in ${appNameToDisplay}`;
+
+  if (options.example && options.example !== appPathAsEntered) {
+    message += ` (from '${options.example}' template)`;
   }
 
+  message += ".";
+
+  Console.info(message + "\n");
+
+  // Print a nice message telling people we created their new app, and what to
+  // do next.
   Console.info("To run your new app:");
-  Console.info(
-    Console.command("cd " + appPathAsEntered), Console.options({ indent: 2 }));
+
+  if (appPathAsEntered !== ".") {
+    // Don't tell people to 'cd .'
+    Console.info(
+      Console.command("cd " + appPathAsEntered),
+        Console.options({ indent: 2 }));
+  }
+
   Console.info(
     Console.command("meteor"), Console.options({ indent: 2 }));
 
