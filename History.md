@@ -1,5 +1,7 @@
 ## v.NEXT
 
+XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd358af0c63cb49666b760
+
 ### Utilities
 
 * New `beforeSend` option to `HTTP.call` on the client allows you to directly
@@ -8,15 +10,45 @@
 * Parse `application/javascript` and `application/x-javascript` HTTP replies as
   JSON too.  #4595
 
+* `Match.test` from the `check` package now properly compares boolean literals,
+  just like it does with Numbers and Strings. This applies to the `check`
+  function as well.
+
+* Provide direct access to the `mailcomposer` npm module used by the `email`
+  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
+  object to `Email.send` instead of individual options.  #4209
+
+* Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
+  allow apps to set the timeout for running phantomjs.
+
+* The `spiderable` package now reports the URL it's trying to fetch on failure.
+
 
 ### Meteor Accounts
 
 * `loginWithPassword` now matches username or email in a case insensitive
   manner. If there are multiple users with a username or email only differing
   in case, a case sensitive match is required. #550
+
 * `loginWithGithub` now requests `user:email` scope by default, and attempts
   to fetch the user's emails. If no public email has been set, we use the
   primary email instead. We also store the complete list of emails. #4545
+
+* Directions for setting up Google OAuth in accounts-ui have been updated to
+  match Google's new requirements.
+
+* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
+  log in with currently registered services.  #4014
+
+* The `accounts-base` now defines reusable `AccountsClient` and
+  `AccountsServer` constructors, so that users can create multiple
+  independent instances of the `Accounts` namespace.  #4233
+
+* Create an index for `Meteor.users` on
+  `services.email.verificationTokens.token` (instead of
+  `emails.validationTokens.token`, which never was used for anything).  #4482
+
+* Remove an IE7-specific workaround from accounts-ui.  #4485
 
 ### Livequery
 
@@ -26,11 +58,10 @@
 
 ### Blaze
 
-* Preparatory work for the yet-unreleased `react-template-helper`
-  package -- don't let templates use {{> React}} with siblings since
-  `React.render` assumes it's being rendered into an empty container
-  element. (This lets us throw the error when compiling templates
-  rather than when the app runs.)
+* Add a special case for the new `react-template-helper` package -- don't let
+  templates use {{> React}} with siblings since `React.render` assumes it's
+  being rendered into an empty container element. (This lets us throw the error
+  when compiling templates rather than when the app runs.)
 
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
@@ -50,6 +81,9 @@
 * Fix external `<script>` tags in body or templates.  #4415
 
 * Fix memory leak.  #4289
+
+* Avoid recursion when materializing DOM elements, to avoid stack overflow
+  errors in certain browsers. #3028
 
 
 ### DDP
@@ -78,8 +112,10 @@
 
 ### Isobuild
 
-* Plugins should not process files whose names match the extension exactly (with
-  no extra dot).  #3985
+* Build plugins will no longer process files whose names match the extension
+  exactly (with no extra dot). If your build plugin needs to match filenames
+  exactly, you should use the new build plugin API in this release which
+  supplies a special `filenames` option. #3985
 
 * Adding the same file twice in the same package is now an error. Previously,
   this could either lead to the file being included multiple times, or to a
@@ -95,10 +131,25 @@
   `{isAsset: true}`. Previously, any file that didn't have a source handler was
   automatically registered as a server-side asset.
 
-### Livequery
+* Built files are now always annotated with line number comments, to improve the
+  debugging experience in browsers that don't support source maps.
+
+* There is a completely new API for defining build plugins that cache their
+  output. There are now special APIs for defining linters and minifiers in
+  addition to compilers. The core Meteor packages for `less`, `coffee`, `stylus`
+  and `html` files have been updated to use this new API. Read more on the
+  [Wiki page](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+
+* CSS output is now split into multiple stylesheets to avoid hitting limits on
+  rules per stylesheet in certain versions of Internet Explorer. #1876
+
+### Mongo
 
 * The oplog observe driver now properly updates queries when you drop a
   database.  #3847
+
+* MongoID logic has been moved out of `minimongo` into a new package called
+  `mongo-id`.
 
 
 ### `meteor` command-line tool
@@ -131,21 +182,6 @@
 * Fix inability to run `mongod` due to lack of locale configuration on some
   platforms, and improve error message if the failure still occurs.  #4019
 
-### Meteor Accounts
-
-* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
-  log in with currently registered services.  #4014
-
-* The `accounts-base` now defines reusable `AccountsClient` and
-  `AccountsServer` constructors, so that users can create multiple
-  independent instances of the `Accounts` namespace.  #4233
-
-* Create an index for `Meteor.users` on
-  `services.email.verificationTokens.token` (instead of
-  `emails.validationTokens.token`, which never was used for anything).  #4482
-
-* Remove an IE7-specific workaround from accounts-ui.  #4485
-
 ### Minimongo
 
 * The `$push` query modifier now supports a `$position` argument.  #4312
@@ -165,22 +201,9 @@
 
 * `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
   the dictionary as if no items had been added, meaning all calls to `get` will
-  return `underfined`. `all` converts the dictionary into a regular JavaScript
+  return `undefined`. `all` converts the dictionary into a regular JavaScript
   object with a snapshot of the keys and values. Inside an autorun, `all`
-  registers a dependency on any changes to the dictionary.
-
-### Utilities
-
-* `Match.test` from the `check` package now properly compares boolean literals,
-  just like it does with Numbers and Strings. This applies to the `check`
-  function as well.
-
-* Provide direct access to the `mailcomposer` npm module used by the `email`
-  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
-  object to `Email.send` instead of individual options.  #4209
-
-* Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
-  allow apps to set the timeout for running phantomjs.
+  registers a dependency on any changes to the dictionary. #3135
 
 
 ### Meteor Mobile
@@ -204,8 +227,6 @@
 
 ### Other bug fixes and improvements
 
-* The `spiderable` package now reports the URL it's trying to fetch on failure.
-
 * Upgraded dependencies:
 
   - Node: 0.10.40 (from 0.10.36)
@@ -216,9 +237,17 @@
   displayed on Google login.
 
 * Upgraded `coffeescript` package to depend on NPM packages
-  coffeescript@1.9.2 and source-map@0.4.2.
+  coffeescript@1.9.2 and source-map@0.4.2. #4302
 
 * Upgraded `fastclick` to 1.0.6 to fix an issue in iOS Safari. #4393
+
+### Windows
+
+* Increase the buffer size for `netstat` when looking for running Mongo servers.
+  #4125
+
+* The Windows installer now always fetches the latest available version of
+  Meteor at runtime, so that it doesn't need to be recompiled for every release.
 
 
 ## v1.1.0.3, 2015-Aug-03
