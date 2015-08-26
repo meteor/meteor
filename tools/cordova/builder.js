@@ -426,7 +426,7 @@ function App(builder) {
      * @param {Object} options
      * @param {String} [options.id,version,name,description,author,email,website]
      * Each of the options correspond to a key in the app's core configuration
-     * as described in the [PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements).
+     * as described in the [Cordova documentation](http://cordova.apache.org/docs/en/5.1.1/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements).
      * @memberOf App
      */
     info: function (options) {
@@ -440,8 +440,8 @@ function App(builder) {
     },
     /**
      * @summary Add a preference for your build as described in the
-     * [PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_global_preferences).
-     * @param {String} name A preference name supported by Phonegap's
+     * [Cordova documentation](http://cordova.apache.org/docs/en/5.1.1/config_ref_index.md.html#The%20config.xml%20File_global_preferences).
+     * @param {String} name A preference name supported by Cordova's
      * `config.xml`.
      * @param {String} value The value for that preference.
      * @memberOf App
@@ -451,7 +451,7 @@ function App(builder) {
     },
 
     /**
-     * @summary Set the build-time configuration for a Phonegap plugin.
+     * @summary Set the build-time configuration for a Cordova plugin.
      * @param {String} pluginName The identifier of the plugin you want to
      * configure.
      * @param {Object} config A set of key-value pairs which will be passed
