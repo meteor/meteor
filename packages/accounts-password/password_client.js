@@ -130,8 +130,6 @@ Accounts.createUser = function (options, callback) {
   });
 };
 
-
-
 // Change password. Must be logged in.
 //
 // @param oldPassword {String|null} By default servers no longer allow
