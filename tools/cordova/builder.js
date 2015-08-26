@@ -173,7 +173,7 @@ export class CordovaBuilder {
         try {
           files.runJavaScript(code, {
             filename: 'mobile-config.js',
-            symbols: { App: App(this) }
+            symbols: { App: createAppConfiguration(this) }
           });
         } catch (error) {
           buildmessage.exception(error);
@@ -414,7 +414,7 @@ export class CordovaBuilder {
   }
 }
 
-function App(builder) {
+function createAppConfiguration(builder) {
   /**
    * @namespace App
    * @global
@@ -452,14 +452,14 @@ function App(builder) {
 
     /**
      * @summary Set the build-time configuration for a Cordova plugin.
-     * @param {String} pluginName The identifier of the plugin you want to
+     * @param {String} id The identifier of the plugin you want to
      * configure.
      * @param {Object} config A set of key-value pairs which will be passed
      * at build-time to configure the specified plugin.
      * @memberOf App
      */
-    configurePlugin: function (pluginName, config) {
-      builder.pluginsConfiguration[pluginName] = config;
+    configurePlugin: function (id, config) {
+      builder.pluginsConfiguration[id] = config;
     },
 
     /**
