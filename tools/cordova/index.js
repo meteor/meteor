@@ -93,7 +93,7 @@ export function installationInstructionsUrlForPlatform(platform) {
   const hostPlatformName = displayNameForHostPlatform();
 
   if (hostPlatformName) {
-    const page = `Mobile-Dev-Install:-${displayNameForPlatform(platform)}-on-${hostPlatformName}`;
+    const page = `Mobile-Development-Install:-${displayNameForPlatform(platform)}-on-${hostPlatformName}`;
     const url = `https://github.com/meteor/meteor/wiki/${page}`;
     return url;
   }
