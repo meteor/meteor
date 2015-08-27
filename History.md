@@ -1,10 +1,34 @@
 ## v.NEXT
 
-XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd358af0c63cb49666b760
+## in progress: v1.2
+
+XXX Mention LESS and Stylus imports and main files
+XXX Mention meteor-platform break-up (upgrader, lack of top-level symbols, ...)
+XXX Mention standard-minifiers and minification
+XXX De-dup sections like DDP
+XXX Mention Build Plugin API
+XXX Mention ECMAScript / Babel, Map, Set, Promise, list of packages?
+XXX Core package renames (e.g. autoupdate -> hot-code-push)
+XXX prodOnly
+XXX es5-shim package
+XXX React, list the React packages
+XXX `meteor lint`?
+XXX Anubhav's Rate limiting
+XXX static-html package
+
+* Fix `Error: Can't render headers after they are sent to the client`.  #4253 #4750
+
+* Fix crash in `meteor mongo` on Windows.  #4711
+
+* Backwards-incompatible change: static assets in package.js files must
+be explicitly declared with `{isAsset: true}`.  See the batch-plugins merge
+message for more details.
 
 * No longer include the `json` package by default, which contains code for
   `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
   natively was Internet Explorer 7.)
+
+* Fix Mongo upserts with dotted keys in selector.  #4522
 
 ### Utilities
 
@@ -37,6 +61,10 @@ XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd
 * `loginWithGithub` now requests `user:email` scope by default, and attempts
   to fetch the user's emails. If no public email has been set, we use the
   primary email instead. We also store the complete list of emails. #4545
+
+* When an account's email address is verified, deactivate other verification tokens.  #4626
+
+* Fix bug where blank page is shown when an expired login token is present.  #4825
 
 * Directions for setting up Google OAuth in accounts-ui have been updated to
   match Google's new requirements.
@@ -113,8 +141,6 @@ XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd
 * Known issue: we do not currently show logging output when running on the
   iOS Simulator. As a workaround, you can `meteor run ios-device` to open the
   project in Xcode and watch the output there.
-
-## in progress: v.1.1.1
 
 ### Blaze
 
