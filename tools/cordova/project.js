@@ -40,7 +40,7 @@ function log(...args) {
 
 export class CordovaProject {
   constructor(projectContext, options = {}) {
-    if (process.platform === 'darwin') {
+    if (process.platform === 'win32') {
       Console.warn(`Building mobile apps on a Windows system is not \
 yet supported.`);
       throw new main.ExitWithCode(1);
