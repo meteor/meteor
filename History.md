@@ -2,57 +2,27 @@
 
 ## in progress: v1.2
 
-XXX Mention LESS and Stylus imports and main files
-XXX Mention meteor-platform break-up (upgrader, lack of top-level symbols, ...)
-XXX Mention standard-minifiers and minification
-XXX De-dup sections like DDP
-XXX Mention Build Plugin API
-XXX Mention ECMAScript / Babel, Map, Set, Promise, list of packages?
-XXX Core package renames (e.g. autoupdate -> hot-code-push)
-XXX prodOnly
-XXX es5-shim package
-XXX React, list the React packages
-XXX `meteor lint`?
-XXX Anubhav's Rate limiting
-XXX static-html package
+### Core Packages
 
-* Fix `Error: Can't render headers after they are sent to the client`.  #4253 #4750
+* `meteor-platform` has been deprecated in favor of the smaller `meteor-base`,
+  with apps listing their other dependencies explicitly.  The v1.2 upgrader
+  will rewrite `meteor-platform` in existing apps.  `meteor-base` puts fewer
+  symbols in the global namepsace, so it's no longer true that all apps
+  have symbols like `Random` and `EJSON` in the global namespace.
 
-* Fix crash in `meteor mongo` on Windows.  #4711
-
-* Backwards-incompatible change: static assets in package.js files must
-be explicitly declared with `{isAsset: true}`.  See the batch-plugins merge
-message for more details.
+* New packages: `ecmascript`, `es5-shim`, `ecmascript-collections`, `promise`,
+  `static-html`, `jshint`, `babel-compiler`
 
 * No longer include the `json` package by default, which contains code for
   `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
   natively was Internet Explorer 7.)
 
-* Fix Mongo upserts with dotted keys in selector.  #4522
-
-### Utilities
-
-* New `beforeSend` option to `HTTP.call` on the client allows you to directly
-  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
-
-* Parse `application/javascript` and `application/x-javascript` HTTP replies as
-  JSON too.  #4595
-
-* `Match.test` from the `check` package now properly compares boolean literals,
-  just like it does with Numbers and Strings. This applies to the `check`
-  function as well.
-
-* Provide direct access to the `mailcomposer` npm module used by the `email`
-  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
-  object to `Email.send` instead of individual options.  #4209
-
-* Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
-  allow apps to set the timeout for running phantomjs.
-
-* The `spiderable` package now reports the URL it's trying to fetch on failure.
-
+* `autoupdate` has been renamed `hot-code-push`
 
 ### Meteor Accounts
+
+* Login attempts are now rate-limited by default.  This can be turned off
+  using `Accounts.removeDefaultRateLimit()`.
 
 * `loginWithPassword` now matches username or email in a case insensitive
   manner. If there are multiple users with a username or email only differing
@@ -142,8 +112,13 @@ message for more details.
   iOS Simulator. As a workaround, you can `meteor run ios-device` to open the
   project in Xcode and watch the output there.
 
-### Blaze
+### Templates/Blaze
 
+* New syntax: Handlebars sub-expressions are now supported -- as in,
+  `{{helper (anotherHelper arg1 arg2)}}` -- as well as new block helper forms
+  `#each .. in ..` and `#let x=y`.  See
+  https://github.com/meteor/meteor/tree/devel/packages/spacebars
+  
 * Add a special case for the new `react-template-helper` package -- don't let
   templates use {{> React}} with siblings since `React.render` assumes it's
   being rendered into an empty container element. (This lets us throw the error
@@ -160,10 +135,6 @@ message for more details.
   default is `Meteor.connection`, which is the connection used when calling
   `Meteor.subscribe`.
 
-* XXX Handlebars sub-expressions. https://github.com/meteor/meteor/pull/4101
-
-* XXX `#each .. in ..` and `#let x=y` forms. https://github.com/meteor/meteor/pull/3560
-
 * Fix external `<script>` tags in body or templates.  #4415
 
 * Fix memory leak.  #4289
@@ -171,6 +142,8 @@ message for more details.
 * Avoid recursion when materializing DOM elements, to avoid stack overflow
   errors in certain browsers. #3028
 
+* Blaze and Meteor's built-in templating are now removable using
+  `meteor remove blaze-html-templates`.
 
 ### DDP
 
@@ -213,9 +186,9 @@ message for more details.
 * Ignore `node_modules` directories in apps instead of processing them as Meteor
   source code.  #4457 #4452
 
-* Static assets in package.js files must now be explicitly declared with
-  `{isAsset: true}`. Previously, any file that didn't have a source handler was
-  automatically registered as a server-side asset.
+* Backwards-incompatible change: Static assets in package.js files must now be
+  explicitly declared with `{isAsset: true}`. Previously, any file that didn't
+  have a source handler was automatically registered as a server-side asset.
 
 * Built files are now always annotated with line number comments, to improve the
   debugging experience in browsers that don't support source maps.
@@ -226,6 +199,14 @@ message for more details.
   and `html` files have been updated to use this new API. Read more on the
   [Wiki page](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
 
+### CSS
+
+* LESS and Stylus now support cross-package imports.
+
+* CSS concatenation and minification is delegated to the `standard-minifiers`
+  package, which is present by default (and added to existing apps by the v1.2
+  upgrader).
+  
 * CSS output is now split into multiple stylesheets to avoid hitting limits on
   rules per stylesheet in certain versions of Internet Explorer. #1876
 
@@ -236,6 +217,8 @@ message for more details.
 
 * MongoID logic has been moved out of `minimongo` into a new package called
   `mongo-id`.
+
+* Fix Mongo upserts with dotted keys in selector.  #4522
 
 
 ### `meteor` command-line tool
@@ -268,6 +251,8 @@ message for more details.
 * Fix inability to run `mongod` due to lack of locale configuration on some
   platforms, and improve error message if the failure still occurs.  #4019
 
+* New `meteor lint` command.
+
 ### Minimongo
 
 * The `$push` query modifier now supports a `$position` argument.  #4312
@@ -291,6 +276,28 @@ message for more details.
   object with a snapshot of the keys and values. Inside an autorun, `all`
   registers a dependency on any changes to the dictionary. #3135
 
+### Utilities
+
+* New `beforeSend` option to `HTTP.call` on the client allows you to directly
+  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
+
+* Parse `application/javascript` and `application/x-javascript` HTTP replies as
+  JSON too.  #4595
+
+* `Match.test` from the `check` package now properly compares boolean literals,
+  just like it does with Numbers and Strings. This applies to the `check`
+  function as well.
+
+* Provide direct access to the `mailcomposer` npm module used by the `email`
+  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
+  object to `Email.send` instead of individual options.  #4209
+
+* Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
+  allow apps to set the timeout for running phantomjs.
+
+* The `spiderable` package now reports the URL it's trying to fetch on failure.
+
+
 ### Other bug fixes and improvements
 
 * Upgraded dependencies:
@@ -307,6 +314,8 @@ message for more details.
 
 * Upgraded `fastclick` to 1.0.6 to fix an issue in iOS Safari. #4393
 
+* Fix `Error: Can't render headers after they are sent to the client`.  #4253 #4750
+
 ### Windows
 
 * Increase the buffer size for `netstat` when looking for running Mongo servers.
@@ -314,6 +323,8 @@ message for more details.
 
 * The Windows installer now always fetches the latest available version of
   Meteor at runtime, so that it doesn't need to be recompiled for every release.
+
+* Fix crash in `meteor mongo` on Windows.  #4711
 
 
 ## v1.1.0.3, 2015-Aug-03
