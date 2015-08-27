@@ -175,9 +175,11 @@ var upgradersByName = {
 
     // Cordova plugin IDs have changed as part of moving to npm, so we convert
     // old plugin IDs to new IDs
-    let pluginVersions = projectContext.cordovaPluginsFile.getPluginVersions();
-    pluginVersions = cordova.convertPluginVersionsToNewIDs(pluginVersions);
-    projectContext.cordovaPluginsFile.write(pluginVersions);
+    if (files.exists(projectContext.cordovaPluginsFile.filename)) {
+      let pluginVersions = projectContext.cordovaPluginsFile.getPluginVersions();
+      pluginVersions = cordova.convertPluginVersionsToNewIDs(pluginVersions);
+      projectContext.cordovaPluginsFile.write(pluginVersions);
+    }
 
     // Don't display notice if the project has no Cordova platforms added
     if (_.isEmpty(projectContext.platformList.getCordovaPlatforms())) return;
