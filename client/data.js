@@ -281,6 +281,75 @@ DocsData = {
     "scope": "static",
     "summary": "Request a forgot password email."
   },
+  "Accounts.onEmailVerificationLink": {
+    "filepath": "accounts-base/url_client.js",
+    "forceMemberof": true,
+    "kind": "member",
+    "lineno": 115,
+    "locus": "Client",
+    "longname": "Accounts.onEmailVerificationLink",
+    "memberof": "Accounts",
+    "name": ".onEmailVerificationLink",
+    "params": [
+      {
+        "description": "<p>The function to call. It is given two arguments:</p>\n<ol>\n<li><code>token</code>: An email verification token that can be passed to\n<a href=\"#accounts_verifyemail\"><code>Accounts.verifyEmail</code></a>.</li>\n<li><code>done</code>: A function to call when the email verification UI flow is complete.\nThe normal login process is suspended until this function is called, so\nthat the user can be notified that they are verifying their email before\nbeing logged in.</li>\n</ol>",
+        "name": "callback",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Register a function to call when an email verification link is\nclicked in an email sent by\n[`Accounts.sendVerificationEmail`](#accounts_sendverificationemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+  },
+  "Accounts.onEnrollmentLink": {
+    "filepath": "accounts-base/url_client.js",
+    "forceMemberof": true,
+    "kind": "member",
+    "lineno": 142,
+    "locus": "Client",
+    "longname": "Accounts.onEnrollmentLink",
+    "memberof": "Accounts",
+    "name": ".onEnrollmentLink",
+    "params": [
+      {
+        "description": "<p>The function to call. It is given two arguments:</p>\n<ol>\n<li><code>token</code>: A password reset token that can be passed to\n<a href=\"#accounts_resetpassword\"><code>Accounts.resetPassword</code></a> to give the newly\nenrolled account a password.</li>\n<li><code>done</code>: A function to call when the enrollment UI flow is complete.\nThe normal login process is suspended until this function is called, so that\nuser A can be enrolled even if user B was logged in.</li>\n</ol>",
+        "name": "callback",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Register a function to call when an account enrollment link is\nclicked in an email sent by\n[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+  },
+  "Accounts.onResetPasswordLink": {
+    "filepath": "accounts-base/url_client.js",
+    "forceMemberof": true,
+    "kind": "member",
+    "lineno": 89,
+    "locus": "Client",
+    "longname": "Accounts.onResetPasswordLink",
+    "memberof": "Accounts",
+    "name": ".onResetPasswordLink",
+    "params": [
+      {
+        "description": "<p>The function to call. It is given two arguments:</p>\n<ol>\n<li><code>token</code>: A password reset token that can be passed to\n<a href=\"#accounts_resetpassword\"><code>Accounts.resetPassword</code></a>.</li>\n<li><code>done</code>: A function to call when the password reset UI flow is complete. The normal\nlogin process is suspended until this function is called, so that the\npassword for user A can be reset even if user B was logged in.</li>\n</ol>",
+        "name": "callback",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Register a function to call when a reset password link is clicked\nin an email sent by\n[`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+  },
   "Accounts.removeEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
@@ -639,13 +708,60 @@ DocsData = {
     "scope": "static",
     "summary": "Marks the user's email address as verified. Logs the user in afterwards."
   },
-  "Ap.config": {
+  "AccountsClient": {
+    "augments": [
+      "AccountsCommon"
+    ],
+    "filepath": "accounts-base/accounts_client.js",
+    "instancename": "accountsClient",
+    "kind": "class",
+    "lineno": 11,
+    "locus": "Client",
+    "longname": "AccountsClient",
+    "name": "AccountsClient",
+    "options": [
+      {
+        "description": "<p>Optional DDP connection to reuse.</p>",
+        "name": "connection",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional URL for creating a new DDP connection.</p>",
+        "name": "ddpUrl",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>an object with fields:</p>",
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Constructor for the `Accounts` object on the client."
+  },
+  "AccountsClient#config": {
     "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#config",
     "kind": "function",
-    "lineno": 112,
+    "lineno": 92,
     "locus": "Anywhere",
-    "longname": "Ap.config",
-    "memberof": "Ap",
+    "longname": "AccountsClient#config",
+    "memberof": "AccountsClient",
     "name": "config",
     "options": [
       {
@@ -705,68 +821,36 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Set global accounts options."
   },
-  "Ap.onCreateUser": {
-    "filepath": "accounts-base/accounts_server.js",
+  "AccountsClient#loggingIn": {
+    "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 1174,
-    "locus": "Server",
-    "longname": "Ap.onCreateUser",
-    "memberof": "Ap",
-    "name": "onCreateUser",
-    "options": [],
-    "params": [
-      {
-        "description": "<p>Called whenever a new user is created. Return the new user object, or throw an <code>Error</code> to abort the creation.</p>",
-        "name": "func",
-        "type": {
-          "names": [
-            "function"
-          ]
-        }
-      }
-    ],
-    "scope": "static",
-    "summary": "Customize new user creation."
-  },
-  "Ap.onEmailVerificationLink": {
-    "filepath": "accounts-base/url_client.js",
-    "kind": "function",
-    "lineno": 129,
+    "lineno": 54,
     "locus": "Client",
-    "longname": "Ap.onEmailVerificationLink",
-    "memberof": "Ap",
-    "name": "onEmailVerificationLink",
+    "longname": "AccountsClient#loggingIn",
+    "memberof": "AccountsClient",
+    "name": "loggingIn",
     "options": [],
-    "params": [
-      {
-        "description": "<p>The function to call. It is given two arguments:</p>\n<ol>\n<li><code>token</code>: An email verification token that can be passed to\n<a href=\"#accounts_verifyemail\"><code>Accounts.verifyEmail</code></a>.</li>\n<li><code>done</code>: A function to call when the email verification UI flow is complete.\nThe normal login process is suspended until this function is called, so\nthat the user can be notified that they are verifying their email before\nbeing logged in.</li>\n</ol>",
-        "name": "callback",
-        "type": {
-          "names": [
-            "function"
-          ]
-        }
-      }
-    ],
-    "scope": "static",
-    "summary": "Register a function to call when an email verification link is\nclicked in an email sent by\n[`Accounts.sendVerificationEmail`](#accounts_sendverificationemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+    "params": [],
+    "scope": "instance",
+    "summary": "True if a login method (such as `Meteor.loginWithPassword`, `Meteor.loginWithFacebook`, or `Accounts.createUser`) is currently in progress. A reactive data source."
   },
-  "Ap.onEnrollmentLink": {
-    "filepath": "accounts-base/url_client.js",
+  "AccountsClient#logout": {
+    "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 154,
+    "lineno": 64,
     "locus": "Client",
-    "longname": "Ap.onEnrollmentLink",
-    "memberof": "Ap",
-    "name": "onEnrollmentLink",
+    "longname": "AccountsClient#logout",
+    "memberof": "AccountsClient",
+    "name": "logout",
     "options": [],
     "params": [
       {
-        "description": "<p>The function to call. It is given two arguments:</p>\n<ol>\n<li><code>token</code>: A password reset token that can be passed to\n<a href=\"#accounts_resetpassword\"><code>Accounts.resetPassword</code></a> to give the newly\nenrolled account a password.</li>\n<li><code>done</code>: A function to call when the enrollment UI flow is complete.\nThe normal login process is suspended until this function is called, so that\nuser A can be enrolled even if user B was logged in.</li>\n</ol>",
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
         "name": "callback",
+        "optional": true,
         "type": {
           "names": [
             "function"
@@ -774,16 +858,42 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
-    "summary": "Register a function to call when an account enrollment link is\nclicked in an email sent by\n[`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+    "scope": "instance",
+    "summary": "Log the user out."
   },
-  "Ap.onLogin": {
+  "AccountsClient#logoutOtherClients": {
+    "filepath": "accounts-base/accounts_client.js",
+    "kind": "function",
+    "lineno": 83,
+    "locus": "Client",
+    "longname": "AccountsClient#logoutOtherClients",
+    "memberof": "AccountsClient",
+    "name": "logoutOtherClients",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>Optional callback. Called with no arguments on success, or with a single <code>Error</code> argument on failure.</p>",
+        "name": "callback",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Log out other clients logged in as the current user, but does not log out the client that calls this function."
+  },
+  "AccountsClient#onLogin": {
     "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLogin",
     "kind": "function",
-    "lineno": 242,
+    "lineno": 146,
     "locus": "Anywhere",
-    "longname": "Ap.onLogin",
-    "memberof": "Ap",
+    "longname": "AccountsClient#onLogin",
+    "memberof": "AccountsClient",
     "name": "onLogin",
     "options": [],
     "params": [
@@ -797,16 +907,18 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Register a callback to be called after a login attempt succeeds."
   },
-  "Ap.onLoginFailure": {
+  "AccountsClient#onLoginFailure": {
     "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLoginFailure",
     "kind": "function",
-    "lineno": 251,
+    "lineno": 155,
     "locus": "Anywhere",
-    "longname": "Ap.onLoginFailure",
-    "memberof": "Ap",
+    "longname": "AccountsClient#onLoginFailure",
+    "memberof": "AccountsClient",
     "name": "onLoginFailure",
     "options": [],
     "params": [
@@ -820,22 +932,145 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Register a callback to be called after a login attempt fails."
   },
-  "Ap.onResetPasswordLink": {
-    "filepath": "accounts-base/url_client.js",
+  "AccountsClient#user": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#user",
     "kind": "function",
-    "lineno": 104,
-    "locus": "Client",
-    "longname": "Ap.onResetPasswordLink",
-    "memberof": "Ap",
-    "name": "onResetPasswordLink",
+    "lineno": 52,
+    "locus": "Anywhere but publish functions",
+    "longname": "AccountsClient#user",
+    "memberof": "AccountsClient",
+    "name": "user",
+    "options": [],
+    "params": [],
+    "scope": "instance",
+    "summary": "Get the current user record, or `null` if no user is logged in. A reactive data source."
+  },
+  "AccountsClient#userId": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#userId",
+    "kind": "function",
+    "lineno": 44,
+    "locus": "Anywhere but publish functions",
+    "longname": "AccountsClient#userId",
+    "memberof": "AccountsClient",
+    "name": "userId",
+    "options": [],
+    "overrides": "AccountsCommon#userId",
+    "params": [],
+    "scope": "instance",
+    "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source."
+  },
+  "AccountsCommon": {
+    "filepath": "accounts-base/accounts_common.js",
+    "instancename": "accountsClientOrServer",
+    "kind": "class",
+    "lineno": 1,
+    "locus": "Anywhere",
+    "longname": "AccountsCommon",
+    "name": "AccountsCommon",
     "options": [],
     "params": [
       {
-        "description": "<p>The function to call. It is given two arguments:</p>\n<ol>\n<li><code>token</code>: A password reset token that can be passed to\n<a href=\"#accounts_resetpassword\"><code>Accounts.resetPassword</code></a>.</li>\n<li><code>done</code>: A function to call when the password reset UI flow is complete. The normal\nlogin process is suspended until this function is called, so that the\npassword for user A can be reset even if user B was logged in.</li>\n</ol>",
-        "name": "callback",
+        "description": "<p>an object with fields:</p>\n<ul>\n<li>connection {Object} Optional DDP connection to reuse.</li>\n<li>ddpUrl {String} Optional URL for creating a new DDP connection.</li>\n</ul>",
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Super-constructor for AccountsClient and AccountsServer."
+  },
+  "AccountsCommon#config": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 92,
+    "locus": "Anywhere",
+    "longname": "AccountsCommon#config",
+    "memberof": "AccountsCommon",
+    "name": "config",
+    "options": [
+      {
+        "description": "<p>New users with an email address will receive an address verification email.</p>",
+        "name": "sendVerificationEmail",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>Calls to <a href=\"#accounts_createuser\"><code>createUser</code></a> from the client will be rejected. In addition, if you are using <a href=\"#accountsui\">accounts-ui</a>, the &quot;Create account&quot; link will not be available.</p>",
+        "name": "forbidClientAccountCreation",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: <code>Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })</code>.</p>",
+        "name": "restrictCreationByEmailDomain",
+        "type": {
+          "names": [
+            "String",
+            "function"
+          ]
+        }
+      },
+      {
+        "description": "<p>The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to <code>null</code> to disable login expiration.</p>",
+        "name": "loginExpirationInDays",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      },
+      {
+        "description": "<p>When using the <code>oauth-encryption</code> package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.</p>",
+        "name": "oauthSecretKey",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Set global accounts options."
+  },
+  "AccountsCommon#onLogin": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 146,
+    "locus": "Anywhere",
+    "longname": "AccountsCommon#onLogin",
+    "memberof": "AccountsCommon",
+    "name": "onLogin",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called when login is successful.</p>",
+        "name": "func",
         "type": {
           "names": [
             "function"
@@ -843,29 +1078,266 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
-    "summary": "Register a function to call when a reset password link is clicked\nin an email sent by\n[`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
+    "scope": "instance",
+    "summary": "Register a callback to be called after a login attempt succeeds."
   },
-  "Ap.userId": {
+  "AccountsCommon#onLoginFailure": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 41,
+    "lineno": 155,
+    "locus": "Anywhere",
+    "longname": "AccountsCommon#onLoginFailure",
+    "memberof": "AccountsCommon",
+    "name": "onLoginFailure",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called after the login has failed.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Register a callback to be called after a login attempt fails."
+  },
+  "AccountsCommon#user": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 52,
     "locus": "Anywhere but publish functions",
-    "longname": "Ap.userId",
-    "memberof": "Ap",
+    "longname": "AccountsCommon#user",
+    "memberof": "AccountsCommon",
+    "name": "user",
+    "options": [],
+    "params": [],
+    "scope": "instance",
+    "summary": "Get the current user record, or `null` if no user is logged in. A reactive data source."
+  },
+  "AccountsCommon#userId": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 44,
+    "locus": "Anywhere but publish functions",
+    "longname": "AccountsCommon#userId",
+    "memberof": "AccountsCommon",
     "name": "userId",
     "options": [],
     "params": [],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source."
   },
-  "Ap.validateLoginAttempt": {
+  "AccountsServer": {
+    "augments": [
+      "AccountsCommon"
+    ],
+    "filepath": "accounts-base/accounts_server.js",
+    "instancename": "accountsServer",
+    "kind": "class",
+    "lineno": 11,
+    "locus": "Server",
+    "longname": "AccountsServer",
+    "name": "AccountsServer",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>A server object such as <code>Meteor.server</code>.</p>",
+        "name": "server",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Constructor for the `Accounts` namespace on the server."
+  },
+  "AccountsServer#config": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#config",
+    "kind": "function",
+    "lineno": 92,
+    "locus": "Anywhere",
+    "longname": "AccountsServer#config",
+    "memberof": "AccountsServer",
+    "name": "config",
+    "options": [
+      {
+        "description": "<p>New users with an email address will receive an address verification email.</p>",
+        "name": "sendVerificationEmail",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>Calls to <a href=\"#accounts_createuser\"><code>createUser</code></a> from the client will be rejected. In addition, if you are using <a href=\"#accountsui\">accounts-ui</a>, the &quot;Create account&quot; link will not be available.</p>",
+        "name": "forbidClientAccountCreation",
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>If set to a string, only allows new users if the domain part of their email address matches the string. If set to a function, only allows new users if the function returns true.  The function is passed the full email address of the proposed new user.  Works with password-based sign-in and external services that expose email addresses (Google, Facebook, GitHub). All existing users still can log in after enabling this option. Example: <code>Accounts.config({ restrictCreationByEmailDomain: 'school.edu' })</code>.</p>",
+        "name": "restrictCreationByEmailDomain",
+        "type": {
+          "names": [
+            "String",
+            "function"
+          ]
+        }
+      },
+      {
+        "description": "<p>The number of days from when a user logs in until their token expires and they are logged out. Defaults to 90. Set to <code>null</code> to disable login expiration.</p>",
+        "name": "loginExpirationInDays",
+        "type": {
+          "names": [
+            "Number"
+          ]
+        }
+      },
+      {
+        "description": "<p>When using the <code>oauth-encryption</code> package, the 16 byte key using to encrypt sensitive account credentials in the database, encoded in base64.  This option may only be specifed on the server.  See packages/oauth-encryption/README.md for details.</p>",
+        "name": "oauthSecretKey",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "name": "options",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Set global accounts options."
+  },
+  "AccountsServer#onCreateUser": {
     "filepath": "accounts-base/accounts_server.js",
     "kind": "function",
-    "lineno": 91,
+    "lineno": 116,
     "locus": "Server",
-    "longname": "Ap.validateLoginAttempt",
-    "memberof": "Ap",
+    "longname": "AccountsServer#onCreateUser",
+    "memberof": "AccountsServer",
+    "name": "onCreateUser",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>Called whenever a new user is created. Return the new user object, or throw an <code>Error</code> to abort the creation.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Customize new user creation."
+  },
+  "AccountsServer#onLogin": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLogin",
+    "kind": "function",
+    "lineno": 146,
+    "locus": "Anywhere",
+    "longname": "AccountsServer#onLogin",
+    "memberof": "AccountsServer",
+    "name": "onLogin",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called when login is successful.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Register a callback to be called after a login attempt succeeds."
+  },
+  "AccountsServer#onLoginFailure": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#onLoginFailure",
+    "kind": "function",
+    "lineno": 155,
+    "locus": "Anywhere",
+    "longname": "AccountsServer#onLoginFailure",
+    "memberof": "AccountsServer",
+    "name": "onLoginFailure",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The callback to be called after the login has failed.</p>",
+        "name": "func",
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Register a callback to be called after a login attempt fails."
+  },
+  "AccountsServer#user": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#user",
+    "kind": "function",
+    "lineno": 52,
+    "locus": "Anywhere but publish functions",
+    "longname": "AccountsServer#user",
+    "memberof": "AccountsServer",
+    "name": "user",
+    "options": [],
+    "params": [],
+    "scope": "instance",
+    "summary": "Get the current user record, or `null` if no user is logged in. A reactive data source."
+  },
+  "AccountsServer#userId": {
+    "filepath": "accounts-base/accounts_common.js",
+    "inherited": true,
+    "inherits": "AccountsCommon#userId",
+    "kind": "function",
+    "lineno": 44,
+    "locus": "Anywhere but publish functions",
+    "longname": "AccountsServer#userId",
+    "memberof": "AccountsServer",
+    "name": "userId",
+    "options": [],
+    "overrides": "AccountsCommon#userId",
+    "params": [],
+    "scope": "instance",
+    "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source."
+  },
+  "AccountsServer#validateLoginAttempt": {
+    "filepath": "accounts-base/accounts_server.js",
+    "kind": "function",
+    "lineno": 93,
+    "locus": "Server",
+    "longname": "AccountsServer#validateLoginAttempt",
+    "memberof": "AccountsServer",
     "name": "validateLoginAttempt",
     "options": [],
     "params": [
@@ -879,16 +1351,16 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Validate login attempts."
   },
-  "Ap.validateNewUser": {
+  "AccountsServer#validateNewUser": {
     "filepath": "accounts-base/accounts_server.js",
     "kind": "function",
-    "lineno": 1257,
+    "lineno": 103,
     "locus": "Server",
-    "longname": "Ap.validateNewUser",
-    "memberof": "Ap",
+    "longname": "AccountsServer#validateNewUser",
+    "memberof": "AccountsServer",
     "name": "validateNewUser",
     "options": [],
     "params": [
@@ -902,7 +1374,7 @@ DocsData = {
         }
       }
     ],
-    "scope": "static",
+    "scope": "instance",
     "summary": "Set restrictions on new user creation."
   },
   "App": {
@@ -960,7 +1432,7 @@ DocsData = {
     "params": [
       {
         "description": "<p>The identifier of the plugin you want to\nconfigure.</p>",
-        "name": "pluginName",
+        "name": "id",
         "type": {
           "names": [
             "String"
@@ -978,7 +1450,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Set the build-time configuration for a Phonegap plugin."
+    "summary": "Set the build-time configuration for a Cordova plugin."
   },
   "App.icons": {
     "kind": "function",
@@ -1007,7 +1479,7 @@ DocsData = {
     "name": "info",
     "options": [
       {
-        "description": "<p>Each of the options correspond to a key in the app's core configuration\nas described in the <a href=\"http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements\">PhoneGap documentation</a>.</p>",
+        "description": "<p>Each of the options correspond to a key in the app's core configuration\nas described in the <a href=\"http://cordova.apache.org/docs/en/5.1.1/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements\">Cordova documentation</a>.</p>",
         "name": "id, version, name, description, author, email, website",
         "optional": true,
         "type": {
@@ -1058,7 +1530,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A preference name supported by Phonegap's\n<code>config.xml</code>.</p>",
+        "description": "<p>A preference name supported by Cordova's\n<code>config.xml</code>.</p>",
         "name": "name",
         "type": {
           "names": [
@@ -1077,7 +1549,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Add a preference for your build as described in the\n[PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_global_preferences)."
+    "summary": "Add a preference for your build as described in the\n[Cordova documentation](http://cordova.apache.org/docs/en/5.1.1/config_ref_index.md.html#The%20config.xml%20File_global_preferences)."
   },
   "Assets": {
     "kind": "namespace",
@@ -3240,7 +3712,7 @@ DocsData = {
   "HTTP.del": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 78,
+    "lineno": 82,
     "locus": "Anywhere",
     "longname": "HTTP.del",
     "memberof": "HTTP",
@@ -3283,7 +3755,7 @@ DocsData = {
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 45,
+    "lineno": 49,
     "locus": "Anywhere",
     "longname": "HTTP.get",
     "memberof": "HTTP",
@@ -3326,7 +3798,7 @@ DocsData = {
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 56,
+    "lineno": 60,
     "locus": "Anywhere",
     "longname": "HTTP.post",
     "memberof": "HTTP",
@@ -3369,7 +3841,7 @@ DocsData = {
   "HTTP.put": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 67,
+    "lineno": 71,
     "locus": "Anywhere",
     "longname": "HTTP.put",
     "memberof": "HTTP",
@@ -4285,7 +4757,7 @@ DocsData = {
   "Meteor.loggingIn": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 53,
+    "lineno": 134,
     "locus": "Client",
     "longname": "Meteor.loggingIn",
     "memberof": "Meteor",
@@ -4429,7 +4901,7 @@ DocsData = {
   "Meteor.logout": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 256,
+    "lineno": 334,
     "locus": "Client",
     "longname": "Meteor.logout",
     "memberof": "Meteor",
@@ -4453,7 +4925,7 @@ DocsData = {
   "Meteor.logoutOtherClients": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 279,
+    "lineno": 343,
     "locus": "Client",
     "longname": "Meteor.logoutOtherClients",
     "memberof": "Meteor",
@@ -4477,7 +4949,7 @@ DocsData = {
   "Meteor.methods": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1513,
+    "lineno": 1530,
     "locus": "Anywhere",
     "longname": "Meteor.methods",
     "memberof": "Meteor",
@@ -4500,7 +4972,7 @@ DocsData = {
   "Meteor.onConnection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1374,
+    "lineno": 1391,
     "locus": "Server",
     "longname": "Meteor.onConnection",
     "memberof": "Meteor",
@@ -4523,7 +4995,7 @@ DocsData = {
   "Meteor.publish": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1448,
+    "lineno": 1465,
     "locus": "Server",
     "longname": "Meteor.publish",
     "memberof": "Meteor",
@@ -4744,7 +5216,7 @@ DocsData = {
   "Meteor.user": {
     "filepath": "accounts-base/accounts_common.js",
     "kind": "function",
-    "lineno": 61,
+    "lineno": 229,
     "locus": "Anywhere but publish functions",
     "longname": "Meteor.user",
     "memberof": "Meteor",
@@ -4753,6 +5225,19 @@ DocsData = {
     "params": [],
     "scope": "static",
     "summary": "Get the current user record, or `null` if no user is logged in. A reactive data source."
+  },
+  "Meteor.userId": {
+    "filepath": "accounts-base/accounts_common.js",
+    "kind": "function",
+    "lineno": 221,
+    "locus": "Anywhere but publish functions",
+    "longname": "Meteor.userId",
+    "memberof": "Meteor",
+    "name": "userId",
+    "options": [],
+    "params": [],
+    "scope": "static",
+    "summary": "Get the current user id, or `null` if no user is logged in. A reactive data source."
   },
   "Meteor.users": {
     "filepath": "accounts-base/globals_server.js",
@@ -6405,7 +6890,7 @@ DocsData = {
     "filepath": "ddp-server/livedata_server.js",
     "instancename": "this",
     "kind": "class",
-    "lineno": 916,
+    "lineno": 933,
     "longname": "Subscription",
     "name": "Subscription",
     "options": [],
@@ -6416,7 +6901,7 @@ DocsData = {
   "Subscription#added": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1204,
+    "lineno": 1221,
     "locus": "Server",
     "longname": "Subscription#added",
     "memberof": "Subscription",
@@ -6457,7 +6942,7 @@ DocsData = {
   "Subscription#changed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1222,
+    "lineno": 1239,
     "locus": "Server",
     "longname": "Subscription#changed",
     "memberof": "Subscription",
@@ -6498,7 +6983,7 @@ DocsData = {
   "Subscription#connection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 926,
+    "lineno": 943,
     "locus": "Server",
     "longname": "Subscription#connection",
     "memberof": "Subscription",
@@ -6509,7 +6994,7 @@ DocsData = {
   "Subscription#error": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1147,
+    "lineno": 1164,
     "locus": "Server",
     "longname": "Subscription#error",
     "memberof": "Subscription",
@@ -6532,7 +7017,7 @@ DocsData = {
   "Subscription#onStop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1179,
+    "lineno": 1196,
     "locus": "Server",
     "longname": "Subscription#onStop",
     "memberof": "Subscription",
@@ -6555,7 +7040,7 @@ DocsData = {
   "Subscription#ready": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1255,
+    "lineno": 1272,
     "locus": "Server",
     "longname": "Subscription#ready",
     "memberof": "Subscription",
@@ -6568,7 +7053,7 @@ DocsData = {
   "Subscription#removed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1238,
+    "lineno": 1255,
     "locus": "Server",
     "longname": "Subscription#removed",
     "memberof": "Subscription",
@@ -6600,7 +7085,7 @@ DocsData = {
   "Subscription#stop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1165,
+    "lineno": 1182,
     "locus": "Server",
     "longname": "Subscription#stop",
     "memberof": "Subscription",
@@ -6613,7 +7098,7 @@ DocsData = {
   "Subscription#userId": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 968,
+    "lineno": 985,
     "locus": "Server",
     "longname": "Subscription#userId",
     "memberof": "Subscription",
@@ -7358,11 +7843,210 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 390,
+    "lineno": 410,
     "longname": "currentUser",
     "name": "currentUser",
     "scope": "global",
     "summary": "Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."
+  },
+  "execFileAsync": {
+    "kind": "function",
+    "longname": "execFileAsync",
+    "name": "execFileAsync",
+    "options": [
+      {
+        "description": "<p>Current working directory of the child process</p>",
+        "name": "cwd",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Environment key-value pairs</p>",
+        "name": "env",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Child's stdio configuration.\n(Default: 'pipe') Specifying anything else than 'pipe' will disallow\ncapture.</p>",
+        "name": "stdio",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array",
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>If specified, instead of capturing\nthe output, the child process stdout will be piped to the destination stream.</p>",
+        "name": "destination",
+        "optional": true,
+        "type": {
+          "names": [
+            "Writable"
+          ]
+        }
+      },
+      {
+        "description": "<p>Whether to wait for the child process\nstreams to close or to resolve the promise when the child process exits.</p>",
+        "name": "waitForClose",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>The command to run</p>",
+        "name": "command",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>List of string arguments</p>",
+        "name": "args",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Promise.<String>"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Executes a command asynchronously, returning a promise that will\neither be resolved to the captured stdout output or be rejected with an\nerror containing the stderr output as part of the message. In addition,\nthe error will contain fields pid, stderr, stdout, status and signal."
+  },
+  "execFileSync": {
+    "kind": "function",
+    "longname": "execFileSync",
+    "name": "execFileSync",
+    "options": [
+      {
+        "description": "<p>Current working directory of the child process</p>",
+        "name": "cwd",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Environment key-value pairs</p>",
+        "name": "env",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Child's stdio configuration.\n(Default: 'pipe') Specifying anything else than 'pipe' will disallow\ncapture.</p>",
+        "name": "stdio",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array",
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>If specified, instead of capturing\nthe output, the child process stdout will be piped to the destination stream.</p>",
+        "name": "destination",
+        "optional": true,
+        "type": {
+          "names": [
+            "Writable"
+          ]
+        }
+      },
+      {
+        "description": "<p>Whether to wait for the child process\nstreams to close or to resolve the promise when the child process exits.</p>",
+        "name": "waitForClose",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>The command to run</p>",
+        "name": "command",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>List of string arguments</p>",
+        "name": "args",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "description": "<p>The stdout from the command</p>",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Executes a command synchronously, returning either the captured\nstdout output or throwing an error containing the stderr output as part of\nthe message. In addition, the error will contain fields pid, stderr, stdout,\nstatus and signal."
   },
   "getExtension": {
     "kind": "function",
@@ -7386,7 +8070,7 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 400,
+    "lineno": 420,
     "longname": "loggingIn",
     "name": "loggingIn",
     "scope": "global",
