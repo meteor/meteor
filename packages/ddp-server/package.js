@@ -11,7 +11,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore',
-           'retry', 'mongo-id', 'diff-sequence'],
+           'retry', 'mongo-id', 'diff-sequence', 'ecmascript'],
           'server');
 
   // common functionality
@@ -53,6 +53,7 @@ Package.onUse(function (api) {
 
 
 Package.onTest(function (api) {
+  api.use('ecmascript', ['client', 'server']);
   api.use('livedata', ['client', 'server']);
   api.use('mongo', ['client', 'server']);
   api.use('test-helpers', ['client', 'server']);

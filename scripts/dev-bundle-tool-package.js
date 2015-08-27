@@ -24,10 +24,10 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "1.4.28",
     fibers: fibersVersion,
-    "meteor-babel": "0.4.4",
-    "meteor-promise": "0.4.0",
+    "meteor-babel": "0.5.7",
+    "meteor-promise": "0.4.6",
     // For Map and Set polyfills.
-    "core-js": "0.9.18",
+    "core-js": "1.0.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -57,18 +57,25 @@ var packageJson = {
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    cordova: "5.0.0",
     pathwatcher: "4.1.0",
-    'lru-cache': '2.6.4'
+    'lru-cache': '2.6.4',
+    // We use our own fork because cordova-lib does not respect a silent
+    // option and by defaults outputs all command output to stdout/stderr.
+    // We can't download the tarball from GitHub because the package.json is
+    // in a subdirectory. See tools/cordova/README.md for instructions on how
+    // to build and upload our own tarball.
+    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
+    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-d5ff7cf04757335762b6695f1664bca6c6cfc272.tar.gz",
+    // Also include the Cordova CLI because it is used in tests
+    "cordova": "5.2.0",
+    "ios-sim": "4.1.1",
   }
 };
 
 if (process.platform === 'win32') {
-  // Cordova is not supported on Windows
-  delete packageJson.dependencies.cordova;
-  // netroute is only needed for Cordova support
+  // Remove dependencies that do not work on Windows
+  delete packageJson.dependencies['ios-sim'];
   delete packageJson.dependencies.netroute;
-  // kexec doesn't work on Windows
   delete packageJson.dependencies.kexec;
 }
 

@@ -127,13 +127,32 @@ var toc = [
       {name: "{{loggingIn}}", id: "template_loggingin"},
       {type: "spacer"},
 
-      "Accounts.config",
-      "Accounts.ui.config",
-      "Accounts.validateNewUser",
-      "Accounts.onCreateUser",
-      "Accounts.validateLoginAttempt",
-      "Accounts.onLogin",
-      "Accounts.onLoginFailure"
+      "Accounts.ui.config"
+    ],
+
+    {name: "Accounts (multi-server)", id: "advanced_accounts_api"}, [
+      "AccountsClient",
+      "AccountsServer",
+      {type: "spacer"},
+
+      { name: "AccountsCommon#userId", id: "accounts_userid" },
+      { name: "AccountsCommon#user", id: "accounts_user" },
+      { name: "AccountsCommon#config", id: "accounts_config" },
+      { name: "AccountsCommon#onLogin", id: "accounts_onlogin" },
+      { name: "AccountsCommon#onLoginFailure", id: "accounts_onloginfailure" },
+      {type: "spacer"},
+
+      { name: "AccountsClient#loggingIn", id: "accounts_loggingin" },
+      { name: "AccountsClient#logout", id: "accounts_logout" },
+      { name: "AccountsClient#logoutOtherClients", id: "accounts_logoutotherclients" },
+      {type: "spacer"},
+
+      { name: "AccountsServer#onCreateUser",
+        id: "accounts_oncreateuser" },
+      { name: "AccountsServer#validateLoginAttempt",
+        id: "accounts_validateloginattempt" },
+      { name: "AccountsServer#validateNewUser",
+        id: "accounts_validatenewuser" },
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [

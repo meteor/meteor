@@ -1,97 +1,128 @@
 var crypto = Npm.require('crypto');
 
-// @summary Constructor for the Accounts namespace on the server. Note
-//          that this constructor is less likely to be instantiated
-//          multiple times than the AccountsClient constructor, because a
-//          single server can provide only one set of methods.
-// @locus Server
-// @param server {Object} Often === Meteor.server; needs to support
-//                        server.methods (like Meteor.methods).
-AccountsServer = function AccountsServer(server) {
-  AccountsCommon.call(this);
-
-  this._server = server || Meteor.server;
-  // Set up the server's methods, as if by calling Meteor.methods.
-  this._initServerMethods();
-
-  this._initAccountDataHooks();
-
-  // If autopublish is on, publish these user fields. Login service
-  // packages (eg accounts-google) add to these by calling
-  // addAutopublishFields.  Notably, this isn't implemented with multiple
-  // publishes since DDP only merges only across top-level fields, not
-  // subfields (such as 'services.facebook.accessToken')
-  this._autopublishFields = {
-    loggedInUser: ['profile', 'username', 'emails'],
-    otherUsers: ['profile', 'username']
-  };
-  this._initServerPublications();
-
-  // connectionId -> {connection, loginToken}
-  this._accountData = {};
-
-  // connection id -> observe handle for the login token that this connection is
-  // currently associated with, or a number. The number indicates that we are in
-  // the process of setting up the observe (using a number instead of a single
-  // sentinel allows multiple attempts to set up the observe to identify which
-  // one was theirs).
-  this._userObservesForConnections = {};
-  this._nextUserObserveNumber = 1;  // for the number described above.
-
-  // list of all registered handlers.
-  this._loginHandlers = [];
-
-  setupUsersCollection(this.users);
-  setupDefaultLoginHandlers(this);
-  setExpireTokensInterval(this);
-
-  this._validateLoginHook = new Hook({ bindEnvironment: false });
-  this._validateNewUserHooks = [
-    defaultValidateNewUserHook.bind(this)
-  ];
-
-  this._deleteSavedTokensForAllUsersOnStartup();
-
-  this._skipCaseInsensitiveChecksForTest = {};
-};
-
-Meteor._inherits(AccountsServer, AccountsCommon);
-var Ap = AccountsServer.prototype;
-
-///
-/// CURRENT USER
-///
-
-// @override of "abstract" non-implementation in accounts_common.js
-Ap.userId = function () {
-  // This function only works if called inside a method. In theory, it
-  // could also be called from publish statements, since they also
-  // have a userId associated with them. However, given that publish
-  // functions aren't reactive, using any of the infomation from
-  // Meteor.user() in a publish function will always use the value
-  // from when the function first runs. This is likely not what the
-  // user expects. The way to make this work in a publish is to do
-  // Meteor.find(this.userId()).observe and recompute when the user
-  // record changes.
-  var currentInvocation = DDP._CurrentInvocation.get();
-  if (!currentInvocation)
-    throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
-  return currentInvocation.userId;
-};
-
-///
-/// LOGIN HOOKS
-///
-
 /**
- * @summary Validate login attempts.
+ * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
- * @param {Function} func Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception.
+ * @class
+ * @extends AccountsCommon
+ * @instancename accountsServer
+ * @param {Object} server A server object such as `Meteor.server`.
  */
-Ap.validateLoginAttempt = function (func) {
-  // Exceptions inside the hook callback are passed up to us.
-  return this._validateLoginHook.register(func);
+AccountsServer = class AccountsServer extends AccountsCommon {
+  // Note that this constructor is less likely to be instantiated multiple
+  // times than the `AccountsClient` constructor, because a single server
+  // can provide only one set of methods.
+  constructor(server) {
+    super();
+
+    this._server = server || Meteor.server;
+    // Set up the server's methods, as if by calling Meteor.methods.
+    this._initServerMethods();
+
+    this._initAccountDataHooks();
+
+    // If autopublish is on, publish these user fields. Login service
+    // packages (eg accounts-google) add to these by calling
+    // addAutopublishFields.  Notably, this isn't implemented with multiple
+    // publishes since DDP only merges only across top-level fields, not
+    // subfields (such as 'services.facebook.accessToken')
+    this._autopublishFields = {
+      loggedInUser: ['profile', 'username', 'emails'],
+      otherUsers: ['profile', 'username']
+    };
+    this._initServerPublications();
+
+    // connectionId -> {connection, loginToken}
+    this._accountData = {};
+
+    // connection id -> observe handle for the login token that this connection is
+    // currently associated with, or a number. The number indicates that we are in
+    // the process of setting up the observe (using a number instead of a single
+    // sentinel allows multiple attempts to set up the observe to identify which
+    // one was theirs).
+    this._userObservesForConnections = {};
+    this._nextUserObserveNumber = 1;  // for the number described above.
+
+    // list of all registered handlers.
+    this._loginHandlers = [];
+
+    setupUsersCollection(this.users);
+    setupDefaultLoginHandlers(this);
+    setExpireTokensInterval(this);
+
+    this._validateLoginHook = new Hook({ bindEnvironment: false });
+    this._validateNewUserHooks = [
+      defaultValidateNewUserHook.bind(this)
+    ];
+
+    this._deleteSavedTokensForAllUsersOnStartup();
+
+    this._skipCaseInsensitiveChecksForTest = {};
+  }
+
+  ///
+  /// CURRENT USER
+  ///
+
+  // @override of "abstract" non-implementation in accounts_common.js
+  userId() {
+    // This function only works if called inside a method. In theory, it
+    // could also be called from publish statements, since they also
+    // have a userId associated with them. However, given that publish
+    // functions aren't reactive, using any of the infomation from
+    // Meteor.user() in a publish function will always use the value
+    // from when the function first runs. This is likely not what the
+    // user expects. The way to make this work in a publish is to do
+    // Meteor.find(this.userId()).observe and recompute when the user
+    // record changes.
+    var currentInvocation = DDP._CurrentInvocation.get();
+    if (!currentInvocation)
+      throw new Error("Meteor.userId can only be invoked in method calls. Use this.userId in publish functions.");
+    return currentInvocation.userId;
+  }
+
+  ///
+  /// LOGIN HOOKS
+  ///
+
+  /**
+   * @summary Validate login attempts.
+   * @locus Server
+   * @param {Function} func Called whenever a login is attempted (either successful or unsuccessful).  A login can be aborted by returning a falsy value or throwing an exception.
+   */
+  validateLoginAttempt(func) {
+    // Exceptions inside the hook callback are passed up to us.
+    return this._validateLoginHook.register(func);
+  }
+
+  /**
+   * @summary Set restrictions on new user creation.
+   * @locus Server
+   * @param {Function} func Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort.
+   */
+  validateNewUser(func) {
+    this._validateNewUserHooks.push(func);
+  }
+
+  ///
+  /// CREATE USER HOOKS
+  ///
+
+  /**
+   * @summary Customize new user creation.
+   * @locus Server
+   * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.
+   */
+  onCreateUser(func) {
+    if (this._onCreateUserHook) {
+      throw new Error("Can only call onCreateUser once");
+    }
+
+    this._onCreateUserHook = func;
+  }
 };
+
+var Ap = AccountsServer.prototype;
 
 // Give each login hook callback a fresh cloned copy of the attempt
 // object, but don't clone the connection.
@@ -1161,24 +1192,6 @@ Meteor.startup(function () {
   });
 });
 
-
-///
-/// CREATE USER HOOKS
-///
-
-/**
- * @summary Customize new user creation.
- * @locus Server
- * @param {Function} func Called whenever a new user is created. Return the new user object, or throw an `Error` to abort the creation.
- */
-Ap.onCreateUser = function (func) {
-  if (this._onCreateUserHook) {
-    throw new Error("Can only call onCreateUser once");
-  } else {
-    this._onCreateUserHook = func;
-  }
-};
-
 // XXX see comment on Accounts.createUser in passwords_server about adding a
 // second "server options" argument.
 function defaultCreateUserHook(options, user) {
@@ -1247,15 +1260,6 @@ Ap.insertUserDoc = function (options, user) {
     throw e;
   }
   return userId;
-};
-
-/**
- * @summary Set restrictions on new user creation.
- * @locus Server
- * @param {Function} func Called whenever a new user is created. Takes the new user object, and returns true to allow the creation or false to abort.
- */
-Ap.validateNewUser = function (func) {
-  this._validateNewUserHooks.push(func);
 };
 
 // Helper function: returns false if email does not match company domain from

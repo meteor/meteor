@@ -107,16 +107,15 @@ call. Otherwise, it won't start measuring anything.
 
 ## Debugging
 
-Currently, debugging the tool with `node-inspector` is only possible if you edit
-the `meteor` bash/batch script and add the `--debug` or `--debug-brk` flag to
-the node call. Note that `node-inspector` should be compatible with the `node`
+Currently, to debug the tool with `node-inspector`, you can set the `
+TOOL_NODE_FLAGS` environment variable to be `--debug` or `--debug-brk`. This
+will modify the `meteor` bash script and run the tool with debugging enabled.
+ Note that `node-inspector` should be compatible with the `node`
 version in the `dev_bundle`.
 
-The node call should look like this after the change (if using `--debug-brk`
-flag): `exec "$DEV_BUNDLE/bin/node" --debug-brk "$METEOR" "$@"`.
-
 Next, start `node-inspector` from your checkout by going to
-`path/to/your/meteor/dev_bundle/lib/node_modules/node-inspector/bin` and running `inspector.js`.
+`path/to/your/meteor/dev_bundle/lib/node_modules/node-inspector/bin` and
+run `inspector.js`.
 This will tell you the URL of the node inspector. If used with `--
 debug-brk`, the script will pause on the first line.
 

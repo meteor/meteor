@@ -3,6 +3,8 @@
 var _ = require('underscore');
 var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
+import main from './cli/main.js';
+import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -163,6 +165,46 @@ var upgradersByName = {
 
       packagesFile.writeIfModified();
     }
+  },
+
+  "1.2.0-cordova-changes": function (projectContext) {
+    // Remove Cordova project directory to start afresh
+    // and avoid a broken project
+    files.rm_recursive(projectContext.getProjectLocalDirectory(
+       'cordova-build'));
+
+    // Cordova plugin IDs have changed as part of moving to npm, so we convert
+    // old plugin IDs to new IDs
+    let pluginVersions = projectContext.cordovaPluginsFile.getPluginVersions();
+    pluginVersions = cordova.convertPluginVersionsToNewIDs(pluginVersions);
+    projectContext.cordovaPluginsFile.write(pluginVersions);
+
+    // Don't display notice if the project has no Cordova platforms added
+    if (_.isEmpty(projectContext.platformList.getCordovaPlatforms())) return;
+
+    maybePrintNoticeHeader();
+
+    Console.info(
+`Meteor 1.2 includes various changes to the Cordova integration.
+
+Cordova tools, platforms and plugins have been updated to the latest versions. \
+This may require you to make changes to your app. For details, see the Cordova \
+release notes for for the different versions:`,
+Console.url('https://cordova.apache.org/#news'), `
+
+As part of moving to npm, many Cordova plugins have been renamed. Meteor should \
+perform conversions automatically, but you may want to be aware of this to \
+avoid surprises. See`,
+Console.url('https://cordova.apache.org/announcements/2015/04/21/plugins-release-and-move-to-npm.html'),
+`for more information.
+
+The bundled Android tools have been removed and a system-wide install of the \
+Android SDK is now required. This should make it easier to keep the development \
+toolchain up to date and helps avoid some difficult to diagnose failures.
+If you don't have your own Android tools installed already, you can find \
+more information about installing the Android SDK for your platform here:`,
+Console.url(cordova.installationInstructionsUrlForPlatform('android')),
+      Console.options({ bulletPoint: "1.2.0: " }));
   }
 
   ////////////

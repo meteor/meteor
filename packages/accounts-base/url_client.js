@@ -92,6 +92,8 @@ AccountsTest = {
  * [`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).
  * This function should be called in top-level code, not inside
  * `Meteor.startup()`.
+ * @memberof! Accounts
+ * @name onResetPasswordLink
  * @param  {Function} callback The function to call. It is given two arguments:
  *
  * 1. `token`: A password reset token that can be passed to
@@ -116,6 +118,8 @@ Ap.onResetPasswordLink = function (callback) {
  * [`Accounts.sendVerificationEmail`](#accounts_sendverificationemail).
  * This function should be called in top-level code, not inside
  * `Meteor.startup()`.
+ * @memberof! Accounts
+ * @name onEmailVerificationLink
  * @param  {Function} callback The function to call. It is given two arguments:
  *
  * 1. `token`: An email verification token that can be passed to
@@ -141,6 +145,8 @@ Ap.onEmailVerificationLink = function (callback) {
  * [`Accounts.sendEnrollmentEmail`](#accounts_sendenrollmentemail).
  * This function should be called in top-level code, not inside
  * `Meteor.startup()`.
+ * @memberof! Accounts
+ * @name onEnrollmentLink
  * @param  {Function} callback The function to call. It is given two arguments:
  *
  * 1. `token`: A password reset token that can be passed to

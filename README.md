@@ -9,7 +9,9 @@ With Meteor you write apps:
 * that send data over the wire, rather than HTML
 * using your choice of popular open-source libraries
 
-Documentation is available at http://docs.meteor.com/
+Documentation is available at http://docs.meteor.com/.
+
+Try the getting started [tutorial](https://www.meteor.com/try).
 
 ## Quick Start
 

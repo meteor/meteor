@@ -2665,6 +2665,136 @@ if (Meteor.isServer) {
                 name: 'david',
                 elements: ['Y', 'A', 'B', 'C']});
   });
+
+  Tinytest.add("mongo-livedata - upsert handles dotted selectors corrrectly", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    var result1 = collection.upsert({
+      "subdocument.a": 1
+    }, {
+      $set: {message: "upsert 1"}
+    });
+
+    test.equal(collection.findOne(result1.insertedId),{
+      _id: result1.insertedId,
+      subdocument: {a: 1},
+      message: "upsert 1"
+    });
+
+    var result2 = collection.upsert({
+      "subdocument.a": 1
+    }, {
+      $set: {message: "upsert 2"}
+    });
+
+    test.equal(result2, {numberAffected: 1});
+
+    test.equal(collection.findOne(result1.insertedId),{
+      _id: result1.insertedId,
+      subdocument: {a: 1},
+      message: "upsert 2"
+    });
+
+    var result3 = collection.upsert({
+      "subdocument.a.b": 1,
+      "subdocument.c": 2
+    }, {
+      $set: {message: "upsert3"}
+    });
+
+    test.equal(collection.findOne(result3.insertedId),{
+      _id: result3.insertedId,
+      subdocument: {a: {b: 1}, c: 2},
+      message: "upsert3"
+    });
+
+    var result4 = collection.upsert({
+      "subdocument.a": 4
+    }, {
+      $set: {"subdocument.a": "upsert 4"}
+    });
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: {a: "upsert 4"}
+    });
+
+    var result5 = collection.upsert({
+      "subdocument.a": "upsert 4"
+    }, {
+      $set: {"subdocument.a": "upsert 5"}
+    });
+
+    test.equal(result5, {numberAffected: 1});
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: {a: "upsert 5"}
+    });
+
+    var result6 = collection.upsert({
+      "subdocument.a": "upsert 5"
+    }, {
+      $set: {"subdocument": "upsert 6"}
+    });
+
+    test.equal(result6, {numberAffected: 1});
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: "upsert 6"
+    });
+
+    var result7 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.c": "upsert7"
+      }
+    });
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: 7, c: "upsert7"}
+      }
+    });
+
+    var result8 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.c": "upsert8"
+      }
+    });
+
+    test.equal(result8, {numberAffected: 1});
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: 7, c: "upsert8"}
+      }
+    });
+
+    var result9 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.b": "upsert9"
+      }
+    });
+
+    test.equal(result9, {numberAffected: 1});
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: "upsert9", c: "upsert8"}
+      }
+    });
+
+  });
 }
 
 // This is a VERY white-box test.

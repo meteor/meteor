@@ -1,13 +1,13 @@
 Package.describe({
   name: "ecmascript-collections",
-  version: "0.1.5-rc.0",
+  version: "0.1.5-rc.1",
   summary: "Polyfills for ECMAScript 2015 Map and Set",
   git: "https://github.com/meteor/ecmascript-collections",
   documentation: "README.md"
 });
 
 Npm.depends({
-  "ecmascript-collections": "0.1.4"
+  "ecmascript-collections": "0.1.5"
 });
 
 Package.onUse(function(api) {
@@ -25,6 +25,7 @@ Package.onUse(function(api) {
 
 Package.onTest(function(api) {
   api.use("tinytest");
+  api.use("check");
   api.use("ecmascript-collections");
   api.addFiles("collections-tests.js");
 });

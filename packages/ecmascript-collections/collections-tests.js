@@ -33,3 +33,9 @@ Tinytest.add("ecmascript-containers - Set", function (test) {
     done: false
   });
 });
+
+Tinytest.add("core-js - Number", function () {
+  // Make sure https://github.com/grigio/meteor-babel/issues/5 is not a
+  // problem for us.
+  check(1234, Number);
+});

@@ -2,6 +2,10 @@
 
 XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd358af0c63cb49666b760
 
+* No longer include the `json` package by default, which contains code for
+  `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
+  natively was Internet Explorer 7.)
+
 ### Utilities
 
 * New `beforeSend` option to `HTTP.call` on the client allows you to directly
@@ -55,6 +59,62 @@ XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd
 * Improved server performance by reducing overhead of processing oplog after
   database writes. Improvements are most noticeable in case when a method is
   doing a lot of writes on collections with plenty of active observers.  #4694
+
+### Mobile
+
+* The included Cordova tools have been updated to the latest version 5.2.0.
+  This includes Cordova Android 4.1 and Cordova iOS 3.9. These updates may
+  require you to make changes to your app. For details, see the [Cordova release
+  notes] (https://cordova.apache.org/#news) for for the different versions.
+
+* Thanks to Cordova Android's support for pluggable web views, it is now
+  possible to install the [Crosswalk plugin]
+  (https://crosswalk-project.org/documentation/cordova/cordova_4.html), which
+  offers a hugely improved web view on older Android versions.
+  You can add the plugin to your app with `meteor add crosswalk`.
+
+* The bundled Android tools have been removed and a system-wide install of the
+  Android SDK is now required. This should make it easier to keep the
+  development toolchain up to date and helps avoid some difficult to diagnose
+  failures. If you don't have your own Android tools installed already, you can
+  find more information about installing the Android SDK for [Mac] (https://github.com/meteor/meteor/wiki/Mobile-Dev-Install:-Android-on-Mac)
+  or [Linux]
+  (https://github.com/meteor/meteor/wiki/Mobile-Dev-Install:-Android-on-Linux).
+
+* As part of moving to npm, many Cordova plugins have been renamed. Meteor
+  should perform conversions automatically, but you may want to be aware of this
+  to avoid surprises. See [here]
+  (https://cordova.apache.org/announcements/2015/04/21/plugins-release-and-move-to-npm.html)
+  for more information.
+
+* Installing plugins from the local filesystem is now supported using `file://`
+  URLs, which should make developing your own plugins more convenient. It is
+  also needed as a temporary workaround for using the Facebook plugin.
+  Relative references are interpreted relative to the Meteor project directory.
+  (As an example,
+  `meteor add cordova:phonegap-facebook-plugin@file://../phonegap-facebook-plugin`
+  would attempt to install the plugin from the same directory you Meteor project
+  directory is located in.)
+
+* Meteor no longer supports installing Cordova plugins from tarball URLs, but
+  does support Git URLs with a SHA reference (like
+  `https://github.com/apache/cordova-plugin-file#c452f1a67f41cb1165c92555f0e721fbb07329cc`).
+  Existing GitHub tarball URLs are converted automatically.
+
+* Allow specifying a `buildNumber` in `App.info`, which is used to set the
+  `android-versionCode` and `ios-CFBundleVersion` in the `config.xml` of the
+  Cordova project. The build number is used to differentiate between
+  different versions of the app, and should be incremented before distributing
+  a built app to stores or testing services. #4048
+
+* Other changes include performance enhancements when building and running,
+  and improved requirements checking and error reporting.
+
+* Known issue: we do not currently show logging output when running on the
+  iOS Simulator. As a workaround, you can `meteor run ios-device` to open the
+  project in Xcode and watch the output there.
+
+## in progress: v.1.1.1
 
 ### Blaze
 
@@ -204,26 +264,6 @@ XXX what about logic solver package? In the neighborhood of c3d45ede004728f9dabd
   return `undefined`. `all` converts the dictionary into a regular JavaScript
   object with a snapshot of the keys and values. Inside an autorun, `all`
   registers a dependency on any changes to the dictionary. #3135
-
-
-### Meteor Mobile
-
-* Upgrade the Cordova CLI dependency from 4.2.0 to 5.0.0. See the release notes
-  for the 5.x series of the Cordova CLI [on Apache
-  Cordova](https://cordova.apache.org/news/2015/04/21/tools-release.html). #4390
-
-* Upgrade the Cordova Android dependency to 4.0. Now requires Android 22 images
-  and uses Gradle instead of Ant as a build system.
-
-* Add the following Cordova Plugins dependencies in core packages:
-  - `cordova-plugin-legacy-whitelist`: `n/a -> 1.0.1`
-* Switch to Core Cordova Plugins served from npm.
-
-* Allow adding local Cordova plugins with `file://` URIs. #4229
-
-* Automatically set default values for `'android-versionCode'` and
-  `'ios-CFBundleVersion'` options of Cordova project. (The feature is helpful to
-  use with tooling such as TestFlight.) #4048
 
 ### Other bug fixes and improvements
 

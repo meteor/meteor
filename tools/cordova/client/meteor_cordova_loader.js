@@ -103,7 +103,7 @@
 
   document.addEventListener("deviceready", function () {
     var startLoading = function () {
-      if (! cordova.file) {
+      if (!cordova.file) {
         // If the plugin didn't actually load, try again later.
         // See a larger comment with details in
         // packages/meteor/startup_client.js

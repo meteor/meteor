@@ -5,6 +5,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('underscore', ['client', 'server']);
+  api.use('ecmascript', ['client', 'server']);
   api.use('ddp-rate-limiter');
   api.use('localstorage', 'client');
   api.use('tracker', 'client');
@@ -68,9 +69,11 @@ Package.onTest(function (api) {
     'test-helpers',
     'oauth-encryption',
     'underscore',
-    'ddp'
+    'ddp',
+    'accounts-password'
   ]);
 
   api.addFiles('accounts_tests.js', 'server');
   api.addFiles("accounts_url_tests.js", "client");
+  api.addFiles("accounts_reconnect_tests.js");
 });
