@@ -132,6 +132,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: 1,
   catalogRefresh: new catalog.Refresh.Never(),
+  hidden: true,
   notOnWindows: true
 }, function (options) {
   Console.setVerbose(!!options.verbose);
@@ -164,6 +165,7 @@ main.registerCommand({
   minArgs: 0,
   maxArgs: Infinity,
   catalogRefresh: new catalog.Refresh.Never(),
+  hidden: true,
   notOnWindows: true
 }, function (options) {
   Console.setVerbose(!!options.verbose);
