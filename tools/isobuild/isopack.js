@@ -1605,6 +1605,7 @@ _.extend(Isopack.prototype, {
       /^tools\/meteor-services\/[^\/]+\.js$/,
       /^tools\/tool-testing\/[^\/]+\.js$/,
       /^tools\/console\/[^\/]+\.js$/,
+      /^tools\/cordova\/[^\/]+\.js$/,
       // We don't support running self-test from an install anymore
     ];
 
