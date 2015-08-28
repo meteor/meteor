@@ -306,12 +306,17 @@ _.extend(PackageAPI.prototype, {
    * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify
    * what architecture the file is used with. You can specify multiple
    * architectures by passing in an array, for example `['web.cordova', 'os.linux']`.
-   * @param {Object} [fileOptions] Options that will be passed to build
-   * plugins. For example, for JavaScript files, you can pass `{bare: true}`
-   * to not wrap the individual file in its own closure. To add a static asset,
-   * pass `{isAsset: true}`; use the `architecture` parameter to determine
-   * if this is a client-side asset served by the HTTP server or a server-side
-   * asset accessible to the `Assets` APIs.
+   * @param {Object} [options] Options that will be passed to build
+   * plugins.
+   * @param {Boolean} [options.bare] If this file is JavaScript code or will
+   * be compiled into JavaScript code by a build plugin, don't wrap the
+   * resulting file in a closure. Has the same effect as putting a file into the
+   * `client/compatibility` directory in an app.
+   * @param {Boolean} [options.isAsset] Should be set to true if this file
+   * should be considered an asset and not a source file. Assets are loaded via
+   * the `Asset` API on the server, or through pre-determined HTTP URLs on the
+   * client. Whether this is a client or server asset is determined by the
+   * `architecture` parameter to `addFiles`.
    */
   addFiles: function (paths, arch, fileOptions) {
     var self = this;
