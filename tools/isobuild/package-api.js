@@ -436,7 +436,11 @@ _.extend(PackageAPI.prototype, {
    * @instance
    * @summary Export package-level variables in your package. The specified
    * variables (declared without `var` in the source code) will be available
-   * to packages that use this package.
+   * to packages that use your package. If your package sets the `debugOnly`
+   * or `prodOnly` options to `true` when it calls `Package.describe()`, then
+   * packages that use your package will need to use 
+   * `Package["package-name"].ExportedVariableName` to access the value of an
+   * exported variable.
    * @locus package.js
    * @param {String|String[]} exportedObjects Name of the object to export, or
    * an array of object names.
