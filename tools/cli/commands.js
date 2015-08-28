@@ -984,8 +984,10 @@ https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
+              if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
                 options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+              }
 
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
