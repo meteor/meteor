@@ -1270,6 +1270,26 @@ var maybeUpdateRelease = function (options) {
           releaseTrack + ".");
       return 1;
     }
+
+    if (release.current && options.appdir && ! options.patch) {
+      var releaseVersion = release.current.getReleaseVersion();
+      var newerRecommendedReleases = getLaterReleaseVersions(
+        releaseTrack, releaseVersion);
+      if (!newerRecommendedReleases.length) {
+        // When running 'meteor update' without --release in an app,
+        // using a release that is not recommended and is newer than
+        // any recommended release, don't springboard backwards to
+        // an older, recommended release.  Don't update Meteor, or
+        // the app's release.  This makes it possible to type `meteor update`
+        // with no arguments from a new RC of Meteor, without performing
+        // the update (and subsequent constraint-solving, etc.) using
+        // the old tool.
+        //
+        // We'll still springboard forwards out of an RC, just not backwards.
+        return 0;
+      }
+    }
+
     if (! release.current || release.current.name !== latestRelease) {
       // The user asked for the latest release (well, they "asked for it" by not
       // passing --release). We're not currently running the latest release on
@@ -1405,13 +1425,10 @@ var maybeUpdateRelease = function (options) {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    var appReleaseInfo = catalog.official.getReleaseVersion(
+    releaseVersionsToTry = getLaterReleaseVersions(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
-    var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
 
-    releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      projectContext.releaseFile.releaseTrack, appOrderKey);
     if (! releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
@@ -1504,6 +1521,15 @@ var maybeUpdateRelease = function (options) {
   // user.
   return 0;
 };
+
+function getLaterReleaseVersions(releaseTrack, releaseVersion) {
+  var releaseInfo = catalog.official.getReleaseVersion(
+    releaseTrack, releaseVersion);
+  var orderKey = (releaseInfo && releaseInfo.orderKey) || null;
+
+  return catalog.official.getSortedRecommendedReleaseVersions(
+    releaseTrack, orderKey);
+}
 
 main.registerCommand({
   name: 'update',
