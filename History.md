@@ -230,6 +230,8 @@
 
 ### `meteor` command-line tool
 
+* `meteor shell` no longer crashes when piped from another command.
+
 * Avoid a race condition in `meteor --test` and work with newer versions of the
   Velocity package.  #3957
 
