@@ -6316,7 +6316,28 @@ DocsData = {
     "longname": "PackageAPI#addFiles",
     "memberof": "PackageAPI",
     "name": "addFiles",
-    "options": [],
+    "options": [
+      {
+        "description": "<p>If this file is JavaScript code or will\nbe compiled into JavaScript code by a build plugin, don't wrap the\nresulting file in a closure. Has the same effect as putting a file into the\n<code>client/compatibility</code> directory in an app.</p>",
+        "name": "bare",
+        "optional": true,
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      },
+      {
+        "description": "<p>Should be set to true if this file\nshould be considered an asset and not a source file. Assets are loaded via\nthe <code>Asset</code> API on the server, or through pre-determined HTTP URLs on the\nclient. Whether this is a client or server asset is determined by the\n<code>architecture</code> parameter to <code>addFiles</code>.</p>",
+        "name": "isAsset",
+        "optional": true,
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      }
+    ],
     "params": [
       {
         "description": "<p>Name of the source file, or array of\nstrings of source file names.</p>",
@@ -6340,8 +6361,8 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Options that will be passed to build\nplugins. For example, for JavaScript files, you can pass <code>{bare: true}</code>\nto not wrap the individual file in its own closure. To add a static asset,\npass <code>{isAsset: true}</code>; use the <code>architecture</code> parameter to determine\nif this is a client-side asset served by the HTTP server or a server-side\nasset accessible to the <code>Assets</code> APIs.</p>",
-        "name": "fileOptions",
+        "description": "<p>Options that will be passed to build\nplugins.</p>",
+        "name": "options",
         "optional": true,
         "type": {
           "names": [
