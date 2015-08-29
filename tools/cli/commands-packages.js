@@ -1271,7 +1271,7 @@ var maybeUpdateRelease = function (options) {
       return 1;
     }
 
-    if (release.current && options.appdir && ! options.patch) {
+    if (release.current && options.appDir && ! options.patch) {
       var releaseVersion = release.current.getReleaseVersion();
       var newerRecommendedReleases = getLaterReleaseVersions(
         releaseTrack, releaseVersion);
@@ -1286,6 +1286,10 @@ var maybeUpdateRelease = function (options) {
         // the old tool.
         //
         // We'll still springboard forwards out of an RC, just not backwards.
+        Console.info("Not updating the release, because this app is at a " +
+                     "newer release (" + release.current.name + ") than " +
+                     "the latest recommended release " +
+                     "(" + latestRelease + ").");
         return 0;
       }
     }
