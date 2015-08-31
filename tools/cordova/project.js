@@ -222,15 +222,25 @@ ${displayNameForPlatform(platform)}`);
 
     if (!satisfied) {
       Console.info();
-      Console.info(`Not all installation requirements are satisfied \
-for building and running apps for ${displayNameForPlatform(platform)}.`);
+      Console.info(`Your system does not yet seem to fulfill all requirements \
+to build apps for ${displayNameForPlatform(platform)}.`);
+
       const url = installationInstructionsUrlForPlatform(platform);
       if (url) {
-        Console.info("Please follow the instructions here:");
+        Console.info();
+        Console.info("Please follow the installation instructions here:");
         Console.info(Console.url(url));
       }
+
       Console.info();
-      Console.info("More details about the individual requirements:");
+
+      if (!Console.verbose) {
+        Console.info("Specify the --verbose option to see more details about \
+the status of individual requirements.");
+        return false;
+      }
+
+      Console.info("Status of the requirements:");
       for (requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
