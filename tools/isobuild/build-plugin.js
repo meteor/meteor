@@ -322,7 +322,7 @@ class SourceClassification {
         // `api.addFiles('foo.bar')` where *.bar is a web-specific legacy
         // handler (eg) would end up adding 'foo.bar' as a static asset on
         // non-web programs, which was unintended. This didn't happen in apps
-        // because initFromAppDir's getSourcesFunc never added them.)
+        // because initFromAppDir's getFiles never added them.)
         const filteredSourceProcessors = sourceProcessors.filter(
           (sourceProcessor) => sourceProcessor.relevantForArch(arch)
         );

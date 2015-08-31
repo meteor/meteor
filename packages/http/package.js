@@ -27,5 +27,6 @@ Package.onTest(function (api) {
 
   api.addFiles('test_responder.js', 'server');
   api.addFiles('httpcall_tests.js', ['client', 'server']);
-  api.addFiles('test_static.serveme', 'client', {isAsset: true});
+
+  api.addAssets('test_static.serveme', 'client');
 });

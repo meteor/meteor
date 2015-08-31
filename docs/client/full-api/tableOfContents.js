@@ -322,7 +322,8 @@ var toc = [
         {name: "api.use", id: "pack_use"},
         {name: "api.imply", id: "pack_api_imply"},
         {name: "api.export", id: "pack_export"},
-        {name: "api.addFiles", id: "pack_addFiles"}
+        {name: "api.addFiles", id: "pack_addFiles"},
+        {name: "api.addAssets", id: "PackageAPI-addAssets"}
       ],
       {name: "Package.onTest", id: "packagetests"},
       {name: "Npm.depends", id: "Npm-depends"},

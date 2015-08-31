@@ -348,3 +348,78 @@ selftest.define("compiler plugins - compiler addAsset", () => {
 
   run.stop();
 });
+
+
+// Test that a package can have a single file that is both source code and an
+// asset
+selftest.define("compiler plugins - addAssets", () => {
+  const s = new Sandbox({ fakeMongo: true });
+
+  s.createApp('myapp', 'compiler-plugin-asset-and-source');
+  s.cd('myapp');
+
+  const run = startRun(s);
+
+  // Test server-side asset.
+  run.match("Printing out my own source code!");
+
+  // Test client-side asset.
+  const body = getUrl('http://localhost:3000/packages/' +
+    'asset-and-source/asset-and-source.js');
+  selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
+
+  // Test error messages for malformed package files
+  s.write("packages/asset-and-source/package.js", `Package.describe({
+    name: 'asset-and-source',
+    version: '0.0.1'
+  });
+
+  Package.onUse(function(api) {
+    api.addFiles('asset-and-source.js');
+    api.addAssets('asset-and-source.js', ['client', 'server']);
+    api.addFiles('asset-and-source.js');
+  });
+`);
+
+  run.match(/Duplicate source file/);
+
+  s.write("packages/asset-and-source/package.js", `Package.describe({
+    name: 'asset-and-source',
+    version: '0.0.1'
+  });
+
+  Package.onUse(function(api) {
+    api.addFiles('asset-and-source.js');
+    api.addAssets('asset-and-source.js', ['client', 'server']);
+    api.addAssets('asset-and-source.js', ['client', 'server']);
+  });
+`);
+
+  run.match(/Duplicate asset file/);
+
+  s.write("packages/asset-and-source/package.js", `Package.describe({
+    name: 'asset-and-source',
+    version: '0.0.1'
+  });
+
+  Package.onUse(function(api) {
+    api.addFiles('asset-and-source.js', 'client', { isAsset: true });
+  });
+  `);
+
+  run.match(/deprecated/);
+
+  s.write("packages/asset-and-source/package.js", `Package.describe({
+    name: 'asset-and-source',
+    version: '0.0.1'
+  });
+
+  Package.onUse(function(api) {
+    api.addAssets('asset-and-source.js');
+  });
+`);
+
+  run.match(/requires a second argument/);
+
+  run.stop();
+});

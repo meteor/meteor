@@ -17,7 +17,7 @@ Package.onUse(function (api) {
   api.addFiles('spiderable_server.js', 'server');
   api.addFiles('spiderable_client.js', 'client');
 
-  api.addFiles('phantom_script.js', 'server', { isAsset: true });
+  api.addAssets('phantom_script.js', 'server');
 });
 
 Package.onTest(function (api) {

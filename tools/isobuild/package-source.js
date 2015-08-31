@@ -184,7 +184,7 @@ var getExcerptFromReadme = function (text) {
 // - arch [required]
 // - uses
 // - implies
-// - getSourcesFunc
+// - getFiles
 // - declaredExports
 // - watchSet
 //
@@ -238,9 +238,9 @@ var SourceArch = function (pkg, options) {
   // unordered and weak are not allowed).
   self.implies = options.implies || [];
 
-  // A function that returns the source files for this architecture. Array of
-  // objects with keys "relPath" and "fileOptions". Null if loaded from
-  // isopack.
+  // A function that returns the source files for this architecture. Object with
+  // keys `sources` and `assets`, where each is an array of objects with keys
+  // "relPath" and "fileOptions". Null if loaded from isopack.
   //
   // fileOptions is optional and represents arbitrary options passed
   // to "api.addFiles"; they are made available on to the plugin as
@@ -251,7 +251,7 @@ var SourceArch = function (pkg, options) {
   // plugins in order to compute the sources list, so we have to wait
   // until build time (after we have loaded any plugins, including
   // local plugins in this package) to compute this.
-  self.getSourcesFunc = options.getSourcesFunc || null;
+  self.getFiles = options.getFiles || null;
 
   // Symbols that this architecture should export. List of symbols (as
   // strings).
@@ -395,7 +395,9 @@ _.extend(PackageSource.prototype, {
   // - sourceRoot (required if sources present)
   // - serveRoot (required if sources present)
   // - use
-  // - sources (array of paths or relPath/fileOptions objects)
+  // - sources (array of paths or relPath/fileOptions objects), note that this
+  // doesn't support assets at this time. If you want to pass assets here, you
+  // should add a new option to this function called `assets`.
   // - npmDependencies
   // - cordovaDependencies
   // - npmDir
@@ -414,7 +416,6 @@ _.extend(PackageSource.prototype, {
     // serveRoot is actually a part of a url path, root here is a forward slash
     self.serveRoot = options.serveRoot || '/';
 
-    var nodeModulesPath = null;
     utils.ensureOnlyExactVersions(options.npmDependencies);
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
@@ -422,18 +423,25 @@ _.extend(PackageSource.prototype, {
     utils.ensureOnlyExactVersions(options.cordovaDependencies);
     self.cordovaDependencies = options.cordovaDependencies;
 
-    var sources = _.map(options.sources, function (source) {
-      if (typeof source === "string")
-        return {relPath: source};
+    const sources = options.sources.map((source) => {
+      if (typeof source === "string") {
+        return {
+          relPath: source
+        };
+      }
+
       return source;
     });
 
-    var sourceArch = new SourceArch(self, {
+    const sourceArch = new SourceArch(self, {
       kind: options.kind,
       arch: "os",
       uses: _.map(options.use, splitConstraint),
-      getSourcesFunc: function () { return sources; },
-      nodeModulesPath: nodeModulesPath
+      getFiles() {
+        return {
+          sources: sources
+        }
+      }
     });
 
     self.architectures.push(sourceArch);
@@ -1043,13 +1051,17 @@ _.extend(PackageSource.prototype, {
         console.log(e.stack); // XXX should we keep this here -- or do we want broken
                               // packages to fail silently?
         buildmessage.exception(e);
+
         // Recover by ignoring all of the source files in the
         // packages and any remaining handlers. It violates the
         // principle of least surprise to half-run a handler
         // and then continue.
-        api.sources = {};
+        api.files = {};
         _.each(compiler.ALL_ARCHES, function (arch) {
-          api.sources[arch] = {};
+          api.files[arch] = {
+            sources: [],
+            assets: []
+          };
         });
 
         fileAndDepLoader = null;
@@ -1187,7 +1199,9 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: api.uses[arch],
         implies: api.implies[arch],
-        getSourcesFunc: function () { return _.values(api.sources[arch]); },
+        getFiles: function () {
+          return api.files[arch];
+        },
         declaredExports: api.exports[arch],
         watchSet: watchSet
       }));
@@ -1247,7 +1261,7 @@ _.extend(PackageSource.prototype, {
       sourceArch.watchSet.merge(projectWatchSet);
 
       // Determine source files
-      sourceArch.getSourcesFunc = (sourceProcessorSet, watchSet) => {
+      sourceArch.getFiles = (sourceProcessorSet, watchSet) => {
         const sourceReadOptions =
                 sourceProcessorSet.appReadDirectoryOptions(arch);
         // Ignore files starting with dot (unless they are explicitly in
@@ -1361,6 +1375,8 @@ _.extend(PackageSource.prototype, {
         const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
         var assetDirs = readAndWatchDirectory('', {names: [assetDir]});
 
+        const assets = [];
+
         if (!_.isEmpty(assetDirs)) {
           if (!_.isEqual(assetDirs, [assetDir]))
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
@@ -1386,18 +1402,18 @@ _.extend(PackageSource.prototype, {
                 assetDirs.push(item);
               } else {
                 // This file is an asset.
-                sources.push({
-                  relPath: item,
-                  fileOptions: {
-                    isAsset: true
-                  }
+                assets.push({
+                  relPath: item
                 });
               }
             });
           }
         }
 
-        return sources;
+        return {
+          sources,
+          assets
+        };
       };
     });
 

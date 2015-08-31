@@ -14,5 +14,5 @@ Package.onUse(function (api) {
   api.addFiles(['reporter.js'], "server");
 
   // This is to be run by phantomjs, not as part of normal package code.
-  api.addFiles('runner.js', 'server', {isAsset: true});
+  api.addAssets('runner.js', 'server');
 });

@@ -186,9 +186,11 @@
 * Ignore `node_modules` directories in apps instead of processing them as Meteor
   source code.  #4457 #4452
 
-* Backwards-incompatible change: Static assets in package.js files must now be
-  explicitly declared with `{isAsset: true}`. Previously, any file that didn't
-  have a source handler was automatically registered as a server-side asset.
+* Backwards-incompatible change for package authors: Static assets in package.js files must now be
+  explicitly declared by using `addAssets` instead of `addFiles`. Previously,
+  any file that didn't have a source handler was automatically registered as a
+  server-side asset. The `isAsset` option to `addFiles` is also deprecated in
+  favor of `addAssets`.
 
 * Built files are now always annotated with line number comments, to improve the
   debugging experience in browsers that don't support source maps.

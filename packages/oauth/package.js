@@ -30,8 +30,10 @@ Package.onUse(function (api) {
   api.addFiles('oauth_server.js', 'server');
   api.addFiles('pending_credentials.js', 'server');
 
-  api.addFiles('end_of_popup_response.html', 'server', { isAsset: true });
-  api.addFiles('end_of_redirect_response.html', 'server', {isAsset: true});
+  api.addAssets([
+    'end_of_popup_response.html',
+    'end_of_redirect_response.html'
+  ], 'server');
 
   api.addFiles('oauth_common.js');
 
