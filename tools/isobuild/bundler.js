@@ -865,7 +865,7 @@ class Target {
           newFile.setUrlFromRelPath(file.path);
           newFile.targetPath = file.path;
         } else {
-          newFile.setUrlToHash('.js');
+          newFile.setUrlToHash('.js', '?meteor_js_resource=true');
         }
 
         return newFile;
