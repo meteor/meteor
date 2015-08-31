@@ -672,6 +672,17 @@ var runWebAppServer = function () {
       return undefined;
     }
 
+    if (request.url.query && request.url.query['meteor_js_resource']) {
+      // Similarly, we're requesting a JS resource that we don't have.
+      // Serve an uncached 404. (We can't use the same hack we use for CSS,
+      // because actually acting on that hack requires us to have the JS
+      // already!)
+      headers['Cache-Control'] = 'no-cache';
+      res.writeHead(404, headers);
+      res.end("404 Not Found");
+      return undefined;
+    }
+
     // /packages/asdfsad ... /__cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
     var archKey = pathname.split('/')[1];
