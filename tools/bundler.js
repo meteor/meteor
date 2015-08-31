@@ -859,7 +859,7 @@ _.extend(Target.prototype, {
     }
 
     self.js = [new File({ info: 'minified js', data: new Buffer(allJs, 'utf8') })];
-    self.js[0].setUrlToHash(".js");
+    self.js[0].setUrlToHash(".js", '?meteor_js_resource=true');
   }),
 
   // Add a Cordova plugin dependency to the target. If the same plugin
