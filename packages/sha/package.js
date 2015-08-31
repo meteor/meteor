@@ -1,7 +1,7 @@
 Package.describe({
-  version: '1.0.4-plugins.0'
+  version: '1.0.4-plugins.0',
   summary: 'SHA256 implementation',
-  git: 'https://github.com/meteor/meteor',
+  git: 'https://github.com/meteor/meteor'
 });
 
 Package.onUse(function (api) {
