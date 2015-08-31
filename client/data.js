@@ -6311,6 +6311,38 @@ DocsData = {
     "scope": "global",
     "summary": "Type of the API object passed into the `Package.onUse` function."
   },
+  "PackageAPI#addAssets": {
+    "kind": "function",
+    "locus": "package.js",
+    "longname": "PackageAPI#addAssets",
+    "memberof": "PackageAPI",
+    "name": "addAssets",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>Paths to the asset files.</p>",
+        "name": "filenames",
+        "type": {
+          "names": [
+            "String",
+            "Array.<String>"
+          ]
+        }
+      },
+      {
+        "description": "<p>Specify where this asset should be\navailable (e.g., 'server', 'client', 'web.browser', 'web.cordova'). You can\nspecify multiple architectures by passing in an array, for example\n<code>['web.cordova', 'os.linux']</code>.</p>",
+        "name": "architecture",
+        "type": {
+          "names": [
+            "String",
+            "Array.<String>"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Specify asset files for your package. They can be accessed via\nthe [Assets API](#assets) from the server, or at the URL\n`/packages/username_package-name/file-name` from the client, depending on the\narchitecture passed."
+  },
   "PackageAPI#addFiles": {
     "kind": "function",
     "locus": "package.js",
@@ -6327,22 +6359,12 @@ DocsData = {
             "Boolean"
           ]
         }
-      },
-      {
-        "description": "<p>Should be set to true if this file\nshould be considered an asset and not a source file. Assets are loaded via\nthe <code>Asset</code> API on the server, or through pre-determined HTTP URLs on the\nclient. Whether this is a client or server asset is determined by the\n<code>architecture</code> parameter to <code>addFiles</code>.</p>",
-        "name": "isAsset",
-        "optional": true,
-        "type": {
-          "names": [
-            "Boolean"
-          ]
-        }
       }
     ],
     "params": [
       {
-        "description": "<p>Name of the source file, or array of\nstrings of source file names.</p>",
-        "name": "filename",
+        "description": "<p>Paths to the source files.</p>",
+        "name": "filenames",
         "type": {
           "names": [
             "String",
@@ -6351,7 +6373,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>If you only want to export the file\non the server (or the client), you can pass in the second argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the file is used with. You can specify multiple\narchitectures by passing in an array, for example <code>['web.cordova', 'os.linux']</code>.</p>",
+        "description": "<p>If you only want to use the file\non the server (or the client), you can pass this argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the file is used with. You can specify multiple\narchitectures by passing in an array, for example\n<code>['web.cordova', 'os.linux']</code>. By default, the file will be loaded on both\nserver and client.</p>",
         "name": "architecture",
         "optional": true,
         "type": {
@@ -6373,7 +6395,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Specify the source code for your package."
+    "summary": "Specify source code files for your package."
   },
   "PackageAPI#export": {
     "kind": "function",
