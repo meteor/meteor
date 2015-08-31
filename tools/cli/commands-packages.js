@@ -1668,13 +1668,23 @@ main.registerCommand({
 
   if (!options.args.length) {
     // Generate and print info about what is NOT at the latest version.
-    var topLevelPkgSet = {};
+
+    var topLevelPkgSet = {}; // direct dependencies (rather than indirect)
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
       topLevelPkgSet[constraint.package] = true;
     });
+
+    var releaseConstrainedPkgSet = {}; // pinned core packages (to skip)
+    _.each(releaseRecordForConstraints.packages, function (v, packageName) {
+      releaseConstrainedPkgSet[packageName] = true;
+    });
+
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
     projectContext.packageMap.eachPackage(function (name, info) {
+      if (_.has(releaseConstrainedPkgSet, name)) {
+        return;
+      }
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
       var latestVersion = getNewerVersion(name, selectedVersion, catalog);
