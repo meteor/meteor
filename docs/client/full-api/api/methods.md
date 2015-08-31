@@ -98,6 +98,18 @@ any future method calls on the connection. Any previous method calls on
 this connection will still see the value of `userId` that was in effect
 when they started.
 
+If you also want to change the logged in user on the client, then after calling
+`setUserId` on the server, call `Meteor.connection.setUserId(userId)` on the
+client. If you have user-specific subscriptions, they need to be updated, either
+by calling `Meteor.subscribe` again or by placing your subscriptions inside an
+autorun:
+
+```js
+Tracker.autorun(function() {
+  Meteor.subscribe('dataFor', Meteor.userId());
+});
+```
+
 {{> autoApiBox "DDPCommon.MethodInvocation#isSimulation"}}
 
 {{> autoApiBox "DDPCommon.MethodInvocation#unblock"}}
