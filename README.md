@@ -329,6 +329,9 @@ since Meteor bundles the same client-side code to all users.  Providing the Role
 
 NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted disclosure. To be clear, Meteor sends all templates, client-side javascript, and published data to the client's browser.  This is by design and is a good thing.  The following example is just sugar to help improve the user experience for normal users.  Those interested in seeing the 'admin_nav' template in the example below will still be able to do so by manually reading the bundled `client.js` file. It won't be pretty but it is possible. But this is not a problem as long as the actual data is restricted server-side.
 
+
+To check for permissions when not using groups:
+
 ```handlebars
 <!-- client/myApp.html -->
 
@@ -343,7 +346,8 @@ NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted 
 </template>
 ```
 
-You can also limit the check to a specific group:
+To check for permissions when using groups:
+
 ```handlebars
 <!-- client/myApp.html -->
 
