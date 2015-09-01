@@ -342,7 +342,7 @@ function doRunCommand(options) {
 
   if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
-      cordovaProject = new CordovaProject(projectContext, {
+      const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
@@ -1541,7 +1541,7 @@ main.registerCommand({
 
   if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
-      cordovaProject = new CordovaProject(projectContext, {
+      const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
