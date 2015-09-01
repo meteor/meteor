@@ -64,7 +64,7 @@ BCp.setDiskCacheDirectory = function (cacheDir) {
 };
 
 Plugin.registerCompiler({
-  extensions: ['js'],
+  extensions: ['js', 'jsx'],
 }, function () {
   return new BabelCompiler();
 });
