@@ -117,7 +117,7 @@ OplogObserveDriver = function (options) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
         Meteor._noYieldsAllowed(
-          self._measure(finishIfNeedToPollQuery(function () {
+          self._measure("handle oplog entry", finishIfNeedToPollQuery(function () {
             var op = notification.op;
             if (notification.dropCollection || notification.dropDatabase) {
               // Note: this call is not allowed to block on anything (especially
@@ -151,33 +151,42 @@ OplogObserveDriver = function (options) {
       fence._oplogObserveDrivers = {};
       fence._oplogObserveDrivers[self._id] = self;
 
-      fence.onBeforeFire(self._measure(function () {
+      fence.onBeforeFire(Profile("onBeforeFire??", function () {
         var drivers = fence._oplogObserveDrivers;
         delete fence._oplogObserveDrivers;
 
-        // This fence cannot fire until we've caught up to "this point" in the
-        // oplog, and all observers made it back to the steady state.
-        self._mongoHandle._oplogHandle.waitUntilCaughtUp();
+        Profile.time("waitUntilCaughtUp", () => {
+          // This fence cannot fire until we've caught up to "this point" in the
+          // oplog, and all observers made it back to the steady state.
+          self._mongoHandle._oplogHandle.waitUntilCaughtUp();
+        });
 
         _.each(drivers, function (driver) {
           if (driver._stopped)
             return;
 
-          var write = fence.beginWrite();
+          var write;
+          Profile.time("beginWrite", () => {
+            write = fence.beginWrite();
+          });
           if (driver._phase === PHASE.STEADY) {
             // Make sure that all of the callbacks have made it through the
             // multiplexer and been delivered to ObserveHandles before committing
             // writes.
             driver._multiplexer.onFlush(function () {
-              write.committed();
+              Profile.time("write.committed()", () => {
+                write.committed();
+              });
             });
           } else {
-            driver._writesToCommitWhenWeReachSteady.push(write);
+            Profile.time("writesToCommitWhenWeReachSteady.push", () => {
+              driver._writesToCommitWhenWeReachSteady.push(write);
+            });
           }
         });
       }));
-    })
-  ));
+    }))
+  );
 
   // When Mongo fails over, we need to repoll the query, in case we processed an
   // oplog entry that got rolled back.
@@ -189,14 +198,19 @@ OplogObserveDriver = function (options) {
   // Give _observeChanges a chance to add the new ObserveHandle to our
   // multiplexer, so that the added calls get streamed.
 
-  Meteor.defer(self._measure(Profile("initial query", finishIfNeedToPollQuery(function () {
+  Meteor.defer(self._measure("initial query", finishIfNeedToPollQuery(function () {
     self._runInitialQuery();
-  }))));
+  })));
 };
 
 _.extend(OplogObserveDriver.prototype, {
-  _measure: function (f) {
-    return Profile(this._cursorDescStr(), f);
+  _measure: function (optAdditionalKey, f) {
+    if (optAdditionalKey) {
+      return Profile(this._cursorDescStr(), Profile(optAdditionalKey, f));
+    } else {
+      f = optAdditionalKey;
+      return Profile(this._cursorDescStr(), f);
+    }
   },
   _cursorDescStr: function () {
     return [
@@ -498,7 +512,7 @@ _.extend(OplogObserveDriver.prototype, {
       self._registerPhaseChange(PHASE.FETCHING);
       // Defer, because nothing called from the oplog entry handler may yield,
       // but fetch() yields.
-      Meteor.defer(self._measure(finishIfNeedToPollQuery(function () {
+      Meteor.defer(self._measure("fetch documents", finishIfNeedToPollQuery(function () {
         while (!self._stopped && !self._needToFetch.empty()) {
           if (self._phase === PHASE.QUERYING) {
             // While fetching, we decided to go into QUERYING mode, and then we
@@ -579,13 +593,15 @@ _.extend(OplogObserveDriver.prototype, {
       });
     });
   },
-  _handleOplogEntryQuerying: function (op) {
+  _handleOplogEntryQuerying: Profile("in querying phase", function (op) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       self._needToFetch.set(idForOp(op), op.ts.toString());
     });
-  },
-  _handleOplogEntrySteadyOrFetching: function (op) {
+  }),
+  _handleOplogEntrySteadyOrFetching: Profile(function () {
+    return `in ${this._phase} phase`;
+  }, function (op) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       var id = idForOp(op);
@@ -663,7 +679,7 @@ _.extend(OplogObserveDriver.prototype, {
         throw Error("XXX SURPRISING OPERATION: " + op);
       }
     });
-  },
+  }),
   // Yields!
   _runInitialQuery: function () {
     var self = this;
@@ -710,7 +726,7 @@ _.extend(OplogObserveDriver.prototype, {
 
       // Defer so that we don't yield.  We don't need finishIfNeedToPollQuery
       // here because SwitchedToQuery is not thrown in QUERYING mode.
-      Meteor.defer(self._measure(function () {
+      Meteor.defer(self._measure("run query", function () {
         self._runQuery();
         self._doneQuerying();
       }));

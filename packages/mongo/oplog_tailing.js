@@ -131,22 +131,27 @@ _.extend(OplogHandle.prototype, {
     // be ready.
     self._readyFuture.wait();
 
-    while (!self._stopped) {
-      // We need to make the selector at least as restrictive as the actual
-      // tailing selector (ie, we need to specify the DB name) or else we might
-      // find a TS that won't show up in the actual tail stream.
-      try {
-        var lastEntry = self._oplogLastEntryConnection.findOne(
-          OPLOG_COLLECTION, self._baseOplogSelector,
-          {fields: {ts: 1}, sort: {$natural: -1}});
-        break;
-      } catch (e) {
-        // During failover (eg) if we get an exception we should log and retry
-        // instead of crashing.
-        Meteor._debug("Got exception while reading last entry: " + e);
-        Meteor._sleepForMs(100);
+    var lastEntry;
+    Profile.time("while !self._stopped", () => {
+      while (!self._stopped) {
+        // We need to make the selector at least as restrictive as the actual
+        // tailing selector (ie, we need to specify the DB name) or else we might
+        // find a TS that won't show up in the actual tail stream.
+        try {
+          Profile.time("oplogLastEntryConnection.findOne", () => {
+            lastEntry = self._oplogLastEntryConnection.findOne(
+              OPLOG_COLLECTION, self._baseOplogSelector,
+              {fields: {ts: 1}, sort: {$natural: -1}});
+          });
+          break;
+        } catch (e) {
+          // During failover (eg) if we get an exception we should log and retry
+          // instead of crashing.
+          Meteor._debug("Got exception while reading last entry: " + e);
+          Meteor._sleepForMs(100);
+        }
       }
-    }
+    });
 
     if (self._stopped)
       return;
@@ -165,18 +170,19 @@ _.extend(OplogHandle.prototype, {
       return;
     }
 
-
-    // Insert the future into our list. Almost always, this will be at the end,
-    // but it's conceivable that if we fail over from one primary to another,
-    // the oplog entries we see will go backwards.
-    var insertAfter = self._catchingUpFutures.length;
-    while (insertAfter - 1 > 0
-           && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
-      insertAfter--;
-    }
-    var f = new Future;
-    self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
-    f.wait();
+    Profile.time("insert future into list", () => {
+      // Insert the future into our list. Almost always, this will be at the end,
+      // but it's conceivable that if we fail over from one primary to another,
+      // the oplog entries we see will go backwards.
+      var insertAfter = self._catchingUpFutures.length;
+      while (insertAfter - 1 > 0
+             && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+        insertAfter--;
+      }
+      var f = new Future;
+      self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
+      f.wait();
+    });
   },
   _startTailing: function () {
     var self = this;
@@ -236,11 +242,11 @@ _.extend(OplogHandle.prototype, {
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription, function (doc) {
+      cursorDescription, Profile("tail oplog", function (doc) {
         self._entryQueue.push(doc);
         self._maybeStartWorker();
       }
-    );
+    ));
     self._readyFuture.return();
   },
 
@@ -249,7 +255,7 @@ _.extend(OplogHandle.prototype, {
     if (self._workerActive)
       return;
     self._workerActive = true;
-    Meteor.defer(Profile("_maybeStartWorker", function () {
+    Meteor.defer(Profile("analyze oplog entry", function () {
       try {
         while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
@@ -300,7 +306,9 @@ _.extend(OplogHandle.prototype, {
             trigger.id = idForOp(doc);
           }
 
-          self._crossbar.fire(trigger);
+          Profile.time("fire invalidation crossbar", () => {
+            self._crossbar.fire(trigger);
+          });
 
           // Now that we've processed this operation, process pending
           // sequencers.

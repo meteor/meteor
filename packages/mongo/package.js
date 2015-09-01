@@ -21,6 +21,8 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
+
   api.use('npm-mongo', 'server');
 
   api.use(['random', 'ejson', 'underscore', 'minimongo',

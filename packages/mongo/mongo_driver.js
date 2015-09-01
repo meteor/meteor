@@ -773,7 +773,15 @@ MongoConnection.prototype.findOne = function (collection_name, selector,
 
   options = options || {};
   options.limit = 1;
-  return self.find(collection_name, selector, options).fetch()[0];
+  var result;
+  Profile.time("find within findOne", () => {
+    var fetchedFind;
+    Profile.time("fetch", () => {
+      fetchedFind = self.find(collection_name, selector, options).fetch();
+    });
+    result = fetchedFind[0];
+  });
+  return result;
 };
 
 // We'll actually design an index API later. For now, we just pass through to
@@ -856,15 +864,17 @@ _.each(['forEach', 'map', 'fetch', 'count'], function (method) {
     if (self._cursorDescription.options.tailable)
       throw new Error("Cannot call " + method + " on a tailable cursor");
 
-    if (!self._synchronousCursor) {
-      self._synchronousCursor = self._mongo._createSynchronousCursor(
-        self._cursorDescription, {
-          // Make sure that the "self" argument to forEach/map callbacks is the
-          // Cursor, not the SynchronousCursor.
-          selfForIteration: self,
-          useTransform: true
-        });
-    }
+    Profile.time("create synchronous cursor", () => {
+      if (!self._synchronousCursor) {
+        self._synchronousCursor = self._mongo._createSynchronousCursor(
+          self._cursorDescription, {
+            // Make sure that the "self" argument to forEach/map callbacks is the
+            // Cursor, not the SynchronousCursor.
+            selfForIteration: self,
+            useTransform: true
+          });
+      }
+    });
 
     return self._synchronousCursor[method].apply(
       self._synchronousCursor, arguments);
@@ -979,11 +989,14 @@ var SynchronousCursor = function (dbCursor, cursorDescription, options) {
 };
 
 _.extend(SynchronousCursor.prototype, {
-  _nextObject: function () {
+  _nextObject: Profile("synchronous cursor:_nextObject", function () {
     var self = this;
 
     while (true) {
-      var doc = self._synchronousNextObject().wait();
+      var doc;
+      Profile.time("self._synchronousNextObject().wait()", () => {
+        doc = self._synchronousNextObject().wait();
+      });
 
       if (!doc) return null;
       doc = replaceTypes(doc, replaceMongoAtomWithMeteor);
@@ -1004,9 +1017,9 @@ _.extend(SynchronousCursor.prototype, {
 
       return doc;
     }
-  },
+  }),
 
-  forEach: function (callback, thisArg) {
+  forEach: Profile("synchronous cursor:forEach", function (callback, thisArg) {
     var self = this;
 
     // Get back to the beginning.
@@ -1021,17 +1034,17 @@ _.extend(SynchronousCursor.prototype, {
       if (!doc) return;
       callback.call(thisArg, doc, index++, self._selfForIteration);
     }
-  },
+  }),
 
   // XXX Allow overlapping callback executions if callback yields.
-  map: function (callback, thisArg) {
+  map: Profile("map", function (callback, thisArg) {
     var self = this;
     var res = [];
-    self.forEach(function (doc, index) {
+    self.forEach(Profile("iterator", function (doc, index) {
       res.push(callback.call(thisArg, doc, index, self._selfForIteration));
-    });
+    }));
     return res;
-  },
+  }),
 
   _rewind: function () {
     var self = this;

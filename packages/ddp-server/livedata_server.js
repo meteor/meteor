@@ -156,7 +156,7 @@ _.extend(SessionCollectionView.prototype, {
     self.callbacks.changed(self.collectionName, id, fields);
   },
 
-  added: Profile(descForSubHandle, function (subscriptionHandle, id, fields) {
+  added: Profile(descForSubHandle, Profile("added", function (subscriptionHandle, id, fields) {
     var self = this;
     var docView = self.documents[id];
     var added = false;
@@ -175,9 +175,9 @@ _.extend(SessionCollectionView.prototype, {
       self.callbacks.added(self.collectionName, id, changeCollector);
     else
       self.callbacks.changed(self.collectionName, id, changeCollector);
-  }),
+  })),
 
-  changed: Profile(descForSubHandle, function (subscriptionHandle, id, changed) {
+  changed: Profile(descForSubHandle, Profile("changed", function (subscriptionHandle, id, changed) {
     var self = this;
     var changedResult = {};
     var docView = self.documents[id];
@@ -190,9 +190,9 @@ _.extend(SessionCollectionView.prototype, {
         docView.changeField(subscriptionHandle, key, value, changedResult);
     });
     self.callbacks.changed(self.collectionName, id, changedResult);
-  }),
+  })),
 
-  removed: Profile(descForSubHandle, function (subscriptionHandle, id) {
+  removed: Profile(descForSubHandle, Profile("removed", function (subscriptionHandle, id) {
     var self = this;
     var docView = self.documents[id];
     if (!docView) {
@@ -214,7 +214,7 @@ _.extend(SessionCollectionView.prototype, {
 
       self.callbacks.changed(self.collectionName, id, changed);
     }
-  })
+  }))
 });
 
 /******************************************************************************/
