@@ -100,15 +100,7 @@ when they started.
 
 If you also want to change the logged in user on the client, then after calling
 `setUserId` on the server, call `Meteor.connection.setUserId(userId)` on the
-client. If you have user-specific subscriptions, they need to be updated, either
-by calling `Meteor.subscribe` again or by placing your subscriptions inside an
-autorun:
-
-```js
-Tracker.autorun(function() {
-  Meteor.subscribe('dataFor', Meteor.userId());
-});
-```
+client.
 
 {{> autoApiBox "DDPCommon.MethodInvocation#isSimulation"}}
 
