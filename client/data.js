@@ -6048,6 +6048,7 @@ DocsData = {
       {
         "description": "<p>Optional.  The 24-character hexadecimal contents of the ObjectID to create</p>",
         "name": "hexString",
+        "optional": true,
         "type": {
           "names": [
             "String"
@@ -6423,7 +6424,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use this package."
+    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use your package. If your package sets the `debugOnly`\nor `prodOnly` options to `true` when it calls `Package.describe()`, then\npackages that use your package will need to use \n`Package[\"package-name\"].ExportedVariableName` to access the value of an\nexported variable."
   },
   "PackageAPI#imply": {
     "kind": "function",
