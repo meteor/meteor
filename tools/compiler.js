@@ -110,7 +110,8 @@ compiler.compile = function (packageSource, options) {
                                      packageSource.npmDependencies)) {
       nodeModulesPath = files.pathJoin(packageSource.npmCacheDirectory,
                                   'node_modules');
-      if (! meteorNpm.dependenciesArePortable(packageSource.npmCacheDirectory))
+      if (! process.env.METEOR_FORCE_PORTABLE &&
+          ! meteorNpm.dependenciesArePortable(packageSource.npmCacheDirectory))
         isPortable = false;
     }
   }
