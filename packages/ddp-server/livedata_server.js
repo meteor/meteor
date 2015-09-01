@@ -708,7 +708,7 @@ _.extend(Session.prototype, {
             invocation,
             () => maybeAuditArgumentChecks(
               Profile("actual method function call", handler),
-              invocation, msg.params, "call to '" + msg.method + "'");
+              invocation, msg.params, "call to '" + msg.method + "'")
           )
         ));
       });
