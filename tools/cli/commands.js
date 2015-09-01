@@ -1462,7 +1462,11 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
 
     // Don't print linting messages for tested packages
-    'no-lint': { type: Boolean }
+    'no-lint': { type: Boolean },
+
+    // allow excluding packages when testing all packages.
+    // should be a comma-separated list of package names.
+    'exclude': { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1518,6 +1522,16 @@ main.registerCommand({
     release.current.isCheckout() ? "none" : release.current.name);
 
   var packagesToAdd = getTestPackageNames(projectContext, options.args);
+
+  // filter out excluded packages
+  var excludedPackages = options.exclude && options.exclude.split(',');
+  if (excludedPackages) {
+    packagesToAdd = _.filter(packagesToAdd, function (p) {
+      return ! _.some(excludedPackages, function (excluded) {
+        return p.replace(/^local-test:/, '') === excluded;
+      });
+    });
+  }
 
   // Use the driver package
   // Also, add `autoupdate` so that you don't have to manually refresh the tests
