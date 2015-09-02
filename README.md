@@ -112,19 +112,25 @@ $ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.j
 
   Migrations set a lock when they are migrating, to prevent multiple instances to prevent multiple instances of your clustered app from running migrations simultaneously. If you migrations throw an exception, you will need to manually remove the lock (and ensure your db is still consistent) before re-running the migration. Update the migrations collection like this:
 
-  ``` sh
-  meteor mongo
+  ```
+  $ meteor mongo
+
   db.migrations.update({_id:"control"}, {$set:{"locked":false}});
   exit
   ```
 
 ## Contributing
 
-Write some code. Write some tests. To run the tests, do:
+1. Write some code.
+2. Write some tests.
+3. From this package's local directory, start the test runner:
 
-``` sh
-$ meteor test-packages percolatestudio:percolatestudio-migrations
-```
+    ```
+    $ meteor test-packages ./
+    ```
+
+4. Open http://localhost:3000/ in your browser to see the test results.
+
 
 ## License 
 
