@@ -28,4 +28,6 @@ Package.onTest(function (api) {
   api.use(["ecmascript", "babel-compiler"]);
   api.addFiles("runtime-tests.js");
   api.addFiles("transpilation-tests.js", "server");
+
+  api.addFiles("bare-test-file.js", "client", { bare: true });
 });
