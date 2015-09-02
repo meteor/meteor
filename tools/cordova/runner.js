@@ -77,6 +77,8 @@ export class CordovaRunner {
     buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
       this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
 
+      if (buildmessage.jobHasMessages()) return;
+
       for (platform of this.platformsForRunTargets) {
         this.cordovaProject.prepareForPlatform(platform);
       }
