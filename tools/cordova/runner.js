@@ -88,18 +88,17 @@ export class CordovaRunner {
   }
 
   startRunTargets() {
-    buildmessage.assertInCapture();
-
     this.started = false;
 
     for (runTarget of this.runTargets) {
-      buildmessage.enterJob({ title: `starting ${runTarget.title}` }, () => {
+      const messages = buildmessage.capture({ title: `starting ${runTarget.title}` }, () => {
         Promise.await(runTarget.start(this.cordovaProject));
-
-        if (!buildmessage.jobHasMessages()) {
-          runLog.log(`Started ${runTarget.title}.`, { arrow: true });
-        }
       });
+      if (messages.hasMessages()) {
+        Console.printMessages(messages);
+      } else {
+        runLog.log(`Started ${runTarget.title}.`, { arrow: true });
+      }
     }
 
     this.started = true;
