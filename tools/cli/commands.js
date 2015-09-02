@@ -803,7 +803,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
       "This command has been deprecated in favor of " +
       Console.command("'meteor build'") + ", which allows you to " +
       "build for multiple platforms and outputs a directory instead of " +
-      "a single tarball. See " + Console.command("'meteor help build'") +
+      "a single tarball. See " + Console.command("'meteor help build'") + " " +
       "for more information.");
       Console.error();
       return buildCommand(_.extend(options, { _serverOnly: true }));
