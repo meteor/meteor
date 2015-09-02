@@ -84,7 +84,6 @@ export class CordovaRunner {
       }
     });
 
-    this.platforms = this.platformsForRunTargets;
     this.plugins = plugins;
   }
 
