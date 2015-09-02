@@ -636,7 +636,6 @@ _.extend(AppRunner.prototype, {
     var runFuture = self.runFuture = new Future;
 
     const cordovaRunner = self.cordovaRunner;
-    // Run Cordova apps
     if (cordovaRunner) {
       const plugins =
         cordova.pluginsFromStarManifest(bundleResult.starManifest);
@@ -646,9 +645,6 @@ _.extend(AppRunner.prototype, {
         const messages = buildmessage.capture(() => {
           cordovaRunner.prepareProject(bundlePath, plugins,
             { settingsFile, mobileServerUrl });
-
-          cordovaRunner.printWarningsIfNeeded();
-          cordovaRunner.startRunTargets();
         });
 
         if (messages.hasMessages()) {
@@ -658,6 +654,7 @@ _.extend(AppRunner.prototype, {
             watchSet: combinedWatchSetForBundleResult(bundleResult)
           };
         }
+        cordovaRunner.printWarningsIfNeeded();
       } else {
         // If the set of Cordova platforms or plugins changes from one run
         // to the next, we just exit, because we don't yet have a way to,
@@ -731,6 +728,10 @@ _.extend(AppRunner.prototype, {
       }
     }
     maybePrintLintWarnings(bundleResult);
+
+    if (cordovaRunner && !cordovaRunner.started) {
+      cordovaRunner.startRunTargets();
+    }
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the
