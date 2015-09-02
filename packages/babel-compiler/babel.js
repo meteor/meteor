@@ -1,9 +1,6 @@
 var meteorBabel = Npm.require('meteor-babel');
 
-/**
- * Returns a new object containing default options appropriate for
- */
-function getDefaultOptions(extraFeatures) {
+function validateExtraFeatures(extraFeatures) {
   if (extraFeatures) {
     check(extraFeatures, {
       // Modify options to enable ES2015 module syntax.
@@ -16,6 +13,13 @@ function getDefaultOptions(extraFeatures) {
       jscript: Match.Optional(Boolean)
     });
   }
+}
+
+/**
+ * Returns a new object containing default options appropriate for
+ */
+function getDefaultOptions(extraFeatures) {
+  validateExtraFeatures(extraFeatures);
 
   // See https://github.com/meteor/babel/blob/master/options.js for more
   // information about what the default options are.
@@ -30,6 +34,8 @@ function getDefaultOptions(extraFeatures) {
 
 Babel = {
   getDefaultOptions: getDefaultOptions,
+
+  validateExtraFeatures: validateExtraFeatures,
 
   compile: function (source, options) {
     options = options || getDefaultOptions();

@@ -11,7 +11,13 @@ Npm.depends({
 });
 
 Package.onUse(function (api) {
-  api.addFiles('babel.js', 'server');
+  api.addFiles([
+    'babel.js',
+    'babel-compiler.js'
+  ], 'server');
+
   api.use('check@1.0.5');
+
   api.export('Babel', 'server');
+  api.export('BabelCompiler', 'server');
 });
