@@ -443,7 +443,7 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (options) {
     var self = this;
     options = options || {};
-    const firstRun = options.firstRun;
+    var firstRun = options.firstRun;
 
     Console.enableProgressDisplay(true);
 
@@ -595,6 +595,8 @@ _.extend(AppRunner.prototype, {
     if (bundleResultOrRunResult.runResult)
       return bundleResultOrRunResult.runResult;
     bundleResult = bundleResultOrRunResult.bundleResult;
+
+    firstRun = false;
 
     // Read the settings file, if any
     var settings = null;
