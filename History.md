@@ -118,7 +118,7 @@
   `{{helper (anotherHelper arg1 arg2)}}` -- as well as new block helper forms
   `#each .. in ..` and `#let x=y`.  See
   https://github.com/meteor/meteor/tree/devel/packages/spacebars
-  
+
 * Add a special case for the new `react-template-helper` package -- don't let
   templates use {{> React}} with siblings since `React.render` assumes it's
   being rendered into an empty container element. (This lets us throw the error
@@ -206,7 +206,7 @@
 * CSS concatenation and minification is delegated to the `standard-minifiers`
   package, which is present by default (and added to existing apps by the v1.2
   upgrader).
-  
+
 * CSS output is now split into multiple stylesheets to avoid hitting limits on
   rules per stylesheet in certain versions of Internet Explorer. #1876
 
@@ -270,7 +270,7 @@
 
 * New `Tracker.Computation#onStop` method.  #3915
 
-* `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
+* `ReactiveDict` has two new methods, `clear` and `all`. `clear` resets
   the dictionary as if no items had been added, meaning all calls to `get` will
   return `undefined`. `all` converts the dictionary into a regular JavaScript
   object with a snapshot of the keys and values. Inside an autorun, `all`
