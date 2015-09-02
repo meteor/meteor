@@ -724,7 +724,7 @@ ${nonCodeFileExts.join(', ')}
   // in the template's versions file).
 
   var appNameToDisplay = appPathAsEntered === "." ?
-    "current directory" : appPathAsEntered;
+    "current directory" : `'${appPathAsEntered}'`;
 
   var message = `Created a new Meteor app in ${appNameToDisplay}`;
 
@@ -741,9 +741,14 @@ ${nonCodeFileExts.join(', ')}
   Console.info("To run your new app:");
 
   if (appPathAsEntered !== ".") {
+    // Wrap the app path in quotes if it contains spaces
+    const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
+      appPathAsEntered :
+      `'${appPathAsEntered}'`;
+
     // Don't tell people to 'cd .'
     Console.info(
-      Console.command("cd " + appPathAsEntered),
+      Console.command("cd " + appPathWithQuotesIfSpaces),
         Console.options({ indent: 2 }));
   }
 
