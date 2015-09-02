@@ -3,6 +3,7 @@ import util from 'util';
 import path from 'path';
 import assert from 'assert';
 import chalk from 'chalk';
+import semver from 'semver';
 
 import isopackets from '../tool-env/isopackets.js'
 import files from '../fs/files.js';
@@ -58,6 +59,33 @@ yet supported.`);
 
   createIfNeeded() {
     buildmessage.assertInJob();
+
+    // Check if we have an existing Cordova project directory with outdated
+    // platforms. In that case, we remove the whole directory to avoid issues.
+    if (files.exists(this.projectRoot)) {
+      const platformVersions = this.listInstalledPlatformVersions();
+
+      // XXX Decide whether to update these if we update cordova-lib.
+      // If we can guarantee there are no issues going forward, we may want to
+      // use updatePlatforms instead of removing the whole directory.
+      const minPlatformVersions = {
+        'android': '4.1.0',
+        'ios': '3.9.0'
+      }
+
+      const outdated = _.some(minPlatformVersions, (minVersion, platform) => {
+        const version = platformVersions[platform];
+        return version && semver.lt(version, minVersion);
+      });
+
+      if (outdated) {
+        Console.debug(`Removing Cordova project directory to avoid issues with
+outdated platforms`);
+        // Remove Cordova project directory to start afresh
+        // and avoid a broken project
+        files.rm_recursive(this.projectRoot);
+      }
+    }
 
     if (!files.exists(this.projectRoot)) {
       // We create a temporary directory with a generated config.xml
@@ -172,7 +200,7 @@ ${displayNameForPlatform(platform)} with options ${options}`,
       cwd: this.projectRoot,
       stdio: Console.verbose ? 'inherit' : 'pipe',
       waitForClose: false })
-    );
+    ), null, null;
   }
 
   // Platforms
@@ -260,6 +288,21 @@ the status of individual requirements.");
 
   listInstalledPlatforms() {
     return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
+  }
+
+  listInstalledPlatformVersions() {
+    let platformVersions = {};
+    this.runCommands(`listing platform versions in Cordova project`, async () => {
+      for (let platform of this.listInstalledPlatforms()) {
+        const command = files.convertToOSPath(files.pathJoin(
+          this.projectRoot, 'platforms', platform, 'cordova', 'version'));
+        const platformVersion = await execFileSync(command, {
+          env: this.defaultEnvWithPathsAdded(),
+          cwd: this.projectRoot})
+        platformVersions[platform] = platformVersion;
+      }
+    }, null, null);
+    return platformVersions;
   }
 
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
