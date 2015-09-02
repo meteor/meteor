@@ -20,7 +20,7 @@ import superspawn from 'cordova-lib/src/cordova/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
 
 import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
-  newPluginId, convertPluginVersionsToNewIDs,
+  newPluginId, convertPluginVersions, convertToGitUrl,
   installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
@@ -362,8 +362,10 @@ from Cordova project`, async () => {
     assert(id);
     assert(version);
 
+    buildmessage.assertInJob();
+
     if (utils.isUrlWithSha(version)) {
-      return this.convertToGitUrl(version);
+      return convertToGitUrl(version);
     } else if (utils.isUrlWithFileScheme(version)) {
       // Strip file:// and resolve the path relative to the cordova-build
       // directory
@@ -380,29 +382,6 @@ from Cordova project`, async () => {
       return files.convertToOSPath(pluginPath);
     } else {
       return `${id}@${version}`;
-    }
-  }
-
-  // Convert old-style GitHub tarball URLs to new Git URLs, and check if other
-  // Git URLs contain a SHA reference.
-  convertToGitUrl(url) {
-    // Matches GitHub tarball URLs, like:
-    // https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2
-    const match =
-      url.match(/^https?:\/\/github.com\/(.+?)\/(.+?)\/tarball\/([0-9a-f]{40})/);
-    if (match) {
-        const [, organization, repository, sha] = match;
-      // Convert them to a Git URL
-      return `https://github.com/${organization}/${repository}.git#${sha}`;
-    // We only support Git URLs with a SHA reference to guarantee repeatability
-    // of builds
-    } else if (/\.git#[0-9a-f]{40}/.test(url)) {
-      return url;
-    } else {
-      buildmessage.error(`Meteor no longer supports installing Cordova plugins \
-from arbitrary tarball URLs. You can either add a plugin from a Git URL with \
-a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
-      return null;
     }
   }
 
@@ -447,31 +426,35 @@ from Cordova project`, async () => {
 
     buildmessage.assertInCapture();
 
-    // Cordova plugin IDs have changed as part of moving to npm.
-    // We convert old plugin IDs to new IDs in the 1.2.0-cordova-changes
-    // upgrader and when adding plugins, but packages may still depend on
-    // the old IDs.
-    // To avoid attempts at duplicate installation, we check for old IDs here
-    // and convert them to new IDs when needed.
-    pluginVersions = convertPluginVersionsToNewIDs(pluginVersions);
-
-    // Also, we warn if any App.configurePlugin calls in mobile-config.js
-    // need to be updated (and in the meantime we take care of the
-    // conversion of the plugin configuration to the new ID).
-    pluginsConfiguration = _.object(_.map(pluginsConfiguration, (config, id) => {
-      const newId = newPluginId(id);
-      if (newId) {
-        Console.warn();
-        Console.labelWarn(`Cordova plugin ${id} has been renamed to ${newId} \
-as part of moving to npm. Please change the App.configurePlugin call in \
-mobile-config.js accordingly.`);
-        return [newId, config];
-      } else {
-        return [id, config];
-      }
-    }));
-
     buildmessage.enterJob({ title: "installing Cordova plugins"}, () => {
+      // Cordova plugin IDs have changed as part of moving to npm.
+      // We convert old plugin IDs to new IDs in the 1.2.0-cordova-changes
+      // upgrader and when adding plugins, but packages may still depend on
+      // the old IDs.
+      // To avoid attempts at duplicate installation, we check for old IDs here
+      // and convert them to new IDs when needed. We also convert old-style GitHub
+      // tarball URLs to new Git URLs, and check if other Git URLs contain a
+      // SHA reference.
+      pluginVersions = convertPluginVersions(pluginVersions);
+
+      if (buildmessage.jobHasMessages()) return;
+
+      // Also, we warn if any App.configurePlugin calls in mobile-config.js
+      // need to be updated (and in the meantime we take care of the
+      // conversion of the plugin configuration to the new ID).
+      pluginsConfiguration = _.object(_.map(pluginsConfiguration, (config, id) => {
+        const newId = newPluginId(id);
+        if (newId) {
+          Console.warn();
+          Console.labelWarn(`Cordova plugin ${id} has been renamed to ${newId} \
+  as part of moving to npm. Please change the App.configurePlugin call in \
+  mobile-config.js accordingly.`);
+          return [newId, config];
+        } else {
+          return [id, config];
+        }
+      }));
+
       const installedPluginVersions = this.listInstalledPluginVersions();
 
       // Due to the dependency structure of Cordova plugins, it is impossible to
@@ -491,10 +474,6 @@ mobile-config.js accordingly.`);
         if (isPluginFromLocalPath) {
           pluginsFromLocalPath[id] = version;
         } else {
-          if (utils.isUrlWithSha(version)) {
-            version = this.convertToGitUrl(version);
-          }
-
           if (!_.has(installedPluginVersions, id) ||
             installedPluginVersions[id] !== version) {
             // We do not have the plugin installed or the version has changed.

@@ -4,6 +4,7 @@ var _ = require('underscore');
 var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
 import main from './cli/main.js';
+import buildmessage from './utils/buildmessage.js';
 import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
@@ -174,11 +175,17 @@ var upgradersByName = {
        'cordova-build'));
 
     // Cordova plugin IDs have changed as part of moving to npm, so we convert
-    // old plugin IDs to new IDs
-    if (files.exists(projectContext.cordovaPluginsFile.filename)) {
-      let pluginVersions = projectContext.cordovaPluginsFile.getPluginVersions();
-      pluginVersions = cordova.convertPluginVersionsToNewIDs(pluginVersions);
-      projectContext.cordovaPluginsFile.write(pluginVersions);
+    // old plugin IDs to new IDs. We also convert old-style GitHub tarball URLs
+    // to new Git URLs, and check if other Git URLs contain a SHA reference.
+    const pluginsFile = projectContext.cordovaPluginsFile;
+    let messages;
+    if (files.exists(pluginsFile.filename)) {
+      messages = buildmessage.capture(
+        { title: `converting Cordova plugins` }, () => {
+        let pluginVersions = pluginsFile.getPluginVersions();
+        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginsFile.write(pluginVersions);
+      });
     }
 
     // Don't display notice if the project has no Cordova platforms added
@@ -207,6 +214,11 @@ If you don't have your own Android tools installed already, you can find \
 more information about installing the Android SDK for your platform here:`,
 Console.url(cordova.installationInstructionsUrlForPlatform('android')),
       Console.options({ bulletPoint: "1.2.0: " }));
+
+    // Print error messages generated during plugin conversion, if any
+    if (messages.hasMessages()) {
+      Console.printMessages(messages);
+    }
   }
 
   ////////////
