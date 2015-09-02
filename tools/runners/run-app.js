@@ -629,13 +629,13 @@ _.extend(AppRunner.prototype, {
 
     const cordovaRunner = self.cordovaRunner;
     if (cordovaRunner) {
-      const plugins =
-        cordova.pluginsFromStarManifest(bundleResult.starManifest);
+      const pluginVersions =
+        cordova.pluginVersionsFromStarManifest(bundleResult.starManifest);
 
       if (!cordovaRunner.started) {
         const { settingsFile, mobileServerUrl } = self;
         const messages = buildmessage.capture(() => {
-          cordovaRunner.prepareProject(bundlePath, plugins,
+          cordovaRunner.prepareProject(bundlePath, pluginVersions,
             { settingsFile, mobileServerUrl });
         });
 

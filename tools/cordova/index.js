@@ -50,6 +50,12 @@ export function splitPluginsAndPackages(packages) {
   return result;
 }
 
+// Returns the cordovaDependencies of the Cordova arch from a star manifest.
+export function pluginVersionsFromStarManifest(star) {
+  var cordovaProgram = _.findWhere(star.programs, { arch: CORDOVA_ARCH });
+  return cordovaProgram ? cordovaProgram.cordovaDependencies : {};
+}
+
 export function newPluginId(id) {
   return oldToNewPluginIds[id];
 }
@@ -108,12 +114,6 @@ from arbitrary tarball URLs. You can either add a plugin from a Git URL with \
 a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
     return null;
   }
-}
-
-// Returns the cordovaDependencies of the Cordova arch from a star manifest.
-export function pluginsFromStarManifest(star) {
-  var cordovaProgram = _.findWhere(star.programs, { arch: CORDOVA_ARCH });
-  return cordovaProgram ? cordovaProgram.cordovaDependencies : {};
 }
 
 function displayNameForHostPlatform(platform = process.platform) {

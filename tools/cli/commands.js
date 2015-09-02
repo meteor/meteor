@@ -950,7 +950,7 @@ on an OS X system.");
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
-        const plugins = cordova.pluginsFromStarManifest(
+        const plugins = cordova.pluginVersionsFromStarManifest(
           bundleResult.starManifest);
 
         cordovaProject.prepareFromAppBundle(bundlePath, plugins);

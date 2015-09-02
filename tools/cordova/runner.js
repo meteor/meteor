@@ -71,11 +71,12 @@ export class CordovaRunner {
     }
   }
 
-  prepareProject(bundlePath, plugins, options) {
+  prepareProject(bundlePath, pluginVersions, options) {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
-      this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
+      this.cordovaProject.prepareFromAppBundle(bundlePath,
+        pluginVersions, options);
 
       if (buildmessage.jobHasMessages()) return;
 
@@ -84,7 +85,7 @@ export class CordovaRunner {
       }
     });
 
-    this.plugins = plugins;
+    this.pluginVersions = pluginVersions;
   }
 
   startRunTargets() {
@@ -114,7 +115,8 @@ export class CordovaRunner {
       _.intersection(platformsForRunTargets, cordovaPlatformsInApp));
   }
 
-  havePluginsChangedSinceLastRun(plugins) {
-    return this.plugins && !_.isEqual(this.plugins, plugins);
+  havePluginsChangedSinceLastRun(pluginVersions) {
+    return this.pluginVersions &&
+      !_.isEqual(this.pluginVersions, pluginVersions);
   }
 }
