@@ -22,9 +22,9 @@ var printedNoticeHeaderThisProcess = false;
 var maybePrintNoticeHeader = function () {
   if (printedNoticeHeaderThisProcess)
     return;
-  console.log();
-  console.log("-- Notice --");
-  console.log();
+  Console.info();
+  Console.info("-- Notice --");
+  Console.info();
   printedNoticeHeaderThisProcess = true;
 };
 
