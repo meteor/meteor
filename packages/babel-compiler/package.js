@@ -3,7 +3,7 @@ Package.describe({
   summary: "Parser/transpiler for ECMAScript 2015+ syntax",
   // Tracks the npm version below.  Use wrap numbers to increment
   // without incrementing the npm version.
-  version: '5.8.22-rc.0'
+  version: '5.8.22-rc.1'
 });
 
 Npm.depends({
