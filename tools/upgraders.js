@@ -216,7 +216,7 @@ Console.url(cordova.installationInstructionsUrlForPlatform('android')),
       Console.options({ bulletPoint: "1.2.0: " }));
 
     // Print error messages generated during plugin conversion, if any
-    if (messages.hasMessages()) {
+    if (messages && messages.hasMessages()) {
       Console.printMessages(messages);
     }
   }
