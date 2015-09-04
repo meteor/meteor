@@ -1915,7 +1915,8 @@ main.registerCommand({
     browserstack: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
-    file: { type: String }
+    file: { type: String },
+    exclude: { type: String }
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -1965,6 +1966,14 @@ main.registerCommand({
     }
   }
 
+  var excludeRegexp = undefined;
+  if (options.exclude) {
+    excludeRegexp = compileRegexp(options.exclude);
+    if (! excludeRegexp) {
+      return 1;
+    }
+  }
+
   if (options.list) {
     selftest.listTests({
       onlyChanged: options.changed,
@@ -1988,6 +1997,7 @@ main.registerCommand({
     includeSlowTests: options.slow,
     testRegexp: testRegexp,
     fileRegexp: fileRegexp,
+    excludeRegexp: excludeRegexp,
     // other options
     historyLines: options.history,
     clients: clients
