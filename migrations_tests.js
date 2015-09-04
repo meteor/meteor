@@ -164,3 +164,18 @@ Tinytest.add('Checks that rerun works correctly', function(test) {
   test.equal(run, ['u1', 'u1']);
   test.equal(Migrations.getVersion(), 1);
 });
+
+Tinytest.add('Migration callbacks include the migration as an argument', function(test) {
+  var contextArg;
+  Migrations._reset();
+
+  // add the migrations
+  var migration = {
+    version: 1,
+    up: function(m) { contextArg = m; }
+  };
+  Migrations.add(migration);
+
+  Migrations.migrateTo(1);
+  test.equal(contextArg === migration, true);
+});

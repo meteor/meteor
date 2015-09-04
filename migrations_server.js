@@ -58,6 +58,9 @@ Migrations.add = function(migration) {
   if (migration.version <= 0)
     throw new Meteor.Error('Migration version must be greater than 0');
 
+  // Freeze the migration object to make it hereafter immutable
+  Object.freeze(migration);
+
   this._list.push(migration);
   this._list = _.sortBy(this._list, function(m) {return m.version;});
 }
@@ -139,7 +142,8 @@ Migrations._migrateTo = function(version, rerun) {
 
     console.log('Running ' + direction + '() on version ' 
       + migration.version + maybeName());
-    migration[direction].call();
+
+    migration[direction](migration);
   }
 
   // sets the current version to be locked/unlocked
