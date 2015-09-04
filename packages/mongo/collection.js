@@ -199,7 +199,12 @@ Mongo.Collection = function (name, options) {
       },
       retrieveOriginals: function () {
         return self._collection.retrieveOriginals();
-      }
+      },
+
+      // Used to preserve current versions of documents across a store reset.
+      getDoc: function(id) {
+        return self.findOne(id);
+      },
     });
 
     if (!ok)

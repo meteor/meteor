@@ -1803,6 +1803,76 @@ if (Meteor.isClient) {
     test.equal(coll.find().count(), 0);
   });
 }
+
+if (Meteor.isClient) {
+  Tinytest.add("livedata stub - method call between reset and quiescence", function (test) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    var collName = Random.id();
+    var coll = new Mongo.Collection(collName, {connection: conn});
+
+    conn.methods({
+      update_value: function () {
+        coll.update('aaa', {value: 222});
+      }
+    });
+
+    // Set up test subscription.
+    var sub = conn.subscribe('test_data');
+    var subMessage = JSON.parse(stream.sent.shift());
+    test.equal(subMessage, {msg: 'sub', name: 'test_data',
+                            params: [], id:subMessage.id});
+    test.length(stream.sent, 0);
+
+    var subDocMessage = {msg: 'added', collection: collName,
+                         id: 'aaa', fields: {value: 111}};
+
+    var subReadyMessage = {msg: 'ready', 'subs': [subMessage.id]};
+
+    stream.receive(subDocMessage);
+    stream.receive(subReadyMessage);
+    test.isTrue(coll.findOne('aaa').value == 111);
+
+    // Initiate reconnect.
+    stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+    testGotMessage(test, stream, subMessage);
+    stream.receive({msg: 'connected', session: SESSION_ID + 1});
+
+    // Now in reconnect, can still see the document.
+    test.isTrue(coll.findOne('aaa').value == 111);
+
+    conn.call('update_value');
+
+    // Observe the stub-written value.
+    test.isTrue(coll.findOne('aaa').value == 222);
+
+    var methodMessage = JSON.parse(stream.sent.shift());
+    test.equal(methodMessage, {msg: 'method', method: 'update_value',
+                               params: [], id:methodMessage.id});
+    test.length(stream.sent, 0);
+
+    stream.receive(subDocMessage);
+    stream.receive(subReadyMessage);
+
+    // By this point quiescence is reached and stores have been reset.
+
+    // The stub-written value is still there.
+    test.isTrue(coll.findOne('aaa').value == 222);
+
+    stream.receive({msg: 'changed', collection: collName,
+                         id: 'aaa', fields: {value: 333}});
+    stream.receive({msg: 'updated', 'methods': [methodMessage.id]});
+    stream.receive({msg: 'result', id:methodMessage.id, result:null});
+
+    // Server wrote a different value, make sure it's visible now.
+    test.isTrue(coll.findOne('aaa').value == 333);
+  });
+}
+
 // XXX also test:
 // - reconnect, with session resume.
 // - restart on update flag
