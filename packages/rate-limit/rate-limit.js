@@ -112,7 +112,7 @@ RateLimiter = function () {
   // id. Each rule object stores the rule pattern, number of events allowed,
   // last reset time and the rule reset interval in milliseconds.
   self.rules = {};
-}
+};
 
 /**
  * Checks if this input has exceeded any rate limits.
@@ -172,7 +172,7 @@ RateLimiter.prototype.check = function (input) {
     }
   });
   return reply;
-}
+};
 
 /**
  * Adds a rule to dictionary of rules that are checked against on every call.
@@ -196,12 +196,12 @@ RateLimiter.prototype.addRule = function (rule, numRequestsAllowed,
   var options = {
     numRequestsAllowed: numRequestsAllowed || DEFAULT_REQUESTS_PER_INTERVAL,
     intervalTime: intervalTime || DEFAULT_INTERVAL_TIME_IN_MILLISECONDS
-  }
+  };
 
   var newRule = new Rule(options, rule);
   this.rules[newRule.id] = newRule;
   return newRule.id;
-}
+};
 
 /**
  * Increment counters in every rule that match to this input
@@ -228,7 +228,7 @@ RateLimiter.prototype.increment = function (input) {
     else
       rule.counters[ruleResult.key] = 1;
   });
-}
+};
 
 // Returns an array of all rules that apply to provided input
 RateLimiter.prototype._findAllMatchingRules = function (input) {
@@ -237,7 +237,7 @@ RateLimiter.prototype._findAllMatchingRules = function (input) {
   return _.filter(self.rules, function(rule) {
     return rule.match(input);
   });
-}
+};
 /**
  * Provides a mechanism to remove rules from the rate limiter. Returns boolean
  * about success.
@@ -252,4 +252,4 @@ RateLimiter.prototype.removeRule = function (id) {
   } else {
     return false;
   }
-}
+};
