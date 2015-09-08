@@ -36,10 +36,6 @@
 
 * `loginWithPassword` now matches username or email in a case insensitive manner. If there are multiple users with a username or email only differing in case, a case sensitive match is required. #550
 
-* `loginWithGithub` now requests `user:email` scope by default, and attempts to fetch the user's emails. If no public email has been set, we use the primary email instead. We also store the complete list of emails. #4545
-
-* `loginWithGithub` now requests `user:email` scope by default, and attempts to fetch the user's emails. If no public email has been set, we use the primary email instead. We also store the complete list of emails. #4545
-
 * Fix bug where blank page is shown when an expired login token is present.  #4825
 
 * Fix `OAuth1Binding.prototype.call` when making requests to Twitter
