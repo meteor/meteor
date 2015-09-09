@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+  id="cordova-plugin-meteor-webapp-tests"
+  version="0.1.0">
+  <name>Meteor Webapp Tests</name>
+  <author>Meteor Development Group</author>
+  <license>MIT</license>
+
+  <js-module src="www/tests.js" name="tests">
+  </js-module>
+  <js-module src="www/fetch.js" name="fetch">
+    <runs/>
+  </js-module>
+  <js-module src="www/underscore.js" name="underscore">
+  </js-module>
+
+  <js-module src="www/webapp_mock_remote_server.js" name="WebAppMockRemoteServer">
+    <clobbers target="WebAppMockRemoteServer" />
+  </js-module>
+
+  <js-module src="www/webapp_cordova_testing.js" name="WebAppCordovaTesting">
+    <merges target="WebAppCordova" />
+  </js-module>
+
+  <asset src="fixtures/bundled_www" target="." />
+  <asset src="fixtures/downloadable_versions" target="downloadable_versions" />
+  <asset src="fixtures/partially_downloaded_versions" target="partially_downloaded_versions" />
+
+  <platform name="ios">
+    <hook type="after_plugin_install" src="../scripts/iosAddBridgingHeader.js" />
+
+    <config-file target="config.xml" parent="/*">
+      <preference name="WebAppLocalServerPort" value="2511" />
+      <feature name="WebAppMockRemoteServer">
+        <param name="ios-package" value="METWebAppMockRemoteServer" />
+        <param name="onload" value="true"/>
+      </feature>
+    </config-file>
+
+    <header-file src="src/ios/cordova-plugin-meteor-webapp-tests-Bridging-Header.h" />
+
+    <source-file src="src/ios/WebAppMockRemoteServer.swift" />
+    <source-file src="src/ios/WebAppCordova+Testing.swift" />
+
+    <header-file src="src/ios/GCDWebServer+Testing.h" />
+    <source-file src="src/ios/GCDWebServer+Testing.m" />
+  </platform>
+</plugin>

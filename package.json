@@ -1,0 +1,26 @@
+{
+  "name": "cordova-plugin-meteor-webapp",
+  "version": "0.1.0",
+  "description": "Cordova plugin that serves a Meteor web app through a local
+    server and implements hot code push",
+  "cordova": {
+    "id": "cordova-plugin-meteor-webapp",
+    "platforms": [
+      "android",
+      "ios"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/meteor/cordova-plugin-meteor-webapp"
+  },
+  "keywords": [
+    "cordova",
+    "meteor",
+    "ecosystem:cordova",
+    "cordova-android",
+    "cordova-ios"
+  ],
+  "author": "Meteor Development Group",
+  "license": "MIT"
+}
