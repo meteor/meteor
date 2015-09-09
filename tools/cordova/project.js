@@ -63,7 +63,7 @@ yet supported.`);
     // Check if we have an existing Cordova project directory with outdated
     // platforms. In that case, we remove the whole directory to avoid issues.
     if (files.exists(this.projectRoot)) {
-      const platformVersions = this.listInstalledPlatformVersions();
+      const installedPlatforms = this.listInstalledPlatforms();
 
       // XXX Decide whether to update these if we update cordova-lib.
       // If we can guarantee there are no issues going forward, we may want to
@@ -74,8 +74,14 @@ yet supported.`);
       }
 
       const outdated = _.some(minPlatformVersions, (minVersion, platform) => {
-        const version = platformVersions[platform];
-        return version && semver.lt(version, minVersion);
+        // If the platform is not installed, it cannot be outdated
+        if (!_.contains(installedPlatforms, platform)) return false;
+
+        const installedVersion = this.installedVersionForPlatform(platform);
+        // If we cannot establish the installed version, we consider it outdated
+        if (!installedVersion) return true;
+
+        return semver.lt(installedVersion, minVersion);
       });
 
       if (outdated) {
@@ -290,19 +296,19 @@ the status of individual requirements.");
     return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
   }
 
-  listInstalledPlatformVersions() {
-    let platformVersions = {};
-    this.runCommands(`listing platform versions in Cordova project`, async () => {
-      for (let platform of this.listInstalledPlatforms()) {
-        const command = files.convertToOSPath(files.pathJoin(
-          this.projectRoot, 'platforms', platform, 'cordova', 'version'));
-        const platformVersion = await execFileSync(command, {
+  installedVersionForPlatform(platform) {
+    const command = files.convertToOSPath(files.pathJoin(
+      this.projectRoot, 'platforms', platform, 'cordova', 'version'));
+    // Make sure the command exists before trying to execute it
+    if (files.exists(command)) {
+      return this.runCommands(
+        `getting installed version for platform ${platform} in Cordova project`,
+        execFileSync(command, {
           env: this.defaultEnvWithPathsAdded(),
-          cwd: this.projectRoot})
-        platformVersions[platform] = platformVersion;
-      }
-    }, null, null);
-    return platformVersions;
+          cwd: this.projectRoot}), null, null);
+    } else {
+      return null;
+    }
   }
 
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
