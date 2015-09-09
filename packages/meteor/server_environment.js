@@ -20,7 +20,11 @@ if (! Meteor.settings.public) {
     Meteor.settings.public = {};
 }
 
-// Push a subset of settings to the client.
+// Push a subset of settings to the client.  Note that the way this
+// code is written, if the app mutates `Meteor.settings.public` on the
+// server, it also mutates
+// `__meteor_runtime_config__.PUBLIC_SETTINGS`, and the modified
+// settings will be sent to the client.
 if (typeof __meteor_runtime_config__ === "object") {
   __meteor_runtime_config__.PUBLIC_SETTINGS = Meteor.settings.public;
 }

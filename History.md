@@ -325,6 +325,10 @@
 
 * Fix `Error: Can't render headers after they are sent to the client`.  #4253 #4750
 
+* `Meteor.settings.public` is always available on client and server,
+  and modifications made on the server (for example, during app initialization)
+  affect the value seen by connecting clients. #4704
+
 ### Windows
 
 * Increase the buffer size for `netstat` when looking for running Mongo servers.
