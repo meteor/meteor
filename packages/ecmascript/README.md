@@ -1,4 +1,17 @@
-# ecmascript
+# [ecmascript](https://github.com/meteor/meteor/tree/devel/packages/ecmascript)
+
+This package lets you use new JavaScript language features that are part
+of the [ECMAScript 2015
+specification](http://www.ecma-international.org/ecma-262/6.0/) but are
+not yet supported by all engines or browsers. Unsupported syntax is
+automatically translated into standard JavaScript that behaves the same
+way.
+
+[This video](https://www.youtube.com/watch?v=05Z6YGiZKmE) from the July
+2015 Meteor Devshop gives an overview of how the package works, and what
+it provides.
+
+## Usage
 
 The `ecmascript` package registers a compiler plugin that transpiles
 ECMAScript 2015+ to ECMAScript 5 (standard JS) in all `.js` files. By
@@ -22,6 +35,8 @@ Package.onUse(function (api) {
 ```
 
 ## Supported ES2015 Features
+
+### Syntax
 
 The `ecmascript` package uses [Babel](http://babeljs.io/) to compile
 ES2015 syntax to ES5 syntax. Many but not all ES2015 features can be
@@ -47,3 +62,9 @@ Here is a list of the Babel transformers that are currently enabled:
 * [`es7.objectRestSpread`](https://github.com/sebmarkbage/ecmascript-rest-spread)
 * [`es7.trailingFunctionCommas`](https://github.com/jeffmo/es-trailing-function-commas)
 * [`flow`](https://babeljs.io/docs/advanced/transformers/other/flow/)
+
+### Polyfills
+
+* [`Promise`](https://github.com/meteor/promise)
+* [`Map`](https://github.com/zloirock/core-js#map)
+* [`Set`](https://github.com/zloirock/core-js#set)
