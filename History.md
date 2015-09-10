@@ -171,6 +171,7 @@
 * `sub.ready()` should return true inside that subscription's `onReady`
   callback.  #4614
 
+* Fix method calls causing broken state when socket is reconnecting.  #5104
 
 ### Isobuild
 
