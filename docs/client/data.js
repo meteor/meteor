@@ -2899,7 +2899,7 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1627,
+    "lineno": 1641,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -5126,7 +5126,7 @@ DocsData = {
     "memberof": "Meteor",
     "name": "settings",
     "scope": "static",
-    "summary": "`Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data) to `meteor run` or `meteor deploy`. When running your server directly (e.g. from a bundle), you instead specify settings by putting the JSON directly into the `METEOR_SETTINGS` environment variable. If you don't provide any settings, `Meteor.settings` will be an empty object.  If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server.",
+    "summary": "`Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data) to `meteor run` or `meteor deploy`. When running your server directly (e.g. from a bundle), you instead specify settings by putting the JSON directly into the `METEOR_SETTINGS` environment variable. If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server.  You can rely on `Meteor.settings` and `Meteor.settings.public` being defined objects (not undefined) on both client and server even if there are no settings specified.  Changes to `Meteor.settings.public` at runtime will be picked up by new client connections.",
     "type": {
       "names": [
         "Object"
@@ -5361,7 +5361,7 @@ DocsData = {
   "Mongo.Collection#allow": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 782,
+    "lineno": 787,
     "locus": "Server",
     "longname": "Mongo.Collection#allow",
     "memberof": "Mongo.Collection",
@@ -5411,7 +5411,7 @@ DocsData = {
   "Mongo.Collection#deny": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 794,
+    "lineno": 799,
     "locus": "Server",
     "longname": "Mongo.Collection#deny",
     "memberof": "Mongo.Collection",
@@ -5461,7 +5461,7 @@ DocsData = {
   "Mongo.Collection#find": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 252,
+    "lineno": 257,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
@@ -5558,7 +5558,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 278,
+    "lineno": 283,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5646,7 +5646,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 422,
+    "lineno": 427,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5679,7 +5679,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 651,
+    "lineno": 656,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5692,7 +5692,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 663,
+    "lineno": 668,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5705,7 +5705,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 446,
+    "lineno": 451,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5738,7 +5738,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 432,
+    "lineno": 437,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5808,7 +5808,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 608,
+    "lineno": 613,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5870,7 +5870,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 685,
+    "lineno": 690,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -6038,7 +6038,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 678,
+    "lineno": 683,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
