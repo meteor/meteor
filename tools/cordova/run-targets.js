@@ -35,10 +35,16 @@ export class iOSRunTarget extends CordovaRunTarget {
     } else {
       await cordovaProject.run(this.platform, this.isDevice, undefined);
 
-      // Bring iOS Simulator to front
-      child_process.spawn('osascript', ['-e',
-        'tell application "System Events" \
-        to set frontmost of process "iOS Simulator" to true']);
+      // Bring iOS Simulator to front (it is called Simulator in Xcode 7)
+      execFileAsync('osascript', ['-e',
+`tell application "System Events"
+  set possibleSimulatorNames to {"iOS Simulator", "Simulator"}
+  repeat with possibleSimulatorName in possibleSimulatorNames
+    if application process possibleSimulatorName exists then
+      set frontmost of process possibleSimulatorName to true
+    end if
+  end repeat
+end tell`]);
     }
   }
 }

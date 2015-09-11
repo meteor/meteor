@@ -56,8 +56,8 @@ export function execFileAsync(command, args,
   options = { waitForClose: true }) {
   // args is optional, so if it's not an array we interpret it as options
   if (!Array.isArray(args)) {
-    args = [];
     options = _.extend(options, args);
+    args = [];
   }
 
   // The child process close event is emitted when the stdio streams
