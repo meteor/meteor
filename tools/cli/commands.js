@@ -597,12 +597,12 @@ main.registerCommand({
     // If trying to create in current directory
     appName = files.pathBasename(files.cwd());
   } else {
-    appName = files.pathBasename(options.appDir);
+    appName = files.pathBasename(appPath);
   }
 
 
   var transform = function (x) {
-    return x.replace(/~name~/g, files.pathBasename(appPath));
+    return x.replace(/~name~/g, appName);
   };
 
   // These file extensions are usually metadata, not app code
