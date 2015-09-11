@@ -1,6 +1,6 @@
-var files = require('../files.js');
-var selftest = require('../selftest.js');
-var testUtils = require('../test-utils.js');
+var files = require('../fs/files.js');
+var selftest = require('../tool-testing/selftest.js');
+var testUtils = require('../tool-testing/test-utils.js');
 var Sandbox = selftest.Sandbox;
 
 var checkMobileServer = selftest.markStack(function (s, expected) {
@@ -21,14 +21,7 @@ selftest.define("cordova builds with server options", ["cordova", "slow"], funct
   s.createApp("myapp", "standard-app");
   s.cd("myapp");
 
-  run = s.run("install-sdk", "android");
-  run.waitSecs(90); // Huge download
-  run.expectExit(0);
-
   run = s.run("add-platform", "android");
-  run.match("Do you agree");
-  run.write("Y\n");
-  run.waitSecs(90); // Huge download
   run.match("added");
   run.expectExit(0);
 

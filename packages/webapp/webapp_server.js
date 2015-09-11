@@ -659,11 +659,27 @@ var runWebAppServer = function () {
     if (request.url.query && request.url.query['meteor_css_resource']) {
       // In this case, we're requesting a CSS resource in the meteor-specific
       // way, but we don't have it.  Serve a static css file that indicates that
-      // we didn't have it, so we can detect that and refresh.
+      // we didn't have it, so we can detect that and refresh.  Make sure
+      // that any proxies or CDNs don't cache this error!  (Normally proxies
+      // or CDNs are smart enough not to cache error pages, but in order to
+      // make this hack work, we need to return the CSS file as a 200, which
+      // would otherwise be cached.)
       headers['Content-Type'] = 'text/css; charset=utf-8';
+      headers['Cache-Control'] = 'no-cache';
       res.writeHead(200, headers);
       res.write(".meteor-css-not-found-error { width: 0px;}");
       res.end();
+      return undefined;
+    }
+
+    if (request.url.query && request.url.query['meteor_js_resource']) {
+      // Similarly, we're requesting a JS resource that we don't have.
+      // Serve an uncached 404. (We can't use the same hack we use for CSS,
+      // because actually acting on that hack requires us to have the JS
+      // already!)
+      headers['Cache-Control'] = 'no-cache';
+      res.writeHead(404, headers);
+      res.end("404 Not Found");
       return undefined;
     }
 

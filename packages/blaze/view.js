@@ -79,6 +79,9 @@ Blaze.View = function (name, render) {
   // this information to be available on views to make smarter decisions. For
   // example: removing the generated parent view with the view on Blaze.remove.
   this._hasGeneratedParent = false;
+  // Bindings accessible to children views (via view.lookup('name')) within the
+  // closest template view.
+  this._scopeBindings = {};
 
   this.renderCount = 0;
 };
@@ -119,6 +122,19 @@ Blaze.View.prototype.onViewReady = function (cb) {
 Blaze.View.prototype.onViewDestroyed = function (cb) {
   this._callbacks.destroyed = this._callbacks.destroyed || [];
   this._callbacks.destroyed.push(cb);
+};
+Blaze.View.prototype.removeViewDestroyedListener = function (cb) {
+  var destroyed = this._callbacks.destroyed;
+  if (! destroyed)
+    return;
+  var index = _.lastIndexOf(destroyed, cb);
+  if (index !== -1) {
+    // XXX You'd think the right thing to do would be splice, but _fireCallbacks
+    // gets sad if you remove callbacks while iterating over the list.  Should
+    // change this to use callback-hook or EventEmitter or something else that
+    // properly supports removal.
+    destroyed[index] = null;
+  }
 };
 
 /// View#autorun(func)
@@ -174,35 +190,31 @@ Blaze.View.prototype.autorun = function (f, _inViewScope, displayName) {
     throw new Error("Can't call View#autorun from a Tracker Computation; try calling it from the created or rendered callback");
   }
 
-  // Each local variable allocate additional space on each frame of the
-  // execution stack. When too many variables are allocated on stack, you can
-  // run out of memory on stack running a deep recursion (which is typical for
-  // Blaze functions) and get stackoverlow error. (The size of the stack varies
-  // between browsers).
-  // The trick we use here is to allocate only one variable on stack `locals`
-  // that keeps references to all the rest. Since locals is allocated on heap,
-  // we don't take up any space on the stack.
-  var locals = {};
-  locals.templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
+  var templateInstanceFunc = Blaze.Template._currentTemplateInstanceFunc;
 
-  locals.f = function viewAutorun(c) {
+  var func = function viewAutorun(c) {
     return Blaze._withCurrentView(_inViewScope || self, function () {
-      return Blaze.Template._withTemplateInstanceFunc(locals.templateInstanceFunc, function () {
-        return f.call(self, c);
-      });
+      return Blaze.Template._withTemplateInstanceFunc(
+        templateInstanceFunc, function () {
+          return f.call(self, c);
+        });
     });
   };
 
   // Give the autorun function a better name for debugging and profiling.
   // The `displayName` property is not part of the spec but browsers like Chrome
   // and Firefox prefer it in debuggers over the name function was declared by.
-  locals.f.displayName =
+  func.displayName =
     (self.name || 'anonymous') + ':' + (displayName || 'anonymous');
-  locals.c = Tracker.autorun(locals.f);
+  var comp = Tracker.autorun(func);
 
-  self.onViewDestroyed(function () { locals.c.stop(); });
+  var stopComputation = function () { comp.stop(); };
+  self.onViewDestroyed(stopComputation);
+  comp.onStop(function () {
+    self.removeViewDestroyedListener(stopComputation);
+  });
 
-  return locals.c;
+  return comp;
 };
 
 Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
@@ -227,7 +239,7 @@ Blaze.View.prototype._errorIfShouldntCallSubscribe = function () {
  */
 Blaze.View.prototype.subscribe = function (args, options) {
   var self = this;
-  options = {} || options;
+  options = options || {};
 
   self._errorIfShouldntCallSubscribe();
 
@@ -264,7 +276,7 @@ Blaze._fireCallbacks = function (view, which) {
     Tracker.nonreactive(function fireCallbacks() {
       var cbs = view._callbacks[which];
       for (var i = 0, N = (cbs && cbs.length); i < N; i++)
-        cbs[i].call(view);
+        cbs[i] && cbs[i].call(view);
     });
   });
 };
@@ -313,13 +325,15 @@ var doFirstRender = function (view, initialContent) {
 // DOMRange, which has been associated with the View.
 //
 // The private arguments `_workStack` and `_intoArray` are passed in
-// by Blaze._materializeDOM.  If provided, then we avoid the mutual
-// recursion of calling back into Blaze._materializeDOM so that deep
-// View hierarchies don't blow the stack.  Instead, we push tasks onto
-// workStack for the initial rendering and subsequent setup of the
-// View, and they are done after we return.  When there is a
-// _workStack, we do not return the new DOMRange, but instead push it
-// into _intoArray from a _workStack task.
+// by Blaze._materializeDOM and are only present for recursive calls
+// (when there is some other _materializeView on the stack).  If
+// provided, then we avoid the mutual recursion of calling back into
+// Blaze._materializeDOM so that deep View hierarchies don't blow the
+// stack.  Instead, we push tasks onto workStack for the initial
+// rendering and subsequent setup of the View, and they are done after
+// we return.  When there is a _workStack, we do not return the new
+// DOMRange, but instead push it into _intoArray from a _workStack
+// task.
 Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
   Blaze._createView(view, parentView);
 
@@ -382,7 +396,8 @@ Blaze._materializeView = function (view, parentView, _workStack, _intoArray) {
         _intoArray.push(domrange);
       });
       // now push the task that calculates initialContents
-      _workStack.push([lastHtmljs, initialContents, view]);
+      _workStack.push(_.bind(Blaze._materializeDOM, null,
+                             lastHtmljs, initialContents, view, _workStack));
     }
   });
 

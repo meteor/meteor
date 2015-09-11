@@ -1,5 +1,5 @@
-var selftest = require('../selftest.js');
-var utils = require('../utils.js');
+var selftest = require('../tool-testing/selftest.js');
+var utils = require('../utils/utils.js');
 
 selftest.define('subset generator', function () {
   var out = [];
@@ -124,71 +124,4 @@ selftest.define("parse url", function () {
     port: "3000",
     protocol: "https://"
   });
-});
-
-selftest.define('get mobile server argument for meteor run', ['cordova'], function () {
-  // on emulator
-
-  // meteor run -p 3000
-  // => mobile server should be localhost:3000
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "3000"
-  }), { host: "localhost", port: "3000", protocol: "http://" });
-
-  // meteor run -p example.com:3000
-  // => mobile server should be localhost:3000
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "example.com:3000"
-  }), { host: "localhost", port: "3000", protocol: "http://" });
-
-  // on device
-
-  // meteor run -p 3000 on device
-  // => mobile server should be <detected ip>:3000
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "3000",
-    args: ["ios-device"]
-  }), { host: utils.ipAddress(), port: "3000", protocol: "http://" });
-
-  // meteor run -p example.com:3000 on device
-  // => mobile server should be <detected ip>:3000
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "example.com:3000",
-    args: ["android-device"]
-  }), { host: utils.ipAddress(), port: "3000", protocol: "http://" });
-
-  // meteor run -p example.com:3000 --mobile-server 4000 => error, mobile
-  // server must specify a hostname
-  var error;
-  try {
-    utils.mobileServerForRun({
-      port: "example.com:3000",
-      "mobile-server": "4000"
-    });
-  } catch (e) {
-    error = e;
-  }
-  selftest.expectEqual(
-    error && error.message, "--mobile-server must specify a hostname.");
-
-  // meteor run -p example.com:3000 --mobile-server example.com =>
-  // mobile server should be example.com
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "example.com:3000",
-    "mobile-server": "example.com"
-  }), { protocol: "http://", host: "example.com", port: undefined });
-
-  // meteor run -p example.com:3000 --mobile-server https://example.com =>
-  // mobile server should be https://example.com
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "example.com:3000",
-    "mobile-server": "https://example.com"
-  }), { host: "example.com", protocol: "https://", port: undefined });
-
-  // meteor run -p example.com:3000 --mobile-server http://example.com:4000 =>
-  // mobile server should be http://example.com:4000
-  selftest.expectEqual(utils.mobileServerForRun({
-    port: "example.com:3000",
-    "mobile-server": "http://example.com:4000"
-  }), { host: "example.com", port: "4000", protocol: "http://" });
 });

@@ -25,7 +25,7 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
   var loginUrl =
         MeteorDeveloperAccounts._server +
         "/oauth2/authorize?" +
-        "state=" + OAuth._stateParam(loginStyle, credentialToken) +
+        "state=" + OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl) +
         "&response_type=code&" +
         "client_id=" + config.clientId;
 
@@ -40,7 +40,7 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
     loginUrl: loginUrl,
     credentialRequestCompleteCallback: credentialRequestCompleteCallback,
     credentialToken: credentialToken,
-    popupOptions: {width: 470, height: 420}
+    popupOptions: {width: 470, height: 490}
   });
 };
 

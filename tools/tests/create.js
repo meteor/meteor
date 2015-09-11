@@ -1,4 +1,4 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
 selftest.define("create", function () {
@@ -7,7 +7,7 @@ selftest.define("create", function () {
   // Can we create an app? Yes!
   var run = s.run("create", "foobar");
   run.waitSecs(15);
-  run.match("foobar: created");
+  run.match("Created a new Meteor app in foobar.");
   run.match("To run your new app");
   run.expectExit(0);
 

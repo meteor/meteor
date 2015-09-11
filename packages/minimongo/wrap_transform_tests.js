@@ -18,14 +18,14 @@ Tinytest.add("minimongo - wrapTransform", function (test) {
   test.equal(transformed.z(), 43);
 
   // Ensure that ObjectIDs work (even if the _ids in question are not ===-equal)
-  var oid1 = new LocalCollection._ObjectID();
-  var oid2 = new LocalCollection._ObjectID(oid1.toHexString());
+  var oid1 = new MongoID.ObjectID();
+  var oid2 = new MongoID.ObjectID(oid1.toHexString());
   test.equal(wrap(function () {return {_id: oid2};})({_id: oid1}),
              {_id: oid2});
 
   // transform functions must return objects
   var invalidObjects = [
-    "asdf", new LocalCollection._ObjectID(), false, null, true,
+    "asdf", new MongoID.ObjectID(), false, null, true,
     27, [123], /adsf/, new Date, function () {}, undefined
   ];
   _.each(invalidObjects, function (invalidObject) {

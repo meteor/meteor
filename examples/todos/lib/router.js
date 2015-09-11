@@ -30,34 +30,32 @@ if (Meteor.isClient) {
   Router.onBeforeAction('dataNotFound', {except: ['join', 'signin']});
 }
 
-Router.map(function() {
-  this.route('join');
-  this.route('signin');
+Router.route('join');
+Router.route('signin');
 
-  this.route('listsShow', {
-    path: '/lists/:_id',
-    // subscribe to todos before the page is rendered but don't wait on the
-    // subscription, we'll just render the items as they arrive
-    onBeforeAction: function () {
-      this.todosHandle = Meteor.subscribe('todos', this.params._id);
+Router.route('listsShow', {
+  path: '/lists/:_id',
+  // subscribe to todos before the page is rendered but don't wait on the
+  // subscription, we'll just render the items as they arrive
+  onBeforeAction: function () {
+    this.todosHandle = Meteor.subscribe('todos', this.params._id);
 
-      if (this.ready()) {
-        // Handle for launch screen defined in app-body.js
-        dataReadyHold.release();
-      }
-    },
-    data: function () {
-      return Lists.findOne(this.params._id);
-    },
-    action: function () {
-      this.render();
+    if (this.ready()) {
+      // Handle for launch screen defined in app-body.js
+      dataReadyHold.release();
     }
-  });
+  },
+  data: function () {
+    return Lists.findOne(this.params._id);
+  },
+  action: function () {
+    this.render();
+  }
+});
 
-  this.route('home', {
-    path: '/',
-    action: function() {
-      Router.go('listsShow', Lists.findOne());
-    }
-  });
+Router.route('home', {
+  path: '/',
+  action: function() {
+    Router.go('listsShow', Lists.findOne());
+  }
 });

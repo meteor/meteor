@@ -1,8 +1,11 @@
 /* eslint no-console: 0 */
 
 var _ = require('underscore');
-var files = require('./files.js');
-var Console = require('./console.js').Console;
+var files = require('./fs/files.js');
+var Console = require('./console/console.js').Console;
+import main from './cli/main.js';
+import buildmessage from './utils/buildmessage.js';
+import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
 // a new version. Each upgrader has a name (registered in upgradersByName).
@@ -20,9 +23,9 @@ var printedNoticeHeaderThisProcess = false;
 var maybePrintNoticeHeader = function () {
   if (printedNoticeHeaderThisProcess)
     return;
-  console.log();
-  console.log("-- Notice --");
-  console.log();
+  Console.info();
+  Console.info("-- Notice --");
+  Console.info();
   printedNoticeHeaderThisProcess = true;
 };
 
@@ -124,6 +127,97 @@ var upgradersByName = {
         "https://github.com/meteor/meteor/wiki/Facebook-Graph-API-Upgrade",
         Console.options({ bulletPoint: "1.0.5: " })
       );
+    }
+  },
+
+  "1.2.0-standard-minifiers-package": function (projectContext) {
+    // Minifiers are extracted into a new package called "standard-minifiers"
+    projectContext.projectConstraintsFile.addPackages(
+      ['standard-minifiers']);
+    projectContext.projectConstraintsFile.writeIfModified();
+  },
+
+  "1.2.0-meteor-platform-split": function (projectContext) {
+    const packagesFile = projectContext.projectConstraintsFile;
+    // meteor-platform is split into a series of smaller umbrella packages
+    // Only run this upgrader if the app has meteor-platform
+    if (packagesFile.getConstraint('meteor-platform')) {
+      packagesFile.removePackages(['meteor-platform']);
+
+      packagesFile.addPackages([
+        // These packages replace meteor-platform in newly created apps
+        'meteor-base',
+        'mobile-experience',
+        'mongo',
+        'blaze-html-templates',
+        'session',
+        'jquery',
+        'tracker',
+
+        // These packages are not in newly created apps, but were in
+        // meteor-platform so we need to add them just in case
+        'logging',
+        'reload',
+        'random',
+        'ejson',
+        'spacebars',
+        'check',
+      ]);
+
+      packagesFile.writeIfModified();
+    }
+  },
+
+  "1.2.0-cordova-changes": function (projectContext) {
+    // Remove Cordova project directory to start afresh
+    // and avoid a broken project
+    files.rm_recursive(projectContext.getProjectLocalDirectory(
+       'cordova-build'));
+
+    // Cordova plugin IDs have changed as part of moving to npm, so we convert
+    // old plugin IDs to new IDs. We also convert old-style GitHub tarball URLs
+    // to new Git URLs, and check if other Git URLs contain a SHA reference.
+    const pluginsFile = projectContext.cordovaPluginsFile;
+    let messages;
+    if (files.exists(pluginsFile.filename)) {
+      messages = buildmessage.capture(
+        { title: `converting Cordova plugins` }, () => {
+        let pluginVersions = pluginsFile.getPluginVersions();
+        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginsFile.write(pluginVersions);
+      });
+    }
+
+    // Don't display notice if the project has no Cordova platforms added
+    if (_.isEmpty(projectContext.platformList.getCordovaPlatforms())) return;
+
+    maybePrintNoticeHeader();
+
+    Console.info(
+`Meteor 1.2 includes various changes to the Cordova integration.
+
+Cordova tools, platforms and plugins have been updated to the latest versions. \
+This may require you to make changes to your app. For details, see the Cordova \
+release notes for for the different versions:`,
+Console.url('https://cordova.apache.org/#news'), `
+
+As part of moving to npm, many Cordova plugins have been renamed. Meteor should \
+perform conversions automatically, but you may want to be aware of this to \
+avoid surprises. See`,
+Console.url('https://cordova.apache.org/announcements/2015/04/21/plugins-release-and-move-to-npm.html'),
+`for more information.
+
+The bundled Android tools have been removed and a system-wide install of the \
+Android SDK is now required. This should make it easier to keep the development \
+toolchain up to date and helps avoid some difficult to diagnose failures.
+If you don't have your own Android tools installed already, you can find \
+more information about installing the Android SDK for your platform here:`,
+Console.url(cordova.installationInstructionsUrlForPlatform('android')),
+      Console.options({ bulletPoint: "1.2.0: " }));
+
+    // Print error messages generated during plugin conversion, if any
+    if (messages && messages.hasMessages()) {
+      Console.printMessages(messages);
     }
   }
 

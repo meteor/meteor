@@ -9,8 +9,8 @@ var warn = function () {
   }
 };
 
-var idStringify = LocalCollection._idStringify;
-var idParse = LocalCollection._idParse;
+var idStringify = MongoID.idStringify;
+var idParse = MongoID.idParse;
 
 ObserveSequence = {
   _suppressWarnings: 0,
@@ -22,7 +22,7 @@ ObserveSequence = {
   //
   // @param sequenceFunc {Function} a reactive function returning a
   //     sequence type. The currently supported sequence types are:
-  //     'null', arrays and cursors.
+  //     Array, Cursor, and null.
   //
   // @param callbacks {Object} similar to a specific subset of
   //     callbacks passed to `cursor.observe`
@@ -150,7 +150,7 @@ var isStoreCursor = function (cursor) {
 // `seqArray` and calls appropriate functions from `callbacks`.
 // Reuses Minimongo's diff algorithm implementation.
 var diffArray = function (lastSeqArray, seqArray, callbacks) {
-  var diffFn = Package.minimongo.LocalCollection._diffQueryOrderedChanges;
+  var diffFn = Package['diff-sequence'].DiffSequence.diffQueryOrderedChanges;
   var oldIdObjects = [];
   var newIdObjects = [];
   var posOld = {}; // maps from idStringify'd ids
@@ -292,7 +292,7 @@ seqChangedToArray = function (lastSeqArray, array, callbacks) {
                item === undefined) {
       id = item;
     } else if (typeof item === 'object') {
-      id = (item && item._id) || index;
+      id = (item && _.has(item, '_id')) ? item._id : index;
     } else {
       throw new Error("{{#each}} doesn't support arrays with " +
                       "elements of type " + typeof item);

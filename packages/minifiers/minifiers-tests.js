@@ -1,7 +1,7 @@
 
 Tinytest.add("minifiers - simple css minification", function (test) {
   var t = function (css, expected, desc) {
-    test.equal(CssTools.minifyCss(css), expected, desc);
+    test.equal(CssTools.minifyCss(css), [expected], desc);
   }
 
   t('a \t\n{ color: red } \n', 'a{color:red}', 'whitespace check');

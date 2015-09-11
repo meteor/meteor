@@ -194,7 +194,8 @@ from the computation's own run function.  Stopping a computation that
 is already stopped has no effect.
 
 Stopping a computation causes its `onInvalidate` callbacks to run
-immediately if it is not currently invalidated.
+immediately if it is not currently invalidated, as well as its
+`stop` callbacks.
 
 Nested computations are stopped automatically when their enclosing
 computation is rerun.
@@ -224,6 +225,8 @@ break dependencies when a computation is rerun or stopped.
 
 To get a callback after a computation has been recomputed, you can
 call [`Tracker.afterFlush`](#tracker_afterflush) from `onInvalidate`.
+
+{{> autoApiBox "Tracker.Computation#onStop" }}
 
 {{> autoApiBox "Tracker.Computation#stopped" }}
 

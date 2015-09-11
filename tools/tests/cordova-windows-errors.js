@@ -1,5 +1,5 @@
-var files = require('../files.js');
-var selftest = require('../selftest.js');
+var files = require('../fs/files.js');
+var selftest = require('../tool-testing/selftest.js');
 var _ = require('underscore');
 var Sandbox = selftest.Sandbox;
 

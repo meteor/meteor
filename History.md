@@ -1,11 +1,351 @@
 ## v.NEXT
 
-## v1.1.0.3, 2015-Jul-30
+## in progress: v1.2
+
+### Core Packages
+
+* `meteor-platform` has been deprecated in favor of the smaller `meteor-base`,
+  with apps listing their other dependencies explicitly.  The v1.2 upgrader
+  will rewrite `meteor-platform` in existing apps.  `meteor-base` puts fewer
+  symbols in the global namepsace, so it's no longer true that all apps
+  have symbols like `Random` and `EJSON` in the global namespace.
+
+* New packages: `ecmascript`, `es5-shim`, `ecmascript-collections`, `promise`,
+  `static-html`, `jshint`, `babel-compiler`
+
+* No longer include the `json` package by default, which contains code for
+  `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
+  natively was Internet Explorer 7.)
+
+* `autoupdate` has been renamed `hot-code-push`
+
+### Meteor Accounts
+
+* Login attempts are now rate-limited by default.  This can be turned off
+  using `Accounts.removeDefaultRateLimit()`.
+
+* `loginWithPassword` now matches username or email in a case insensitive
+  manner. If there are multiple users with a username or email only differing
+  in case, a case sensitive match is required. #550
+
+* `loginWithGithub` now requests `user:email` scope by default, and attempts
+  to fetch the user's emails. If no public email has been set, we use the
+  primary email instead. We also store the complete list of emails. #4545
+
+* When an account's email address is verified, deactivate other verification tokens.  #4626
+
+* Fix bug where blank page is shown when an expired login token is present.  #4825
+
+* Fix `OAuth1Binding.prototype.call` when making requests to Twitter
+  with a large parameter set.
+
+* Directions for setting up Google OAuth in accounts-ui have been updated to
+  match Google's new requirements.
+
+* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
+  log in with currently registered services.  #4014
+
+* The `accounts-base` now defines reusable `AccountsClient` and
+  `AccountsServer` constructors, so that users can create multiple
+  independent instances of the `Accounts` namespace.  #4233
+
+* Create an index for `Meteor.users` on
+  `services.email.verificationTokens.token` (instead of
+  `emails.validationTokens.token`, which never was used for anything).  #4482
+
+* Remove an IE7-specific workaround from accounts-ui.  #4485
+
+### Livequery
+
+* Improved server performance by reducing overhead of processing oplog after
+  database writes. Improvements are most noticeable in case when a method is
+  doing a lot of writes on collections with plenty of active observers.  #4694
+
+### Mobile
+
+* The included Cordova tools have been updated to the latest version 5.2.0.
+  This includes Cordova Android 4.1 and Cordova iOS 3.9. These updates may
+  require you to make changes to your app. For details, see the [Cordova release
+  notes] (https://cordova.apache.org/#news) for for the different versions.
+
+* Thanks to Cordova Android's support for pluggable web views, it is now
+  possible to install the [Crosswalk plugin]
+  (https://crosswalk-project.org/documentation/cordova/cordova_4.html), which
+  offers a hugely improved web view on older Android versions.
+  You can add the plugin to your app with `meteor add crosswalk`.
+
+* The bundled Android tools have been removed and a system-wide install of the
+  Android SDK is now required. This should make it easier to keep the
+  development toolchain up to date and helps avoid some difficult to diagnose
+  failures. If you don't have your own Android tools installed already, you can
+  find more information about installing the Android SDK for [Mac] (https://github.com/meteor/meteor/wiki/Mobile-Dev-Install:-Android-on-Mac)
+  or [Linux]
+  (https://github.com/meteor/meteor/wiki/Mobile-Dev-Install:-Android-on-Linux).
+
+* As part of moving to npm, many Cordova plugins have been renamed. Meteor
+  should perform conversions automatically, but you may want to be aware of this
+  to avoid surprises. See [here]
+  (https://cordova.apache.org/announcements/2015/04/21/plugins-release-and-move-to-npm.html)
+  for more information.
+
+* Installing plugins from the local filesystem is now supported using `file://`
+  URLs, which should make developing your own plugins more convenient. It is
+  also needed as a temporary workaround for using the Facebook plugin.
+  Relative references are interpreted relative to the Meteor project directory.
+  (As an example,
+  `meteor add cordova:phonegap-facebook-plugin@file://../phonegap-facebook-plugin`
+  would attempt to install the plugin from the same directory you Meteor project
+  directory is located in.)
+
+* Meteor no longer supports installing Cordova plugins from tarball URLs, but
+  does support Git URLs with a SHA reference (like
+  `https://github.com/apache/cordova-plugin-file#c452f1a67f41cb1165c92555f0e721fbb07329cc`).
+  Existing GitHub tarball URLs are converted automatically.
+
+* Allow specifying a `buildNumber` in `App.info`, which is used to set the
+  `android-versionCode` and `ios-CFBundleVersion` in the `config.xml` of the
+  Cordova project. The build number is used to differentiate between
+  different versions of the app, and should be incremented before distributing
+  a built app to stores or testing services. #4048
+
+* Other changes include performance enhancements when building and running,
+  and improved requirements checking and error reporting.
+
+* Known issue: we do not currently show logging output when running on the
+  iOS Simulator. As a workaround, you can `meteor run ios-device` to open the
+  project in Xcode and watch the output there.
+
+### Templates/Blaze
+
+* New syntax: Handlebars sub-expressions are now supported -- as in,
+  `{{helper (anotherHelper arg1 arg2)}}` -- as well as new block helper forms
+  `#each .. in ..` and `#let x=y`.  See
+  https://github.com/meteor/meteor/tree/devel/packages/spacebars
+
+* Add a special case for the new `react-template-helper` package -- don't let
+  templates use {{> React}} with siblings since `React.render` assumes it's
+  being rendered into an empty container element. (This lets us throw the error
+  when compiling templates rather than when the app runs.)
+
+* Improve parsing of `<script>` and `<style>` tags.  #3797
+
+* Fix a bug in `observe-sequence`. The bug was causing unnecessary rerenderings
+  in an instance of `#each` block helper followed by false "duplicate ids"
+  warnings. #4049
+
+* `TemplateInstance#subscribe` now has a new `connection` option, which
+  specifies which connection should be used when making the subscription. The
+  default is `Meteor.connection`, which is the connection used when calling
+  `Meteor.subscribe`.
+
+* Fix external `<script>` tags in body or templates.  #4415
+
+* Fix memory leak.  #4289
+
+* Avoid recursion when materializing DOM elements, to avoid stack overflow
+  errors in certain browsers. #3028
+
+* Blaze and Meteor's built-in templating are now removable using
+  `meteor remove blaze-html-templates`.
+
+### DDP
+
+* Websockets now support the
+  [`permessage-deflate`](https://tools.ietf.org/id/draft-ietf-hybi-permessage-compression-19.txt)
+  extension, which compresses data on the wire. It is enabled by default on the
+  server. To disable it, set `$SERVER_WEBSOCKET_COMPRESSION` to `0`. To configure
+  compression options, set `$SERVER_WEBSOCKET_COMPRESSION` to a JSON object that
+  will be used as an argument to
+  [`deflate.configure`](https://github.com/faye/permessage-deflate-node/blob/master/README.md).
+  Compression is supported on the client side by Meteor's Node DDP client and by
+  browsers including Chrome, Safari, and Firefox 37.
+
+* The `ddp` package has been split into `ddp-client` and `ddp-server` packages;
+  using `ddp` is equivalent to using both. This allows you to use the Node DDP
+  client without adding the DDP server to your app.  #4191 #3452
+
+* On the client, `Meteor.call` now takes a `throwStubExceptions` option; if set,
+  exceptions thrown by method stubs will be thrown instead of logged, and the
+  method will not be invoked on the server.  #4202
+
+* `sub.ready()` should return true inside that subscription's `onReady`
+  callback.  #4614
+
+* Fix method calls causing broken state when socket is reconnecting.  #5104
+
+### Isobuild
+
+* Build plugins will no longer process files whose names match the extension
+  exactly (with no extra dot). If your build plugin needs to match filenames
+  exactly, you should use the new build plugin API in this release which
+  supplies a special `filenames` option. #3985
+
+* Adding the same file twice in the same package is now an error. Previously,
+  this could either lead to the file being included multiple times, or to a
+  build time crash.
+
+* You may now specify the `bare` option for JavaScript files on the server.
+  Previous versions only allowed this on the client. #3681
+
+* Ignore `node_modules` directories in apps instead of processing them as Meteor
+  source code.  #4457 #4452
+
+* Backwards-incompatible change for package authors: Static assets in package.js files must now be
+  explicitly declared by using `addAssets` instead of `addFiles`. Previously,
+  any file that didn't have a source handler was automatically registered as a
+  server-side asset. The `isAsset` option to `addFiles` is also deprecated in
+  favor of `addAssets`.
+
+* Built files are now always annotated with line number comments, to improve the
+  debugging experience in browsers that don't support source maps.
+
+* There is a completely new API for defining build plugins that cache their
+  output. There are now special APIs for defining linters and minifiers in
+  addition to compilers. The core Meteor packages for `less`, `coffee`, `stylus`
+  and `html` files have been updated to use this new API. Read more on the
+  [Wiki page](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+
+### CSS
+
+* LESS and Stylus now support cross-package imports.
+
+* CSS concatenation and minification is delegated to the `standard-minifiers`
+  package, which is present by default (and added to existing apps by the v1.2
+  upgrader).
+
+* CSS output is now split into multiple stylesheets to avoid hitting limits on
+  rules per stylesheet in certain versions of Internet Explorer. #1876
+
+### Mongo
+
+* The oplog observe driver now properly updates queries when you drop a
+  database.  #3847
+
+* MongoID logic has been moved out of `minimongo` into a new package called
+  `mongo-id`.
+
+* Fix Mongo upserts with dotted keys in selector.  #4522
+
+
+### `meteor` command-line tool
+
+* `meteor shell` no longer crashes when piped from another command.
+
+* Avoid a race condition in `meteor --test` and work with newer versions of the
+  Velocity package.  #3957
+
+* Improve error handling when publishing packages.  #3977
+
+* Improve messaging around publishing binary packages.  #3961
+
+* Preserve the value of `_` in `meteor shell`.  #4010
+
+* `meteor mongo` now works on OS X when certain non-ASCII characters are in the
+  pathname, as long as the `pgrep` utility is installed (it ships standard with
+  OS X 10.8 and newer).  #3999
+
+* `meteor run` no longer ignores (and often reverts) external changes to
+  `.meteor/versions` which occur while the process is running.  #3582
+
+* Fix crash when downloading two builds of the same package version
+  simultaneously.  #4163
+
+* Improve messages printed by `meteor update`, displaying list of packages
+  that are not at the latest version available.
+
+* When determining file load order, split file paths on path separator
+  before comparing path components alphabetically.  #4300
+
+* Fix inability to run `mongod` due to lack of locale configuration on some
+  platforms, and improve error message if the failure still occurs.  #4019
+
+* New `meteor lint` command.
+
+### Minimongo
+
+* The `$push` query modifier now supports a `$position` argument.  #4312
+
+* `c.update(selector, replacementDoc)` no longer shares mutable state between
+  replacementDoc and Minimongo internals. #4377
+
+### Email
+
+* `Email.send` now has a new option, `attachments`, in the same style as
+  `mailcomposer`.
+  [Details here.](https://github.com/andris9/mailcomposer#add-attachments)
+
+### Tracker
+
+* New `Tracker.Computation#onStop` method.  #3915
+
+* `ReactiveDict` has two new methods, `clear` and `all`. `clear` resets
+  the dictionary as if no items had been added, meaning all calls to `get` will
+  return `undefined`. `all` converts the dictionary into a regular JavaScript
+  object with a snapshot of the keys and values. Inside an autorun, `all`
+  registers a dependency on any changes to the dictionary. #3135
+
+### Utilities
+
+* New `beforeSend` option to `HTTP.call` on the client allows you to directly
+  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
+
+* Parse `application/javascript` and `application/x-javascript` HTTP replies as
+  JSON too.  #4595
+
+* `Match.test` from the `check` package now properly compares boolean literals,
+  just like it does with Numbers and Strings. This applies to the `check`
+  function as well.
+
+* Provide direct access to the `mailcomposer` npm module used by the `email`
+  package on `EmailInternals.NpmModules`. Allow specifying a `MailComposer`
+  object to `Email.send` instead of individual options.  #4209
+
+* Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
+  allow apps to set the timeout for running phantomjs.
+
+* The `spiderable` package now reports the URL it's trying to fetch on failure.
+
+
+### Other bug fixes and improvements
+
+* Upgraded dependencies:
+
+  - Node: 0.10.40 (from 0.10.36)
+  - uglify-js: 2.4.20 (from 2.4.17)
+  - http-proxy: 1.11.1 (from 1.6.0)
+
+* `Meteor.loginWithGoogle` now supports `prompt`. Choose a prompt to always be
+  displayed on Google login.
+
+* Upgraded `coffeescript` package to depend on NPM packages
+  coffeescript@1.9.2 and source-map@0.4.2. #4302
+
+* Upgraded `fastclick` to 1.0.6 to fix an issue in iOS Safari. #4393
+
+* Fix `Error: Can't render headers after they are sent to the client`.  #4253 #4750
+
+* `Meteor.settings.public` is always available on client and server,
+  and modifications made on the server (for example, during app initialization)
+  affect the value seen by connecting clients. #4704
+
+### Windows
+
+* Increase the buffer size for `netstat` when looking for running Mongo servers.
+  #4125
+
+* The Windows installer now always fetches the latest available version of
+  Meteor at runtime, so that it doesn't need to be recompiled for every release.
+
+* Fix crash in `meteor mongo` on Windows.  #4711
+
+
+## v1.1.0.3, 2015-Aug-03
 
 ### Accounts
 
 * When using Facebook API version 2.4, properly fetch `email` and other fields.
   Facebook recently forced all new apps to use version 2.4 of their API.  #4743
+
 
 ## v1.1.0.2, 2015-Apr-06
 
@@ -13,6 +353,7 @@
 
 * Revert a change in 1.1.0.1 that caused `meteor mongo` to fail on some Linux
   systems. #4115, #4124, #4134
+
 
 ## v1.1.0.1, 2015-Apr-02
 

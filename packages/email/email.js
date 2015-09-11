@@ -1,9 +1,19 @@
 var Future = Npm.require('fibers/future');
 var urlModule = Npm.require('url');
-var MailComposer = Npm.require('mailcomposer').MailComposer;
 
 Email = {};
 EmailTest = {};
+
+EmailInternals = {
+  NpmModules: {
+    mailcomposer: {
+      version: Npm.require('mailcomposer/package.json').version,
+      module: Npm.require('mailcomposer')
+    }
+  }
+};
+
+var MailComposer = EmailInternals.NpmModules.mailcomposer.module.MailComposer;
 
 var makePool = function (mailUrlString) {
   var mailUrl = urlModule.parse(mailUrlString);
@@ -122,31 +132,44 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.subject]  "Subject:" line
  * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
+ * @param {Object[]} [options.attachments] Array of attachment objects, as
+ * described in the [mailcomposer documentation](https://github.com/andris9/mailcomposer#add-attachments).
+ * @param {MailComposer} [options.mailComposer] A [MailComposer](https://github.com/andris9/mailcomposer)
+ * object representing the message to be sent. Overrides all other options. You
+ * can access the `mailcomposer` npm module at
+ * `EmailInternals.NpmModules.mailcomposer.module`.
  */
 Email.send = function (options) {
   for (var i = 0; i < sendHooks.length; i++)
     if (! sendHooks[i](options))
       return;
 
-  var mc = new MailComposer();
+  var mc;
+  if (options.mailComposer) {
+    mc = options.mailComposer;
+  } else {
+    mc = new MailComposer();
 
-  // setup message data
-  // XXX support attachments (once we have a client/server-compatible binary
-  //     Buffer class)
-  mc.setMessageOption({
-    from: options.from,
-    to: options.to,
-    cc: options.cc,
-    bcc: options.bcc,
-    replyTo: options.replyTo,
-    subject: options.subject,
-    text: options.text,
-    html: options.html
-  });
+    // setup message data
+    mc.setMessageOption({
+      from: options.from,
+      to: options.to,
+      cc: options.cc,
+      bcc: options.bcc,
+      replyTo: options.replyTo,
+      subject: options.subject,
+      text: options.text,
+      html: options.html
+    });
 
-  _.each(options.headers, function (value, name) {
-    mc.addHeader(name, value);
-  });
+    _.each(options.headers, function (value, name) {
+      mc.addHeader(name, value);
+    });
+
+    _.each(options.attachments, function(attachment){
+      mc.addAttachment(attachment);
+    });
+  }
 
   var pool = getPool();
   if (pool) {

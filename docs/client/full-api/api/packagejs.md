@@ -88,6 +88,7 @@ package is exported to.
 {{> autoApiBox "PackageAPI#imply" }}
 {{> autoApiBox "PackageAPI#export" }}
 {{> autoApiBox "PackageAPI#addFiles" }}
+{{> autoApiBox "PackageAPI#addAssets" }}
 
 <h3 id="packagetests"><span>Unit Tests</span></h3>
 

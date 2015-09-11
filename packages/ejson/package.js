@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Extended and Extensible JSON library",
-  version: '1.0.6'
+  version: '1.0.7-rc.0'
 });
 
 Package.onUse(function (api) {
-  api.use(['json', 'underscore', 'base64']);
+  api.use(['underscore', 'base64']);
   api.export('EJSON');
   api.export('EJSONTest', {testOnly: true});
   api.addFiles('ejson.js', ['client', 'server']);

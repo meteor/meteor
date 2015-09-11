@@ -21,11 +21,12 @@ var packageJson = {
   version: "0.0.0",
   dependencies: {
     fibers: fibersVersion,
+    "meteor-promise": "0.4.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
-    "source-map-support": "0.2.8",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     semver: "4.1.0"
   },
   // These are only used in dev mode (by shell.js) so end-users can avoid

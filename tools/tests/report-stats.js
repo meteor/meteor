@@ -1,20 +1,20 @@
 var _ = require('underscore');
-var os = require("os");
-var util = require("util");
+var os = require('os');
+var util = require('util');
 
-var auth = require("../auth.js");
-var files = require("../files.js");
-var config = require("../config.js");
-var release = require("../release.js");
-var selftest = require('../selftest.js');
-var testUtils = require('../test-utils.js');
-var stats = require('../stats.js');
-var tropohouseModule = require('../tropohouse.js');
+var auth = require('../meteor-services/auth.js');
+var files = require('../fs/files.js');
+var config = require('../meteor-services/config.js');
+var selftest = require('../tool-testing/selftest.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var stats = require('../meteor-services/stats.js');
+var tropohouseModule = require('../packaging/tropohouse.js');
+var release = require('../packaging/release.js');
 var Sandbox = selftest.Sandbox;
 var projectContextModule = require('../project-context.js');
-var buildmessage = require('../buildmessage.js');
+var buildmessage = require('../utils/buildmessage.js');
 
-var testStatsServer = "https://test-package-stats.meteor.com";
+var testStatsServer = 'https://test-package-stats.meteor.com';
 process.env.METEOR_PACKAGE_STATS_SERVER_URL = testStatsServer;
 
 var clientAddress;
@@ -25,7 +25,7 @@ var clientAddress;
 // XXX I have not managed to get this test passing since introducing
 //     isopack-cache, though it seems to just be major server slowness
 //     and perhaps preexisting.
-selftest.define("report-stats", ["slow", "net"], function () {
+selftest.define('report-stats', ['slow', 'net'], function () {
   _.each(
     // If we are currently running from a checkout, then we run this
     // test twice (once in which the sandbox uses the current checkout,
@@ -106,10 +106,10 @@ selftest.define("report-stats", ["slow", "net"], function () {
                            _.sortBy(stats.packageList(projectContext), "name"));
 
       // Check that the direct and local dependency was recorded as such.
-      _.each(usage.packages, function (package) {
-        if (package.name === "local-package") {
-          selftest.expectTrue(package.direct);
-          selftest.expectTrue(package.local);
+      _.each(usage.packages, function (packageObj) {
+        if (packageObj.name === "local-package") {
+          selftest.expectTrue(packageObj.direct);
+          selftest.expectTrue(packageObj.local);
         }
       });
 

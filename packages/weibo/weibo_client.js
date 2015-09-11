@@ -29,7 +29,7 @@ Weibo.requestCredential = function (options, credentialRequestCompleteCallback) 
         '?response_type=code' +
         '&client_id=' + config.clientId +
         '&redirect_uri=' + OAuth._redirectUri('weibo', config, null, {replaceLocalhost: true}) +
-        '&state=' + OAuth._stateParam(loginStyle, credentialToken);
+        '&state=' + OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl);
 
   OAuth.launchLogin({
     loginService: "weibo",

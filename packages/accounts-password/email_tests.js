@@ -11,7 +11,7 @@ var verifyEmailToken;
 var enrollAccountToken;
 
 Accounts._isolateLoginTokenForTest();
-
+Accounts.removeDefaultRateLimit();
 testAsyncMulti("accounts emails - reset password flow", [
   function (test, expect) {
     email1 = Random.id() + "-intercept@example.com";
@@ -33,7 +33,7 @@ testAsyncMulti("accounts emails - reset password flow", [
         test.equal(result.length, 2); // the first is the email verification
         var options = result[1];
 
-        var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)")
+        var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
         var match = options.text.match(re);
         test.isTrue(match);
         resetPasswordToken = match[1];

@@ -25,7 +25,7 @@ LocalCollection._CachingChangeObserver = function (options) {
   var callbacks = options.callbacks || {};
 
   if (self.ordered) {
-    self.docs = new OrderedDict(LocalCollection._idStringify);
+    self.docs = new OrderedDict(MongoID.idStringify);
     self.applyChange = {
       addedBefore: function (id, fields, before) {
         var doc = EJSON.clone(fields);
@@ -65,7 +65,7 @@ LocalCollection._CachingChangeObserver = function (options) {
       throw new Error("Unknown id for changed: " + id);
     callbacks.changed && callbacks.changed.call(
       self, id, EJSON.clone(fields));
-    LocalCollection._applyChanges(doc, fields);
+    DiffSequence.applyChanges(doc, fields);
   };
   self.applyChange.removed = function (id) {
     callbacks.removed && callbacks.removed.call(self, id);
@@ -106,7 +106,7 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
         if (!doc)
           throw new Error("Unknown id for changed: " + id);
         var oldDoc = transform(EJSON.clone(doc));
-        LocalCollection._applyChanges(doc, fields);
+        DiffSequence.applyChanges(doc, fields);
         doc = transform(doc);
         if (observeCallbacks.changedAt) {
           var index = indices ? self.docs.indexOf(id) : -1;
@@ -158,7 +158,7 @@ LocalCollection._observeFromObserveChanges = function (cursor, observeCallbacks)
         if (observeCallbacks.changed) {
           var oldDoc = self.docs.get(id);
           var doc = EJSON.clone(oldDoc);
-          LocalCollection._applyChanges(doc, fields);
+          DiffSequence.applyChanges(doc, fields);
           observeCallbacks.changed(transform(doc),
                                    transform(EJSON.clone(oldDoc)));
         }

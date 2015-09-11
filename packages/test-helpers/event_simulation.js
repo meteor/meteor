@@ -42,3 +42,25 @@ clickElement = function(elem) {
   else
     simulateEvent(elem, 'click');
 };
+
+var inDocument = function (elem) {
+  while ((elem = elem.parentNode)) {
+    if (elem == document) {
+      return true;
+    }
+  }
+  return false;
+};
+
+clickIt = function (elem) {
+  if (!inDocument(elem))
+    throw new Error("Can't click on elements without first adding them to the document");
+
+  // jQuery's bubbling change event polyfill for IE 8 seems
+  // to require that the element in question have focus when
+  // it receives a simulated click.
+  if (elem.focus)
+    elem.focus();
+  clickElement(elem);
+};
+

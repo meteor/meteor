@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BUNDLE_VERSION=0.4.18
+BUNDLE_VERSION=0.5.12
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
@@ -106,10 +106,12 @@ if [ -d "$SCRIPT_DIR/.git" ] || [ -f "$SCRIPT_DIR/.git" ]; then
         echo "Your dependency kit is out of date. I will download the new one." >&2
         install_dev_bundle
     fi
+
+    export BABEL_CACHE_DIR="$SCRIPT_DIR/.babel-cache"
 fi
 
 DEV_BUNDLE="$SCRIPT_DIR/dev_bundle"
-METEOR="$SCRIPT_DIR/tools/main.js"
+METEOR="$SCRIPT_DIR/tools/index.js"
 
 
 # Bump our file descriptor ulimit as high as it will go. This is a
@@ -130,4 +132,4 @@ fi
 # the script take precedence over $NODE_PATH; it used to be that users would
 # screw up their meteor installs by have a ~/node_modules
 
-exec "$DEV_BUNDLE/bin/node" "$METEOR" "$@"
+exec "$DEV_BUNDLE/bin/node" ${TOOL_NODE_FLAGS} "$METEOR" "$@"

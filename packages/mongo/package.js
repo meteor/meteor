@@ -9,16 +9,10 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.1.0'
+  version: '1.1.1-rc.3'
 });
 
 Npm.depends({
-  // 1.4.32 (and bson 0.2.18) with optional native dependencies (bson native
-  // piece and kerberos) ripped out, which means we don't have to do the
-  // publish-for-arch dance every time we make a Meteor release.
-  // XXX move the npm dependency into a non-core versioned package and allow
-  //     it to use C++ bson
-  mongodb: "https://github.com/meteor/node-mongodb-native/tarball/634759e6326dc19a228df66ddb309285532f3b8a",
   "mongodb-uri": "0.9.7"
 });
 
@@ -27,8 +21,10 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
-  api.use(['random', 'ejson', 'json', 'underscore', 'minimongo', 'logging',
-           'ddp', 'tracker'],
+  api.use('npm-mongo', 'server');
+
+  api.use(['random', 'ejson', 'underscore', 'minimongo',
+           'ddp', 'tracker', 'diff-sequence', 'mongo-id'],
           ['client', 'server']);
   api.use('check', ['client', 'server']);
 

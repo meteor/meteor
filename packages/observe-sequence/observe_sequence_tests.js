@@ -561,6 +561,31 @@ Tinytest.add('observe-sequence - number arrays', function (test) {
   ]);
 });
 
+Tinytest.add('observe-sequence - number arrays, _id:0 correctly handled, no duplicate ids warning #4049', function (test) {
+  var seq = _.map(_.range(3), function (i) { return { _id: i}; });
+  var dep = new Tracker.Dependency;
+
+  runOneObserveSequenceTestCase(test, function () {
+    dep.depend();
+    return seq;
+  }, function () {
+    // There was a bug before fixing #4049 that 0 wouldn't be handled well as an
+    // _id. An expression like `(item && item._id) || index` would incorrectly
+    // return '2' for the last item because the _id is falsy (although it is not
+    // undefined, but 0!).
+    seq = _.map([1, 2, 0], function (i) { return { _id: i}; });
+    dep.changed();
+  }, [
+    {addedAt: [0, {_id: 0}, 0, null]},
+    {addedAt: [1, {_id: 1}, 1, null]},
+    {addedAt: [2, {_id: 2}, 2, null]},
+    {movedTo: [0, {_id: 0}, 0, 2, null]},
+    {changedAt: [0, {_id: 0}, {_id: 0}, 2]},
+    {changedAt: [1, {_id: 1}, {_id: 1}, 0]},
+    {changedAt: [2, {_id: 2}, {_id: 2}, 1]}
+  ]);
+});
+
 Tinytest.add('observe-sequence - cursor to other cursor, same collection', function (test) {
   var dep = new Tracker.Dependency;
   var coll = new Mongo.Collection(null);

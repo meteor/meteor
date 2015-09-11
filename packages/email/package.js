@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.0.6"
+  version: "1.0.7-rc.0"
 });
 
 Npm.depends({
@@ -12,7 +12,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('underscore', 'server');
-  api.export('Email', 'server');
+  api.export(['Email', 'EmailInternals'], 'server');
   api.export('EmailTest', 'server', {testOnly: true});
   api.addFiles('email.js', 'server');
 });

@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.6'
+  version: '1.1.7-rc.1'
 });
 
 Package.registerBuildPlugin({
@@ -11,11 +11,18 @@ Package.registerBuildPlugin({
 });
 
 Npm.depends({
-  "double-ended-queue": "2.1.0-0"
+  "meteor-deque": "2.1.0"
 });
 
 Package.onUse(function (api) {
+  // If the es5-shim package is installed, make sure it is evaluated
+  // before all other packages. Note that es5-shim registers an unordered
+  // dependency on the meteor package.
+  api.use('es5-shim', { weak: true });
+
   api.use('underscore', ['client', 'server']);
+
+  api.use('isobuild:compiler-plugin@1.0.0');
 
   api.export('Meteor');
 
@@ -31,6 +38,7 @@ Package.onUse(function (api) {
   api.addFiles('startup_client.js', ['client']);
   api.addFiles('startup_server.js', ['server']);
   api.addFiles('debug.js', ['client', 'server']);
+  api.addFiles('string_utils.js', ['client', 'server']);
 
   // dynamic variables, bindEnvironment
   // XXX move into a separate package?

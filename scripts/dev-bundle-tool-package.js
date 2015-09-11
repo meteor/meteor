@@ -20,12 +20,19 @@ var packageJson = {
   // Version is not important but is needed to prevent warnings.
   version: "0.0.0",
   dependencies: {
+    // Explicit dependency because we are replacing it with a bundled version
+    // and we want to make sure there are no dependencies on a higher version
+    npm: "1.4.28",
     fibers: fibersVersion,
+    "meteor-babel": "0.5.7",
+    "meteor-promise": "0.4.6",
+    // For Map and Set polyfills.
+    "core-js": "1.0.1",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
     underscore: "1.5.2",
-    "source-map-support": "0.2.8",
+    "source-map-support": "https://github.com/meteor/node-source-map-support/tarball/1912478769d76e5df4c365e147f25896aee6375e",
     semver: "4.1.0",
     request: "2.47.0",
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
@@ -38,7 +45,7 @@ var packageJson = {
     sqlite3: "3.0.2",
     netroute: "0.2.5",
     phantomjs: "1.9.12",
-    "http-proxy": "1.6.0",
+    "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
     "rimraf": "2.2.8",
@@ -46,23 +53,29 @@ var packageJson = {
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
     "commonmark": "0.15.0",
-    // XXX We ought to be able to get this from the copy in js-analyze rather
-    // than in the dev bundle.)
-    esprima: "1.2.2",
+    escope: "3.2.0",
     // 2.4.0 (more or less, the package.json change isn't committed) plus our PR
     // https://github.com/williamwicks/node-eachline/pull/4
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
-    cordova: "4.2.0",
-    pathwatcher: "4.1.0"
+    pathwatcher: "4.1.0",
+    'lru-cache': '2.6.4',
+    // We use our own fork because cordova-lib does not respect a silent
+    // option and by defaults outputs all command output to stdout/stderr.
+    // We can't download the tarball from GitHub because the package.json is
+    // in a subdirectory. See tools/cordova/README.md for instructions on how
+    // to build and upload our own tarball.
+    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
+    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-d5ff7cf04757335762b6695f1664bca6c6cfc272.tar.gz",
+    // Also include the Cordova CLI because it is used in tests
+    "cordova": "5.2.0",
+    "ios-sim": "4.1.1",
   }
 };
 
 if (process.platform === 'win32') {
-  // Cordova is not supported on Windows
-  delete packageJson.dependencies.cordova;
-  // netroute is only needed for Cordova support
+  // Remove dependencies that do not work on Windows
+  delete packageJson.dependencies['ios-sim'];
   delete packageJson.dependencies.netroute;
-  // kexec doesn't work on Windows
   delete packageJson.dependencies.kexec;
 }
 
