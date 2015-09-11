@@ -17,7 +17,7 @@ Cordova.depends({
   'cordova-plugin-legacy-whitelist': '1.1.0',
   // the cordova plugin built by Meteor Core team that "emulates a server" on
   // the mobile device. Serving the files and checking for the HCP updates.
-  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2'
+  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update.git#815f36966f941b153d3979d64a4804064a89c1ba'
 });
 
 Package.onUse(function (api) {
