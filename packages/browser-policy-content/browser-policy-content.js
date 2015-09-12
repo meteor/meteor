@@ -255,6 +255,7 @@ _.each(["script", "object", "img", "media",
          var allowMethodName = "allow" + methodResource + "Origin";
          var disallowMethodName = "disallow" + methodResource;
          var allowDataMethodName = "allow" + methodResource + "DataUrl";
+         var allowBlobMethodName = "allow" + methodResource + "BlobUrl";
          var allowSelfMethodName = "allow" + methodResource + "SameOrigin";
 
          var disallow = function () {
@@ -277,6 +278,10 @@ _.each(["script", "object", "img", "media",
          BrowserPolicy.content[allowDataMethodName] = function () {
            prepareForCspDirective(directive);
            cspSrcs[directive].push("data:");
+         };
+         BrowserPolicy.content[allowBlobMethodName] = function () {
+           prepareForCspDirective(directive);
+           cspSrcs[directive].push("blob:");
          };
          BrowserPolicy.content[allowSelfMethodName] = function () {
            prepareForCspDirective(directive);
