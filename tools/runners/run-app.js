@@ -659,7 +659,7 @@ _.extend(AppRunner.prototype, {
           return { outcome: 'outdated-cordova-platforms' };
         }
 
-        if (cordovaRunner.havePluginsChangedSinceLastRun(plugins)) {
+        if (cordovaRunner.havePluginsChangedSinceLastRun(pluginVersions)) {
           return { outcome: 'outdated-cordova-plugins' };
         }
       }
