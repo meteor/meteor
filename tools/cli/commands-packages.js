@@ -1271,7 +1271,8 @@ var maybeUpdateRelease = function (options) {
       return 1;
     }
 
-    if (release.current && options.appDir && ! options.patch) {
+    if (release.current && ! release.current.isRecommended() &&
+        options.appDir && ! options.patch) {
       var releaseVersion = release.current.getReleaseVersion();
       var newerRecommendedReleases = getLaterReleaseVersions(
         releaseTrack, releaseVersion);
