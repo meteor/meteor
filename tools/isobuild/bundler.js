@@ -2014,7 +2014,8 @@ exports.bundle = function ({
   includeNodeModules,
   buildOptions,
   previousBuilders,
-  hasCachedBundle
+  hasCachedBundle,
+  includeTests
 }) {
   buildOptions = buildOptions || {};
 
@@ -2101,7 +2102,7 @@ exports.bundle = function ({
     var packageSource = new PackageSource;
     packageSource.initFromAppDir(projectContext, {
       ignoreFiles: exports.ignoreFiles,
-      includeTests: options.includeTests
+      includeTests: includeTests
     });
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
