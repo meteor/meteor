@@ -1,6 +1,6 @@
 var Console = require('../console/console.js').Console;
 var isopackets = require("../tool-env/isopackets.js");
-var files = require('./files.js');
+var files = require('../fs/files.js');
 
 var phantomjs = require('phantomjs');
 var child_process = require('child_process');
