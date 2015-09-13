@@ -505,7 +505,8 @@ from Cordova project`, async () => {
         }
       }));
 
-      const installedPluginVersions = this.listInstalledPluginVersions();
+      const installedPluginVersions =
+        convertPluginVersions(this.listInstalledPluginVersions());
 
       // Due to the dependency structure of Cordova plugins, it is impossible to
       // upgrade the version on an individual Cordova plugin. Instead, whenever

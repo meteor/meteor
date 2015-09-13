@@ -3,15 +3,17 @@ import { parse, markBottom } from '../utils/parse-stack.js';
 import _ from 'underscore';
 import Fiber from 'fibers';
 import Future from 'fibers/future';
+import files from '../fs/files.js';
 
 selftest.define("parse-stack - parse stack traces without fibers", () => {
   const err = new Error();
   const parsedStack = parse(err).outsideFiber;
 
-  selftest.expectEqual(_.last(parsedStack[0].file.split("/")),
-    "parse-stack-test.js");
-  selftest.expectEqual(_.last(_.last(parsedStack).file.split("/")),
-    "main.js");
+  const firstFilePath = files.convertToStandardPath(parsedStack[0].file);
+  selftest.expectEqual(_.last(firstFilePath.split("/")), "parse-stack-test.js");
+
+  const lastFilePath = files.convertToStandardPath(_.last(parsedStack).file);
+  selftest.expectEqual(_.last(lastFilePath.split("/")), "main.js");
 
   markBottom(() => {
     const markedErr = new Error();
@@ -27,7 +29,10 @@ selftest.define("parse-stack - parse stack traces without fibers", () => {
     // The stack trace should only contain this one function since we marked the
     // bottom
     selftest.expectEqual(outsideFiber.length, 1);
-    selftest.expectEqual(_.last(outsideFiber[0].file.split("/")),
+
+    const firstOutsideFiberPath =
+      files.convertToStandardPath(outsideFiber[0].file);
+    selftest.expectEqual(_.last(firstOutsideFiberPath.split("/")),
       "parse-stack-test.js");
   })();
 });
