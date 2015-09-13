@@ -1,9 +1,9 @@
 {
     "track": "velocity:METEOR",
-    "version": "1.1.0.3-docker-fix_3",
+    "version": "1.2-rc.14_1",
     "recommended": false,
     "official": false,
     "description": "Extends Meteor with testing functionality",
-    "tool": "velocity:meteor-tool@1.1.4-docker-fix_3",
+    "tool": "velocity:meteor-tool@1.1.7-rc.13_1",
     "packages": {}
 }
