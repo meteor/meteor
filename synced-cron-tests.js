@@ -213,4 +213,14 @@ Tinytest.addAsync('SyncedCron should pass correct arguments to logger', function
   SyncedCron.start();
 
   SyncedCron.options.logger = null;
+
+});
+
+Tinytest.add('Single time schedules don\'t break', function(test) {
+  // create a once off date 1 sec in the future
+  var date = new Date(new Date().valueOf() + 1 * 1000);
+  var schedule = Later.parse.recur().on(date).fullDate();
+
+  // this would throw without our patch for #41
+  SyncedCron._laterSetTimeout(_.identity, schedule);
 });

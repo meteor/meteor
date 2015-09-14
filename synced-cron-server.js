@@ -295,8 +295,13 @@ SyncedCron._laterSetTimeout = function(fn, sched) {
   */
   function scheduleTimeout() {
     var now = Date.now(),
-        next = s.next(2, now),
-        diff = next[0].getTime() - now,
+        next = s.next(2, now);
+
+    // don't schedlue another occurence if no more exist synced-cron#41
+    if (! next[0])
+      return;
+
+    var diff = next[0].getTime() - now,
         intendedAt = next[0];
 
     // minimum time to fire is one second, use next occurrence instead
