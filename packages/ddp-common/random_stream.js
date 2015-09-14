@@ -49,9 +49,11 @@ DDPCommon.RandomStream.get = function (scope, name) {
     name = "default";
   }
   if (!scope) {
-    // There was no scope passed in;
-    // the sequence won't actually be reproducible.
-    return Random;
+    // There was no scope passed in; the sequence won't actually be
+    // reproducible. but make it fast (and not cryptographically
+    // secure) anyways, so that the behavior is similar to what you'd
+    // get by passing in a scope.
+    return Random.fast;
   }
   var randomStream = scope.randomStream;
   if (!randomStream) {
