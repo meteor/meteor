@@ -1445,6 +1445,7 @@ var maybeUpdateRelease = function (options) {
     }
   }
 
+  var didPrintMessages = false;
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.official.getReleaseVersion(
       releaseTrack, versionToTry);
@@ -1457,11 +1458,16 @@ var maybeUpdateRelease = function (options) {
       projectContext.resolveConstraints();
     });
     if (messages.hasMessages()) {
+      // To avoid overloading the user, we only print messages for the first
+      // release version we try (which should be the latest)
+      if (!didPrintMessages) {
+        Console.info(
+          "Update to release", releaseTrack + "@" + versionToTry,
+          "is impossible:");
+        Console.info(messages.formatMessages());
+        didPrintMessages = true;
+      }
       // Nope, this release didn't work.
-      Console.debug(
-        "Update to release", releaseTrack + "@" + versionToTry,
-        "is impossible:");
-      Console.debug(messages.formatMessages());
       return false;
     }
 
