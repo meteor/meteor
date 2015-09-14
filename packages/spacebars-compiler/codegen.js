@@ -124,7 +124,7 @@ _.extend(CodeGen.prototype, {
             }
             var variable = variableArg[1][0];
             dataCode = 'function () { return { _sequence: Spacebars.call(' +
-              self.codeGenPath(args[2][1]) +
+              self.codeGenArgValue(args[2]) +
               '), _variable: ' + BlazeTools.toJSLiteral(variable) + ' }; }';
           } else if (path[0] === 'let') {
             var dataProps = {};
