@@ -243,6 +243,26 @@ Here is a list of the Babel transformers that are currently enabled:
 
 ### Polyfills
 
+The ECMAScript 2015 standard library has grown to include new APIs and
+data structures, some of which can be implemented ("polyfilled") using
+JavaScript that runs in all engines and browsers today. Here are three new
+constructors that are guaranteed to be available when the `ecmascript`
+package is installed:
+
 * [`Promise`](https://github.com/meteor/promise)<br>
+  A `Promise` allows its owner to wait for a value that might not be
+  available yet. See [this tutorial](https://www.promisejs.org/) for more
+  details about the API and motivation. The Meteor `Promise`
+  implementation is especially useful because it runs all callback
+  functions in recycled `Fiber`s, so you can use any Meteor API, including
+  those that yield (e.g. `HTTP.get`, `Meteor.call`, or `MongoCollection`),
+  and you never have to call `Meteor.bindEnvironment`.
+
 * [`Map`](https://github.com/zloirock/core-js#map)<br>
+  An associative key-value data structure where the keys can be any
+  JavaScript value (not just strings). Lookup and insertion take constant
+  time.
+
 * [`Set`](https://github.com/zloirock/core-js#set)<br>
+  A collection of unique JavaScript values of any type. Lookup and
+  insertion take constant time.
