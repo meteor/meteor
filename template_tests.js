@@ -3225,6 +3225,25 @@ Tinytest.add("spacebars-tests - template_tests - new #each extends data context"
   Blaze.remove(view);
 });
 
+// Same as above, but now the argument to each in has a subexpression
+Tinytest.add("spacebars-tests - template_tests - new #each with subexpression (#5137)", function (test) {
+  var tmpl = Template.spacebars_template_test_new_each_data_context_subexpr;
+  tmpl.helpers({
+    dataContext: function () {
+      return {
+        items: [{text:"a"}, {text:"b"}],
+        toplevel: "XYZ"
+      };
+    }
+  });
+
+  var div = document.createElement("DIV");
+  var theWith = Blaze.render(tmpl, div);
+  test.equal(canonicalizeHtml(div.innerHTML), '<div>a -- XYZ</div><div>b -- XYZ</div>');
+  var view = Blaze.getView(div.querySelector('div'));
+  Blaze.remove(view);
+});
+
 Tinytest.add("spacebars-tests - template_tests - new #each binding lookup is scoped to the template", function (test) {
   var tmpl = Template.spacebars_template_test_new_each_lookup_top_level;
   tmpl.helpers({
