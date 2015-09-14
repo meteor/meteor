@@ -184,6 +184,8 @@ Tinytest.addAsync('SyncedCron can log to injected logger', function(test, done) 
 
   var logger = function() {
     test.isTrue(true);
+
+    SyncedCron.stop();
     done();
   };
 
@@ -204,6 +206,7 @@ Tinytest.addAsync('SyncedCron should pass correct arguments to logger', function
     test.include(opts, 'tag');
     test.equal(opts.tag, 'SyncedCron');
 
+    SyncedCron.stop();
     done();
   };
 
