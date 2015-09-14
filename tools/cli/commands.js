@@ -898,7 +898,7 @@ var buildCommand = function (options) {
 
   let cordovaPlatforms;
   let parsedMobileServerUrl;
-  if (!options._serverOnly) {
+  if (!options._serverOnly && process.platform !== 'win32') {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
     if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
