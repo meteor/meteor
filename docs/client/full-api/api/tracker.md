@@ -21,11 +21,6 @@ advanced facilities such as `Tracker.Dependency` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
-To learn more about how Tracker works and to explore advanced ways to use it,
-visit the <a href="http://manual.meteor.com/#tracker"> Tracker</a> chapter in the
-<a href="http://manual.meteor.com/">Meteor Manual</a>, which describes it in
-complete detail.
-
 {{> autoApiBox "Tracker.autorun" }}
 
 `Tracker.autorun` allows you to run a function that depends on reactive data
