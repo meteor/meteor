@@ -146,7 +146,8 @@
   errors in certain browsers. #3028
 
 * Blaze and Meteor's built-in templating are now removable using
-  `meteor remove blaze-html-templates`.
+  `meteor remove blaze-html-templates`. You can add back support for static
+  `head` and `body` tags in `.html` files by using the `static-html` package.
 
 ### DDP
 
@@ -228,6 +229,15 @@
 
 
 ### `meteor` command-line tool
+
+* There are two new example apps that can be used as starting points for
+  developing Meteor apps with React and Angular. They include the necessary
+  packages for the relevant view layer and don't include Blaze. Use them with:
+
+  ```sh
+  meteor create --example react
+  meteor create --example angular
+  ```
 
 * `meteor shell` no longer crashes when piped from another command.
 
