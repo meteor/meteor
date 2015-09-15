@@ -248,5 +248,7 @@ babelHelpers = {
       return bound;
     };
 
-  })()
+  })(),
+
+  slice: Array.prototype.slice
 };
