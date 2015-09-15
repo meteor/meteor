@@ -1,0 +1,21 @@
+<head>
+  <title>Angular-skeleton</title>
+</head>
+
+<body ng-app="skelApp">
+<h1>Welcome to Meteor and Angular!</h1>
+
+<p><a href="https://www.meteor.com/tutorials/angular">Try the tutorial!</a></p>
+
+<div ng-controller="ItemsListCtrl as itemsList">
+  <ul>
+    <li ng-repeat="item in itemsList.items">
+      {{item.text}}
+    </li>
+  </ul>
+
+  <button ng-click="itemsList.addItem()">
+    Add item
+  </button>
+</div>
+</body>
