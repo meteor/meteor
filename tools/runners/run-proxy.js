@@ -174,12 +174,36 @@ _.extend(Proxy.prototype, {
       if (self.mode === "errorpage") {
         // XXX serve an app that shows the logs nicely and that also
         // knows how to reload when the server comes back up
-        c.res.writeHead(200, {'Content-Type': 'text/plain'});
-        c.res.write("Your app is crashing. Here's the latest log.\n\n");
+        c.res.writeHead(200, {'Content-Type': 'text/html'});
+        c.res.write(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>App crashing</title>
+    <style type='text/css'>
+      body { margin: 0; }
+      h3 {
+        margin: 0;
+        font-family: sans-serif;
+        padding: 20px 10px 10px 10px;
+        background: #eee;
+      }
+      pre { margin: 20px; }
+    </style>
+  </head>
+
+  <body>
+    <h3>Your app is crashing. Here's the latest log:</h3>
+
+    <pre>`);
 
         _.each(runLog.getLog(), function (item) {
           c.res.write(item.message + "\n");
         });
+
+        c.res.write(`</pre>
+  </body>
+</html>`)
 
         c.res.end();
       } else {
