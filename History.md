@@ -230,13 +230,15 @@
 
 ### `meteor` command-line tool
 
-* There are two new example apps that can be used as starting points for
-  developing Meteor apps with React and Angular. They include the necessary
-  packages for the relevant view layer and don't include Blaze. Use them with:
+* You can now create three new example apps with the command line tool. These
+  are the apps from the official tutorials at http://meteor.com/tutorials, which
+  demonstrate building the same app with Blaze, Angular, and React. Try these
+  apps with:
 
   ```sh
-  meteor create --example react
-  meteor create --example angular
+  meteor create --example simple-todos
+  meteor create --example simple-todos-react
+  meteor create --example simple-todos-angular
   ```
 
 * `meteor shell` no longer crashes when piped from another command.
