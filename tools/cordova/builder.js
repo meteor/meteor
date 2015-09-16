@@ -92,6 +92,11 @@ export class CordovaBuilder {
       this.additionalConfiguration.SplashScreenDelay = 10000;
     }
 
+    if (packageMap && packageMap.getInfo('mobile-status-bar')) {
+      this.additionalConfiguration.StatusBarOverlaysWebView = false;
+      this.additionalConfiguration.StatusBarStyle = 'default';
+    }
+
     // Default access rules for plain Meteor-Cordova apps.
     // Rules can be extended with mobile-config API.
     // The value is `true` if the protocol or domain should be allowed,
