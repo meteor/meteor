@@ -7,6 +7,7 @@ Package.describe({
 // between the `spacebars` and `templating` packages.
 Package.onTest(function (api) {
   api.use([
+    'es5-shim',
     'underscore',
     'spacebars',
     'tinytest',
