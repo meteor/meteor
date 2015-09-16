@@ -8,3 +8,8 @@ var global = this;
 // variables to their appropriate global values.
 Date = global.Date;
 parseInt = global.parseInt;
+
+// Save the original String#replace method, because es5-shim's
+// reimplementation of it causes problems in markdown/showdown.js.
+// This original method will be restored in export_globals.js.
+originalStringReplace = String.prototype.replace;
