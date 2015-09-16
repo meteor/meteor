@@ -2,6 +2,10 @@
 
 ## in progress: v1.2
 
+There are quite a lot of changes in Meteor 1.2. See the
+[Wiki](https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2) for
+a shorter list of breaking changes you should be aware of when upgrading.
+
 ### Core Packages
 
 * `meteor-platform` has been deprecated in favor of the smaller `meteor-base`,
