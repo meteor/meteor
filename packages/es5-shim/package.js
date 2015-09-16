@@ -1,6 +1,6 @@
 Package.describe({
   name: "es5-shim",
-  version: "4.1.13-rc.0",
+  version: "4.1.13-rc.1",
   summary: "Shims and polyfills to improve ECMAScript 5 support",
   documentation: "README.md"
 });
@@ -16,6 +16,9 @@ Package.onUse(function(api) {
 
   // Initialize Date and parseInt with their initial global values.
   api.addFiles("import_globals.js");
+
+  // Turn callable console method objects into actual functions.
+  api.addFiles("console.js", "client");
 
   var es5ShimPath = ".npm/package/node_modules/es5-shim/es5-shim.js";
   var es5ShamPath = ".npm/package/node_modules/es5-shim/es5-sham.js";
