@@ -39,8 +39,8 @@ a shorter list of breaking changes you should be aware of when upgrading.
 * When an account's email address is verified, deactivate other verification
   tokens.  #4626
 
-* Fix bug where blank page is shown when an expired login token is present.
-  #4825
+* Fix bug where blank page is shown when an expired login token is
+  present. #4825
 
 * Fix `OAuth1Binding.prototype.call` when making requests to Twitter
   with a large parameter set.
