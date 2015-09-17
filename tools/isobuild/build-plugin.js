@@ -470,9 +470,14 @@ _.extend(exports.InputFile.prototype, {
    */
   error: function (options) {
     var self = this;
-    var relPath = self.getPathInPackage();
-    buildmessage.error(options.message || ("error building " + relPath), {
-      file: options.sourcePath || relPath,
+    var path = self.getPathInPackage();
+    var packageName = self.getPackageName();
+    if (packageName) {
+      path = "packages/" + packageName + "/" + path;
+    }
+
+    buildmessage.error(options.message || ("error building " + path), {
+      file: options.sourcePath || path,
       line: options.line ? options.line : undefined,
       column: options.column ? options.column : undefined,
       func: options.func ? options.func : undefined
