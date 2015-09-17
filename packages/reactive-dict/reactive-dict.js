@@ -50,6 +50,7 @@ _.extend(ReactiveDict.prototype, {
     var self = this;
 
     if ((typeof keyOrObject === 'object') && (value === undefined)) {
+      // Called as `dict.set({...})`
       self._setObject(keyOrObject);
       return;
     }
@@ -60,9 +61,11 @@ _.extend(ReactiveDict.prototype, {
     value = stringify(value);
 
     var oldSerializedValue = 'undefined';
-    if (_.has(self.keys, key)) oldSerializedValue = self.keys[key];
-    if (value === oldSerializedValue)
-      return;
+    if (_.has(self.keys, key)) {
+      oldSerializedValue = self.keys[key];
+      if (value === oldSerializedValue)
+        return;
+    }
     self.keys[key] = value;
 
     self.allDeps.changed();

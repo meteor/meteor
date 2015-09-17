@@ -1,11 +1,19 @@
+Tinytest.add('ReactiveDict - set to undefined', function (test) {
+  var dict = new ReactiveDict;
+  dict.set('foo', undefined);
+  test.equal(_.keys(dict.all()), ['foo']);
+  dict.setDefault('foo', 'bar');
+  test.equal(dict.get('foo'), undefined);
+});
+
 Tinytest.add('ReactiveDict - all() works', function (test) {
   var all = {}, dict = new ReactiveDict;
   Tracker.autorun(function() {
     all = dict.all();
   });
-  
+
   test.equal(all, {});
-  
+
   dict.set('foo', 'bar');
   Tracker.flush();
   test.equal(all, {foo: 'bar'});
@@ -15,7 +23,7 @@ Tinytest.add('ReactiveDict - all() works', function (test) {
 Tinytest.add('ReactiveDict - clear() works', function (test) {
   var dict = new ReactiveDict;
   dict.set('foo', 'bar');
-  
+
   var val, equals, equalsUndefined, all;
   Tracker.autorun(function() {
     val = dict.get('foo');
@@ -29,12 +37,12 @@ Tinytest.add('ReactiveDict - clear() works', function (test) {
   Tracker.autorun(function() {
     all = dict.all();
   });
-  
+
   test.equal(val, 'bar');
   test.equal(equals, true);
   test.equal(equalsUndefined, false);
   test.equal(all, {foo: 'bar'});
-  
+
   dict.clear();
   Tracker.flush();
   test.isUndefined(val);
