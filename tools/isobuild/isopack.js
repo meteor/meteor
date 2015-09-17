@@ -1747,6 +1747,26 @@ _.extend(Isopack.prototype, {
     return watchSet;
   }),
 
+  getClientWatchSet: Profile("Isopack#getClientWatchSet", function () {
+    var watchSet = this.pluginWatchSet.clone();
+    _.each(this.unibuilds, function (unibuild) {
+      if (/^web\./.test(unibuild.arch)) {
+        watchSet.merge(unibuild.watchSet);
+      }
+    });
+    return watchSet;
+  }),
+
+  getServerWatchSet: Profile("Isopack#getServerWatchSet", function () {
+    var watchSet = this.pluginWatchSet.clone();
+    _.each(this.unibuilds, function (unibuild) {
+      if (! /^web\./.test(unibuild.arch)) {
+        watchSet.merge(unibuild.watchSet);
+      }
+    });
+    return watchSet;
+  }),
+
   // Similar to PackageSource.getPackagesToLoadFirst, but doesn't include
   // packages used by plugins, because plugin dependencies are already
   // statically included in this built Isopack. Used by
