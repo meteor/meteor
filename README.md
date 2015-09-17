@@ -83,6 +83,50 @@ To see what version the database is at, call:
 Migrations.getVersion();
 ```
 
+### Configuration
+
+You can configure Migrations with the `config` method. Defaults are:
+
+``` javascript
+Migrations.config({
+  // Log job run details to console
+  log: true,
+
+  // Use a custom logger function (defaults to Meteor's logging package)
+  logger: null
+});
+```
+
+### Logging
+
+Migrations uses Meteor's `logging` package by default. If you want to use your
+own logger (for sending to other consumers or similar) you can do so by
+configuring the `logger` option.
+
+Migrations expects a function as `logger`, and will pass arguments to it for
+you to take action on.
+
+```js
+var MyLogger = function(opts) {
+  console.log('Level', opts.level);
+  console.log('Message', opts.message);
+  console.log('Tag', opts.tag);
+}
+
+Migrations.config({
+  logger: MyLogger
+});
+
+Migrations.add({ name: 'Test Job', ... });
+Migrations.start();
+```
+
+The `opts` object passed to `MyLogger` above includes `level`, `message`, and `tag`.
+
+- `level` will be one of `info`, `warn`, `error`, `debug`.
+- `message` is something like `Finished migrating.`.
+- `tag` will always be `"Migrations"` (handy for filtering).
+
 ### Command line use
 
 *** DEPRECATED ***

@@ -32,12 +32,68 @@ var DefaultMigration = {version: 0, up: function(){}};
 
 Migrations = {
   _list: [DefaultMigration],
+  options: {
+    // false disables logging
+    log: true,
+    // null or a function
+    logger: null,
+  },
+  config: function(opts) {
+    this.options = _.extend({}, this.options, opts);
+  },
 }
+
+/*
+  Logger factory function. Takes a prefix string and options object
+  and uses an injected `logger` if provided, else falls back to
+  Meteor's `Log` package.
+  Will send a log object to the injected logger, on the following form:
+    message: String
+    level: String (info, warn, error, debug)
+    tag: 'Migrations'
+*/
+function createLogger(prefix) {
+  check(prefix, String);
+
+  // Return noop if logging is disabled.
+  if(Migrations.options.log === false) {
+    return function() {};
+  }
+
+  return function(level, message) {
+    check(level, Match.OneOf('info', 'error', 'warn', 'debug'));
+    check(message, String);
+
+    var logger = Migrations.options && Migrations.options.logger;
+
+    if(logger && _.isFunction(logger)) {
+
+      logger({
+        level: level,
+        message: message,
+        tag: prefix
+      });
+
+    } else {
+      Log[level]({ message: prefix + ': ' + message });
+    }
+  }
+}
+
+var log;
 
 // collection holding the control record
 Migrations._collection = new Mongo.Collection('migrations');
 
 Meteor.startup(function () {
+  var options = Migrations.options;
+
+  log = createLogger('Migrations');
+
+  ['info', 'warn', 'error', 'debug'].forEach(function(level) {
+    log[level] = _.partial(log, level);
+  });
+
   if (process.env.MIGRATE)
     Migrations.migrateTo(process.env.MIGRATE);
 });
@@ -102,29 +158,29 @@ Migrations._migrateTo = function(version, rerun) {
   var currentVersion = control.version;
 
   if (rerun) {
-    console.log('Rerunning version ' + version);
+    log.info('Rerunning version ' + version);
     setLocked(true);
     migrate('up', version);
     setLocked(false);
-    console.log('Finished migrating.');
+    log.info('Finished migrating.');
     return;
   }
 
   if (currentVersion === version) {
-    console.log('Not migrating, already at version ' + version);
+    log.debug('Not migrating, already at version ' + version);
     return;
   }
 
   if (control.locked === true) {
-    console.log('Not migrating, control is locked.');
+    log.debug('Not migrating, control is locked.');
     return;
   }
 
   var startIdx = this._findIndexByVersion(currentVersion);
   var endIdx = this._findIndexByVersion(version);
 
-  // console.log('startIdx:' + startIdx + ' endIdx:' + endIdx);
-  console.log('Migrating from version ' + this._list[startIdx].version
+  // log.info('startIdx:' + startIdx + ' endIdx:' + endIdx);
+  log.info('Migrating from version ' + this._list[startIdx].version
     + ' -> ' + this._list[endIdx].version);
 
   // run the actual migration
@@ -140,7 +196,7 @@ Migrations._migrateTo = function(version, rerun) {
       return migration.name ? ' (' + migration.name + ')' : '';
     }
 
-    console.log('Running ' + direction + '() on version ' 
+    log.info('Running ' + direction + '() on version '
       + migration.version + maybeName());
 
     migration[direction](migration);
@@ -166,7 +222,7 @@ Migrations._migrateTo = function(version, rerun) {
     }
   }
   setLocked(false);
-  console.log('Finished migrating.');
+  log.info('Finished migrating.');
 }
 
 // gets the current control record, optionally creating it if non-existant

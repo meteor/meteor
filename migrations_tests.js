@@ -179,3 +179,37 @@ Tinytest.add('Migration callbacks include the migration as an argument', functio
   Migrations.migrateTo(1);
   test.equal(contextArg === migration, true);
 });
+
+Tinytest.addAsync('Migrations can log to injected logger', function(test, done) {
+  Migrations._reset();
+
+  Migrations.options.logger = function() {
+    test.isTrue(true);
+    done();
+  };
+
+  Migrations.add({ version: 1, up: function() { } });
+  Migrations.migrateTo(1);
+
+  Migrations.options.logger = null;
+});
+
+Tinytest.addAsync('Migrations should pass correct arguments to logger', function(test, done) {
+  Migrations._reset();
+
+  var logger = function(opts) {
+    test.include(opts, 'level');
+    test.include(opts, 'message');
+    test.include(opts, 'tag');
+    test.equal(opts.tag, 'Migrations');
+
+    done();
+  };
+
+  Migrations.options.logger = logger;
+
+  Migrations.add({ version: 1, up: function() { } });
+  Migrations.migrateTo(1);
+
+  Migrations.options.logger = null;
+});
