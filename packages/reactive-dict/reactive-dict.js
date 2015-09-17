@@ -166,6 +166,25 @@ _.extend(ReactiveDict.prototype, {
 
   },
 
+  delete: function(key) {
+    var self = this;
+    var didRemove = false;
+
+    if (_.has(self.keys, key)) {
+      var oldValue = self.keys[key];
+      delete self.keys[key];
+      changed(self.keyDeps[key]);
+      if (self.keyValueDeps[key]) {
+        changed(self.keyValueDeps[key][oldValue]);
+        changed(self.keyValueDeps[key]['undefined']);
+      }
+      self.allDeps.changed();
+      didRemove = true;
+    }
+
+    return didRemove;
+  },
+
   _setObject: function (object) {
     var self = this;
 
