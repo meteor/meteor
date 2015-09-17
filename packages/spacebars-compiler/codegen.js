@@ -378,7 +378,12 @@ _.extend(CodeGen.prototype, {
 
   codeGenInclusionDataFunc: function (args) {
     var self = this;
-    return 'function () { return ' + self.codeGenInclusionData(args) + '; }';
+    var dataCode = self.codeGenInclusionData(args);
+    if (dataCode) {
+      return 'function () { return ' + dataCode + '; }';
+    } else {
+      return null;
+    }
   }
 
 });

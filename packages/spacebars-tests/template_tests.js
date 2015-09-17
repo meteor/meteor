@@ -1428,7 +1428,7 @@ _.each(['textarea', 'text', 'password', 'submit', 'button',
         },
         type: type
       });
-    };
+    }
 
     var div = renderToDiv(tmpl);
     document.body.appendChild(div);
@@ -3447,4 +3447,18 @@ Tinytest.add("spacebars-tests - template_tests - lexical scope doesn't leak", fu
   test.throws(function () {
     var div = renderToDiv(tmpl);
   }, /Unsupported directive/);
+});
+
+// PR #5138
+Tinytest.add("spacebars-tests - template_tests - multiple arguments in each-in", function (test) {
+  var tmpl = Template.spacebars_template_test_each_in_multi_args;
+  tmpl.helpers({
+    list: ['a', 'b', 'c'],
+    helper: function (list) {
+      return list.reverse();
+    }
+  });
+
+  var div = renderToDiv(tmpl);
+  test.equal(canonicalizeHtml(div.innerHTML), "<div>c</div><div>b</div><div>a</div>");
 });
