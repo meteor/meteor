@@ -6,6 +6,18 @@ Tinytest.add('ReactiveDict - set to undefined', function (test) {
   test.equal(dict.get('foo'), undefined);
 });
 
+Tinytest.add('ReactiveDict - setDefault', function (test) {
+  var dict = new ReactiveDict;
+  dict.set('A', 'blah');
+  dict.set('B', undefined);
+  dict.setDefault('A', 'default');
+  dict.setDefault('B', 'default');
+  dict.setDefault('C', 'default');
+  dict.setDefault('D', undefined);
+  test.equal(dict.all(), {A: 'blah', B: undefined,
+                          C: 'default', D: undefined});
+});
+
 Tinytest.add('ReactiveDict - all() works', function (test) {
   var all = {}, dict = new ReactiveDict;
   Tracker.autorun(function() {

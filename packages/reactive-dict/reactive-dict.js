@@ -78,10 +78,7 @@ _.extend(ReactiveDict.prototype, {
 
   setDefault: function (key, value) {
     var self = this;
-    // for now, explicitly check for undefined, since there is no
-    // ReactiveDict.clear().  Later we might have a ReactiveDict.clear(), in which case
-    // we should check if it has the key.
-    if (self.keys[key] === undefined) {
+    if (! _.has(self.keys, key)) {
       self.set(key, value);
     }
   },
