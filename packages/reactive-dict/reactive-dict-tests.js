@@ -68,6 +68,10 @@ Tinytest.add('ReactiveDict - delete(key) works', function (test) {
   dict.set('foo', 'bar');
   dict.set('bar', 'foo');
 
+  dict.set('baz', 123);
+  test.equal(dict.delete('baz'), true);
+  test.equal(dict.delete('baz'), false);
+
   var val, equals, equalsUndefined, all;
 
   Tracker.autorun(function() {

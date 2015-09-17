@@ -167,15 +167,17 @@ _.extend(ReactiveDict.prototype, {
   },
 
   delete: function(key) {
-    var self      = this;
-    var oldKeys   = self.keys;
+    var self = this;
     var didRemove = false;
 
-    if (_.has(oldKeys, key)) {
+    if (_.has(self.keys, key)) {
+      var oldValue = self.keys[key];
+      delete self.keys[key];
       changed(self.keyDeps[key]);
-      changed(self.keyValueDeps[key][oldKeys[key]]);
-      changed(self.keyValueDeps[key]['undefined']);
-      delete self.keys[key]; // clean up
+      if (self.keyValueDeps[key]) {
+        changed(self.keyValueDeps[key][oldValue]);
+        changed(self.keyValueDeps[key]['undefined']);
+      }
       self.allDeps.changed();
       didRemove = true;
     }
