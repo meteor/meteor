@@ -80,7 +80,7 @@ Meteor.Cordova.setAdditionalDataUrlPrefix = function(prefix) {
  * @locus Client
  * @param {String} [path] An absolute, valid path to a file on the mobile device
  */
-Meteor.getUrlForPath = function(path) {
+Meteor.Cordova.getUrlForPath = function(path) {
     if (! path) {
         throw new Error('Path not provided.');
     }
