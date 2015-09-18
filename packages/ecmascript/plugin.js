@@ -1,6 +1,7 @@
 function BabelCompiler() {}
 
 var BCp = BabelCompiler.prototype;
+var excludedFileExtensionPattern = /\.es5\.js$/i;
 
 BCp.processFilesForTarget = function (inputFiles) {
   inputFiles.forEach(function (inputFile) {
@@ -17,7 +18,15 @@ BCp.processFilesForTarget = function (inputFiles) {
       bare: !! fileOptions.bare
     };
 
-    if (fileOptions.transpile !== false) {
+    // If you need to exclude a specific file within a package from Babel
+    // compilation, pass the { transpile: false } options to api.addFiles
+    // when you add that file.
+    if (fileOptions.transpile !== false &&
+        // If you need to exclude a specific file within an app from Babel
+        // compilation, give it the following file extension: .es5.js
+        ! excludedFileExtensionPattern.test(inputFilePath)) {
+      console.log(inputFilePath);
+
       var targetCouldBeInternetExplorer8 =
         inputFile.getArch() === "web.browser";
 
