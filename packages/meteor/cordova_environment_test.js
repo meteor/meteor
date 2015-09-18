@@ -3,4 +3,3 @@ Tinytest.add("environment - cordova basics", function (test) {
   test.isTrue(Meteor.isClient);
   test.isTrue(Meteor.isCordova);
 });
-
