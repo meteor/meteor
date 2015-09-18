@@ -3,11 +3,11 @@ Package.describe({
   summary: "Parser/transpiler for ECMAScript 2015+ syntax",
   // Tracks the npm version below.  Use wrap numbers to increment
   // without incrementing the npm version.
-  version: '5.8.22-rc.1'
+  version: '5.8.24-rc.1'
 });
 
 Npm.depends({
-  'meteor-babel': '0.5.7'
+  'meteor-babel': '0.5.8'
 });
 
 Package.onUse(function (api) {
