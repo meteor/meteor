@@ -24,10 +24,10 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "1.4.28",
     fibers: fibersVersion,
-    "meteor-babel": "0.5.7",
-    "meteor-promise": "0.4.6",
+    "meteor-babel": "0.5.8",
+    "meteor-promise": "0.4.8",
     // For Map and Set polyfills.
-    "core-js": "1.0.1",
+    "core-js": "1.1.4",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -48,7 +48,7 @@ var packageJson = {
     "http-proxy": "1.11.1",
     "wordwrap": "0.0.2",
     "moment": "2.8.4",
-    "rimraf": "2.2.8",
+    "rimraf": "2.4.3",
     // XXX: When we update this, see if it fixes this Github issue:
     // https://github.com/jgm/CommonMark/issues/276 . If it does, remove the
     // workaround from the tool.
