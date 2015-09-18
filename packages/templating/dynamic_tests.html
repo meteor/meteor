@@ -18,6 +18,18 @@
   test{{foo}}
 </template>
 
+<template name="ui_dynamic_test_contentblock">
+  {{#Template.dynamic template=templateName data=templateData}}contentBlock{{/Template.dynamic}}
+</template>
+
+<template name="ui_dynamic_test_contentblock_no_data">
+  {{# Template.dynamic template=templateName}}contentBlock{{/Template.dynamic}}
+</template>
+
+<template name="ui_dynamic_test_sub_contentblock">
+  test{{foo}}{{>Template.contentBlock}}
+</template>
+
 <template name="ui_dynamic_test_falsey_inner_context">
   {{#with foo="bar"}}
     {{> Template.dynamic template=templateName data=context}}

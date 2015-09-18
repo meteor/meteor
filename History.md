@@ -18,6 +18,9 @@
 * WebApp's `PORT` environment variable can now be a named pipe to better support
   deployment on IIS on Windows. [4413](https://github.com/meteor/meteor/issues/4413)
 
+* `Template.dynamic` can be now used as a block helper:
+  `{{#Template.dynamic}} ... {{/Template.dynamic}}` [#4756](https://github.com/meteor/meteor/issues/4756)
+
 ## v1.2.0.2, 2015-Sept-28
 
 * Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
