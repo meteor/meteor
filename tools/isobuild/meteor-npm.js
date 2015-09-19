@@ -188,6 +188,15 @@ var updateExistingNpmDirectory = function (packageName, newPackageNpmDir,
       files.rm_recursive(nodeModulesDir);
   }
 
+  // If the node modules directory exists but doesn't have .package.json and
+  // .npm-shrinkwrap.json, recreate.  This is to ensure that
+  // providePackageJSONForUnavailableBinaryDeps works.
+  if (files.exists(nodeModulesDir) &&
+      (!files.exists(files.pathJoin(nodeModulesDir, '.package.json')) ||
+       !files.exists(files.pathJoin(nodeModulesDir, '.npm-shrinkwrap.json')))) {
+    files.rm_recursive(nodeModulesDir);
+  }
+
   // Make sure node_modules is present (fix for #1761). Prevents npm install
   // from installing to an existing node_modules dir higher up in the
   // filesystem.  node_modules may be absent due to a change in Node version or
@@ -295,8 +304,15 @@ var completeNpmDirectory = function (packageName, newPackageNpmDir,
   // Create a shrinkwrap file.
   shrinkwrap(newPackageNpmDir);
 
-  // now delete package.json
-  files.unlink(files.pathJoin(newPackageNpmDir, 'package.json'));
+  // now get package.json out of the way, but put it somewhere where the
+  // providePackageJSONForUnavailableBinaryDeps code can find it
+  files.rename(
+    files.pathJoin(newPackageNpmDir, 'package.json'),
+    files.pathJoin(newPackageNpmDir, 'node_modules', '.package.json'));
+  // And stow a copy of npm-shrinkwrap too.
+  files.copyFile(
+    files.pathJoin(newPackageNpmDir, 'npm-shrinkwrap.json'),
+    files.pathJoin(newPackageNpmDir, 'node_modules', '.npm-shrinkwrap.json'));
 
   createReadme(newPackageNpmDir);
   createNodeVersion(newPackageNpmDir);
