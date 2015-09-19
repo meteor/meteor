@@ -1,4 +1,3 @@
-{{#template name="quickStart"}}
 ## Quick start!
 
 Meteor supports [OS X, Windows, and Linux](https://github.com/meteor/meteor/wiki/Supported-Platforms).
@@ -34,4 +33,3 @@ Then, open a new terminal tab and unleash it on the world (on a free server we p
 ```bash
 meteor deploy myapp.meteor.com
 ```
-{{/template}}
