@@ -868,6 +868,7 @@ compiler.eachUsedUnibuild = function (
   var dependencies = options.dependencies;
   var arch = options.arch;
   var isopackCache = options.isopackCache;
+  var allowWrongPlatform = options.allowWrongPlatform;
 
   var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
@@ -891,7 +892,8 @@ compiler.eachUsedUnibuild = function (
     if (usedPackage.debugOnly && options.skipDebugOnly)
       continue;
 
-    var unibuild = usedPackage.getUnibuildAtArch(arch);
+    var unibuild = usedPackage.getUnibuildAtArch(
+      arch, {allowWrongPlatform: allowWrongPlatform});
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.

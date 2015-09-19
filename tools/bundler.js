@@ -223,6 +223,9 @@ var NodeModulesDirectory = function (options) {
 
   // Optionally, files to discard.
   self.npmDiscards = options.npmDiscards;
+
+  // Write a package.json file instead of copying the full directory.
+  self.writePackageJSON = !!options.writePackageJSON;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -456,6 +459,9 @@ var Target = function (options) {
   // A mapping from Cordova plugin name to Cordova plugin version number.
   self.cordovaDependencies = self.cordovaPluginsFile ? {} : null;
 
+  self.providePackageJSONForUnavailableBinaryDeps =
+    !!options.providePackageJSONForUnavailableBinaryDeps;
+
   // For the todos sample app:
   // false: 99.6 KB / 316 KB
   // vs
@@ -546,7 +552,9 @@ _.extend(Target.prototype, {
         if (p.debugOnly && ! self.includeDebug) {
           return;
         }
-        var unibuild = p.getUnibuildAtArch(self.arch);
+        var unibuild = p.getUnibuildAtArch(self.arch, {
+          allowWrongPlatform: self.providePackageJSONForUnavailableBinaryDeps
+        });
         unibuild && rootUnibuilds.push(unibuild);
       });
 
@@ -576,7 +584,8 @@ _.extend(Target.prototype, {
           dependencies: unibuild.uses,
           arch: self.arch,
           isopackCache: isopackCache,
-          skipDebugOnly: ! self.includeDebug
+          skipDebugOnly: ! self.includeDebug,
+          allowWrongPlatform: self.providePackageJSONForUnavailableBinaryDeps
         }, addToGetsUsed);
       };
       _.each(rootUnibuilds, addToGetsUsed);
@@ -638,7 +647,8 @@ _.extend(Target.prototype, {
           isopackCache: isopackCache,
           skipUnordered: true,
           acceptableWeakPackages: self.usedPackages,
-          skipDebugOnly: ! self.includeDebug
+          skipDebugOnly: ! self.includeDebug,
+          allowWrongPlatform: self.providePackageJSONForUnavailableBinaryDeps
         }, processUnibuild);
         self.unibuilds.push(unibuild);
         delete needed[unibuild.id];
@@ -760,6 +770,33 @@ _.extend(Target.prototype, {
                 self.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
               }
               f.nodeModulesDirectory = nmd;
+
+              if (!archinfo.matches(self.arch, unibuild.arch)) {
+                // The unibuild we're trying to include doesn't work for the
+                // bundle target (eg, os.osx.x86_64 instead of os.linux.x86_64)!
+                // Hopefully this is because we specially enabled the feature
+                // that leads to this.
+                if (!self.providePackageJSONForUnavailableBinaryDeps) {
+                  throw Error("mismatched arch without special feature enabled "
+                              + unibuild.pkg.name + " / " + self.arch + " / " +
+                              unibuild.arch);
+                }
+                if (!files.exists(
+                  files.pathJoin(nmd.sourcePath, '.package.json'))) {
+                  buildmessage.error(
+                    "Can't cross-compile package " +
+                      unibuild.pkg.name + ": missing .package.json");
+                  return;
+                }
+                if (!files.exists(
+                  files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json'))) {
+                  buildmessage.error(
+                    "Can't cross-compile package " +
+                      unibuild.pkg.name + ": missing .npm-shrinkwrap.json");
+                  return;
+                }
+                nmd.writePackageJSON = true;
+              }
             }
           }
 
@@ -1262,6 +1299,8 @@ var JsImage = function () {
 
   // Architecture required by this image
   self.arch = null;
+
+  self.providePackageJSONForUnavailableBinaryDeps = false;
 };
 
 _.extend(JsImage.prototype, {
@@ -1452,7 +1491,8 @@ _.extend(JsImage.prototype, {
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
         preferredBundlePath: modulesPhysicalLocation,
-        npmDiscards: nmd.npmDiscards
+        npmDiscards: nmd.npmDiscards,
+        writePackageJSON: nmd.writePackageJSON
       }));
     });
 
@@ -1536,13 +1576,36 @@ _.extend(JsImage.prototype, {
       load.push(loadItem);
     });
 
+    var setupScriptPieces = [];
     // node_modules resources from the packages. Due to appropriate
     // builder configuration, 'meteor bundle' and 'meteor deploy' copy
     // them, and 'meteor run' symlinks them. If these contain
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
-      if (nmd.sourcePath !== nmd.preferredBundlePath) {
+      if (nmd.writePackageJSON) {
+        // Make sure there's an empty node_modules directory at the right place
+        // in the tree (so that npm install puts modules there instead of
+        // elsewhere).
+        builder.reserve(
+          nmd.preferredBundlePath, {directory: true});
+        // We check that these source files exist in _emitResources when
+        // writePackageJSON is initially set.
+        builder.write(
+          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
+                         'package.json'),
+          { file: files.pathJoin(nmd.sourcePath, '.package.json') }
+        );
+        builder.write(
+          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
+                         'npm-shrinkwrap.json'),
+          { file: files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json') }
+        );
+        // XXX does not support npmDiscards!
+
+        setupScriptPieces.push(
+          '(cd ', nmd.preferredBundlePath, ' && npm install)\n\n');
+      } else if (nmd.sourcePath !== nmd.preferredBundlePath) {
         builder.copyDirectory({
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
@@ -1551,6 +1614,14 @@ _.extend(JsImage.prototype, {
         });
       }
     });
+
+    if (setupScriptPieces.length) {
+      setupScriptPieces.unshift('#!/bin/bash\n', 'set -e\n\n');
+      builder.write('setup.sh', {
+        data: new Buffer(setupScriptPieces.join(''), 'utf8'),
+        executable: true
+      });
+    }
 
     // Control file
     builder.writeJson('program.json', {
@@ -2015,7 +2086,8 @@ exports.bundle = function (options) {
   var outputPath = options.outputPath;
   var includeNodeModules = options.includeNodeModules;
   var buildOptions = options.buildOptions || {};
-
+  var providePackageJSONForUnavailableBinaryDeps = options.providePackageJSONForUnavailableBinaryDeps;
+  
   var appDir = projectContext.projectDir;
 
   var serverArch = buildOptions.serverArch || archinfo.host();
@@ -2067,7 +2139,8 @@ exports.bundle = function (options) {
         isopackCache: projectContext.isopackCache,
         arch: serverArch,
         releaseName: releaseName,
-        includeDebug: buildOptions.includeDebug
+        includeDebug: buildOptions.includeDebug,
+        providePackageJSONForUnavailableBinaryDeps: providePackageJSONForUnavailableBinaryDeps
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;

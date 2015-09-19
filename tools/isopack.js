@@ -126,10 +126,6 @@ _.extend(Unibuild.prototype, {
     if (! isopackCache)
       throw Error("no isopackCache?");
 
-    if (! archinfo.matches(bundleArch, self.arch))
-      throw new Error("unibuild of arch '" + self.arch + "' does not support '" +
-                      bundleArch + "'?");
-
     // Compute imports by merging the exports of all of the packages
     // we use. Note that in the case of conflicting symbols, later
     // packages get precedence.
@@ -153,7 +149,10 @@ _.extend(Unibuild.prototype, {
       arch: bundleArch,
       isopackCache: isopackCache,
       skipUnordered: true,
-      skipDebugOnly: true
+      skipDebugOnly: true,
+      // We only care about getting exports here, so it's OK if we get the Mac
+      // version when we're bundling for Linux.
+      allowWrongPlatform: true
     }, addImportsForUnibuild);
 
     // Phase 2 link
@@ -477,11 +476,22 @@ _.extend(Isopack.prototype, {
   // Return the unibuild of the package to use for a given target architecture
   // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
-  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch) {
+  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch, options) {
     var self = this;
+    var allowWrongPlatform = !!(options && options.allowWrongPlatform);
 
     var chosenArch = archinfo.mostSpecificMatch(
       arch, _.pluck(self.unibuilds, 'arch'));
+    if (! chosenArch && allowWrongPlatform && arch.match(/^os\./)) {
+      // Special-case: we're looking for a specific server platform and it's
+      // not available. (eg, we're deploying from a Mac to Linux and are
+      // processing a local package with binary npm deps).  If we have "allow
+      // wrong platform" turned on, search again for the host version, which
+      // might find the Mac version.  We'll detect this case later and provide
+      // package.json instead of Mac binaries.
+      chosenArch =
+        archinfo.mostSpecificMatch(archinfo.host(), _.pluck(self.unibuilds, 'arch'));
+    }
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +

@@ -903,7 +903,8 @@ var buildCommand = function (options) {
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       includeDebug: !! options.debug
-    }
+    },
+    providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND
   });
   if (bundleResult.errors) {
     Console.error("Errors prevented bundling:");
