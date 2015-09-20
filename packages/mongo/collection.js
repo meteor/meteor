@@ -64,7 +64,7 @@ Mongo.Collection = function (name, options) {
     self._makeNewID = function () {
       var src = name
             ? DDP.randomStream('/collection/' + name)
-            : Random.fast;
+            : Random.insecure;
       return new Mongo.ObjectID(src.hexString(24));
     };
     break;
@@ -73,7 +73,7 @@ Mongo.Collection = function (name, options) {
     self._makeNewID = function () {
       var src = name
             ? DDP.randomStream('/collection/' + name)
-            : Random.fast;
+            : Random.insecure;
       return src.id();
     };
     break;

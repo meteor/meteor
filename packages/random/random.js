@@ -261,4 +261,4 @@ Random.createWithSeeds = function (...seeds) {
 
 // Used like `Random`, but much faster and not cryptographically
 // secure
-Random.fast = createAleaGeneratorWithGeneratedSeed();
+Random.insecure = createAleaGeneratorWithGeneratedSeed();
