@@ -298,19 +298,14 @@ _.extend(Mongo.Collection.prototype, {
   },
   
   /**
-   * @summary Check if the documents in a collection that match the selector exists.
+   * @summary Check if the documents in a collection that match the selector exist.
    * @locus Anywhere
    * @method exists
    * @memberOf Mongo.Collection
    * @instance
    * @param {MongoSelector} [selector] A query describing the documents to find
    * @param {Object} [options]
-   * @param {MongoSortSpecifier} options.sort Sort order (default: natural order)
-   * @param {Number} options.skip Number of results to skip at the beginning
-   * @param {Number} options.limit Maximum number of results to return
-   * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
-   * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
    * @returns {Boolean}
    */
   exists: function (/* selector, options */) {
@@ -319,8 +314,9 @@ _.extend(Mongo.Collection.prototype, {
     // careful about the length of arguments.
     var self = this;
     var argArray = _.toArray(arguments);
-    return self._collection.find(self._getFindSelector(argArray),
-                                 self._getFindOptions(argArray)).count() ? true : false;
+    var isReactive = self._getFindOptions(argArray).reactive;
+    var options = {limit: 1, fields: { _id: 1 }, transform: null, reactive: isReactive};
+    return self._collection.find(self._getFindSelector(argArray), options).count() ? true : false;
   }
 
 });
