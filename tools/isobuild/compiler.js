@@ -915,4 +915,13 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package uses the `prodOnly` metadata flag, which causes it to
   // automatically depend on the `isobuild:prod-only` feature package.
   'isobuild:prod-only': ['1.0.0'],
+
+  // This package depends on a specific version of Cordova. Package authors must
+  // explicitly depend on this feature package to indicate that they are not
+  // compatible with earlier Cordova versions, which is most likely a result of
+  // the Cordova plugins they depend on.
+  // A common scenario is a package depending on a Cordova plugin or version
+  // that is only available on npm, which means downloading the plugin is not
+  // supported on versions of Cordova below 5.0.0.
+  'isobuild:cordova': ['5.2.0']
 };
