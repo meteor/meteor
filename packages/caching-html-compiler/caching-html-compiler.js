@@ -107,12 +107,19 @@ CachingHtmlCompiler = class CachingHtmlCompiler extends CachingCompiler {
         }
       });
 
-      // Add JavaScript code to set attributes on body
+      const setAttributesOnBody = _.map(compileResult.bodyAttrs, (val, key) => {
+        return `document.body.setAttribute('${key}', '${val}');`
+      }).join("\n  ");
+
+      // Add JavaScript code to set attributes on body. Don't use JQuery here
+      // because not all users of this package will have it
       allJavaScript += `
-Meteor.startup(function() { $('body').attr(${JSON.stringify(compileResult.bodyAttrs)}); });
+Meteor.startup(function() {
+  ${setAttributesOnBody}
+});
 `;
     }
-    
+
 
     if (allJavaScript) {
       const filePath = inputFile.getPathInPackage();
@@ -128,7 +135,7 @@ Meteor.startup(function() { $('body').attr(${JSON.stringify(compileResult.bodyAt
       // XXX generate a source map
 
       inputFile.addJavaScript({
-        path: path.join(pathPart, "template." + basename + ".js"),
+        path: path.join(pathPart, basename + ".compiled.html.js"),
         data: allJavaScript
       });
     }
