@@ -193,33 +193,22 @@ var upgradersByName = {
 
     maybePrintNoticeHeader();
 
-    Console.info(
-`Meteor 1.2 includes various changes to the Cordova integration.
-
-Cordova tools, platforms and plugins have been updated to the latest versions. \
-This may require you to make changes to your app. For details, see the Cordova \
-release notes for for the different versions:`,
-Console.url('https://cordova.apache.org/#news'), `
-
-As part of moving to npm, many Cordova plugins have been renamed. Meteor should \
-perform conversions automatically, but you may want to be aware of this to \
-avoid surprises. See`,
-Console.url('https://cordova.apache.org/announcements/2015/04/21/plugins-release-and-move-to-npm.html'),
-`for more information.
-
-The bundled Android tools have been removed and a system-wide install of the \
-Android SDK is now required. This should make it easier to keep the development \
-toolchain up to date and helps avoid some difficult to diagnose failures.
-If you don't have your own Android tools installed already, you can find \
-more information about installing the Android SDK for your platform here:`,
-Console.url(cordova.installationInstructionsUrlForPlatform('android')),
-      Console.options({ bulletPoint: "1.2.0: " }));
-
     // Print error messages generated during plugin conversion, if any
     if (messages && messages.hasMessages()) {
       Console.printMessages(messages);
     }
-  }
+  },
+
+  "1.2.0-breaking-changes": function () {
+    maybePrintNoticeHeader();
+    Console.info(
+`Meteor 1.2 includes many changes and improvements to the build system, \
+some of which might require small changes to apps and packages. Please read \
+the guide about breaking changes here:`,
+      Console.url("https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2"),
+      Console.options({ bulletPoint: "1.2: " })
+    );
+  },
 
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the
