@@ -579,6 +579,11 @@ api.addAssets('${relPath}', 'client').`);
     return _.pick(symbol, ['name', 'testOnly']);
   });
 
+  // *** Determine captured variables
+  var declaredPckgscopes = _.map(inputSourceArch.declaredPckgscopes, function (symbol) {
+    return _.pick(symbol, ['name']);
+  });
+
   // *** Consider npm dependencies and portability
   var arch = inputSourceArch.arch;
   if (arch === "os" && ! isPortable) {
@@ -601,6 +606,7 @@ api.addAssets('${relPath}', 'client').`);
     watchSet: watchSet,
     nodeModulesPath: nodeModulesPathOrUndefined,
     declaredExports: declaredExports,
+    declaredPckgscopes: declaredPckgscopes,
     resources: resources
   });
 

@@ -85,6 +85,9 @@ function PackageAPI (options) {
   // symbols exported
   self.exports = {};
 
+  // symbols with package-scope
+  self.pckgscopes = {};
+
   // packages used and implied (keys are 'package', 'unordered', and
   // 'weak').  an "implied" package is a package that will be used by a unibuild
   // which uses us.
@@ -98,6 +101,7 @@ function PackageAPI (options) {
     };
 
     self.exports[arch] = [];
+    self.pckgscopes[arch] = [];
     self.uses[arch] = [];
     self.implies[arch] = [];
   });
@@ -547,6 +551,51 @@ _.extend(PackageAPI.prototype, {
       }
       forAllMatchingArchs(arch, function (w) {
         self.exports[w].push({name: symbol, testOnly: !!options.testOnly});
+      });
+    });
+  },
+
+  // Symbols with package-scope in this package.
+  //
+  // @param symbols String (eg "Foo") or array of String
+  // @param arch 'web', 'server', 'web.browser', 'web.cordova'
+  // or an array of those.
+  // The default is ['web', 'server'].
+  // @param options 'testOnly', boolean.
+
+  /**
+   *
+   * @memberOf PackageAPI
+   * @instance
+   * @summary Makes variables visible in your package, but not outside. The
+   * specified variables (declared without `var` in the source code) will be
+   * available to all files in this package.
+   * @locus package.js
+   * @param {String|String[]} pckgscopeObjects Name of the object to be shared in this
+   * package, or an array of object names.
+   * @param {String|String[]} [architecture] If you only want to export the
+   * object on the server (or the client), you can pass in the second argument
+   * (e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify what
+   * architecture the export is used with. You can specify multiple
+   * architectures by passing in an array, for example `['web.cordova',
+   * 'os.linux']`.
+   */
+  pckgscope: function (symbols, arch) {
+    var self = this;
+
+    symbols = toArray(symbols);
+    arch = toArchArray(arch);
+
+    _.each(symbols, function (symbol) {
+      // XXX be unicode-friendlier
+      if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
+        buildmessage.error("Bad pckg scoped symbol: " + symbol,
+                           { useMyCaller: true });
+        // recover by ignoring
+        return;
+      }
+      forAllMatchingArchs(arch, function (w) {
+        self.pckgscopes[w].push({name: symbol});
       });
     });
   }

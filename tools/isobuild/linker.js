@@ -695,6 +695,8 @@ var getFooter = function (options) {
 // declaredExports: an array of symbols that the module exports. Symbols are
 // {name,testOnly} pairs.
 //
+// declaredPckgscopes: an array of symbols with package-scope.
+//
 // imports: a map from imported symbol to the name of the package that it is
 // imported from
 //
@@ -707,7 +709,8 @@ var getFooter = function (options) {
 // Output is an array of output files: objects with keys source, servePath,
 // sourceMap.
 var fullLink = Profile("linker.fullLink", function (inputFiles, {
-    useGlobalNamespace, combinedServePath, name, declaredExports, imports,
+    useGlobalNamespace, combinedServePath, name, declaredExports,
+    declaredPckgscopes, imports,
     importStubServePath, includeSourceMapInstructions
   }) {
   buildmessage.assertInJob();
@@ -751,7 +754,8 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // into a single scope.
   var header = getHeader({
     imports,
-    packageVariables: _.union(assignedVariables, declaredExports)
+    packageVariables: _.union(assignedVariables, declaredExports,
+      declaredPckgscopes)
   });
 
   var footer = getFooter({

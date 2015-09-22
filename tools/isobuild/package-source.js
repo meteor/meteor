@@ -186,6 +186,7 @@ var getExcerptFromReadme = function (text) {
 // - implies
 // - getFiles
 // - declaredExports
+// - declaredPckgscopes
 // - watchSet
 //
 // Do not include the source files in watchSet. They will be
@@ -256,6 +257,10 @@ var SourceArch = function (pkg, options) {
   // Symbols that this architecture should export. List of symbols (as
   // strings).
   self.declaredExports = options.declaredExports || null;
+
+  // Symbols that in this architecture should be package-scoped. List of symbols
+  // (as strings).
+  self.declaredPckgscopes = options.declaredPckgscopes || null;
 
   // Files and directories that we want to monitor for changes in
   // development mode, as a watch.WatchSet. In the latest refactoring
@@ -1203,6 +1208,7 @@ _.extend(PackageSource.prototype, {
           return api.files[arch];
         },
         declaredExports: api.exports[arch],
+        declaredPckgscopes: api.pckgscopes[arch],
         watchSet: watchSet
       }));
     });
@@ -1533,6 +1539,30 @@ _.extend(PackageSource.prototype, {
           return;
         }
         // Add the export to the export map.
+        if (! _.has(ret, exp.name)) {
+          ret[exp.name] = [arch.arch];
+        } else {
+          ret[exp.name].push(arch.arch);
+        }
+     });
+    });
+    return _.map(ret, function (arches, name) {
+      return { name: name, architectures: arches };
+    });
+   },
+
+  // Returns an array of objects, representing this package-scoped
+  // objects. Each object has the following keys:
+  //  - name: name (ex: "Accounts")
+  //  - arch: an array of strings representing architectures for which this
+  //    object is declared.
+  getPckgscopes: function () {
+    var self = this;
+    var ret = {};
+    // Go over all of the architectures, and aggregate the exports together.
+    _.each(self.architectures, function (arch) {
+      _.each(arch.declaredPckgscopes, function (exp) {
+        // Add the package scope object to the map.
         if (! _.has(ret, exp.name)) {
           ret[exp.name] = [arch.arch];
         } else {

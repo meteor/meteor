@@ -31,6 +31,7 @@ var rejectBadPath = function (p) {
 // - watchSet
 // - nodeModulesPath
 // - declaredExports
+// - declaredPckgscopes
 // - resources
 
 var nextBuildId = 1;
@@ -64,6 +65,10 @@ var Unibuild = function (isopack, options) {
   // A list of objects with keys 'name' (required) and 'testOnly' (boolean,
   // defaults to false).
   self.declaredExports = options.declaredExports;
+
+  // 'declaredPckgscopes' are the variables which are visible in this package.
+  // A list of objects with key 'name' (required).
+  self.declaredPckgscopes = options.declaredPckgscopes;
 
   // All of the data provided for eventual inclusion in the bundle,
   // other than JavaScript that still needs to be fed through the
@@ -1049,6 +1054,9 @@ _.extend(Isopack.prototype, {
         declaredExports = unibuildJson.declaredExports || [];
       }
 
+      var declaredPckgscopes;
+      declaredPckgscopes = unibuildJson.declaredPckgscopes || [];
+
       unibuildJson.uses && unibuildJson.uses.forEach((use) => {
         if (!use.weak && compiler.isIsobuildFeaturePackage(use.package) &&
             self.isobuildFeatures.indexOf(use.package) === -1) {
@@ -1066,6 +1074,7 @@ _.extend(Isopack.prototype, {
         watchSet: unibuildWatchSets[unibuildMeta.path],
         nodeModulesPath: nodeModulesPath,
         declaredExports: declaredExports,
+        declaredPckgscopes: declaredPckgscopes,
         resources: resources
       }));
     });
@@ -1261,6 +1270,7 @@ _.extend(Isopack.prototype, {
         var unibuildJson = {
           format: "isopack-2-unibuild",
           declaredExports: unibuild.declaredExports,
+          declaredPckgscopes: unibuild.declaredPckgscopes,
           uses: _.map(unibuild.uses, function (u) {
             return {
               'package': u.package,
@@ -1497,6 +1507,14 @@ _.extend(Isopack.prototype, {
                 });
                 packageVariableNames[symbol.name] = true;
               });
+              _.each(unibuild.declaredPckgscopes, function (symbol) {
+                if (_.has(packageVariableNames, symbol.name))
+                  return;
+                packageVariables.push({
+                  name: symbol.name
+                });
+                packageVariableNames[symbol.name] = true;
+              });
               _.each(results.assignedVariables, function (name) {
                 if (_.has(packageVariableNames, name))
                   return;
@@ -1529,6 +1547,7 @@ _.extend(Isopack.prototype, {
           }
           unibuildJson.resources = newResources;
           delete unibuildJson.declaredExports;
+          delete unibuildJson.declaredPckgscopes;
           builder.writeJson(legacyFilename, unibuildJson);
         });
 
