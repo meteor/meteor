@@ -63,7 +63,11 @@ var restartServer = function (location) {
       'www_root' : location,
       'cordovajs_root': cordovajsRoot
     }, function (url) {
-      Package.reload.Reload._reload();
+      if (Package.reload) {
+        Package.reload.Reload._reload();
+      } else {
+        window.location.reload();
+      }
     }, fail);
   };
 

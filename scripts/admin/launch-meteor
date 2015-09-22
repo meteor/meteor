@@ -75,7 +75,7 @@ if [ ! -x "$METEOR_WAREHOUSE_DIR/meteor" ]; then
   INSTALL_TMPDIR="$(dirname "$METEOR_WAREHOUSE_DIR")/.meteor-install-tmp"
   rm -rf "$INSTALL_TMPDIR"
   mkdir "$INSTALL_TMPDIR"
-  if [ -n "$USER" ]; then
+  if [ -n "${USER-}" ]; then
     echo "$USER, this is your first time using Meteor!" 1>&2
   else
     echo "This is your first time using Meteor!" 1>&2

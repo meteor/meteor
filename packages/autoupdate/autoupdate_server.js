@@ -189,10 +189,10 @@ process.on('message', Meteor.bindEnvironment(function (m) {
   if (m && m.refresh === 'client') {
     enqueueVersionsRefresh();
   }
-}));
+}, "handling client refresh message"));
 
 // Another way to tell the process to refresh: send SIGHUP signal
 process.on('SIGHUP', Meteor.bindEnvironment(function () {
   enqueueVersionsRefresh();
-}));
+}, "handling SIGHUP signal for refresh"));
 

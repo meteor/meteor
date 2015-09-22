@@ -10,10 +10,13 @@ set -u
 
 cd "`dirname "$0"`"
 
+arg=$1
+
 TARGET="s3://com.meteor.static/test/"
 TEST=no
-if [ $# -ge 1 -a $1 = '--prod' ]; then
+if [ $# -ge 1 -a ${arg} = '--prod' ]; then
     shift
+    arg=$1
     TARGET="s3://com.meteor.static/"
 else
     TEST=yes
@@ -24,7 +27,7 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(dev-bundle-.+--'$1'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(dev-bundle-.+--'${arg}'--.+)/!')
 
 if [ -z "$DIRNAME" ]; then
     echo "build not found" 1>&2
@@ -40,9 +43,9 @@ aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | \
 
 trap - EXIT
 
-for FILE in $(aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nlaF/ -e 'print $F[-1]'); do
-  # aws s3 ls returns 0 when it lists nothing
-  if [[ $(aws s3 ls $TARGET$FILE >/dev/null | wc -l) != 0 ]]; then
+# This awful perl line means "print everything after the last whitespace".
+for FILE in $(aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nla -e 'print $F[-1]'); do
+  if aws s3 ls $TARGET$FILE >/dev/null; then
     echo "$TARGET$FILE already exists (maybe from another branch?)"
     exit 1
   fi

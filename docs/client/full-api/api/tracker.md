@@ -21,11 +21,6 @@ advanced facilities such as `Tracker.Dependency` and `onInvalidate`
 callbacks are intended primarily for package authors implementing new
 reactive data sources.
 
-To learn more about how Tracker works and to explore advanced ways to use it,
-visit the <a href="http://manual.meteor.com/#tracker"> Tracker</a> chapter in the
-<a href="http://manual.meteor.com/">Meteor Manual</a>, which describes it in
-complete detail.
-
 {{> autoApiBox "Tracker.autorun" }}
 
 `Tracker.autorun` allows you to run a function that depends on reactive data
@@ -194,7 +189,8 @@ from the computation's own run function.  Stopping a computation that
 is already stopped has no effect.
 
 Stopping a computation causes its `onInvalidate` callbacks to run
-immediately if it is not currently invalidated.
+immediately if it is not currently invalidated, as well as its
+`stop` callbacks.
 
 Nested computations are stopped automatically when their enclosing
 computation is rerun.
@@ -224,6 +220,8 @@ break dependencies when a computation is rerun or stopped.
 
 To get a callback after a computation has been recomputed, you can
 call [`Tracker.afterFlush`](#tracker_afterflush) from `onInvalidate`.
+
+{{> autoApiBox "Tracker.Computation#onStop" }}
 
 {{> autoApiBox "Tracker.Computation#stopped" }}
 

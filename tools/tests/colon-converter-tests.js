@@ -1,10 +1,10 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
-var testUtils = require('../test-utils.js');
-var utils = require('../utils.js');
+var files = require('../fs/files.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var utils = require('../utils/utils.js');
 var _ = require('underscore');
-var tropohouse = require('../tropohouse.js');
+var tropohouse = require('../packaging/tropohouse.js');
 
 var username = "test";
 var password = "testtest";

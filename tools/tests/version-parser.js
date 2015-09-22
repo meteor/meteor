@@ -1,6 +1,6 @@
 var _ = require('underscore');
-var utils = require('../utils.js');
-var selftest = require('../selftest.js');
+var utils = require('../utils/utils.js');
+var selftest = require('../tool-testing/selftest.js');
 
 
 selftest.define("release management - default orderKey", function () {

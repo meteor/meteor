@@ -14,6 +14,10 @@ LocalCollection._modify = function (doc, mod, options) {
   options = options || {};
   if (!isPlainObject(mod))
     throw MinimongoError("Modifier must be an object");
+
+  // Make sure the caller can't mutate our data structures.
+  mod = EJSON.clone(mod);
+
   var isModifier = isOperatorObject(mod);
 
   var newDoc;
@@ -200,7 +204,7 @@ var MODIFIERS = {
       e.setPropertyError = true;
       throw e;
     }
-    target[field] = EJSON.clone(arg);
+    target[field] = arg;
   },
   $setOnInsert: function (target, field, arg) {
     // converted to `$set` in `_modify`
@@ -222,14 +226,25 @@ var MODIFIERS = {
 
     if (!(arg && arg.$each)) {
       // Simple mode: not $each
-      target[field].push(EJSON.clone(arg));
+      target[field].push(arg);
       return;
     }
 
-    // Fancy mode: $each (and maybe $slice and $sort)
+    // Fancy mode: $each (and maybe $slice and $sort and $position)
     var toPush = arg.$each;
     if (!(toPush instanceof Array))
       throw MinimongoError("$each must be an array");
+
+    // Parse $position
+    var position = undefined;
+    if ('$position' in arg) {
+      if (typeof arg.$position !== "number")
+        throw MinimongoError("$position must be a numeric value");
+      // XXX should check to make sure integer
+      if (arg.$position < 0)
+        throw MinimongoError("$position in $push must be zero or positive");
+      position = arg.$position;
+    }
 
     // Parse $slice.
     var slice = undefined;
@@ -261,8 +276,15 @@ var MODIFIERS = {
     }
 
     // Actually push.
-    for (var j = 0; j < toPush.length; j++)
-      target[field].push(EJSON.clone(toPush[j]));
+    if (position === undefined) {
+      for (var j = 0; j < toPush.length; j++)
+        target[field].push(toPush[j]);
+    } else {
+      var spliceArguments = [position, 0];
+      for (var j = 0; j < toPush.length; j++)
+        spliceArguments.push(toPush[j]);
+      Array.prototype.splice.apply(target[field], spliceArguments);
+    }
 
     // Actually sort.
     if (sortFunction)
@@ -310,7 +332,7 @@ var MODIFIERS = {
         for (var i = 0; i < x.length; i++)
           if (LocalCollection._f._equal(value, x[i]))
             return;
-        x.push(EJSON.clone(value));
+        x.push(value);
       });
     }
   },

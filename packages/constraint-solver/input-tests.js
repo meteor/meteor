@@ -343,6 +343,41 @@ Tinytest.add("constraint solver - input - conflicting top-level constraints", fu
   }, /No version of foo satisfies all constraints: @1.0.0, @2.0.0/);
 });
 
+Tinytest.add("constraint solver - input - unknown package", function (test) {
+  doFailTest(test, {
+    dependencies: ["bar"],
+    constraints: [],
+    catalogCache: {
+      data: {}
+    }
+  }, /unknown package in top-level dependencies: bar/);
+  doFailTest(test, {
+    dependencies: ['foo'],
+    constraints: [],
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["bar"]
+      }
+    }
+  }, /unknown package: bar\nRequired by: foo 1.0.0/);
+  doFailTest(test, {
+    dependencies: ["isobuild:bar"],
+    constraints: [],
+    catalogCache: {
+      data: {}
+    }
+  }, /unsupported Isobuild feature "isobuild:bar" in top-level dependencies/);
+  doFailTest(test, {
+    dependencies: ['foo'],
+    constraints: [],
+    catalogCache: {
+      data: {
+        "foo 1.0.0": ["isobuild:bar"]
+      }
+    }
+  }, /unsupported Isobuild feature "isobuild:bar";.*\nRequired by: foo 1.0.0/);
+});
+
 Tinytest.add("constraint solver - input - previous indirect deps", function (test) {
   doTest(test, {
     dependencies: ["a"],

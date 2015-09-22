@@ -8,7 +8,7 @@
  */
 
 var path = Npm.require('path');
-var MongoDB = Npm.require('mongodb');
+var MongoDB = NpmModuleMongodb;
 var Fiber = Npm.require('fibers');
 var Future = Npm.require(path.join('fibers', 'future'));
 
@@ -17,7 +17,7 @@ MongoTest = {};
 
 MongoInternals.NpmModules = {
   mongodb: {
-    version: Npm.require('mongodb/package.json').version,
+    version: NpmModuleMongodbVersion,
     module: MongoDB
   }
 };
@@ -306,7 +306,16 @@ var writeCallback = function (write, refresh, callback) {
   return function (err, result) {
     if (! err) {
       // XXX We don't have to run this on error, right?
-      refresh();
+      try {
+        refresh();
+      } catch (refreshErr) {
+        if (callback) {
+          callback(refreshErr);
+          return;
+        } else {
+          throw refreshErr;
+        }
+      }
     }
     write.committed();
     if (callback)
@@ -420,6 +429,25 @@ MongoConnection.prototype._dropCollection = function (collectionName, cb) {
   try {
     var collection = self.rawCollection(collectionName);
     collection.drop(cb);
+  } catch (e) {
+    write.committed();
+    throw e;
+  }
+};
+
+// For testing only.  Slightly better than `c.rawDatabase().dropDatabase()`
+// because it lets the test's fence wait for it to be complete.
+MongoConnection.prototype._dropDatabase = function (cb) {
+  var self = this;
+
+  var write = self._maybeBeginWrite();
+  var refresh = function () {
+    Meteor.refresh({ dropDatabase: true });
+  };
+  cb = bindEnvironmentForWrite(writeCallback(write, refresh, cb));
+
+  try {
+    self.db.dropDatabase(cb);
   } catch (e) {
     write.committed();
     throw e;
@@ -608,8 +636,38 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
     // the behavior of modifiers is concerned, whether `_modify`
     // is run on EJSON or on mongo-converted EJSON.
     var selectorDoc = LocalCollection._removeDollarOperators(selector);
-    LocalCollection._modify(selectorDoc, mod, {isInsert: true});
+
     newDoc = selectorDoc;
+
+    // Convert dotted keys into objects. (Resolves issue #4522).
+    _.each(newDoc, function (value, key) {
+      var trail = key.split(".");
+
+      if (trail.length > 1) {
+        //Key is dotted. Convert it into an object.
+        delete newDoc[key];
+
+        var obj = newDoc,
+            leaf = trail.pop();
+
+        // XXX It is not quite certain what should be done if there are clashing
+        // keys on the trail of the dotted key. For now we will just override it
+        // It wouldn't be a very sane query in the first place, but should look
+        // up what mongo does in this case.
+
+        while ((key = trail.shift())) {
+          if (typeof obj[key] !== "object") {
+            obj[key] = {};
+          }
+
+          obj = obj[key];
+        }
+
+        obj[leaf] = value;
+      }
+    });
+
+    LocalCollection._modify(newDoc, mod, {isInsert: true});
   } else {
     newDoc = mod;
   }
@@ -672,7 +730,7 @@ var simulateUpsertWithInsertedId = function (collection, selector, mod,
   doUpdate();
 };
 
-_.each(["insert", "update", "remove", "dropCollection"], function (method) {
+_.each(["insert", "update", "remove", "dropCollection", "dropDatabase"], function (method) {
   MongoConnection.prototype[method] = function (/* arguments */) {
     var self = this;
     return Meteor.wrapAsync(self["_" + method]).apply(self, arguments);
@@ -1215,6 +1273,8 @@ forEachTrigger = function (cursorDescription, triggerCallback) {
   } else {
     triggerCallback(key);
   }
+  // Everyone cares about the database being dropped.
+  triggerCallback({ dropDatabase: true });
 };
 
 // observeChanges for tailable cursors on capped collections.

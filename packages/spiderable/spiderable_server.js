@@ -13,10 +13,15 @@ var urlParser = Npm.require('url');
 // the _escaped_fragment_ protocol, so we need to hardcode a list
 // here. I shed a silent tear.
 Spiderable.userAgentRegExps = [
-    /^facebookexternalhit/i, /^linkedinbot/i, /^twitterbot/i];
+  /^facebookexternalhit/i,
+  /^linkedinbot/i,
+  /^twitterbot/i,
+  /^slackbot-linkexpanding/i
+];
 
-// how long to let phantomjs run before we kill it
-var REQUEST_TIMEOUT = 15*1000;
+// how long to let phantomjs run before we kill it (and send down the
+// regular page instead). Users may modify this number.
+Spiderable.requestTimeoutMs = 15*1000;
 // maximum size of result HTML. node's default is 200k which is too
 // small for our docs.
 var MAX_BUFFER = 5*1024*1024; // 5MB
@@ -107,7 +112,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
       ['-c',
        ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
-      {timeout: REQUEST_TIMEOUT, maxBuffer: MAX_BUFFER},
+      {timeout: Spiderable.requestTimeoutMs, maxBuffer: MAX_BUFFER},
       function (error, stdout, stderr) {
         if (!error && /<html/i.test(stdout)) {
           res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
@@ -118,7 +123,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
           if (error && error.code === 127)
             Meteor._debug("spiderable: phantomjs not installed. Download and install from http://phantomjs.org/");
           else
-            Meteor._debug("spiderable: phantomjs failed:", error, "\nstderr:", stderr);
+            Meteor._debug("spiderable: phantomjs failed at " + url + ":", error, "\nstderr:", stderr, "\nstdout:", stdout);
 
           next();
         }

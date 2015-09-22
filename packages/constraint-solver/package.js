@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Given the set of the constraints, picks a satisfying configuration",
-  version: "1.0.19"
+  version: "1.0.20"
 });
 
 Package.onUse(function (api) {
@@ -23,8 +23,13 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use('constraint-solver');
-  api.use(['tinytest', 'minimongo', 'package-version-parser']);
-  api.use('underscore');
+  api.use([
+    'tinytest',
+    'minimongo',
+    'package-version-parser',
+    'underscore',
+    'check'
+  ]);
 
   // Only test the package on the server.  Mainly because of
   // package-version-parser, which uses the semver npm module,

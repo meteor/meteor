@@ -1,5 +1,5 @@
-var selftest = require('../selftest.js');
-var files = require('../files.js');
+var selftest = require('../tool-testing/selftest.js');
+var files = require('../fs/files.js');
 
 selftest.define("linking to meteor script works correctly on Windows", function () {
   var location =

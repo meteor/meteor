@@ -136,7 +136,7 @@ Mongo.Collection = function (name, options) {
       // Apply an update.
       // XXX better specify this interface (not in terms of a wire message)?
       update: function (msg) {
-        var mongoId = LocalCollection._idParse(msg.id);
+        var mongoId = MongoID.idParse(msg.id);
         var doc = self._collection.findOne(mongoId);
 
         // Is this a "replace the whole doc" message coming from the quiescence
@@ -199,7 +199,12 @@ Mongo.Collection = function (name, options) {
       },
       retrieveOriginals: function () {
         return self._collection.retrieveOriginals();
-      }
+      },
+
+      // Used to preserve current versions of documents across a store reset.
+      getDoc: function(id) {
+        return self.findOne(id);
+      },
     });
 
     if (!ok)
@@ -327,6 +332,12 @@ Mongo.Collection._rewriteSelector = function (selector) {
   // shorthand -- scalars match _id
   if (LocalCollection._selectorIsId(selector))
     selector = {_id: selector};
+
+  if (_.isArray(selector)) {
+    // This is consistent with the Mongo console itself; if we don't do this
+    // check passing an empty array ends up selecting all items
+    throw new Error("Mongo selector can't be an array.");
+  }
 
   if (!selector || (('_id' in selector) && !selector._id))
     // can't match anything
@@ -638,6 +649,10 @@ Mongo.Collection.prototype._createCappedCollection = function (byteSize, maxDocu
   self._collection._createCappedCollection(byteSize, maxDocuments);
 };
 
+/**
+ * @summary Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/collection.html) object corresponding to this collection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @locus Server
+ */
 Mongo.Collection.prototype.rawCollection = function () {
   var self = this;
   if (! self._collection.rawCollection) {
@@ -646,6 +661,10 @@ Mongo.Collection.prototype.rawCollection = function () {
   return self._collection.rawCollection();
 };
 
+/**
+ * @summary Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/1.4/api-generated/db.html) object corresponding to this collection's database connection from the [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+ * @locus Server
+ */
 Mongo.Collection.prototype.rawDatabase = function () {
   var self = this;
   if (! (self._driver.mongo && self._driver.mongo.db)) {
@@ -659,9 +678,9 @@ Mongo.Collection.prototype.rawDatabase = function () {
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
  * @class
- * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
+ * @param {String} [hexString] Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
-Mongo.ObjectID = LocalCollection._ObjectID;
+Mongo.ObjectID = MongoID.ObjectID;
 
 /**
  * @summary To create a cursor, use find. To access the documents in a cursor, use forEach, map, or fetch.

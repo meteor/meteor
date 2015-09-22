@@ -66,6 +66,9 @@ Meteor.methods({
 });
 
 Accounts.onLogin(function (attempt) {
+  if (!attempt.connection) // if login method called from the server
+    return;
+
   if (capturedLogins[attempt.connection.id])
     capturedLogins[attempt.connection.id].push({
       successful: true,
@@ -74,6 +77,9 @@ Accounts.onLogin(function (attempt) {
 });
 
 Accounts.onLoginFailure(function (attempt) {
+  if (!attempt.connection) // if login method called from the server
+    return;
+
   if (capturedLogins[attempt.connection.id]) {
     capturedLogins[attempt.connection.id].push({
       successful: false,

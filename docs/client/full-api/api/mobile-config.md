@@ -40,6 +40,8 @@ App.launchScreens({
 // Set PhoneGap/Cordova preferences
 App.setPreference('BackgroundColor', '0xff0000ff');
 App.setPreference('HideKeyboardFormAccessoryBar', true);
+App.setPreference('Orientation', 'default');
+App.setPreference('Orientation', 'all', 'ios');
 
 // Pass preferences for a particular PhoneGap/Cordova plugin
 App.configurePlugin('com.phonegap.plugins.facebookconnect', {

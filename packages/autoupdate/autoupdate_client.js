@@ -41,6 +41,7 @@ Autoupdate.newClientAvailable = function () {
                _id: "version-refreshable",
                version: {$ne: autoupdateVersionRefreshable} });
 };
+Autoupdate._ClientVersions = ClientVersions;  // Used by a self-test
 
 var knownToSupportCssOnLoad = false;
 
@@ -137,7 +138,10 @@ Autoupdate._retrySubscription = function () {
           }
           else if (doc._id === 'version' && doc.version !== autoupdateVersion) {
             handle && handle.stop();
-            Package.reload.Reload._reload();
+
+            if (Package.reload) {
+              Package.reload.Reload._reload();
+            }
           }
         };
 

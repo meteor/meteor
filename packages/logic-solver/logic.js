@@ -1,70 +1,65 @@
-Logic = {};
+Logic._MiniSat = MiniSat; // Expose for testing and poking around
 
-// Disabling type checks speeds things up a LOT (several times faster).
-// Type checks are disabled when `_check` is set to a no-op function
-// instead of `check`.
-_check = check;
-Logic._disablingTypeChecks = function (f) {
-  var oldCheck = _check;
-  try {
-    _check = function () {};
-    return f();
-  } finally {
-    _check = oldCheck;
+// import the private testers from types.js
+var isInteger = Logic._isInteger;
+var isFunction = Logic._isFunction;
+var isString = Logic._isString;
+var isArrayWhere = Logic._isArrayWhere;
+var isFormulaOrTerm = Logic._isFormulaOrTerm;
+var isFormulaOrTermOrBits = Logic._isFormulaOrTermOrBits;
+
+Logic._assert = function (value, tester, description) {
+  if (! tester(value)) {
+    var displayValue = (typeof value === 'string' ? JSON.stringify(value) :
+                        value);
+    throw new Error(displayValue + " is not " +
+                    (tester.description || description));
   }
 };
 
-Logic._MiniSat = MiniSat; // Expose for testing and poking around
+// Call this as `if (assert) assertNumArgs(...)`
+var assertNumArgs = function (actual, expected, funcName) {
+  if (actual !== expected) {
+    throw new Error("Expected " + expected + " args in " + funcName +
+                    ", got " + actual);
+  }
+};
 
-////////// Type Declarations
+// Call `assert` as: `if (assert) assert(...)`.
+// This local variable temporarily set to `null` inside
+// `Logic.disablingAssertions`.
+var assert = Logic._assert;
 
-// All variables have a name and a number.  The number is mainly used
-// internally, and it's what's given to MiniSat.  Names and numbers
-// are interchangeable, which is convenient for doing manipulation
-// of terms in a way that works before or after variable names are
-// converted to numbers.
+// Like `if (assert) assert(...)` but usable from other files in the package.
+Logic._assertIfEnabled = function (value, tester, description) {
+  if (assert) assert(value, tester, description);
+};
 
-// Term: a variable name or variable number, optionally
-// negated (meaning "boolean not").  For example,
-// `1`, `-1`, `"foo"`, or `"-foo"`.  All variables have
-// internal numbers that start at 1, so "foo" might be
-// variable number 1, for example.  Any number of leading
-// "-" will be parsed in the string form, but we try to
-// keep it to either one or zero of them.
+// Disabling runtime assertions speeds up clause generation.  Assertions
+// are disabled when the local variable `assert` is null instead of
+// `Logic._assert`.
+Logic.disablingAssertions = function (f) {
+  var oldAssert = assert;
+  try {
+    assert = null;
+    return f();
+  } finally {
+    assert = oldAssert;
+  }
+};
 
-Logic.NumTerm = Match.Where(function (x) {
-  return Match.test(x, Match.Integer) && x !== 0;
-});
+// Back-compat.
+Logic._disablingTypeChecks = Logic.disablingAssertions;
 
-Logic.NameTerm = Match.Where(function (x) {
-  // NameTerm must not be empty, or just `-` characters, or
-  // look like a number.  Specifically, it can't be zero or
-  // more `-` followed by zero or more digits.
-  return (typeof x === 'string') &&
-    ! /^-*[0-9]*$/.test(x);
-});
-
-Logic.Term = Match.OneOf(Logic.NameTerm, Logic.NumTerm);
-
-// WholeNumber: a non-negative integer (0 is allowed)
-Logic.WholeNumber = Match.Where(function (x) {
-  return Match.test(x, Match.Integer) && x >= 0;
-});
-
-// Abstract base class.  Subclasses are created using _defineFormula.
-Logic.Formula = function () {};
-
-Logic.FormulaOrTerm = Match.OneOf(Logic.Formula, Logic.Term);
-
-////////// End Type Declarations
-
+////////////////////
 
 // Takes a Formula or Term, returns a Formula or Term.
 // Unlike other operators, if you give it a Term,
 // you will get a Term back (of the same type, NameTerm
 // or NumTerm).
 Logic.not = function (operand) {
-  _check(operand, Logic.FormulaOrTerm);
+  if (assert) assert(operand, isFormulaOrTerm);
+
   if (operand instanceof Logic.Formula) {
     return new Logic.NotFormula(operand);
   } else {
@@ -87,10 +82,14 @@ Logic.NUM_TRUE = 2;
 Logic.TRUE = Logic.NAME_TRUE;
 Logic.FALSE = Logic.NAME_FALSE;
 
+// Abstract base class.  Subclasses are created using _defineFormula.
+Logic.Formula = function () {};
+
 Logic._defineFormula = function (constructor, typeName, methods) {
-  _check(constructor, Function);
-  _check(typeName, String);
-  Meteor._inherits(constructor, Logic.Formula);
+  if (assert) assert(constructor, isFunction);
+  if (assert) assert(typeName, isString);
+
+  constructor.prototype = new Logic.Formula();
   constructor.prototype.type = typeName;
   if (methods) {
     _.extend(constructor.prototype, methods);
@@ -124,7 +123,8 @@ Logic.Formula.prototype.guid = function () {
 // the clauses to MiniSat.
 Logic.Clause = function (/*formulaOrArray, ...*/) {
   var terms = _.flatten(arguments);
-  _check(terms, [Logic.NumTerm]);
+  if (assert) assert(terms, isArrayWhere(Logic.isNumTerm));
+
   this.terms = terms; // immutable [NumTerm]
 };
 
@@ -213,7 +213,8 @@ Logic.Termifier = function (solver) {
 Logic.Termifier.prototype.clause = function (/*args*/) {
   var self = this;
   var formulas = _.flatten(arguments);
-  _check(formulas, [Logic.FormulaOrTerm]);
+  if (assert) assert(formulas, isArrayWhere(isFormulaOrTerm));
+
   return new Logic.Clause(_.map(formulas, function (f) {
     return self.term(f);
   }));
@@ -249,8 +250,8 @@ Logic.Solver = function () {
   self._name2num = {}; // (' '+vname) -> vnum
 
   // true and false
-  var F = self.getVarNum(Logic.NAME_FALSE, true); // 1
-  var T = self.getVarNum(Logic.NAME_TRUE, true); // 2
+  var F = self.getVarNum(Logic.NAME_FALSE, false, true); // 1
+  var T = self.getVarNum(Logic.NAME_TRUE, false, true); // 2
   if (F !== Logic.NUM_FALSE || T !== Logic.NUM_TRUE) {
     throw new Error("Assertion failure: $T and $F have wrong numeric value");
   }
@@ -277,14 +278,14 @@ Logic.Solver = function () {
 };
 
 // Get a var number for vname, assigning it a number if it is new.
-// Setting "_createInternals" to true grants the ability to create $ variables.
-// Setting "_noCreate" to true causes the function to return 0 instead of
+// Setting "noCreate" to true causes the function to return 0 instead of
 // creating a new variable.
-Logic.Solver.prototype.getVarNum = function (vname, _createInternals, _noCreate) {
+// Setting "_createInternals" to true grants the ability to create $ variables.
+Logic.Solver.prototype.getVarNum = function (vname, noCreate, _createInternals) {
   var key = ' '+vname;
   if (_.has(this._name2num, key)) {
     return this._name2num[key];
-  } else if (_noCreate) {
+  } else if (noCreate) {
     return 0;
   } else {
     if (vname.charAt(0) === "$" && ! _createInternals) {
@@ -298,7 +299,8 @@ Logic.Solver.prototype.getVarNum = function (vname, _createInternals, _noCreate)
 };
 
 Logic.Solver.prototype.getVarName = function (vnum) {
-  _check(vnum, Match.Integer);
+  if (assert) assert(vnum, isInteger);
+
   var num2name = this._num2name;
   if (vnum < 1 || vnum >= num2name.length) {
     throw new Error("Bad variable num: " + vnum);
@@ -316,7 +318,7 @@ Logic.Solver.prototype.getVarName = function (vnum) {
 Logic.Solver.prototype.toNumTerm = function (t, noCreate) {
   var self = this;
 
-  _check(t, Logic.Term);
+  if (assert) assert(t, Logic.isTerm);
 
   if (typeof t === 'number') {
     return t;
@@ -326,7 +328,7 @@ Logic.Solver.prototype.toNumTerm = function (t, noCreate) {
       t = t.slice(1);
       not = ! not;
     }
-    var n = self.getVarNum(t, false, noCreate);
+    var n = self.getVarNum(t, noCreate);
     if (! n) {
       return 0; // must be the noCreate case
     } else {
@@ -339,7 +341,7 @@ Logic.Solver.prototype.toNumTerm = function (t, noCreate) {
 Logic.Solver.prototype.toNameTerm = function (t) {
   var self = this;
 
-  _check(t, Logic.Term);
+  if (assert) assert(t, Logic.isTerm);
 
   if (typeof t === 'string') {
     // canonicalize, removing leading "--"
@@ -365,12 +367,12 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms,
                                               _useTermOverride) {
   var self = this;
 
-  _check(cls, Logic.Clause);
+  if (assert) assert(cls, Logic.isClause);
 
   var extraTerms = null;
   if (_extraTerms) {
     extraTerms = _extraTerms;
-    _check(extraTerms, [Logic.NumTerm]);
+    if (assert) assert(extraTerms, isArrayWhere(Logic.isNumTerm));
   }
 
   var usedF = false;
@@ -420,7 +422,7 @@ Logic.Solver.prototype._addClause = function (cls, _extraTerms,
 
 Logic.Solver.prototype._useFormulaTerm = function (t, _addClausesOverride) {
   var self = this;
-  _check(t, Logic.NumTerm);
+  if (assert) assert(t, Logic.isNumTerm);
   var v = (t < 0) ? -t : t;
 
   if (! _.has(self._ungeneratedFormulas, v)) {
@@ -497,7 +499,7 @@ Logic.Solver.prototype._useFormulaTerm = function (t, _addClausesOverride) {
 
 Logic.Solver.prototype._addClauses = function (array, _extraTerms,
                                                _useTermOverride) {
-  _check(array, [Logic.Clause]);
+  if (assert) assert(array, isArrayWhere(Logic.isClause));
   var self = this;
   _.each(array, function (cls) {
     self._addClause(cls, _extraTerms, _useTermOverride);
@@ -514,7 +516,8 @@ Logic.Solver.prototype.forbid = function (/*formulaOrArray, ...*/) {
 
 Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
   var self = this;
-  _check(formulas, [Logic.FormulaOrTerm]);
+  if (assert) assert(formulas, isArrayWhere(isFormulaOrTerm));
+
   _.each(formulas, function (f) {
     if (f instanceof Logic.NotFormula) {
       self._requireForbidImpl(!isRequire, [f.operand]);
@@ -539,7 +542,7 @@ Logic.Solver.prototype._requireForbidImpl = function (isRequire, formulas) {
 
 Logic.Solver.prototype._generateFormula = function (isTrue, formula, _termifier) {
   var self = this;
-  _check(formula, Logic.FormulaOrTerm);
+  if (assert) assert(formula, isFormulaOrTerm);
 
   if (formula instanceof Logic.NotFormula) {
     return self._generateFormula(!isTrue, formula.operand);
@@ -626,10 +629,10 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
   var self = this;
 
   if (_.isArray(formula)) {
-    _check(formula, [Logic.FormulaOrTerm]);
+    if (assert) assert(formula, isArrayWhere(isFormulaOrTerm));
     return _.map(formula, _.bind(self._formulaToTerm, self));
   } else {
-    _check(formula, Logic.FormulaOrTerm);
+    if (assert) assert(formula, isFormulaOrTerm);
   }
 
   if (formula instanceof Logic.NotFormula) {
@@ -650,7 +653,7 @@ Logic.Solver.prototype._formulaToTerm = function (formula) {
       }
       var numForVarName = this._nextFormulaNumByType[type]++;
       info.varName = "$" + formula.type + numForVarName;
-      info.varNum = this.getVarNum(info.varName, true);
+      info.varNum = this.getVarNum(info.varName, false, true);
       this._ungeneratedFormulas[info.varNum] = formula;
     }
     return info.varNum;
@@ -665,7 +668,7 @@ Logic.or = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.FALSE;
   } else if (args.length === 1) {
-    _check(args[0], Logic.FormulaOrTerm);
+    if (assert) assert(args[0], isFormulaOrTerm);
     return args[0];
   } else {
     return new Logic.OrFormula(args);
@@ -673,7 +676,7 @@ Logic.or = function (/*formulaOrArray, ...*/) {
 };
 
 Logic.OrFormula = function (operands) {
-  _check(operands, [Logic.FormulaOrTerm]);
+  if (assert) assert(operands, isArrayWhere(isFormulaOrTerm));
   this.operands = operands;
 };
 
@@ -694,7 +697,7 @@ Logic._defineFormula(Logic.OrFormula, 'or', {
 });
 
 Logic.NotFormula = function (operand) {
-  _check(operand, Logic.FormulaOrTerm);
+  if (assert) assert(operand, isFormulaOrTerm);
   this.operand = operand;
 };
 
@@ -707,7 +710,7 @@ Logic.and = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.TRUE;
   } else if (args.length === 1) {
-    _check(args[0], Logic.FormulaOrTerm);
+    if (assert) assert(args[0], isFormulaOrTerm);
     return args[0];
   } else {
     return new Logic.AndFormula(args);
@@ -715,7 +718,7 @@ Logic.and = function (/*formulaOrArray, ...*/) {
 };
 
 Logic.AndFormula = function (operands) {
-  _check(operands, [Logic.FormulaOrTerm]);
+  if (assert) assert(operands, isArrayWhere(isFormulaOrTerm));
   this.operands = operands;
 };
 
@@ -750,7 +753,7 @@ Logic.xor = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.FALSE;
   } else if (args.length === 1) {
-    _check(args[0], Logic.FormulaOrTerm);
+    if (assert) assert(args[0], isFormulaOrTerm);
     return args[0];
   } else {
     return new Logic.XorFormula(args);
@@ -758,7 +761,7 @@ Logic.xor = function (/*formulaOrArray, ...*/) {
 };
 
 Logic.XorFormula = function (operands) {
-  _check(operands, [Logic.FormulaOrTerm]);
+  if (assert) assert(operands, isArrayWhere(isFormulaOrTerm));
   this.operands = operands;
 };
 
@@ -819,7 +822,7 @@ Logic.atMostOne = function (/*formulaOrArray, ...*/) {
 };
 
 Logic.AtMostOneFormula = function (operands) {
-  _check(operands, [Logic.FormulaOrTerm]);
+  if (assert) assert(operands, isArrayWhere(isFormulaOrTerm));
   this.operands = operands;
 };
 
@@ -872,14 +875,14 @@ Logic._defineFormula(Logic.AtMostOneFormula, 'atMostOne', {
 });
 
 Logic.implies = function (A, B) {
-  _check(arguments.length, 2);
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.implies");
   return new Logic.ImpliesFormula(A, B);
 };
 
 Logic.ImpliesFormula = function (A, B) {
-  _check(A, Logic.FormulaOrTerm);
-  _check(B, Logic.FormulaOrTerm);
-  _check(arguments.length, 2);
+  if (assert) assert(A, isFormulaOrTerm);
+  if (assert) assert(B, isFormulaOrTerm);
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.implies");
   this.A = A;
   this.B = B;
 };
@@ -891,14 +894,14 @@ Logic._defineFormula(Logic.ImpliesFormula, 'implies', {
 });
 
 Logic.equiv = function (A, B) {
-  _check(arguments.length, 2);
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.equiv");
   return new Logic.EquivFormula(A, B);
 };
 
 Logic.EquivFormula = function (A, B) {
-  _check(A, Logic.FormulaOrTerm);
-  _check(B, Logic.FormulaOrTerm);
-  _check(arguments.length, 2);
+  if (assert) assert(A, isFormulaOrTerm);
+  if (assert) assert(B, isFormulaOrTerm);
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.equiv");
   this.A = A;
   this.B = B;
 };
@@ -914,7 +917,7 @@ Logic.exactlyOne = function (/*formulaOrArray, ...*/) {
   if (args.length === 0) {
     return Logic.FALSE;
   } else if (args.length === 1) {
-    _check(args[0], Logic.FormulaOrTerm);
+    if (assert) assert(args[0], isFormulaOrTerm);
     return args[0];
   } else {
     return new Logic.ExactlyOneFormula(args);
@@ -922,7 +925,7 @@ Logic.exactlyOne = function (/*formulaOrArray, ...*/) {
 };
 
 Logic.ExactlyOneFormula = function (operands) {
-  _check(operands, [Logic.FormulaOrTerm]);
+  if (assert) assert(operands, isArrayWhere(isFormulaOrTerm));
   this.operands = operands;
 };
 
@@ -942,12 +945,12 @@ Logic._defineFormula(Logic.ExactlyOneFormula, 'exactlyOne', {
 // a non-negative integer.  Least significant bit is first.  That is,
 // the kth array element has a place value of 2^k.
 Logic.Bits = function (formulaArray) {
-  _check(formulaArray, [Logic.FormulaOrTerm]);
+  if (assert) assert(formulaArray, isArrayWhere(isFormulaOrTerm));
   this.bits = formulaArray; // public, immutable
 };
 
 Logic.constantBits = function (wholeNumber) {
-  _check(wholeNumber, Logic.WholeNumber);
+  if (assert) assert(wholeNumber, Logic.isWholeNumber);
   var result = [];
   while (wholeNumber) {
     result.push((wholeNumber & 1) ? Logic.TRUE : Logic.FALSE);
@@ -957,9 +960,10 @@ Logic.constantBits = function (wholeNumber) {
 };
 
 Logic.variableBits = function (baseName, nbits) {
+  if (assert) assert(nbits, Logic.isWholeNumber);
   var result = [];
   for (var i = 0; i < nbits; i++) {
-    result.push(baseName + i);
+    result.push(baseName + '$' + i);
   }
   return new Logic.Bits(result);
 };
@@ -970,9 +974,9 @@ Logic.lessThanOrEqual = function (bits1, bits2) {
 };
 
 Logic.LessThanOrEqualFormula = function (bits1, bits2) {
-  _check(bits1, Logic.Bits);
-  _check(bits2, Logic.Bits);
-  _check(arguments.length, 2);
+  if (assert) assert(bits1, Logic.isBits);
+  if (assert) assert(bits2, Logic.isBits);
+  if (assert) assertNumArgs(arguments.length, 2, "Bits comparison function");
   this.bits1 = bits1;
   this.bits2 = bits2;
 };
@@ -1054,9 +1058,9 @@ Logic.lessThan = function (bits1, bits2) {
 };
 
 Logic.LessThanFormula = function (bits1, bits2) {
-  _check(bits1, Logic.Bits);
-  _check(bits2, Logic.Bits);
-  _check(arguments.length, 2);
+  if (assert) assert(bits1, Logic.isBits);
+  if (assert) assert(bits2, Logic.isBits);
+  if (assert) assertNumArgs(arguments.length, 2, "Bits comparison function");
   this.bits1 = bits1;
   this.bits2 = bits2;
 };
@@ -1086,9 +1090,9 @@ Logic.equalBits = function (bits1, bits2) {
 };
 
 Logic.EqualBitsFormula = function (bits1, bits2) {
-  _check(bits1, Logic.Bits);
-  _check(bits2, Logic.Bits);
-  _check(arguments.length, 2);
+  if (assert) assert(bits1, Logic.isBits);
+  if (assert) assert(bits2, Logic.isBits);
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.equalBits");
   this.bits1 = bits1;
   this.bits2 = bits2;
 };
@@ -1125,9 +1129,10 @@ Logic._defineFormula(Logic.EqualBitsFormula, 'equalBits', {
 // here to enhance readability of the generated clauses.
 
 Logic.HalfAdderSum = function (formula1, formula2) {
-  _check(formula1, Logic.FormulaOrTerm);
-  _check(formula2, Logic.FormulaOrTerm);
-  _check(arguments.length, 2);
+  if (assert) assert(formula1, isFormulaOrTerm);
+  if (assert) assert(formula2, isFormulaOrTerm);
+
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.HalfAdderSum");
   this.a = formula1;
   this.b = formula2;
 };
@@ -1139,9 +1144,9 @@ Logic._defineFormula(Logic.HalfAdderSum, 'hsum', {
 });
 
 Logic.HalfAdderCarry = function (formula1, formula2) {
-  _check(formula1, Logic.FormulaOrTerm);
-  _check(formula2, Logic.FormulaOrTerm);
-  _check(arguments.length, 2);
+  if (assert) assert(formula1, isFormulaOrTerm);
+  if (assert) assert(formula2, isFormulaOrTerm);
+  if (assert) assertNumArgs(arguments.length, 2, "Logic.HalfAdderCarry");
   this.a = formula1;
   this.b = formula2;
 };
@@ -1153,10 +1158,10 @@ Logic._defineFormula(Logic.HalfAdderCarry, 'hcarry', {
 });
 
 Logic.FullAdderSum = function (formula1, formula2, formula3) {
-  _check(formula1, Logic.FormulaOrTerm);
-  _check(formula2, Logic.FormulaOrTerm);
-  _check(formula3, Logic.FormulaOrTerm);
-  _check(arguments.length, 3);
+  if (assert) assert(formula1, isFormulaOrTerm);
+  if (assert) assert(formula2, isFormulaOrTerm);
+  if (assert) assert(formula3, isFormulaOrTerm);
+  if (assert) assertNumArgs(arguments.length, 3, "Logic.FullAdderSum");
   this.a = formula1;
   this.b = formula2;
   this.c = formula3;
@@ -1169,10 +1174,10 @@ Logic._defineFormula(Logic.FullAdderSum, 'fsum', {
 });
 
 Logic.FullAdderCarry = function (formula1, formula2, formula3) {
-  _check(formula1, Logic.FormulaOrTerm);
-  _check(formula2, Logic.FormulaOrTerm);
-  _check(formula3, Logic.FormulaOrTerm);
-  _check(arguments.length, 3);
+  if (assert) assert(formula1, isFormulaOrTerm);
+  if (assert) assert(formula2, isFormulaOrTerm);
+  if (assert) assert(formula3, isFormulaOrTerm);
+  if (assert) assertNumArgs(arguments.length, 3, "Logic.FullAdderCarry");
   this.a = formula1;
   this.b = formula2;
   this.c = formula3;
@@ -1195,7 +1200,8 @@ Logic._defineFormula(Logic.FullAdderCarry, 'fcarry', {
 //
 // Returns an array of Logic.FormulaOrTerm.
 var binaryWeightedSum = function (varsByWeight) {
-  _check(varsByWeight, [[Logic.FormulaOrTerm]]);
+  if (assert) assert(varsByWeight,
+                     isArrayWhere(isArrayWhere(isFormulaOrTerm)));
   // initialize buckets to a two-level clone of varsByWeight
   var buckets = _.map(varsByWeight, _.clone);
   var lowestWeight = 0; // index of the first non-empty array
@@ -1243,20 +1249,28 @@ var pushToNth = function (arrayOfArrays, n, newItem) {
   arrayOfArrays[n].push(newItem);
 };
 
-Logic.weightedSum = function (formulas, weights) {
-  _check(formulas, [Logic.FormulaOrTerm]);
+var checkWeightedSumArgs = function (formulas, weights) {
+  if (assert) assert(formulas, isArrayWhere(isFormulaOrTerm));
   if (typeof weights === 'number') {
-    _check(weights, Logic.WholeNumber);
-    weights = _.map(formulas, function () { return weights; });
+    if (assert) assert(weights, Logic.isWholeNumber);
+  } else {
+    if (assert) assert(weights, isArrayWhere(Logic.isWholeNumber));
+    if (formulas.length !== weights.length) {
+      throw new Error("Formula array and weight array must be same length" +
+                      "; they are " + formulas.length + " and " + weights.length);
+    }
   }
-  _check(weights, [Logic.WholeNumber]);
-  if (formulas.length !== weights.length) {
-    throw new Error("Formula array and weight array must be same length" +
-                    "; they are " + formulas.length + " and " + weights.length);
-  }
+};
+
+Logic.weightedSum = function (formulas, weights) {
+  checkWeightedSumArgs(formulas, weights);
 
   if (formulas.length === 0) {
     return new Logic.Bits([]);
+  }
+
+  if (typeof weights === 'number') {
+    weights = _.map(formulas, function () { return weights; });
   }
 
   var binaryWeighted = [];
@@ -1277,7 +1291,7 @@ Logic.weightedSum = function (formulas, weights) {
 
 Logic.sum = function (/*formulaOrBitsOrArray, ...*/) {
   var things = _.flatten(arguments);
-  _check(things, [Match.OneOf(Logic.FormulaOrTerm, Logic.Bits)]);
+  if (assert) assert(things, isArrayWhere(isFormulaOrTermOrBits));
 
   var binaryWeighted = [];
   _.each(things, function (x) {
@@ -1332,7 +1346,7 @@ Logic.Solver.prototype.solve = function (_assumpVar) {
 };
 
 Logic.Solver.prototype.solveAssuming = function (formula) {
-  _check(formula, Logic.FormulaOrTerm);
+  if (assert) assert(formula, isFormulaOrTerm);
 
   // Wrap the formula in a formula of type Assumption, so that
   // we always generate a var like `$assump123`, regardless
@@ -1362,7 +1376,7 @@ Logic.Solver.prototype.solveAssuming = function (formula) {
 };
 
 Logic.Assumption = function (formula) {
-  _check(formula, Logic.FormulaOrTerm);
+  if (assert) assert(formula, isFormulaOrTerm);
   this.formula = formula;
 };
 
@@ -1398,11 +1412,18 @@ Logic.Solution = function (_solver, _assignment) {
     return self.evaluate(formula) ? Logic.NUM_TRUE : Logic.NUM_FALSE;
   };
 
-  // Read/write.  When true, evaluation doesn't throw errors when
+  // When true, evaluation doesn't throw errors when
   // `evaluate` or `getWeightedSum` encounter named variables that are
   // unknown or variables that weren't present when this Solution was
   // generated.  Instead, the unknown variables are assumed to be false.
-  self.ignoreUnknownVariables = false;
+  self._ignoreUnknownVariables = false;
+};
+
+Logic.Solution.prototype.ignoreUnknownVariables = function () {
+  // We only make this settable one way (false to true).
+  // Setting it back and forth would be questionable, since we keep
+  // a cache of Formula evaluations.
+  this._ignoreUnknownVariables = true;
 };
 
 // Get a map of variables to their assignments,
@@ -1461,7 +1482,7 @@ Logic.Solution.prototype.getFormula = function () {
 // if the argument is a Logic.Bits.
 Logic.Solution.prototype.evaluate = function (formulaOrBits) {
   var self = this;
-  _check(formulaOrBits, Match.OneOf(Logic.FormulaOrTerm, Logic.Bits));
+  if (assert) assert(formulaOrBits, isFormulaOrTermOrBits);
 
   if (formulaOrBits instanceof Logic.Bits) {
     // Evaluate to an integer
@@ -1475,7 +1496,7 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
   }
 
   var solver = self._solver;
-  var ignoreUnknownVariables = self.ignoreUnknownVariables;
+  var ignoreUnknownVariables = self._ignoreUnknownVariables;
   var assignment = self._assignment;
   var formula = formulaOrBits;
   if (formula instanceof Logic.NotFormula) {
@@ -1548,18 +1569,17 @@ Logic.Solution.prototype.evaluate = function (formulaOrBits) {
 };
 
 Logic.Solution.prototype.getWeightedSum = function (formulas, weights) {
-  _check(formulas, [Logic.FormulaOrTerm]);
-  if (typeof weights === 'number') {
-    _check(weights, Logic.WholeNumber);
-    weights = _.map(formulas, function () { return weights; });
-  }
-  _check(weights, [Logic.WholeNumber]);
+  checkWeightedSumArgs(formulas, weights);
+
   var total = 0;
-  if (formulas.length !== weights.length) {
-    throw new Error("formulas and weights arrays must be same length");
-  }
-  for (var i = 0; i < formulas.length; i++) {
-    total += weights[i] * (this.evaluate(formulas[i]) ? 1 : 0);
+  if (typeof weights === 'number') {
+    for (var i = 0; i < formulas.length; i++) {
+      total += weights * (this.evaluate(formulas[i]) ? 1 : 0);
+    }
+  } else {
+    for (var i = 0; i < formulas.length; i++) {
+      total += weights[i] * (this.evaluate(formulas[i]) ? 1 : 0);
+    }
   }
   return total;
 };

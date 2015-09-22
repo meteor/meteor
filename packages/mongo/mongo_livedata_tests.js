@@ -2665,6 +2665,136 @@ if (Meteor.isServer) {
                 name: 'david',
                 elements: ['Y', 'A', 'B', 'C']});
   });
+
+  Tinytest.add("mongo-livedata - upsert handles dotted selectors corrrectly", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    var result1 = collection.upsert({
+      "subdocument.a": 1
+    }, {
+      $set: {message: "upsert 1"}
+    });
+
+    test.equal(collection.findOne(result1.insertedId),{
+      _id: result1.insertedId,
+      subdocument: {a: 1},
+      message: "upsert 1"
+    });
+
+    var result2 = collection.upsert({
+      "subdocument.a": 1
+    }, {
+      $set: {message: "upsert 2"}
+    });
+
+    test.equal(result2, {numberAffected: 1});
+
+    test.equal(collection.findOne(result1.insertedId),{
+      _id: result1.insertedId,
+      subdocument: {a: 1},
+      message: "upsert 2"
+    });
+
+    var result3 = collection.upsert({
+      "subdocument.a.b": 1,
+      "subdocument.c": 2
+    }, {
+      $set: {message: "upsert3"}
+    });
+
+    test.equal(collection.findOne(result3.insertedId),{
+      _id: result3.insertedId,
+      subdocument: {a: {b: 1}, c: 2},
+      message: "upsert3"
+    });
+
+    var result4 = collection.upsert({
+      "subdocument.a": 4
+    }, {
+      $set: {"subdocument.a": "upsert 4"}
+    });
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: {a: "upsert 4"}
+    });
+
+    var result5 = collection.upsert({
+      "subdocument.a": "upsert 4"
+    }, {
+      $set: {"subdocument.a": "upsert 5"}
+    });
+
+    test.equal(result5, {numberAffected: 1});
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: {a: "upsert 5"}
+    });
+
+    var result6 = collection.upsert({
+      "subdocument.a": "upsert 5"
+    }, {
+      $set: {"subdocument": "upsert 6"}
+    });
+
+    test.equal(result6, {numberAffected: 1});
+
+    test.equal(collection.findOne(result4.insertedId), {
+      _id: result4.insertedId,
+      subdocument: "upsert 6"
+    });
+
+    var result7 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.c": "upsert7"
+      }
+    });
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: 7, c: "upsert7"}
+      }
+    });
+
+    var result8 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.c": "upsert8"
+      }
+    });
+
+    test.equal(result8, {numberAffected: 1});
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: 7, c: "upsert8"}
+      }
+    });
+
+    var result9 = collection.upsert({
+      "subdocument.a.b": 7
+    }, {
+      $set: {
+        "subdocument.a.b": "upsert9"
+      }
+    });
+
+    test.equal(result9, {numberAffected: 1});
+
+    test.equal(collection.findOne(result7.insertedId), {
+      _id: result7.insertedId,
+      subdocument: {
+        a: {b: "upsert9", c: "upsert8"}
+      }
+    });
+
+  });
 }
 
 // This is a VERY white-box test.
@@ -2765,9 +2895,20 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - transform", function (
 });
 
 
-Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", function (test) {
+Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection/db", function (test) {
+  // This test uses a random database, so it can be dropped without affecting
+  // anything else.
+  var mongodbUri = Npm.require('mongodb-uri');
+  var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
+  parsedUri.database = 'dropDB' + Random.id();
+  var driver = new MongoInternals.RemoteCollectionDriver(
+    mongodbUri.format(parsedUri), {
+      oplogUrl: process.env.MONGO_OPLOG_URL
+    }
+  );
+
   var collName = "dropCollection" + Random.id();
-  var coll = new Mongo.Collection(collName);
+  var coll = new Mongo.Collection(collName, { _driver: driver });
 
   var doc1Id = coll.insert({a: 'foo', c: 1});
   var doc2Id = coll.insert({b: 'bar'});
@@ -2824,7 +2965,16 @@ Meteor.isServer && Tinytest.add("mongo-livedata - oplog - drop collection", func
   test.length(output, 1);
   test.equal(output.shift(), ['added', doc4Id, {a: 'foo', c: 3}]);
 
+  // Now drop the database. Should remove all docs again.
+  runInFence(function () {
+    driver.mongo.dropDatabase();
+  });
+
+  test.length(output, 1);
+  test.equal(output.shift(), ['removed', doc4Id]);
+
   handle.stop();
+  driver.mongo.close();
 });
 
 var TestCustomType = function (head, tail) {
@@ -3100,3 +3250,97 @@ Meteor.isServer && Tinytest.add("mongo-livedata - npm modules", function (test) 
   test.isTrue(rawDb);
   test.isTrue(rawDb.admin);
 });
+
+if (Meteor.isServer) {
+  Tinytest.add("mongo-livedata - update/remove don't accept an array as a selector #4804", function (test) {
+    var collection = new Mongo.Collection(Random.id());
+
+    _.times(10, function () {
+      collection.insert({ data: "Hello" });
+    });
+
+    test.equal(collection.find().count(), 10);
+
+    // Test several array-related selectors
+    _.each([[], [1, 2, 3], [{}]], function (selector) {
+      test.throws(function () {
+        collection.remove(selector);
+      });
+
+      test.throws(function () {
+        collection.update(selector, {$set: 5});
+      });
+    });
+    
+    test.equal(collection.find().count(), 10);
+  });
+}
+
+// This is a regression test for https://github.com/meteor/meteor/issues/4839.
+// Prior to fixing the issue (but after applying
+// https://github.com/meteor/meteor/pull/4694), doing a Mongo write from a
+// timeout that ran after a method body (invoked via the client) would throw an
+// error "fence has already activated -- too late to add a callback" and not
+// properly call the Mongo write's callback.  In this test:
+//  - The client invokes a method (fenceOnBeforeFireError1) which
+//    - Starts an observe on a query
+//    - Creates a timeout (which shares a write fence with the method)
+//    - Lets the method return (firing the write fence)
+//  - The timeout runs and does a Mongo write. This write is inside a write
+//    fence (because timeouts preserve the fence, see dcd26415) but the write
+//    fence already fired.
+//  - The Mongo write's callback confirms that there is no error. This was
+//    not the case before fixing the bug!  (Note that the observe was necessary
+//    for the error to occur, because the error was thrown from the observe's
+//    crossbar listener callback).  It puts the confirmation into a Future.
+//  - The client invokes another method which reads the confirmation from
+//    the future. (Well, the invocation happened earlier but the use of the
+//    Future sequences it so that the confirmation only gets read at this point.)
+if (Meteor.isClient) {
+  testAsyncMulti("mongo-livedata - fence onBeforeFire error", [
+    function (test, expect) {
+      var self = this;
+      self.nonce = Random.id();
+      Meteor.call('fenceOnBeforeFireError1', self.nonce, expect(function (err) {
+        test.isFalse(err);
+      }));
+    },
+    function (test, expect) {
+      var self = this;
+      Meteor.call('fenceOnBeforeFireError2', self.nonce, expect(
+        function (err, success) {
+          test.isFalse(err);
+          test.isTrue(success);
+        }
+      ));
+    }
+  ]);
+} else {
+  var fenceOnBeforeFireErrorCollection = new Mongo.Collection("FOBFE");
+  var Future = Npm.require('fibers/future');
+  var futuresByNonce = {};
+  Meteor.methods({
+    fenceOnBeforeFireError1: function (nonce) {
+      futuresByNonce[nonce] = new Future;
+      var observe = fenceOnBeforeFireErrorCollection.find({nonce: nonce})
+            .observeChanges({added: function (){}});
+      Meteor.setTimeout(function () {
+        fenceOnBeforeFireErrorCollection.insert(
+          {nonce: nonce},
+          function (err, result) {
+            var success = !err && result;
+            futuresByNonce[nonce].return(success);
+            observe.stop();
+          }
+        );
+      }, 10);
+    },
+    fenceOnBeforeFireError2: function (nonce) {
+      try {
+        return futuresByNonce[nonce].wait();
+      } finally {
+        delete futuresByNonce[nonce];
+      }
+    }
+  });
+}

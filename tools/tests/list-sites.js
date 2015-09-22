@@ -1,8 +1,8 @@
 var _ = require('underscore');
-var selftest = require('../selftest.js');
-var testUtils = require('../test-utils.js');
-var files = require('../files.js');
-var config = require("../config.js");
+var selftest = require('../tool-testing/selftest.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var files = require('../fs/files.js');
+var config = require('../meteor-services/config.js');
 var Sandbox = selftest.Sandbox;
 
 var commandTimeoutSecs = testUtils.accountsCommandTimeoutSecs;

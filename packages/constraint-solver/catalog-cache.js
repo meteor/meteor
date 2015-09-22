@@ -1,8 +1,8 @@
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
-var pvkey = function (package, version) {
-  return package + " " + version;
+var pvkey = function (pkg, version) {
+  return pkg + " " + version;
 };
 
 // Stores the Dependencies for each known PackageAndVersion.
@@ -17,8 +17,8 @@ CS.CatalogCache = function () {
   this._versions = {};
 };
 
-CS.CatalogCache.prototype.hasPackageVersion = function (package, version) {
-  return _.has(this._dependencies, pvkey(package, version));
+CS.CatalogCache.prototype.hasPackageVersion = function (pkg, version) {
+  return _.has(this._dependencies, pvkey(pkg, version));
 };
 
 CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
@@ -63,9 +63,9 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
 
 // Returns an array of version strings, sorted, possibly empty.
 // (Don't mutate the result.)
-CS.CatalogCache.prototype.getPackageVersions = function (package) {
-  var result = (_.has(this._versions, package) ?
-                this._versions[package] : []);
+CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
+  var result = (_.has(this._versions, pkg) ?
+                this._versions[pkg] : []);
   if ((!result.length) || result.sorted) {
     return result;
   } else {
@@ -77,8 +77,8 @@ CS.CatalogCache.prototype.getPackageVersions = function (package) {
   }
 };
 
-CS.CatalogCache.prototype.hasPackage = function (package) {
-  return _.has(this._versions, package);
+CS.CatalogCache.prototype.hasPackage = function (pkg) {
+  return _.has(this._versions, pkg);
 };
 
 CS.CatalogCache.prototype.toJSONable = function () {

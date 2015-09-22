@@ -1,11 +1,13 @@
+require('../../tool-env/install-babel.js');
+
 var _ = require('underscore');
 var assert = require('assert');
-var bundler = require('../../bundler.js');
-var release = require('../../release.js');
-var files = require('../../files.js');
-var catalog = require('../../catalog.js');
-var buildmessage = require('../../buildmessage.js');
-var isopackets = require("../../isopackets.js");
+var bundler = require('../../isobuild/bundler.js');
+var release = require('../../packaging/release.js');
+var files = require('../../fs/files.js');
+var catalog = require('../../packaging/catalog/catalog.js');
+var buildmessage = require('../../utils/buildmessage.js');
+var isopackets = require('../../tool-env/isopackets.js');
 var projectContextModule = require('../../project-context.js');
 
 
@@ -59,7 +61,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: true }
+      buildOptions: { minifyMode: 'production' }
     });
     assert.strictEqual(result.errors, false, result.errors && result.errors[0]);
 
@@ -72,7 +74,7 @@ var runTest = function () {
                                         "programs", "server", "node_modules")));
     // yes package node_modules directory
     assert(files.lstat(files.pathJoin(
-      tmpOutputDir, "programs", "server", "npm", "ddp"))
+      tmpOutputDir, "programs", "server", "npm", "ddp-server"))
            .isDirectory());
 
     // verify that contents are minified
@@ -81,7 +83,7 @@ var runTest = function () {
       if (item.type !== 'js')
         return;
       // Just a hash, and no "packages/".
-      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path));
+      assert(/^[0-9a-f]{40,40}\.js$/.test(item.path), item.path);
     });
   });
 
@@ -91,7 +93,7 @@ var runTest = function () {
     var result = bundler.bundle({
       projectContext: projectContext,
       outputPath: tmpOutputDir,
-      buildOptions: { minify: false }
+      buildOptions: { minifyMode: 'development' }
     });
     assert.strictEqual(result.errors, false);
 
@@ -140,7 +142,7 @@ var runTest = function () {
       // package node_modules directory also a symlink
       // XXX might be breaking this
       assert(files.lstat(files.pathJoin(
-        tmpOutputDir, "programs", "server", "npm", "ddp", "node_modules"))
+        tmpOutputDir, "programs", "server", "npm", "ddp-server", "node_modules"))
              .isSymbolicLink());
     });
   }

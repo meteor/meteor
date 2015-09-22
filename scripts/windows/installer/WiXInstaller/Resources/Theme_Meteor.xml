@@ -36,9 +36,7 @@
 		<Button Name="CloseButton"  X="-24"  Y="-10" Width="110" Height="23" TabStop="yes" FontId="0">#(loc.InstallCloseButton)</Button>
 	</Page>
 	<Page Name="Progress">
-        <Text X="24" Y="30" Width="-24" Height="75" FontId="3" DisablePrefix="yes">
-Installing Meteor, the complete open source platform
-for building apps in pure JavaScript.
+        <Text Name="InstallingHeader" X="24" Y="30" Width="-24" Height="75" FontId="3" DisablePrefix="yes">
         </Text>
 
 		<Progressbar Name="OverallCalculatedProgressbar" X="24" Y="183" Width="-24" Height="17" />

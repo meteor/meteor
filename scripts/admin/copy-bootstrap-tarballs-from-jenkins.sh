@@ -18,7 +18,7 @@ if [ $# -ne 1 ]; then
 fi
 
 # bootstrap-tarballs--${METEOR_RELEASE}--${BUILD_ID}--${BUILD_NUMBER}--${GIT_COMMIT}
-DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!/(bootstrap-tarballs--.+--.+--'$1'--.+)/!')
+DIRNAME=$(aws s3 ls s3://com.meteor.jenkins/ | perl -nle 'print $1 if m!(bootstrap-tarballs--.+--.+--'$1'--.+)/!')
 RELEASE=$(echo $DIRNAME | perl -pe 's/^bootstrap-tarballs--(.+)--.+--.+--.+$/$1/')
 
 if [ -z "$DIRNAME" ]; then
