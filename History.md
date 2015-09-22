@@ -348,8 +348,7 @@ a shorter list of breaking changes you should be aware of when upgrading.
 
 ### Windows
 
-* Increase the buffer size for `netstat` when looking for running Mongo servers.
-  #4125
+* Increase the buffer size for `netstat` when looking for running Mongo servers. #4125
 
 * The Windows installer now always fetches the latest available version of
   Meteor at runtime, so that it doesn't need to be recompiled for every release.
