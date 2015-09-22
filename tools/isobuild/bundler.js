@@ -2109,13 +2109,23 @@ exports.bundle = function ({
       isopackCache: projectContext.isopackCache,
       includeCordovaUnibuild: projectContext.platformList.usesCordova()
     });
+
+    const mergeAppWatchSets = () => {
+      var projectAndLocalPackagesWatchSet =
+        projectContext.getProjectAndLocalPackagesWatchSet();
+
+      clientWatchSet.merge(projectAndLocalPackagesWatchSet);
+      clientWatchSet.merge(app.getClientWatchSet());
+
+      serverWatchSet.merge(projectAndLocalPackagesWatchSet);
+      serverWatchSet.merge(app.getServerWatchSet());
+    };
+
     // If we failed to 'compile' the app (which mostly means something odd
     // happened like clashing extension handlers, or a legacy source handler
     // failed), restart on any relevant change, and be done.
     if (buildmessage.jobHasMessages()) {
-      serverWatchSet.merge(projectContext.getProjectAndLocalPackagesWatchSet());
-      serverWatchSet.merge(app.getMergedWatchSet());
-      return;
+      return mergeAppWatchSets();
     }
 
     if (! buildmessage.jobHasMessages()) {
@@ -2125,9 +2135,7 @@ exports.bundle = function ({
     // plugins in one of the linter packages), restart on any relevant change,
     // and be done.
     if (buildmessage.jobHasMessages()) {
-      serverWatchSet.merge(projectContext.getProjectAndLocalPackagesWatchSet());
-      serverWatchSet.merge(app.getMergedWatchSet());
-      return;
+      return mergeAppWatchSets();
     }
 
     var minifiers = null;
@@ -2141,9 +2149,7 @@ exports.bundle = function ({
     // If figuring out what the minifiers are failed (eg, clashing extension
     // handlers), restart on any relevant change, and be done.
     if (buildmessage.jobHasMessages()) {
-      serverWatchSet.merge(projectContext.getProjectAndLocalPackagesWatchSet());
-      serverWatchSet.merge(app.getMergedWatchSet());
-      return;
+      return mergeAppWatchSets();
     }
 
     var clientTargets = [];

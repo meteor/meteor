@@ -1450,21 +1450,36 @@ _.extend(Isopack.prototype, {
                   + JSON.stringify(resource));
             }
           });
-          if (jsResourcesForLegacyPrelink.length) {
-            var prelinkFile, prelinkData, packageVariables;
-            if (jsResourcesForLegacyPrelink.length === 1 &&
-                jsResourcesForLegacyPrelink[0].legacyPrelink) {
-              // Aha!  This isopack was actually a legacy isopack in the first
-              // place! So this source file is already the output of prelink,
-              // and we don't need to reprocess it.
-              prelinkFile = jsResourcesForLegacyPrelink[0];
-              // XXX It's weird that the type of object going in and out of
-              // linker.prelink is different (so that this prelinkData
-              // assignment differs from that below), ah well.
-              prelinkData = prelinkFile.data;
-              packageVariables =
-                jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
-            } else {
+
+          var prelinkFile, prelinkData, packageVariables;
+          if (jsResourcesForLegacyPrelink.length === 1 &&
+              jsResourcesForLegacyPrelink[0].legacyPrelink) {
+            // Aha!  This isopack was actually a legacy isopack in the first
+            // place! So this source file is already the output of prelink,
+            // and we don't need to reprocess it.
+            prelinkFile = jsResourcesForLegacyPrelink[0];
+            // XXX It's weird that the type of object going in and out of
+            // linker.prelink is different (so that this prelinkData
+            // assignment differs from that below), ah well.
+            prelinkData = prelinkFile.data;
+            packageVariables =
+              jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
+          } else {
+            // Determine captured variables, legacy way. First, start with the
+            // exports. We'll add the package variables after running prelink.
+            packageVariables = [];
+            var packageVariableNames = {};
+            _.each(unibuild.declaredExports, function (symbol) {
+              if (_.has(packageVariableNames, symbol.name))
+                return;
+              packageVariables.push({
+                name: symbol.name,
+                export: symbol.testOnly? "tests" : true
+              });
+              packageVariableNames[symbol.name] = true;
+            });
+
+            if (jsResourcesForLegacyPrelink.length) {
               // Not originally legacy; let's run prelink to make it legacy.
               var results = linker.prelink({
                 inputFiles: jsResourcesForLegacyPrelink,
@@ -1485,18 +1500,6 @@ _.extend(Isopack.prototype, {
               prelinkFile = results.files[0];
               prelinkData = new Buffer(prelinkFile.source, 'utf8');
 
-              // Determine captured variables, legacy way.
-              packageVariables = [];
-              var packageVariableNames = {};
-              _.each(unibuild.declaredExports, function (symbol) {
-                if (_.has(packageVariableNames, symbol.name))
-                  return;
-                packageVariables.push({
-                  name: symbol.name,
-                  export: symbol.testOnly? "tests" : true
-                });
-                packageVariableNames[symbol.name] = true;
-              });
               _.each(results.assignedVariables, function (name) {
                 if (_.has(packageVariableNames, name))
                   return;
@@ -1506,7 +1509,9 @@ _.extend(Isopack.prototype, {
                 packageVariableNames[name] = true;
               });
             }
+          }
 
+          if (prelinkFile && prelinkData) {
             var prelinkResource = {
               type: 'prelink',
               file: builder.writeToGeneratedFilename(
@@ -1524,9 +1529,12 @@ _.extend(Isopack.prototype, {
               );
             }
             newResources.push(prelinkResource);
+          }
 
+          if (packageVariables.length) {
             unibuildJson.packageVariables = packageVariables;
           }
+
           unibuildJson.resources = newResources;
           delete unibuildJson.declaredExports;
           builder.writeJson(legacyFilename, unibuildJson);
@@ -1743,6 +1751,26 @@ _.extend(Isopack.prototype, {
     var watchSet = self.pluginWatchSet.clone();
     _.each(self.unibuilds, function (unibuild) {
       watchSet.merge(unibuild.watchSet);
+    });
+    return watchSet;
+  }),
+
+  getClientWatchSet: Profile("Isopack#getClientWatchSet", function () {
+    var watchSet = this.pluginWatchSet.clone();
+    _.each(this.unibuilds, function (unibuild) {
+      if (/^web\./.test(unibuild.arch)) {
+        watchSet.merge(unibuild.watchSet);
+      }
+    });
+    return watchSet;
+  }),
+
+  getServerWatchSet: Profile("Isopack#getServerWatchSet", function () {
+    var watchSet = this.pluginWatchSet.clone();
+    _.each(this.unibuilds, function (unibuild) {
+      if (! /^web\./.test(unibuild.arch)) {
+        watchSet.merge(unibuild.watchSet);
+      }
     });
     return watchSet;
   }),

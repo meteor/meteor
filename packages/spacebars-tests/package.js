@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.4-rc.0'
+  version: '1.0.4'
 });
 
 // These tests are in a separate package to avoid a circular dependency
 // between the `spacebars` and `templating` packages.
 Package.onTest(function (api) {
   api.use([
+    'es5-shim',
     'underscore',
     'spacebars',
     'tinytest',

@@ -64,11 +64,11 @@ Undo previous changes made, such as by using `git checkout .` Reload
 the client, which will cause the browser to stop using the app cache.
 
 It's hard to see the `newClientAvailable` reactive variable when the
-client automatically reloads.  Remove the `reload` package so you can
+client automatically reloads.  Remove the `hot-code-push` package so you can
 see the variable without having the client also reload.
 
-    $ meteor remove hot-code-push
-    $ meteor add autoupdate
+    $ meteor remove meteor-base
+    $ meteor add meteor webapp ddp autoupdate
 
 Add to leaderboard.js:
 

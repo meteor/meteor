@@ -1546,6 +1546,16 @@ DocsData = {
             "String"
           ]
         }
+      },
+      {
+        "description": "<p>Optional. A platform name (either <code>ios</code> or <code>android</code>) to add a platform-specific preference.</p>",
+        "name": "platform",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
       }
     ],
     "scope": "static",

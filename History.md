@@ -2,6 +2,10 @@
 
 ## in progress: v1.2
 
+There are quite a lot of changes in Meteor 1.2. See the
+[Wiki](https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2) for
+a shorter list of breaking changes you should be aware of when upgrading.
+
 ### Core Packages
 
 * `meteor-platform` has been deprecated in favor of the smaller `meteor-base`,
@@ -32,9 +36,11 @@
   to fetch the user's emails. If no public email has been set, we use the
   primary email instead. We also store the complete list of emails. #4545
 
-* When an account's email address is verified, deactivate other verification tokens.  #4626
+* When an account's email address is verified, deactivate other verification
+  tokens.  #4626
 
-* Fix bug where blank page is shown when an expired login token is present.  #4825
+* Fix bug where blank page is shown when an expired login token is
+  present. #4825
 
 * Fix `OAuth1Binding.prototype.call` when making requests to Twitter
   with a large parameter set.
@@ -146,7 +152,8 @@
   errors in certain browsers. #3028
 
 * Blaze and Meteor's built-in templating are now removable using
-  `meteor remove blaze-html-templates`.
+  `meteor remove blaze-html-templates`. You can add back support for static
+  `head` and `body` tags in `.html` files by using the `static-html` package.
 
 ### DDP
 
@@ -228,6 +235,17 @@
 
 
 ### `meteor` command-line tool
+
+* You can now create three new example apps with the command line tool. These
+  are the apps from the official tutorials at http://meteor.com/tutorials, which
+  demonstrate building the same app with Blaze, Angular, and React. Try these
+  apps with:
+
+  ```sh
+  meteor create --example simple-todos
+  meteor create --example simple-todos-react
+  meteor create --example simple-todos-angular
+  ```
 
 * `meteor shell` no longer crashes when piped from another command.
 

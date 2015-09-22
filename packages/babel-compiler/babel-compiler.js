@@ -1,4 +1,3 @@
-
 /**
  * A compiler that can be instantiated with features and used inside
  * Plugin.registerCompiler
@@ -7,9 +6,10 @@
 BabelCompiler = function BabelCompiler(extraFeatures) {
   Babel.validateExtraFeatures(extraFeatures);
   this.extraFeatures = extraFeatures;
-}
+};
 
 var BCp = BabelCompiler.prototype;
+var excludedFileExtensionPattern = /\.es5\.js$/i;
 
 BCp.processFilesForTarget = function (inputFiles) {
   var self = this;
@@ -28,7 +28,14 @@ BCp.processFilesForTarget = function (inputFiles) {
       bare: !! fileOptions.bare
     };
 
-    if (fileOptions.transpile !== false) {
+    // If you need to exclude a specific file within a package from Babel
+    // compilation, pass the { transpile: false } options to api.addFiles
+    // when you add that file.
+    if (fileOptions.transpile !== false &&
+        // If you need to exclude a specific file within an app from Babel
+        // compilation, give it the following file extension: .es5.js
+        ! excludedFileExtensionPattern.test(inputFilePath)) {
+
       var targetCouldBeInternetExplorer8 =
         inputFile.getArch() === "web.browser";
 
