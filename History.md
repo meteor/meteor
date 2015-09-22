@@ -1,6 +1,10 @@
 ## v.NEXT
 
-## in progress: v1.2
+## v1.2.0.1, 2015-Sept-22
+
+* Fix incorrect publishing of packages with exports but no source. #5228
+
+## v1.2, 2015-Sept-21
 
 There are quite a lot of changes in Meteor 1.2. See the
 [Wiki](https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2) for
