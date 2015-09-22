@@ -982,10 +982,10 @@ main.registerCommand({
     });
 
     // Set the remaining release information. For now, when we publish from
-    // checkout, we always set 'velocity:meteor-tool' as the tool. We don't include the
+    // checkout, we always set 'meteor-tool' as the tool. We don't include the
     // tool in the packages list.
-    relConf.tool="velocity:meteor-tool@" + relConf.packages["velocity:meteor-tool"];
-    delete relConf.packages["velocity:meteor-tool"];
+    relConf.tool="meteor-tool@" + relConf.packages["meteor-tool"];
+    delete relConf.packages["meteor-tool"];
   }
 
   main.captureAndExit(
