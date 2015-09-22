@@ -30,19 +30,21 @@ export class iOSRunTarget extends CordovaRunTarget {
     // ios-deploy is super buggy, so we just open Xcode and let the user
     // start the app themselves.
     if (this.isDevice) {
-      // Make sure we prepare the platform, which is normally done as part of
-      // running
-      cordovaProject.prepareForPlatform(this.platform);
-
       openXcodeProject(files.pathJoin(cordovaProject.projectRoot,
         'platforms', 'ios'));
     } else {
       await cordovaProject.run(this.platform, this.isDevice, undefined);
 
-      // Bring iOS Simulator to front
-      child_process.spawn('osascript', ['-e',
-        'tell application "System Events" \
-        to set frontmost of process "iOS Simulator" to true']);
+      // Bring iOS Simulator to front (it is called Simulator in Xcode 7)
+      execFileAsync('osascript', ['-e',
+`tell application "System Events"
+  set possibleSimulatorNames to {"iOS Simulator", "Simulator"}
+  repeat with possibleSimulatorName in possibleSimulatorNames
+    if application process possibleSimulatorName exists then
+      set frontmost of process possibleSimulatorName to true
+    end if
+  end repeat
+end tell`]);
     }
   }
 }

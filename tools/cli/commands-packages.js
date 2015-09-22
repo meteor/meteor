@@ -1270,6 +1270,31 @@ var maybeUpdateRelease = function (options) {
           releaseTrack + ".");
       return 1;
     }
+
+    if (release.current && ! release.current.isRecommended() &&
+        options.appDir && ! options.patch) {
+      var releaseVersion = release.current.getReleaseVersion();
+      var newerRecommendedReleases = getLaterReleaseVersions(
+        releaseTrack, releaseVersion);
+      if (!newerRecommendedReleases.length) {
+        // When running 'meteor update' without --release in an app,
+        // using a release that is not recommended and is newer than
+        // any recommended release, don't springboard backwards to
+        // an older, recommended release.  Don't update Meteor, or
+        // the app's release.  This makes it possible to type `meteor update`
+        // with no arguments from a new RC of Meteor, without performing
+        // the update (and subsequent constraint-solving, etc.) using
+        // the old tool.
+        //
+        // We'll still springboard forwards out of an RC, just not backwards.
+        Console.info("Not updating the release, because this app is at a " +
+                     "newer release (" + release.current.name + ") than " +
+                     "the latest recommended release " +
+                     "(" + latestRelease + ").");
+        return 0;
+      }
+    }
+
     if (! release.current || release.current.name !== latestRelease) {
       // The user asked for the latest release (well, they "asked for it" by not
       // passing --release). We're not currently running the latest release on
@@ -1405,13 +1430,10 @@ var maybeUpdateRelease = function (options) {
     // We are not doing a patch update, or a specific release update, so we need
     // to try all recommended releases on our track, whose order key is greater
     // than the app's.
-    var appReleaseInfo = catalog.official.getReleaseVersion(
+    releaseVersionsToTry = getLaterReleaseVersions(
       projectContext.releaseFile.releaseTrack,
       projectContext.releaseFile.releaseVersion);
-    var appOrderKey = (appReleaseInfo && appReleaseInfo.orderKey) || null;
 
-    releaseVersionsToTry = catalog.official.getSortedRecommendedReleaseVersions(
-      projectContext.releaseFile.releaseTrack, appOrderKey);
     if (! releaseVersionsToTry.length) {
       // We could not find any releases newer than the one that we are on, on
       // that track, so we are done.
@@ -1423,6 +1445,7 @@ var maybeUpdateRelease = function (options) {
     }
   }
 
+  var didPrintMessages = false;
   var solutionReleaseVersion = _.find(releaseVersionsToTry, function (versionToTry) {
     var releaseRecord = catalog.official.getReleaseVersion(
       releaseTrack, versionToTry);
@@ -1435,11 +1458,16 @@ var maybeUpdateRelease = function (options) {
       projectContext.resolveConstraints();
     });
     if (messages.hasMessages()) {
+      // To avoid overloading the user, we only print messages for the first
+      // release version we try (which should be the latest)
+      if (!didPrintMessages) {
+        Console.info(
+          "Update to release", releaseTrack + "@" + versionToTry,
+          "is impossible:");
+        Console.info(messages.formatMessages());
+        didPrintMessages = true;
+      }
       // Nope, this release didn't work.
-      Console.debug(
-        "Update to release", releaseTrack + "@" + versionToTry,
-        "is impossible:");
-      Console.debug(messages.formatMessages());
       return false;
     }
 
@@ -1504,6 +1532,15 @@ var maybeUpdateRelease = function (options) {
   // user.
   return 0;
 };
+
+function getLaterReleaseVersions(releaseTrack, releaseVersion) {
+  var releaseInfo = catalog.official.getReleaseVersion(
+    releaseTrack, releaseVersion);
+  var orderKey = (releaseInfo && releaseInfo.orderKey) || null;
+
+  return catalog.official.getSortedRecommendedReleaseVersions(
+    releaseTrack, orderKey);
+}
 
 main.registerCommand({
   name: 'update',
@@ -1638,13 +1675,23 @@ main.registerCommand({
 
   if (!options.args.length) {
     // Generate and print info about what is NOT at the latest version.
-    var topLevelPkgSet = {};
+
+    var topLevelPkgSet = {}; // direct dependencies (rather than indirect)
     projectContext.projectConstraintsFile.eachConstraint(function (constraint) {
       topLevelPkgSet[constraint.package] = true;
     });
+
+    var releaseConstrainedPkgSet = {}; // pinned core packages (to skip)
+    _.each(releaseRecordForConstraints.packages, function (v, packageName) {
+      releaseConstrainedPkgSet[packageName] = true;
+    });
+
     var nonlatestDirectDeps = [];
     var nonlatestIndirectDeps = [];
     projectContext.packageMap.eachPackage(function (name, info) {
+      if (_.has(releaseConstrainedPkgSet, name)) {
+        return;
+      }
       var selectedVersion = info.version;
       var catalog = projectContext.projectCatalog;
       var latestVersion = getNewerVersion(name, selectedVersion, catalog);

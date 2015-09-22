@@ -22,6 +22,9 @@ var tropohouseModule = require('../packaging/tropohouse.js');
 var packageMapModule = require('../packaging/package-map.js');
 var release = require('../packaging/release.js');
 
+var projectContextModule = require('../project-context.js');
+var upgraders = require('../upgraders.js');
+
 // Exception representing a test failure
 var TestFailure = function (reason, details) {
   var self = this;
@@ -607,16 +610,24 @@ _.extend(Sandbox.prototype, {
   createApp: function (to, template, options) {
     var self = this;
     options = options || {};
+    var absoluteTo = files.pathJoin(self.cwd, to);
     files.cp_r(files.pathJoin(
       files.convertToStandardPath(__dirname), '..', 'tests', 'apps', template),
-               files.pathJoin(self.cwd, to),
-               { ignore: [/^local$/] });
+        absoluteTo, { ignore: [/^local$/] });
     // If the test isn't explicitly managing a mock warehouse, ensure that apps
     // run with our release by default.
     if (options.release) {
       self.write(files.pathJoin(to, '.meteor/release'), options.release);
     } else if (!self.warehouse && release.current.isProperRelease()) {
       self.write(files.pathJoin(to, '.meteor/release'), release.current.name);
+    }
+
+    // Make sure the apps don't run any upgraders, unless they intentionally
+    // have a partial upgraders file
+    var upgradersFile =
+      new projectContextModule.FinishedUpgraders({projectDir: absoluteTo});
+    if (_.isEmpty(upgradersFile.readUpgraders())) {
+      upgradersFile.appendUpgraders(upgraders.allUpgraders());
     }
 
     if (options.dontPrepareApp)
@@ -1582,6 +1593,9 @@ var getFilteredTests = function (options) {
       } else if (options.onlyChanged &&
                  test.fileHash === testState.lastPassedHashes[test.file]) {
         newTags.push('unchanged');
+      } else if (options.excludeRegexp &&
+                 options.excludeRegexp.test(test.name)) {
+        newTags.push('excluded');
       }
 
       // We make sure to not run galaxy tests unless the user explicitly asks us
@@ -1605,6 +1619,9 @@ var getFilteredTests = function (options) {
   }
   if (options.testRegexp) {
     tagsToSkip.push('non-matching');
+  }
+  if (options.excludeRegexp) {
+    tagsToSkip.push('excluded');
   }
   if (options.onlyChanged) {
     tagsToSkip.push('unchanged');

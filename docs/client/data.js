@@ -9,10 +9,52 @@ DocsData = {
     "scope": "global",
     "summary": "The namespace for all server-side accounts-related methods."
   },
+  "Accounts.addEmail": {
+    "filepath": "accounts-password/password_server.js",
+    "kind": "function",
+    "lineno": 847,
+    "locus": "Server",
+    "longname": "Accounts.addEmail",
+    "memberof": "Accounts",
+    "name": "addEmail",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The ID of the user to update.</p>",
+        "name": "userId",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>A new email address for the user.</p>",
+        "name": "newEmail",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Optional - whether the new email address should\nbe marked as verified. Defaults to false.</p>",
+        "name": "verified",
+        "optional": true,
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Add an email address for a user. Use this instead of directly\nupdating the database. The operation will fail if there is a different user\nwith an email only differing in case. If the specified user has an existing\nemail only differing in case however, we replace it."
+  },
   "Accounts.changePassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 150,
+    "lineno": 148,
     "locus": "Client",
     "longname": "Accounts.changePassword",
     "memberof": "Accounts",
@@ -131,10 +173,76 @@ DocsData = {
     "scope": "static",
     "summary": "Options to customize emails sent from the Accounts system."
   },
+  "Accounts.findUserByEmail": {
+    "filepath": "accounts-password/password_server.js",
+    "kind": "function",
+    "lineno": 138,
+    "locus": "Server",
+    "longname": "Accounts.findUserByEmail",
+    "memberof": "Accounts",
+    "name": "findUserByEmail",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The email address to look for</p>",
+        "name": "email",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "description": "<p>A user if found, else null</p>",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Finds the user with the specified email.\nFirst tries to match email case sensitively; if that fails, it\ntries case insensitively; but if more than one user matches the case\ninsensitive search, it returns null."
+  },
+  "Accounts.findUserByUsername": {
+    "filepath": "accounts-password/password_server.js",
+    "kind": "function",
+    "lineno": 123,
+    "locus": "Server",
+    "longname": "Accounts.findUserByUsername",
+    "memberof": "Accounts",
+    "name": "findUserByUsername",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The username to look for</p>",
+        "name": "username",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "description": "<p>A user if found, else null</p>",
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Finds the user with the specified username.\nFirst tries to match username case sensitively; if that fails, it\ntries case insensitively; but if more than one user matches the case\ninsensitive search, it returns null."
+  },
   "Accounts.forgotPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 212,
+    "lineno": 210,
     "locus": "Client",
     "longname": "Accounts.forgotPassword",
     "memberof": "Accounts",
@@ -242,10 +350,42 @@ DocsData = {
     "scope": "static",
     "summary": "Register a function to call when a reset password link is clicked\nin an email sent by\n[`Accounts.sendResetPasswordEmail`](#accounts_sendresetpasswordemail).\nThis function should be called in top-level code, not inside\n`Meteor.startup()`."
   },
+  "Accounts.removeEmail": {
+    "filepath": "accounts-password/password_server.js",
+    "kind": "function",
+    "lineno": 930,
+    "locus": "Server",
+    "longname": "Accounts.removeEmail",
+    "memberof": "Accounts",
+    "name": "removeEmail",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The ID of the user to update.</p>",
+        "name": "userId",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>The email address to remove.</p>",
+        "name": "email",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Remove an email address for a user. Use this instead of updating\nthe database directly."
+  },
   "Accounts.resetPassword": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 232,
+    "lineno": 230,
     "locus": "Client",
     "longname": "Accounts.resetPassword",
     "memberof": "Accounts",
@@ -287,7 +427,7 @@ DocsData = {
   "Accounts.sendEnrollmentEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 509,
+    "lineno": 584,
     "locus": "Server",
     "longname": "Accounts.sendEnrollmentEmail",
     "memberof": "Accounts",
@@ -320,7 +460,7 @@ DocsData = {
   "Accounts.sendResetPasswordEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 444,
+    "lineno": 519,
     "locus": "Server",
     "longname": "Accounts.sendResetPasswordEmail",
     "memberof": "Accounts",
@@ -353,7 +493,7 @@ DocsData = {
   "Accounts.sendVerificationEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 648,
+    "lineno": 723,
     "locus": "Server",
     "longname": "Accounts.sendVerificationEmail",
     "memberof": "Accounts",
@@ -386,7 +526,7 @@ DocsData = {
   "Accounts.setPassword": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 396,
+    "lineno": 471,
     "locus": "Server",
     "longname": "Accounts.setPassword",
     "memberof": "Accounts",
@@ -433,6 +573,38 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Forcibly change the password for a user."
+  },
+  "Accounts.setUsername": {
+    "filepath": "accounts-password/password_server.js",
+    "kind": "function",
+    "lineno": 372,
+    "locus": "Server",
+    "longname": "Accounts.setUsername",
+    "memberof": "Accounts",
+    "name": "setUsername",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The ID of the user to update.</p>",
+        "name": "userId",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>A new username for the user.</p>",
+        "name": "newUsername",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Change a user's username. Use this instead of updating the\ndatabase directly. The operation will fail if there is an existing user\nwith a username only differing in case."
   },
   "Accounts.ui": {
     "filepath": "accounts-ui-unstyled/accounts_ui.js",
@@ -506,7 +678,7 @@ DocsData = {
   "Accounts.verifyEmail": {
     "filepath": "accounts-password/password_client.js",
     "kind": "function",
-    "lineno": 259,
+    "lineno": 257,
     "locus": "Client",
     "longname": "Accounts.verifyEmail",
     "memberof": "Accounts",
@@ -1260,7 +1432,7 @@ DocsData = {
     "params": [
       {
         "description": "<p>The identifier of the plugin you want to\nconfigure.</p>",
-        "name": "pluginName",
+        "name": "id",
         "type": {
           "names": [
             "String"
@@ -1278,7 +1450,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Set the build-time configuration for a Phonegap plugin."
+    "summary": "Set the build-time configuration for a Cordova plugin."
   },
   "App.icons": {
     "kind": "function",
@@ -1307,7 +1479,7 @@ DocsData = {
     "name": "info",
     "options": [
       {
-        "description": "<p>Each of the options correspond to a key in the app's core configuration\nas described in the <a href=\"http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements\">PhoneGap documentation</a>.</p>",
+        "description": "<p>Each of the options correspond to a key in the app's core configuration\nas described in the <a href=\"http://cordova.apache.org/docs/en/5.1.1/config_ref_index.md.html#The%20config.xml%20File_core_configuration_elements\">Cordova documentation</a>.</p>",
         "name": "id, version, name, description, author, email, website",
         "optional": true,
         "type": {
@@ -1358,7 +1530,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A preference name supported by Phonegap's\n<code>config.xml</code>.</p>",
+        "description": "<p>A preference name supported by Cordova's\n<code>config.xml</code>.</p>",
         "name": "name",
         "type": {
           "names": [
@@ -1374,10 +1546,20 @@ DocsData = {
             "String"
           ]
         }
+      },
+      {
+        "description": "<p>Optional. A platform name (either <code>ios</code> or <code>android</code>) to add a platform-specific preference.</p>",
+        "name": "platform",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
       }
     ],
     "scope": "static",
-    "summary": "Add a preference for your build as described in the\n[PhoneGap documentation](http://docs.phonegap.com/en/3.5.0/config_ref_index.md.html#The%20config.xml%20File_global_preferences)."
+    "summary": "Add a preference for your build as described in the\n[Cordova documentation](http://cordova.apache.org/docs/en/5.1.1/config_ref_index.md.html#The%20config.xml%20File_global_preferences)."
   },
   "Assets": {
     "kind": "namespace",
@@ -2727,7 +2909,7 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1627,
+    "lineno": 1641,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -3540,7 +3722,7 @@ DocsData = {
   "HTTP.del": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 78,
+    "lineno": 82,
     "locus": "Anywhere",
     "longname": "HTTP.del",
     "memberof": "HTTP",
@@ -3583,7 +3765,7 @@ DocsData = {
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 45,
+    "lineno": 49,
     "locus": "Anywhere",
     "longname": "HTTP.get",
     "memberof": "HTTP",
@@ -3626,7 +3808,7 @@ DocsData = {
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 56,
+    "lineno": 60,
     "locus": "Anywhere",
     "longname": "HTTP.post",
     "memberof": "HTTP",
@@ -3669,7 +3851,7 @@ DocsData = {
   "HTTP.put": {
     "filepath": "http/httpcall_common.js",
     "kind": "function",
-    "lineno": 67,
+    "lineno": 71,
     "locus": "Anywhere",
     "longname": "HTTP.put",
     "memberof": "HTTP",
@@ -4729,7 +4911,7 @@ DocsData = {
   "Meteor.logout": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 332,
+    "lineno": 334,
     "locus": "Client",
     "longname": "Meteor.logout",
     "memberof": "Meteor",
@@ -4753,7 +4935,7 @@ DocsData = {
   "Meteor.logoutOtherClients": {
     "filepath": "accounts-base/accounts_client.js",
     "kind": "function",
-    "lineno": 341,
+    "lineno": 343,
     "locus": "Client",
     "longname": "Meteor.logoutOtherClients",
     "memberof": "Meteor",
@@ -4954,7 +5136,7 @@ DocsData = {
     "memberof": "Meteor",
     "name": "settings",
     "scope": "static",
-    "summary": "`Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data) to `meteor run` or `meteor deploy`. When running your server directly (e.g. from a bundle), you instead specify settings by putting the JSON directly into the `METEOR_SETTINGS` environment variable. If you don't provide any settings, `Meteor.settings` will be an empty object.  If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server.",
+    "summary": "`Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data) to `meteor run` or `meteor deploy`. When running your server directly (e.g. from a bundle), you instead specify settings by putting the JSON directly into the `METEOR_SETTINGS` environment variable. If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of `Meteor.settings` are only defined on the server.  You can rely on `Meteor.settings` and `Meteor.settings.public` being defined objects (not undefined) on both client and server even if there are no settings specified.  Changes to `Meteor.settings.public` at runtime will be picked up by new client connections.",
     "type": {
       "names": [
         "Object"
@@ -5189,7 +5371,7 @@ DocsData = {
   "Mongo.Collection#allow": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 782,
+    "lineno": 787,
     "locus": "Server",
     "longname": "Mongo.Collection#allow",
     "memberof": "Mongo.Collection",
@@ -5239,7 +5421,7 @@ DocsData = {
   "Mongo.Collection#deny": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 794,
+    "lineno": 799,
     "locus": "Server",
     "longname": "Mongo.Collection#deny",
     "memberof": "Mongo.Collection",
@@ -5289,7 +5471,7 @@ DocsData = {
   "Mongo.Collection#find": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 252,
+    "lineno": 257,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
@@ -5386,7 +5568,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 278,
+    "lineno": 283,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5474,7 +5656,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 422,
+    "lineno": 427,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5507,7 +5689,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 651,
+    "lineno": 656,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5520,7 +5702,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 663,
+    "lineno": 668,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5533,7 +5715,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 446,
+    "lineno": 451,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5566,7 +5748,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 432,
+    "lineno": 437,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5636,7 +5818,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 608,
+    "lineno": 613,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5698,7 +5880,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 685,
+    "lineno": 690,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -5866,7 +6048,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 678,
+    "lineno": 683,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
@@ -5876,6 +6058,7 @@ DocsData = {
       {
         "description": "<p>Optional.  The 24-character hexadecimal contents of the ObjectID to create</p>",
         "name": "hexString",
+        "optional": true,
         "type": {
           "names": [
             "String"
@@ -6138,17 +6321,17 @@ DocsData = {
     "scope": "global",
     "summary": "Type of the API object passed into the `Package.onUse` function."
   },
-  "PackageAPI#addFiles": {
+  "PackageAPI#addAssets": {
     "kind": "function",
     "locus": "package.js",
-    "longname": "PackageAPI#addFiles",
+    "longname": "PackageAPI#addAssets",
     "memberof": "PackageAPI",
-    "name": "addFiles",
+    "name": "addAssets",
     "options": [],
     "params": [
       {
-        "description": "<p>Name of the source file, or array of\nstrings of source file names.</p>",
-        "name": "filename",
+        "description": "<p>Paths to the asset files.</p>",
+        "name": "filenames",
         "type": {
           "names": [
             "String",
@@ -6157,7 +6340,50 @@ DocsData = {
         }
       },
       {
-        "description": "<p>If you only want to export the file\non the server (or the client), you can pass in the second argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the file is used with. You can specify multiple\narchitectures by passing in an array, for example <code>['web.cordova', 'os.linux']</code>.</p>",
+        "description": "<p>Specify where this asset should be\navailable (e.g., 'server', 'client', 'web.browser', 'web.cordova'). You can\nspecify multiple architectures by passing in an array, for example\n<code>['web.cordova', 'os.linux']</code>.</p>",
+        "name": "architecture",
+        "type": {
+          "names": [
+            "String",
+            "Array.<String>"
+          ]
+        }
+      }
+    ],
+    "scope": "instance",
+    "summary": "Specify asset files for your package. They can be accessed via\nthe [Assets API](#assets) from the server, or at the URL\n`/packages/username_package-name/file-name` from the client, depending on the\narchitecture passed."
+  },
+  "PackageAPI#addFiles": {
+    "kind": "function",
+    "locus": "package.js",
+    "longname": "PackageAPI#addFiles",
+    "memberof": "PackageAPI",
+    "name": "addFiles",
+    "options": [
+      {
+        "description": "<p>If this file is JavaScript code or will\nbe compiled into JavaScript code by a build plugin, don't wrap the\nresulting file in a closure. Has the same effect as putting a file into the\n<code>client/compatibility</code> directory in an app.</p>",
+        "name": "bare",
+        "optional": true,
+        "type": {
+          "names": [
+            "Boolean"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>Paths to the source files.</p>",
+        "name": "filenames",
+        "type": {
+          "names": [
+            "String",
+            "Array.<String>"
+          ]
+        }
+      },
+      {
+        "description": "<p>If you only want to use the file\non the server (or the client), you can pass this argument\n(e.g., 'server', 'client', 'web.browser', 'web.cordova') to specify\nwhat architecture the file is used with. You can specify multiple\narchitectures by passing in an array, for example\n<code>['web.cordova', 'os.linux']</code>. By default, the file will be loaded on both\nserver and client.</p>",
         "name": "architecture",
         "optional": true,
         "type": {
@@ -6168,8 +6394,8 @@ DocsData = {
         }
       },
       {
-        "description": "<p>Options that will be passed to build\nplugins. For example, for JavaScript files, you can pass <code>{bare: true}</code>\nto not wrap the individual file in its own closure. To add a static asset,\npass <code>{isAsset: true}</code>; use the <code>architecture</code> parameter to determine\nif this is a client-side asset served by the HTTP server or a server-side\nasset accessible to the <code>Assets</code> APIs.</p>",
-        "name": "fileOptions",
+        "description": "<p>Options that will be passed to build\nplugins.</p>",
+        "name": "options",
         "optional": true,
         "type": {
           "names": [
@@ -6179,7 +6405,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Specify the source code for your package."
+    "summary": "Specify source code files for your package."
   },
   "PackageAPI#export": {
     "kind": "function",
@@ -6230,7 +6456,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use this package."
+    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use your package. If your package sets the `debugOnly`\nor `prodOnly` options to `true` when it calls `Package.describe()`, then\npackages that use your package will need to use \n`Package[\"package-name\"].ExportedVariableName` to access the value of an\nexported variable."
   },
   "PackageAPI#imply": {
     "kind": "function",
@@ -7671,11 +7897,210 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 408,
+    "lineno": 410,
     "longname": "currentUser",
     "name": "currentUser",
     "scope": "global",
     "summary": "Calls [Meteor.user()](#meteor_user). Use `{{#if currentUser}}` to check whether the user is logged in."
+  },
+  "execFileAsync": {
+    "kind": "function",
+    "longname": "execFileAsync",
+    "name": "execFileAsync",
+    "options": [
+      {
+        "description": "<p>Current working directory of the child process</p>",
+        "name": "cwd",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Environment key-value pairs</p>",
+        "name": "env",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Child's stdio configuration.\n(Default: 'pipe') Specifying anything else than 'pipe' will disallow\ncapture.</p>",
+        "name": "stdio",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array",
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>If specified, instead of capturing\nthe output, the child process stdout will be piped to the destination stream.</p>",
+        "name": "destination",
+        "optional": true,
+        "type": {
+          "names": [
+            "Writable"
+          ]
+        }
+      },
+      {
+        "description": "<p>Whether to wait for the child process\nstreams to close or to resolve the promise when the child process exits.</p>",
+        "name": "waitForClose",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>The command to run</p>",
+        "name": "command",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>List of string arguments</p>",
+        "name": "args",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Promise.<String>"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Executes a command asynchronously, returning a promise that will\neither be resolved to the captured stdout output or be rejected with an\nerror containing the stderr output as part of the message. In addition,\nthe error will contain fields pid, stderr, stdout, status and signal."
+  },
+  "execFileSync": {
+    "kind": "function",
+    "longname": "execFileSync",
+    "name": "execFileSync",
+    "options": [
+      {
+        "description": "<p>Current working directory of the child process</p>",
+        "name": "cwd",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Environment key-value pairs</p>",
+        "name": "env",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Child's stdio configuration.\n(Default: 'pipe') Specifying anything else than 'pipe' will disallow\ncapture.</p>",
+        "name": "stdio",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array",
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>If specified, instead of capturing\nthe output, the child process stdout will be piped to the destination stream.</p>",
+        "name": "destination",
+        "optional": true,
+        "type": {
+          "names": [
+            "Writable"
+          ]
+        }
+      },
+      {
+        "description": "<p>Whether to wait for the child process\nstreams to close or to resolve the promise when the child process exits.</p>",
+        "name": "waitForClose",
+        "optional": true,
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "params": [
+      {
+        "description": "<p>The command to run</p>",
+        "name": "command",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>List of string arguments</p>",
+        "name": "args",
+        "optional": true,
+        "type": {
+          "names": [
+            "Array"
+          ]
+        }
+      },
+      {
+        "name": "options",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "returns": [
+      {
+        "description": "<p>The stdout from the command</p>",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      }
+    ],
+    "scope": "global",
+    "summary": "Executes a command synchronously, returning either the captured\nstdout output or throwing an error containing the stderr output as part of\nthe message. In addition, the error will contain fields pid, stderr, stdout,\nstatus and signal."
   },
   "getExtension": {
     "kind": "function",
@@ -7699,7 +8124,7 @@ DocsData = {
     "filepath": "accounts-base/accounts_client.js",
     "ishelper": "true",
     "kind": "member",
-    "lineno": 418,
+    "lineno": 420,
     "longname": "loggingIn",
     "name": "loggingIn",
     "scope": "global",

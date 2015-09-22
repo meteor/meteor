@@ -3,8 +3,9 @@ import util from 'util';
 import path from 'path';
 import assert from 'assert';
 import chalk from 'chalk';
+import semver from 'semver';
 
-import isopackets from '../tool-env/isopackets.js'
+import isopackets from '../tool-env/isopackets.js';
 import files from '../fs/files.js';
 import utils from '../utils/utils.js';
 import { Console } from '../console/console.js';
@@ -13,6 +14,7 @@ import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
 import { execFileSync, execFileAsync } from '../utils/processes.js';
 
+import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
@@ -20,7 +22,7 @@ import superspawn from 'cordova-lib/src/cordova/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
 
 import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
-  newPluginId, convertPluginVersionsToNewIDs,
+  newPluginId, convertPluginVersions, convertToGitUrl,
   installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
@@ -58,6 +60,39 @@ yet supported.`);
 
   createIfNeeded() {
     buildmessage.assertInJob();
+
+    // Check if we have an existing Cordova project directory with outdated
+    // platforms. In that case, we remove the whole directory to avoid issues.
+    if (files.exists(this.projectRoot)) {
+      const installedPlatforms = this.listInstalledPlatforms();
+
+      // XXX Decide whether to update these if we update cordova-lib.
+      // If we can guarantee there are no issues going forward, we may want to
+      // use updatePlatforms instead of removing the whole directory.
+      const minPlatformVersions = {
+        'android': '4.1.0',
+        'ios': '3.9.0'
+      }
+
+      const outdated = _.some(minPlatformVersions, (minVersion, platform) => {
+        // If the platform is not installed, it cannot be outdated
+        if (!_.contains(installedPlatforms, platform)) return false;
+
+        const installedVersion = this.installedVersionForPlatform(platform);
+        // If we cannot establish the installed version, we consider it outdated
+        if (!installedVersion) return true;
+
+        return semver.lt(installedVersion, minVersion);
+      });
+
+      if (outdated) {
+        Console.debug(`Removing Cordova project directory to avoid issues with
+outdated platforms`);
+        // Remove Cordova project directory to start afresh
+        // and avoid a broken project
+        files.rm_recursive(this.projectRoot);
+      }
+    }
 
     if (!files.exists(this.projectRoot)) {
       // We create a temporary directory with a generated config.xml
@@ -172,7 +207,7 @@ ${displayNameForPlatform(platform)} with options ${options}`,
       cwd: this.projectRoot,
       stdio: Console.verbose ? 'inherit' : 'pipe',
       waitForClose: false })
-    );
+    ), null, null;
   }
 
   // Platforms
@@ -222,15 +257,25 @@ ${displayNameForPlatform(platform)}`);
 
     if (!satisfied) {
       Console.info();
-      Console.info(`Not all installation requirements are satisfied \
-for building and running apps for ${displayNameForPlatform(platform)}.`);
+      Console.info(`Your system does not yet seem to fulfill all requirements \
+to build apps for ${displayNameForPlatform(platform)}.`);
+
       const url = installationInstructionsUrlForPlatform(platform);
       if (url) {
-        Console.info("Please follow the instructions here:");
+        Console.info();
+        Console.info("Please follow the installation instructions here:");
         Console.info(Console.url(url));
       }
+
       Console.info();
-      Console.info("More details about the individual requirements:");
+
+      if (!Console.verbose) {
+        Console.info("Specify the --verbose option to see more details about \
+the status of individual requirements.");
+        return false;
+      }
+
+      Console.info("Status of the requirements:");
       for (requirement of requirements) {
         const name = requirement.name;
         if (requirement.installed) {
@@ -250,6 +295,21 @@ for building and running apps for ${displayNameForPlatform(platform)}.`);
 
   listInstalledPlatforms() {
     return cordova_util.listPlatforms(files.convertToOSPath(this.projectRoot));
+  }
+
+  installedVersionForPlatform(platform) {
+    const command = files.convertToOSPath(files.pathJoin(
+      this.projectRoot, 'platforms', platform, 'cordova', 'version'));
+    // Make sure the command exists before trying to execute it
+    if (files.exists(command)) {
+      return this.runCommands(
+        `getting installed version for platform ${platform} in Cordova project`,
+        execFileSync(command, {
+          env: this.defaultEnvWithPathsAdded(),
+          cwd: this.projectRoot}), null, null);
+    } else {
+      return null;
+    }
   }
 
   updatePlatforms(platforms = this.listInstalledPlatforms()) {
@@ -352,8 +412,10 @@ from Cordova project`, async () => {
     assert(id);
     assert(version);
 
+    buildmessage.assertInJob();
+
     if (utils.isUrlWithSha(version)) {
-      return this.convertToGitUrl(version);
+      return convertToGitUrl(version);
     } else if (utils.isUrlWithFileScheme(version)) {
       // Strip file:// and resolve the path relative to the cordova-build
       // directory
@@ -370,29 +432,6 @@ from Cordova project`, async () => {
       return files.convertToOSPath(pluginPath);
     } else {
       return `${id}@${version}`;
-    }
-  }
-
-  // Convert old-style GitHub tarball URLs to new Git URLs, and check if other
-  // Git URLs contain a SHA reference.
-  convertToGitUrl(url) {
-    // Matches GitHub tarball URLs, like:
-    // https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2
-    const match =
-      url.match(/^https?:\/\/github.com\/(.+?)\/(.+?)\/tarball\/([0-9a-f]{40})/);
-    if (match) {
-        const [, organization, repository, sha] = match;
-      // Convert them to a Git URL
-      return `https://github.com/${organization}/${repository}.git#${sha}`;
-    // We only support Git URLs with a SHA reference to guarantee repeatability
-    // of builds
-    } else if (/\.git#[0-9a-f]{40}/.test(url)) {
-      return url;
-    } else {
-      buildmessage.error(`Meteor no longer supports installing Cordova plugins \
-from arbitrary tarball URLs. You can either add a plugin from a Git URL with \
-a SHA reference, or from a local path. (Attempting to install from ${url}.)`);
-      return null;
     }
   }
 
@@ -437,32 +476,37 @@ from Cordova project`, async () => {
 
     buildmessage.assertInCapture();
 
-    // Cordova plugin IDs have changed as part of moving to npm.
-    // We convert old plugin IDs to new IDs in the 1.2.0-cordova-changes
-    // upgrader and when adding plugins, but packages may still depend on
-    // the old IDs.
-    // To avoid attempts at duplicate installation, we check for old IDs here
-    // and convert them to new IDs when needed.
-    pluginVersions = convertPluginVersionsToNewIDs(pluginVersions);
-
-    // Also, we warn if any App.configurePlugin calls in mobile-config.js
-    // need to be updated (and in the meantime we take care of the
-    // conversion of the plugin configuration to the new ID).
-    pluginsConfiguration = _.object(_.map(pluginsConfiguration, (config, id) => {
-      const newId = newPluginId(id);
-      if (newId) {
-        Console.warn();
-        Console.labelWarn(`Cordova plugin ${id} has been renamed to ${newId} \
-as part of moving to npm. Please change the App.configurePlugin call in \
-mobile-config.js accordingly.`);
-        return [newId, config];
-      } else {
-        return [id, config];
-      }
-    }));
-
     buildmessage.enterJob({ title: "installing Cordova plugins"}, () => {
-      const installedPluginVersions = this.listInstalledPluginVersions();
+      // Cordova plugin IDs have changed as part of moving to npm.
+      // We convert old plugin IDs to new IDs in the 1.2.0-cordova-changes
+      // upgrader and when adding plugins, but packages may still depend on
+      // the old IDs.
+      // To avoid attempts at duplicate installation, we check for old IDs here
+      // and convert them to new IDs when needed. We also convert old-style GitHub
+      // tarball URLs to new Git URLs, and check if other Git URLs contain a
+      // SHA reference.
+      pluginVersions = convertPluginVersions(pluginVersions);
+
+      if (buildmessage.jobHasMessages()) return;
+
+      // Also, we warn if any App.configurePlugin calls in mobile-config.js
+      // need to be updated (and in the meantime we take care of the
+      // conversion of the plugin configuration to the new ID).
+      pluginsConfiguration = _.object(_.map(pluginsConfiguration, (config, id) => {
+        const newId = newPluginId(id);
+        if (newId) {
+          Console.warn();
+          Console.labelWarn(`Cordova plugin ${id} has been renamed to ${newId} \
+  as part of moving to npm. Please change the App.configurePlugin call in \
+  mobile-config.js accordingly.`);
+          return [newId, config];
+        } else {
+          return [id, config];
+        }
+      }));
+
+      const installedPluginVersions =
+        convertPluginVersions(this.listInstalledPluginVersions());
 
       // Due to the dependency structure of Cordova plugins, it is impossible to
       // upgrade the version on an individual Cordova plugin. Instead, whenever
@@ -481,10 +525,6 @@ mobile-config.js accordingly.`);
         if (isPluginFromLocalPath) {
           pluginsFromLocalPath[id] = version;
         } else {
-          if (utils.isUrlWithSha(version)) {
-            version = this.convertToGitUrl(version);
-          }
-
           if (!_.has(installedPluginVersions, id) ||
             installedPluginVersions[id] !== version) {
             // We do not have the plugin installed or the version has changed.

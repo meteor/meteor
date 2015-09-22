@@ -6,8 +6,8 @@ selftest.define("create", function () {
 
   // Can we create an app? Yes!
   var run = s.run("create", "foobar");
-  run.waitSecs(15);
-  run.match("foobar: created");
+  run.waitSecs(60);
+  run.match("Created a new Meteor app in 'foobar'.");
   run.match("To run your new app");
   run.expectExit(0);
 

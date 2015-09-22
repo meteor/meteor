@@ -322,7 +322,7 @@ class SourceClassification {
         // `api.addFiles('foo.bar')` where *.bar is a web-specific legacy
         // handler (eg) would end up adding 'foo.bar' as a static asset on
         // non-web programs, which was unintended. This didn't happen in apps
-        // because initFromAppDir's getSourcesFunc never added them.)
+        // because initFromAppDir's getFiles never added them.)
         const filteredSourceProcessors = sourceProcessors.filter(
           (sourceProcessor) => sourceProcessor.relevantForArch(arch)
         );
@@ -470,9 +470,14 @@ _.extend(exports.InputFile.prototype, {
    */
   error: function (options) {
     var self = this;
-    var relPath = self.getPathInPackage();
-    buildmessage.error(options.message || ("error building " + relPath), {
-      file: options.sourcePath || relPath,
+    var path = self.getPathInPackage();
+    var packageName = self.getPackageName();
+    if (packageName) {
+      path = "packages/" + packageName + "/" + path;
+    }
+
+    buildmessage.error(options.message || ("error building " + path), {
+      file: options.sourcePath || path,
       line: options.line ? options.line : undefined,
       column: options.column ? options.column : undefined,
       func: options.func ? options.func : undefined

@@ -1,39 +1,65 @@
-## batch-plugins
-
-Backwards-incompatible change: static assets in package.js files must
-be explicitly declared with `{isAsset: true}`.  See the batch-plugins merge
-message for more details.
-
-
 ## v.NEXT
+
+## in progress: v1.2
+
+There are quite a lot of changes in Meteor 1.2. See the
+[Wiki](https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2) for
+a shorter list of breaking changes you should be aware of when upgrading.
+
+### Core Packages
+
+* `meteor-platform` has been deprecated in favor of the smaller `meteor-base`,
+  with apps listing their other dependencies explicitly.  The v1.2 upgrader
+  will rewrite `meteor-platform` in existing apps.  `meteor-base` puts fewer
+  symbols in the global namepsace, so it's no longer true that all apps
+  have symbols like `Random` and `EJSON` in the global namespace.
+
+* New packages: `ecmascript`, `es5-shim`, `ecmascript-collections`, `promise`,
+  `static-html`, `jshint`, `babel-compiler`
 
 * No longer include the `json` package by default, which contains code for
   `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
   natively was Internet Explorer 7.)
 
-### Utilities
-
-* New `beforeSend` option to `HTTP.call` on the client allows you to directly
-  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
-
-* Parse `application/javascript` and `application/x-javascript` HTTP replies as
-  JSON too.  #4595
-
+* `autoupdate` has been renamed `hot-code-push`
 
 ### Meteor Accounts
 
-* `loginWithPassword` now matches username or email in a case insensitive manner. If there are multiple users with a username or email only differing in case, a case sensitive match is required. #550
+* Login attempts are now rate-limited by default.  This can be turned off
+  using `Accounts.removeDefaultRateLimit()`.
 
-* `loginWithGithub` now requests `user:email` scope by default, and attempts to fetch the user's emails. If no public email has been set, we use the primary email instead. We also store the complete list of emails. #4545
+* `loginWithPassword` now matches username or email in a case insensitive
+  manner. If there are multiple users with a username or email only differing
+  in case, a case sensitive match is required. #550
+
+* `loginWithGithub` now requests `user:email` scope by default, and attempts
+  to fetch the user's emails. If no public email has been set, we use the
+  primary email instead. We also store the complete list of emails. #4545
+
+* When an account's email address is verified, deactivate other verification
+  tokens.  #4626
+
+* Fix bug where blank page is shown when an expired login token is
+  present. #4825
 
 * Fix `OAuth1Binding.prototype.call` when making requests to Twitter
   with a large parameter set.
 
+* Directions for setting up Google OAuth in accounts-ui have been updated to
+  match Google's new requirements.
 
-### DDP
+* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
+  log in with currently registered services.  #4014
 
-* `sub.ready()` should return true inside that subscription's `onReady`
-  callback.  #4614
+* The `accounts-base` now defines reusable `AccountsClient` and
+  `AccountsServer` constructors, so that users can create multiple
+  independent instances of the `Accounts` namespace.  #4233
+
+* Create an index for `Meteor.users` on
+  `services.email.verificationTokens.token` (instead of
+  `emails.validationTokens.token`, which never was used for anything).  #4482
+
+* Remove an IE7-specific workaround from accounts-ui.  #4485
 
 ### Livequery
 
@@ -95,15 +121,17 @@ message for more details.
   iOS Simulator. As a workaround, you can `meteor run ios-device` to open the
   project in Xcode and watch the output there.
 
-## in progress: v.1.1.1
+### Templates/Blaze
 
-### Blaze
+* New syntax: Handlebars sub-expressions are now supported -- as in,
+  `{{helper (anotherHelper arg1 arg2)}}` -- as well as new block helper forms
+  `#each .. in ..` and `#let x=y`.  See
+  https://github.com/meteor/meteor/tree/devel/packages/spacebars
 
-* Preparatory work for the yet-unreleased `react-template-helper`
-  package -- don't let templates use {{> React}} with siblings since
-  `React.render` assumes it's being rendered into an empty container
-  element. (This lets us throw the error when compiling templates
-  rather than when the app runs.)
+* Add a special case for the new `react-template-helper` package -- don't let
+  templates use {{> React}} with siblings since `React.render` assumes it's
+  being rendered into an empty container element. (This lets us throw the error
+  when compiling templates rather than when the app runs.)
 
 * Improve parsing of `<script>` and `<style>` tags.  #3797
 
@@ -116,14 +144,16 @@ message for more details.
   default is `Meteor.connection`, which is the connection used when calling
   `Meteor.subscribe`.
 
-* XXX Handlebars sub-expressions. https://github.com/meteor/meteor/pull/4101
-
-* XXX `#each .. in ..` and `#let x=y` forms. https://github.com/meteor/meteor/pull/3560
-
 * Fix external `<script>` tags in body or templates.  #4415
 
 * Fix memory leak.  #4289
 
+* Avoid recursion when materializing DOM elements, to avoid stack overflow
+  errors in certain browsers. #3028
+
+* Blaze and Meteor's built-in templating are now removable using
+  `meteor remove blaze-html-templates`. You can add back support for static
+  `head` and `body` tags in `.html` files by using the `static-html` package.
 
 ### DDP
 
@@ -145,11 +175,17 @@ message for more details.
   exceptions thrown by method stubs will be thrown instead of logged, and the
   method will not be invoked on the server.  #4202
 
+* `sub.ready()` should return true inside that subscription's `onReady`
+  callback.  #4614
+
+* Fix method calls causing broken state when socket is reconnecting.  #5104
 
 ### Isobuild
 
-* Plugins should not process files whose names match the extension exactly (with
-  no extra dot).  #3985
+* Build plugins will no longer process files whose names match the extension
+  exactly (with no extra dot). If your build plugin needs to match filenames
+  exactly, you should use the new build plugin API in this release which
+  supplies a special `filenames` option. #3985
 
 * Adding the same file twice in the same package is now an error. Previously,
   this could either lead to the file being included multiple times, or to a
@@ -161,13 +197,55 @@ message for more details.
 * Ignore `node_modules` directories in apps instead of processing them as Meteor
   source code.  #4457 #4452
 
-### Livequery
+* Backwards-incompatible change for package authors: Static assets in package.js files must now be
+  explicitly declared by using `addAssets` instead of `addFiles`. Previously,
+  any file that didn't have a source handler was automatically registered as a
+  server-side asset. The `isAsset` option to `addFiles` is also deprecated in
+  favor of `addAssets`.
+
+* Built files are now always annotated with line number comments, to improve the
+  debugging experience in browsers that don't support source maps.
+
+* There is a completely new API for defining build plugins that cache their
+  output. There are now special APIs for defining linters and minifiers in
+  addition to compilers. The core Meteor packages for `less`, `coffee`, `stylus`
+  and `html` files have been updated to use this new API. Read more on the
+  [Wiki page](https://github.com/meteor/meteor/wiki/Build-Plugins-API).
+
+### CSS
+
+* LESS and Stylus now support cross-package imports.
+
+* CSS concatenation and minification is delegated to the `standard-minifiers`
+  package, which is present by default (and added to existing apps by the v1.2
+  upgrader).
+
+* CSS output is now split into multiple stylesheets to avoid hitting limits on
+  rules per stylesheet in certain versions of Internet Explorer. #1876
+
+### Mongo
 
 * The oplog observe driver now properly updates queries when you drop a
   database.  #3847
 
+* MongoID logic has been moved out of `minimongo` into a new package called
+  `mongo-id`.
+
+* Fix Mongo upserts with dotted keys in selector.  #4522
+
 
 ### `meteor` command-line tool
+
+* You can now create three new example apps with the command line tool. These
+  are the apps from the official tutorials at http://meteor.com/tutorials, which
+  demonstrate building the same app with Blaze, Angular, and React. Try these
+  apps with:
+
+  ```sh
+  meteor create --example simple-todos
+  meteor create --example simple-todos-react
+  meteor create --example simple-todos-angular
+  ```
 
 * `meteor shell` no longer crashes when piped from another command.
 
@@ -199,20 +277,7 @@ message for more details.
 * Fix inability to run `mongod` due to lack of locale configuration on some
   platforms, and improve error message if the failure still occurs.  #4019
 
-### Meteor Accounts
-
-* Add `Accounts.oauth.unregisterService` method, and ensure that users can only
-  log in with currently registered services.  #4014
-
-* The `accounts-base` now defines reusable `AccountsClient` and
-  `AccountsServer` constructors, so that users can create multiple
-  independent instances of the `Accounts` namespace.  #4233
-
-* Create an index for `Meteor.users` on
-  `services.email.verificationTokens.token` (instead of
-  `emails.validationTokens.token`, which never was used for anything).  #4482
-
-* Remove an IE7-specific workaround from accounts-ui.  #4485
+* New `meteor lint` command.
 
 ### Minimongo
 
@@ -231,13 +296,19 @@ message for more details.
 
 * New `Tracker.Computation#onStop` method.  #3915
 
-* `ReactiveDict` now has two new methods, `clear` and `all`. `clear` resets
+* `ReactiveDict` has two new methods, `clear` and `all`. `clear` resets
   the dictionary as if no items had been added, meaning all calls to `get` will
-  return `underfined`. `all` converts the dictionary into a regular JavaScript
+  return `undefined`. `all` converts the dictionary into a regular JavaScript
   object with a snapshot of the keys and values. Inside an autorun, `all`
-  registers a dependency on any changes to the dictionary.
+  registers a dependency on any changes to the dictionary. #3135
 
 ### Utilities
+
+* New `beforeSend` option to `HTTP.call` on the client allows you to directly
+  access the `XMLHttpRequest` object and abort the call.  #4419 #3243 #3266
+
+* Parse `application/javascript` and `application/x-javascript` HTTP replies as
+  JSON too.  #4595
 
 * `Match.test` from the `check` package now properly compares boolean literals,
   just like it does with Numbers and Strings. This applies to the `check`
@@ -250,9 +321,10 @@ message for more details.
 * Expose `Spiderable.requestTimeoutMs` from `spiderable` package to
   allow apps to set the timeout for running phantomjs.
 
-### Other bug fixes and improvements
-
 * The `spiderable` package now reports the URL it's trying to fetch on failure.
+
+
+### Other bug fixes and improvements
 
 * Upgraded dependencies:
 
@@ -264,9 +336,25 @@ message for more details.
   displayed on Google login.
 
 * Upgraded `coffeescript` package to depend on NPM packages
-  coffeescript@1.9.2 and source-map@0.4.2.
+  coffeescript@1.9.2 and source-map@0.4.2. #4302
 
 * Upgraded `fastclick` to 1.0.6 to fix an issue in iOS Safari. #4393
+
+* Fix `Error: Can't render headers after they are sent to the client`.  #4253 #4750
+
+* `Meteor.settings.public` is always available on client and server,
+  and modifications made on the server (for example, during app initialization)
+  affect the value seen by connecting clients. #4704
+
+### Windows
+
+* Increase the buffer size for `netstat` when looking for running Mongo servers.
+  #4125
+
+* The Windows installer now always fetches the latest available version of
+  Meteor at runtime, so that it doesn't need to be recompiled for every release.
+
+* Fix crash in `meteor mongo` on Windows.  #4711
 
 
 ## v1.1.0.3, 2015-Aug-03

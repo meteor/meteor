@@ -78,10 +78,11 @@ class LessCompiler extends MultiFileCachingCompiler {
     const compileResult = {css: output.css, sourceMap: output.map};
     const referencedImportPaths = [];
     output.imports.forEach((path) => {
-      if (! allFiles.has(path)) {
-        throw Error("Imported an unknown file?");
+      // Some files that show up in output.imports are not actually files; for
+      // example @import url("...");
+      if (allFiles.has(path)) {
+        referencedImportPaths.push(path);
       }
-      referencedImportPaths.push(path);
     });
 
     return {compileResult, referencedImportPaths};
@@ -115,8 +116,15 @@ class MeteorImportLessFileManager extends less.AbstractFileManager {
   }
 
   // We want to be the only active FileManager, so claim to support everything.
-  supports() {
-    return true;
+  supports(filename) {
+    // We shouldn't process files that start with `//` or a protocol because
+    // those are not relative to the app at all; they are probably native
+    // CSS imports
+    if (! filename.match(/^(https?:)?\/\//)) {
+      return true;
+    }
+
+    return false;
   }
 
   loadFile(filename, currentDirectory, options, environment, cb) {

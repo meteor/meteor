@@ -596,7 +596,7 @@ _.extend(Session.prototype, {
         };
 
         DDPRateLimiter._increment(rateLimiterInput);
-        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput);
         if (!rateLimitResult.allowed) {
           self.send({
             msg: 'nosub', id: msg.id,

@@ -35,7 +35,7 @@ Meetup.requestCredential = function (options, credentialRequestCompleteCallback)
         '&response_type=code' +
         '&scope=' + flatScope +
         '&redirect_uri=' + OAuth._redirectUri('meetup', config) +
-        '&state=' + OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl);
+        '&state=' + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl);
 
   // meetup box gets taller when permissions requested.
   var height = 620;

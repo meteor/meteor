@@ -30,7 +30,7 @@ Github.requestCredential = function (options, credentialRequestCompleteCallback)
     '?client_id=' + config.clientId +
     '&scope=' + flatScope +
     '&redirect_uri=' + OAuth._redirectUri('github', config) +
-    '&state=' + OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl);
+    '&state=' + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl);
 
   OAuth.launchLogin({
     loginService: "github",

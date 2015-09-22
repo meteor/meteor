@@ -71,34 +71,35 @@ export class CordovaRunner {
     }
   }
 
-  prepareProject(bundlePath, plugins, options) {
+  prepareProject(bundlePath, pluginVersions, options) {
     buildmessage.assertInCapture();
 
     buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
-      this.cordovaProject.prepareFromAppBundle(bundlePath, plugins, options);
+      this.cordovaProject.prepareFromAppBundle(bundlePath,
+        pluginVersions, options);
+
+      if (buildmessage.jobHasMessages()) return;
 
       for (platform of this.platformsForRunTargets) {
         this.cordovaProject.prepareForPlatform(platform);
       }
     });
 
-    this.platforms = this.platformsForRunTargets;
-    this.plugins = plugins;
+    this.pluginVersions = pluginVersions;
   }
 
   startRunTargets() {
-    buildmessage.assertInCapture();
-
     this.started = false;
 
     for (runTarget of this.runTargets) {
-      buildmessage.enterJob({ title: `starting ${runTarget.title}` }, () => {
+      const messages = buildmessage.capture({ title: `starting ${runTarget.title}` }, () => {
         Promise.await(runTarget.start(this.cordovaProject));
-
-        if (!buildmessage.jobHasMessages()) {
-          runLog.log(`Started ${runTarget.title}.`, { arrow: true });
-        }
       });
+      if (messages.hasMessages()) {
+        Console.printMessages(messages);
+      } else {
+        runLog.log(`Started ${runTarget.title}.`, { arrow: true });
+      }
     }
 
     this.started = true;
@@ -114,7 +115,8 @@ export class CordovaRunner {
       _.intersection(platformsForRunTargets, cordovaPlatformsInApp));
   }
 
-  havePluginsChangedSinceLastRun(plugins) {
-    return this.plugins && !_.isEqual(this.plugins, plugins);
+  havePluginsChangedSinceLastRun(pluginVersions) {
+    return this.pluginVersions &&
+      !_.isEqual(this.pluginVersions, pluginVersions);
   }
 }

@@ -1,0 +1,39 @@
+<div class="container">
+  <header>
+    <h1>Todo List ( {{ incompleteCount() }} )</h1>
+
+    <label class="hide-completed">
+      <input type="checkbox" ng-model="$parent.hideCompleted"/>
+      Hide Completed Tasks
+    </label>
+
+    <meteor-include src="loginButtons"></meteor-include>
+
+    <!-- add a form below the h1 -->
+    <form class="new-task"
+          ng-submit="addTask(newTask); newTask='';"
+          ng-show="$root.currentUser">
+      <input ng-model="newTask" type="text"
+             name="text" placeholder="Type to add new tasks" />
+    </form>
+  </header>
+
+  <ul ng-repeat="task in tasks">
+    <li ng-class="{'checked': task.checked, 'private': task.private}">
+      <button class="delete" ng-click="deleteTask(task)">&times;</button>
+
+      <input type="checkbox" ng-checked="task.checked"
+             ng-click="setChecked(task)" class="toggle-checked" />
+
+      <button class="toggle-private"
+              ng-if="task.owner === $root.currentUser._id"
+              ng-click="setPrivate(task)">
+        {{task.private == true ? "Private" : "Public"}}
+      </button>
+
+      <span class="text">
+        <strong>{{task.username}}</strong> - {{task.text}}
+      </span>
+    </li>
+  </ul>
+</div>

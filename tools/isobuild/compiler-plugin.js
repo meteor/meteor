@@ -365,6 +365,14 @@ _.extend(ResourceSlot.prototype, {
     if (! self.sourceProcessor && self.inputResource.extension !== "js")
       throw Error("addJavaScript on non-source ResourceSlot?");
 
+    // By default, use the 'bare' option given to addFiles, but allow the option
+    // passed to addJavaScript to override it.
+    var bare = self.inputResource.fileOptions &&
+      self.inputResource.fileOptions.bare;
+    if (options.hasOwnProperty('bare')) {
+      bare = options.bare;
+    }
+
     var data = new Buffer(
       files.convertToStandardLineEndings(options.data), 'utf8');
     self.jsOutputResources.push({
@@ -377,7 +385,7 @@ _.extend(ResourceSlot.prototype, {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      bare: options.bare
+      bare: !! bare
     });
   },
   addAsset: function (options) {

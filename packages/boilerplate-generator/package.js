@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Generates the boilerplate html from program's manifest",
-  version: '1.0.4-plugins.0'
+  version: '1.0.4'
 });
 
 Package.onUse(function (api) {
@@ -12,7 +12,8 @@ Package.onUse(function (api) {
   // spacebars compiler rather than letting the 'templating' package (which
   // isn't fully supported on the server yet) handle it. That also means that
   // they don't contain the outer "<template>" tag.
-  api.addFiles(['boilerplate_web.browser.html',
-                 'boilerplate_web.cordova.html'],
-                 'server', {isAsset: true});
+  api.addAssets([
+    'boilerplate_web.browser.html',
+    'boilerplate_web.cordova.html'
+  ], 'server');
 });

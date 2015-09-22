@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.4-plugins.0',
+  version: '1.0.4',
   summary: 'SHA256 implementation',
   git: 'https://github.com/meteor/meteor'
 });

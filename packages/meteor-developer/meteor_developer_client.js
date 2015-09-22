@@ -25,7 +25,7 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
   var loginUrl =
         MeteorDeveloperAccounts._server +
         "/oauth2/authorize?" +
-        "state=" + OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl) +
+        "state=" + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl) +
         "&response_type=code&" +
         "client_id=" + config.clientId;
 

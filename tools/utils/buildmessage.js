@@ -486,7 +486,11 @@ var exception = function (error) {
       column: error.column
     });
   } else {
-    var stack = parseStack.parse(error).outsideFiber;
+    var parsed = parseStack.parse(error);
+
+    // If there is a part inside the fiber, that's the one we want. Otherwise,
+    // use the one outside.
+    var stack = parsed.insideFiber || parsed.outsideFiber;
     var locus = stack[0];
     currentJob.get().addMessage({
       message: message,

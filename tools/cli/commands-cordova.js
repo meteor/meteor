@@ -74,8 +74,7 @@ main.registerCommand({
   minArgs: 1,
   maxArgs: Infinity,
   requiresApp: true,
-  catalogRefresh: new catalog.Refresh.Never(),
-  notOnWindows: true
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   const projectContext = createProjectContext(options.appDir);
 
@@ -95,19 +94,17 @@ version of Meteor`);
 
     if (buildmessage.jobHasMessages()) return;
 
-    const cordovaProject = new CordovaProject(projectContext);
-
     installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
-    const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
-    cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
-
-    if (buildmessage.jobHasMessages()) return;
-
-    // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
 
     for (platform of platformsToRemove) {
       Console.info(`${platform}: removed platform`);
+    }
+
+    if (process.platform !== 'win32') {
+      const cordovaProject = new CordovaProject(projectContext);
+      const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
+      cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
     }
   });
 });

@@ -4,6 +4,7 @@ var _ = require('underscore');
 var files = require('./fs/files.js');
 var Console = require('./console/console.js').Console;
 import main from './cli/main.js';
+import buildmessage from './utils/buildmessage.js';
 import * as cordova from './cordova';
 
 // This file implements "upgraders" --- functions which upgrade a Meteor app to
@@ -22,9 +23,9 @@ var printedNoticeHeaderThisProcess = false;
 var maybePrintNoticeHeader = function () {
   if (printedNoticeHeaderThisProcess)
     return;
-  console.log();
-  console.log("-- Notice --");
-  console.log();
+  Console.info();
+  Console.info("-- Notice --");
+  Console.info();
   printedNoticeHeaderThisProcess = true;
 };
 
@@ -174,11 +175,17 @@ var upgradersByName = {
        'cordova-build'));
 
     // Cordova plugin IDs have changed as part of moving to npm, so we convert
-    // old plugin IDs to new IDs
-    if (files.exists(projectContext.cordovaPluginsFile.filename)) {
-      let pluginVersions = projectContext.cordovaPluginsFile.getPluginVersions();
-      pluginVersions = cordova.convertPluginVersionsToNewIDs(pluginVersions);
-      projectContext.cordovaPluginsFile.write(pluginVersions);
+    // old plugin IDs to new IDs. We also convert old-style GitHub tarball URLs
+    // to new Git URLs, and check if other Git URLs contain a SHA reference.
+    const pluginsFile = projectContext.cordovaPluginsFile;
+    let messages;
+    if (files.exists(pluginsFile.filename)) {
+      messages = buildmessage.capture(
+        { title: `converting Cordova plugins` }, () => {
+        let pluginVersions = pluginsFile.getPluginVersions();
+        pluginVersions = cordova.convertPluginVersions(pluginVersions);
+        pluginsFile.write(pluginVersions);
+      });
     }
 
     // Don't display notice if the project has no Cordova platforms added
@@ -186,28 +193,22 @@ var upgradersByName = {
 
     maybePrintNoticeHeader();
 
+    // Print error messages generated during plugin conversion, if any
+    if (messages && messages.hasMessages()) {
+      Console.printMessages(messages);
+    }
+  },
+
+  "1.2.0-breaking-changes": function () {
+    maybePrintNoticeHeader();
     Console.info(
-`Meteor 1.2 includes various changes to the Cordova integration.
-
-Cordova tools, platforms and plugins have been updated to the latest versions. \
-This may require you to make changes to your app. For details, see the Cordova \
-release notes for for the different versions:`,
-Console.url('https://cordova.apache.org/#news'), `
-
-As part of moving to npm, many Cordova plugins have been renamed. Meteor should \
-perform conversions automatically, but you may want to be aware of this to \
-avoid surprises. See`,
-Console.url('https://cordova.apache.org/announcements/2015/04/21/plugins-release-and-move-to-npm.html'),
-`for more information.
-
-The bundled Android tools have been removed and a system-wide install of the \
-Android SDK is now required. This should make it easier to keep the development \
-toolchain up to date and helps avoid some difficult to diagnose failures.
-If you don't have your own Android tools installed already, you can find \
-more information about installing the Android SDK for your platform here:`,
-Console.url(cordova.installationInstructionsUrlForPlatform('android')),
-      Console.options({ bulletPoint: "1.2.0: " }));
-  }
+`Meteor 1.2 includes many changes and improvements to the build system, \
+some of which might require small changes to apps and packages. Please read \
+the guide about breaking changes here:`,
+      Console.url("https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2"),
+      Console.options({ bulletPoint: "1.2: " })
+    );
+  },
 
   ////////////
   // PLEASE. When adding new upgraders that print mesasges, follow the

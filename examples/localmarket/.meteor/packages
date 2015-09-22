@@ -5,7 +5,6 @@
 # but you can also edit it by hand.
 
 # Packages from the release:
-meteor-platform
 standard-minifiers
 less
 email
@@ -24,3 +23,16 @@ percolate:velocityjs
 percolate:wireframing
 mdg:camera
 mdg:geolocation
+meteor-base
+mobile-experience
+mongo
+blaze-html-templates
+session
+jquery
+tracker
+logging
+reload
+random
+ejson
+spacebars
+check
