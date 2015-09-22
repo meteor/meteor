@@ -1,6 +1,6 @@
 {
     "track": "velocity:METEOR",
-    "version": "1.2-rc.15_2",
+    "version": "1.2.0.1_1",
     "recommended": false,
     "official": false,
     "description": "Extends Meteor with testing functionality"
