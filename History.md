@@ -2,7 +2,7 @@
 
 ## v1.2.0.1, 2015-Sept-22
 
-* Fix internal exception caused by missing exports. #5228
+* Fix incorrect publishing of packages with exports but no source. #5228
 
 ## v1.2, 2015-Sept-21
 
