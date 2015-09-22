@@ -465,7 +465,7 @@ Posts.allow({
 });
 
 Posts.deny({
-  update: function (userId, docs, fields, modifier) {
+  update: function (userId, doc, fields, modifier) {
     // can't change owners
     return _.contains(fields, 'owner');
   },
@@ -508,6 +508,10 @@ checks the collection's `deny` rules. If none of them return true then
 it checks the collection's `allow` rules. Meteor allows the write only
 if no `deny` rules return `true` and at least one `allow` rule returns
 `true`.
+
+{{> autoApiBox "Mongo.Collection#rawCollection"}}
+
+{{> autoApiBox "Mongo.Collection#rawDatabase"}}
 
 <h2 id="mongo_cursor"><span>Cursors</span></h2>
 
