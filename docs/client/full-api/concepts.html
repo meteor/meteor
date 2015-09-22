@@ -141,6 +141,13 @@ treated specially by Meteor:
     Any directory named `tests` is not loaded anywhere. Use this for any local
     test code.
 
+- **node_modules**
+
+    For compatibility with node.js tools used alongside Meteor, any directory named
+    `node_modules` is not loaded anywhere. node.js packages installed into
+    `node_modules` directories will not be available to your Meteor code. Use
+    `Npm.depends` in your package `package.js` file for that.
+
 ### Files outside special directories
 
 All JavaScript files outside special directories are loaded on both the client
@@ -504,6 +511,7 @@ These Meteor functions run your code as a reactive computation:
 
 * [Templates](#livehtmltemplates)
 * [`Tracker.autorun`](#tracker_autorun)
+* [`Template.autorun`](#template_autorun)
 * [`Blaze.render`](#blaze_render) and [`Blaze.renderWithData`](#blaze_renderwithdata)
 
 And the reactive data sources that can trigger changes are:
@@ -547,7 +555,7 @@ Meteor's live page update technology. Just write your template as you normally
 would, and Meteor will take care of making it update in realtime.
 
 Meteor ships with a templating language called
-[Spacebars](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md),
+[Spacebars](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md),
 inspired by [Handlebars](http://handlebarsjs.com/).  It shares some of the
 spirit and syntax of Handlebars, but it has been tailored to produce reactive
 Meteor templates when compiled.
@@ -697,7 +705,7 @@ Template.playerScore.events({
 ```
 
 For more details about Spacebars, read [the Spacebars
-README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md).
+README](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md).
 
 {{/markdown}}
 </template>
@@ -727,11 +735,13 @@ Additionally, [`meteor list`](#meteorlist) will tell you what
 packages your project is using, and [`meteor update`](#meteorupdate)
 will update them to the newest versions when possible.
 
-By default all apps include the `meteor-platform` package. This
-automatically pulls in the packages that make up the core Meteor
-stack. If you want to build your own custom stack, just remove
-`meteor-platform` from your app and add back in whichever of the standard
-packages you want to keep.
+By default all apps include the `meteor-base` package. This pulls in the
+packages that make up the core of the Meteor stack. Most apps will have this
+package.
+
+All new apps also start with a set of packages that allow a friendly development
+experience. For more information about these packages, check out the comments in
+the [packages file](https://github.com/meteor/meteor/blob/master/tools/skel/.meteor/packages).
 
 Meteor uses a single-loading packaging system, meaning that it loads just one
 version of every package. Before adding or upgrading to a particular version of
@@ -744,7 +754,9 @@ In addition to the packages in the official Meteor release being used by your
 app, `meteor list` and `meteor add` also search the `packages` directory at the
 top of your app. You can also use the `packages` directory to break your app
 into subpackages for your convenience, or to test packages that you might want
-to publish. See [Writing Packages](#writingpackages).
+to publish. See [Writing Packages](#writingpackages). If you wish to add
+packages outside of your app's folder structure, set the environment variable
+`PACKAGE_DIRS` to a colon-delimited list of paths.
 
 {{/markdown}}
 </template>
@@ -896,7 +908,7 @@ meteor build my_directory
 This command will generate a fully-contained Node.js application in the form of
 a tarball.  To run this application, you need to provide Node.js 0.10 and a
 MongoDB server.  (The current release of Meteor has been tested with Node
-0.10.36.) You can then run the application by invoking node, specifying the
+0.10.40.) You can then run the application by invoking node, specifying the
 HTTP port for the application to listen on, and the MongoDB endpoint.
 
 ```bash
@@ -960,13 +972,13 @@ there are two common ways to test a package:
 
 * Integration tests (putting a package directly into an application, and writing
 tests against the application) is the most common way to test a package. After
-creating your package, add it to your app's /packages directory and run `meteor
-add`. This will add your package to your app as a local package. You can then
+creating your package, add it to your app's /packages directory and run `meteor add`.
+This will add your package to your app as a local package. You can then
 test and run your app as usual. Meteor will detect and respond to changes to
 your local package, just as it does to your app files.
 
-* Unit tests are run with the command [`meteor test-packages
-package-name`](#meteortestpackages). As described in the [`package.js`](#packagejs)
+* Unit tests are run with the command [`meteor test-packages package-name`](#meteortestpackages).
+As described in the [`package.js`](#packagejs)
 section, you can use the `package.js` file to specify where your unit tests are
 located. If you have a repository that contains only the package source, you can
 test your package by specifying the path to the package directory (which must

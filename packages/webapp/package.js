@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.2.0'
+  version: '1.2.2'
 });
 
 Npm.depends({connect: "2.9.0",
@@ -13,10 +13,11 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'org.apache.cordova.device': '0.2.13',
+  'cordova-plugin-device': '1.0.1',
+  'cordova-plugin-legacy-whitelist': '1.1.0',
   // the cordova plugin built by Meteor Core team that "emulates a server" on
   // the mobile device. Serving the files and checking for the HCP updates.
-  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update/tarball/92fe99b7248075318f6446b288995d4381d24cd2'
+  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update.git#16c53f53e438fc8b1b9c768de36f0a8974e38b49'
 });
 
 Package.onUse(function (api) {
@@ -36,7 +37,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['tinytest', 'webapp', 'http']);
+  api.use(['tinytest', 'webapp', 'http', 'underscore']);
   api.addFiles('webapp_tests.js', 'server');
   api.addFiles('webapp_client_tests.js', 'client');
 });

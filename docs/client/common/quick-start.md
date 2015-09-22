@@ -8,7 +8,7 @@ On Windows?  [Download the official Meteor installer here](https://install.meteo
 On OS X or Linux?  Install the latest official Meteor release from your terminal:
 
 ```bash
-curl https://install.meteor.com/ | sh
+$ curl https://install.meteor.com/ | sh
 ```
 
 The Windows installer supports Windows 7, Windows 8.1, Windows Server
@@ -29,7 +29,7 @@ meteor
 # Meteor server running on: http://localhost:3000/
 ```
 
-Unleash it on the world (on a free server we provide):
+Then, open a new terminal tab and unleash it on the world (on a free server we provide):
 
 ```bash
 meteor deploy myapp.meteor.com

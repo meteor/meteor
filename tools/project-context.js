@@ -1,20 +1,20 @@
 var assert = require("assert");
 var _ = require('underscore');
 
-var archinfo = require('./archinfo.js');
-var buildmessage = require('./buildmessage.js');
-var catalog = require('./catalog.js');
-var catalogLocal = require('./catalog-local.js');
-var Console = require('./console.js').Console;
-var files = require('./files.js');
-var isopackCacheModule = require('./isopack-cache.js');
-var isopackets = require('./isopackets.js');
-var packageMapModule = require('./package-map.js');
-var release = require('./release.js');
-var tropohouse = require('./tropohouse.js');
-var utils = require('./utils.js');
-var watch = require('./watch.js');
-var Profile = require('./profile.js').Profile;
+var archinfo = require('./utils/archinfo.js');
+var buildmessage = require('./utils/buildmessage.js');
+var catalog = require('./packaging/catalog/catalog.js');
+var catalogLocal = require('./packaging/catalog/catalog-local.js');
+var Console = require('./console/console.js').Console;
+var files = require('./fs/files.js');
+var isopackCacheModule = require('./isobuild/isopack-cache.js');
+var isopackets = require('./tool-env/isopackets.js');
+var packageMapModule = require('./packaging/package-map.js');
+var release = require('./packaging/release.js');
+var tropohouse = require('./packaging/tropohouse.js');
+var utils = require('./utils/utils.js');
+var watch = require('./fs/watch.js');
+var Profile = require('./tool-env/profile.js').Profile;
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
@@ -85,7 +85,7 @@ _.extend(ProjectContext.prototype, {
       options.explicitlyAddedLocalPackageDirs;
 
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
-    // package names.
+    // package names.  Deletes the isopacks and their plugin caches.
     self._forceRebuildPackages = options.forceRebuildPackages;
 
     // Set in a few cases where we really want to only get packages from
@@ -146,8 +146,11 @@ _.extend(ProjectContext.prototype, {
 
     if (resetOptions.preservePackageMap && self.packageMap) {
       self._cachedVersionsBeforeReset = self.packageMap.toVersionMap();
+      // packageMapFile should always exist if packageMap does
+      self._oldPackageMapFileHash = self.packageMapFile.fileHash;
     } else {
       self._cachedVersionsBeforeReset = null;
+      self._oldPackageMapFileHash = null;
     }
 
     // The --allow-incompatible-update command-line switch, which allows
@@ -155,6 +158,15 @@ _.extend(ProjectContext.prototype, {
     // incompatible with the previously chosen versions (i.e. to downgrade
     // them or change their major version).
     self._allowIncompatibleUpdate = options.allowIncompatibleUpdate;
+
+    // If set, we run the linter on the app and local packages.  Set by 'meteor
+    // lint', and the runner commands (run/test-packages/debug) when --no-lint
+    // is not passed.
+    self.lintAppAndLocalPackages = options.lintAppAndLocalPackages;
+
+    // If set, we run the linter on just one local package, with this
+    // source root. Set by 'meteor lint' in a package, and 'meteor publish'.
+    self._lintPackageWithSourceRoot = options.lintPackageWithSourceRoot;
 
     // Initialized by readProjectMetadata.
     self.releaseFile = null;
@@ -195,6 +207,13 @@ _.extend(ProjectContext.prototype, {
     self.isopackCache = null;
 
     self._completedStage = STAGE.INITIAL;
+
+    // The resolverResultCache is used by the constraint solver; to
+    // us it's just an opaque object.  If we pass it into repeated
+    // calls to the constraint solver, the constraint solver can be
+    // more efficient by caching or memoizing its work.  We choose not
+    // to reset this when reset() is called more than once.
+    self._resolverResultCache = (self._resolverResultCache || {});
   },
 
   readProjectMetadata: function () {
@@ -375,6 +394,11 @@ _.extend(ProjectContext.prototype, {
     return watchSet;
   },
 
+  getLintingMessagesForLocalPackages: function () {
+    var self = this;
+    return self.isopackCache.getLintingMessagesForLocalPackages();
+  },
+
   _ensureAppIdentifier: function () {
     var self = this;
     var identifierFile = files.pathJoin(self.projectDir, '.meteor', '.id');
@@ -411,10 +435,19 @@ _.extend(ProjectContext.prototype, {
     // If this is in the runner and we have reset this ProjectContext for a
     // rebuild, use the versions we calculated last time in this process (which
     // may not have been written to disk if our release doesn't match the
-    // project's release on disk). Otherwise use the versions from
-    // .meteor/versions.
-    var cachedVersions = self._cachedVersionsBeforeReset ||
-          self.packageMapFile.getCachedVersions();
+    // project's release on disk)... unless the actual file on disk has changed
+    // out from under us. Otherwise use the versions from .meteor/versions.
+    var cachedVersions;
+    if (self._cachedVersionsBeforeReset &&
+        self._oldPackageMapFileHash === self.packageMapFile.fileHash) {
+      // The file on disk hasn't change; reuse last time's results.
+      cachedVersions = self._cachedVersionsBeforeReset;
+    } else {
+      // We don't have a last time, or the file has changed; use
+      // .meteor/versions.
+      cachedVersions = self.packageMapFile.getCachedVersions();
+    }
+
     var anticipatedPrereleases = self._getAnticipatedPrereleases(
       depsAndConstraints.constraints, cachedVersions);
 
@@ -652,7 +685,8 @@ _.extend(ProjectContext.prototype, {
               nudge: function () {
                 Console.nudge(true);
               },
-              Profile: Profile
+              Profile: Profile,
+              resultCache: self._resolverResultCache
             });
     return resolver;
   },
@@ -684,8 +718,11 @@ _.extend(ProjectContext.prototype, {
       includeCordovaUnibuild: (self._forceIncludeCordovaUnibuild
                                || self.platformList.usesCordova()),
       cacheDir: self.getProjectLocalDirectory('isopacks'),
+      pluginCacheDirRoot: self.getProjectLocalDirectory('plugin-cache'),
       tropohouse: self.tropohouse,
-      previousIsopackCache: self._previousIsopackCache
+      previousIsopackCache: self._previousIsopackCache,
+      lintLocalPackages: self.lintAppAndLocalPackages,
+      lintPackageWithSourceRoot: self._lintPackageWithSourceRoot
     });
 
     if (self._forceRebuildPackages) {
@@ -864,6 +901,10 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
   addConstraints: function (constraintsToAdd) {
     var self = this;
     _.each(constraintsToAdd, function (constraintToAdd) {
+      if (! constraintToAdd.package) {
+        throw new Error("Expected PackageConstraint: " + constraintToAdd);
+      }
+
       var lineRecord;
       if (! _.has(self._constraintMap, constraintToAdd.package)) {
         lineRecord = {
@@ -882,6 +923,17 @@ _.extend(exports.ProjectConstraintsFile.prototype, {
       lineRecord.constraint = constraintToAdd;
       self._modified = true;
     });
+  },
+
+  // Like addConstraints, but takes an array of package name strings
+  // to add with no version constraint
+  addPackages: function (packagesToAdd) {
+    this.addConstraints(_.map(packagesToAdd, function (packageName) {
+      // make sure packageName is valid (and doesn't, for example,
+      // contain an '@' sign)
+      utils.validatePackageName(packageName);
+      return utils.parsePackageConstraint(packageName);
+    }));
   },
 
   // The packages in packagesToRemove are expected to actually be in the file;
@@ -925,6 +977,7 @@ exports.PackageMapFile = function (options) {
 
   self.filename = options.filename;
   self.watchSet = new watch.WatchSet;
+  self.fileHash = null;
   self._versions = {};
 
   self._readFile();
@@ -934,7 +987,9 @@ _.extend(exports.PackageMapFile.prototype, {
   _readFile: function () {
     var self = this;
 
-    var contents = watch.readAndWatchFile(self.watchSet, self.filename);
+    var fileInfo = watch.readAndWatchFileWithHash(self.watchSet, self.filename);
+    var contents = fileInfo.contents;
+    self.fileHash = fileInfo.hash;
     // No .meteor/versions? That's OK, you just get to start your calculation
     // from scratch.
     if (contents === null)
@@ -948,7 +1003,7 @@ _.extend(exports.PackageMapFile.prototype, {
       line = files.trimSpace(line);
       if (line === '')
         return;
-      var packageVersion = utils.parsePackageAtVersion(line, {
+      var packageVersion = utils.parsePackageAndVersion(line, {
         useBuildmessage: true,
         buildmessageFile: self.filename
       });
@@ -1224,9 +1279,11 @@ _.extend(exports.ReleaseFile.prototype, {
     }
 
     self.unnormalizedReleaseName = lines[0];
-    var parts = utils.splitReleaseName(self.unnormalizedReleaseName);
+
+    const catalogUtils = require('./packaging/catalog/catalog-utils.js');
+    var parts = catalogUtils.splitReleaseName(self.unnormalizedReleaseName);
     self.fullReleaseName = parts[0] + '@' + parts[1];
-    self.displayReleaseName = utils.displayRelease(parts[0], parts[1]);
+    self.displayReleaseName = catalogUtils.displayRelease(parts[0], parts[1]);
     self.releaseTrack = parts[0];
     self.releaseVersion = parts[1];
   },

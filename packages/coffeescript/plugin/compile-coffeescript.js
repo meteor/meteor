@@ -1,13 +1,99 @@
-var fs = Npm.require('fs');
-var path = Npm.require('path');
-var coffee = Npm.require('coffee-script');
-var _ = Npm.require('underscore');
-var sourcemap = Npm.require('source-map');
+const sourcemap = Npm.require('source-map');
 
-var stripExportedVars = function (source, exports) {
-  if (!exports || _.isEmpty(exports))
+// The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
+// use of coffee.run which we don't use.  This conflicts with the tool's use of
+// Error.prepareStackTrace to properly show error messages in linked code.  Save
+// the tool's one and restore it after coffee-script clobbers it.
+const prepareStackTrace = Error.prepareStackTrace;
+const coffee = Npm.require('coffee-script');
+Error.prepareStackTrace = prepareStackTrace;
+
+Plugin.registerCompiler({
+  extensions: ['coffee', 'litcoffee', 'coffee.md']
+}, () => new CoffeeCompiler());
+
+// The CompileResult for this CachingCompiler is a {source, sourceMap} object.
+
+class CoffeeCompiler extends CachingCompiler {
+  constructor() {
+    super({
+      compilerName: 'coffeescript',
+      defaultCacheSize: 1024*1024*10,
+    });
+  }
+
+  _getCompileOptions(inputFile) {
+    return {
+      bare: true,
+      filename: inputFile.getPathInPackage(),
+      literate: inputFile.getExtension() !== 'coffee',
+      // Return a source map.
+      sourceMap: true,
+      // Include the original source in the source map (sourcesContent field).
+      inline: true,
+      // This becomes the "file" field of the source map.
+      generatedFile: "/" + this._outputFilePath(inputFile),
+      // This becomes the "sources" field of the source map.
+      sourceFiles: [inputFile.getDisplayPath()],
+    };
+  }
+
+  _outputFilePath(inputFile) {
+    return inputFile.getPathInPackage() + ".js";
+  }
+
+  getCacheKey(inputFile) {
+    return [
+      inputFile.getSourceHash(),
+      inputFile.getDeclaredExports(),
+      this._getCompileOptions(inputFile),
+    ];
+  }
+
+  compileOneFile(inputFile) {
+    const source = inputFile.getContentsAsString();
+    const compileOptions = this._getCompileOptions(inputFile);
+
+    let output;
+    try {
+      output = coffee.compile(source, compileOptions);
+    } catch (e) {
+      inputFile.error({
+        message: e.message,
+        line: e.location && (e.location.first_line + 1),
+        column: e.location && (e.location.first_column + 1)
+      });
+      return null;
+    }
+
+    const stripped = stripExportedVars(
+      output.js,
+      inputFile.getDeclaredExports().map(e => e.name));
+    const sourceWithMap = addSharedHeader(
+      stripped, JSON.parse(output.v3SourceMap));
+    return sourceWithMap;
+  }
+
+  addCompileResult(inputFile, sourceWithMap) {
+    inputFile.addJavaScript({
+      path: this._outputFilePath(inputFile),
+      sourcePath: inputFile.getPathInPackage(),
+      data: sourceWithMap.source,
+      sourceMap: sourceWithMap.sourceMap,
+      bare: inputFile.getFileOptions().bare
+    });
+  }
+
+  compileResultSize(sourceWithMap) {
+    return sourceWithMap.source.length +
+      this.sourceMapSize(sourceWithMap.sourceMap);
+  }
+}
+
+function stripExportedVars(source, exports) {
+  if (!exports || !exports.length)
     return source;
-  var lines = source.split("\n");
+  const lines = source.split("\n");
 
   // We make the following assumptions, based on the output of CoffeeScript
   // 1.7.1.
@@ -31,9 +117,9 @@ var stripExportedVars = function (source, exports) {
   //     Or alternatively, hack the compiler to allow us to specify unbound
   //     symbols directly.
 
-  for (var i = 0; i < lines.length; i++) {
-    var line = lines[i];
-    var match = /^var (.+)([,;])$/.exec(line);
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const match = /^var (.+)([,;])$/.exec(line);
     if (!match)
       continue;
 
@@ -46,17 +132,16 @@ var stripExportedVars = function (source, exports) {
     // We want to replace the line with something no shorter, so that all
     // records in the source map continue to point at valid
     // characters.
-    var replaceLine = function (x) {
+    function replaceLine(x) {
       if (x.length >= lines[i].length) {
         lines[i] = x;
       } else {
         lines[i] = x + new Array(1 + (lines[i].length - x.length)).join(' ');
       }
-    };
+    }
 
-    var vars = match[1].split(', ');
-    vars = _.difference(vars, exports);
-    if (!_.isEmpty(vars)) {
+    let vars = match[1].split(', ').filter(v => exports.indexOf(v) === -1);
+    if (vars.length) {
       replaceLine("var " + vars.join(', ') + match[2]);
     } else {
       // We got rid of all the vars on this line. Drop the whole line if this
@@ -70,11 +155,9 @@ var stripExportedVars = function (source, exports) {
   }
 
   return lines.join('\n');
-};
+}
 
-var addSharedHeader = function (source, sourceMap) {
-  var sourceMapJSON = JSON.parse(sourceMap);
-
+function addSharedHeader(source, sourceMap) {
   // We want the symbol "share" to be visible to all CoffeeScript files in the
   // package (and shared between them), but not visible to JavaScript
   // files. (That's because we don't want to introduce two competing ways to
@@ -86,13 +169,13 @@ var addSharedHeader = function (source, sourceMap) {
   // a global.
   //
   // This ends in a newline to make the source map easier to adjust.
-  var header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
-                "? __coffeescriptShare : {}; " +
-                "var share = __coffeescriptShare;\n");
+  const header = ("__coffeescriptShare = typeof __coffeescriptShare === 'object' " +
+                  "? __coffeescriptShare : {}; " +
+                  "var share = __coffeescriptShare;\n");
 
   // If the file begins with "use strict", we need to keep that as the first
   // statement.
-  source = source.replace(/^(?:((['"])use strict\2;)\n)?/, function (match, useStrict) {
+  const processedSource = source.replace(/^(?:((['"])use strict\2;)\n)?/, (match, useStrict) => {
     if (match) {
       // There's a "use strict"; we keep this as the first statement and insert
       // our header at the end of the line that it's on. This doesn't change
@@ -103,61 +186,12 @@ var addSharedHeader = function (source, sourceMap) {
       // There's no use strict, so we can just add the header at the very
       // beginning. This adds a line to the file, so we update the source map to
       // add a single un-annotated line to the beginning.
-      sourceMapJSON.mappings = ";" + sourceMapJSON.mappings;
+      sourceMap.mappings = ";" + sourceMap.mappings;
       return header;
     }
   });
   return {
-    source: source,
-    sourceMap: JSON.stringify(sourceMapJSON)
+    source: processedSource,
+    sourceMap: sourceMap
   };
-};
-
-var handler = function (compileStep, isLiterate) {
-  var source = compileStep.read().toString('utf8');
-  var outputFile = compileStep.inputPath + ".js";
-
-  var options = {
-    bare: true,
-    filename: compileStep.inputPath,
-    literate: !!isLiterate,
-    // Return a source map.
-    sourceMap: true,
-    // Include the original source in the source map (sourcesContent field).
-    inline: true,
-    // This becomes the "file" field of the source map.
-    generatedFile: "/" + outputFile,
-    // This becomes the "sources" field of the source map.
-    sourceFiles: [compileStep.pathForSourceMap]
-  };
-
-  try {
-    var output = coffee.compile(source, options);
-  } catch (e) {
-    // XXX better error handling, once the Plugin interface support it
-    throw new Error(
-      compileStep.inputPath + ':' +
-      (e.location ? (e.location.first_line + ': ') : ' ') +
-      e.message
-    );
-  }
-
-  var stripped = stripExportedVars(output.js, compileStep.declaredExports);
-  var sourceWithMap = addSharedHeader(stripped, output.v3SourceMap);
-
-  compileStep.addJavaScript({
-    path: outputFile,
-    sourcePath: compileStep.inputPath,
-    data: sourceWithMap.source,
-    sourceMap: sourceWithMap.sourceMap,
-    bare: compileStep.fileOptions.bare
-  });
-};
-
-var literateHandler = function (compileStep) {
-  return handler(compileStep, true);
-};
-
-Plugin.registerSourceHandler("coffee", handler);
-Plugin.registerSourceHandler("litcoffee", literateHandler);
-Plugin.registerSourceHandler("coffee.md", literateHandler);
+}

@@ -13,6 +13,8 @@ var A = HTML.A;
 var DIV = HTML.DIV;
 var P = HTML.P;
 var TEXTAREA = HTML.TEXTAREA;
+var SCRIPT = HTML.SCRIPT;
+var STYLE = HTML.STYLE;
 
 Tinytest.add("html-tools - parser getContent", function (test) {
 
@@ -149,6 +151,39 @@ Tinytest.add("html-tools - parser getContent", function (test) {
   succeed('<br x="\r\r">', BR({x:'\n\n'}));
   succeed('<br x=y\r>', BR({x:'y'}));
   fatal('<br x=\r>');
+
+  succeed('<script>var x="<div>";</script>',SCRIPT('var x="<div>";'));
+  succeed('<script>var x=1 && 0;</script>',SCRIPT('var x=1 && 0;'));
+
+  succeed('<script>asdf</script>', SCRIPT("asdf"));
+  succeed('<script x=y>asdf</script>', SCRIPT({x: "y"}, "asdf"));
+  succeed('<script><p></script>', SCRIPT("<p>"));
+  succeed('<script>a&amp;b</script>', SCRIPT("a&amp;b"));
+  succeed('<script></script</script>', SCRIPT("</script"));
+  succeed('<script>\n</script>', SCRIPT("\n"));
+  succeed('<script><!-- --></script>', SCRIPT("<!-- -->"));
+  succeed('<sCrIpT>asdf</SCRipt>', SCRIPT("asdf"));
+  fatal('<script>asdf');
+  fatal('<script>asdf</script');
+  succeed('<script>&davidgreenspan;</script>', SCRIPT("&davidgreenspan;"));
+  succeed('<script>&</script>', SCRIPT("&"));
+  succeed('<script></script  \n<</script  \n>asdf',
+          [SCRIPT("</script  \n<"), "asdf"]);
+
+  succeed('<style>asdf</style>', STYLE("asdf"));
+  succeed('<style x=y>asdf</style>', STYLE({x: "y"}, "asdf"));
+  succeed('<style><p></style>', STYLE("<p>"));
+  succeed('<style>a&amp;b</style>', STYLE("a&amp;b"));
+  succeed('<style></style</style>', STYLE("</style"));
+  succeed('<style>\n</style>', STYLE("\n"));
+  succeed('<style><!-- --></style>', STYLE("<!-- -->"));
+  succeed('<sTyLe>asdf</STYle>', STYLE("asdf"));
+  fatal('<style>asdf');
+  fatal('<style>asdf</style');
+  succeed('<style>&davidgreenspan;</style>', STYLE("&davidgreenspan;"));
+  succeed('<style>&</style>', STYLE("&"));
+  succeed('<style></style  \n<</style  \n>asdf',
+          [STYLE("</style  \n<"), "asdf"]);
 });
 
 Tinytest.add("html-tools - parseFragment", function (test) {

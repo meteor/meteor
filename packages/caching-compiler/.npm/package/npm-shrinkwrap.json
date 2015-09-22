@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "async": {
+      "version": "1.4.0"
+    },
+    "lru-cache": {
+      "version": "2.6.4"
+    }
+  }
+}

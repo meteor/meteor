@@ -1184,6 +1184,21 @@ Tinytest.add("logic-solver - simple solve", function (test) {
   test.equal(s._minisat._clauses.length, 9);
 });
 
+Tinytest.add("logic-solver - getVarNum", function (test) {
+  var s = new Logic.Solver();
+  s.require("A");
+  var a = s.getVarNum("A");
+  test.isTrue(a > 0); // this also confirms it's a number
+  test.equal(s.getVarNum("B", true), 0); // noCreate = true
+  var b = s.getVarNum("B");
+  test.notEqual(a, b);
+  var a2 = s.getVarNum("A");
+  var b2 = s.getVarNum("B");
+  test.equal(a, a2);
+  test.equal(b, b2);
+});
+
+
 Tinytest.add("logic-solver - assumptions", function (test) {
   var s = new Logic.Solver;
   s.getVarNum("A");
@@ -1278,7 +1293,7 @@ Tinytest.add("logic-solver - assumptions", function (test) {
 
 Tinytest.add("logic-solver - eight queens", function (test) {
   var boardSquare = function (r, c) {
-    return String(r) + String(c);
+    return String(r) + ',' + String(c);
   };
 
   Logic._disablingTypeChecks(function () {
@@ -1319,19 +1334,19 @@ Tinytest.add("logic-solver - eight queens", function (test) {
     // solution might be, for example,
     // ["16", "24", "31", "45", "58", "62", "77", "83"]
     test.equal(solution.length, 8);
-    test.isTrue(/^([1-8][1-8],){7}[1-8][1-8]$/.test(solution.join(',')));
+    test.isTrue(/^([1-8],[1-8] ){7}[1-8],[1-8]$/.test(solution.join(' ')));
     var assertEightDifferent = function (transformFunc) {
       test.equal(_.uniq(_.map(solution, transformFunc)).length, 8);
     };
     // queens occur in eight different rows, eight different columns
     assertEightDifferent(function (queen) { return queen.charAt(0); });
-    assertEightDifferent(function (queen) { return queen.charAt(1); });
+    assertEightDifferent(function (queen) { return queen.charAt(2); });
     // queens' row/col have eight different sums, eight different differences
     assertEightDifferent(function (queen) {
-      return Number(queen.charAt(0)) - Number(queen.charAt(1));
+      return Number(queen.charAt(0)) - Number(queen.charAt(2));
     });
     assertEightDifferent(function (queen) {
-      return Number(queen.charAt(0)) + Number(queen.charAt(1));
+      return Number(queen.charAt(0)) + Number(queen.charAt(2));
     });
   });
 });
@@ -1424,7 +1439,7 @@ Tinytest.add("logic-solver - goes to eleven", function (test) {
   var x = Logic.variableBits("x", 5);
   solver.require(Logic.lessThanOrEqual(x, eleven));
   solver.require(Logic.lessThanOrEqual(eleven, x));
-  test.equal(solver.solve().getTrueVars().join(','), "x0,x1,x3");
+  test.equal(solver.solve().getTrueVars().join(','), "x$0,x$1,x$3");
 });
 
 Tinytest.add("logic-solver - evaluate", function (test) {
@@ -1544,7 +1559,7 @@ Tinytest.add("logic-solver - toy packages", function (test) {
 
       for (var i = 0; i < vectorLength; i++) {
         var weights = _.pluck(weightVectors, i);
-        solution = solver.minimize(solution, terms, weights);
+        solution = solver.minimizeWeightedSum(solution, terms, weights);
       }
 
       return solution;
@@ -1677,7 +1692,7 @@ Tinytest.add("logic-solver - minimize", function (test) {
   // to be greater than 0, but MiniSat will always discover
   // a sparser solution than (1,1,1,1) first.
   test.isTrue(solution1.getWeightedSum(costTerms, costWeights) > 0);
-  var solution2 = s.minimize(solution1, costTerms, costWeights);
+  var solution2 = s.minimizeWeightedSum(solution1, costTerms, costWeights);
   test.isFalse(solution1 === solution2);
   test.equal(solution2.getWeightedSum(costTerms, costWeights), 0);
   test.equal(solution2.getTrueVars(), ["A", "B", "C", "D"]);
@@ -1695,7 +1710,7 @@ Tinytest.add("logic-solver - maximize", function (test) {
   var ws = Logic.weightedSum(costTerms, costWeights);
   s.require(Logic.lessThanOrEqual(ws, Logic.constantBits(19)));
   var sol = s.solve();
-  var sol2 = s.maximize(sol, costTerms, costWeights, ws);
+  var sol2 = s.maximizeWeightedSum(sol, costTerms, costWeights, ws);
   test.equal(sol2.getTrueVars(), ["#11", "#2", "#5"]);
 });
 
@@ -1713,9 +1728,7 @@ Tinytest.add("logic-solver - type-checking", function (test) {
   // on by default
   test.throws(function () {
     Logic.or({});
-  }, function (e) {
-    return e instanceof Match.Error;
-  });
+  }, /is not a Formula or Term/);
 
   // ... but can turn it off (this shouldn't throw)
   Logic._disablingTypeChecks(function () {

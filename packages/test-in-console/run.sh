@@ -10,13 +10,12 @@ export PATH=$METEOR_HOME:$PATH
 
 export URL='http://localhost:4096/'
 
-meteor test-packages --driver-package test-in-console -p 4096 &
-METEOR_PID=$!
+exec 3< <(meteor test-packages --driver-package test-in-console -p 4096 --exclude $TEST_PACKAGES_EXCLUDE)
+EXEC_PID=$!
 
-sleep 2
-
+sed '/test-in-console listening$/q' <&3
 phantomjs $METEOR_HOME/packages/test-in-console/runner.js
 STATUS=$?
 
-kill $METEOR_PID
+pkill -TERM -P $EXEC_PID
 exit $STATUS

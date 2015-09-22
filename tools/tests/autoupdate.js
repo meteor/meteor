@@ -1,7 +1,7 @@
-var selftest = require('../selftest.js');
-var config = require("../config.js");
-var catalogRemote = require("../catalog-remote.js");
-var buildmessage = require("../buildmessage.js");
+var selftest = require('../tool-testing/selftest.js');
+var config = require('../meteor-services/config.js');
+var catalogRemote = require('../packaging/catalog/catalog-remote.js');
+var buildmessage = require('../utils/buildmessage.js');
 var Sandbox = selftest.Sandbox;
 
 var DEFAULT_RELEASE_TRACK = catalogRemote.DEFAULT_TRACK;
@@ -52,7 +52,7 @@ selftest.define("autoupdate", ['checkout'], function () {
     setBanner(s, "v2", "=> New hotness v2 being downloaded.\n");
 
     // console.log("WE ARE READY NOW", s.warehouse, s.cwd)
-    // require('../utils.js').sleepMs(1000*10000)
+    // require('../utils/utils.js').sleepMs(1000*10000)
 
     // Run it and see the banner for the current version.
     run = s.run("--port", "21000");
@@ -139,7 +139,8 @@ selftest.define("autoupdate", ['checkout'], function () {
 
     run = s.run("update");
     run.match("myapp: updated to Meteor v3.\n");
-    run.match("Your packages are at their latest compatible versions.\n");
+    run.match("Your top-level dependencies are at their latest compatible " +
+              "versions.\n");
     run.expectExit(0);
 
     run = s.run("--version");

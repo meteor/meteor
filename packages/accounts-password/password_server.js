@@ -77,28 +77,132 @@ var checkPassword = Accounts._checkPassword;
 /// LOGIN
 ///
 
-// Users can specify various keys to identify themselves with.
-// @param user {Object} with one of `id`, `username`, or `email`.
-// @returns A selector to pass to mongo to get the user record.
+Accounts._findUserByQuery = function (query) {
+  var user = null;
 
-var selectorFromUserQuery = function (user) {
-  if (user.id)
-    return {_id: user.id};
-  else if (user.username)
-    return {username: user.username};
-  else if (user.email)
-    return {"emails.address": user.email};
-  throw new Error("shouldn't happen (validation missed something)");
-};
-
-var findUserFromUserQuery = function (user) {
-  var selector = selectorFromUserQuery(user);
-
-  var user = Meteor.users.findOne(selector);
-  if (!user)
-    throw new Meteor.Error(403, "User not found");
+  if (query.id) {
+    user = Meteor.users.findOne({ _id: query.id });
+  } else {
+    var fieldName;
+    var fieldValue;
+    if (query.username) {
+      fieldName = 'username';
+      fieldValue = query.username;
+    } else if (query.email) {
+      fieldName = 'emails.address';
+      fieldValue = query.email;
+    } else {
+      throw new Error("shouldn't happen (validation missed something)");
+    }
+    var selector = {};
+    selector[fieldName] = fieldValue;
+    user = Meteor.users.findOne(selector);
+    // If user is not found, try a case insensitive lookup
+    if (!user) {
+      selector = selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
+      var candidateUsers = Meteor.users.find(selector).fetch();
+      // No match if multiple candidates are found
+      if (candidateUsers.length === 1) {
+        user = candidateUsers[0];
+      }
+    }
+  }
 
   return user;
+};
+
+/**
+ * @summary Finds the user with the specified username.
+ * First tries to match username case sensitively; if that fails, it
+ * tries case insensitively; but if more than one user matches the case
+ * insensitive search, it returns null.
+ * @locus Server
+ * @param {String} username The username to look for
+ * @returns {Object} A user if found, else null
+ */
+Accounts.findUserByUsername = function (username) {
+  return Accounts._findUserByQuery({
+    username: username
+  });
+};
+
+/**
+ * @summary Finds the user with the specified email.
+ * First tries to match email case sensitively; if that fails, it
+ * tries case insensitively; but if more than one user matches the case
+ * insensitive search, it returns null.
+ * @locus Server
+ * @param {String} email The email address to look for
+ * @returns {Object} A user if found, else null
+ */
+Accounts.findUserByEmail = function (email) {
+  return Accounts._findUserByQuery({
+    email: email
+  });
+};
+
+// Generates a MongoDB selector that can be used to perform a fast case
+// insensitive lookup for the given fieldName and string. Since MongoDB does
+// not support case insensitive indexes, and case insensitive regex queries
+// are slow, we construct a set of prefix selectors for all permutations of
+// the first 4 characters ourselves. We first attempt to matching against
+// these, and because 'prefix expression' regex queries do use indexes (see
+// http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
+// this has been found to greatly improve performance (from 1200ms to 5ms in a
+// test with 1.000.000 users).
+var selectorForFastCaseInsensitiveLookup = function (fieldName, string) {
+  // Performance seems to improve up to 4 prefix characters
+  var prefix = string.substring(0, Math.min(string.length, 4));
+  var orClause = _.map(generateCasePermutationsForString(prefix),
+    function (prefixPermutation) {
+      var selector = {};
+      selector[fieldName] =
+        new RegExp('^' + Meteor._escapeRegExp(prefixPermutation));
+      return selector;
+    });
+  var caseInsensitiveClause = {};
+  caseInsensitiveClause[fieldName] =
+    new RegExp('^' + Meteor._escapeRegExp(string) + '$', 'i')
+  return {$and: [{$or: orClause}, caseInsensitiveClause]};
+}
+
+// Generates permutations of all case variations of a given string.
+var generateCasePermutationsForString = function (string) {
+  var permutations = [''];
+  for (var i = 0; i < string.length; i++) {
+    var ch = string.charAt(i);
+    permutations = _.flatten(_.map(permutations, function (prefix) {
+      var lowerCaseChar = ch.toLowerCase();
+      var upperCaseChar = ch.toUpperCase();
+      // Don't add unneccesary permutations when ch is not a letter
+      if (lowerCaseChar === upperCaseChar) {
+        return [prefix + ch];
+      } else {
+        return [prefix + lowerCaseChar, prefix + upperCaseChar];
+      }
+    }));
+  }
+  return permutations;
+}
+
+var checkForCaseInsensitiveDuplicates = function (fieldName, displayName, fieldValue, ownUserId) {
+  // Some tests need the ability to add users with the same case insensitive
+  // value, hence the _skipCaseInsensitiveChecksForTest check
+  var skipCheck = _.has(Accounts._skipCaseInsensitiveChecksForTest, fieldValue);
+
+  if (fieldValue && !skipCheck) {
+    var matchedUsers = Meteor.users.find(
+      selectorForFastCaseInsensitiveLookup(fieldName, fieldValue)).fetch();
+
+    if (matchedUsers.length > 0 &&
+        // If we don't have a userId yet, any match we find is a duplicate
+        (!ownUserId ||
+        // Otherwise, check to see if there are multiple matches or a match
+        // that is not us
+        (matchedUsers.length > 1 || matchedUsers[0]._id !== ownUserId))) {
+      throw new Meteor.Error(403, displayName + " already exists.");
+    }
+  }
 };
 
 // XXX maybe this belongs in the check package
@@ -147,7 +251,9 @@ Accounts.registerLoginHandler("password", function (options) {
   });
 
 
-  var user = findUserFromUserQuery(options.user);
+  var user = Accounts._findUserByQuery(options.user);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
 
   if (!user.services || !user.services.password ||
       !(user.services.password.bcrypt || user.services.password.srp))
@@ -211,7 +317,9 @@ Accounts.registerLoginHandler("password", function (options) {
     password: passwordValidator
   });
 
-  var user = findUserFromUserQuery(options.user);
+  var user = Accounts._findUserByQuery(options.user);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
 
   // Check to see if another simultaneous login has already upgraded
   // the user record to bcrypt.
@@ -252,6 +360,40 @@ Accounts.registerLoginHandler("password", function (options) {
 ///
 /// CHANGING
 ///
+
+/**
+ * @summary Change a user's username. Use this instead of updating the
+ * database directly. The operation will fail if there is an existing user
+ * with a username only differing in case.
+ * @locus Server
+ * @param {String} userId The ID of the user to update.
+ * @param {String} newUsername A new username for the user.
+ */
+Accounts.setUsername = function (userId, newUsername) {
+  check(userId, NonEmptyString);
+  check(newUsername, NonEmptyString);
+
+  var user = Meteor.users.findOne(userId);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  var oldUsername = user.username;
+
+  // Perform a case insensitive check fro duplicates before update
+  checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
+
+  Meteor.users.update({_id: user._id}, {$set: {username: newUsername}});
+
+  // Perform another check after update, in case a matching user has been
+  // inserted in the meantime
+  try {
+    checkForCaseInsensitiveDuplicates('username', 'Username', newUsername, user._id);
+  } catch (ex) {
+    // Undo update if the check fails
+    Meteor.users.update({_id: user._id}, {$set: {username: oldUsername}});
+    throw ex;
+  }
+};
 
 // Let the user change their own password if they know the old
 // password. `oldPassword` and `newPassword` should be objects with keys
@@ -406,9 +548,13 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     from: Accounts.emailTemplates.resetPassword.from
       ? Accounts.emailTemplates.resetPassword.from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.resetPassword.subject(user),
-    text: Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl)
+    subject: Accounts.emailTemplates.resetPassword.subject(user)
   };
+
+  if (typeof Accounts.emailTemplates.resetPassword.text === 'function') {
+    options.text =
+      Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl);
+  }
 
   if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
     options.html =
@@ -470,9 +616,13 @@ Accounts.sendEnrollmentEmail = function (userId, email) {
     from: Accounts.emailTemplates.enrollAccount.from
       ? Accounts.emailTemplates.enrollAccount.from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.enrollAccount.subject(user),
-    text: Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl)
+    subject: Accounts.emailTemplates.enrollAccount.subject(user)
   };
+
+  if (typeof Accounts.emailTemplates.enrollAccount.text === 'function') {
+    options.text =
+      Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl);
+  }
 
   if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
     options.html =
@@ -612,9 +762,13 @@ Accounts.sendVerificationEmail = function (userId, address) {
     from: Accounts.emailTemplates.verifyEmail.from
       ? Accounts.emailTemplates.verifyEmail.from(user)
       : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.verifyEmail.subject(user),
-    text: Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl)
+    subject: Accounts.emailTemplates.verifyEmail.subject(user)
   };
+
+  if (typeof Accounts.emailTemplates.verifyEmail.text === 'function') {
+    options.text =
+      Accounts.emailTemplates.verifyEmail.text(user, verifyEmailUrl);
+  }
 
   if (typeof Accounts.emailTemplates.verifyEmail.html === 'function')
     options.html =
@@ -672,14 +826,118 @@ Meteor.methods({verifyEmail: function (token) {
         {_id: user._id,
          'emails.address': tokenRecord.address},
         {$set: {'emails.$.verified': true},
-         $pull: {'services.email.verificationTokens': {token: token}}});
+         $pull: {'services.email.verificationTokens': {address: tokenRecord.address}}});
 
       return {userId: user._id};
     }
   );
 }});
 
+/**
+ * @summary Add an email address for a user. Use this instead of directly
+ * updating the database. The operation will fail if there is a different user
+ * with an email only differing in case. If the specified user has an existing
+ * email only differing in case however, we replace it.
+ * @locus Server
+ * @param {String} userId The ID of the user to update.
+ * @param {String} newEmail A new email address for the user.
+ * @param {Boolean} [verified] Optional - whether the new email address should
+ * be marked as verified. Defaults to false.
+ */
+Accounts.addEmail = function (userId, newEmail, verified) {
+  check(userId, NonEmptyString);
+  check(newEmail, NonEmptyString);
+  check(verified, Match.Optional(Boolean));
 
+  if (_.isUndefined(verified)) {
+    verified = false;
+  }
+
+  var user = Meteor.users.findOne(userId);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  // Allow users to change their own email to a version with a different case
+
+  // We don't have to call checkForCaseInsensitiveDuplicates to do a case
+  // insensitive check across all emails in the database here because: (1) if
+  // there is no case-insensitive duplicate between this user and other users,
+  // then we are OK and (2) if this would create a conflict with other users
+  // then there would already be a case-insensitive duplicate and we can't fix
+  // that in this code anyway.
+  var caseInsensitiveRegExp =
+    new RegExp('^' + Meteor._escapeRegExp(newEmail) + '$', 'i');
+
+  var didUpdateOwnEmail = _.any(user.emails, function(email, index) {
+    if (caseInsensitiveRegExp.test(email.address)) {
+      Meteor.users.update({
+        _id: user._id,
+        'emails.address': email.address
+      }, {$set: {
+        'emails.$.address': newEmail,
+        'emails.$.verified': verified
+      }});
+      return true;
+    }
+
+    return false;
+  });
+
+  // In the other updates below, we have to do another call to
+  // checkForCaseInsensitiveDuplicates to make sure that no conflicting values
+  // were added to the database in the meantime. We don't have to do this for
+  // the case where the user is updating their email address to one that is the
+  // same as before, but only different because of capitalization. Read the
+  // big comment above to understand why.
+
+  if (didUpdateOwnEmail) {
+    return;
+  }
+
+  // Perform a case insensitive check for duplicates before update
+  checkForCaseInsensitiveDuplicates('emails.address', 'Email', newEmail, user._id);
+
+  Meteor.users.update({
+    _id: user._id
+  }, {
+    $addToSet: {
+      emails: {
+        address: newEmail,
+        verified: verified
+      }
+    }
+  });
+
+  // Perform another check after update, in case a matching user has been
+  // inserted in the meantime
+  try {
+    checkForCaseInsensitiveDuplicates('emails.address', 'Email', newEmail, user._id);
+  } catch (ex) {
+    // Undo update if the check fails
+    Meteor.users.update({_id: user._id},
+      {$pull: {emails: {address: newEmail}}});
+    throw ex;
+  }
+}
+
+/**
+ * @summary Remove an email address for a user. Use this instead of updating
+ * the database directly.
+ * @locus Server
+ * @param {String} userId The ID of the user to update.
+ * @param {String} email The email address to remove.
+ */
+Accounts.removeEmail = function (userId, email) {
+  check(userId, NonEmptyString);
+  check(email, NonEmptyString);
+
+  var user = Meteor.users.findOne(userId);
+  if (!user)
+    throw new Meteor.Error(403, "User not found");
+
+  Meteor.users.update({_id: user._id},
+    {$pull: {emails: {address: email}}});
+}
 
 ///
 /// CREATING USERS
@@ -715,7 +973,22 @@ var createUser = function (options) {
   if (email)
     user.emails = [{address: email, verified: false}];
 
-  return Accounts.insertUserDoc(options, user);
+  // Perform a case insensitive check before insert
+  checkForCaseInsensitiveDuplicates('username', 'Username', username);
+  checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
+
+  var userId = Accounts.insertUserDoc(options, user);
+  // Perform another check after insert, in case a matching user has been
+  // inserted in the meantime
+  try {
+    checkForCaseInsensitiveDuplicates('username', 'Username', username, userId);
+    checkForCaseInsensitiveDuplicates('emails.address', 'Email', email, userId);
+  } catch (ex) {
+    // Remove inserted user if the check fails
+    Meteor.users.remove(userId);
+    throw ex;
+  }
+  return userId;
 };
 
 // method for create user. Requests come from the client.
@@ -779,7 +1052,7 @@ Accounts.createUser = function (options, callback) {
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-Meteor.users._ensureIndex('emails.validationTokens.token',
+Meteor.users._ensureIndex('services.email.verificationTokens.token',
                           {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.password.reset.token',
                           {unique: 1, sparse: 1});

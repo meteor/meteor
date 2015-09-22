@@ -1,7 +1,11 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
-selftest.define("build errors - colon in filename", function () {
+// This test was originally written to test the behavior of parse-stack.js when
+// there's a colon in a filename. We now try a lot harder to avoid putting
+// colons in filenames. But it's still a decent test that errors in legacy
+// source handlers work.
+selftest.define("build errors - legacy handler error", function () {
   var s = new Sandbox();
   var run;
 

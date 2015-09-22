@@ -1,3 +1,5 @@
+// http://stackoverflow.com/questions/9906794/internet-explorers-css-rules-limits
+var LIMIT = 4095;
 
 // Stringifier based on css-stringify
 var emit = function (str) {
@@ -18,10 +20,72 @@ var mapVisit = function (nodes) {
   return buf;
 };
 
+// returns a list of strings
 MinifyAst = function(node) {
-  return node.stylesheet
-    .rules.map(function (rule) { return visit(rule); })
-    .join('');
+  // the approach is taken from BlessCSS
+
+  var newAsts = [];
+  var current = {
+    selectors: 0,
+    nodes: []
+  };
+
+  var startNewAst = function () {
+    newAsts.push({
+      type: 'stylesheet',
+      stylesheet: {
+        rules: current.nodes
+      }
+    });
+
+    current.nodes = [];
+    current.selectors = 0;
+  };
+
+  _.each(node.stylesheet.rules, function (rule) {
+    switch (rule.type) {
+      case 'rule':
+        if (current.selectors + rule.selectors.length > LIMIT) {
+          startNewAst();
+        }
+
+        current.selectors += rule.selectors.length;
+        current.nodes.push(rule);
+        break;
+      case 'comment':
+        // no-op
+        break;
+      default:
+        // nested rules
+        var nested = 0;
+        _.each(rule.rules, function (nestedRule) {
+          if (nestedRule.selectors) {
+            nested += nestedRule.selectors.length;
+          }
+        });
+
+        if (current.selectors + nested > LIMIT) {
+          startNewAst();
+        }
+
+        current.selectors += nested;
+        current.nodes.push(rule);
+        break;
+    }
+  });
+
+  // push the left-over
+  if (current.nodes.length > 0) {
+    startNewAst();
+  }
+
+  var stringifyAst = function (node) {
+    return node.stylesheet
+      .rules.map(function (rule) { return visit(rule); })
+      .join('');
+  };
+
+  return newAsts.map(stringifyAst);
 };
 
 var traverse = {};
@@ -140,5 +204,3 @@ traverse.declaration = function(node, last) {
   return emit(node.property + ':' + value, node.position)
          + (last ? '' : emit(';'));
 };
-
-

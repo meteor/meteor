@@ -4,7 +4,7 @@ var net = require("net");
 var eachline = require("eachline");
 var chalk = require("chalk");
 var EOL = require("os").EOL;
-var server = require("./server/shell-server.js");
+var server = require('./static-assets/server/shell-server.js');
 var EXITING_MESSAGE = server.EXITING_MESSAGE;
 var getInfoFile = server.getInfoFile;
 
@@ -103,7 +103,9 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
 
     process.stderr.write(shellBanner());
     process.stdin.pipe(sock);
-    process.stdin.setRawMode(true);
+    if (process.stdin.setRawMode) { // https://github.com/joyent/node/issues/8204
+      process.stdin.setRawMode(true);
+    }
   }
 
   function onClose() {
@@ -125,7 +127,9 @@ Cp.setUpSocket = function setUpSocket(sock, key) {
 
   function tearDown() {
     self.connected = false;
-    process.stdin.setRawMode(false);
+    if (process.stdin.setRawMode) { // https://github.com/joyent/node/issues/8204
+      process.stdin.setRawMode(false);
+    }
     process.stdin.unpipe(sock);
     sock.unpipe(process.stdout);
     sock.removeListener("connect", onConnect);

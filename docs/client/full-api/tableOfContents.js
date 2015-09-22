@@ -40,7 +40,8 @@ var toc = [
         {instance: "this", name: "stop", id: "publish_stop"},
         {instance: "this", name: "connection", id: "publish_connection"}
       ],
-      "Meteor.subscribe"
+      "Meteor.subscribe",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"}
     ],
 
     {name: "Methods", id: "methods_header"}, [
@@ -53,7 +54,8 @@ var toc = [
       ],
       "Meteor.Error",
       "Meteor.call",
-      "Meteor.apply"
+      "Meteor.apply",
+      {name: "DDPRateLimiter", id: "ddpratelimiter"}
     ],
 
     {name: "Check", id: "check_package"}, [
@@ -79,7 +81,11 @@ var toc = [
         {instance: "collection", name: "upsert"},
         {instance: "collection", name: "remove"},
         {instance: "collection", name: "allow"},
-        {instance: "collection", name: "deny"}
+        {instance: "collection", name: "deny"},
+        {instance: "collection", name: "rawCollection",
+         id: "Mongo-Collection-rawCollection"},
+        {instance: "collection", name: "rawDatabase",
+         id: "Mongo-Collection-rawDatabase"}
       ],
 
       "Mongo.Cursor", [
@@ -121,22 +127,50 @@ var toc = [
       {name: "{{loggingIn}}", id: "template_loggingin"},
       {type: "spacer"},
 
-      "Accounts.config",
-      "Accounts.ui.config",
-      "Accounts.validateNewUser",
-      "Accounts.onCreateUser",
-      "Accounts.validateLoginAttempt",
-      "Accounts.onLogin",
-      "Accounts.onLoginFailure"
+      "Accounts.ui.config"
+    ],
+
+    {name: "Accounts (multi-server)", id: "advanced_accounts_api"}, [
+      "AccountsClient",
+      "AccountsServer",
+      {type: "spacer"},
+
+      { name: "AccountsCommon#userId", id: "accounts_userid" },
+      { name: "AccountsCommon#user", id: "accounts_user" },
+      { name: "AccountsCommon#config", id: "accounts_config" },
+      { name: "AccountsCommon#onLogin", id: "accounts_onlogin" },
+      { name: "AccountsCommon#onLoginFailure", id: "accounts_onloginfailure" },
+      {type: "spacer"},
+
+      { name: "AccountsClient#loggingIn", id: "accounts_loggingin" },
+      { name: "AccountsClient#logout", id: "accounts_logout" },
+      { name: "AccountsClient#logoutOtherClients", id: "accounts_logoutotherclients" },
+      {type: "spacer"},
+
+      { name: "AccountsServer#onCreateUser",
+        id: "accounts_oncreateuser" },
+      { name: "AccountsServer#validateLoginAttempt",
+        id: "accounts_validateloginattempt" },
+      { name: "AccountsServer#validateNewUser",
+        id: "accounts_validatenewuser" },
     ],
 
     {name: "Passwords", id: "accounts_passwords"}, [
       "Accounts.createUser",
+      {type: "spacer"},
+
+      {name: "Accounts.setUsername", id: "Accounts-setUsername"},
+      {name: "Accounts.addEmail", id: "Accounts-addEmail"},
+      {name: "Accounts.removeEmail", id: "Accounts-removeEmail"},
+      {name: "Accounts.verifyEmail", id: "accounts_verifyemail"},
+      {name: "Accounts.findUserByUsername", id: "Accounts-findUserByUsername"},
+      {name: "Accounts.findUserByEmail", id: "Accounts-findUserByEmail"},
+      {type: "spacer"},
+
       "Accounts.changePassword",
       "Accounts.forgotPassword",
       "Accounts.resetPassword",
       "Accounts.setPassword",
-      "Accounts.verifyEmail",
       {type: "spacer"},
 
       "Accounts.sendResetPasswordEmail",
@@ -221,6 +255,7 @@ var toc = [
         {instance: "computation", name: "stop", id: "computation_stop"},
         {instance: "computation", name: "invalidate", id: "computation_invalidate"},
         {instance: "computation", name: "onInvalidate", id: "computation_oninvalidate"},
+        {instance: "computation", name: "onStop", id: "computation_onstop"},
         {instance: "computation", name: "stopped", id: "computation_stopped"},
         {instance: "computation", name: "invalidated", id: "computation_invalidated"},
         {instance: "computation", name: "firstRun", id: "computation_firstrun"}
@@ -287,7 +322,8 @@ var toc = [
         {name: "api.use", id: "pack_use"},
         {name: "api.imply", id: "pack_api_imply"},
         {name: "api.export", id: "pack_export"},
-        {name: "api.addFiles", id: "pack_addFiles"}
+        {name: "api.addFiles", id: "pack_addFiles"},
+        {name: "api.addAssets", id: "PackageAPI-addAssets"}
       ],
       {name: "Package.onTest", id: "packagetests"},
       {name: "Npm.depends", id: "Npm-depends"},
@@ -337,6 +373,7 @@ var toc = [
     "meteor mongo",
     "meteor reset",
     "meteor build",
+    "meteor lint",
     "meteor search",
     "meteor show",
     "meteor publish",

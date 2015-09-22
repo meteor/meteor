@@ -46,7 +46,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
             // for.
             throw e;
           } else {
-            Meteor._debug("Exception in queued task: " + e.stack);
+            Meteor._debug("Exception in queued task: " + (e.stack || e));
           }
         }
       }

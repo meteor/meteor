@@ -14,7 +14,7 @@ Meteor._noYieldsAllowed = function (f) {
   }
 };
 
-Meteor._DoubleEndedQueue = Npm.require('double-ended-queue');
+Meteor._DoubleEndedQueue = Npm.require('meteor-deque');
 
 // Meteor._SynchronousQueue is a queue which runs task functions serially.
 // Tasks are assumed to be synchronous: ie, it's assumed that they are
@@ -150,7 +150,7 @@ _.extend(Meteor._SynchronousQueue.prototype, {
         // We'll throw this exception through runTask.
         exception = err;
       } else {
-        Meteor._debug("Exception in queued task: " + err.stack);
+        Meteor._debug("Exception in queued task: " + (err.stack || err));
       }
     }
     self._currentTaskFiber = undefined;

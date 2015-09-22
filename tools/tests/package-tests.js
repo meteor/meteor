@@ -1,11 +1,12 @@
-var selftest = require('../selftest.js');
-var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
-var testUtils = require('../test-utils.js');
-var utils = require('../utils.js');
 var _= require('underscore');
-var packageClient = require("../package-client.js");
-var catalog = require('../catalog.js');
+
+var selftest = require('../tool-testing/selftest.js');
+var Sandbox = selftest.Sandbox;
+var files = require('../fs/files.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var utils = require('../utils/utils.js');
+var packageClient = require('../packaging/package-client.js');
+var catalog = require('../packaging/catalog/catalog.js');
 
 var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 
@@ -34,7 +35,7 @@ var randomizedReleaseName = function (username) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    meteor-platform (ie: name), in which case this will match any
+//    meteor-base (ie: name), in which case this will match any
 //    version of that package as long as it is included.
 //
 //    awesome-pack@1.0.0 (ie: name@version) to match that name at that
@@ -66,7 +67,7 @@ var checkPackages = selftest.markStack(function(sand, packages) {
 // sand: a sandbox, that has the main app directory as its cwd.
 // packages: an array of packages in order. Packages can be of the form:
 //
-//    meteor-platform (ie: name), in which case this will match any
+//    meteor-base (ie: name), in which case this will match any
 //    version of that package as long as it is included. This is for packages
 //    external to the app, since we don't want this test to fail when we push a
 //    new version.
@@ -186,7 +187,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("running at");
   run.match("localhost");
   // Add the local package 'say-something'. It should print a message.
-  s.write(".meteor/packages", "meteor-platform \n say-something");
+  s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
   run.match("initial");
 
@@ -198,7 +199,7 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("another");
 
   // Add a local package depends-on-plugin.
-  s.write(".meteor/packages", "meteor-platform \n depends-on-plugin");
+  s.write(".meteor/packages", "meteor-base \n depends-on-plugin");
   run.waitSecs(2);
   run.match("foobar");
 
@@ -225,13 +226,13 @@ selftest.define("change packages during hot code push", [], function () {
   run.match("restarted");
 
   // Switch back to say-something for a moment.
-  s.write(".meteor/packages", "meteor-platform \n say-something");
+  s.write(".meteor/packages", "meteor-base \n say-something");
   run.waitSecs(3);
   run.match("another");
   run.stop();
 
   s.rename('packages/say-something', 'packages/shout-something');
-  s.write(".meteor/packages", "meteor-platform \n shout-something");
+  s.write(".meteor/packages", "meteor-base \n shout-something");
   s.cd("packages/shout-something", function () {
     s.write("foo.js", "console.log(\"louder\");");
   });
@@ -250,7 +251,7 @@ selftest.define("change packages during hot code push", [], function () {
     s.write("package.js", "]");
     run.waitSecs(3);
     run.match("=> Errors prevented startup");
-    run.match("package.js:1:1: Unexpected token ]");
+    run.match("package.js:1: Unexpected token");
     run.match("Waiting for file change");
 
     s.write("package.js", packageJs);
@@ -262,8 +263,7 @@ selftest.define("change packages during hot code push", [], function () {
 });
 
 // Add packages through the command line. Make sure that the correct set of
-// changes is reflected in .meteor/packages, .meteor/versions and list. Make
-// sure that debugOnly packages don't show up in production mode.
+// changes is reflected in .meteor/packages, .meteor/versions and list.
 selftest.define("add packages to app", [], function () {
   var s = new Sandbox();
   var run;
@@ -293,7 +293,7 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base"]);
+                ["meteor-base", "accounts-base"]);
 
   // Adding the nonexistent version now should still say "no such
   // version". Regression test for
@@ -311,26 +311,26 @@ selftest.define("add packages to app", [], function () {
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base",  "say-something@1.0.0"]);
+                ["meteor-base", "accounts-base",  "say-something@1.0.0"]);
 
   run = s.run("add", "depends-on-plugin");
   run.match(/depends-on-plugin.*added,/);
   run.expectExit(0);
 
   checkPackages(s,
-                ["meteor-platform", "accounts-base",
+                ["meteor-base", "accounts-base",
                  "say-something@1.0.0", "depends-on-plugin"]);
 
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "say-something",  "meteor-platform",
+                 "say-something",  "meteor-base",
                  "contains-plugin@1.1.0"]);
 
   run = s.run("remove", "say-something");
   run.match("say-something: removed dependency");
   checkVersions(s,
                 ["accounts-base",  "depends-on-plugin",
-                 "meteor-platform",
+                 "meteor-base",
                  "contains-plugin"]);
 
   run = s.run("remove", "depends-on-plugin");
@@ -340,10 +340,10 @@ selftest.define("add packages to app", [], function () {
 
   checkVersions(s,
                 ["accounts-base",
-                 "meteor-platform"]);
+                 "meteor-base"]);
   run = s.run("list");
   run.match("accounts-base");
-  run.match("meteor-platform");
+  run.match("meteor-base");
 
   // Add a description-less package. Check that no weird things get
   // printed (like "added no-description: undefined").
@@ -351,15 +351,25 @@ selftest.define("add packages to app", [], function () {
   run.match("no-description\n");
   run.expectEnd();
   run.expectExit(0);
+});
 
-  // Add a debugOnly package. It should work during a normal run, but print
+selftest.define("add debugOnly and prodOnly packages", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Starting a run
+  s.createApp("myapp", "package-tests");
+  s.cd("myapp");
+  s.set("METEOR_OFFLINE_CATALOG", "t");
+
+    // Add a debugOnly package. It should work during a normal run, but print
   // nothing in production mode.
   run = s.run("add", "debug-only");
   run.match("debug-only");
   run.expectExit(0);
 
   s.mkdir("server");
-  s.write("server/debug.js",
+  s.write("server/exit-test.js",
           "process.exit(global.DEBUG_ONLY_LOADED ? 234 : 235)");
 
   run = s.run("--once");
@@ -369,7 +379,38 @@ selftest.define("add packages to app", [], function () {
   run = s.run("--once", "--production");
   run.waitSecs(15);
   run.expectExit(235);
+
+  // Add prod-only package, which sets GLOBAL.PROD_ONLY_LOADED.
+  run = s.run("add", "prod-only");
+  run.match("prod-only");
+  run.expectExit(0);
+
+  s.mkdir("server");
+  s.write("server/exit-test.js", // overwrite
+          "process.exit(global.PROD_ONLY_LOADED ? 234 : 235)");
+
+  run = s.run("--once");
+  run.waitSecs(15);
+  run.expectExit(235);
+
+  run = s.run("--once", "--production");
+  run.waitSecs(15);
+  run.expectExit(234);
 });
+
+selftest.define("add package with both debugOnly and prodOnly", [], function () {
+  var s = new Sandbox();
+  var run;
+
+  // Add an app with a package with prodOnly and debugOnly set (an error)
+  s.createApp("myapp", "debug-only-test", {dontPrepareApp: true});
+  s.cd("myapp");
+  run = s.run("--prepare-app");
+  run.waitSecs(20);
+  run.matchErr("can't have both debugOnly and prodOnly");
+  run.expectExit(1);
+});
+
 
 // Add a package that adds files to specific client architectures.
 selftest.define("add packages client archs", function (options) {
@@ -386,7 +427,7 @@ selftest.define("add packages client archs", function (options) {
     var outerRun = s.run("add", "say-something-client-targets");
     outerRun.match(/say-something-client-targets.*added,/);
     outerRun.expectExit(0);
-    checkPackages(s, ["meteor-platform", "say-something-client-targets"]);
+    checkPackages(s, ["meteor-base", "say-something-client-targets"]);
 
     var expectedLogNum = 0;
     s.testWithAllClients(function (run) {
@@ -473,8 +514,8 @@ selftest.define("update server package data unit test",
 
   var packageStorageFileDir = files.mkdtemp("update-server-package-data");
 
-  var rC = require('../catalog-remote.js');
-  var config = require('../config.js');
+  var rC = require('../packaging/catalog/catalog-remote.js');
+  var config = require('../meteor-services/config.js');
   var packageStorage = new rC.RemoteCatalog();
   var packageStorageFile = config.getPackageStorage({
     root: packageStorageFileDir,
@@ -615,7 +656,7 @@ selftest.define("talk to package server with expired or no accounts token",
   run.write("testtest\n");
   run.waitSecs(15);
   // The 'test' user should not be a maintainer of
-  // meteor-platform. So this command should fail.
+  // meteor-base. So this command should fail.
   run.matchErr("You are not an authorized maintainer");
   run.expectExit(1);
 
@@ -765,9 +806,9 @@ selftest.define("show unknown version of package", function () {
   var s = new Sandbox();
 
   // This version doesn't exist and is unlikely to exist.
-  var run = s.run("show", "meteor-platform@0.123.456");
+  var run = s.run("show", "meteor-base@0.123.456");
   run.waitSecs(5);
-  run.matchErr("meteor-platform@0.123.456: not found");
+  run.matchErr("meteor-base@0.123.456: not found");
   run.expectExit(1);
 
   // This package exists in the server (we need it to publish the tool), but is

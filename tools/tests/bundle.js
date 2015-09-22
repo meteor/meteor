@@ -1,6 +1,6 @@
-var selftest = require('../selftest.js');
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require("../files.js");
+var files = require('../fs/files.js');
 
 selftest.define("bundle", ["slow"], function () {
   var s = new Sandbox();

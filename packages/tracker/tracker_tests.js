@@ -326,18 +326,21 @@ Tinytest.add("tracker - onInvalidate", function (test) {
     buf += "*";
   });
 
-  var append = function (x) {
-    return function () {
+  var append = function (x, expectedComputation) {
+    return function (givenComputation) {
       test.isFalse(Tracker.active);
+      test.equal(givenComputation, expectedComputation || c1);
       buf += x;
     };
   };
+
+  c1.onStop(append('s'));
 
   c1.onInvalidate(append('a'));
   c1.onInvalidate(append('b'));
   test.equal(buf, '*');
   Tracker.autorun(function (me) {
-    Tracker.onInvalidate(append('z'));
+    Tracker.onInvalidate(append('z', me));
     me.stop();
     test.equal(buf, '*z');
     c1.invalidate();
@@ -354,17 +357,17 @@ Tinytest.add("tracker - onInvalidate", function (test) {
   c1.onInvalidate(append('a'));
   c1.onInvalidate(append('b'));
   Tracker.afterFlush(function () {
-    append('x')();
+    append('x')(c1);
     c1.onInvalidate(append('c'));
     c1.invalidate();
     Tracker.afterFlush(function () {
-      append('y')();
+      append('y')(c1);
       c1.onInvalidate(append('d'));
       c1.invalidate();
     });
   });
   Tracker.afterFlush(function () {
-    append('z')();
+    append('z')(c1);
     c1.onInvalidate(append('e'));
     c1.invalidate();
   });
@@ -375,9 +378,14 @@ Tinytest.add("tracker - onInvalidate", function (test) {
 
   buf = "";
   c1.onInvalidate(append('m'));
-  c1.stop();
-  test.equal(buf, 'm');
   Tracker.flush();
+  test.equal(buf, '');
+  c1.stop();
+  test.equal(buf, 'ms');  // s is from onStop
+  Tracker.flush();
+  test.equal(buf, 'ms');
+  c1.onStop(append('S'));
+  test.equal(buf, 'msS');
 });
 
 Tinytest.add('tracker - invalidate at flush time', function (test) {

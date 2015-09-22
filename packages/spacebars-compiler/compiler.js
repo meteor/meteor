@@ -62,6 +62,7 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
   // a block helper, say
   var isTemplate = (options && options.isTemplate);
   var isBody = (options && options.isBody);
+  var sourceName = (options && options.sourceName);
 
   var tree = parseTree;
 
@@ -71,6 +72,10 @@ SpacebarsCompiler.codeGen = function (parseTree, options) {
     // in a TEXTAREA, say.
     tree = SpacebarsCompiler.optimize(tree);
   }
+
+  // throws an error if using `{{> React}}` with siblings
+  new ReactComponentSiblingForbidder({sourceName: sourceName})
+    .visit(tree);
 
   var codegen = new SpacebarsCompiler.CodeGen;
   tree = (new SpacebarsCompiler._TemplateTagReplacer(

@@ -1,10 +1,10 @@
 var _ = require('underscore');
-var selftest = require('../selftest.js');
-var testUtils = require('../test-utils.js');
-var utils = require('../utils.js');
+var selftest = require('../tool-testing/selftest.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var utils = require('../utils/utils.js');
 var Sandbox = selftest.Sandbox;
-var httpHelpers = require('../http-helpers.js');
-var config = require('../config.js');
+var httpHelpers = require('../utils/http-helpers.js');
+var config = require('../meteor-services/config.js');
 
 var expectInvalidToken = selftest.markStack(function (token) {
   // Same XXX as testUtils.registerWithToken: should be hardcoded to

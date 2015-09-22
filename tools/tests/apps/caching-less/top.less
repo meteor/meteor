@@ -1,0 +1,9 @@
+@first-style: dotted;
+@import "subdir/foo.import.less";
+
+.el1 { border-style: @first-style; }
+.el2 { border-style: @el2-style; }
+.el3 { border-style: @el3-style; }
+
+@import "{local-pack}/p.less";
+.el4 { border-style: @el4-style; }

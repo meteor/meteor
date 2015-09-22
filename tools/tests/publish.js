@@ -1,10 +1,10 @@
 var _ = require('underscore');
-var utils = require('../utils.js');
-var testUtils = require('../test-utils.js');
-var selftest = require('../selftest.js');
-var stats = require('../stats.js');
+var utils = require('../utils/utils.js');
+var testUtils = require('../tool-testing/test-utils.js');
+var selftest = require('../tool-testing/selftest.js');
+var stats = require('../meteor-services/stats.js');
 var Sandbox = selftest.Sandbox;
-var files = require('../files.js');
+var files = require('../fs/files.js');
 
 selftest.define("create-publish-and-search",
     ["slow", "net", "test-package-server", "checkout"], function () {

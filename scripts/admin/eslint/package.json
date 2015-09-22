@@ -5,6 +5,8 @@
   "readme": "no warn",
   "repository": "no warn",
   "dependencies": {
-    "eslint": "0.13.0"
+    "eslint": "0.22.1",
+    "eslint-plugin-react": "2.5.0",
+    "babel-eslint": "4.0.5"
   }
 }

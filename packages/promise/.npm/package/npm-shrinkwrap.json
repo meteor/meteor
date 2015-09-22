@@ -1,0 +1,17 @@
+{
+  "dependencies": {
+    "meteor-promise": {
+      "version": "0.4.8",
+      "dependencies": {
+        "promise": {
+          "version": "7.0.4",
+          "dependencies": {
+            "asap": {
+              "version": "2.0.3"
+            }
+          }
+        }
+      }
+    }
+  }
+}

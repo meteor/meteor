@@ -171,10 +171,11 @@ var BooleanHandler = AttributeHandler.extend({
   }
 });
 
-var ValueHandler = AttributeHandler.extend({
+var DOMPropertyHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
-    if (value !== element.value)
-      element.value = value;
+    var name = this.name;
+    if (value !== element[name])
+      element[name] = value;
   }
 });
 
@@ -298,7 +299,7 @@ makeAttributeHandler = function (elem, name, value) {
              && name === 'value') {
     // internally, TEXTAREAs tracks their value in the 'value'
     // attribute just like INPUTs.
-    return new ValueHandler(name, value);
+    return new DOMPropertyHandler(name, value);
   } else if (name.substring(0,6) === 'xlink:') {
     return new XlinkHandler(name.substring(6), value);
   } else if (isUrlAttribute(elem.tagName, name)) {

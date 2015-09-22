@@ -5,9 +5,13 @@ makeErrorByStatus = function(statusCode, content) {
     return str.length > length ? str.slice(0, length) + '...' : str;
   };
 
+  var contentToCheck = typeof content == "string" ? content : content.toString();
+
   var message = "failed [" + statusCode + "]";
-  if (content)
-    message += " " + truncate(content.replace(/\n/g, " "), MAX_LENGTH);
+
+  if (contentToCheck) {
+    message += " " + truncate(contentToCheck.replace(/\n/g, " "), MAX_LENGTH);
+  }
 
   return new Error(message);
 };
@@ -21,7 +25,8 @@ populateData = function(response) {
   var contentType = (response.headers['content-type'] || ';').split(';')[0];
 
   // Only try to parse data as JSON if server sets correct content type.
-  if (_.include(['application/json', 'text/javascript'], contentType)) {
+  if (_.include(['application/json', 'text/javascript',
+      'application/javascript', 'application/x-javascript'], contentType)) {
     try {
       response.data = JSON.parse(response.content);
     } catch (err) {

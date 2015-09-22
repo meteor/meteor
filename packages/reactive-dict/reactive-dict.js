@@ -11,6 +11,10 @@ var parse = function (serialized) {
   return EJSON.parse(serialized);
 };
 
+var changed = function (v) {
+  v && v.changed();
+};
+
 // XXX COMPAT WITH 0.9.1 : accept migrationData instead of dictName
 ReactiveDict = function (dictName) {
   // this.keys: key -> value
@@ -20,6 +24,7 @@ ReactiveDict = function (dictName) {
       // _registerDictForMigrate will throw an error on duplicate name.
       ReactiveDict._registerDictForMigrate(dictName, this);
       this.keys = ReactiveDict._loadMigratedDict(dictName) || {};
+      this.name = dictName;
     } else if (typeof dictName === 'object') {
       // back-compat case: dictName is actually migrationData
       this.keys = dictName;
@@ -31,6 +36,7 @@ ReactiveDict = function (dictName) {
     this.keys = {};
   }
 
+  this.allDeps = new Tracker.Dependency;
   this.keyDeps = {}; // key -> Dependency
   this.keyValueDeps = {}; // key -> Dependency
 };
@@ -59,10 +65,7 @@ _.extend(ReactiveDict.prototype, {
       return;
     self.keys[key] = value;
 
-    var changed = function (v) {
-      v && v.changed();
-    };
-
+    self.allDeps.changed();
     changed(self.keyDeps[key]);
     if (self.keyValueDeps[key]) {
       changed(self.keyValueDeps[key][oldSerializedValue]);
@@ -92,8 +95,8 @@ _.extend(ReactiveDict.prototype, {
 
     // Mongo.ObjectID is in the 'mongo' package
     var ObjectID = null;
-    if (typeof Mongo !== 'undefined') {
-      ObjectID = Mongo.ObjectID;
+    if (Package.mongo) {
+      ObjectID = Package.mongo.Mongo.ObjectID;
     }
 
     // We don't allow objects (or arrays that might include objects) for
@@ -111,8 +114,9 @@ _.extend(ReactiveDict.prototype, {
         typeof value !== 'undefined' &&
         !(value instanceof Date) &&
         !(ObjectID && value instanceof ObjectID) &&
-        value !== null)
+        value !== null) {
       throw new Error("ReactiveDict.equals: value must be scalar");
+    }
     var serializedValue = stringify(value);
 
     if (Tracker.active) {
@@ -135,6 +139,31 @@ _.extend(ReactiveDict.prototype, {
     var oldValue = undefined;
     if (_.has(self.keys, key)) oldValue = parse(self.keys[key]);
     return EJSON.equals(oldValue, value);
+  },
+
+  all: function() {
+    this.allDeps.depend();
+    var ret = {};
+    _.each(this.keys, function(value, key) {
+      ret[key] = parse(value);
+    });
+    return ret;
+  },
+
+  clear: function() {
+    var self = this;
+
+    var oldKeys = self.keys;
+    self.keys = {};
+
+    self.allDeps.changed();
+
+    _.each(oldKeys, function(value, key) {
+      changed(self.keyDeps[key]);
+      changed(self.keyValueDeps[key][value]);
+      changed(self.keyValueDeps[key]['undefined']);
+    });
+
   },
 
   _setObject: function (object) {

@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "es5-shim": {
+      "version": "4.1.13"
+    }
+  }
+}
