@@ -19,13 +19,13 @@ if (Meteor.isClient) {
 
   Template.body.helpers({
     tasks: function () {
+      var options = {};
+
       if (Session.get("hideCompleted")) {
-        // If hide completed is checked, filter tasks
-        return Tasks.find({checked: {$ne: true}}, {sort: {createdAt: -1}});
-      } else {
-        // Otherwise, return all of the tasks
-        return Tasks.find({}, {sort: {createdAt: -1}});
+        options = {checked: {$ne: true}};
       }
+
+      return Tasks.find(options, {sort: {createdAt: -1}});
     },
     hideCompleted: function () {
       return Session.get("hideCompleted");
