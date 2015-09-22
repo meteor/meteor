@@ -1,6 +1,4 @@
-// See https://github.com/then/promise#usage for an explanation of why we
-// require promise/domains here.
-var MeteorPromise = require("promise/domains");
+var MeteorPromise = require("./promise.js");
 
 var es6PromiseThen = MeteorPromise.prototype.then;
 MeteorPromise.prototype.then = function (onResolved, onRejected) {
