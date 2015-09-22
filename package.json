@@ -29,8 +29,8 @@
     "promise": "7.0.4"
   },
   "devDependencies": {
-    "fibers": "1.0.6",
-    "mocha": "~2.2.4",
-    "webpack": "~1.8.11"
+    "fibers": "1.0.7",
+    "mocha": "~2.3.3",
+    "webpack": "~1.12.2"
   }
 }
