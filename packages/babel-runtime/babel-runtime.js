@@ -25,6 +25,20 @@ function canDefineNonEnumerableProperties() {
 // The name `babelHelpers` is hard-coded in Babel.  Otherwise we would make it
 // something capitalized and more descriptive, like `BabelRuntime`.
 babelHelpers = {
+  // Provides support for es7.decorators
+  createDecoratedClass: function (obj) {
+    return obj && obj.__esModule ? obj : {
+      "default": obj
+    };
+  },
+
+  // Provides support for es6.modules and "import ... from" keywords
+  interopRequireDefault: function (obj) {
+    return obj && obj.__esModule ? obj : {
+      "default": obj
+    };
+  },
+
   // Meteor-specific runtime helper for wrapping the object of for-in
   // loops, so that inherited Array methods defined by es5-shim can be
   // ignored in browsers where they cannot be defined as non-enumerable.
