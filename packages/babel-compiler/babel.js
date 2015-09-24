@@ -1,7 +1,7 @@
 var meteorBabel = Npm.require('meteor-babel');
 
-// Read in user config from optional babel.json file, which must be located 
-// in the project root directory. babel.json must be formatted as in the 
+// Read in user config from optional .babelrc file, which must be located 
+// in the project root directory. .babelrc must be formatted as in the 
 // example below.
 //{
 //    "whitelist": [
@@ -18,7 +18,7 @@ var babelUserConfig = function () {
   var path = Npm.require('path');
 
   var appdir = process.env.PWD || process.cwd();
-  var babelOptionsFilePath = path.join(appdir, 'babel.json');
+  var babelOptionsFilePath = path.join(appdir, '.babelrc');
 
   if (fs.existsSync(babelOptionsFilePath)) {
     return JSON.parse(fs.readFileSync(babelOptionsFilePath, {encoding: 'utf8'}));
@@ -50,7 +50,7 @@ function getDefaultOptions(extraFeatures) {
   // information about what the default options are.
   var options = meteorBabel.getDefaultOptions(extraFeatures);
 
-  // Bring in user Babel config options from babel.json
+  // Bring in user Babel config options from .babelrc
   for (propName in babelUserConfig) {
     if (babelUserConfig.hasOwnProperty(propName)) {
       var prop = babelUserConfig[propName];
