@@ -1,0 +1,41 @@
+{
+  "name": "eslint-plugin-meteor",
+  "version": "0.1.0",
+  "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
+  "description": "Meteor specific linting rules for ESLint",
+  "main": "index.js",
+  "scripts": {
+    "coveralls": "cat ./reports/coverage/lcov.info | coveralls",
+    "lint": "eslint ./",
+    "test": "npm run lint && npm run unit-test",
+    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot"
+  },
+  "files": [
+    "LICENSE",
+    "README.md",
+    "index.js",
+    "lib"
+  ],
+  "repository": "dferber90/eslint-plugin-meteor",
+  "homepage": "https://github.com/dferber90/eslint-plugin-meteor",
+  "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
+  "dependencies": {},
+  "devDependencies": {
+    "coveralls": "2.11.4",
+    "eslint": "1.5.1",
+    "istanbul": "0.3.21",
+    "mocha": "2.3.3"
+  },
+  "peerDependencies": {
+    "eslint": ">=0.8.0"
+  },
+  "engines": {},
+  "keywords": [
+    "eslint",
+    "eslint-plugin",
+    "eslintplugin",
+    "meteor"
+  ],
+  "license": "MIT",
+  "contributors": []
+}
