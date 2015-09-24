@@ -1,30 +1,5 @@
 var meteorBabel = Npm.require('meteor-babel');
 
-// Read in user config from optional .babelrc file, which must be located 
-// in the project root directory. .babelrc must be formatted as in the 
-// example below.
-//{
-//    "whitelist": [
-//        "es7.decorators",
-//        "es7.classProperties",
-//        "es7.exportExtensions",
-//        "es7.comprehensions",
-//        "es6.modules"
-//    ],
-//    "stage": 0
-//}
-var babelUserConfig = function () {
-  var fs = Npm.require('fs');
-  var path = Npm.require('path');
-
-  var appdir = process.env.PWD || process.cwd();
-  var babelOptionsFilePath = path.join(appdir, '.babelrc');
-
-  if (fs.existsSync(babelOptionsFilePath)) {
-    return JSON.parse(fs.readFileSync(babelOptionsFilePath, {encoding: 'utf8'}));
-  }
-}();
-
 function validateExtraFeatures(extraFeatures) {
   if (extraFeatures) {
     check(extraFeatures, {
@@ -49,21 +24,6 @@ function getDefaultOptions(extraFeatures) {
   // See https://github.com/meteor/babel/blob/master/options.js for more
   // information about what the default options are.
   var options = meteorBabel.getDefaultOptions(extraFeatures);
-
-  // Bring in user Babel config options from .babelrc
-  for (propName in babelUserConfig) {
-    if (babelUserConfig.hasOwnProperty(propName)) {
-      var prop = babelUserConfig[propName];
-      if (prop instanceof Array) {
-        prop.forEach(function (opt) {
-          if (options[propName].indexOf(opt) === -1)
-            options[propName].push(opt);
-        })
-      } else {
-        options[propName] = prop;
-      }
-    }
-  }
 
   // The sourceMap option should probably be removed from the default
   // options returned by meteorBabel.getDefaultOptions.

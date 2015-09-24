@@ -25,7 +25,19 @@ function canDefineNonEnumerableProperties() {
 // The name `babelHelpers` is hard-coded in Babel.  Otherwise we would make it
 // something capitalized and more descriptive, like `BabelRuntime`.
 babelHelpers = {
-  // Provides support for es7.decorators
+  // Provides support for es7.decorators 
+  defineDecoratedPropertyDescriptor: function (target, key, descriptors) {
+    var _descriptor = descriptors[key];
+    if (!_descriptor) return;
+    var descriptor = {};
+
+    for (var _key in _descriptor) descriptor[_key] = _descriptor[_key];
+
+    descriptor.value = descriptor.initializer ? descriptor.initializer.call(target) : undefined;
+    Object.defineProperty(target, key, descriptor);
+  },
+    
+  // Provides support for es7.decorators 
   createDecoratedClass: (function () {
         function defineProperties(target, descriptors, initializers) {
             for (var i = 0; i < descriptors.length; i++) {
