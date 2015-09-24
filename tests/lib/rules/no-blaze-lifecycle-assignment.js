@@ -1,5 +1,5 @@
 /**
- * @fileoverview Prevents usage of deprecated template callback assignments.
+ * @fileoverview Prevent usage of deprecated template callback assignments.
  * @author Dominik Ferber
  * @copyright 2015 Dominik Ferber. All rights reserved.
  * See LICENSE file in root directory for full license.

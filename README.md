@@ -38,7 +38,8 @@ Finally, enable all of the rules that you would like to use.
 {
   "rules": {
     "meteor/no-session": 1,
-    "meteor/no-blaze-lifecycle-assignment": 2
+    "meteor/no-blaze-lifecycle-assignment": 2,
+    "meteor/no-blaze-zero-timeout": 2
   }
 }
 ```
@@ -47,6 +48,7 @@ Finally, enable all of the rules that you would like to use.
 
 * [no-session](docs/rules/no-session.md): Prevent usage of Session
 * [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md): Prevent deprecated template lifecycle callback assignments
+* [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
 
 ## To Do
 
@@ -58,6 +60,7 @@ Finally, enable all of the rules that you would like to use.
 
 These specs and tools help enormously when developing new rules.
 * [ESTree Spec](https://github.com/estree/estree/blob/master/spec.md)
+* [Espree Parser](http://eslint.org/parser/)
 * [Esprima Parser](http://esprima.org/demo/parse.html#)
 * [Yeoman ESLint Generator](https://github.com/eslint/generator-eslint)
 
@@ -80,7 +83,7 @@ ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.o
 [deps-url]: https://david-dm.org/dferber90/eslint-plugin-meteor
 [deps-image]: https://img.shields.io/david/dev/dferber90/eslint-plugin-meteor.svg?style=flat-square
 
-[coverage-url]: https://coveralls.io/r/dferber90/eslint-plugin-meteor?branch=master
+[coverage-url]: https://coveralls.io/github/dferber90/eslint-plugin-meteor?branch=master
 [coverage-image]: http://img.shields.io/coveralls/dferber90/eslint-plugin-meteor/master.svg?style=flat-square
 
 [climate-url]: https://codeclimate.com/github/dferber90/eslint-plugin-meteor

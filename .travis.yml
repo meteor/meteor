@@ -1,8 +1,26 @@
+sudo: false
 language: node_js
+cache:
+  directories:
+    - node_modules
+branches:
+  only:
+    - master
+notifications:
+  email: dominik.ferber+travis@gmail.com
 node_js:
   - 0.10
   - 0.12
   - iojs
   - 4
+before_install:
+  - npm i -g npm@^2.0.0
+before_script:
+  - npm prune
+  - 'curl -Lo travis_after_all.py https://git.io/vLSON'
+script:
+  - npm test
 after_success:
-  - npm run coveralls
+  - python travis_after_all.py
+  - export $(cat .to_export_back)
+  - npm run semantic-release
