@@ -1,0 +1,29 @@
+{
+  "name": "meteor-migrations-tests",
+  "version": "0.0.1",
+  "description": "Tests for meteor-migrations.",
+  "main": "migrations_tests.js",
+  "scripts": {
+    "test": "spacejam test-packages ./"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/percolatestudio/meteor-migrations.git"
+  },
+  "author": {
+    "name": "Percolate Studio",
+    "url": "http://percolatestudio.com/"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/percolatestudio/meteor-migrations/issues"
+  },
+  "homepage": "https://atmospherejs.com/percolate/migrations",
+  "dependencies": {
+    "spacejam": "^1.2.0"
+  },
+  "keywords": [
+    "meteor",
+    "migrations"
+  ]
+}
