@@ -1,0 +1,7 @@
+language: node_js
+node_js: "0.10"
+install:
+  - "curl https://install.meteor.com | /bin/sh"
+  - "npm install"
+before_script:
+  - "export PATH=$HOME/.meteor:$PATH"
