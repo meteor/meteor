@@ -179,3 +179,50 @@ Tinytest.add('Migration callbacks include the migration as an argument', functio
   Migrations.migrateTo(1);
   test.equal(contextArg === migration, true);
 });
+
+Tinytest.addAsync('Migrations can log to injected logger', function(test, done) {
+  Migrations._reset();
+
+  // Ensure this logging code only runs once. More than once and we get
+  // Tinytest errors that the test "returned multiple times", or "Trace: event
+  // after complete!". Give me a ping, Vasili. One ping only, please.
+  var calledDone = false;
+  Migrations.options.logger = function() {
+    if (!calledDone) {
+      calledDone = true;
+      test.isTrue(true);
+      done();
+    }
+  };
+
+  Migrations.add({ version: 1, up: function() { } });
+  Migrations.migrateTo(1);
+
+  Migrations.options.logger = null;
+});
+
+Tinytest.addAsync('Migrations should pass correct arguments to logger', function(test, done) {
+  Migrations._reset();
+
+  // Ensure this logging code only runs once. More than once and we get
+  // Tinytest errors that the test "returned multiple times", or "Trace: event
+  // after complete!". Give me a ping, Vasili. One ping only, please.
+  var calledDone = false;
+  var logger = function(opts) {
+    if (!calledDone) {
+      calledDone = true;
+      test.include(opts, 'level');
+      test.include(opts, 'message');
+      test.include(opts, 'tag');
+      test.equal(opts.tag, 'Migrations');
+      done();
+    }
+  };
+
+  Migrations.options.logger = logger;
+
+  Migrations.add({ version: 1, up: function() { } });
+  Migrations.migrateTo(1);
+
+  Migrations.options.logger = null;
+});
