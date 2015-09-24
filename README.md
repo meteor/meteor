@@ -156,7 +156,7 @@ $ ./packages/percolatestudio-migrations/migrate.sh latest --settings ./setting.j
 ### Errors
 1. `Not migrating, control is locked`
 
-  Migrations set a lock when they are migrating, to prevent multiple instances to prevent multiple instances of your clustered app from running migrations simultaneously. If you migrations throw an exception, you will need to manually remove the lock (and ensure your db is still consistent) before re-running the migration. Update the migrations collection like this:
+  Migrations set a lock when they are migrating, to prevent multiple instances of your clustered app from running migrations simultaneously. If your migrations throw an exception, you will need to manually remove the lock (and ensure your db is still consistent) before re-running the migration. Update the migrations collection like this:
 
   ```
   $ meteor mongo
