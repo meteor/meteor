@@ -1,7 +1,11 @@
 ## v.NEXT
 
 * Update Crosswalk plugin for Cordova to 1.3.1.
+
 * Fix `meteor add` for a Cordova plugin using a Git URL with SHA.
+
+* Upgraded the `promise` package to use `meteor-promise@0.5.0`, which uses
+  the global `Promise` constructor in browsers that define it natively.
 
 ## v1.2.0.1, 2015-Sept-22
 
