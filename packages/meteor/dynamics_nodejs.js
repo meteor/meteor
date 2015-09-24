@@ -94,6 +94,8 @@ Meteor.bindEnvironment = function (func, onException, _this) {
         error && error.stack || error
       );
     };
+  } else if (typeof(onException) !== 'function') {
+    throw new Error('onException argument must be a function, string or undefined for Meteor.bindEnvironment().');
   }
 
   return function (/* arguments */) {
