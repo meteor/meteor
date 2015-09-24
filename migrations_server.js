@@ -98,25 +98,25 @@ Migrations.getVersion = function() {
 // migrates to the specific version passed in
 Migrations._migrateTo = function(version, rerun) {
   var self = this;
-  var control = this._getControl();
+  var control = this._getControl(); // Side effect: upserts control document.
   var currentVersion = control.version;
+
+  if (lock() === false) {
+    console.log('Not migrating, control is locked.');
+    return;
+  }
 
   if (rerun) {
     console.log('Rerunning version ' + version);
-    setLocked(true);
     migrate('up', version);
-    setLocked(false);
     console.log('Finished migrating.');
+    unlock();
     return;
   }
 
   if (currentVersion === version) {
     console.log('Not migrating, already at version ' + version);
-    return;
-  }
-
-  if (control.locked === true) {
-    console.log('Not migrating, control is locked.');
+    unlock();
     return;
   }
 
@@ -132,6 +132,7 @@ Migrations._migrateTo = function(version, rerun) {
     var migration = self._list[idx];
     
     if (typeof migration[direction] !== 'function') {
+      unlock();
       throw new Meteor.Error('Cannot migrate ' + direction + ' on version ' 
         + migration.version);
     }
@@ -146,26 +147,33 @@ Migrations._migrateTo = function(version, rerun) {
     migration[direction](migration);
   }
 
-  // sets the current version to be locked/unlocked
-  function setLocked(locked) {
-    self._setControl({version:currentVersion, locked: locked});
+  // Returns true if lock was acquired.
+  function lock() {
+    // This is atomic. The selector ensures only one caller at a time will see
+    // the unlocked control, and locking occurs in the same update's modifier.
+    // All other simultaneous callers will get false back from the update.
+    return self._collection.update(
+      {_id: 'control', locked: false}, {$set: {locked: true}}
+    ) === 1;
   }
 
-  setLocked(true);
+  // Side effect: saves version.
+  function unlock() {
+    self._setControl({locked: false, version: currentVersion});
+  }
+
   if (currentVersion < version) {
     for (var i = startIdx;i < endIdx;i++) {
       migrate('up', i + 1);
       currentVersion = self._list[i + 1].version;
-      setLocked(true);
     }
   } else {
     for (var i = startIdx;i > endIdx;i--) {
       migrate('down', i);
       currentVersion = self._list[i - 1].version;
-      setLocked(true);
     }
   }
-  setLocked(false);
+  unlock();
   console.log('Finished migrating.');
 }
 
