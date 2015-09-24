@@ -1,6 +1,6 @@
 ## v.NEXT
 
-* Update Crosswalk plugin for Cordova to 1.3.0.
+* Update Crosswalk plugin for Cordova to 1.3.1.
 * Fix `meteor add` for a Cordova plugin using a Git URL with SHA.
 
 ## v1.2.0.1, 2015-Sept-22
