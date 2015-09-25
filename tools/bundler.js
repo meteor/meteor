@@ -923,7 +923,14 @@ _.extend(Target.prototype, {
   // would be 'os'.
   mostCompatibleArch: function () {
     var self = this;
-    return archinfo.leastSpecificDescription(_.pluck(self.unibuilds, 'arch'));
+    var arches = _.pluck(self.unibuilds, 'arch');
+    if (self.providePackageJSONForUnavailableBinaryDeps) {
+      // Filter out incompatible arches.
+      arches = _.filter(arches, function (arch) {
+        return archinfo.matches(self.arch, arch);
+      });
+    }
+    return archinfo.leastSpecificDescription(arches);
   }
 });
 
