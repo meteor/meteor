@@ -1003,7 +1003,14 @@ class Target {
   // including anything that was specific to Linux, the return value
   // would be 'os'.
   mostCompatibleArch() {
-    return archinfo.leastSpecificDescription(_.pluck(this.unibuilds, 'arch'));
+    let arches = _.pluck(this.unibuilds, 'arch');
+    if (this.providePackageJSONForUnavailableBinaryDeps) {
+      // Filter out incompatible arches.
+      arches = arches.filter(
+        (arch) => archinfo.matches(this.arch, arch)
+      );
+    }
+    return archinfo.leastSpecificDescription(arches);
   }
 }
 
