@@ -1,5 +1,12 @@
 ## v.NEXT
 
+* `coll.insert()` now uses a faster (but cryptographically insecure)
+  algorithm to generate document IDs when called outside of a method
+  and an `_id` field is not explicitly passed. With this change, there
+  are no longer two algorithms used to generate document
+  IDs. `Random.id()` can still be used to generate crpytographically
+  secure document IDs. #5161
+
 ## v1.2.0.1, 2015-Sept-22
 
 * Fix incorrect publishing of packages with exports but no source. #5228
@@ -20,13 +27,6 @@ a shorter list of breaking changes you should be aware of when upgrading.
 
 * New packages: `ecmascript`, `es5-shim`, `ecmascript-collections`, `promise`,
   `static-html`, `jshint`, `babel-compiler`
-
-* `coll.insert()` now uses a faster (but cryptographically insecure)
-  algorithm to generate document IDs when called outside of a method
-  and an `_id` field is not explicitly passed. With this change, there
-  are no longer two algorithms used to generate document
-  IDs. `Random.id()` can still be used to generate crpytographically
-  secure document IDs. #5161
 
 * No longer include the `json` package by default, which contains code for
   `JSON.parse` and `JSON.stringify`.  (The last browser to not support JSON
