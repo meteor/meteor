@@ -60,19 +60,22 @@ _.extend(ReactiveDict.prototype, {
 
     value = stringify(value);
 
-    var oldSerializedValue = 'undefined';
-    if (_.has(self.keys, key)) {
-      oldSerializedValue = self.keys[key];
-      if (value === oldSerializedValue)
-        return;
-    }
+    var keyExisted = _.has(self.keys, key);
+    var oldSerializedValue = keyExisted ? self.keys[key] : 'undefined';
+    var isNewValue = (value !== oldSerializedValue);
+
     self.keys[key] = value;
 
-    self.allDeps.changed();
-    changed(self.keyDeps[key]);
-    if (self.keyValueDeps[key]) {
-      changed(self.keyValueDeps[key][oldSerializedValue]);
-      changed(self.keyValueDeps[key][value]);
+    if (isNewValue || !keyExisted) {
+      self.allDeps.changed();
+    }
+
+    if (isNewValue) {
+      changed(self.keyDeps[key]);
+      if (self.keyValueDeps[key]) {
+        changed(self.keyValueDeps[key][oldSerializedValue]);
+        changed(self.keyValueDeps[key][value]);
+      }
     }
   },
 
