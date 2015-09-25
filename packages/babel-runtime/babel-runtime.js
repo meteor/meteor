@@ -25,6 +25,58 @@ function canDefineNonEnumerableProperties() {
 // The name `babelHelpers` is hard-coded in Babel.  Otherwise we would make it
 // something capitalized and more descriptive, like `BabelRuntime`.
 babelHelpers = {
+  // Provides support for es7.decorators 
+  defineDecoratedPropertyDescriptor: function (target, key, descriptors) {
+    var _descriptor = descriptors[key];
+    if (!_descriptor) return;
+    var descriptor = {};
+
+    for (var _key in _descriptor) descriptor[_key] = _descriptor[_key];
+
+    descriptor.value = descriptor.initializer ? descriptor.initializer.call(target) : undefined;
+    Object.defineProperty(target, key, descriptor);
+  },
+    
+  // Provides support for es7.decorators 
+  createDecoratedClass: (function () {
+        function defineProperties(target, descriptors, initializers) {
+            for (var i = 0; i < descriptors.length; i++) {
+                var descriptor = descriptors[i];
+                var decorators = descriptor.decorators;
+                var key = descriptor.key;
+                delete descriptor.key;
+                delete descriptor.decorators;
+                descriptor.enumerable = descriptor.enumerable || false;
+                descriptor.configurable = true;
+                if ('value' in descriptor || descriptor.initializer) descriptor.writable = true;
+                if (decorators) {
+                    for (var f = 0; f < decorators.length; f++) {
+                        var decorator = decorators[f];
+                        if (typeof decorator === 'function') { descriptor = decorator(target, key, descriptor) || descriptor; } else { throw new TypeError('The decorator for method ' + descriptor.key + ' is of the invalid type ' + typeof decorator); }
+                    }
+                    if (descriptor.initializer !== undefined) {
+                        initializers[key] = descriptor;
+                        continue;
+                    }
+                }
+                Object.defineProperty(target, key, descriptor);
+            }
+        }
+
+        return function (Constructor, protoProps, staticProps, protoInitializers, staticInitializers) {
+            if (protoProps) defineProperties(Constructor.prototype, protoProps, protoInitializers);
+            if (staticProps) defineProperties(Constructor, staticProps, staticInitializers);
+            return Constructor;
+        };
+    })(),
+
+  // Provides support for es6.modules and "import ... from" keywords
+  interopRequireDefault: function (obj) {
+    return obj && obj.__esModule ? obj : {
+      "default": obj
+    };
+  },
+
   // Meteor-specific runtime helper for wrapping the object of for-in
   // loops, so that inherited Array methods defined by es5-shim can be
   // ignored in browsers where they cannot be defined as non-enumerable.
