@@ -29,6 +29,10 @@ Tinytest.add('ReactiveDict - all() works', function (test) {
   dict.set('foo', 'bar');
   Tracker.flush();
   test.equal(all, {foo: 'bar'});
+
+  dict.set('blah', undefined);
+  Tracker.flush();
+  test.equal(all, {foo: 'bar', blah: undefined});
 });
 
 
