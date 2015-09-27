@@ -1,6 +1,6 @@
 export TIMEOUT_SCALE_FACTOR=10
-export SELF_TEST_EXCLUDE="less"
-export TEST_PACKAGES_EXCLUDE="^autoupdate|^can't publish package with colons|^old cli tests|^create$|lint package on \`meteor publish\`|^logs - logged out|^mongo - logged out|^minifiers can't register non-js|^minifiers: apps can't use|^package skeleton|^springboard|^writing versions file|^unknown release|^update during run|^source maps|^wipe all packages"
+export TEST_PACKAGES_EXCLUDE="less"
+export SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^logs - logged out|^mongo - logged out|^minifiers can't register non-js|^minifiers: apps can't use"
 
 # run different jobs based on CicleCI parallel container index
 case $CIRCLE_NODE_INDEX in
