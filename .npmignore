@@ -1,6 +1,7 @@
 # .npmignore so dist/ can be git-ignored but will be in npm package
 
 reports
-# dist < must end up in npm package. do not ignore.
+# dist must end up in npm package. do not ignore.
+lib
 node_modules
 npm-debug.log
