@@ -1,7 +1,14 @@
 ESLint-plugin-Meteor
 ===================
 
-[![Maintenance Status][status-image]][status-url] [![NPM version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Dependency Status][deps-image]][deps-url] [![Coverage Status][coverage-image]][coverage-url] [![Code Climate][climate-image]][climate-url]
+[![Maintenance Status][status-image]][status-url]
+[![NPM version][npm-image]][npm-url]
+[![Build Status][travis-image]][travis-url]
+[![Dependency Status][deps-image]][deps-url]
+[![Coverage Status][coverage-image]][coverage-url]
+[![Code Climate][climate-image]][climate-url]
+[![semantic-release][semantic-release-image]](semantic-release)
+
 
 Meteor specific linting rules for ESLint
 
@@ -93,3 +100,6 @@ ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.o
 
 [status-url]: https://github.com/dferber90/eslint-plugin-meteor/pulse
 [status-image]: http://img.shields.io/badge/status-maintained-brightgreen.svg?style=flat-square
+
+[semantic-release-image]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg
+[semantic-release]: https://github.com/semantic-release/semantic-release
