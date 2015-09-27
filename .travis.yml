@@ -7,7 +7,7 @@ branches:
   only:
     - master
 notifications:
-  email: dominik.ferber+travis@gmail.com
+  email: false
 node_js:
   - 0.10
   - 0.12
