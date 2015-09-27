@@ -32,6 +32,7 @@ ruleTester.run('audit-argument-checks', rule, {
 
     'Meteor.methods()',
     'Meteor.methods({ x: function () {} })',
+    'Meteor["methods"]({ x: function () {} })',
     'Meteor.methods({ x: true })',
     {code: 'Meteor.methods({ x () {} })', parser: 'babel-eslint'},
     'Meteor.methods({ x: function (bar) { check(bar, Match.Any); } })',
@@ -41,6 +42,13 @@ ruleTester.run('audit-argument-checks', rule, {
   invalid: [
     {
       code: 'Meteor.publish("foo", function (bar) { foo(); })',
+      errors: [{
+        message: 'bar is not checked',
+        type: 'Identifier'
+      }]
+    },
+    {
+      code: 'Meteor["publish"]("foo", function (bar) { foo(); })',
       errors: [{
         message: 'bar is not checked',
         type: 'Identifier'
