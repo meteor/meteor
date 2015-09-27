@@ -26,6 +26,7 @@
   "dependencies": {},
   "devDependencies": {
     "coveralls": "2.11.4",
+    "cz-conventional-changelog": "1.0.1",
     "eslint": "1.5.1",
     "istanbul": "0.3.21",
     "mocha": "2.3.3",
@@ -43,6 +44,9 @@
   ],
   "release": {
     "branch": "master"
+  },
+  "czConfig": {
+    "path": "node_modules/cz-conventional-changelog/"
   },
   "license": "MIT",
   "contributors": []
