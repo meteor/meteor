@@ -2,13 +2,12 @@
  * @fileoverview Enforce check on all arguments passed to methods and publish functions
  * @author Dominik Ferber
  */
-'use strict';
 
 // -----------------------------------------------------------------------------
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../lib/rules/audit-argument-checks');
+var rule = require('../../../dist/rules/audit-argument-checks');
 var RuleTester = require('eslint').RuleTester;
 
 
@@ -84,16 +83,16 @@ ruleTester.run('audit-argument-checks', rule, {
       parser: 'babel-eslint'
     },
     {
-      code: [
-        'Meteor.methods({' +
-        '  foo () {},' +
-        '  foo2 (bar) {' +
-        '    if (true) {' +
-        '      check(bar, Meteor.any)' +
-        '    }' +
-        '  }' +
-        '})'
-      ].join('\n'),
+      code: `
+        Meteor.methods({
+          foo () {},
+          foo2 (bar) {
+            if (true) {
+              check(bar, Meteor.any)
+            }
+          }
+        })
+      `,
       errors: [{
         message: 'bar is not checked',
         type: 'Identifier'

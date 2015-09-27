@@ -4,13 +4,12 @@
  * @copyright 2015 Dominik Ferber. All rights reserved.
  * See LICENSE file in root directory for full license.
  */
-'use strict';
 
 // -----------------------------------------------------------------------------
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../lib/rules/no-session');
+var rule = require('../../../dist/rules/no-session');
 var RuleTester = require('eslint').RuleTester;
 
 

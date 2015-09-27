@@ -4,15 +4,13 @@
  * @copyright 2015 Dominik Ferber. All rights reserved.
  * See LICENSE file in root directory for full license.
  */
-'use strict';
 
 // -----------------------------------------------------------------------------
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../lib/rules/no-blaze-lifecycle-assignment'),
-
-  RuleTester = require('eslint').RuleTester;
+var rule = require('../../../dist/rules/no-blaze-lifecycle-assignment');
+var RuleTester = require('eslint').RuleTester;
 
 
 // -----------------------------------------------------------------------------

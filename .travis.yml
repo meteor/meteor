@@ -19,7 +19,8 @@ before_script:
   - npm prune
   - 'curl -Lo travis_after_all.py https://git.io/vLSON'
 script:
-  - npm test
+  - npm run test
+  - npm run build
 after_success:
   - python travis_after_all.py
   - export $(cat .to_export_back)

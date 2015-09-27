@@ -1,4 +1,5 @@
 {
+    "parser": "babel-eslint",
     "env": {
         "node": true
     },
@@ -83,7 +84,7 @@
         "wrap-iife": 2,
         "yoda": 2,
         // Strict Mode
-        "strict": [2, "global"],
+        "strict": [2, "never"],
         // Variables
         "no-catch-shadow": 2,
         "no-delete-var": 2,
