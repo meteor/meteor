@@ -2,13 +2,12 @@
  * @fileoverview Prevent usage of Meteor.setTimeout with zero delay
  * @author Dominik Ferber
  */
-'use strict';
 
 // -----------------------------------------------------------------------------
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../lib/rules/no-zero-timeout');
+var rule = require('../../../dist/rules/no-zero-timeout');
 var RuleTester = require('eslint').RuleTester;
 
 

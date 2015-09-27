@@ -2,13 +2,16 @@
   "name": "eslint-plugin-meteor",
   "author": "Dominik Ferber <dominik.ferber+npm@gmail.com>",
   "description": "Meteor specific linting rules for ESLint",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "coveralls": "cat ./reports/coverage/lcov.info | coveralls",
     "lint": "eslint ./",
     "test": "npm run lint && npm run unit-test",
-    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot",
-    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot --compilers js:babel/register",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post",
+    "prebuild": "rimraf dist && mkdir dist",
+    "dev": "babel lib -d dist -w",
+    "build": "babel lib -d dist"
   },
   "files": [
     "LICENSE",
@@ -24,6 +27,7 @@
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {},
   "devDependencies": {
+    "babel": "5.8.23",
     "coveralls": "2.11.4",
     "cz-conventional-changelog": "1.0.1",
     "eslint": "1.5.1",
@@ -31,7 +35,8 @@
     "ghooks": "0.3.2",
     "istanbul": "0.3.21",
     "mocha": "2.3.3",
-    "semantic-release": "4.3.5"
+    "semantic-release": "4.3.5",
+    "rimraf": "2.4.3"
   },
   "peerDependencies": {
     "eslint": ">=0.8.0"

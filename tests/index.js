@@ -1,13 +1,12 @@
 /* eslint-env mocha */
-'use strict';
 
-var plugin = require('..');
+var plugin = require('../dist/index.js');
 
 var assert = require('assert');
 var fs = require('fs');
 var path = require('path');
 
-var rules = fs.readdirSync(path.resolve(__dirname, '../lib/rules/'))
+var rules = fs.readdirSync(path.resolve(__dirname, '../dist/rules/'))
   .filter(function (f) {
     return path.extname(f) === '.js';
   })
@@ -22,7 +21,7 @@ describe('all rule files should be exported by the plugin', function() {
     it('should export ' + ruleName, function() {
       assert.equal(
         plugin.rules[ruleName],
-        require(path.join('../lib/rules', ruleName))
+        require(path.join('../dist/rules', ruleName))
       );
     });
 
