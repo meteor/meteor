@@ -7,13 +7,13 @@
                    "1.0.4", "1.0.4.1", "1.0.4.2", "1.0.5", "1.1", "1.1.0.1",
                    "1.1.0.2", "1.1.0.3"],
       "banner": {
-        "text": "=> Meteor 1.2.0.1: React and Angular support, ECMAScript 2015, new faster build\n   system, and improvements to the Cordova integration for mobile apps.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.2.0.1 by running 'meteor update'."
+        "text": "=> Meteor 1.2.0.2: React and Angular support, ECMAScript 2015, new faster build\n   system, and improvements to the Cordova integration for mobile apps.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.2.0.2 by running 'meteor update'."
       }
     },
     {
-      "versions": ["1.2"],
+      "versions": ["1.2", "1.2.0.1"],
       "banner": {
-        "text": "=> Meteor 1.2.0.1: A patch for an error when updating to 1.2.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.2.0.1 by running 'meteor update'."
+        "text": "=> Meteor 1.2.0.2: Bug fixes for Meteor 1.2, see History.md for details.\n\n\n   This release is being downloaded in the background. Update your app to\n   Meteor 1.2.0.2 by running 'meteor update'."
       }
     }
   ]
