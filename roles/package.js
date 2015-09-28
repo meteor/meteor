@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Authorization package for Meteor",
-  version: "1.2.12",
+  version: "1.2.13",
   git: "https://github.com/alanning/meteor-roles.git",
   name: "alanning:roles"
 });
@@ -8,7 +8,7 @@ Package.describe({
 Package.on_use(function (api) {
   api.versionsFrom && api.versionsFrom("METEOR@0.9.0");
   var both = ['client', 'server'];
-  api.use(['underscore', 'accounts-base'], both);
+  api.use(['underscore', 'accounts-base', 'check'], both);
   api.use(['handlebars'], 'client', {weak: true});
 
   // This is needed due to Meteor Issue #1358
