@@ -4,15 +4,17 @@
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
   "scripts": {
+    "build": "babel lib -d dist",
+    "build:w": "npm run build -- -w",
+    "clean": "rimraf dist",
     "coveralls": "cat ./reports/coverage/lcov.info | coveralls",
     "lint": "eslint ./",
-    "test": "npm run lint && npm run unit-test",
-    "clean": "rimraf dist",
-    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot --compilers js:babel/register",
-    "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "prebuild": "npm run clean && mkdir dist",
-    "dev": "babel lib -d dist -w",
-    "build": "babel lib -d dist"
+    "prepublish": "npm run build",
+    "preunit-test": "npm run build",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post",
+    "test": "npm run lint && npm run unit-test",
+    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot --compilers js:babel/register"
   },
   "files": [
     "LICENSE",
