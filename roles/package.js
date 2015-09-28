@@ -9,7 +9,7 @@ Package.on_use(function (api) {
   api.versionsFrom && api.versionsFrom("METEOR@0.9.0");
   var both = ['client', 'server'];
   api.use(['underscore', 'accounts-base', 'check'], both);
-  api.use(['handlebars'], 'client', {weak: true});
+  api.use(['blaze-html-templates', 'handlebars'], 'client', {weak: true});
 
   // This is needed due to Meteor Issue #1358
   //   https://github.com/meteor/meteor/issues/1358
