@@ -8,6 +8,7 @@ ESLint-plugin-Meteor
 [![Coverage Status][coverage-image]][coverage-url]
 [![Code Climate][climate-image]][climate-url]
 [![semantic-release][semantic-release-image]](semantic-release)
+[![Commitizen friendly][commitizen-image]](commitizen)
 
 
 Meteor specific linting rules for ESLint
@@ -102,3 +103,6 @@ ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.o
 
 [semantic-release-image]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg
 [semantic-release]: https://github.com/semantic-release/semantic-release
+
+[commitizen-image]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
+[commitizen]: http://commitizen.github.io/cz-cli/
