@@ -70,7 +70,6 @@ Finally, enable all of the rules that you would like to use.
 These specs and tools help enormously when developing new rules.
 * [ESTree Spec](https://github.com/estree/estree/blob/master/spec.md)
 * [Espree Parser](http://eslint.org/parser/)
-* [Esprima Parser](http://esprima.org/demo/parse.html#)
 * [Yeoman ESLint Generator](https://github.com/eslint/generator-eslint)
 
 
