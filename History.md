@@ -1,11 +1,14 @@
 ## v.NEXT
 
-* Update Crosswalk plugin for Cordova to 1.3.1.
+* Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
 
 * Fix `meteor add` for a Cordova plugin using a Git URL with SHA.
 
 * Upgraded the `promise` package to use `meteor-promise@0.5.0`, which uses
   the global `Promise` constructor in browsers that define it natively.
+
+* Fix error in assigning attributes to `<body>` tag when using Blaze templates
+  or `static-html`. [#5232](https://github.com/meteor/meteor/issues/5232)
 
 ## v1.2.0.1, 2015-Sept-22
 
