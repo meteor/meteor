@@ -497,8 +497,8 @@ from Cordova project`, async () => {
         if (newId) {
           Console.warn();
           Console.labelWarn(`Cordova plugin ${id} has been renamed to ${newId} \
-  as part of moving to npm. Please change the App.configurePlugin call in \
-  mobile-config.js accordingly.`);
+as part of moving to npm. Please change the App.configurePlugin call in \
+mobile-config.js accordingly.`);
           return [newId, config];
         } else {
           return [id, config];

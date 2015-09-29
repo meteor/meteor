@@ -566,3 +566,9 @@ following elements:
   page.  It will be compiled to the `Template.body` component. If `<body>` is
   used multiple times (perhaps in different files), the contents of all of the
   `<body>` elements are concatenated.
+
+## Escaping Curly Braces
+
+To insert a literal `{{`, `{{{`, or any number of curly braces, put a
+vertical bar after it.  So `{{|` will show up as `{{`, `{{{|` will
+show up as `{{{`, and so on.

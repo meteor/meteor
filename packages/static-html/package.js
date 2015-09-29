@@ -1,5 +1,5 @@
 Package.describe({
-  version: '1.0.1',
+  version: '1.0.2',
   // Brief, one-line summary of the package.
   summary: 'Define static page content in .html files',
   git: 'https://github.com/meteor/meteor',
@@ -23,6 +23,7 @@ Package.registerBuildPlugin({
 
 Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
+  api.use('jquery');
 
   // Body attributes are compiled to code that uses Meteor.startup
   api.imply('meteor', 'client');

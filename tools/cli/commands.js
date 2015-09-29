@@ -1916,6 +1916,7 @@ main.registerCommand({
     changed: { type: Boolean },
     'force-online': { type: Boolean },
     slow: { type: Boolean },
+    galaxy: { type: Boolean },
     browserstack: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
@@ -1983,6 +1984,7 @@ main.registerCommand({
       onlyChanged: options.changed,
       offline: offline,
       includeSlowTests: options.slow,
+      galaxyOnly: options.galaxy,
       testRegexp: testRegexp,
       fileRegexp: fileRegexp
     });
@@ -1999,6 +2001,7 @@ main.registerCommand({
     onlyChanged: options.changed,
     offline: offline,
     includeSlowTests: options.slow,
+    galaxyOnly: options.galaxy,
     testRegexp: testRegexp,
     fileRegexp: fileRegexp,
     excludeRegexp: excludeRegexp,

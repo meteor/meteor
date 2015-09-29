@@ -491,15 +491,21 @@ var exception = function (error) {
     // If there is a part inside the fiber, that's the one we want. Otherwise,
     // use the one outside.
     var stack = parsed.insideFiber || parsed.outsideFiber;
-    var locus = stack[0];
-    currentJob.get().addMessage({
-      message: message,
-      stack: stack,
-      func: locus.func,
-      file: locus.file,
-      line: locus.line,
-      column: locus.column
-    });
+    if (stack && stack.length > 0) {
+      var locus = stack[0];
+      currentJob.get().addMessage({
+        message: message,
+        stack: stack,
+        func: locus.func,
+        file: locus.file,
+        line: locus.line,
+        column: locus.column
+      });
+    } else {
+      currentJob.get().addMessage({
+        message: message
+      });
+    }
   }
 };
 

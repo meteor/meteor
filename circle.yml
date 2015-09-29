@@ -1,0 +1,8 @@
+dependencies:
+  override:
+    - ./meteor --get-ready
+
+test:
+  override:
+    - ./scripts/ci.sh :
+        parallel: true
