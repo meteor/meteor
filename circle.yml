@@ -1,4 +1,6 @@
 dependencies:
+  cache_directories:
+    - "dev_bundle"
   override:
     - ./meteor --get-ready
 
