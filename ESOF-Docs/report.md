@@ -7,9 +7,8 @@ Meteor é um open-source, real-time, e framework de aplicações web multi-plata
 que permite a criação de protótipos muito rápido e produz código multi-plataforma (web , Android, iOS).
 
 Com o Meteor, criamos apps:
+
 > em JavaScript
-> que envia informação sobre o fio, em vez de HTML
-> em que pudemos utilizar bibliotecas populares de open-source
 
 O objetivo desta plataforma é criar software de uma maneira mais simples como produzir uma nova plataforma para aplicações cloud
 que vão se tornar tão onipresentes quanto as plataformas anteriores (Unix, HTTP e a base de dados relacional). 
