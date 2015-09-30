@@ -1,37 +1,7 @@
-var _ = require('underscore');
 var selftest = require('../tool-testing/selftest.js');
 var testUtils = require('../tool-testing/test-utils.js');
 var utils = require('../utils/utils.js');
 var Sandbox = selftest.Sandbox;
-var httpHelpers = require('../utils/http-helpers.js');
-
-// Poll the given app looking for the correct settings. Throws an error
-// if the settings aren't found after a timeout.
-var checkForSettings = selftest.markStack(function (appName, settings, timeoutSecs) {
-  var timeoutDate = new Date(new Date().valueOf() + timeoutSecs * 1000);
-  while (true) {
-    if (new Date() >= timeoutDate) {
-      selftest.fail('Expected settings not found on app ' + appName);
-    }
-
-    var result = httpHelpers.request('http://' + appName);
-
-    // XXX This is brittle; the test will break if we start formatting the
-    // __meteor_runtime_config__ JS differently. Ideally we'd do something
-    // like point a phantom at the deployed app and actually evaluate
-    // Meteor.settings.
-    try {
-      var mrc = testUtils.getMeteorRuntimeConfigFromHTML(result.body);
-    } catch (e) {
-      // ignore
-      continue;
-    }
-
-    if (_.isEqual(mrc.PUBLIC_SETTINGS, settings['public'])) {
-      return;
-    }
-  }
-});
 
 selftest.define('deploy - with settings', ['net', 'slow'], function () {
   var s = new Sandbox;
@@ -52,7 +22,7 @@ selftest.define('deploy - with settings', ['net', 'slow'], function () {
     // createAndDeployApp creates a new app directory and cd's into it.
     settingsFile: '../settings.json'
   });
-  checkForSettings(appName, settings, 10);
+  testUtils.checkForSettings(appName, settings, 10);
 
   // Re-deploy without settings and check that the settings still
   // appear.
@@ -66,7 +36,7 @@ selftest.define('deploy - with settings', ['net', 'slow'], function () {
   // disappear, we don't want to send our request before the app has
   // updated and conclude that the settings are still there).
   utils.sleepMs(5000);
-  checkForSettings(appName, settings, 10);
+  testUtils.checkForSettings(appName, settings, 10);
 
   // Re-deploy with new settings and check that the settings get
   // updated.
@@ -78,7 +48,7 @@ selftest.define('deploy - with settings', ['net', 'slow'], function () {
     settingsFile: '../settings.json',
     appName: appName
   });
-  checkForSettings(appName, settings, 10);
+  testUtils.checkForSettings(appName, settings, 10);
 
   testUtils.cleanUpApp(s, appName);
   testUtils.logout(s);

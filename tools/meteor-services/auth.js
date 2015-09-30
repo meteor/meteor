@@ -444,6 +444,10 @@ var doInteractivePasswordLogin = function (options) {
   else
     throw new Error("Need username or email");
 
+  if (_.has(options, 'password')) {
+    loginData.password = options.password;
+  }
+
   var loginFailed = function () {
     if (! options.suppressErrorMessage) {
       Console.error("Login failed.");
@@ -458,11 +462,13 @@ var doInteractivePasswordLogin = function (options) {
   };
 
   while (true) {
-    loginData.password = Console.readLine({
-      echo: false,
-      prompt: "Password: ",
-      stream: process.stderr
-    });
+    if (! _.has(loginData, 'password')) {
+      loginData.password = Console.readLine({
+        echo: false,
+        prompt: "Password: ",
+        stream: process.stderr
+      });
+    }
 
     try {
       var result = conn.call('login', {

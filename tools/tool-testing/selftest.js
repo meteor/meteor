@@ -1149,6 +1149,7 @@ _.extend(Run.prototype, {
         });
       }
     });
+
   },
 
   connectClient: function () {
@@ -1557,6 +1558,7 @@ var tagDescriptions = {
   checkout: 'can only run from checkouts',
   net: 'require an internet connection',
   slow: 'take quite a long time; use --slow to include',
+  galaxy: 'galaxy-specific test testing galaxy integration',
   cordova: 'requires Cordova support in tool (eg not on Windows)',
   windows: 'runs only on Windows',
   // these are pseudo-tags, assigned to tests when you specify
@@ -1571,17 +1573,16 @@ var tagDescriptions = {
 // command-line arguments).  Used as the first step of both listTests
 // and runTests.
 //
-// Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests
+// Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests, galaxyOnly
 var getFilteredTests = function (options) {
   options = options || {};
-
   var allTests = getAllTests();
 
   if (allTests.length) {
     var testState = readTestState();
 
-    // Add pseudo-tags 'non-matching', 'unchanged', and 'in other files'
-    // (but only so that we can then skip tests with those tags)
+    // Add pseudo-tags 'non-matching', 'unchanged', 'non-galaxy' and 'in other
+    // files' (but only so that we can then skip tests with those tags)
     allTests = allTests.map(function (test) {
       var newTags = [];
 
@@ -1595,6 +1596,12 @@ var getFilteredTests = function (options) {
       } else if (options.excludeRegexp &&
                  options.excludeRegexp.test(test.name)) {
         newTags.push('excluded');
+      }
+
+      // We make sure to not run galaxy tests unless the user explicitly asks us
+      // to. Someday, this might not be the case.
+      if ( _.indexOf(test.tags, "galaxy") === -1) {
+        newTags.push('non-galaxy');
       }
 
       if (! newTags.length) {
@@ -1622,11 +1629,18 @@ var getFilteredTests = function (options) {
   if (! files.inCheckout()) {
     tagsToSkip.push('checkout');
   }
-  if (options.offline) {
-    tagsToSkip.push('net');
-  }
-  if (! options.includeSlowTests) {
-    tagsToSkip.push('slow');
+  if (options.galaxyOnly) {
+    // We consider `galaxy` to imply `slow` and `net` since almost all galaxy
+    // tests involve deploying an app to a (probably) remote server.
+    tagsToSkip.push('non-galaxy');
+  } else {
+    tagsToSkip.push('galaxy');
+    if (options.offline) {
+      tagsToSkip.push('net');
+    }
+    if (! options.includeSlowTests) {
+      tagsToSkip.push('slow');
+    }
   }
 
   if (process.platform === "win32") {

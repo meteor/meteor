@@ -253,6 +253,14 @@ _.extend(exports, {
     return process.env.DEPLOY_HOSTNAME || "meteor.com";
   },
 
+  getFullAppName: function(appName) {
+    var domain = process.env.DEPLOY_DOMAIN || this.getDeployHostname();
+    if (appName.indexOf(".") === -1) {
+      return appName + "." + domain;
+    }
+    return appName; 
+  },
+
   // Deploy URL for MDG free hosting, eg 'https://deploy.meteor.com'.
   getDeployUrl: function () {
     var host;

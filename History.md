@@ -1,6 +1,20 @@
 ## v.NEXT
 
-## in progress: v1.2
+* Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
+
+* Fix `meteor add` for a Cordova plugin using a Git URL with SHA.
+
+* Upgraded the `promise` package to use `meteor-promise@0.5.0`, which uses
+  the global `Promise` constructor in browsers that define it natively.
+
+* Fix error in assigning attributes to `<body>` tag when using Blaze templates
+  or `static-html`. [#5232](https://github.com/meteor/meteor/issues/5232)
+
+## v1.2.0.1, 2015-Sept-22
+
+* Fix internal exception caused by missing exports. #5228
+
+## v1.2, 2015-Sept-21
 
 There are quite a lot of changes in Meteor 1.2. See the
 [Wiki](https://github.com/meteor/meteor/wiki/Breaking-changes-in-Meteor-1.2) for
@@ -348,8 +362,7 @@ a shorter list of breaking changes you should be aware of when upgrading.
 
 ### Windows
 
-* Increase the buffer size for `netstat` when looking for running Mongo servers.
-  #4125
+* Increase the buffer size for `netstat` when looking for running Mongo servers. #4125
 
 * The Windows installer now always fetches the latest available version of
   Meteor at runtime, so that it doesn't need to be recompiled for every release.

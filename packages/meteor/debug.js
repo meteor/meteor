@@ -61,7 +61,7 @@ Meteor._suppress_log = function (count) {
   suppress += count;
 };
 
-Meteor._supressed_log_expected = function () {
+Meteor._suppressed_log_expected = function () {
   return suppress !== 0;
 };
 

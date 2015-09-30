@@ -1171,7 +1171,7 @@ _.extend(exports.CordovaPluginsFile.prototype, {
 
     var lines = files.splitBufferToLines(contents);
     _.each(lines, function (line) {
-      line = files.trimSpaceAndComments(line);
+      line = files.trimSpace(line);
       if (line === '')
         return;
 

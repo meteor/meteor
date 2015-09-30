@@ -452,7 +452,7 @@ Tinytest.addAsync('tracker - no infinite recomputation', function (test, onCompl
     c.invalidate();
   });
   test.isFalse(reran);
-  setTimeout(function () {
+  Meteor.setTimeout(function () {
     c.stop();
     Tracker.afterFlush(function () {
       test.isTrue(reran);
