@@ -65,7 +65,7 @@ var packageJson = {
     // in a subdirectory. See tools/cordova/README.md for instructions on how
     // to build and upload our own tarball.
     // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
-    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-d5ff7cf04757335762b6695f1664bca6c6cfc272.tar.gz",
+    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-1512fc069c7ea51c7a112cf14a8d93d69726a6f7.tar.gz",
     // Also include the Cordova CLI because it is used in tests
     "cordova": "5.2.0",
     "ios-sim": "4.1.1",
