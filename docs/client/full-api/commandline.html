@@ -28,7 +28,7 @@ changes are automatically detected and applied to the running
 application.
 
 You can use the application by pointing your web browser at
-<a href="http://localhost:3000">localhost:3000</a>. No internet connection is
+<a href="http://localhost:3000">localhost:3000</a>. No Internet connection is
 required.
 
 This is the default command. Simply running `meteor` is the
@@ -49,11 +49,15 @@ server code that would normally execute. In order to continue execution of
 server code, use either the web-based Node Inspector or the command-line
 debugger (further instructions will be printed in the console).
 
-Breakpoints can be set using the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger" target="_blank">`debugger` keyword</a>, or through the web UI of Node Inspector ("Sources" tab).
+Breakpoints can be set using the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger" target="_blank">`debugger`
+keyword</a>, or through the web UI of Node Inspector ("Sources" tab).
 
-The server process debugger will listen for incoming connections from debugging clients, such as node-inspector, on port 5858 by default. To specify a different port use the `--debug-port <port>` option.
+The server process debugger will listen for incoming connections from
+debugging clients, such as node-inspector, on port 5858 by default. To
+specify a different port use the `--debug-port <port>` option.
 
-The same debugging functionality can be achieved by adding the `--debug-port <port>` option to other `meteor` tool commands, such as `meteor run` and `meteor test-packages`.
+The same debugging functionality can be achieved by adding the `--debug-port <port>`
+option to other `meteor` tool commands, such as `meteor run` and `meteor test-packages`.
 
 
 <h3 id="meteorcreate">meteor create <i>name</i></h3>
@@ -62,7 +66,7 @@ Create a new Meteor project. By default, makes a subdirectory named *name*
 and copies in the template app. You can pass an absolute or relative
 path.
 
-You can use the --package option, to create a new package. If used in an
+You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
@@ -151,7 +155,7 @@ using your package with another release by passing the `--release` option to any
 command; `meteor update` changes the pinned release.
 
 Sometimes, Meteor will ask you to run `meteor update --patch`. Patch releases
-are special releases that contain only very minor change (usually crucial bug
+are special releases that contain only very minor changes (usually crucial bug
 fixes) from previous releases. We highly recommend that you always run `update
 --patch` when prompted.
 
@@ -165,13 +169,13 @@ change your package versions if necessary.
 
 Add packages to your Meteor project. By convention, names of community packages
 include the name of the maintainer. For example: `meteor add iron:router`. You
-can add multiple packages with one command
+can add multiple packages with one command.
 
 Optionally, adds version constraints. Running `meteor add package@1.1.0` will
 add the package at version `1.1.0` or higher (but not `2.0.0` or higher). If you
 want to use version `1.1.0` exactly, use `meteor add package@=1.1.0`. You can also
-'or' constraints together: for example, `meteor add 'package@=1.0.0 || =2.0.1'` means either 1.0.0 (exactly)
-or 2.0.1 (exactly).
+'or' constraints together: for example, `meteor add 'package@=1.0.0 || =2.0.1'`
+means either 1.0.0 (exactly) or 2.0.1 (exactly).
 
 To remove a version constraint for a specific package, run `meteor add` again
 without specifying a version. For example above, to stop using version `1.1.0`
@@ -203,7 +207,7 @@ package is available.
 
 Adds platforms to your Meteor project. You can add multiple
 platforms with one command. Once a platform has been added, you
-can use 'meteor run <i>platform</i>' to run on the platform, and 'meteor build'
+can use 'meteor run <i>platform</i>' to run on the platform, and `meteor build`
 to build the Meteor project for every added platform.
 
 
@@ -211,7 +215,7 @@ to build the Meteor project for every added platform.
 
 Removes a platform previously added to your Meteor project. For a
 list of the platforms that your application is currently using, see
-'meteor list-platforms'.
+`meteor list-platforms`.
 
 
 <h3 id="meteorlistplatforms">meteor list-platforms</h3>
@@ -237,8 +241,8 @@ mongo database.
 
 {{#warning}}
 This deletes your data! Make sure you do not have any information you
-care about in your local mongo database by running `meteor
-mongo`. From the mongo shell, use `show collections`
+care about in your local mongo database by running `meteor mongo`.
+From the mongo shell, use `show collections`
 and <code>db.<i>collection</i>.find()</code> to inspect your data.
 {{/warning}}
 
@@ -254,8 +258,8 @@ Package this project up for deployment. The output is a directory with several
 build artifacts:
 
 <ul><li>a tarball that includes everything necessary to run the application server
-  (see `README` in the tarball for details)</li>
-<li>an unsigned `apk` bundle and a project source if Android is targetted as a
+  (see the <code>README</code> in the tarball for details)</li>
+<li>an unsigned <code>apk</code> bundle and a project source if Android is targetted as a
   mobile platform</li>
 <li>a directory with an Xcode project source if iOS is targetted as a mobile
   platform</li></ul>
@@ -265,13 +269,13 @@ own server, instead of deploying to Meteor's servers.  You will have to deal
 with logging, monitoring, backups, load-balancing, etc, all of which we handle
 for you if you use `meteor deploy`.
 
-Unsigned `apk` bundle and the outputted Xcode project can be used to deploy
+The unsigned `apk` bundle and the outputted Xcode project can be used to deploy
 your mobile apps to Android Play Store and Apple App Store.
 
 By default, your application is bundled for your current architecture.
 This may cause difficulties if your app contains binary code due to,
 for example, npm packages. You can try to override that behavior
-with the --architecture flag.
+with the `--architecture` flag.
 
 
 <h3 id="meteorlint">meteor lint</h3>
@@ -294,10 +298,10 @@ usernames of its maintainers, and, if specified, its homepage and git URL.
 
 <h3 id="meteorpublish">meteor publish</h3>
 
-Publishes your package. To publish, you must cd into the package directory, log
+Publishes your package. To publish, you must `cd` into the package directory, log
 in with your Meteor Developer Account and run `meteor publish`. By convention,
-published package names must begin with the maintainer's Meteor Development
-Accounts username and a colon, like so: `iron:router`.
+published package names must begin with the maintainer's Meteor Developer
+Account username and a colon, like so: `iron:router`.
 
 To publish a package for the first time, use `meteor publish --create`.
 
@@ -330,14 +334,14 @@ and Mac OS. The servers for `meteor deploy` run 64-bit Linux.
 
 <h3 id="meteorpublishrelease">meteor publish-release</h3>
 
-Publishes a release of Meteor. Takes in a json configuration file.
+Publishes a release of Meteor. Takes in a JSON configuration file.
 
 Meteor releases are divided into tracks. While only MDG members can publish to
 the default Meteor track, anyone can create a track of their own and publish to
 it. Running `meteor update` without specifying the `--release` option will not
 cause the user to switch tracks.
 
-To publish to a release track for the first time, use the `create-track` flag.
+To publish to a release track for the first time, use the `--create-track` flag.
 
 The JSON configuration file must contain the name of the release track
 (`track`), the release version (`version`), various metadata, the packages
