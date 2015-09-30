@@ -8,7 +8,7 @@ que permite a criação de protótipos muito rápido e produz código multi-plat
 
 Com o Meteor, criamos apps:
 
-> em JavaScript
+* em JavaScript
 
 O objetivo desta plataforma é criar software de uma maneira mais simples como produzir uma nova plataforma para aplicações cloud
 que vão se tornar tão onipresentes quanto as plataformas anteriores (Unix, HTTP e a base de dados relacional). 
