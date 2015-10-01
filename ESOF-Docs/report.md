@@ -22,4 +22,9 @@ Meteor was first introduced in December 2011 under the name Skybreak
 
 # Processo
 # Análise Crítica
-O lançamento de muitas versões, torna-se um incomodo para os utilizadores, porque encontram problemas de compatibilidade. Isto pode levar a um desencorajamento por partes dos utilizadores que estão a testar as aplicações.
+O lançamento de muitas versões, torna-se um incomodo para os utilizadores, porque encontram problemas de compatibilidade. Isto pode levar a um desencorajamento por partes dos utilizadores que estão a testar as aplicações. Por outro lado, são facilmente detetados bugs pelos utilizadores e corrigidos pela equipa de trabalho.
+
+A ideia de um lançamento cedo para teste de mercado, para depois melhorá-la com o "feedback" dos utilizadores, também pode ser interpretada como "delevery over quality".
+
+Responding to change over Following a plan
+Uma escolhe pobre das funcionalidades necessárias, pode levar a uma sobrecarga de trabalho dos "developers" que pode levar a um esgotamento das capacidades da equipa de trabalho.
