@@ -17,6 +17,8 @@ que vão se tornar tão onipresentes quanto as plataformas anteriores (Unix, HTT
 
 Meteor foi desenvolvida para ser fácil de aprender, incuíndo principiantes. É utilizada Javascript como a única linguagem de programação porque é só essa usada no cliente (jQuery) assim como no servidor (Node.js, Underscore). Como base de dados, Meteor suporta MongoDB que está presente na interface do cliente assim como no servidor, onde não é necessário aprender um novo modelo de código.
 
+//notas
+Meteor was first introduced in December 2011 under the name Skybreak
 
 # Processo
 # Análise Crítica
