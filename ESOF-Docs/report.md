@@ -28,3 +28,5 @@ A ideia de um lançamento cedo para teste de mercado, para depois melhorá-la co
 
 Responding to change over Following a plan
 Uma escolhe pobre das funcionalidades necessárias, pode levar a uma sobrecarga de trabalho dos "developers" que pode levar a um esgotamento das capacidades da equipa de trabalho.
+
+Todas as mudanças que é feito ao projecto tem um custo , pode dificultar prever quais os custos totais e se o "bugget/orçamento" vai ser suficiente para o custo do projecto.
