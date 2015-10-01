@@ -154,5 +154,37 @@ describe('getMeteorMeta', function () {
     assert.equal(result.isInMeteorProject, true)
   })
 
+  describe('mobile-config.js', function () {
+    it('is detected', function () {
+      var filename = path.join(rootPath, 'mobile-config.js')
+      var result = getMeteorMeta(rootPaths, filename)
+
+      assert.equal(result.isMobileConfig, true)
+    })
+
+    it('is not detected', function () {
+      var filename = path.join(rootPath, 'sub', 'mobile-config.js')
+      var result = getMeteorMeta(rootPaths, filename)
+
+      assert.equal(result.isMobileConfig, false)
+    })
+  })
+
+  describe('package.js', function () {
+    it('is detected', function () {
+      var filename = path.join(rootPath, 'packages', 'my-module', 'package.js')
+      var result = getMeteorMeta(rootPaths, filename)
+
+      assert.equal(result.isPackageConfig, true)
+    })
+
+    it('is not detected', function () {
+      var filename = path.join(rootPath, 'packages', 'package.js')
+      var result = getMeteorMeta(rootPaths, filename)
+
+      assert.equal(result.isPackageConfig, false)
+    })
+  })
+
 
 })
