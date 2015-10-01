@@ -20,3 +20,4 @@ Meteor foi desenvolvida para ser fácil de aprender, incuíndo principiantes. É
 
 # Processo
 # Análise Crítica
+O lançamento de muitas versões, torna-se um incomodo para os utilizadores, porque encontram problemas de compatibilidade. Isto pode levar a um desencorajamento por partes dos utilizadores que estão a testar as aplicações.
