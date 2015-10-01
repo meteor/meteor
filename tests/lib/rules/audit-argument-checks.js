@@ -16,7 +16,7 @@ var RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 var ruleTester = new RuleTester()
-ruleTester.run('audit-argument-checks', rule, {
+ruleTester.run('audit-argument-checks', rule(), {
 
   valid: [
     'foo()',

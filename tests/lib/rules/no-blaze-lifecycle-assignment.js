@@ -18,7 +18,7 @@ var RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 var ruleTester = new RuleTester()
-ruleTester.run('no-blaze-lifecycle-assignment', rule, {
+ruleTester.run('no-blaze-lifecycle-assignment', rule(), {
 
   valid: [
     'x += 1',

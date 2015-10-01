@@ -9,16 +9,53 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
+import {SERVER, CLIENT} from '../../../dist/util/environment.js'
 var rule = require('../../../dist/rules/no-session')
 var RuleTester = require('eslint').RuleTester
+
+
+// -----------------------------------------------------------------------------
+// Environments
+// -----------------------------------------------------------------------------
+
+const serverEnv = {
+  path: 'server/methods.js',
+  env: SERVER,
+  isCompatibilityFile: false,
+  isInMeteorProject: true
+}
+
+const clientEnv = {
+  path: 'server/methods.js',
+  env: CLIENT,
+  isCompatibilityFile: false,
+  isInMeteorProject: true
+}
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
+
 var ruleTester = new RuleTester()
-ruleTester.run('no-session', rule, {
+ruleTester.run('no-session', rule(serverEnv), {
+
+  valid: [
+    'session.get("foo")',
+    'foo(Session)'
+  ],
+
+  invalid: [
+    {code: 'Session.set("foo", true)', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
+    {code: 'Session.get("foo")', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
+    {code: 'Session.clear("foo")', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
+    {code: 'Session.all()', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]}
+  ]
+
+})
+
+ruleTester.run('no-session', rule(clientEnv), {
 
   valid: [
     'session.get("foo")',

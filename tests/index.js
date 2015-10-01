@@ -18,10 +18,10 @@ var defaultSettings = {}
 
 describe('all rule files should be exported by the plugin', function() {
   rules.forEach(function(ruleName) {
-    it('should export ' + ruleName, function() {
+    it('should export ' + ruleName, function () {
       assert.equal(
-        plugin.rules[ruleName],
-        require(path.join('../dist/rules', ruleName))
+        typeof plugin.rules[ruleName],
+        'function'
       )
     })
 

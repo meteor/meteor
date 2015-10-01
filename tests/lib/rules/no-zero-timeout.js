@@ -16,7 +16,7 @@ var RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 var ruleTester = new RuleTester()
-ruleTester.run('no-zero-timeout', rule, {
+ruleTester.run('no-zero-timeout', rule(), {
 
   valid: [
     'Meteor.setTimeout()',
