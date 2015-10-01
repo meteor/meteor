@@ -11,13 +11,10 @@ const rootPath = path.join('User', 'anon', 'meteor-project')
 const rootPaths = [rootPath]
 
 describe('getMeteorMeta', function () {
-  it('has working rule test-mode', function () {
-    var someObj = {}
-    assert.equal(getMeteorMeta(someObj), someObj)
-  })
 
-  it('does not accept anything that is not an object or array', function () {
+  it('does not accept anything that is not an array', function () {
     assert.throws(getMeteorMeta.bind(null), Error)
+    assert.throws(getMeteorMeta.bind(null, {}), Error)
     assert.throws(getMeteorMeta.bind(null, true), Error)
     assert.throws(getMeteorMeta.bind(null, false), Error)
     assert.throws(getMeteorMeta.bind(null, 2), Error)

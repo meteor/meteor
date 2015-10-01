@@ -26,7 +26,7 @@ const serverEnv = {
 }
 
 const clientEnv = {
-  path: 'server/methods.js',
+  path: 'client/methods.js',
   env: CLIENT,
   isCompatibilityFile: false,
   isInMeteorProject: true
@@ -39,7 +39,7 @@ const clientEnv = {
 
 
 var ruleTester = new RuleTester()
-ruleTester.run('no-session', rule(serverEnv), {
+ruleTester.run('no-session', rule(() => serverEnv), {
 
   valid: [
     'session.get("foo")',
@@ -55,7 +55,7 @@ ruleTester.run('no-session', rule(serverEnv), {
 
 })
 
-ruleTester.run('no-session', rule(clientEnv), {
+ruleTester.run('no-session', rule(() => clientEnv), {
 
   valid: [
     'session.get("foo")',
