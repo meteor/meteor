@@ -9,15 +9,15 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../dist/rules/no-blaze-lifecycle-assignment');
-var RuleTester = require('eslint').RuleTester;
+var rule = require('../../../dist/rules/no-blaze-lifecycle-assignment')
+var RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-var ruleTester = new RuleTester();
+var ruleTester = new RuleTester()
 ruleTester.run('no-blaze-lifecycle-assignment', rule, {
 
   valid: [
@@ -73,4 +73,4 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule, {
       }]
     }
   ]
-});
+})

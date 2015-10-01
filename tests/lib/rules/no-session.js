@@ -9,15 +9,15 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../dist/rules/no-session');
-var RuleTester = require('eslint').RuleTester;
+var rule = require('../../../dist/rules/no-session')
+var RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-var ruleTester = new RuleTester();
+var ruleTester = new RuleTester()
 ruleTester.run('no-session', rule, {
 
   valid: [
@@ -32,4 +32,4 @@ ruleTester.run('no-session', rule, {
     {code: 'Session.all()', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]}
   ]
 
-});
+})

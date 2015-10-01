@@ -7,15 +7,15 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../dist/rules/audit-argument-checks');
-var RuleTester = require('eslint').RuleTester;
+var rule = require('../../../dist/rules/audit-argument-checks')
+var RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-var ruleTester = new RuleTester();
+var ruleTester = new RuleTester()
 ruleTester.run('audit-argument-checks', rule, {
 
   valid: [
@@ -108,4 +108,4 @@ ruleTester.run('audit-argument-checks', rule, {
       parser: 'babel-eslint'
     }
   ]
-});
+})
