@@ -8,6 +8,7 @@ var getMeteorMeta = require('../../../dist/util/getMeteorMeta.js')
 
 
 const rootPath = path.join('User', 'anon', 'meteor-project')
+const rootPaths = [rootPath]
 
 describe('getMeteorMeta', function () {
   it('has working rule test-mode', function () {
@@ -15,9 +16,16 @@ describe('getMeteorMeta', function () {
     assert.equal(getMeteorMeta(someObj), someObj)
   })
 
+  it('does not accept anything that is not an object or array', function () {
+    assert.throws(getMeteorMeta.bind(null), Error)
+    assert.throws(getMeteorMeta.bind(null, true), Error)
+    assert.throws(getMeteorMeta.bind(null, false), Error)
+    assert.throws(getMeteorMeta.bind(null, 2), Error)
+  })
+
   describe('when not in Meteor project', function () {
     it('returns default env', function () {
-      var result = getMeteorMeta(false, 'file.js')
+      var result = getMeteorMeta([], 'file.js')
       assert.equal(typeof result, 'object')
       assert.equal(result.isInMeteorProject, false)
       assert.equal(Object.keys(result).length, 1)
@@ -27,7 +35,7 @@ describe('getMeteorMeta', function () {
   describe('in public', function () {
     it('detects the environment', function () {
       var filename = path.join(rootPath, 'public', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'public/file.js')
       assert.equal(result.env, ENVIRONMENT.PUBLIC)
@@ -39,7 +47,7 @@ describe('getMeteorMeta', function () {
   describe('in private', function () {
     it('detects the environment', function () {
       var filename = path.join(rootPath, 'private', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'private/file.js')
       assert.equal(result.env, ENVIRONMENT.PRIVATE)
@@ -51,7 +59,7 @@ describe('getMeteorMeta', function () {
   describe('in package', function () {
     it('detects the environment', function () {
       var filename = path.join(rootPath, 'packages', 'awesome-pkg', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'packages/awesome-pkg/file.js')
       assert.equal(result.env, ENVIRONMENT.PACKAGE)
@@ -63,7 +71,7 @@ describe('getMeteorMeta', function () {
   describe('on no special folder', function () {
     it('has universal environment', function () {
       var filename = path.join(rootPath, 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'file.js')
       assert.equal(result.env, ENVIRONMENT.UNIVERSAL)
@@ -76,7 +84,7 @@ describe('getMeteorMeta', function () {
 
     it('returns file info', function () {
       var filename = path.join(rootPath, 'client', 'lib', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'client/lib/file.js')
       assert.equal(result.env, ENVIRONMENT.CLIENT)
@@ -86,7 +94,7 @@ describe('getMeteorMeta', function () {
 
     it('does not detect compatibility when directly in client-folder ', function () {
       var filename = path.join(rootPath, 'client', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'client/file.js')
       assert.equal(result.env, ENVIRONMENT.CLIENT)
@@ -96,7 +104,7 @@ describe('getMeteorMeta', function () {
 
     it('detects compatibility mode', function () {
       var filename = path.join(rootPath, 'client', 'compatibility', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'client/compatibility/file.js')
       assert.equal(result.env, ENVIRONMENT.CLIENT)
@@ -108,7 +116,7 @@ describe('getMeteorMeta', function () {
   describe('on server', function () {
     it('detects the environment', function () {
       var filename = path.join(rootPath, 'server', 'file.js')
-      var result = getMeteorMeta(rootPath, filename)
+      var result = getMeteorMeta(rootPaths, filename)
       assert.equal(typeof result, 'object')
       assert.equal(result.path, 'server/file.js')
       assert.equal(result.env, ENVIRONMENT.SERVER)
@@ -119,7 +127,7 @@ describe('getMeteorMeta', function () {
     describe('that is nested', function () {
       it('detects the environment', function () {
         var filename = path.join(rootPath, 'lib', 'server', 'file.js')
-        var result = getMeteorMeta(rootPath, filename)
+        var result = getMeteorMeta(rootPaths, filename)
         assert.equal(typeof result, 'object')
         assert.equal(result.path, 'lib/server/file.js')
         assert.equal(result.env, ENVIRONMENT.SERVER)
@@ -131,7 +139,7 @@ describe('getMeteorMeta', function () {
 
   describe('in tests', function () {
     var filename = path.join(rootPath, 'tests', 'file.js')
-    var result = getMeteorMeta(rootPath, filename)
+    var result = getMeteorMeta(rootPaths, filename)
     assert.equal(typeof result, 'object')
     assert.equal(result.path, 'tests/file.js')
     assert.equal(result.env, ENVIRONMENT.TEST)
@@ -141,7 +149,7 @@ describe('getMeteorMeta', function () {
 
   describe('in node_modules', function () {
     var filename = path.join(rootPath, 'node_modules', 'my-module', 'file.js')
-    var result = getMeteorMeta(rootPath, filename)
+    var result = getMeteorMeta(rootPaths, filename)
     assert.equal(typeof result, 'object')
     assert.equal(result.path, 'node_modules/my-module/file.js')
     assert.equal(result.env, ENVIRONMENT.NODE_MODULE)

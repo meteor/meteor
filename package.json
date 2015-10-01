@@ -13,8 +13,7 @@
     "prepublish": "npm run build",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
     "test": "npm run lint && npm run build && npm run unit-test",
-    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot --compilers js:babel/register",
-    "unit-test:n": "node_modules/mocha/bin/_mocha tests/**/*.js --recursive --reporter dot --compilers js:babel/register"
+    "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot --compilers js:babel/register"
   },
   "files": [
     "LICENSE",
@@ -29,7 +28,8 @@
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
     "invariant": "2.1.1",
-    "path-exists": "2.0.0"
+    "path-exists": "2.0.0",
+    "walkdir": "0.0.10"
   },
   "devDependencies": {
     "babel": "5.8.23",
