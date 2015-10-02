@@ -5371,7 +5371,7 @@ DocsData = {
   "Mongo.Collection#allow": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 791,
+    "lineno": 787,
     "locus": "Server",
     "longname": "Mongo.Collection#allow",
     "memberof": "Mongo.Collection",
@@ -5421,7 +5421,7 @@ DocsData = {
   "Mongo.Collection#deny": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 803,
+    "lineno": 799,
     "locus": "Server",
     "longname": "Mongo.Collection#deny",
     "memberof": "Mongo.Collection",
@@ -5471,7 +5471,7 @@ DocsData = {
   "Mongo.Collection#find": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 261,
+    "lineno": 257,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
@@ -5568,7 +5568,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 287,
+    "lineno": 283,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5656,7 +5656,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 431,
+    "lineno": 427,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5689,7 +5689,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 660,
+    "lineno": 656,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5702,7 +5702,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 672,
+    "lineno": 668,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5715,7 +5715,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 455,
+    "lineno": 451,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5748,7 +5748,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 441,
+    "lineno": 437,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5818,7 +5818,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 617,
+    "lineno": 613,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5880,7 +5880,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 694,
+    "lineno": 690,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -6048,7 +6048,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 687,
+    "lineno": 683,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
