@@ -1,11 +1,13 @@
 # Relatório
 
+
+## FEUP ESOF  MIEIC
+
+
 ### Alunos:
 * Luís Pedro Sousa Pinto, ee11169@fe.up.pt
-*
-*
-
-## FEUP                        ESOF                                   MIEIC
+* Rúben
+* Nuno
 
 # Descrição do Projeto
 
