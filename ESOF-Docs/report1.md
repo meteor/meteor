@@ -27,9 +27,19 @@ Meteor foi desenvolvida para ser fácil de aprender, incuíndo principiantes. É
 # Processo
 
 Meteor contém uma comunidade bastante populosa com colaboradores por todo mundo. A equipa é constituída por 26 elementos com
-historial de experiência bastante fascinante. A Meteor usa um [roadmap] (https://trello.com/b/hjBDflxp/meteor-roadmap) para comunicar em relação ao que estão a trabalhar neste momento e no que vão trabalhar no futuro.
+historial de experiência bastante fascinante. A Meteor usa um [roadmap] (https://trello.com/b/hjBDflxp/meteor-roadmap) para comunicar no que estão a trabalhar neste momento e no que vão trabalhar no futuro.
 
 Para contribuir com o projeto podemos reportar bugs, adicionar novos packages e efetuar mudanças na Meteor core. Ao reportar os bugs devemos colocar um report com reproduction recipe no [issue tracker] (https://github.com/meteor/meteor/issues) do [GitHub da Meteor] (https://github.com/meteor/meteor). Caso seja um bug de segurança, devemos mandar um  email para security@meteor.com em vez de colocar o report. Para mais informações sobre o reproduction recipe siga as instruções do tópico "Reporting a bug in Meteor" desta [página] (https://github.com/meteor/meteor/wiki/Contributing-to-Meteor).
+Adicionar novos packages para a Meteor deve ser feita através de uma [Atmosphere] (https://atmospherejs.com/) package. A package deve ter testes como por exemplo o [test] (https://github.com/iron-meteor/iron-router/tree/master/test) do master branch no [iron:router] (https://atmospherejs.com/iron/router).
+Para realizar mudanças no core da Meteor podemos contribuir submetendo um pull request ou propondo a nossa mudança a um core developer como, por exemplo, através da [Devshop] (https://devshop.meteor.com/) em San Francisco. Submeter um pull-request pode não ser tão simples quanto parece. Devemos seguir as próximas intruções para efetuar um pull request:
+
+* Assinar o [contributor's agreement] (https://contribute.meteor.com/).
+* A base do nosso trabalho tem de ser realizada na devel branch. 
+* Mudar o nome da branch de acordo com o bug ou característica que estamos a submeter.
+* Apenas enviar um bug ou característica por pull request
+* Enviar com os testes realizados que comprovam que o código funciona.
+* Seguir o [MDG style guide] (https://github.com/meteor/meteor/wiki/Meteor-Style-Guide) para o código e para submeter mensagens.
+* Não se esquecer que a pessoa que fez o pull request ter o nome completo e o email no Git.
 
 
 # Análise Crítica
