@@ -9,6 +9,8 @@
 
 ## Meteor - The JavaScript App Platform
 
+![alt tag] (https://d14jjfgstdxsoz.cloudfront.net/og-image-logo.png)
+
 [Meteor] (https://www.meteor.com/) é um open-source, real-time, e framework de aplicações web multi-plataforma construído em cima de tecnologia comprovada,
 que permite a criação de protótipos muito rápido e produz código multi-plataforma (web , Android, iOS).
 Meteor foi introduzido em Dezembro de  2011 com o nome de Skybreak.
