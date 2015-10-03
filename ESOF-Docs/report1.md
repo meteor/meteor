@@ -11,6 +11,7 @@
 
 Meteor é um open-source, real-time, e framework de aplicações web multi-plataforma construído em cima de tecnologia comprovada,
 que permite a criação de protótipos muito rápido e produz código multi-plataforma (web , Android, iOS).
+Meteor foi introduzido em Dezembro de  2011 com o nome de Skybreak.
 
 Com o Meteor, criamos apps:
 
@@ -23,10 +24,9 @@ que vão se tornar tão onipresentes quanto as plataformas anteriores (Unix, HTT
 
 Meteor foi desenvolvida para ser fácil de aprender, incuíndo principiantes. É utilizada Javascript como a única linguagem de programação porque é só essa usada no cliente (jQuery) assim como no servidor (Node.js, Underscore). Como base de dados, Meteor suporta MongoDB que está presente na interface do cliente assim como no servidor, onde não é necessário aprender um novo modelo de código.
 
-//notas
-Meteor was first introduced in December 2011 under the name Skybreak
-
 # Processo
+
+
 # Análise Crítica
 O lançamento de muitas versões, torna-se um incomodo para os utilizadores, porque encontram problemas de compatibilidade. Isto pode levar a um desencorajamento por partes dos utilizadores que estão a testar as aplicações. Por outro lado, são facilmente detetados bugs pelos utilizadores e corrigidos pela equipa de trabalho.
 
