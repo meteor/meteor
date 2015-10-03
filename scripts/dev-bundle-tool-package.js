@@ -26,8 +26,8 @@ var packageJson = {
     fibers: fibersVersion,
     "meteor-babel": "0.5.8",
     "meteor-promise": "0.5.0",
-    // For Map and Set polyfills.
-    "core-js": "1.1.4",
+    // For various ES2015 polyfills, such as Map and Set.
+    "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
