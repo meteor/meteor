@@ -43,7 +43,7 @@ Para realizar mudanças no core da Meteor podemos contribuir submetendo um pull 
 
 Analisando a actividade no Github, a cada nova versão da aplicação é criado um novo branch, possibilitando um facil e rapido conhecimento das etapas que a aplicação percorreu. A cada nova feature também é criado um novo ramo, que quando concluida e testada é adicionada a versão master. Como cada nova feature, só é adicionada caso passe por um estrutura de testes, leva-nos a presumir que o processo TDD(Test Drive Development) é usado no desenvolvimento. Neste processo, composto por 5 etapas, são programados os testes que definem a nova funcionalidade, só depois ela passar os testes previem feitos, será adicionado ao projeto principal. Isto previne que cada nova funcionalidade, não entre em conflito com o código feito até então.
 
-#Analise Critica
+#Análise Crítica
 
 O lançamento de muitas versões, torna-se um incomodo para os utilizadores, porque encontram problemas de compatibilidade. Isto pode levar a um desencorajamento por partes dos utilizadores que estão a testar as aplicações. Por outro lado, são facilmente detetados bugs pelos utilizadores e corrigidos pela equipa de trabalho.
 
