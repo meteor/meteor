@@ -7,6 +7,12 @@
   IDs. `Random.id()` can still be used to generate crpytographically
   secure document IDs. [#5161](https://github.com/meteor/meteor/issues/5161)
 
+* The `ecmascript-collections` package has been renamed to
+  `ecmascript-runtime` and now includes a more complete selection of
+  ES2015 polyfills and shims from [`core-js`](https://www.npmjs.com/package/core-js).
+  The complete list can be found
+  [here](https://github.com/meteor/ecmascript-runtime/blob/master/server.js).
+
 ## v1.2.0.2, 2015-Sept-28
 
 * Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
