@@ -9,8 +9,7 @@
 
 ## Meteor - The JavaScript App Platform
 
-![alt tag] (https://d14jjfgstdxsoz.cloudfront.net/og-image-logo.png)
-![teste] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/og-image-logo.png)
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/og-image-logo.png)
 
 O [Meteor] (https://www.meteor.com/) é um framework de aplicações web open-source, real-time e multi-plataforma construído com base em tecnologia comprovada,
 que permite a criação muito rápida de protótipos e produz código multi-plataforma (web, Android, iOS).
