@@ -2,8 +2,8 @@
 
 ### Alunos:
 * Luís Pedro Sousa Pinto, ee11169@fe.up.pt
-* Rúben
-* Nuno
+* Rúben Alexandre da Fonseca Marques, ei10117@fe.up.pt 
+* Nuno Soares Marques, ee11291@fe.up.pt
 
 # Descrição do Projeto
 
@@ -25,6 +25,11 @@ que vão se tornar tão onipresentes quanto as plataformas anteriores (Unix, HTT
 Meteor foi desenvolvida para ser fácil de aprender, incuíndo principiantes. É utilizada Javascript como a única linguagem de programação porque é só essa usada no cliente (jQuery) assim como no servidor (Node.js, Underscore). Como base de dados, Meteor suporta MongoDB que está presente na interface do cliente assim como no servidor, onde não é necessário aprender um novo modelo de código.
 
 # Processo
+
+Meteor contém uma comunidade bastante populosa com colaboradores por todo mundo. A equipa é constituída por 26 elementos com
+historial de experiência bastante fascinante. A Meteor usa um [roadmap] (https://trello.com/b/hjBDflxp/meteor-roadmap) para comunicar em relação ao que estão a trabalhar neste momento e no que vão trabalhar no futuro.
+
+Para contribuir com o projeto podemos reportar bugs, adicionar novos packages e efetuar mudanças na Meteor core. Ao reportar os bugs devemos colocar um report com reproduction recipe no issue tracker do GitHub da Meteor. Caso seja um bug de segurança, devemos mandar um  email para security@meteor.com em vez de colocar o report. Para mais informações sobre o reproduction recipe siga as instruções do tópico "Reporting a bug in Meteor" desta página.
 
 
 # Análise Crítica
