@@ -9,7 +9,7 @@
 
 ## Meteor - The JavaScript App Platform
 
-Meteor é um open-source, real-time, e framework de aplicações web multi-plataforma construído em cima de tecnologia comprovada,
+[Meteor] (https://www.meteor.com/) é um open-source, real-time, e framework de aplicações web multi-plataforma construído em cima de tecnologia comprovada,
 que permite a criação de protótipos muito rápido e produz código multi-plataforma (web , Android, iOS).
 Meteor foi introduzido em Dezembro de  2011 com o nome de Skybreak.
 
@@ -29,7 +29,7 @@ Meteor foi desenvolvida para ser fácil de aprender, incuíndo principiantes. É
 Meteor contém uma comunidade bastante populosa com colaboradores por todo mundo. A equipa é constituída por 26 elementos com
 historial de experiência bastante fascinante. A Meteor usa um [roadmap] (https://trello.com/b/hjBDflxp/meteor-roadmap) para comunicar em relação ao que estão a trabalhar neste momento e no que vão trabalhar no futuro.
 
-Para contribuir com o projeto podemos reportar bugs, adicionar novos packages e efetuar mudanças na Meteor core. Ao reportar os bugs devemos colocar um report com reproduction recipe no issue tracker do GitHub da Meteor. Caso seja um bug de segurança, devemos mandar um  email para security@meteor.com em vez de colocar o report. Para mais informações sobre o reproduction recipe siga as instruções do tópico "Reporting a bug in Meteor" desta página.
+Para contribuir com o projeto podemos reportar bugs, adicionar novos packages e efetuar mudanças na Meteor core. Ao reportar os bugs devemos colocar um report com reproduction recipe no [issue tracker] (https://github.com/meteor/meteor/issues) do [GitHub da Meteor] (https://github.com/meteor/meteor). Caso seja um bug de segurança, devemos mandar um  email para security@meteor.com em vez de colocar o report. Para mais informações sobre o reproduction recipe siga as instruções do tópico "Reporting a bug in Meteor" desta [página] (https://github.com/meteor/meteor/wiki/Contributing-to-Meteor).
 
 
 # Análise Crítica
