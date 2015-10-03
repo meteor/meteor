@@ -16,8 +16,8 @@ Package.onUse(function (api) {
   api.use('babel-compiler');
 
   api.imply('babel-runtime');
+  api.imply('ecmascript-runtime');
   api.imply('promise');
-  api.imply('ecmascript-collections');
 
   api.addFiles("ecmascript.js", "server");
   api.export("ECMAScript");
