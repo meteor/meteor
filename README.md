@@ -53,6 +53,8 @@ Finally, enable all of the rules that you would like to use.
 }
 ```
 
+For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_METEOR_PROJECT.md).
+
 # List of supported rules
 
 * [no-session](docs/rules/no-session.md): Prevent usage of Session
@@ -62,16 +64,19 @@ Finally, enable all of the rules that you would like to use.
 
 ## To Do
 
-* Add more rules.
+* Implement basic rules for Meteor API
 
 [Any rule idea is welcome !](https://github.com/dferber90/eslint-plugin-meteor/issues)
+
+## Contributing
+
+Read about [set up of the development environment](docs/SETUP_DEVELOPMENT.md).
 
 ## Essential Development Resources
 
 These specs and tools help enormously when developing new rules.
 * [ESTree Spec](https://github.com/estree/estree/blob/master/spec.md)
 * [Espree Parser](http://eslint.org/parser/)
-* [Yeoman ESLint Generator](https://github.com/eslint/generator-eslint)
 
 
 # Thanks
