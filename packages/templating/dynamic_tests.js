@@ -107,12 +107,12 @@ Tinytest.add(
     // Choose the "ui-dynamic-test-sub" template, with no data context
     // passed in.
     nameVar.set("ui_dynamic_test_sub_contentblock");
-    Tracker.flush();
+    Tracker.flush({_throwFirstError: true});
     test.equal(canonicalizeHtml(div.innerHTML), "testcontentBlock");
 
     // Set a data context.
     dataVar.set({ foo: "bar" });
-    Tracker.flush();
+    Tracker.flush({_throwFirstError: true});
     test.equal(canonicalizeHtml(div.innerHTML), "testbarcontentBlock");
   });
 
@@ -134,7 +134,7 @@ Tinytest.add(
     test.equal(canonicalizeHtml(div.innerHTML), "");
 
     nameVar.set("ui_dynamic_test_sub_contentblock");
-    Tracker.flush();
+    Tracker.flush({_throwFirstError: true});
     test.equal(canonicalizeHtml(div.innerHTML), "testcontentBlock");
   });
 
