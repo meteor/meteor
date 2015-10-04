@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.1.5-plugins.1"
+  version: "1.1.6"
 });
 
 Package.onUse(function (api) {
@@ -30,8 +30,10 @@ Package.onUse(function (api) {
   api.addFiles('oauth_server.js', 'server');
   api.addFiles('pending_credentials.js', 'server');
 
-  api.addFiles('end_of_popup_response.html', 'server', { isAsset: true });
-  api.addFiles('end_of_redirect_response.html', 'server', {isAsset: true});
+  api.addAssets([
+    'end_of_popup_response.html',
+    'end_of_redirect_response.html'
+  ], 'server');
 
   api.addFiles('oauth_common.js');
 

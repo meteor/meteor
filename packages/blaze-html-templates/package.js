@@ -1,6 +1,6 @@
 Package.describe({
   name: 'blaze-html-templates',
-  version: '1.0.0',
+  version: '1.0.1',
   // Brief, one-line summary of the package.
   summary: 'Compile HTML templates into reactive UI with Meteor Blaze',
   // By default, Meteor will default to using README.md for documentation.

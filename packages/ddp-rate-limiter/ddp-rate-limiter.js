@@ -1,12 +1,12 @@
 // Rate Limiter built into DDP with a default error message. See README or
 // online documentation for more details.
-DDPRateLimiter = {}
+DDPRateLimiter = {};
 
 var errorMessage = function (rateLimitResult) {
   return "Error, too many requests. Please slow down. You must wait " +
     Math.ceil(rateLimitResult.timeToReset / 1000) + " seconds before " +
     "trying again.";
-}
+};
 var rateLimiter = new RateLimiter();
 
 DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
@@ -14,7 +14,7 @@ DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
     return errorMessage(rateLimitResult);
   else
     return errorMessage;
-}
+};
 
 /**
  * @summary Set error message text when method or subscription rate limit
@@ -26,7 +26,7 @@ DDPRateLimiter.getErrorMessage = function (rateLimitResult) {
  */
 DDPRateLimiter.setErrorMessage = function (message) {
   errorMessage = message;
-}
+};
 
 /**
  * @summary
@@ -70,7 +70,7 @@ DDPRateLimiter.addRule = function (matcher, numRequests, timeInterval) {
 
 DDPRateLimiter.printRules = function () {
   return rateLimiter.rules;
-}
+};
 
 /**
  * @summary Removes the specified rule from the rate limiter. If rule had
@@ -80,14 +80,14 @@ DDPRateLimiter.printRules = function () {
  */
 DDPRateLimiter.removeRule = function (id) {
   return rateLimiter.removeRule(id);
-}
+};
 
 // This is accessed inside livedata_server.js, but shouldn't be called by any
 // user.
 DDPRateLimiter._increment = function (input) {
   rateLimiter.increment(input);
-}
+};
 
 DDPRateLimiter._check = function (input) {
   return rateLimiter.check(input);
-}
+};

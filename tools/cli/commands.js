@@ -342,7 +342,7 @@ function doRunCommand(options) {
 
   if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
-      cordovaProject = new CordovaProject(projectContext, {
+      const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
@@ -597,12 +597,12 @@ main.registerCommand({
     // If trying to create in current directory
     appName = files.pathBasename(files.cwd());
   } else {
-    appName = files.pathBasename(options.appDir);
+    appName = files.pathBasename(appPath);
   }
 
 
   var transform = function (x) {
-    return x.replace(/~name~/g, files.pathBasename(appPath));
+    return x.replace(/~name~/g, appName);
   };
 
   // These file extensions are usually metadata, not app code
@@ -724,7 +724,7 @@ ${nonCodeFileExts.join(', ')}
   // in the template's versions file).
 
   var appNameToDisplay = appPathAsEntered === "." ?
-    "current directory" : appPathAsEntered;
+    "current directory" : `'${appPathAsEntered}'`;
 
   var message = `Created a new Meteor app in ${appNameToDisplay}`;
 
@@ -741,9 +741,14 @@ ${nonCodeFileExts.join(', ')}
   Console.info("To run your new app:");
 
   if (appPathAsEntered !== ".") {
+    // Wrap the app path in quotes if it contains spaces
+    const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
+      appPathAsEntered :
+      `'${appPathAsEntered}'`;
+
     // Don't tell people to 'cd .'
     Console.info(
-      Console.command("cd " + appPathAsEntered),
+      Console.command("cd " + appPathWithQuotesIfSpaces),
         Console.options({ indent: 2 }));
   }
 
@@ -798,7 +803,7 @@ main.registerCommand(_.extend({ name: 'bundle', hidden: true
       "This command has been deprecated in favor of " +
       Console.command("'meteor build'") + ", which allows you to " +
       "build for multiple platforms and outputs a directory instead of " +
-      "a single tarball. See " + Console.command("'meteor help build'") +
+      "a single tarball. See " + Console.command("'meteor help build'") + " " +
       "for more information.");
       Console.error();
       return buildCommand(_.extend(options, { _serverOnly: true }));
@@ -848,7 +853,11 @@ var buildCommand = function (options) {
   if (!options._serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
-    if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
+    if (process.platform === 'win32' && !_.isEmpty(cordovaPlatforms)) {
+      Console.warn(`Can't build for mobile on Windows. Skipping the following \
+platforms: ${cordovaPlatforms.join(", ")}`);
+      cordovaPlatforms = [];
+    } else if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
       Console.warn("Currently, it is only possible to build iOS apps \
 on an OS X system.");
@@ -916,7 +925,8 @@ on an OS X system.");
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
-    }
+    },
+    providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
   });
   if (bundleResult.errors) {
     Console.error("Errors prevented bundling:");
@@ -950,7 +960,7 @@ on an OS X system.");
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
-        const plugins = cordova.pluginsFromStarManifest(
+        const plugins = cordova.pluginVersionsFromStarManifest(
           bundleResult.starManifest);
 
         cordovaProject.prepareFromAppBundle(bundlePath, plugins);
@@ -984,8 +994,10 @@ https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
               const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
                 options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
 
+              if (files.exists(apkPath)) {
               files.copyFile(apkPath, files.pathJoin(platformOutputPath,
                 options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+              }
 
               files.writeFile(
                 files.pathJoin(platformOutputPath, 'README'),
@@ -1120,16 +1132,16 @@ main.registerCommand({
     if (! mongoPort) {
       Console.info("mongo: Meteor isn't running a local MongoDB server.");
       Console.info();
-      Console.info(
-        "This command only works while Meteor is running your application " +
-        "locally. Start your application first. (This error will also occur " +
-        "if you asked Meteor to use a different MongoDB server with " +
-        "$MONGO_URL when you ran your application.)");
+      Console.info(`\
+This command only works while Meteor is running your application locally. \
+Start your application first with 'meteor' and then run this command in a new \
+terminal. This error will also occur if you asked Meteor to use a different \
+MongoDB server with $MONGO_URL when you ran your application.`);
       Console.info();
-      Console.info(
-        "If you're trying to connect to the database of an app you deployed " +
-        "with " + Console.command("'meteor deploy'") +
-        ", specify your site's name with this command.");
+      Console.info(`\
+If you're trying to connect to the database of an app you deployed with \
+${Console.command("'meteor deploy'")}, specify your site's name as an argument \
+to this command.`);
       return 1;
     }
     mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
@@ -1455,7 +1467,11 @@ main.registerCommand({
     'allow-incompatible-update': { type: Boolean },
 
     // Don't print linting messages for tested packages
-    'no-lint': { type: Boolean }
+    'no-lint': { type: Boolean },
+
+    // allow excluding packages when testing all packages.
+    // should be a comma-separated list of package names.
+    'exclude': { type: String }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -1512,6 +1528,16 @@ main.registerCommand({
 
   var packagesToAdd = getTestPackageNames(projectContext, options.args);
 
+  // filter out excluded packages
+  var excludedPackages = options.exclude && options.exclude.split(',');
+  if (excludedPackages) {
+    packagesToAdd = _.filter(packagesToAdd, function (p) {
+      return ! _.some(excludedPackages, function (excluded) {
+        return p.replace(/^local-test:/, '') === excluded;
+      });
+    });
+  }
+
   // Use the driver package
   // Also, add `autoupdate` so that you don't have to manually refresh the tests
   packagesToAdd.unshift("autoupdate", options['driver-package']);
@@ -1539,7 +1565,7 @@ main.registerCommand({
 
   if (!_.isEmpty(runTargets)) {
     main.captureAndExit('', 'preparing Cordova project', () => {
-      cordovaProject = new CordovaProject(projectContext, {
+      const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
@@ -1895,7 +1921,8 @@ main.registerCommand({
     browserstack: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
-    file: { type: String }
+    file: { type: String },
+    exclude: { type: String }
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -1945,6 +1972,14 @@ main.registerCommand({
     }
   }
 
+  var excludeRegexp = undefined;
+  if (options.exclude) {
+    excludeRegexp = compileRegexp(options.exclude);
+    if (! excludeRegexp) {
+      return 1;
+    }
+  }
+
   if (options.list) {
     selftest.listTests({
       onlyChanged: options.changed,
@@ -1970,6 +2005,7 @@ main.registerCommand({
     galaxyOnly: options.galaxy,
     testRegexp: testRegexp,
     fileRegexp: fileRegexp,
+    excludeRegexp: excludeRegexp,
     // other options
     historyLines: options.history,
     clients: clients

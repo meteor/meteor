@@ -301,13 +301,12 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
     throw Error(`No ${ sourceArch.arch } unibuild for ${ isopack.name }!`);
   }
 
-  var sourceItems = sourceArch.getSourcesFunc(
-    sourceProcessorSet, unibuild.watchSet);
+  const {sources} = sourceArch.getFiles(sourceProcessorSet, unibuild.watchSet);
 
   const linterMessages = buildmessage.capture(() => {
     runLinters({
       isopackCache,
-      sourceItems,
+      sources,
       sourceProcessorSet,
       inputSourceArch: sourceArch,
       watchSet: unibuild.watchSet
@@ -324,20 +323,20 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 var compileUnibuild = function (options) {
   buildmessage.assertInCapture();
 
-  var isopk = options.isopack;
-  var inputSourceArch = options.sourceArch;
-  var isopackCache = options.isopackCache;
-  var nodeModulesPath = options.nodeModulesPath;
-  var isPortable = options.isPortable;
-  var noLineNumbers = options.noLineNumbers;
+  const isopk = options.isopack;
+  const inputSourceArch = options.sourceArch;
+  const isopackCache = options.isopackCache;
+  const nodeModulesPath = options.nodeModulesPath;
+  const isPortable = options.isPortable;
+  const noLineNumbers = options.noLineNumbers;
 
-  var isApp = ! inputSourceArch.pkg.name;
-  var resources = [];
-  var pluginProviderPackageNames = {};
-  var watchSet = inputSourceArch.watchSet.clone();
+  const isApp = ! inputSourceArch.pkg.name;
+  const resources = [];
+  const pluginProviderPackageNames = {};
+  const watchSet = inputSourceArch.watchSet.clone();
 
   // *** Determine and load active plugins
-  var activePluginPackages = getActivePluginPackages(isopk, {
+  const activePluginPackages = getActivePluginPackages(isopk, {
     uses: inputSourceArch.uses,
     isopackCache: isopackCache,
     // If other package is built from source, then we need to rebuild this
@@ -375,21 +374,23 @@ var compileUnibuild = function (options) {
       isopack: isopk
     });
     if (buildmessage.jobHasMessages()) {
-      // Recover by not calling getSourcesFunc and pretending there are no
+      // Recover by not calling getFiles and pretending there are no
       // items.
       sourceProcessorSet = null;
     }
   });
 
   // *** Determine source files
-  // Note: the getSourcesFunc function isn't expected to add its
+  // Note: the getFiles function isn't expected to add its
   // source files to watchSet; rather, the watchSet is for other
-  // things that the getSourcesFunc consulted (such as directory
+  // things that the getFiles consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  const sourceItems = sourceProcessorSet
-          ? inputSourceArch.getSourcesFunc(sourceProcessorSet, watchSet)
-          : [];
+  const {
+    sources = [],
+    assets = []
+  } = sourceProcessorSet ?
+    inputSourceArch.getFiles(sourceProcessorSet, watchSet) : {};
 
   if (nodeModulesPath) {
     // If this slice has node modules, we should consider the shrinkwrap file
@@ -403,16 +404,19 @@ var compileUnibuild = function (options) {
     // an indirect dependency of the coffee-script npm module used by the
     // coffeescript package will correctly cause packages with *.coffee files
     // to be rebuilt.
-    var shrinkwrapPath = nodeModulesPath.replace(
+    const shrinkwrapPath = nodeModulesPath.replace(
         /node_modules$/, 'npm-shrinkwrap.json');
     watch.readAndWatchFile(watchSet, shrinkwrapPath);
   }
 
-  // *** Process each source file
-  var addAsset = function (contents, relPath, hash) {
-    // XXX hack
-    if (! inputSourceArch.pkg.name)
+  // This function needs to be factored out to support legacy handlers later on
+  // in the compilation process
+  function addAsset(contents, relPath, hash) {
+    // XXX hack to strip out private and public directory names from app asset
+    // paths
+    if (! inputSourceArch.pkg.name) {
       relPath = relPath.replace(/^(private|public)\//, '');
+    }
 
     resources.push({
       type: "asset",
@@ -422,85 +426,94 @@ var compileUnibuild = function (options) {
         files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
       hash: hash
     });
-  };
+  }
 
-  _.each(sourceItems, function (source) {
-    var relPath = source.relPath;
-    var fileOptions = _.clone(source.fileOptions) || {};
-    var absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
-    var filename = files.pathBasename(relPath);
+  // Add all assets
+  _.values(assets).forEach((asset) => {
+    const relPath = asset.relPath;
+    const absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
 
-    // Find the handler for source files with this extension (unless explicitly
-    // tagged as a static asset).
+    // readAndWatchFileWithHash returns an object carrying a buffer with the
+    // file-contents. The buffer contains the original data of the file (no EOL
+    // transforms from the tools/files.js part).
+    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
+    const hash = file.hash;
+    const contents = file.contents;
+
+    addAsset(contents, relPath, hash);
+  });
+
+  // Add and compile all source files
+  _.values(sources).forEach((source) => {
+    const relPath = source.relPath;
+    const fileOptions = _.clone(source.fileOptions) || {};
+    const absPath = files.pathResolve(inputSourceArch.pkg.sourceRoot, relPath);
+    const filename = files.pathBasename(relPath);
+
+    // Find the handler for source files with this extension
     let classification = null;
-    if (! fileOptions.isAsset) {
-      classification = sourceProcessorSet.classifyFilename(
+    classification = sourceProcessorSet.classifyFilename(
+      filename, inputSourceArch.arch);
+
+    if (classification.type === 'wrong-arch') {
+      // This file is for a compiler plugin but not for this arch. Skip it,
+      // and don't even watch it.  (eg, skip CSS preprocessor files on the
+      // server.)  This `return` skips this source file and goes on to the next
+      // one.
+      return;
+    }
+
+    if (classification.type === 'unmatched') {
+      // This is not matched by any compiler plugin or legacy source handler,
+      // but it was added as a source file.
+      //
+      // Prior to the batch-plugins project, these would be implicitly treated
+      // as static assets. Now we consider this to be an error; you need to
+      // explicitly tell that you want something to be a static asset by calling
+      // addAssets or putting it in the public/private directories in an app.
+      //
+      // This is a backwards-incompatible change, but it doesn't affect
+      // previously-published packages (because the check is occuring in the
+      // compiler), and it doesn't affect apps (where random files outside of
+      // private/public never end up in the source list anyway).
+      //
+      // As one special case, if a file is unmatched by the compiler
+      // SourceProcessorSet but is matched by the linter SourceProcessorSet (ie,
+      // a linter config file), we don't report an error; this is so that you
+      // can run `api.addFiles('.jshintrc')` and have it work.  (This is only
+      // relevant for packages.)  We don't put these files in the WatchSet,
+      // though; that happens via compiler.lint.
+
+      if (isApp) {
+        // This shouldn't happen, because initFromAppDir's getFiles
+        // should only return assets or sources which match
+        // sourceProcessorSet.
+        throw Error("app contains non-asset files without plugin? " +
+                    relPath + " - " + filename);
+      }
+
+      const linterClassification = linterSourceProcessorSet.classifyFilename(
         filename, inputSourceArch.arch);
-
-      if (classification.type === 'wrong-arch') {
-        // This file is for a compiler plugin but not for this arch. Skip it,
-        // and don't even watch it.  (eg, skip CSS preprocessor files on the
-        // server.)  This `return` goes on to the next `_.each(sourceItems`
-        // iteration.
+      if (linterClassification.type !== 'unmatched') {
+        // The linter knows about this, so we'll just ignore it instead of
+        // throwing an error.
         return;
       }
 
-      if (classification.type === 'unmatched') {
-        // This is not matched by any compiler plugin or legacy source handler,
-        // and it wasn't explicitly tagged as a static asset (with {isAsset:
-        // true} in packages, or by being in private/public in apps).
-        //
-        // Prior to the batch-plugins project, these would be implicitly treated
-        // as static assets. Now we consider this to be an error; you need to
-        // explicitly tell that you want something to be a static asset by
-        // including the isAsset flag in packages, or by putting it in
-        // public/private in an app.
-        //
-        // This is a backwards-incompatible change, but it doesn't affect
-        // previously-published packages (because the check is occuring in the
-        // compiler), and it doesn't affect apps (where random files outside of
-        // private/public never end up in the source list anyway).
-        //
-        // As one special case, if a file is unmatched by the compiler
-        // SourceProcessorSet but is matched by the linker SourceProcessorSet
-        // (ie, a linter config file), we don't report an error; this is so that
-        // you can run `api.addFiles('.jshintrc')` and have it work and not also
-        // add the file as a static asset.  (This is only relevant for
-        // packages.)  We don't put these files in the WatchSet, though; that
-        // happens via compiler.lint.
-
-        if (isApp) {
-          // This shouldn't happen, because initFromAppDir's getSourcesFunc
-          // should only return sources that have isAsset set or which match
-          // sourceProcessorSet.
-          throw Error("app contains non-asset files without plugin? " +
-                      relPath + " - " + filename);
-        }
-
-        const linterClassification = linterSourceProcessorSet.classifyFilename(
-          filename, inputSourceArch.arch);
-        if (linterClassification.type !== 'unmatched') {
-          // The linter knows about this, so we'll just ignore it instead of
-          // throwing an error.
-          return;
-        }
-
-        buildmessage.error(
-          `No plugin known to handle file '${ relPath }'. If you want this ` +
-          `file to be a static asset, pass the {isAsset: true} option ` +
-            `to api.addFiles; eg, api.addFiles('${relPath}', 'client', ` +
-            `{isAsset: true}).`);
-        // recover by ignoring
-        return;
-      }
+      buildmessage.error(
+        `No plugin known to handle file '${ relPath }'. If you want this \
+file to be a static asset, use addAssets instead of addFiles; eg, \
+api.addAssets('${relPath}', 'client').`);
+      // recover by ignoring
+      return;
     }
 
     // readAndWatchFileWithHash returns an object carrying a buffer with the
     // file-contents. The buffer contains the original data of the file (no EOL
     // transforms from the tools/files.js part).
-    var file = watch.readAndWatchFileWithHash(watchSet, absPath);
-    var hash = file.hash;
-    var contents = file.contents;
+    const file = watch.readAndWatchFileWithHash(watchSet, absPath);
+    const hash = file.hash;
+    const contents = file.contents;
 
     Console.nudge(true);
 
@@ -520,12 +533,6 @@ var compileUnibuild = function (options) {
       }
 
       // recover by ignoring (but still watching the file)
-      return;
-    }
-
-    // Add static assets.
-    if (fileOptions.isAsset) {
-      addAsset(contents, relPath, hash);
       return;
     }
 
@@ -578,9 +585,11 @@ var compileUnibuild = function (options) {
     // Contains non-portable compiled npm modules, so set arch correctly
     arch = archinfo.host();
   }
+
+  let nodeModulesPathOrUndefined = nodeModulesPath;
   if (! archinfo.matches(arch, "os")) {
     // npm modules only work on server architectures
-    nodeModulesPath = undefined;
+    nodeModulesPathOrUndefined = undefined;
   }
 
   // *** Output unibuild object
@@ -590,7 +599,7 @@ var compileUnibuild = function (options) {
     uses: inputSourceArch.uses,
     implies: inputSourceArch.implies,
     watchSet: watchSet,
-    nodeModulesPath: nodeModulesPath,
+    nodeModulesPath: nodeModulesPathOrUndefined,
     declaredExports: declaredExports,
     resources: resources
   });
@@ -600,7 +609,7 @@ var compileUnibuild = function (options) {
   };
 };
 
-function runLinters({inputSourceArch, isopackCache, sourceItems,
+function runLinters({inputSourceArch, isopackCache, sources,
                      sourceProcessorSet, watchSet}) {
   // The buildmessage context here is for linter warnings only! runLinters
   // should not do anything that can have a real build failure.
@@ -652,6 +661,9 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
     // the code must access them with `Package["my-package"].MySymbol`.
     skipDebugOnly: true,
     skipProdOnly: true,
+    // We only care about getting exports here, so it's OK if we get the Mac
+    // version when we're bundling for Linux.
+    allowWrongPlatform: true,
   }, (unibuild) => {
     if (unibuild.pkg.name === inputSourceArch.pkg.name)
       return;
@@ -664,10 +676,11 @@ function runLinters({inputSourceArch, isopackCache, sourceItems,
 
   // sourceProcessor.id -> {sourceProcessor, sources: [WrappedSourceItem]}
   const sourceItemsForLinter = {};
-  sourceItems.forEach((sourceItem) => {
+  _.values(sources).forEach((sourceItem) => {
     const { relPath } = sourceItem;
     const classification = sourceProcessorSet.classifyFilename(
       files.pathBasename(relPath), inputSourceArch.arch);
+
     // If we don't have a linter for this file (or we do but it's only on
     // another arch), skip without even reading the file into a WatchSet.
     if (classification.type === 'wrong-arch' ||
@@ -806,6 +819,7 @@ compiler.eachUsedUnibuild = function (
   var dependencies = options.dependencies;
   var arch = options.arch;
   var isopackCache = options.isopackCache;
+  const allowWrongPlatform = options.allowWrongPlatform;
 
   var acceptableWeakPackages = options.acceptableWeakPackages || {};
 
@@ -836,7 +850,7 @@ compiler.eachUsedUnibuild = function (
     if (usedPackage.prodOnly && options.skipProdOnly)
       continue;
 
-    var unibuild = usedPackage.getUnibuildAtArch(arch);
+    var unibuild = usedPackage.getUnibuildAtArch(arch, {allowWrongPlatform});
     if (!unibuild) {
       // The package exists but there's no unibuild for us. A buildmessage has
       // already been issued. Recover by skipping.
@@ -863,6 +877,9 @@ export function isIsobuildFeaturePackage(packageName) {
   return packageName.startsWith('isobuild:');
 }
 
+// If you update this data structure to add more feature packages, you should
+// update the wiki page here:
+// https://github.com/meteor/meteor/wiki/Isobuild-Feature-Packages
 export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package directly calls Plugin.registerCompiler. Package authors
   // must explicitly depend on this feature package to use the API.
@@ -902,4 +919,13 @@ export const KNOWN_ISOBUILD_FEATURE_PACKAGES = {
   // This package uses the `prodOnly` metadata flag, which causes it to
   // automatically depend on the `isobuild:prod-only` feature package.
   'isobuild:prod-only': ['1.0.0'],
+
+  // This package depends on a specific version of Cordova. Package authors must
+  // explicitly depend on this feature package to indicate that they are not
+  // compatible with earlier Cordova versions, which is most likely a result of
+  // the Cordova plugins they depend on.
+  // A common scenario is a package depending on a Cordova plugin or version
+  // that is only available on npm, which means downloading the plugin is not
+  // supported on versions of Cordova below 5.0.0.
+  'isobuild:cordova': ['5.2.0']
 };

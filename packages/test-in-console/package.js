@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests noninteractively, with results going to the console.",
-  version: '1.0.6-plugins.0'
+  version: '1.0.7'
 });
 
 Package.onUse(function (api) {
@@ -14,5 +14,5 @@ Package.onUse(function (api) {
   api.addFiles(['reporter.js'], "server");
 
   // This is to be run by phantomjs, not as part of normal package code.
-  api.addFiles('runner.js', 'server', {isAsset: true});
+  api.addAssets('runner.js', 'server');
 });

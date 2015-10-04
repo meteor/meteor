@@ -402,7 +402,8 @@ var bundleAndDeploy = function (options) {
     var bundleResult = bundler.bundle({
       projectContext: options.projectContext,
       outputPath: bundlePath,
-      buildOptions: options.buildOptions
+      buildOptions: options.buildOptions,
+      providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
     });
 
     if (bundleResult.errors)

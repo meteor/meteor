@@ -443,7 +443,7 @@ _.extend(AppRunner.prototype, {
   _runOnce: function (options) {
     var self = this;
     options = options || {};
-    const firstRun = options.firstRun;
+    var firstRun = options.firstRun;
 
     Console.enableProgressDisplay(true);
 
@@ -596,6 +596,8 @@ _.extend(AppRunner.prototype, {
       return bundleResultOrRunResult.runResult;
     bundleResult = bundleResultOrRunResult.bundleResult;
 
+    firstRun = false;
+
     // Read the settings file, if any
     var settings = null;
     var settingsWatchSet = new watch.WatchSet;
@@ -627,28 +629,16 @@ _.extend(AppRunner.prototype, {
       serverWatchSet = combinedWatchSetForBundleResult(bundleResult);
     }
 
-    // Atomically (1) see if we've been stop()'d, (2) if not, create a
-    // future that can be used to stop() us once we start running.
-    if (self.exitFuture)
-      return { outcome: 'stopped' };
-    if (self.runFuture)
-      throw new Error("already have future?");
-    var runFuture = self.runFuture = new Future;
-
     const cordovaRunner = self.cordovaRunner;
-    // Run Cordova apps
     if (cordovaRunner) {
-      const plugins =
-        cordova.pluginsFromStarManifest(bundleResult.starManifest);
+      const pluginVersions =
+        cordova.pluginVersionsFromStarManifest(bundleResult.starManifest);
 
       if (!cordovaRunner.started) {
         const { settingsFile, mobileServerUrl } = self;
         const messages = buildmessage.capture(() => {
-          cordovaRunner.prepareProject(bundlePath, plugins,
+          cordovaRunner.prepareProject(bundlePath, pluginVersions,
             { settingsFile, mobileServerUrl });
-
-          cordovaRunner.printWarningsIfNeeded();
-          cordovaRunner.startRunTargets();
         });
 
         if (messages.hasMessages()) {
@@ -658,6 +648,7 @@ _.extend(AppRunner.prototype, {
             watchSet: combinedWatchSetForBundleResult(bundleResult)
           };
         }
+        cordovaRunner.printWarningsIfNeeded();
       } else {
         // If the set of Cordova platforms or plugins changes from one run
         // to the next, we just exit, because we don't yet have a way to,
@@ -668,11 +659,19 @@ _.extend(AppRunner.prototype, {
           return { outcome: 'outdated-cordova-platforms' };
         }
 
-        if (cordovaRunner.havePluginsChangedSinceLastRun(plugins)) {
+        if (cordovaRunner.havePluginsChangedSinceLastRun(pluginVersions)) {
           return { outcome: 'outdated-cordova-plugins' };
         }
       }
     }
+
+    // Atomically (1) see if we've been stop()'d, (2) if not, create a
+    // future that can be used to stop() us once we start running.
+    if (self.exitFuture)
+      return { outcome: 'stopped' };
+    if (self.runFuture)
+      throw new Error("already have future?");
+    var runFuture = self.runFuture = new Future;
 
     // Run the program
     options.beforeRun && options.beforeRun();
@@ -731,6 +730,10 @@ _.extend(AppRunner.prototype, {
       }
     }
     maybePrintLintWarnings(bundleResult);
+
+    if (cordovaRunner && !cordovaRunner.started) {
+      cordovaRunner.startRunTargets();
+    }
 
     // Start watching for changes for files if requested. There's no
     // hurry to do this, since clientWatchSet contains a snapshot of the

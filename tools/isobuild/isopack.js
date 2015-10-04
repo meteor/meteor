@@ -438,11 +438,22 @@ _.extend(Isopack.prototype, {
   // Return the unibuild of the package to use for a given target architecture
   // (eg, 'os.linux.x86_64' or 'web'), or throw an exception if that
   // packages can't be loaded under these circumstances.
-  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (arch) {
+  getUnibuildAtArch: Profile("Isopack#getUnibuildAtArch", function (
+    arch, {allowWrongPlatform} = {}) {
     var self = this;
 
-    var chosenArch = archinfo.mostSpecificMatch(
+    let chosenArch = archinfo.mostSpecificMatch(
       arch, _.pluck(self.unibuilds, 'arch'));
+    if (! chosenArch && allowWrongPlatform && arch.match(/^os\./)) {
+      // Special-case: we're looking for a specific server platform and it's
+      // not available. (eg, we're deploying from a Mac to Linux and are
+      // processing a local package with binary npm deps).  If we have "allow
+      // wrong platform" turned on, search again for the host version, which
+      // might find the Mac version.  We'll detect this case later and provide
+      // package.json instead of Mac binaries.
+      chosenArch =
+        archinfo.mostSpecificMatch(archinfo.host(), _.pluck(self.unibuilds, 'arch'));
+    }
     if (! chosenArch) {
       buildmessage.error(
         (self.name || "this app") +
@@ -1450,21 +1461,36 @@ _.extend(Isopack.prototype, {
                   + JSON.stringify(resource));
             }
           });
-          if (jsResourcesForLegacyPrelink.length) {
-            var prelinkFile, prelinkData, packageVariables;
-            if (jsResourcesForLegacyPrelink.length === 1 &&
-                jsResourcesForLegacyPrelink[0].legacyPrelink) {
-              // Aha!  This isopack was actually a legacy isopack in the first
-              // place! So this source file is already the output of prelink,
-              // and we don't need to reprocess it.
-              prelinkFile = jsResourcesForLegacyPrelink[0];
-              // XXX It's weird that the type of object going in and out of
-              // linker.prelink is different (so that this prelinkData
-              // assignment differs from that below), ah well.
-              prelinkData = prelinkFile.data;
-              packageVariables =
-                jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
-            } else {
+
+          var prelinkFile, prelinkData, packageVariables;
+          if (jsResourcesForLegacyPrelink.length === 1 &&
+              jsResourcesForLegacyPrelink[0].legacyPrelink) {
+            // Aha!  This isopack was actually a legacy isopack in the first
+            // place! So this source file is already the output of prelink,
+            // and we don't need to reprocess it.
+            prelinkFile = jsResourcesForLegacyPrelink[0];
+            // XXX It's weird that the type of object going in and out of
+            // linker.prelink is different (so that this prelinkData
+            // assignment differs from that below), ah well.
+            prelinkData = prelinkFile.data;
+            packageVariables =
+              jsResourcesForLegacyPrelink[0].legacyPrelink.packageVariables;
+          } else {
+            // Determine captured variables, legacy way. First, start with the
+            // exports. We'll add the package variables after running prelink.
+            packageVariables = [];
+            var packageVariableNames = {};
+            _.each(unibuild.declaredExports, function (symbol) {
+              if (_.has(packageVariableNames, symbol.name))
+                return;
+              packageVariables.push({
+                name: symbol.name,
+                export: symbol.testOnly? "tests" : true
+              });
+              packageVariableNames[symbol.name] = true;
+            });
+
+            if (jsResourcesForLegacyPrelink.length) {
               // Not originally legacy; let's run prelink to make it legacy.
               var results = linker.prelink({
                 inputFiles: jsResourcesForLegacyPrelink,
@@ -1485,18 +1511,6 @@ _.extend(Isopack.prototype, {
               prelinkFile = results.files[0];
               prelinkData = new Buffer(prelinkFile.source, 'utf8');
 
-              // Determine captured variables, legacy way.
-              packageVariables = [];
-              var packageVariableNames = {};
-              _.each(unibuild.declaredExports, function (symbol) {
-                if (_.has(packageVariableNames, symbol.name))
-                  return;
-                packageVariables.push({
-                  name: symbol.name,
-                  export: symbol.testOnly? "tests" : true
-                });
-                packageVariableNames[symbol.name] = true;
-              });
               _.each(results.assignedVariables, function (name) {
                 if (_.has(packageVariableNames, name))
                   return;
@@ -1506,7 +1520,9 @@ _.extend(Isopack.prototype, {
                 packageVariableNames[name] = true;
               });
             }
+          }
 
+          if (prelinkFile && prelinkData) {
             var prelinkResource = {
               type: 'prelink',
               file: builder.writeToGeneratedFilename(
@@ -1524,9 +1540,12 @@ _.extend(Isopack.prototype, {
               );
             }
             newResources.push(prelinkResource);
+          }
 
+          if (packageVariables.length) {
             unibuildJson.packageVariables = packageVariables;
           }
+
           unibuildJson.resources = newResources;
           delete unibuildJson.declaredExports;
           builder.writeJson(legacyFilename, unibuildJson);
@@ -1605,6 +1624,7 @@ _.extend(Isopack.prototype, {
       /^tools\/meteor-services\/[^\/]+\.js$/,
       /^tools\/tool-testing\/[^\/]+\.js$/,
       /^tools\/console\/[^\/]+\.js$/,
+      /^tools\/cordova\/[^\/]+\.js$/,
       // We don't support running self-test from an install anymore
     ];
 

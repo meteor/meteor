@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run server tests noninteractively, with results going to the console.",
-  version: '1.0.4-plugins.0'
+  version: '1.0.5'
 });
 
 Package.onUse(function (api) {

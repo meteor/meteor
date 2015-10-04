@@ -1,6 +1,6 @@
 Package.describe({
   summary: "(Deprecated) Include a standard set of Meteor packages in your app",
-  version: '1.2.3-plugins.0'
+  version: '1.2.3'
 });
 
 Package.onUse(function(api) {

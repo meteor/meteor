@@ -223,6 +223,9 @@ var NodeModulesDirectory = function (options) {
 
   // Optionally, files to discard.
   self.npmDiscards = options.npmDiscards;
+
+  // Write a package.json file instead of copying the full directory.
+  self.writePackageJSON = !!options.writePackageJSON;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -415,7 +418,9 @@ class Target {
     //  and prodOnly packages are included; defaults to 'production'
     buildMode,
     // directory on disk where to store the cache for things like linker
-    bundlerCacheDir
+    bundlerCacheDir,
+    // whether to substitute a package.json for unavailable binary deps
+    providePackageJSONForUnavailableBinaryDeps,
     // ... see subclasses for additional options
   }) {
     this.packageMap = packageMap;
@@ -462,6 +467,9 @@ class Target {
     this.buildMode = buildMode || 'production';
 
     this.bundlerCacheDir = bundlerCacheDir;
+
+    this.providePackageJSONForUnavailableBinaryDeps
+      = providePackageJSONForUnavailableBinaryDeps;
   }
 
   // Top-level entry point for building a target. Generally to build a
@@ -561,7 +569,9 @@ class Target {
         if (p.prodOnly && this.buildMode !== 'production') {
           return;
         }
-        const unibuild = p.getUnibuildAtArch(this.arch);
+        const unibuild = p.getUnibuildAtArch(this.arch, {
+          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps
+        });
         unibuild && rootUnibuilds.push(unibuild);
       });
 
@@ -592,7 +602,8 @@ class Target {
           arch: this.arch,
           isopackCache: isopackCache,
           skipDebugOnly: this.buildMode !== 'development',
-          skipProdOnly: this.buildMode !== 'production'
+          skipProdOnly: this.buildMode !== 'production',
+          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
         }, addToGetsUsed);
       }.bind(this);
 
@@ -657,6 +668,7 @@ class Target {
           acceptableWeakPackages: this.usedPackages,
           skipDebugOnly: this.buildMode !== 'development',
           skipProdOnly: this.buildMode !== 'production',
+          allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
         }, processUnibuild);
         this.unibuilds.push(unibuild);
         delete needed[unibuild.id];
@@ -792,6 +804,33 @@ class Target {
                 this.nodeModulesDirectories[unibuild.nodeModulesPath] = nmd;
               }
               f.nodeModulesDirectory = nmd;
+
+              if (!archinfo.matches(this.arch, unibuild.arch)) {
+                // The unibuild we're trying to include doesn't work for the
+                // bundle target (eg, os.osx.x86_64 instead of os.linux.x86_64)!
+                // Hopefully this is because we specially enabled the feature
+                // that leads to this.
+                if (!this.providePackageJSONForUnavailableBinaryDeps) {
+                  throw Error("mismatched arch without special feature enabled "
+                              + unibuild.pkg.name + " / " + this.arch + " / " +
+                              unibuild.arch);
+                }
+                if (!files.exists(
+                  files.pathJoin(nmd.sourcePath, '.package.json'))) {
+                  buildmessage.error(
+                    "Can't cross-compile package " +
+                      unibuild.pkg.name + ": missing .package.json");
+                  return;
+                }
+                if (!files.exists(
+                  files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json'))) {
+                  buildmessage.error(
+                    "Can't cross-compile package " +
+                      unibuild.pkg.name + ": missing .npm-shrinkwrap.json");
+                  return;
+                }
+                nmd.writePackageJSON = true;
+              }
             }
           }
 
@@ -964,7 +1003,14 @@ class Target {
   // including anything that was specific to Linux, the return value
   // would be 'os'.
   mostCompatibleArch() {
-    return archinfo.leastSpecificDescription(_.pluck(this.unibuilds, 'arch'));
+    let arches = _.pluck(this.unibuilds, 'arch');
+    if (this.providePackageJSONForUnavailableBinaryDeps) {
+      // Filter out incompatible arches.
+      arches = arches.filter(
+        (arch) => archinfo.matches(this.arch, arch)
+      );
+    }
+    return archinfo.leastSpecificDescription(arches);
   }
 }
 
@@ -1197,6 +1243,8 @@ class JsImage {
 
     // Architecture required by this image
     this.arch = null;
+
+    this.providePackageJSONForUnavailableBinaryDeps = false;
   }
 
   // Load the image into the current process. It gets its own unique
@@ -1387,7 +1435,8 @@ class JsImage {
       nodeModulesDirectories.push(new NodeModulesDirectory({
         sourcePath: nmd.sourcePath,
         preferredBundlePath: modulesPhysicalLocation,
-        npmDiscards: nmd.npmDiscards
+        npmDiscards: nmd.npmDiscards,
+        writePackageJSON: nmd.writePackageJSON
       }));
     });
 
@@ -1472,13 +1521,36 @@ class JsImage {
       load.push(loadItem);
     });
 
+    const setupScriptPieces = [];
     // node_modules resources from the packages. Due to appropriate
     // builder configuration, 'meteor bundle' and 'meteor deploy' copy
     // them, and 'meteor run' symlinks them. If these contain
     // arch-specific code then the target will end up having an
     // appropriately specific arch.
     _.each(nodeModulesDirectories, function (nmd) {
-      if (nmd.sourcePath !== nmd.preferredBundlePath) {
+      if (nmd.writePackageJSON) {
+        // Make sure there's an empty node_modules directory at the right place
+        // in the tree (so that npm install puts modules there instead of
+        // elsewhere).
+        builder.reserve(
+          nmd.preferredBundlePath, {directory: true});
+        // We check that these source files exist in _emitResources when
+        // writePackageJSON is initially set.
+        builder.write(
+          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
+                         'package.json'),
+          { file: files.pathJoin(nmd.sourcePath, '.package.json') }
+        );
+        builder.write(
+          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
+                         'npm-shrinkwrap.json'),
+          { file: files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json') }
+        );
+        // XXX does not support npmDiscards!
+
+        setupScriptPieces.push(
+          '(cd ', nmd.preferredBundlePath, ' && npm install)\n\n');
+      } else if (nmd.sourcePath !== nmd.preferredBundlePath) {
         builder.copyDirectory({
           from: nmd.sourcePath,
           to: nmd.preferredBundlePath,
@@ -1487,6 +1559,14 @@ class JsImage {
         });
       }
     });
+
+    if (setupScriptPieces.length) {
+      setupScriptPieces.unshift('#!/bin/bash\n', 'set -e\n\n');
+      builder.write('setup.sh', {
+        data: new Buffer(setupScriptPieces.join(''), 'utf8'),
+        executable: true
+      });
+    }
 
     // Control file
     builder.writeJson('program.json', {
@@ -2010,7 +2090,8 @@ exports.bundle = function ({
   includeNodeModules,
   buildOptions,
   previousBuilders,
-  hasCachedBundle
+  hasCachedBundle,
+  providePackageJSONForUnavailableBinaryDeps
 }) {
   buildOptions = buildOptions || {};
 
@@ -2077,7 +2158,8 @@ exports.bundle = function ({
         isopackCache: projectContext.isopackCache,
         arch: serverArch,
         releaseName: releaseName,
-        buildMode: buildOptions.buildMode
+        buildMode: buildOptions.buildMode,
+        providePackageJSONForUnavailableBinaryDeps
       };
       if (clientTargets)
         targetOptions.clientTargets = clientTargets;

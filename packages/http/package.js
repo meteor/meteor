@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.1.1-plugins.0'
+  version: '1.1.1'
 });
 
 Npm.depends({request: "2.53.0"});
@@ -27,5 +27,6 @@ Package.onTest(function (api) {
 
   api.addFiles('test_responder.js', 'server');
   api.addFiles('httpcall_tests.js', ['client', 'server']);
-  api.addFiles('test_static.serveme', 'client', {isAsset: true});
+
+  api.addAssets('test_static.serveme', 'client');
 });

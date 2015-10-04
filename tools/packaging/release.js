@@ -35,6 +35,10 @@ _.extend(Release.prototype, {
     return this.name === null;
   },
 
+  isRecommended: function () {
+    return this._manifest.recommended;
+  },
+
   getReleaseTrack: function () {
     var self = this;
     if (! self.isProperRelease())

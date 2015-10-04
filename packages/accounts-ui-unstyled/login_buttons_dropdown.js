@@ -146,13 +146,18 @@ Template._loginButtonsLoggedOutDropdown.events({
     // force the ui to update so that we have the approprate fields to fill in
     Tracker.flush();
 
-    if (document.getElementById('login-username'))
+    if (document.getElementById('login-username') && username !== null)
       document.getElementById('login-username').value = username;
-    if (document.getElementById('login-email'))
+    if (document.getElementById('login-email') && email !== null)
       document.getElementById('login-email').value = email;
 
-    if (document.getElementById('login-username-or-email'))
-      document.getElementById('login-username-or-email').value = email || username;
+    var usernameOrEmailInput = document.getElementById('login-username-or-email');
+    if (usernameOrEmailInput) {
+      if (email !== null)
+        usernameOrEmailInput.value = email;
+      if (username !== null)
+        usernameOrEmailInput.value = username;
+    }
 
     if (password !== null)
       document.getElementById('login-password').value = password;

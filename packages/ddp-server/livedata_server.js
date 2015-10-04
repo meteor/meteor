@@ -596,7 +596,7 @@ _.extend(Session.prototype, {
         };
 
         DDPRateLimiter._increment(rateLimiterInput);
-        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput)
+        var rateLimitResult = DDPRateLimiter._check(rateLimiterInput);
         if (!rateLimitResult.allowed) {
           self.send({
             msg: 'nosub', id: msg.id,
@@ -1035,6 +1035,10 @@ _.extend(Subscription.prototype, {
     if (self._isDeactivated())
       return;
 
+    self._publishHandlerResult(res);
+  },
+
+  _publishHandlerResult: function (res) {
     // SPECIAL CASE: Instead of writing their own callbacks that invoke
     // this.added/changed/ready/etc, the user can just return a collection
     // cursor or array of cursors from the publish function; we call their
@@ -1051,6 +1055,8 @@ _.extend(Subscription.prototype, {
     //       reactiveThingy.publishMe();
     //     });
     //   };
+
+    var self = this;
     var isCursor = function (c) {
       return c && c._publishCursor;
     };

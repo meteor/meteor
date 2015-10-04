@@ -29,7 +29,7 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   // url to app, enters "step 1" as described in
   // packages/accounts-oauth1-helper/oauth1_server.js
   var loginPath = '_oauth/twitter/?requestTokenAndRedirect=true'
-        + '&state=' + OAuth._stateParam(loginStyle, credentialToken, options.redirectUrl);
+        + '&state=' + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl);
 
   if (Meteor.isCordova) {
     loginPath = loginPath + "&cordova=true";

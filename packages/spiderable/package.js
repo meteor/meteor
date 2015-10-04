@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.8-plugins.0"
+  version: "1.0.9"
 });
 
 Package.onUse(function (api) {
@@ -17,7 +17,7 @@ Package.onUse(function (api) {
   api.addFiles('spiderable_server.js', 'server');
   api.addFiles('spiderable_client.js', 'client');
 
-  api.addFiles('phantom_script.js', 'server', { isAsset: true });
+  api.addAssets('phantom_script.js', 'server');
 });
 
 Package.onTest(function (api) {

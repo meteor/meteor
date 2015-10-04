@@ -38,56 +38,56 @@ setting the `cwd` and `env` and catching `CordovaError`s.
 
 ### Stages
 
-* `project.createIfNeeded()`
+* `CordovaProject#createIfNeeded()`
 
 Invoked automatically from the constructor. Makes sure the project has been
 created if the `cordova-build` directory does not currently exist.
 
-* `project.prepareFromAppBundle(bundlePath, plugins, options = {})`
+* `CordovaProject#prepareFromAppBundle(bundlePath, pluginVersions, options = {})`
 
 Uses a builder (see `CordovaBuilder`) to generate the `www` directory,
 resources, and `config.xml` based on the app bundle result and
 `mobile-config.js`.
 
-* `project.prepareForPlatform(platform)`
+* `CordovaProject#prepareForPlatform(platform)`
 
 Similar to `cordova prepare <platform>`. Synchronizes the project contents
 (`www` directory and resources) with a platform directory and installs or
 updates plugins in a platform-specific manner (modifying an Xcode project for
 instance).
 
-* `project.buildForPlatform(platform, options = [], extraPaths)`
+* `CordovaProject#buildForPlatform(platform, options = [], extraPaths)`
 
 Similar to `cordova build <platform>`. Uses platform-specific build mechanisms
 to compile app. Includes everything done in the prepare stage. It is used for
 `meteor build`.
 
-* `async project.run(platform, isDevice, options = [], extraPaths)`
+* `async CordovaProject#run(platform, isDevice, options = [], extraPaths)`
 
 Similar to `cordova run <target>`, except that it doesn't include prepare, so
-you'll have to make sure `project.prepareForPlatform()` is called before.
+you'll have to make sure `CordovaProject#prepareForPlatform()` is called before.
 Uses platform-specific mechanisms to run the built app on a device or
 emulator/simulator. It is used for `meteor run/test-packages`.
 
 ### Managing platforms
 
-* `project.ensurePlatformsAreSynchronized(platforms =
-* this.cordovaPlatformsInApp)`
+* `CordovaProject#ensurePlatformsAreSynchronized(platforms =
+  this.cordovaPlatformsInApp)`
 
 Ensures the platforms installed in the Cordova project are synchronized with the
 app-level platforms (in `.meteor/platforms`). This gets invoked as part of
 `meteor add-platform/remove-platform` (from `commands-cordova.js`) and as part
 of the build process (from `CordovaBuilder`).
 
-Uses methods `project.listInstalledPlatforms()`,
-`project.addPlatform(platform)`, and `project.removePlatform(platform)` to call
-into Cordova.
+Uses methods `CordovaProject#listInstalledPlatforms()`,
+`CordovaProject#addPlatform(platform)`, and
+`CordovaProject#removePlatform(platform)` to call into Cordova.
 
-`project.checkPlatformRequirements(platform)` uses the Cordova platform-specific
-tools to get a list of installation requirements, whether they are satisfied,
-and if not, why. The latter can be very useful and is pretty detailed (telling
-you for instance that `ANDROID_HOME` has been set to a non-existent directory,
-or that the right platform tools cannot be found).
+`CordovaProject#checkPlatformRequirements(platform)` uses the Cordova
+platform-specific tools to get a list of installation requirements, whether they
+are satisfied, and if not, why. The latter can be very useful and is pretty
+detailed (telling you for instance that `ANDROID_HOME` has been set to a
+non-existent directory, or that the right platform tools cannot be found).
 
 We massage the results a little and print them (only if not all requirements for
 a platform are satisfied) in a list with checkmarks and crosses. This may need
@@ -101,18 +101,21 @@ feedback about the state of the installation) and before running (from
 
 ### Managing plugins
 
-* `project.ensurePluginsAreSynchronized(plugins, pluginsConfiguration = {})`
+* `CordovaProject#ensurePluginsAreSynchronized(pluginVersions,
+  pluginsConfiguration = {})`
 
 Ensures the plugins installed in the Cordova project are synchronized with the
 app-level Cordova plugins. This gets invoked as part of the build process (from
 `CordovaBuilder`) where it is passed the plugins from the star manifest in the
-app bundle (a combination of `.meteor/cordova-plugins` for stand-alone plugin
-installs and the plugins added as dependencies of packages through
-`Cordova.depends`). The `pluginsConfiguration` comes from `App.configurePlugin`
-calls in `meteor-config.js`.
+app bundle (`pluginVersionsFromStarManifest`, a combination of
+`.meteor/cordova-plugins` for stand-alone plugin installs and the plugins added
+as dependencies of packages through `Cordova.depends`).
+The `pluginsConfiguration` comes from `App.configurePlugin` calls in
+`meteor-config.js`.
 
-Uses methods `project.listInstalledPluginVersions()`, `project.addPlugin(name, version,
-config)`, `project.removePlugins(plugins)` to call into Cordova.
+Uses methods `CordovaProject#listInstalledPluginVersions()`,
+`CordovaProject#addPlugin(name, version, config)`,
+`CordovaProject#removePlugins(plugins)` to call into Cordova.
 
 ## Running
 
@@ -129,7 +132,7 @@ One of the main benefits of this is that we can now use the app bundle generated
 in `AppRunner`. Previously, we were actually doing a whole separate
 `bundler.bundle()` for Cordova, even though the one in `AppRunner` also
 generated the `web.cordova` architecture (which is needed to serve it to clients
-as part of Hot Code Push). We now invoke `cordovaRunner.prepareProject()` with
+as part of Hot Code Push). We now invoke `CordovaRunner#prepareProject()` with
 the existing bundle result right before starting the server app.
 
 Moving building/running of Cordova apps to `AppRunner` should also allow Cordova
@@ -144,7 +147,7 @@ Right now, we only differentiate between running on a device or an
 emulator/simulator. We may want to allow specifying a specific device ID in the
 future (so we can select between different connected devices for instance).
 
-`cordovaRunner.startRunTargets()` is responsible for starting the app on the
+`CordovaRunner#startRunTargets()` is responsible for starting the app on the
 associated run targets (while displaying build messages and a run log entry). It
 currently starts the targets asynchronously (in parallel). This means running
 the app on multiple targets is a lot faster than before. Because we don't
@@ -160,5 +163,5 @@ that is built-up through different stages (`initalizeDefaults()`,
 `processControlFile()`) and can be used to generate and copy the `www`
 directory, resources, and `config.xml`.
 
-`builder.processControlFile()` is responsible for running the `mobile-config.js`
-control file (passing itself as a context to `App`).
+`CordovaBuilder#processControlFile()` is responsible for running the
+`mobile-config.js` control file (passing itself as a context to `App`).

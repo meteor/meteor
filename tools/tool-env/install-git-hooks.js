@@ -32,6 +32,9 @@ const METEOR_HOOK_SUFFIX = '.meteor-hook';
 const METEOR_HOOK_LINE_REGEX = /.*meteor-hook.*/;
 
 export default function installGitHooks() {
+  // ensure the hooks folder is present
+  files.mkdir_p(hookDestination);
+
   allPossibleHooks.map((hookName) => {
     if (!files.exists(hookDestination)) {
       // Don't do anything if the hook destination does not exist, eg.,

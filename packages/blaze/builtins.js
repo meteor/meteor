@@ -171,16 +171,15 @@ Blaze.Each = function (argFunc, contentFunc, elseFunc) {
     }, {
       addedAt: function (id, item, index) {
         Tracker.nonreactive(function () {
-          var newDataContext;
+          var newItemView;
           if (eachView.variableName) {
             // new-style #each (as in {{#each item in items}})
-            // the new data context is the same
-            newDataContext = Blaze.getData(eachView);
+            // doesn't create a new data context
+            newItemView = Blaze.View('item', eachView.contentFunc);
           } else {
-            newDataContext = item;
+            newItemView = Blaze.With(item, eachView.contentFunc);
           }
 
-          var newItemView = Blaze.With(newDataContext, eachView.contentFunc);
           eachView.numItems++;
 
           var bindings = {};

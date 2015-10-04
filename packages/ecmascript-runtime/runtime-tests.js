@@ -55,3 +55,36 @@ Tinytest.add("core-js - Number", function () {
   // problem for us.
   check(1234, Number);
 });
+
+Tinytest.add("core-js - Object", function (test) {
+  test.equal(typeof Object.assign, "function");
+  test.equal(typeof Object.is, "function");
+  test.equal(typeof Object.setPrototypeOf, "function");
+  test.equal(typeof Object.getPrototypeOf, "function");
+});
+
+Tinytest.add("core-js - String", function (test) {
+  test.equal(typeof "asdf".startsWith, "function");
+  test.equal(typeof "asdf".endsWith, "function");
+  test.equal(typeof "asdf".repeat, "function");
+  test.equal(typeof "asdf".trim, "function");
+});
+
+Tinytest.add("core-js - Symbol", function (test) {
+  test.equal(typeof Symbol, "function");
+  test.equal(
+    typeof Array.prototype[Symbol.iterator],
+    "function"
+  );
+});
+
+Tinytest.add("core-js - Function", function (test) {
+  test.equal(
+    typeof Function.prototype[Symbol.hasInstance],
+    "function"
+  );
+
+  function Constructor() {};
+  test.equal(Constructor[Symbol.hasInstance](new Constructor), true);
+  test.equal(Constructor[Symbol.hasInstance]({}), false);
+});

@@ -62,14 +62,18 @@ Mongo.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      var src = name
+            ? DDP.randomStream('/collection/' + name)
+            : Random.insecure;
       return new Mongo.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
     self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      var src = name
+            ? DDP.randomStream('/collection/' + name)
+            : Random.insecure;
       return src.id();
     };
     break;
@@ -678,7 +682,7 @@ Mongo.Collection.prototype.rawDatabase = function () {
  * @summary Create a Mongo-style `ObjectID`.  If you don't specify a `hexString`, the `ObjectID` will generated randomly (not using MongoDB's ID construction rules).
  * @locus Anywhere
  * @class
- * @param {String} hexString Optional.  The 24-character hexadecimal contents of the ObjectID to create
+ * @param {String} [hexString] Optional.  The 24-character hexadecimal contents of the ObjectID to create
  */
 Mongo.ObjectID = MongoID.ObjectID;
 

@@ -435,16 +435,7 @@ selftest.define("old cli tests (converted)", function () {
 
   // bundle
   run = s.run('bundle', 'foo.tar.gz');
-  run.expectExit(0);
-
-  // untar the tarball, make sure the tar command succeeds, do it only on linux,
-  // since on windows it requires messing with 7z failures, different behavior
-  // of commands and options, etc
-  if (process.platform !== 'win32') {
-    var tar_tvzf = utils.execFileSync('tar', ['tvzf', files.pathJoin(s.cwd, 'foo.tar.gz')]);
-    selftest.expectTrue(tar_tvzf.success);
-  }
-  files.unlink(files.pathJoin(s.cwd, 'foo.tar.gz'));
+  run.matchErr(/This command has been deprecated/);
 
   run = s.run('build', '.');
   run.expectExit(0);
@@ -501,4 +492,3 @@ selftest.define("old cli tests (converted)", function () {
   run.expectExit(0);
   files.unlink(files.pathJoin(s.cwd, 'settings.js'));
 });
-
