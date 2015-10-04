@@ -30,8 +30,7 @@
   "dependencies": {
     "invariant": "2.1.1",
     "lodash.find": "3.2.1",
-    "path-exists": "2.0.0",
-    "walkdir": "0.0.10"
+    "path-exists": "2.0.0"
   },
   "devDependencies": {
     "babel": "5.8.23",
