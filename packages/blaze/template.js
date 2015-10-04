@@ -438,13 +438,13 @@ Blaze.TemplateInstance.prototype.subscriptionsReady = function () {
  * @function
  * @param {Integer} [numLevels] The number of levels beyond the template instance to look. Defaults to 1.
  */
-Blaze.TemplateInstance.prototype.parentTemplate = function (levels) {
+Blaze.TemplateInstance.prototype.parentTemplate = function (numLevels) {
     var view = Blaze.currentView;
-    if (typeof levels === "undefined") {
-        levels = 1;
+    if (typeof numLevels === "undefined") {
+        numLevels = 1;
     }
     while (view) {
-        if (view.name.substring(0, 9) === "Template." && !(levels--)) {
+        if (view.name.substring(0, 9) === "Template." && !(numLevels--)) {
             return view.templateInstance();
         }
         view = view.parentView;
