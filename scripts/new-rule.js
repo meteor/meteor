@@ -112,7 +112,7 @@ var RuleTester = require('eslint').RuleTester
 
 const serverEnv = {
   path: 'server/${ruleId}.js',
-  env: CLIENT
+  env: SERVER,
   isCompatibilityFile: false,
   isInMeteorProject: true,
   isPackageConfig: false,
@@ -121,7 +121,7 @@ const serverEnv = {
 
 const clientEnv = {
   path: 'server/${ruleId}.js',
-  env: CLIENT
+  env: CLIENT,
   isCompatibilityFile: false,
   isInMeteorProject: true,
   isPackageConfig: false,
