@@ -24,7 +24,9 @@ Com o Meteor, criamos apps:
 O objetivo desta plataforma é criar software de uma maneira mais simples, como produzir uma nova plataforma para aplicações cloud
 que se vai tornar tão omnipresente quanto as plataformas anteriores (Unix, HTTP e a base de dados relacional). 
 
-O Meteor foi desenvolvido para ser fácil de aprender, incluíndo para principiantes. É utilizado Javascript como a única linguagem de programação porque só essa é usada no cliente (jQuery) assim como no servidor (Node.js, Underscore). Como base de dados, o Meteor suporta MongoDB que está presente na interface do cliente assim como no servidor, onde não é necessário aprender um novo modelo de código.
+O Meteor foi desenvolvido para ser fácil de aprender, incluíndo por principiantes. É utilizado Javascript como a única linguagem de programação porque só essa é usada no cliente (jQuery) assim como no servidor (Node.js, Underscore). Como base de dados, o Meteor suporta MongoDB que está presente na interface do cliente assim como no servidor, onde não é necessário aprender um novo modelo de código.
+
+A sua aceitação por parte dos programadores tem sido bastante positiva. A plataforma é aclamada pela sua portabilidade e por simplificar processos de desenvolvimento com os quais era complicado trabalhar. Isto permite aos programadores criarem aplicações a partir do zero num espaço de semanas, havendo já vários casos de startups construídas com o Meteor que foram adquiridas.
 
 # Processo
 
@@ -51,7 +53,7 @@ O lançamento de muitas versões torna-se um incómodo para os utilizadores, por
 
 A ideia de um lançamento antecipado para teste de mercado para depois melhorá-lo com o "feedback" dos utilizadores também pode ser interpretado como "delivery over quality".
 
-Responding to change over Following a plan
+Responding to change over following a plan
 Uma escolha pobre das funcionalidades necessárias pode levar a uma sobrecarga de trabalho dos "developers", que por sua vez pode levar a um esgotamento das capacidades da equipa de trabalho.
 
 Todas as mudanças que são feitas ao projeto têm um custo, podem dificultar a previsão dos custos totais e se o "budget/orçamento" será suficiente para o cobrir o custo do projeto.
