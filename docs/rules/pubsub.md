@@ -1,6 +1,6 @@
 # Core API for publications and subscriptions (pubsub)
 
-Verifies usage of [Publish and Subscribe](http://docs.meteor.com/#/full/publishandsubscribe).
+Prevent misusage of [Publish and Subscribe](http://docs.meteor.com/#/full/publishandsubscribe).
 
 
 ## Rule Details
