@@ -45,10 +45,11 @@ Finally, enable all of the rules that you would like to use.
 ```json
 {
   "rules": {
-    "meteor/no-session": 1,
+    "meteor/no-session": 2,
     "meteor/no-blaze-lifecycle-assignment": 2,
     "meteor/no-blaze-zero-timeout": 2,
-    "meteor/audit-argument-checks": 2
+    "meteor/audit-argument-checks": 2,
+    "meteor/pubsub": 2
   }
 }
 ```
@@ -61,6 +62,7 @@ For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_
 * [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md): Prevent deprecated template lifecycle callback assignments
 * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
 * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
+* [pubsub](docs/rules/pubsub.md): Prevent misusage of Publish and Subscribe
 
 ## To Do
 
