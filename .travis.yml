@@ -15,12 +15,14 @@ node_js:
   - 4
 before_install:
   - npm i -g npm@^2.0.0
+  - npm i -g codeclimate-test-reporter
 before_script:
   - npm prune
   - 'curl -Lo travis_after_all.py https://git.io/vLSON'
 script:
   - npm run test
 after_success:
+  - codeclimate-test-reporter < ./reports/coverage/lcov.info
   - python travis_after_all.py
   - export $(cat .to_export_back)
   - npm run semantic-release

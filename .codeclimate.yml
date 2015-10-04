@@ -1,3 +1,8 @@
 engines:
   eslint:
     enabled: true
+
+ratings:
+  paths:
+    - lib/**
+    - tests/**
