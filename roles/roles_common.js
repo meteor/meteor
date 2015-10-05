@@ -432,8 +432,8 @@ _.extend(Roles, {
    *                            specified but need not have _all_ roles.
    * @param {String} [group] Optional name of group to restrict roles to.
    *                         User's Roles.GLOBAL_GROUP will also be checked.
-   * @param {Object} [options] Optional set options identical to what you may
-   *                         pass to the Collection.find method.
+   * @param {Object} [options] Optional options which are passed directly
+   *                           through to `Meteor.users.find(query, options)`
    * @return {Cursor} cursor of users in role
    */
   getUsersInRole: function (role, group, options) {
