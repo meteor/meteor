@@ -13,6 +13,10 @@ ESLint-plugin-Meteor
 
 Meteor specific linting rules for ESLint
 
+![Example](docs/media/pub.gif)
+*This gif shows integration of ESLint-plugin-Meteor into Atom with [linter](https://atom.io/packages/linter) and [linter-eslint](https://atom.io/packages/linter-eslint). Find out more in the [setup guide](docs/SETUP_DEVELOPMENT.md).*
+
+
 # Installation
 
 Install [ESLint](https://www.github.com/eslint/eslint) either locally or globally.
@@ -70,16 +74,9 @@ For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_
 
 [Any rule idea is welcome !](https://github.com/dferber90/eslint-plugin-meteor/issues)
 
-## Contributing
+# Contributing
 
 Read about [set up of the development environment](docs/SETUP_DEVELOPMENT.md).
-
-## Essential Development Resources
-
-These specs and tools help enormously when developing new rules.
-* [ESTree Spec](https://github.com/estree/estree/blob/master/spec.md)
-* [Espree Parser](http://eslint.org/parser/)
-
 
 # Thanks
 

@@ -63,3 +63,9 @@ Rules defined in this plugin differ from regular ESLint rules. Meteor treats fil
 ## Give back
 
 After making sure all tests pass and the test-coverage is at 100%, please send a PR to [dferber90/eslint-plugin-meteor](https://github.com/dferber90/eslint-plugin-meteor).
+
+## Essential Development Resources
+
+These specs and tools help enormously when developing new rules.
+* [ESTree Spec](https://github.com/estree/estree/blob/master/spec.md)
+* [Espree Parser](http://eslint.org/parser/)
