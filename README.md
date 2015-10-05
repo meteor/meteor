@@ -1,12 +1,12 @@
 # Meteor Guide
 
-We're getting started building a Meteor Guide. TL;DR, like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor.
+We're getting started building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor.
 
 - Current status: Initial planning and community feedback.
 
 ### Action items for community
 
-1. Read the charter below and the [outlines](outlines.md)
+1. Read the charter below and the [proposed outlines for guide articles](outlines.md)
 2. Ask questions on the [forum thread](#)
 2. Submit pull requests on the outlines to add things that are missing
 3. File issues here for serious problems or discussion
