@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>UIHelpers - The meteor-roles API</title>
+    <title>roles/client/uiHelpers.js - The meteor-roles API</title>
     <link rel="stylesheet" href="http://yui.yahooapis.com/3.9.1/build/cssgrids/cssgrids-min.css">
     <link rel="stylesheet" href="../assets/vendor/prettify/prettify-min.css">
     <link rel="stylesheet" href="../assets/css/main.css" id="site_styles">
@@ -88,53 +88,104 @@
             <div class="apidocs">
                 <div id="docs-main">
                     <div class="content">
-                        <h1>UIHelpers Module</h1>
-<div class="box clearfix meta">
-    
+                        <h1 class="file-heading">File: roles/client/uiHelpers.js</h1>
 
-    
+<div class="file">
+    <pre class="code prettyprint linenums">
+&quot;use strict&quot;
 
-    
-        <div class="foundat">
-            Defined in: <a href="../files/roles_client_uiHelpers.js.html#l3"><code>roles&#x2F;client&#x2F;uiHelpers.js:3</code></a>
-        </div>
-    
-
-    
-</div>
-
-
-
-<div class="box intro">
-    <p>Convenience functions for use on client.</p>
-<p>NOTE: You must restrict user actions on the server-side; any
-client-side checks are strictly for convenience and must not be
-trusted.</p>
-
-</div>
+/**
+ * Convenience functions for use on client.
+ *
+ * NOTE: You must restrict user actions on the server-side; any
+ * client-side checks are strictly for convenience and must not be
+ * trusted.
+ *
+ * @module UIHelpers
+ */
 
 
+////////////////////////////////////////////////////////////
+// UI helpers
+//
+// Use a semi-private variable rather than declaring UI
+// helpers directly so that we can unit test the helpers.
+// XXX For some reason, the UI helpers are not registered 
+// before the tests run.
+//
+Roles._uiHelpers = {
 
-<div class="yui3-g">
-    <div class="yui3-u-1-2">
-        
-            <p>This module provides the following classes:</p>
+  /**
+   * UI helper to check if current user is in at least one
+   * of the target roles.  For use in client-side templates.
+   *
+   * @example
+   *     {{#if isInRole &#x27;admin&#x27;}}
+   *     {{/if}}
+   *
+   *     {{#if isInRole &#x27;editor,user&#x27;}}
+   *     {{/if}}
+   *
+   *     {{#if isInRole &#x27;editor,user&#x27; &#x27;group1&#x27;}}
+   *     {{/if}}
+   *
+   * @method isInRole
+   * @param {String} role Name of role or comma-seperated list of roles
+   * @param {String} [group] Optional, name of group to check
+   * @return {Boolean} true if current user is in at least one of the target roles
+   * @static
+   * @for UIHelpers 
+   */
+  isInRole: function (role, group) {
+    var user = Meteor.user(),
+        comma = (role || &#x27;&#x27;).indexOf(&#x27;,&#x27;),
+        roles
 
-            <ul class="module-classes">
-            
-                <li class="module-class">
-                    <a href="../classes/UIHelpers.html">
-                        UIHelpers
-                    </a>
-                </li>
-            
-            </ul>
-        
-    </div>
+    if (!user) return false
+    if (!Match.test(role, String)) return false
 
-    <div class="yui3-u-1-2">
-        
-    </div>
+    if (comma !== -1) {
+      roles = _.reduce(role.split(&#x27;,&#x27;), function (memo, r) {
+        if (!r || !r.trim()) {
+          return memo
+        }
+        memo.push(r.trim())
+        return memo
+      }, [])
+    } else {
+      roles = [role]
+    }
+
+    if (Match.test(group, String)) {
+      return Roles.userIsInRole(user, roles, group)
+    }
+
+    return Roles.userIsInRole(user, roles)
+  }
+}
+
+
+
+////////////////////////////////////////////////////////////
+// Register UI helpers
+//
+
+if (Roles.debug &amp;&amp; console.log) {
+  console.log(&quot;[roles] Roles.debug =&quot;, Roles.debug)
+}
+
+if (&#x27;undefined&#x27; !== typeof Package.blaze &amp;&amp;
+    &#x27;undefined&#x27; !== typeof Package.blaze.Blaze &amp;&amp;
+    &#x27;function&#x27;  === typeof Package.blaze.Blaze.registerHelper) {
+  _.each(Roles._uiHelpers, function (func, name) {
+    if (Roles.debug &amp;&amp; console.log) {
+      console.log(&quot;[roles] registering Blaze helper &#x27;&quot; + name + &quot;&#x27;&quot;)
+    }
+    Package.blaze.Blaze.registerHelper(name, func) 
+  })
+}
+
+    </pre>
 </div>
 
                     </div>

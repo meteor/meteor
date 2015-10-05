@@ -19,7 +19,7 @@
             
         </div>
         <div class="yui3-u-1-4 version">
-            <em>API Docs for: v1.2.12</em>
+            <em>API Docs for: v1.2.14</em>
         </div>
     </div>
     <div id="bd" class="yui3-g">
@@ -43,105 +43,7 @@
             
                 <li><a href="../classes/Roles.html">Roles</a></li>
             
-                <li><a href="../classes/Roles                                                                                                    // 22.html">Roles                                                                                                    // 22</a></li>
-            
-                <li><a href="../classes/Roles                                                                                            // 22.html">Roles                                                                                            // 22</a></li>
-            
                 <li><a href="../classes/UIHelpers.html">UIHelpers</a></li>
-            
-                <li><a href="../classes/UIHelpers                                                                                                // 42
-/                                                                                                              // 43
- isInRole: function (role, group) {                                                                               // 44
-   var user = Meteor.user(),                                                                                      // 45
-       comma = (role || &#x27;&#x27;).indexOf(&#x27;,&#x27;),                                                                         // 46
-       roles                                                                                                      // 47
-                                                                                                                  // 48
-   if (!user) return false                                                                                        // 49
-   if (!Match.test(role, String)) return false                                                                    // 50
-                                                                                                                  // 51
-   if (comma !== -1) {                                                                                            // 52
-     roles = _.reduce(role.split(&#x27;,&#x27;), function (memo, r) {                                                       // 53
-       if (!r || !r.trim()) {                                                                                     // 54
-         return memo                                                                                              // 55
-       }                                                                                                          // 56
-       memo.push(r.trim())                                                                                        // 57
-       return memo                                                                                                // 58
-     }, [])                                                                                                       // 59
-   } else {                                                                                                       // 60
-     roles = [role]                                                                                               // 61
-   }                                                                                                              // 62
-                                                                                                                  // 63
-   if (Match.test(group, String)) {                                                                               // 64
-     return Roles.userIsInRole(user, roles, group)                                                                // 65
-   }                                                                                                              // 66
-                                                                                                                  // 67
-   return Roles.userIsInRole(user, roles)                                                                         // 68
- }                                                                                                                // 69
-}                                                                                                                  // 70
-                                                                                                                  // 71
-if (Package.ui) {                                                                                                  // 72
- _.each(Roles._uiHelpers, function (func, name) {                                                                 // 73
-   Package.ui.UI.registerHelper(name, func)                                                                       // 74
- })                                                                                                               // 75
-} else if (Package.handlebars) {                                                                                   // 76
- _.each(Roles._uiHelpers, function (func, name) {                                                                 // 77
-   Package.handlebars.Handlebars.registerHelper(name, func)                                                       // 78
- })                                                                                                               // 79
-} else {                                                                                                           // 80
- console.log &amp;&amp; console.log(&#x27;WARNING: Roles template helpers not registered. Handlebars or UI package not found&#x27;) // 81
-}                                                                                                                  // 82
-                                                                                                                  // 83
-}());                                                                                                              // 84
-                                                                                                                  // 85
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-}).call(this);.html">UIHelpers                                                                                                // 42
-/                                                                                                              // 43
- isInRole: function (role, group) {                                                                               // 44
-   var user = Meteor.user(),                                                                                      // 45
-       comma = (role || &#x27;&#x27;).indexOf(&#x27;,&#x27;),                                                                         // 46
-       roles                                                                                                      // 47
-                                                                                                                  // 48
-   if (!user) return false                                                                                        // 49
-   if (!Match.test(role, String)) return false                                                                    // 50
-                                                                                                                  // 51
-   if (comma !== -1) {                                                                                            // 52
-     roles = _.reduce(role.split(&#x27;,&#x27;), function (memo, r) {                                                       // 53
-       if (!r || !r.trim()) {                                                                                     // 54
-         return memo                                                                                              // 55
-       }                                                                                                          // 56
-       memo.push(r.trim())                                                                                        // 57
-       return memo                                                                                                // 58
-     }, [])                                                                                                       // 59
-   } else {                                                                                                       // 60
-     roles = [role]                                                                                               // 61
-   }                                                                                                              // 62
-                                                                                                                  // 63
-   if (Match.test(group, String)) {                                                                               // 64
-     return Roles.userIsInRole(user, roles, group)                                                                // 65
-   }                                                                                                              // 66
-                                                                                                                  // 67
-   return Roles.userIsInRole(user, roles)                                                                         // 68
- }                                                                                                                // 69
-}                                                                                                                  // 70
-                                                                                                                  // 71
-if (Package.ui) {                                                                                                  // 72
- _.each(Roles._uiHelpers, function (func, name) {                                                                 // 73
-   Package.ui.UI.registerHelper(name, func)                                                                       // 74
- })                                                                                                               // 75
-} else if (Package.handlebars) {                                                                                   // 76
- _.each(Roles._uiHelpers, function (func, name) {                                                                 // 77
-   Package.handlebars.Handlebars.registerHelper(name, func)                                                       // 78
- })                                                                                                               // 79
-} else {                                                                                                           // 80
- console.log &amp;&amp; console.log(&#x27;WARNING: Roles template helpers not registered. Handlebars or UI package not found&#x27;) // 81
-}                                                                                                                  // 82
-                                                                                                                  // 83
-}());                                                                                                              // 84
-                                                                                                                  // 85
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-}).call(this);</a></li>
             
             </ul>
 
@@ -149,105 +51,7 @@ if (Package.ui) {                                                               
             
                 <li><a href="../modules/Roles.html">Roles</a></li>
             
-                <li><a href="../modules/Roles                                                                                                   __ 6
-_                                                                                                                __ 7
-                                                                                                                  __ 8
-_**                                                                                                                __ 9
-Roles collection documents consist only of an id and a role name.                                               __ 10
-  ex: { _id:&lt;uuid&gt;, name: &quot;admin&quot; }                                                                             __ 11
-_                                                                                                                __ 12
-if (!Meteor.roles) {                                                                                               __ 13
- Meteor.roles = new Meteor.Collection(&quot;roles&quot;)                                                                    __ 14
-}                                                                                                                  __ 15
-                                                                                                                  __ 16
-_**                                                                                                                __ 17
-Role-based authorization compatible with built-in Meteor accounts package.                                      __ 18
-                                                                                                                __ 19
-Stores user&#x27;s current roles in a &#x27;roles&#x27; field on the user object.                                              __ 20
-                                                                                                                __ 21.html">Roles                                                                                                   // 6
-/                                                                                                                // 7
-                                                                                                                  // 8
-/**                                                                                                                // 9
-Roles collection documents consist only of an id and a role name.                                               // 10
-  ex: { _id:&lt;uuid&gt;, name: &quot;admin&quot; }                                                                             // 11
-/                                                                                                                // 12
-if (!Meteor.roles) {                                                                                               // 13
- Meteor.roles = new Meteor.Collection(&quot;roles&quot;)                                                                    // 14
-}                                                                                                                  // 15
-                                                                                                                  // 16
-/**                                                                                                                // 17
-Role-based authorization compatible with built-in Meteor accounts package.                                      // 18
-                                                                                                                // 19
-Stores user&#x27;s current roles in a &#x27;roles&#x27; field on the user object.                                              // 20
-                                                                                                                // 21</a></li>
-            
-                <li><a href="../modules/Roles                                                                                           __ 6
-_                                                                                                        __ 7
-                                                                                                          __ 8
-_**                                                                                                        __ 9
-Roles collection documents consist only of an id and a role name.                                       __ 10
-  ex: { _id:&lt;uuid&gt;, name: &quot;admin&quot; }                                                                     __ 11
-_                                                                                                        __ 12
-if (!Meteor.roles) {                                                                                       __ 13
- Meteor.roles = new Meteor.Collection(&quot;roles&quot;)                                                            __ 14
-}                                                                                                          __ 15
-                                                                                                          __ 16
-_**                                                                                                        __ 17
-Role-based authorization compatible with built-in Meteor accounts package.                              __ 18
-                                                                                                        __ 19
-Stores user&#x27;s current roles in a &#x27;roles&#x27; field on the user object.                                      __ 20
-                                                                                                        __ 21.html">Roles                                                                                           // 6
-/                                                                                                        // 7
-                                                                                                          // 8
-/**                                                                                                        // 9
-Roles collection documents consist only of an id and a role name.                                       // 10
-  ex: { _id:&lt;uuid&gt;, name: &quot;admin&quot; }                                                                     // 11
-/                                                                                                        // 12
-if (!Meteor.roles) {                                                                                       // 13
- Meteor.roles = new Meteor.Collection(&quot;roles&quot;)                                                            // 14
-}                                                                                                          // 15
-                                                                                                          // 16
-/**                                                                                                        // 17
-Role-based authorization compatible with built-in Meteor accounts package.                              // 18
-                                                                                                        // 19
-Stores user&#x27;s current roles in a &#x27;roles&#x27; field on the user object.                                      // 20
-                                                                                                        // 21</a></li>
-            
                 <li><a href="../modules/UIHelpers.html">UIHelpers</a></li>
-            
-                <li><a href="../modules/UIHelpers                                                                                               __ 10
-_                                                                                                                __ 11
-                                                                                                                  __ 12
-____________________________________________________________                                                       __ 13
-__ UI helpers                                                                                                      __ 14
-__                                                                                                                 __ 15
-__ Use a semi-private variable rather than declaring UI                                                            __ 16
-__ helpers directly so that we can unit test the helpers.                                                          __ 17
-__ XXX For some reason, the UI helpers are not registered                                                          __ 18
-__ before the tests run.                                                                                           __ 19
-__                                                                                                                 __ 20
-Roles._uiHelpers = {                                                                                               __ 21
-                                                                                                                  __ 22
- _**                                                                                                              __ 23
-UI helper to check if current user is in at least one                                                         __ 24
-of the target roles.  For use in client-side templates.                                                       __ 25
-                                                                                                              __ 26.html">UIHelpers                                                                                               // 10
-/                                                                                                                // 11
-                                                                                                                  // 12
-////////////////////////////////////////////////////////////                                                       // 13
-// UI helpers                                                                                                      // 14
-//                                                                                                                 // 15
-// Use a semi-private variable rather than declaring UI                                                            // 16
-// helpers directly so that we can unit test the helpers.                                                          // 17
-// XXX For some reason, the UI helpers are not registered                                                          // 18
-// before the tests run.                                                                                           // 19
-//                                                                                                                 // 20
-Roles._uiHelpers = {                                                                                               // 21
-                                                                                                                  // 22
- /**                                                                                                              // 23
-UI helper to check if current user is in at least one                                                         // 24
-of the target roles.  For use in client-side templates.                                                       // 25
-                                                                                                              // 26</a></li>
             
             </ul>
         </div>
@@ -301,11 +105,11 @@ of the target roles.  For use in client-side templates.                         
  *   ex: { _id:&lt;uuid&gt;, name: &quot;admin&quot; }
  */
 if (!Meteor.roles) {
-  Meteor.roles = new Meteor.Collection(&quot;roles&quot;)
+  Meteor.roles = new Mongo.Collection(&quot;roles&quot;)
 }
 
 /**
- * Role-based authorization compatible with built-in Meteor accounts package.
+ * Authorization package compatible with built-in Meteor accounts system.
  *
  * Stores user&#x27;s current roles in a &#x27;roles&#x27; field on the user object.
  *
@@ -533,10 +337,7 @@ _.extend(Roles, {
       }
     }
     catch (ex) {
-      var removeNonGroupedRoleFromGroupMsg = &#x27;Cannot apply $pull/$pullAll modifier to non-array&#x27; 
-
-      if (ex.name === &#x27;MongoError&#x27; &amp;&amp;
-          ex.err === removeNonGroupedRoleFromGroupMsg) {
+      if (ex.name === &#x27;MongoError&#x27; &amp;&amp; isMongoMixError(ex.err)) {
         throw new Error (mixingGroupAndNonGroupErrorMsg)
       }
 
@@ -722,9 +523,11 @@ _.extend(Roles, {
    *                            specified but need not have _all_ roles.
    * @param {String} [group] Optional name of group to restrict roles to.
    *                         User&#x27;s Roles.GLOBAL_GROUP will also be checked.
+   * @param {Object} [options] Optional options which are passed directly
+   *                           through to &#x60;Meteor.users.find(query, options)&#x60;
    * @return {Cursor} cursor of users in role
    */
-  getUsersInRole: function (role, group) {
+  getUsersInRole: function (role, group, options) {
     var query,
         roles = role,
         groupQuery
@@ -770,7 +573,7 @@ _.extend(Roles, {
       query.$or.push({roles: {$in: roles}})
     }
 
-    return Meteor.users.find(query)
+    return Meteor.users.find(query, options);
   },  // end getUsersInRole 
   
   /**
@@ -873,7 +676,7 @@ _.extend(Roles, {
 
 
   /**
-   * Internal function that users the Template pattern to adds or sets roles 
+   * Internal function that uses the Template pattern to adds or sets roles 
    * for users.
    *
    * @method _updateUserRoles
@@ -974,12 +777,7 @@ _.extend(Roles, {
       }
     }
     catch (ex) {
-      var addNonGroupToGroupedRolesMsg = &#x27;Cannot apply $addToSet modifier to non-array&#x27;,
-          addGrouped2NonGroupedMsg = &quot;can&#x27;t append to array using string field name&quot;
-
-      if (ex.name === &#x27;MongoError&#x27; &amp;&amp;
-          (ex.err === addNonGroupToGroupedRolesMsg ||
-           ex.err.substring(0, 45) === addGrouped2NonGroupedMsg)) {
+      if (ex.name === &#x27;MongoError&#x27; &amp;&amp; isMongoMixError(ex.err)) {
         throw new Error (mixingGroupAndNonGroupErrorMsg)
       }
 
@@ -988,6 +786,26 @@ _.extend(Roles, {
   }  // end _updateUserRoles
 
 })  // end _.extend(Roles ...)
+
+
+function isMongoMixError (errorMsg) {
+  var expectedMessages = [
+      &#x27;Cannot apply $addToSet modifier to non-array&#x27;,
+      &#x27;Cannot apply $addToSet to a non-array field&#x27;,
+      &#x27;Can only apply $pullAll to an array&#x27;,
+      &#x27;Cannot apply $pull/$pullAll modifier to non-array&#x27;,
+      &quot;can&#x27;t append to array using string field name&quot;,
+      &#x27;to traverse the element&#x27;
+      ]
+
+  return _.some(expectedMessages, function (snippet) {
+    return strContains(errorMsg, snippet)
+  })
+}
+
+function strContains (haystack, needle) {
+  return -1 !== haystack.indexOf(needle)
+}
 
 }());
 

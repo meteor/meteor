@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>UIHelpers - The meteor-roles API</title>
+    <title>roles/client/subscriptions.js - The meteor-roles API</title>
     <link rel="stylesheet" href="http://yui.yahooapis.com/3.9.1/build/cssgrids/cssgrids-min.css">
     <link rel="stylesheet" href="../assets/vendor/prettify/prettify-min.css">
     <link rel="stylesheet" href="../assets/css/main.css" id="site_styles">
@@ -88,53 +88,34 @@
             <div class="apidocs">
                 <div id="docs-main">
                     <div class="content">
-                        <h1>UIHelpers Module</h1>
-<div class="box clearfix meta">
-    
+                        <h1 class="file-heading">File: roles/client/subscriptions.js</h1>
 
-    
-
-    
-        <div class="foundat">
-            Defined in: <a href="../files/roles_client_uiHelpers.js.html#l3"><code>roles&#x2F;client&#x2F;uiHelpers.js:3</code></a>
-        </div>
-    
-
-    
-</div>
+<div class="file">
+    <pre class="code prettyprint linenums">
+&quot;use strict&quot;
 
 
+/**
+ * Subscription handle for the currently logged in user&#x27;s permissions.
+ *
+ * NOTE: The corresponding publish function, &#x60;_roles&#x60;, depends on
+ * &#x60;this.userId&#x60; so it will automatically re-run when the currently
+ * logged-in user changes.
+ *
+ * @example
+ *
+ *     &#x60;Roles.subscription.ready()&#x60; // =&gt; &#x60;true&#x60; if user roles have been loaded
+ *
+ * @property subscription
+ * @type Object
+ * @for Roles
+ */
 
-<div class="box intro">
-    <p>Convenience functions for use on client.</p>
-<p>NOTE: You must restrict user actions on the server-side; any
-client-side checks are strictly for convenience and must not be
-trusted.</p>
+Tracker.autorun(function () {
+  Roles.subscription = Meteor.subscribe(&quot;_roles&quot;)
+})
 
-</div>
-
-
-
-<div class="yui3-g">
-    <div class="yui3-u-1-2">
-        
-            <p>This module provides the following classes:</p>
-
-            <ul class="module-classes">
-            
-                <li class="module-class">
-                    <a href="../classes/UIHelpers.html">
-                        UIHelpers
-                    </a>
-                </li>
-            
-            </ul>
-        
-    </div>
-
-    <div class="yui3-u-1-2">
-        
-    </div>
+    </pre>
 </div>
 
                     </div>
