@@ -224,7 +224,7 @@
                 },
                 {
                     "name": "group",
-                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        Group names can not start with '$' or numbers.\n                        Periods in names '.' are automatically converted\n                        to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
+                    "description": "Optional group name. If supplied, roles will be\n                        specific to that group.  \n                        Group names can not start with a '$' or contain\n                        null characters.  Periods in names '.' are\n                        automatically converted to underscores.\n                        The special group Roles.GLOBAL_GROUP provides \n                        a convenient way to assign blanket roles/permissions\n                        across all groups.  The roles/permissions in the \n                        Roles.GLOBAL_GROUP group will be automatically \n                        included in checks for any group.",
                     "type": "String",
                     "optional": true
                 }
