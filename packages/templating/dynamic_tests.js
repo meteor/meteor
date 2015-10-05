@@ -86,6 +86,59 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "spacebars - ui-dynamic-template - render template dynamically with contentBlock", function (test, expect) {
+    var tmpl = Template.ui_dynamic_test_contentblock;
+
+    var nameVar = new ReactiveVar;
+    var dataVar = new ReactiveVar;
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      },
+      templateData: function () {
+        return dataVar.get();
+      }
+    });
+
+    // No template chosen
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "");
+
+    // Choose the "ui-dynamic-test-sub" template, with no data context
+    // passed in.
+    nameVar.set("ui_dynamic_test_sub_contentblock");
+    Tracker.flush({_throwFirstError: true});
+    test.equal(canonicalizeHtml(div.innerHTML), "testcontentBlock");
+
+    // Set a data context.
+    dataVar.set({ foo: "bar" });
+    Tracker.flush({_throwFirstError: true});
+    test.equal(canonicalizeHtml(div.innerHTML), "testbarcontentBlock");
+  });
+
+// Same test as above, but the {{> Template.dynamic}} inclusion has no
+// `dataContext` argument.
+Tinytest.add(
+  "spacebars - ui-dynamic-template - render template dynamically with contentBlock, no data context",
+  function (test, expect) {
+    var tmpl = Template.ui_dynamic_test_contentblock_no_data;
+
+    var nameVar = new ReactiveVar;
+    tmpl.helpers({
+      templateName: function () {
+        return nameVar.get();
+      }
+    });
+
+    var div = renderToDiv(tmpl);
+    test.equal(canonicalizeHtml(div.innerHTML), "");
+
+    nameVar.set("ui_dynamic_test_sub_contentblock");
+    Tracker.flush({_throwFirstError: true});
+    test.equal(canonicalizeHtml(div.innerHTML), "testcontentBlock");
+  });
+
+Tinytest.add(
   "spacebars - ui-dynamic-template - render template " +
     "dynamically, data context does not get inherited if " +
     "falsey context is passed in",
