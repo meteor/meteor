@@ -243,10 +243,7 @@ _.extend(Roles, {
       }
     }
     catch (ex) {
-      var removeNonGroupedRoleFromGroupMsg = 'Cannot apply $pull/$pullAll modifier to non-array' 
-
-      if (ex.name === 'MongoError' &&
-          ex.err === removeNonGroupedRoleFromGroupMsg) {
+      if (ex.name === 'MongoError' && isMongoMixError(ex.err)) {
         throw new Error (mixingGroupAndNonGroupErrorMsg)
       }
 
@@ -686,12 +683,7 @@ _.extend(Roles, {
       }
     }
     catch (ex) {
-      var addNonGroupToGroupedRolesMsg = 'Cannot apply $addToSet modifier to non-array',
-          addGrouped2NonGroupedMsg = "can't append to array using string field name"
-
-      if (ex.name === 'MongoError' &&
-          (ex.err === addNonGroupToGroupedRolesMsg ||
-           ex.err.substring(0, 45) === addGrouped2NonGroupedMsg)) {
+      if (ex.name === 'MongoError' && isMongoMixError(ex.err)) {
         throw new Error (mixingGroupAndNonGroupErrorMsg)
       }
 
@@ -700,5 +692,25 @@ _.extend(Roles, {
   }  // end _updateUserRoles
 
 })  // end _.extend(Roles ...)
+
+
+function isMongoMixError (errorMsg) {
+  var expectedMessages = [
+      'Cannot apply $addToSet modifier to non-array',
+      'Cannot apply $addToSet to a non-array field',
+      'Can only apply $pullAll to an array',
+      'Cannot apply $pull/$pullAll modifier to non-array',
+      "can't append to array using string field name",
+      'to traverse the element'
+      ]
+
+  return _.some(expectedMessages, function (snippet) {
+    return strContains(errorMsg, snippet)
+  })
+}
+
+function strContains (haystack, needle) {
+  return -1 !== haystack.indexOf(needle)
+}
 
 }());

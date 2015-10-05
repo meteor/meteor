@@ -1,8 +1,9 @@
-;(function () {
+"use strict"
+
 
 /**
  * Roles collection documents consist only of an id and a role name.
- *   ex: { _id:<uuid>, name: "admin" }
+ *   ex: { _id: "123", name: "admin" }
  */
 if (!Meteor.roles) {
   Meteor.roles = new Mongo.Collection("roles")
@@ -13,14 +14,19 @@ if (!Meteor.roles) {
 
 
 /**
- * Always publish logged-in user's roles so client-side
- * checks can work.
+ * Publish logged-in user's roles so client-side checks can work.
+ * 
+ * Use a named publish function so clients can check `ready()` state.
  */
-Meteor.publish('roles', function () {
-  var userId = this.userId,
-      fields = {roles:1}
+Meteor.publish('_roles', function () {
+  var loggedInUserId = this.userId,
+      fields = {roles: 1}
 
-  return Meteor.users.find({_id:userId}, {fields: fields})
+  if (!loggedInUserId) {
+    this.ready()
+    return
+  }
+
+  return Meteor.users.find({_id: loggedInUserId},
+                           {fields: fields})
 })
-
-}());

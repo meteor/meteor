@@ -8,16 +8,23 @@ Package.describe({
 Package.onUse(function (api) {
   var both = ['client', 'server'];
 
-  api.versionsFrom && api.versionsFrom("METEOR@1.2.0.2");
+  api.versionsFrom("METEOR@1.2.0.2");
 
-  api.use(['underscore', 'accounts-base', 'check'], both);
+  api.use(['underscore',
+           'accounts-base',
+           'tracker',
+           'mongo',
+           'check'], both);
+
   api.use(['blaze'], 'client', {weak: true});
 
-  api.export && api.export('Roles');
+  api.export('Roles');
 
   api.addFiles('roles_server.js', 'server');
   api.addFiles('roles_common.js', both);
-  api.addFiles('roles_client.js', 'client');
+  api.addFiles(['client/debug.js',
+                'client/uiHelpers.js',
+                'client/subscriptions.js'], 'client');
 });
 
 Package.onTest(function (api) {
@@ -25,7 +32,10 @@ Package.onTest(function (api) {
 
   // `accounts-password` is included so `Meteor.users` exists
 
-  api.use(['alanning:roles','accounts-password','tinytest'], both);
+  api.use(['alanning:roles',
+           'accounts-password',
+           'underscore',
+           'tinytest'], both);
 
   api.addFiles('tests/client.js', 'client');
   api.addFiles('tests/server.js', 'server');

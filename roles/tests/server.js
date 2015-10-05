@@ -960,8 +960,12 @@
 
       reset() 
       Roles.addUsersToRoles(users.bob, ['editor', 'user'])
-      // don't expect this to throw error
-      Roles.removeUsersFromRoles(users.bob, ['user'], 'group1')
+      try {
+        Roles.removeUsersFromRoles(users.bob, ['user'], 'group1')
+      }
+      catch (ex) {
+        test.isTrue(ex.message == expectedErrorMsg, ex.message)
+      }
 
       reset() 
       Roles.addUsersToRoles(users.bob, ['editor', 'user'], 'group1')
