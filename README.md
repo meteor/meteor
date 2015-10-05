@@ -6,10 +6,16 @@ We're getting started building a Meteor Guide. TL;DR, like the [Rails Guide](htt
 
 ### Action items for community
 
-1. Read the charter below and the [outlines](outlines.md).
-2. Ask questions on the [forum thread](#).
-2. Submit pull requests on the outlines to add things that are missing.
-3. File issues here for serious problems or discussion.
+1. Read the charter below and the [outlines](outlines.md)
+2. Ask questions on the [forum thread](#)
+2. Submit pull requests on the outlines to add things that are missing
+3. File issues here for serious problems or discussion
+
+### Action items for MDG
+
+1. Consider and respond to all community feedback
+2. Set up GitHub pages site with basic theme and structure
+2. Set up hooks to deploy PRs and branches
 
 ## Meteor Guide “Charter”
 
