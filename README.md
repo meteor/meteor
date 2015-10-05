@@ -27,6 +27,8 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 Thanks to:
 
+  * [@challett](https://github.com/challett)
+  * [@dandv](https://github.com/dandv)
   * [@aldeed](https://github.com/aldeed)
   * [@kevb](https://github.com/kevb)
   * [@zimme](https://github.com/zimme)
@@ -37,6 +39,7 @@ Thanks to:
   * [@alanning](https://github.com/alanning)
 
 <br />
+
 
 <a name="authorization">
 ### Authorization
@@ -49,6 +52,7 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 
     v1.2.0 - adds the special Roles.GLOBAL_GROUP, used to provide blanket permissions across all groups
 
+
 <br />
 
 <a name="naming">
@@ -56,14 +60,14 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 
 Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign on a user and which you can check for later.
 
-You can have traditional roles like, "admin" or "webmaster", or you can assign more granular permissions such as, "view-secrets", "users.view", or "users.manage".  Often times more granular is actually better because you are able to handle all those pesky edge cases that come up in real-life usage without creating a ton of higher-level 'roles'.  To the roles package, its all strings.
+You can have traditional roles like, "admin" or "webmaster", or you can assign more granular permissions such as, "view-secrets", "users.view", or "users.manage".  Often times more granular is actually better because you are able to handle all those pesky edge cases that come up in real-life usage without creating a ton of higher-level 'roles'.  To the roles package, it's all strings.
 
 <br />
 
 <a name="groups">
 ### What are "groups"?
 
-Sometimes its useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is more clear.  Users can have one set of permissions in group A and another set of permissions in group B.  Let's go through an example of this using soccer/football teams as groups.
+Sometimes it's useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is more clear.  Users can have one set of permissions in group A and another set of permissions in group B.  Let's go through an example of this using soccer/football teams as groups.
 
 ```
 Roles.addUsersToRoles(joesUserId, ['manage-team','schedule-game'], 'manchester-united.com')
@@ -136,7 +140,7 @@ Meteor.publish(null, function (){
 <a name="installing">
 ### Installing
 
-#### Meteor 0.9+ (new packaging system)
+#### Meteor 0.9 - latest
 
 1. Add one of the built-in accounts packages so the Meteor.users collection exists.  From a command prompt:
     ```bash
@@ -193,29 +197,29 @@ Here are some potential use cases:
 
 Add users to roles:
 ```js
-  var users = [
+var users = [
       {name:"Normal User",email:"normal@example.com",roles:[]},
       {name:"View-Secrets User",email:"view@example.com",roles:['view-secrets']},
       {name:"Manage-Users User",email:"manage@example.com",roles:['manage-users']},
       {name:"Admin User",email:"admin@example.com",roles:['admin']}
     ];
 
-  _.each(users, function (user) {
-    var id;
-    
-    id = Accounts.createUser({
-      email: user.email,
-      password: "apple1",
-      profile: { name: user.name }
-    });
-
-    if (user.roles.length > 0) {
-      // Need _id of existing user record so this call must come 
-      // after `Accounts.createUser` or `Accounts.onCreate`
-      Roles.addUsersToRoles(id, user.roles, 'default-group');
-    }
+_.each(users, function (user) {
+  var id;
   
+  id = Accounts.createUser({
+    email: user.email,
+    password: "apple1",
+    profile: { name: user.name }
   });
+
+  if (user.roles.length > 0) {
+    // Need _id of existing user record so this call must come 
+    // after `Accounts.createUser` or `Accounts.onCreate`
+    Roles.addUsersToRoles(id, user.roles, 'default-group');
+  }
+
+});
 ```
 
 <br />
@@ -247,16 +251,16 @@ Meteor.publish('secrets', function (group) {
 
 Prevent non-authorized users from creating new users:
 ```js
-  Accounts.validateNewUser(function (user) {
-    var loggedInUser = Meteor.user();
+Accounts.validateNewUser(function (user) {
+  var loggedInUser = Meteor.user();
 
-    if (Roles.userIsInRole(loggedInUser, ['admin','manage-users'])) {
-      // NOTE: This example assumes the user is not using groups. 
-      return true;
-    }
+  if (Roles.userIsInRole(loggedInUser, ['admin','manage-users'])) {
+    // NOTE: This example assumes the user is not using groups. 
+    return true;
+  }
 
-    throw new Meteor.Error(403, "Not authorized to create new users");
-  });
+  throw new Meteor.Error(403, "Not authorized to create new users");
+});
 ```
 
 <br />
@@ -278,7 +282,7 @@ Meteor.methods({
 
     if (!loggedInUser ||
         !Roles.userIsInRole(loggedInUser, 
-                            ['manage-users','support-staff'], group)) {
+                            ['manage-users', 'support-staff'], group)) {
       throw new Meteor.Error(403, "Access denied")
     }
 
@@ -309,7 +313,7 @@ Meteor.methods({
 
     if (!loggedInUser ||
         !Roles.userIsInRole(loggedInUser, 
-                            ['manage-users','support-staff'], group)) {
+                            ['manage-users', 'support-staff'], group)) {
       throw new Meteor.Error(403, "Access denied")
     }
 
@@ -324,7 +328,7 @@ Meteor.methods({
 
 Client javascript has access to all the same Roles functions as the server with the addition of a `isInRole` handlebars helper which is automatically registered by the Roles package.
 
-Like all Meteor applications, client-side checks are a convenience, rather than a true security implementation 
+As with all Meteor applications, client-side checks are a convenience, rather than a true security implementation 
 since Meteor bundles the same client-side code to all users.  Providing the Roles functions client-side also allows for latency compensation during Meteor method calls.
 
 NOTE: Any sensitive data needs to be controlled server-side to prevent unwanted disclosure. To be clear, Meteor sends all templates, client-side javascript, and published data to the client's browser.  This is by design and is a good thing.  The following example is just sugar to help improve the user experience for normal users.  Those interested in seeing the 'admin_nav' template in the example below will still be able to do so by manually reading the bundled `client.js` file. It won't be pretty but it is possible. But this is not a problem as long as the actual data is restricted server-side.
@@ -394,7 +398,7 @@ The `examples` directory contains Meteor apps which show off the following featu
 * Client-side routing
 
 
-The only difference between the example apps is which routing package is used.
+The only difference among the example apps is which routing package is used.
 
 View the `meteor-router` example app online @  <a href="http://roles.meteor.com/" target="_blank">http://roles.meteor.com/</a>
  
@@ -410,7 +414,7 @@ _Iron Router or Flow Router_
 
 <br />
 
-_Mini-Pages or Router_
+_Deprecated routing packages: Mini-Pages or Router_
 
   1. install [Meteorite][1]
   2. `git clone https://github.com/alanning/meteor-roles.git`

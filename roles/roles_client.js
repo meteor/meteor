@@ -1,5 +1,7 @@
 ;(function () {
 
+"use strict"
+
 /**
  * Convenience functions for use on client.
  *
@@ -9,6 +11,25 @@
  *
  * @module UIHelpers
  */
+
+////////////////////////////////////////////////////////////
+// Debugging helpers
+//
+// Run this in your browser console to turn on debugging
+// for this package:
+//
+//   localstorage.setItem('Roles.debug', true)
+//
+Roles.debug = false
+
+if (localStorage) {
+  var temp = localStorage.getItem("Roles.debug")
+
+  if ('undefined' !== typeof temp) {
+    Roles.debug = !!temp
+  }
+}
+
 
 ////////////////////////////////////////////////////////////
 // UI helpers
@@ -69,16 +90,25 @@ Roles._uiHelpers = {
   }
 }
 
-if (Package.ui) {
+
+
+////////////////////////////////////////////////////////////
+// Register UI helpers
+//
+
+if (Roles.debug && console.log) {
+  console.log("[roles] Roles.debug =", Roles.debug)
+}
+
+if ('undefined' !== typeof Package.blaze &&
+    'undefined' !== typeof Package.blaze.Blaze &&
+    'function'  === typeof Package.blaze.Blaze.registerHelper) {
   _.each(Roles._uiHelpers, function (func, name) {
-    Package.ui.UI.registerHelper(name, func) 
+    if (Roles.debug && console.log) {
+      console.log("[roles] registering Blaze helper '" + name + "'")
+    }
+    Package.blaze.Blaze.registerHelper(name, func) 
   })
-} else if (Package.handlebars) {
-  _.each(Roles._uiHelpers, function (func, name) {
-    Package.handlebars.Handlebars.registerHelper(name, func)
-  })
-} else {
-  console.log && console.log('WARNING: Roles template helpers not registered. Handlebars or UI package not found')
 }
 
 }());
