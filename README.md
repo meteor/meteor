@@ -7,7 +7,7 @@ We're getting started building a Meteor Guide. Like the [Rails Guide](http://gui
 ### Action items for community
 
 1. Read the charter below and the [proposed outlines for guide articles](outlines.md)
-2. Ask questions on the [forum thread](#)
+2. Ask questions on the [forum thread](https://forums.meteor.com/t/new-mdg-project-the-meteor-guide/10873)
 2. Submit pull requests on the outlines to add things that are missing
 3. File issues here for serious problems or discussion
 
