@@ -34,10 +34,11 @@ var requestCredential = function (options, credentialRequestCompleteCallback) {
    */
   if (options && options.userEmail && !options.loginHint) {
     options.loginHint = options.userEmail;
+    delete options.userEmail;
   }
 
-  if (options && options.userEmail) {
-    loginUrl += '&user_email=' + encodeURIComponent(options.userEmail);
+  if (options && options.loginHint) {
+    loginUrl += '&user_email=' + encodeURIComponent(options.loginHint);
   }
 
   loginUrl += "&redirect_uri=" + OAuth._redirectUri('meteor-developer', config);
