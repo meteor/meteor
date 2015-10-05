@@ -1,0 +1,12 @@
+requesitos (pesquisar projeto para nova funcionalidades e ver como o projeto funciona)
+.new?
+.done?
+.managment
+.acceptable tests
+
+user story
+.priority?
+.estimative?
+.testes de aceitação
+
+ELICITATION!
