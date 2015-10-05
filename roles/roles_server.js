@@ -1,12 +1,6 @@
 ;(function () {
 
 /**
- * Eliminate Meteor.Collection deprecation warning while maintaining
- * backwards compatibility
- */
-var Mongo = Mongo || _.pick(Meteor,'Collection');
-
-/**
  * Roles collection documents consist only of an id and a role name.
  *   ex: { _id:<uuid>, name: "admin" }
  */

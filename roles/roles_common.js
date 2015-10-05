@@ -1,12 +1,6 @@
 ;(function () {
 
 /**
- * Eliminate Meteor.Collection deprecation warning while maintaining
- * backwards compatibility
- */
-var Mongo = Mongo || _.pick(Meteor,'Collection');
-
-/**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
  * @module Roles
