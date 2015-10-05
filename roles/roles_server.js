@@ -1,12 +1,17 @@
 ;(function () {
 
+/**
+ * Eliminate Meteor.Collection deprecation warning while maintaining
+ * backwards compatibility
+ */
+var Mongo = Mongo || _.pick(Meteor,'Collection');
 
 /**
  * Roles collection documents consist only of an id and a role name.
  *   ex: { _id:<uuid>, name: "admin" }
  */
 if (!Meteor.roles) {
-  Meteor.roles = new Meteor.Collection("roles")
+  Meteor.roles = new Mongo.Collection("roles")
 
   // Create default indexes for roles collection
   Meteor.roles._ensureIndex('name', {unique: 1})
