@@ -16,7 +16,7 @@ if (!Meteor.roles) {
  * Always publish logged-in user's roles so client-side
  * checks can work.
  */
-Meteor.publish(null, function () {
+Meteor.publish('roles', function () {
   var userId = this.userId,
       fields = {roles:1}
 
