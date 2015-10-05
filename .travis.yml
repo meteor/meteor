@@ -26,3 +26,6 @@ after_success:
   - python travis_after_all.py
   - export $(cat .to_export_back)
   - npm run semantic-release
+addons:
+  code_climate:
+    repo_token: c2f5565ff4d312c27c2864e45d361d9767f9f6cba820bd705b422ca75f69c706
