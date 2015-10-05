@@ -53,7 +53,7 @@ O lançamento de muitas versões torna-se um incómodo para os utilizadores, por
 
 A ideia de um lançamento antecipado para teste de mercado para depois melhorá-lo com o "feedback" dos utilizadores também pode ser interpretado como "delivery over quality".
 
-Responding to change over following a plan
+"Responding to change over following a plan" - 
 Uma escolha pobre das funcionalidades necessárias pode levar a uma sobrecarga de trabalho dos "developers", que por sua vez pode levar a um esgotamento das capacidades da equipa de trabalho.
 
 Todas as mudanças que são feitas ao projeto têm um custo, podem dificultar a previsão dos custos totais e se o "budget/orçamento" será suficiente para o cobrir o custo do projeto.
