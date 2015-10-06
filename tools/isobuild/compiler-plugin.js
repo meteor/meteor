@@ -295,56 +295,57 @@ _.extend(InputFile.prototype, {
   }
 });
 
-var ResourceSlot = function (unibuildResourceInfo,
-                             sourceProcessor,
-                             packageSourceBatch) {
-  var self = this;
-  // XXX ideally this should be an classy object, but it's not.
-  self.inputResource = unibuildResourceInfo;
-  // Everything but JS.
-  self.outputResources = [];
-  // JS, which gets linked together at the end.
-  self.jsOutputResources = [];
-  self.sourceProcessor = sourceProcessor;
-  self.packageSourceBatch = packageSourceBatch;
+class ResourceSlot {
+  constructor(unibuildResourceInfo,
+              sourceProcessor,
+              packageSourceBatch) {
+    const self = this;
+    // XXX ideally this should be an classy object, but it's not.
+    self.inputResource = unibuildResourceInfo;
+    // Everything but JS.
+    self.outputResources = [];
+    // JS, which gets linked together at the end.
+    self.jsOutputResources = [];
+    self.sourceProcessor = sourceProcessor;
+    self.packageSourceBatch = packageSourceBatch;
 
-  if (self.inputResource.type === "source") {
-    if (sourceProcessor) {
-      // If we have a sourceProcessor, it will handle the adding of the
-      // final processed JavaScript.
-    } else if (self.inputResource.extension === "js") {
-      // If there is no sourceProcessor for a .js file, add the source
-      // directly to the output. #HardcodeJs
-      self.addJavaScript({
-        // XXX it's a shame to keep converting between Buffer and string, but
-        // files.convertToStandardLineEndings only works on strings for now
-        data: self.inputResource.data.toString('utf8'),
-        path: self.inputResource.path,
-        hash: self.inputResource.hash,
-        bare: self.inputResource.fileOptions &&
-          (self.inputResource.fileOptions.bare ||
-           // XXX eventually get rid of backward-compatibility "raw" name
-           // XXX COMPAT WITH 0.6.4
-           self.inputResource.fileOptions.raw)
-      });
-    }
-  } else {
-    if (sourceProcessor) {
-      throw Error("sourceProcessor for non-source? " +
-                  JSON.stringify(unibuildResourceInfo));
-    }
-    // Any resource that isn't handled by compiler plugins just gets passed
-    // through.
-    if (self.inputResource.type === "js") {
-      self.jsOutputResources.push(self.inputResource);
+    if (self.inputResource.type === "source") {
+      if (sourceProcessor) {
+        // If we have a sourceProcessor, it will handle the adding of the
+        // final processed JavaScript.
+      } else if (self.inputResource.extension === "js") {
+        // If there is no sourceProcessor for a .js file, add the source
+        // directly to the output. #HardcodeJs
+        self.addJavaScript({
+          // XXX it's a shame to keep converting between Buffer and string, but
+          // files.convertToStandardLineEndings only works on strings for now
+          data: self.inputResource.data.toString('utf8'),
+          path: self.inputResource.path,
+          hash: self.inputResource.hash,
+          bare: self.inputResource.fileOptions &&
+            (self.inputResource.fileOptions.bare ||
+             // XXX eventually get rid of backward-compatibility "raw" name
+             // XXX COMPAT WITH 0.6.4
+             self.inputResource.fileOptions.raw)
+        });
+      }
     } else {
-      self.outputResources.push(self.inputResource);
+      if (sourceProcessor) {
+        throw Error("sourceProcessor for non-source? " +
+                    JSON.stringify(unibuildResourceInfo));
+      }
+      // Any resource that isn't handled by compiler plugins just gets passed
+      // through.
+      if (self.inputResource.type === "js") {
+        self.jsOutputResources.push(self.inputResource);
+      } else {
+        self.outputResources.push(self.inputResource);
+      }
     }
   }
-};
-_.extend(ResourceSlot.prototype, {
-  addStylesheet: function (options) {
-    var self = this;
+
+  addStylesheet(options) {
+    const self = this;
     if (! self.sourceProcessor)
       throw Error("addStylesheet on non-source ResourceSlot?");
 
@@ -358,9 +359,10 @@ _.extend(ResourceSlot.prototype, {
       //     in legacy handlers?
       sourceMap: options.sourceMap
     });
-  },
-  addJavaScript: function (options) {
-    var self = this;
+  }
+
+  addJavaScript(options) {
+    const self = this;
     // #HardcodeJs this gets called by constructor in the "js" case
     if (! self.sourceProcessor && self.inputResource.extension !== "js")
       throw Error("addJavaScript on non-source ResourceSlot?");
@@ -387,9 +389,10 @@ _.extend(ResourceSlot.prototype, {
       sourceMap: options.sourceMap,
       bare: !! bare
     });
-  },
-  addAsset: function (options) {
-    var self = this;
+  }
+
+  addAsset(options) {
+    const self = this;
     if (! self.sourceProcessor)
       throw Error("addAsset on non-source ResourceSlot?");
 
@@ -409,10 +412,11 @@ _.extend(ResourceSlot.prototype, {
         options.path),
       hash: sha1(options.data)
     });
-  },
-  addHtml: function (options) {
-    var self = this;
-    var unibuild = self.packageSourceBatch.unibuild;
+  }
+
+  addHtml(options) {
+    const self = this;
+    const unibuild = self.packageSourceBatch.unibuild;
 
     if (! archinfo.matches(unibuild.arch, "web"))
       throw new Error("Document sections can only be emitted to " +
@@ -427,7 +431,7 @@ _.extend(ResourceSlot.prototype, {
       data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
     });
   }
-});
+}
 
 var PackageSourceBatch = function (unibuild, processor, {linkerCacheDir}) {
   var self = this;
