@@ -62,9 +62,17 @@ var rule = `/**
 // Rule Definition
 // -----------------------------------------------------------------------------
 
-module.exports = (/* getMeta */) => (/* context */) => {
+module.exports = getMeta => context => {
 
-  // variables should be defined here
+  const {
+    isInMeteorProject,
+    isPackageConfig,
+    isMobileConfig
+  } = getMeta(context.getFilename())
+
+  if (!isInMeteorProject || isPackageConfig || isMobileConfig) {
+    return {}
+  }
 
   // ---------------------------------------------------------------------------
   // Helpers
