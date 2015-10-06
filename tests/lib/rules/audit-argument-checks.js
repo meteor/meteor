@@ -26,8 +26,10 @@ ruleTester.run('audit-argument-checks', rule(), {
     'Meteor.publish()',
 
     {code: 'Meteor.publish("foo", function ({ x }) {})', parser: 'babel-eslint'},
+    {code: 'Meteor.publish("foo", () => {})', parser: 'babel-eslint'},
     'Meteor.publish("foo", function () {})',
     'Meteor.publish("foo", function (bar) { check(bar, Match.Any); })',
+    {code: 'Meteor.publish("foo", (bar) =>  { check(bar, Match.Any); })', parser: 'babel-eslint'},
     'Meteor.publish("foo", function (bar, baz) { check(bar, Match.Any); check(baz, Match.Any); })',
 
     'Meteor.methods()',
