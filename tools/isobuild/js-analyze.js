@@ -4,12 +4,124 @@ import { analyze as analyzeScope } from 'escope';
 // Like babel.parse, but annotates any thrown error with $ParseError = true.
 function tryToParse(source) {
   try {
-    return parse(source, {strictMode: false});
+    return parse(source, {
+      strictMode: false,
+      ecmaVersion: 6,
+      sourceType: "module",
+      allowReturnOutsideFunction: true,
+      allowImportExportEverywhere: true,
+    });
   } catch (e) {
     if (typeof e.loc === 'object') {
       e.$ParseError = true;
     }
     throw e;
+  }
+}
+
+var dependencyKeywordPattern = /\b(require|import|export)\b/g;
+
+export function findImportedModuleIdentifiers(source) {
+  const identifiers = {};
+  const possibleIndexes = [];
+  let match;
+
+  dependencyKeywordPattern.lastIndex = 0;
+  while ((match = dependencyKeywordPattern.exec(source))) {
+    possibleIndexes.push(match.index);
+  }
+
+  if (!possibleIndexes.length) {
+    return {};
+  }
+
+  const ast = tryToParse(source);
+
+  function walk(node, left, right) {
+    if (left >= right) {
+      // The window of possible indexes is empty, so we can ignore
+      // the entire subtree rooted at this node.
+    } else if (Array.isArray(node)) {
+      for (var i = 0, len = node.length; i < len; ++i) {
+        walk(node[i], left, right);
+      }
+    } else if (isNode(node)) {
+      const start = node.start;
+      const end = node.end;
+
+      // Narrow the left-right window to exclude possible indexes
+      // that fall outside of the current node.
+      while (left < right && possibleIndexes[left] < start) ++left;
+      while (left < right && end < possibleIndexes[right - 1]) --right;
+
+      if (left < right) {
+        let id = getRequiredModuleId(node);
+        if (typeof id === "string") {
+          identifiers[id] = node;
+          return;
+        }
+
+        id = getImportedModuleId(node);
+        if (typeof id === "string") {
+          identifiers[id] = node;
+          return;
+        }
+
+        // Continue traversing the children of this node.
+        for (const key of Object.keys(node)) {
+          switch (key) {
+          case "type":
+          case "loc":
+          case "start":
+          case "end":
+            // Ignore common keys that are never nodes.
+            continue;
+          }
+
+          walk(node[key], left, right);
+        }
+      }
+    }
+  }
+
+  walk(ast, 0, possibleIndexes.length);
+
+  return identifiers;
+}
+
+function isNode(value) {
+  return value
+    && typeof value === "object"
+    && typeof value.type === "string"
+    && typeof value.start === "number"
+    && typeof value.end === "number";
+}
+
+function getRequiredModuleId(node) {
+  if (node.type === "CallExpression" &&
+      node.callee.type === "Identifier" &&
+      node.callee.name === "require") {
+    const args = node.arguments;
+    const argc = args.length;
+    if (argc > 0) {
+      const arg = args[0];
+      if (arg.type === "Literal" &&
+          typeof arg.value === "string") {
+        return arg.value;
+      }
+    }
+  }
+}
+
+function getImportedModuleId(node) {
+  if (node.type === "ImportDeclaration" ||
+      node.type === "ExportAllDeclaration" ||
+      node.type === "ExportNamedDeclaration") {
+    // The .source of an ImportDeclaration or Export{Named,All}Declaration
+    // is always a string-valued Literal node, if not null.
+    if (isNode(node.source)) {
+      return node.source.value;
+    }
   }
 }
 
@@ -43,7 +155,11 @@ export function findAssignedGlobals(source) {
   //
   // But it can't pull references outward, so for our purposes it is safe to
   // ignore.
-  const scopeManager = analyzeScope(ast, { ignoreEval: true });
+  const scopeManager = analyzeScope(ast, {
+    ecmaVersion: 6,
+    sourceType: "module",
+    ignoreEval: true,
+  });
   const globalScope = scopeManager.acquire(ast);
 
   const assignedGlobals = {};
