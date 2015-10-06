@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data framework",
-  version: '1.1.1-server.perf.1'
+  version: '1.1.1-server.perf.2'
 });
 
 // We use 'faye-websocket' for connections in server-to-server DDP, mostly

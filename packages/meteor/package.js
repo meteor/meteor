@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.7-server.perf.0'
+  version: '1.1.7-server.perf.1'
 });
 
 Package.registerBuildPlugin({
