@@ -8,7 +8,6 @@ This is focusing on the guide chrome and structure, not text style or content. A
 * Rails: http://guides.rubyonrails.org/
 * Django: https://docs.djangoproject.com/en/1.8/
 * Ember.js: http://guides.emberjs.com/v2.0.0/templates/conditionals/
-* Angular's website is *terrible*.
 * Firebase has a great design/navigation structure. I think the three-level nav is pretty great: https://www.firebase.com/docs/android/guide/understanding-data.html
 * Stripe: https://stripe.com/docs
 
