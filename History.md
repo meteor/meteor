@@ -13,6 +13,8 @@
   The complete list can be found
   [here](https://github.com/meteor/ecmascript-runtime/blob/master/server.js).
 
+* Check type of `onException` argument to `bindEnvironment`. #5271
+
 ## v1.2.0.2, 2015-Sept-28
 
 * Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
