@@ -40,10 +40,12 @@ UglifyJSMinifier.prototype.processFilesForBundle = function (files, options) {
         path: file.getPathInBundle()
       });
     }
-    allJs += UglifyJSMinify(file.getContentsAsString(), minifyOptions).code;
-    allJs += '\n\n';
+    else {
+      allJs += UglifyJSMinify(file.getContentsAsString(), minifyOptions).code;
+      allJs += '\n\n';
 
-    Plugin.nudge();
+      Plugin.nudge();
+    }
   });
 
   if (files.length) {
