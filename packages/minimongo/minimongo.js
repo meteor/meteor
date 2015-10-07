@@ -231,6 +231,24 @@ LocalCollection.Cursor.prototype.count = function () {
   return self._getRawObjects({ordered: true}).length;
 };
 
+/**
+ * @summary Checks if document(s) corresponding to the cursor exist.
+ * @memberOf Mongo.Cursor
+ * @method  exists
+ * @instance
+ * @locus Anywhere
+ * @returns {Boolean}
+ */
+LocalCollection.Cursor.prototype.exists = function () {
+  var self = this;
+
+  if (self.reactive)
+    self._depend({added: true, removed: true},
+                 true /* allow the observe to be unordered */);
+
+  return self._getRawObjects({ordered: true}).length > 0;
+};
+
 LocalCollection.Cursor.prototype._publishCursor = function (sub) {
   var self = this;
   if (! self.collection.name)
