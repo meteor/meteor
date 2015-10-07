@@ -405,9 +405,7 @@ var constructPackageJson = function (packageName, newPackageNpmDir,
                                      npmDependencies) {
   var packageJsonContents = JSON.stringify({
     // name and version are unimportant but required for `npm install`.
-    // we used to put packageName in here, but it doesn't work when that
-    // has colons.
-    name: 'packages-for-meteor-smartpackage-' + utils.randomToken(),
+    name: 'packages-for-meteor-' + packageName.replace(/:/g, '-'),
     version: '0.0.0',
     dependencies: npmDependencies
   });
