@@ -17,7 +17,7 @@ After reading this guide, you'll know:
 
 This guide will refer to code samples from the Todos example app, which has been carefully constructed to demonstrate all of these concepts.
 
-## 1. Routing and the role it plays in a client-rendered app
+## Routing and the role it plays in a client-rendered app
 
 In a web application, _Routing_ is the process of using URLs to drive the user interface (UI). URLs are a prominent feature in every single web browser, and have several main functions from the user's point of view:
 
@@ -31,7 +31,7 @@ In contrast, Meteor operates on the principle of _data on the wire_, where the s
 
 However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Now that the server is not URL-driven, the URL just becomes a useful *serialization* of the client-side state the user is currently looking at. However, unlike a server-rendered application, it does not need to serialize the entirety of the user’s current state, simply the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
 
-## 2. Installing Flow Router 2
+## Installing Flow Router 2
 
 To add routing to your app, install the `kadira:flow-router` package:
 
@@ -45,11 +45,11 @@ At the time of writing this guide, Flow Router is at version 2.x.
 
 *Community packages: Flow Router is one of several popular routing packages for Meteor. Another is iron:router. You can search for router on Atmosphere to find more. Hopefully, the concepts in this routing guide will be relevant no matter which router you use, as long as it provides basic functions for URL management.*
 
-## 3. Defining a simple route
+## Defining a simple route
 
 The basic purpose of a router is to match certain URLs and perform actions as a result. This all happens on the client side, in the app user's browser.
 
-```
+```js
 FlowRouter.route('/blog/:postId', {
   name: "blog-post",
   action(urlParams, queryParams) {
@@ -67,23 +67,24 @@ When the route is matched, the `action` method executes, and you can perform any
 
 The `name` property of the route is optional, but will let us refer to this route more conveniently later on.
 
-### 3.1 URL pattern matching
+### URL pattern matching
 
 The above code snippet will match certain URLs. You may notice that one of the segments is prefixed by `:` - this means that it is a *url parameter*, and will match any string that is present in that segment of the path. Here are some example URLs and the resulting `urlParams` and `queryParams`:
 
-URL	action() called?	urlParams	queryParams
-/	no		
-/about	no		
-/blog/	no		
-/blog/eMtGij5AFESbTKfkT	yes	{ postId: "eMtGij5AFESbTKfkT"}	{ }
-/blog/1	yes	{ postId: "1"}	{ }
-/blog/1?commentSort=top	yes	{ postId: "1"}	{ commentSort: "top" }
+| URL           | action() called?	        | urlParams	         | queryParams
+| ---- | ---- | ---- | ---- |
+| /	            | no		
+| /about	      | no		
+| /blog/        | no		
+| /blog/eMtGij5AFESbTKfkT |	yes |	{ postId: "eMtGij5AFESbTKfkT"} |	{ }
+| /blog/1	| yes	| { postId: "1"} | { }
+| /blog/1?commentSort=top	| yes	| { postId: "1"} | { commentSort: "top" }
 
 *Table 3.1: Example URLs and the resulting parameters*
 
 Note that all of the values in `urlParams` and `queryParams` are always strings since URLs don't have any way of encoding a data type, so you might need to use `parseInt(value, 10)` to convert them into numbers.
 
-## 4. Displaying different views based on the URL and defining layouts
+## Displaying different views based on the URL and defining layouts
 
 *This section is UI-framework specific, and is written assuming you are using Blaze as your UI engine. If you are building your app with React or Angular, you will end up with similar concepts but the code will not be exactly the same.*
 
@@ -99,7 +100,7 @@ meteor add kadira:blaze-layout
 
 To use this package, we need to define a layout template in our HTML:
 
-```
+```html
 <template name="layout-main">
   {{> layout-navbar}}
   <div class="sidebar">
@@ -119,7 +120,7 @@ To use this package, we need to define a layout template in our HTML:
 
 Here, we are using a Blaze feature called `Template.dynamic` to render a template whose name is passed in from outside. We have defined two *regions* in our layout: `sidebar` and `page`. We have also included a `layout-navbar` template at the top, which will put a navbar at the top of every page. Let's define some of the templates that will display our actual content:
 
-```
+```html
 <template name="sidebar-recent-posts">
   <h3>Recent posts</h3>
   <p>... Recent posts will go here ...</p>
@@ -142,7 +143,7 @@ These are some templates that we will render into the layout from our route acti
 
 Now, let's define two routes that actually use our templates and layout to display some content!
 
-```
+```js
 FlowRouter.route('/blog/:postId', {
   name: "blog-post",
   action(urlParams, queryParams) {
@@ -168,17 +169,17 @@ FlowRouter.route('/about', {
 
 Now, if the user navigates to the different URLs, they will see the blog post template or the about page template. You can define as many templates or layouts as you want, and mix and match them inside your route handlers.
 
-### 4.1 Templates as PAges vs. Templates as reusable UI components
+### Templates as PAges vs. Templates as reusable UI components
 
 In the code samples, we have decided to name the templates after the layout regions they will be rendered into. This is not necessary, but enables us to make it clear that those templates are expecting to be used in a certain place in the layout. It's explicitly stating that these templates are not meant to be reusable in different parts of the app - they are only useful for rendering a “page” of the app.
 
 If you have lots of pages that are similar, it would make sense to split up your app into a collection of reusable components, and a collection of single-purpose pages that mostly just mix-and-match the reusable components. Read more about this distinction in the section on _UI components_.
 
-## 5. Displaying and subscribing to data based on the URL
+## Displaying and subscribing to data based on the URL
 
 In the previous section, we looked at how to display different templates based on the URL pattern. However, if we have a `page-blog-post` template that can display different posts, we need to be able to tell it which post to display. We already have the ability to get `urlParams.postId` inside the body of the `action` function on the `blog-post` route, but how do we give it to the template?
 
-### 5.1 Accessing URL Parameters in JAvaScript and Template Helpers
+### Accessing URL Parameters in JAvaScript and Template Helpers
 
 Flow Router has some helpful functions that can be used to access data about the current URL from anywhere. Here are some of the most useful ones:
 
@@ -188,7 +189,7 @@ Flow Router has some helpful functions that can be used to access data about the
 
 So let's say we wanted to display a blog post in our `content-blog-post` template based on the current URL. We could define a helper like this:
 
-```
+```js
 Template["page-blog-post"].helpers({
   blogPost() {
     return BlogPosts.findOne(FlowRouter.getParam("postId"));
@@ -200,7 +201,7 @@ Template["page-blog-post"].helpers({
 
 Now, we can use this helper in our HTML to display the post content:
 
-```
+```html
 <template name="page-blog-post">
   <h2>{{blogPost.title}}</h2>
 
@@ -216,7 +217,7 @@ Now, we can use this helper in our HTML to display the post content:
 
 As mentioned in section 4.1, the `page-blog-post` template is coupled to a certain route and a certain layout. If you want to render blog posts in many different ways, it could be prudent to factor out the blog post display and formatting logic into a reusable component, in which case the template for the page would become simpler:
 
-```
+```html
 <template name="page-blog-post">
   {{> component-blog-post post=blogPost}}
 
@@ -232,11 +233,11 @@ In this case, the function of the `page-blog-post` component is just to get the 
 
 **Reusable component tip:** be very careful about accessing URL parameters in any component you want to be reusable across different pages.
 
-### 5.2 Subscribing to data and displaying a loading indicator
+### Subscribing to data and displaying a loading indicator
 
 If you are experienced in Meteor, you know that in order for `BlogPosts.findOne(...)` in snippet 5.1.1 to return anything useful, you need to subscribe to that data from the server using `Meteor.subscribe`. The `page-blog-post` template would be a great place to do that:
 
-```
+```html
 Template["page-blog-post"].onCreated(function () {
   this.autorun(() => {
     this.subscribe("blog-post", FlowRouter.getParam("postId"));
@@ -248,7 +249,7 @@ Template["page-blog-post"].onCreated(function () {
 
 Now, when we go to the blog post page in our app, when the `page-blog-post` template is initialized, we will subscribe to the data for this blog post, and the `blogPost` helper will return the post data once it arrives. But this won't happen instantly - it takes time for the data to arrive from the server to the client before it can be displayed. For this reason, Blaze has a helpful built-in helper: `Template.subscriptionsReady`. It works because we used `this.subscribe` instead of `Meteor.subscribe` when loading the data. Let's display a simple loading message:
 
-```
+```html
 <template name="page-blog-post">
   {{#if Template.subscriptionsReady}}
     {{> component-blog-post post=blogPost}}
@@ -266,7 +267,7 @@ Now, when we go to the blog post page in our app, when the `page-blog-post` temp
 
 Note that we don't need to block out the entire page while the data is loading! We can just block a small part of the page with a loading indicator.
 
-### 5.3 HIglighting the active route in the navigation
+### Higlighting the active route in the navigation
 
 One more place you might want to access the data from the URL is in your navigation component, to highlight the one that is currently active. A convenient package for this is `zimme:active-route`:
 
@@ -276,7 +277,7 @@ meteor add zimme:active-route
 
 Now, let's create a navbar template that highlights the appropriate item based on the active route:
 
-```
+```html
 <template name="layout-navbar">
   <nav>
     <a class="{{isActiveRoute 'home'}}">Home</a>
@@ -287,7 +288,7 @@ Now, let's create a navbar template that highlights the appropriate item based o
 
 Now, the link that corresponds to the active route (based on the `name` of the route) will get the `active` class, and you can style it differently using CSS. Read more about the different features of `zimme:active-route` in [its README](https://github.com/zimme/meteor-active-route).
 
-## 6. Redirecting
+## Redirecting
 
 Sometimes, your users will end up on a page that isn't the best place for them to be. Maybe the data they were looking for has moved, maybe they were on an admin panel page and logged out, or maybe they just created a new object and you want them to end up on the page for the thing they just created.
 
@@ -296,19 +297,19 @@ You can go to a new URL programmatically by calling `FlowRouter.go(name, urlPara
 You can also redirect to a different route from a route trigger. We'll discuss them in more detail in the _triggers section_, but here we'll include some example code specifically for redirection.
 
 
-### 6.1 Redirecting for convenience
+### Redirecting for convenience
 
 Sometimes, you want to have a route that always redirects somewhere else. Maybe this is so that the user can type less, or bookmark a certain URL, or similar. For example, you may want a URL that always redirects to the most recent blog post published. In Flow Router, you do this using a trigger, which will be covered in more detail later in the guide:
 
-```
+```js
 // XXX how do you do this?
 ```
 
-### 6.2 Redirecting when an asynchronous operation succeeds
+### Redirecting when an asynchronous operation succeeds
 
 Often, you just want to go to a new route programmatically when a user has completed a certain action. In this case, we'll take the example of deleting a blog post. If you have deleted a blog post from its page, you probably want to leave the page you were on, since that resource no longer exists. Here's how you could do that:
 
-```
+```js
 Meteor.call("/blog-posts/delete", (err) => {
   if (err) {
     // Display error message
@@ -320,31 +321,31 @@ Meteor.call("/blog-posts/delete", (err) => {
 
 You will also want to show some kind of status while the method is working so that the user knows there is something going on between them clicking the button and the redirect happening. It's important that we only redirect if the method call on the server succeeds, because otherwise the redirect will make it look like the item was deleted when it actually wasn't.
 
-### 6.3 Redirecting when some data has been moved
+### Redirecting when some data has been moved
 
 If some data in your app has been moved, you probably want to redirect people to the new object. For example, if we renamed a document and the name was part of the URL, we would want the user to end up at the new URL so that usage of the old one decreases gradually. Eventually, once our _analytics_ indicate that nobody is visiting the old URL anymore, we can remove the backwards compatibility code.
 
-```
+```js
 // XXX how do you do this?
 ```
 
-### 6.4 Redirecting when a route has been changed
+### Redirecting when a route has been changed
 
 As you maintain and develop new features for your app, you might discover that you need to change your URL structure. If there are already lots of links and bookmarks to your app floating around in the wild, it might be a good idea to redirect the old URLs for backwards compatibility.
 
-```
+```js
 // XXX write this
 ```
 
-## 7. User permissions and URLs
+## User permissions and URLs
 
 In a traditional server-side rendered app, it's common to restrict which URLs users are allowed to visit based on their ownership of certain data, or the role they have in the system (admin, moderator, etc). In Meteor, the router is not the correct place to manage permissions. Permissions about which users can read and write data belong in Meteor publications and methods, which deal with actually reading and writing data from the server. However, it's still useful to show people nice messages reminding them to log in to see certain content or reminding them that they don't have the right permissions.
 
-### 7.1 Displaying a reminder to Log in to see a certain page
+### Displaying a reminder to Log in to see a certain page
 
 This is best done inside the page template itself. For example, imagine we had a page in our app to edit a blog post, and the template for that was called `page-blog-post-edit`. Here is what the template's HTML would look like if we wanted to remind people to log in to edit the blog post:
 
-```
+```html
 <template name="page-blog-post-edit">
   <h3>Edit post {{blogPost.title}}</h3>
 
@@ -358,14 +359,14 @@ This is best done inside the page template itself. For example, imagine we had a
 
 However, in a multi-user system, this might not be good enough because only certain users are allowed to edit posts.
 
-### 7.2 Indicating that a logged in user doesn't have permission to be on a certain page
+### Indicating that a logged in user doesn't have permission to be on a certain page
 
 There are several options for what the UI should do if a user is logged in but doesn't have permissions for a certain action. First of all, the app developer should minimize the opportunities for the user to end up on that page in the first place, as a courtesy. For example, don't display a button to edit the blog post if the user doesn't have permissions. But if the user has ended up on the page anyway, possibly by remembering the URL or similar, you should display a message on the page telling the user that they won't be able to accomplish their intended action.
 
 In the below code snippet, we use a helper `userCanEditPost` to check if the user is the owner of the blog post and display a helpful message. This can be a good option if the user's permissions are likely to change - for example, you could arrive at this page, note that you don't have permissions, ask the author to give you the permissions, and then the page will update to show the editor once the permissions are added. This workflow wouldn't be possible if you had instead redirected the user to a different URL entirely.
 
 
-```
+```html
 <template name="page-blog-post-edit">
   <h3>Edit post {{blogPost.title}}</h3>
 
@@ -382,11 +383,11 @@ In the below code snippet, we use a helper `userCanEditPost` to check if the use
 </template>
 ```
 
-### 7.3 Redirecting a user away from a page they shouldn't be on
+### Redirecting a user away from a page they shouldn't be on
 
 XXX given that the user's data might not have loaded yet, this might actually be super hard!
 
-## 8. Displaying links to routes using helpers
+## Displaying links to routes using helpers
 
 Once you have some routes defined in your app, you will probably want to add some links to your page to go to the different URLs. You can generate the URLs yourself using `FlowRouter.pathFor`, but it is more convenient to use a package that defines some helpers for you:
 
@@ -396,13 +397,13 @@ meteor add arillo:flow-router-helpers
 
 Now that you have this package, you can use helpers in your templates to display a link to a certain route. For example, to link to a blog post:
 
-```
+```html
 <a href="{{pathFor 'blog-post' postId=blogPostId}}">Link to a post</a>
 ```
 
 Or to link to the `about` page which doesn't have any parameters:
 
-```
+```html
 <a href="{{pathFor 'about'}}">Link to a post</a>
 ```
 
@@ -416,7 +417,7 @@ meteor add okgrow:analytics
 
 Now, we need to configure the package with our Google Analytics key (the package also supports a large variety of other providers, check out the documentation [on Atmosphere](https://atmospherejs.com/okgrow/analytics)). Pass it in as part of _Meteor settings_:
 
-```
+```js
 {
   "public": {
     "analyticsSettings": {
