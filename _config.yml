@@ -1,0 +1,3 @@
+encoding: 'utf8'
+kramdown:
+  input: GFM

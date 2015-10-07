@@ -19,7 +19,7 @@ This guide will refer to code samples from the Todos example app, which has been
 
 In a web application, _Routing_ is the process of using URLs to drive the user interface (UI). URLs are a prominent feature in every single web browser, and have several main functions from the user's point of view:
 
-1. **Bookmarking **- Users can bookmark URLs in their web browser to save content they want to come back to later
+1. **Bookmarking** - Users can bookmark URLs in their web browser to save content they want to come back to later
 2. **Sharing** - Users can share content with others by sending a link to a certain page
 3. **Navigation** - URLs are used to drive the web browser's back/forward functions
 
