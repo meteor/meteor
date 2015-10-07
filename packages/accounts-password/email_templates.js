@@ -7,14 +7,14 @@ function greet(welcomeMsg) {
   return function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
             ("Hello " + user.profile.name + ",") : "Hello,";
-      return greeting + "\n"
-        + "\n"
-        + welcomeMsg
-        + ", simply click the link below.\n"
-        + "\n"
-        + url + "\n"
-        + "\n"
-        + "Thanks.\n";
+      return `${greeting}
+
+${welcomeMsg}, simply click the link below.
+
+url
+
+Thanks.
+`;
     }
   };
 }
