@@ -1,3 +1,8 @@
+---
+layout: article
+title: Routing and URLs
+---
+
 # Meteor Guide: Routing
 
 After reading this guide, you'll know:
