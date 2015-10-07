@@ -11,7 +11,7 @@ function greet(welcomeMsg) {
 
 ${welcomeMsg}, simply click the link below.
 
-url
+${url}
 
 Thanks.
 `;
