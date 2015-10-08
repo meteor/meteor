@@ -1,0 +1,15 @@
+<template name="blaze_test_parent">
+  {{#if showChild1}}
+    {{> blaze_test_child1 showChild1}}
+  {{/if }}
+
+  {{> blaze_test_child2 }}
+</template>
+
+<template name="blaze_test_child1">
+  <div id="child1">
+  </div>
+</template>
+
+<template name="blaze_test_child2">
+</template>
