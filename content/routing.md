@@ -90,7 +90,7 @@ When using Flow Router, the simplest way to display different views on the page 
 meteor add kadira:blaze-layout
 ```
 
-*Snippet: Add the Blaze Layout package*
+- [Blaze Layout on GitHub](https://github.com/kadirahq/blaze-layout)
 
 To use this package, we need to define a layout template in our HTML:
 
@@ -267,6 +267,8 @@ One more place you might want to access the data from the URL is in your navigat
 meteor add zimme:active-route
 ```
 
+- [zimme/meteor-active-route on GitHub](https://github.com/zimme/meteor-active-route)
+
 Now, let's create a navbar template that highlights the appropriate item based on the active route:
 
 ```html
@@ -387,6 +389,8 @@ Once you have some routes defined in your app, you will probably want to add som
 meteor add arillo:flow-router-helpers
 ```
 
+- [arillo/meteor-flow-router-helpers on GitHub](https://github.com/arillo/meteor-flow-router-helpers/)
+
 Now that you have this package, you can use helpers in your templates to display a link to a certain route. For example, to link to a blog post:
 
 ```html
@@ -406,6 +410,8 @@ It's common to want to know which pages of your app are most commonly visited, a
 ```
 meteor add okgrow:analytics
 ```
+
+- [okgrow/analytics on GitHub](https://github.com/okgrow/analytics)
 
 Now, we need to configure the package with our Google Analytics key (the package also supports a large variety of other providers, check out the documentation [on Atmosphere](https://atmospherejs.com/okgrow/analytics)). Pass it in as part of _Meteor settings_:
 
