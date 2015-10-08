@@ -158,11 +158,11 @@ FlowRouter.route('/about', {
 
 Now, if the user navigates to the different URLs, they will see the blog post template or the about page template. You can define as many templates or layouts as you want, and mix and match them inside your route handlers.
 
-### Templates as PAges vs. Templates as reusable UI components
+### Templates as pages vs. Templates as reusable UI components
 
 In the code samples, we have decided to name the templates after the layout regions they will be rendered into. This is not necessary, but enables us to make it clear that those templates are expecting to be used in a certain place in the layout. It's explicitly stating that these templates are not meant to be reusable in different parts of the app - they are only useful for rendering a “page” of the app.
 
-If you have lots of pages that are similar, it would make sense to split up your app into a collection of reusable components, and a collection of single-purpose pages that mostly just mix-and-match the reusable components. Read more about this distinction in the section on _UI components_.
+If you have lots of pages that are similar, it would make sense to split up your app into a collection of reusable components, and a collection of single-purpose pages that mostly just mix-and-match the reusable components. Read more about this distinction in the article on _UI components_.
 
 ## Displaying and subscribing to data based on the URL
 
@@ -202,7 +202,7 @@ Now, we can use this helper in our HTML to display the post content:
 </template>
 ```
 
-*Snippet: Using the new helper from snippet 5.1.1 to display a blog post's title and content*
+*Snippet: Using the new helper from the previous snippet to display a blog post's title and content*
 
 As mentioned in section 4.1, the `page-blog-post` template is coupled to a certain route and a certain layout. If you want to render blog posts in many different ways, it could be prudent to factor out the blog post display and formatting logic into a reusable component, in which case the template for the page would become simpler:
 
@@ -216,7 +216,7 @@ As mentioned in section 4.1, the `page-blog-post` template is coupled to a certa
 </template>
 ```
 
-*Snippet: A version of 5.1.2 that uses a reusable blog post component to do formatting, and only displays the parts that are page-specific itself*
+*Snippet: A page that uses a reusable blog post component to do formatting, and only displays the parts that are page-specific itself*
 
 In this case, the function of the `page-blog-post` component is just to get the correct data using the URL parameter, and to display page-specific UI such as sharing buttons. The important part of rendering the blog post content itself is delegated to a reusable component that can be included on many different pages, independently of the URL logic and post data retrieval.
 
@@ -224,7 +224,7 @@ In this case, the function of the `page-blog-post` component is just to get the 
 
 ### Subscribing to data and displaying a loading indicator
 
-If you are experienced in Meteor, you know that in order for `BlogPosts.findOne(...)` in snippet 5.1.1 to return anything useful, you need to subscribe to that data from the server using `Meteor.subscribe`. The `page-blog-post` template would be a great place to do that:
+If you are experienced in Meteor, you know that in order for `BlogPosts.findOne(...)` in the snippet above to return anything useful, you need to subscribe to that data from the server using `Meteor.subscribe`. The `page-blog-post` template would be a great place to do that:
 
 ```html
 Template["page-blog-post"].onCreated(function () {
@@ -330,7 +330,7 @@ As you maintain and develop new features for your app, you might discover that y
 
 In a traditional server-side rendered app, it's common to restrict which URLs users are allowed to visit based on their ownership of certain data, or the role they have in the system (admin, moderator, etc). In Meteor, the router is not the correct place to manage permissions. Permissions about which users can read and write data belong in Meteor publications and methods, which deal with actually reading and writing data from the server. However, it's still useful to show people nice messages reminding them to log in to see certain content or reminding them that they don't have the right permissions.
 
-### Displaying a reminder to Log in to see a certain page
+### Displaying a reminder to log in to see a certain page
 
 This is best done inside the page template itself. For example, imagine we had a page in our app to edit a blog post, and the template for that was called `page-blog-post-edit`. Here is what the template's HTML would look like if we wanted to remind people to log in to edit the blog post:
 
@@ -418,8 +418,6 @@ Now, we need to configure the package with our Google Analytics key (the package
 ```
 
 We're done! The analytics package hooks into Flow Router and records all of the page events for you.
-
-XXX at the time of writing this wasn't true - there was an outstanding PR to add support for Flow Router I think.
 
 ## Advanced features of Flow Router
 
