@@ -1,8 +1,0 @@
-encoding: utf-8
-markdown: redcarpet
-markdown_ext:  markdown,mkdown,mkdn,mkd,md
-
-redcarpet:
-  extensions: ["tables", "autolink", "strikethrough", "space_after_headers", "with_toc_data", "fenced_code_blocks", "no_intra_emphasis"]
-safe: true
-lsi: false

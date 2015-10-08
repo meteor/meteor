@@ -1,10 +1,3 @@
----
-layout: article
-title: Routing and URLs
----
-
-{% raw %}
-
 # Meteor Guide: Routing
 
 After reading this guide, you'll know:
@@ -448,5 +441,3 @@ Displaying not found/404 page
 
 1. Don't use redirects to display a login page; just display the login page instead of the content, and keep the URL the same. In server-side rendered apps the only way to show a login page is to redirect but that restriction doesn't exist on the client.
 2. Similarly, don't encode temporary data in the URL, like `/stuff?alert="thanks for logging in"` because you can just use a variable in JS. If you want something to persist across tabs and actual page reloads, it should be in Mongo or localstorage.
-
-{% end raw %}

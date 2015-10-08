@@ -1,0 +1,5 @@
+site_name: Meteor Guide
+theme: readthedocs
+pages:
+- Routing and URLs: routing.md
+docs_dir: content
