@@ -73,7 +73,7 @@ The above code snippet will match certain URLs. You may notice that one of the s
 
 *Table: Example URLs and the resulting parameters*
 
-Note that all of the values in `pathParams` and `queryParams` are always strings since URLs don't have any way of encoding a data type, so you might need to use `parseInt(value, 10)` to convert them into numbers.
+Note that all of the values in `pathParams` and `queryParams` are always strings since URLs don't have any way of encoding data types. You might need to use `parseInt(value, 10)` to convert strings into numbers.
 
 ## Displaying different views based on the URL and defining layouts
 
@@ -81,7 +81,7 @@ Note that all of the values in `pathParams` and `queryParams` are always strings
 
 Now we know how to define a function that is called when we reach a particular URL. But URLs are most often used not to call plain functions, but to display some UI. This is why navigating to a URL is often referred to as “going to a page” - you expect the app to display certain content as if it were a page in a book or magazine.
 
-When using Flow Router, the simplest way to display different views on the page for different URLs is to use Blaze Layout. First, make sure you have the Blaze Layout package installed:
+When using Flow Router, the simplest way to display different views on the page for different URLs is to use the complementary Blaze Layout package. First, make sure you have the Blaze Layout package installed:
 
 ```
 meteor add kadira:blaze-layout
@@ -93,23 +93,21 @@ To use this package, we need to define a layout template in our HTML:
 
 ```html
 <template name="layout-main">
-  {{> layout-navbar}}
+  <nav>... some links go here ...</nav>
+
   <div class="sidebar">
     {{> Template.dynamic template=sidebar}}
   </div>
+
   <div class="page">
     {{> Template.dynamic template=page}}
   </div>
-</template>
-
-<template name="layout-navbar">
-  <nav>... some links go here ...</nav>
 </template>
 ```
 
 *Snippet: Defining a layout to use with Blaze Layout*
 
-Here, we are using a Blaze feature called `Template.dynamic` to render a template whose name is passed in from outside. We have defined two *regions* in our layout: `sidebar` and `page`. We have also included a `layout-navbar` template at the top, which will put a navbar at the top of every page. Let's define some of the templates that will display our actual content:
+Here, we are using a Blaze feature called `Template.dynamic` to render a template whose name is passed in from outside. We have defined two *regions* in our layout: `sidebar` and `page`. We have also included a navbar at the top of every page. Let's define some of the templates that will display our actual content:
 
 ```html
 <template name="sidebar-recent-posts">
