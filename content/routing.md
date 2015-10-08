@@ -43,8 +43,8 @@ The basic purpose of a router is to match certain URLs and perform actions as a 
 ```js
 FlowRouter.route('/blog/:postId', {
   name: "blog-post",
-  action(urlParams, queryParams) {
-    console.log("Got the postId from the URL:", urlParams.postId);
+  action(pathParams, queryParams) {
+    console.log("Got the postId from the URL:", pathParams.postId);
     console.log("Query parameters:", queryParams);
   }
 });
@@ -60,9 +60,9 @@ The `name` property of the route is optional, but will let us refer to this rout
 
 ### URL pattern matching
 
-The above code snippet will match certain URLs. You may notice that one of the segments is prefixed by `:` - this means that it is a *url parameter*, and will match any string that is present in that segment of the path. Here are some example URLs and the resulting `urlParams` and `queryParams`:
+The above code snippet will match certain URLs. You may notice that one of the segments is prefixed by `:` - this means that it is a *url parameter*, and will match any string that is present in that segment of the path. Here are some example URLs and the resulting `pathParams` and `queryParams`:
 
-| URL           | action() called?	        | urlParams	         | queryParams
+| URL           | action() called?	        | pathParams	         | queryParams
 | ---- | ---- | ---- | ---- |
 | /	            | no		
 | /about	      | no		
@@ -73,7 +73,7 @@ The above code snippet will match certain URLs. You may notice that one of the s
 
 *Table: Example URLs and the resulting parameters*
 
-Note that all of the values in `urlParams` and `queryParams` are always strings since URLs don't have any way of encoding a data type, so you might need to use `parseInt(value, 10)` to convert them into numbers.
+Note that all of the values in `pathParams` and `queryParams` are always strings since URLs don't have any way of encoding a data type, so you might need to use `parseInt(value, 10)` to convert them into numbers.
 
 ## Displaying different views based on the URL and defining layouts
 
@@ -137,7 +137,7 @@ Now, let's define two routes that actually use our templates and layout to displ
 ```js
 FlowRouter.route('/blog/:postId', {
   name: "blog-post",
-  action(urlParams, queryParams) {
+  action(pathParams, queryParams) {
     BlazeLayout.render('layout-main', {
       sidebar: "sidebar-recent-posts",
       content: "page-blog-post"
@@ -147,7 +147,7 @@ FlowRouter.route('/blog/:postId', {
 
 FlowRouter.route('/about', {
   name: "about",
-  action(urlParams, queryParams) {
+  action(pathParams, queryParams) {
     BlazeLayout.render('layout-main', {
       sidebar: "sidebar-recent-posts",
       content: "page-about"
@@ -168,7 +168,7 @@ If you have lots of pages that are similar, it would make sense to split up your
 
 ## Displaying and subscribing to data based on the URL
 
-In the previous section, we looked at how to display different templates based on the URL pattern. However, if we have a `page-blog-post` template that can display different posts, we need to be able to tell it which post to display. We already have the ability to get `urlParams.postId` inside the body of the `action` function on the `blog-post` route, but how do we give it to the template?
+In the previous section, we looked at how to display different templates based on the URL pattern. However, if we have a `page-blog-post` template that can display different posts, we need to be able to tell it which post to display. We already have the ability to get `pathParams.postId` inside the body of the `action` function on the `blog-post` route, but how do we give it to the template?
 
 ### Accessing URL Parameters in JAvaScript and Template Helpers
 
@@ -283,7 +283,7 @@ Now, the link that corresponds to the active route (based on the `name` of the r
 
 Sometimes, your users will end up on a page that isn't the best place for them to be. Maybe the data they were looking for has moved, maybe they were on an admin panel page and logged out, or maybe they just created a new object and you want them to end up on the page for the thing they just created.
 
-You can go to a new URL programmatically by calling `FlowRouter.go(name, urlParams, queryParams)`. See the [FlowRouter docs](https://github.com/kadirahq/flow-router#flowroutergopathdef-params-queryparams) for more methods that accomplish similar things, like `FlowRouter.setParams` and `FlowRouter.setQueryParams`.
+You can go to a new URL programmatically by calling `FlowRouter.go(name, pathParams, queryParams)`. See the [FlowRouter docs](https://github.com/kadirahq/flow-router#flowroutergopathdef-params-queryparams) for more methods that accomplish similar things, like `FlowRouter.setParams` and `FlowRouter.setQueryParams`.
 
 You can also redirect to a different route from a route trigger. We'll discuss them in more detail in the _triggers section_, but here we'll include some example code specifically for redirection.
 
