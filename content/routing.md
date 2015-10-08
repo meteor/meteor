@@ -168,7 +168,7 @@ If you have lots of pages that are similar, it would make sense to split up your
 
 In the previous section, we looked at how to display different templates based on the URL pattern. However, if we have a `page-blog-post` template that can display different posts, we need to be able to tell it which post to display. We already have the ability to get `pathParams.postId` inside the body of the `action` function on the `blog-post` route, but how do we give it to the template?
 
-### Accessing URL Parameters in JAvaScript and Template Helpers
+### Accessing URL Parameters in JavaScript and Template Helpers
 
 Flow Router has some helpful functions that can be used to access data about the current URL from anywhere. Here are some of the most useful ones:
 
