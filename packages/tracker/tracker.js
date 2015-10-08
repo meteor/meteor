@@ -196,6 +196,7 @@ Tracker.Computation = function (f, parent, onError) {
   self._id = nextId++;
   self._onInvalidateCallbacks = [];
   self._onStopCallbacks = [];
+  self._afterRunCallbacks = [];
   // the plan is at some point to use the parent relation
   // to constrain the order that computations are processed
   self._parent = parent;
@@ -257,6 +258,20 @@ Tracker.Computation.prototype.onStop = function (f) {
   } else {
     self._onStopCallbacks.push(f);
   }
+};
+
+/**
+ * @summary Registers `callback` to call after the current run of this computation, or the after the next run if the computation is not running.  The callback is run before any `afterFlush` callbacks.
+ * @locus Client
+ * @param {Function} callback Function to be called after a run. Receives one argument, the computation that was running.
+ */
+Tracker.Computation.prototype.afterRun = function (f) {
+  var self = this;
+
+  if (typeof f !== 'function')
+    throw new Error("afterRun requires a function");
+
+  self._afterRunCallbacks.push(f);
 };
 
 // http://docs.meteor.com/#computation_invalidate
@@ -321,6 +336,12 @@ Tracker.Computation.prototype._compute = function () {
   inCompute = true;
   try {
     withNoYieldsAllowed(self._func)(self);
+    for(var i = 0, f; f = self._afterRunCallbacks[i]; i++) {
+      Tracker.nonreactive(function () {
+        withNoYieldsAllowed(f)(self);
+      });
+    }
+    self._afterRunCallbacks = [];
   } finally {
     setCurrentComputation(previous);
     inCompute = previousInCompute;
