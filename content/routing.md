@@ -30,11 +30,14 @@ To add routing to your app, install the `kadira:flow-router` package:
 meteor add kadira:flow-router
 ```
 
-*Snippet: Adding the Flow Router package*
+Flow Router is a community routing package for Meteor. At the time of writing this guide, it is at version 2.x.
 
-At the time of writing this guide, Flow Router is at version 2.x.
+- [Flow Router on GitHub](https://github.com/kadirahq/flow-router)
+- [Kadira Meteor routing guide](https://kadira.io/academy/meteor-routing-guide)
 
-*Community packages: Flow Router is one of several popular routing packages for Meteor. Another is iron:router. You can search for router on Atmosphere to find more. Hopefully, the concepts in this routing guide will be relevant no matter which router you use, as long as it provides basic functions for URL management.*
+### Other options for routing
+
+Flow Router is one of several popular routing packages for Meteor. Another is iron:router. You can search for router on Atmosphere to find more. Hopefully, the concepts in this routing guide will be relevant no matter which router you use, as long as it provides basic functions for URL management.
 
 ## Defining a simple route
 
