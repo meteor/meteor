@@ -37,8 +37,8 @@ Let's get on the path to having a “Meteor Guide” – the most authoritative,
 ### **Methods**
 
 1. Put the guide in a new repository so that it can be discussed and contributed to independently of the Meteor framework.
-2. Set up a standard static site generator, Jekyll, that will be easy for people to understand and contribute to.
-3. Set up a continuous deployment system using Jekyll-hook to automatically deploy changes from GitHub, so that we can't forget to deploy a new version.
+2. Set up a standard static site generator that will be easy for people to understand and contribute to.
+3. Set up a continuous deployment system to automatically deploy changes from GitHub, so that we can't forget to deploy a new version.
 4. Build in support for versioning docs via branches so that people can easily access documentation for previous Meteor releases.
 5. Ensure great SEO so that people can find documentation items through Google or other search engines.
 6. Don't put guide-appropriate information anywhere else, like the GitHub Wiki, READMEs, or similar, so that people don't have to guess where information might be hidden.
