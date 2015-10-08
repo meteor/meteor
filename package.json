@@ -6,6 +6,7 @@
   "scripts": {
     "build": "babel lib -d dist --auxiliary-comment-before \"istanbul ignore next\"",
     "build:w": "npm run build -- -w",
+    "check-coverage": "istanbul check-coverage",
     "clean": "rimraf dist",
     "coveralls": "cat ./reports/coverage/lcov.info | coveralls",
     "lint": "eslint ./",
@@ -13,7 +14,7 @@
     "prepublish": "npm run build",
     "rule": "babel scripts/new-rule.js | node",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post",
-    "test": "npm run lint && npm run build && npm run unit-test",
+    "test": "npm run lint && npm run build && npm run unit-test && npm run check-coverage",
     "unit-test": "istanbul cover --dir reports/coverage node_modules/mocha/bin/_mocha tests/**/*.js -- --reporter dot --compilers js:babel/register"
   },
   "files": [
