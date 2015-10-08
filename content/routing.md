@@ -8,8 +8,6 @@ After reading this guide, you'll know:
 4. How to construct links to routes and go to routes programmatically
 5. How to handle URLs in your app that should only be accessible to certain users
 
-This guide will refer to code samples from the Todos example app, which has been carefully constructed to demonstrate all of these concepts.
-
 ## Routing and the role it plays in a client-rendered app
 
 In a web application, _Routing_ is the process of using URLs to drive the user interface (UI). URLs are a prominent feature in every single web browser, and have several main functions from the user's point of view:
