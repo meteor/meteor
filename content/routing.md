@@ -30,7 +30,7 @@ To add routing to your app, install the `kadira:flow-router` package:
 meteor add kadira:flow-router
 ```
 
-*Snippet 2.1: Adding the Flow Router package*
+*Snippet: Adding the Flow Router package*
 
 At the time of writing this guide, Flow Router is at version 2.x.
 
@@ -50,7 +50,7 @@ FlowRouter.route('/blog/:postId', {
 });
 ```
 
-*Snippet 3.1: Defining a basic route with Flow Router*
+*Snippet: Defining a basic route with Flow Router*
 
 This route handler will run in two situations: if the page loads initially at a URL that matches the URL pattern, and if the URL changes to one that matches the pattern while the page is open. Note that, unlike in a server-side-rendered app, the URL can change without any additional requests to the server.
 
@@ -71,7 +71,7 @@ The above code snippet will match certain URLs. You may notice that one of the s
 | /blog/1	| yes	| { postId: "1"} | { }
 | /blog/1?commentSort=top	| yes	| { postId: "1"} | { commentSort: "top" }
 
-*Table 3.1: Example URLs and the resulting parameters*
+*Table: Example URLs and the resulting parameters*
 
 Note that all of the values in `urlParams` and `queryParams` are always strings since URLs don't have any way of encoding a data type, so you might need to use `parseInt(value, 10)` to convert them into numbers.
 
@@ -87,7 +87,7 @@ When using Flow Router, the simplest way to display different views on the page 
 meteor add kadira:blaze-layout
 ```
 
-*Snippet 4.1: Add the Blaze Layout package*
+*Snippet: Add the Blaze Layout package*
 
 To use this package, we need to define a layout template in our HTML:
 
@@ -107,7 +107,7 @@ To use this package, we need to define a layout template in our HTML:
 </template>
 ```
 
-*Snippet 4.2: Defining a layout to use with Blaze Layout*
+*Snippet: Defining a layout to use with Blaze Layout*
 
 Here, we are using a Blaze feature called `Template.dynamic` to render a template whose name is passed in from outside. We have defined two *regions* in our layout: `sidebar` and `page`. We have also included a `layout-navbar` template at the top, which will put a navbar at the top of every page. Let's define some of the templates that will display our actual content:
 
@@ -128,7 +128,7 @@ Here, we are using a Blaze feature called `Template.dynamic` to render a templat
 </template>
 ```
 
-*Snippet 4.3: Defining some templates that display content*
+*Snippet: Defining some templates that display content*
 
 These are some templates that we will render into the layout from our route action. Notice that these templates don't have any dynamic data. Right now, we are focusing on the layout aspect and we will get to filling in data in a later section.
 
@@ -156,7 +156,7 @@ FlowRouter.route('/about', {
 });
 ```
 
-*Snippet 4.4: Using our content templates and our layout inside the route action to display content*
+*Snippet: Using our content templates and our layout inside the route action to display content*
 
 Now, if the user navigates to the different URLs, they will see the blog post template or the about page template. You can define as many templates or layouts as you want, and mix and match them inside your route handlers.
 
@@ -188,7 +188,7 @@ Template["page-blog-post"].helpers({
 });
 ```
 
-*Snippet 5.1.1: Defining a helper to pass a blog post object to the blog post page template using a URL parameter*
+*Snippet: Defining a helper to pass a blog post object to the blog post page template using a URL parameter*
 
 Now, we can use this helper in our HTML to display the post content:
 
@@ -204,7 +204,7 @@ Now, we can use this helper in our HTML to display the post content:
 </template>
 ```
 
-*Snippet 5.1.2: Using the new helper from snippet 5.1.1 to display a blog post's title and content*
+*Snippet: Using the new helper from snippet 5.1.1 to display a blog post's title and content*
 
 As mentioned in section 4.1, the `page-blog-post` template is coupled to a certain route and a certain layout. If you want to render blog posts in many different ways, it could be prudent to factor out the blog post display and formatting logic into a reusable component, in which case the template for the page would become simpler:
 
@@ -218,7 +218,7 @@ As mentioned in section 4.1, the `page-blog-post` template is coupled to a certa
 </template>
 ```
 
-*Snippet 5.1.3: A version of 5.1.2 that uses a reusable blog post component to do formatting, and only displays the parts that are page-specific itself*
+*Snippet: A version of 5.1.2 that uses a reusable blog post component to do formatting, and only displays the parts that are page-specific itself*
 
 In this case, the function of the `page-blog-post` component is just to get the correct data using the URL parameter, and to display page-specific UI such as sharing buttons. The important part of rendering the blog post content itself is delegated to a reusable component that can be included on many different pages, independently of the URL logic and post data retrieval.
 
@@ -236,7 +236,7 @@ Template["page-blog-post"].onCreated(function () {
 });
 ```
 
-*Snippet 5.2.1: Subscribing to data from the onCreated callback of a page template*
+*Snippet: Subscribing to data from the onCreated callback of a page template*
 
 Now, when we go to the blog post page in our app, when the `page-blog-post` template is initialized, we will subscribe to the data for this blog post, and the `blogPost` helper will return the post data once it arrives. But this won't happen instantly - it takes time for the data to arrive from the server to the client before it can be displayed. For this reason, Blaze has a helpful built-in helper: `Template.subscriptionsReady`. It works because we used `this.subscribe` instead of `Meteor.subscribe` when loading the data. Let's display a simple loading message:
 
@@ -254,7 +254,7 @@ Now, when we go to the blog post page in our app, when the `page-blog-post` temp
 </template>
 ```
 
-*Snippet 5.2.2: Displaying a loading indicator while data is loading from the server*
+*Snippet: Displaying a loading indicator while data is loading from the server*
 
 Note that we don't need to block out the entire page while the data is loading! We can just block a small part of the page with a loading indicator.
 
