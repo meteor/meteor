@@ -160,10 +160,12 @@ Write “HTML with holes” just like you're used to, and get a fast, fine-grain
 Now that you've built a sweet app, give it to the world. It can be hard to run a production app, that's where Galaxy comes in.
 
 1. Integrating with popular analytics platforms to track method calls, publications, and URL hits
-2. Profiling and monitoring your app to find out where it is slow
+2. Profiling your app locally
+3. Monitoring your app in production (with Kadira)
 3. Escape hatches for performance issues
 4. Staging and testing
 5. Rolling updates with hot code push
+6. Debugging production apps (with Kadira Debug)
 6. Galaxy
 
 ### Meteor guide: Building a great package
