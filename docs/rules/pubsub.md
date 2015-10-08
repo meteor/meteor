@@ -40,6 +40,7 @@ Disable this rule if `Meteor.isServer` and `Meteor.isClient` checks happen in dy
 
 - `Meteor.isServer` and `Meteor.isClient` checks must happen in `if`-conditions with exactly one condition.
 - Usage of methods and properties available through the context of publication functions is not verified
+- Does not verify usage of DDPRateLimiter
 
 ## Further Reading
 
