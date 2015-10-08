@@ -63,7 +63,7 @@ Let's get on the path to having a “Meteor Guide” – the most authoritative,
 
 ### **Goals**
 
-1. Develop a skeleton for a guide app in Jekyll, with nice styles and a clear path to adding more content [firm]
+1. Develop a skeleton for a guide app, with nice styles and a clear path to adding more content [firm]
 2. Have continuous deployment set up for at least two branches of the new guide repository [firm]
 3. Migrate all existing content onto the guide website from docs.meteor.com, GitHub Wiki, and READMEs (I'm looking at you, Spacebars) [firm]
 4. Hire one technical writer
