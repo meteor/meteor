@@ -359,7 +359,6 @@ There are several options for what the UI should do if a user is logged in but d
 
 In the below code snippet, we use a helper `userCanEditPost` to check if the user is the owner of the blog post and display a helpful message. This can be a good option if the user's permissions are likely to change - for example, you could arrive at this page, note that you don't have permissions, ask the author to give you the permissions, and then the page will update to show the editor once the permissions are added. This workflow wouldn't be possible if you had instead redirected the user to a different URL entirely.
 
-
 ```html
 <template name="page-blog-post-edit">
   <h3>Edit post {{blogPost.title}}</h3>
@@ -426,19 +425,21 @@ Now, we need to configure the package with our Google Analytics key (the package
 }
 ```
 
-We're done! The analytics package hooks into Flow Router and records all of the page events for you.
+That's it! The analytics package hooks into Flow Router and records all of the page events for you.
 
-----------
+## Not done
 
-Below here not done!
-
-- Advanced features of Flow Router
-- Nested routes
 - Root route
-- When to use query parameters
+- When to use query parameters; don't encode temporary data in the URL, like `/stuff?alert="thanks for logging in"` because you can just use a variable in JS. If you want something to persist across tabs and actual page reloads, it should be in Mongo or localstorage.
 - Displaying not found/404 page
 
-Notes/ideas from sashko
+## Further reading
 
-1. Don't use redirects to display a login page; just display the login page instead of the content, and keep the URL the same. In server-side rendered apps the only way to show a login page is to redirect but that restriction doesn't exist on the client. XXX we need to figure out how this interacts with password managers!
-2. Similarly, don't encode temporary data in the URL, like `/stuff?alert="thanks for logging in"` because you can just use a variable in JS. If you want something to persist across tabs and actual page reloads, it should be in Mongo or localstorage.
+Learn about advanced features of Flow Router:
+
+- Nested routes
+- XXX
+
+HTTP routing/API
+
+- Link to other guide articles here
