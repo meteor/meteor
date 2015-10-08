@@ -419,21 +419,17 @@ Now, we need to configure the package with our Google Analytics key (the package
 
 We're done! The analytics package hooks into Flow Router and records all of the page events for you.
 
-## Advanced features of Flow Router
+----------
 
-1. Nested routes
+Below here not done!
 
+- Advanced features of Flow Router
+- Nested routes
+- Root route
+- When to use query parameters
+- Displaying not found/404 page
 
-Root route
-
-When to use query parameters
-
-Analytics
-
-Displaying not found/404 page
-
-
-## Notes/ideas from sashko
+Notes/ideas from sashko
 
 1. Don't use redirects to display a login page; just display the login page instead of the content, and keep the URL the same. In server-side rendered apps the only way to show a login page is to redirect but that restriction doesn't exist on the client. XXX we need to figure out how this interacts with password managers!
 2. Similarly, don't encode temporary data in the URL, like `/stuff?alert="thanks for logging in"` because you can just use a variable in JS. If you want something to persist across tabs and actual page reloads, it should be in Mongo or localstorage.
