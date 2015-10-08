@@ -423,6 +423,8 @@ Now, we need to configure the package with our Google Analytics key (the package
 
 We're done! The analytics package hooks into Flow Router and records all of the page events for you.
 
+XXX at the time of writing this wasn't true - there was an outstanding PR to add support for Flow Router I think.
+
 ## Advanced features of Flow Router
 
 1. Nested routes
