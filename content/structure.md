@@ -76,7 +76,7 @@ Once your app gets to a certain size, developing it using the file structure abo
 
 To solve the three problems above, we need to move to a new application structure where our code is more clearly separated into modules. The way to do this in Meteor is to split your app into *local packages*.
 
-XXX directions for building a package are probably in a different guide!
+Read about how to make Meteor packages in the [packaging section](#XXX).
 
 ### Types of packages
 
@@ -87,6 +87,24 @@ You'll end up with two kinds of packages in your app:
 
 There isn't any concrete difference between the two, but it's good to keep in mind which are which. The feature packages will look a lot like small chunks of an app, so you can basically write them as you would any other app code. The packages with reusable code should probably follow a few extra guidelines.
 
+### Have a lib package for your app that sets up common dependencies
+
+Once you split your app up into many smaller packages, it can become a hassle to manage all of their dependencies independently. To solve this problem, create a package in your app called `app-lib`, and have all of your app's packages depend on it. The `app-lib` package can then `imply` some core set of packages that will be used throughout your app. This way, if you want to update the version of one of your dependencies, you can just do it in one place: the `package.js` file of `app-lib`.
+
+Another tip is to have `app-lib` set up a global namespace for your app's packages. Rather than having each package export a variable, you can have it attach that variable to the namespace defined in `app-lib`. The variable should be named analogously to the package. Here's an example to demonstrate this idea:
+
+```js
+// In packages/app-lib/namespace.js
+MyApp = {};
+```
+
+```js
+// In packages/date-format/date-format.js
+MyApp.DateFormat = { ... };
+```
+
+Now, when you use this package somewhere else in your app, you can always reference it by `MyApp.DateFormat`. But make sure to still declare dependencies on packages you are using, so that Meteor can correctly calculate the load order!
+
 ### Guidelines for reusable packages in an app
 
 Here are some tips to keep in mind when you are building local packages that you expect to be used in lots of different parts of your app.
@@ -94,9 +112,9 @@ Here are some tips to keep in mind when you are building local packages that you
 1. **Avoid side effects.** These packages can define UI components, JavaScript functions, or LESS mixins, but they shouldn't add anything to the global properties of the app - this means no methods, collections, or publications. Any UI components included should be optimized for reusability. XXX link to reusable components guide here!
 2. **Expose a documented, testable API.** Treat the package like something you would publish. Since you have other developers working with you on this app, you might need to document how to use it and what other developers should expect to get when they include this package in their part of the app. This API should be tested so that when you optimize or update your package it's unlikely to break some other part of the app. XXX link to package testing here
 
-### Guidelines for directory names in a feature package
+### Directory names in packages
 
-Even though packages can have any file names you want, it can still be useful to have a standard directory structure for your package. In particular, you can have directories named `client` and `server` to indicate which files are loaded where. This way, a new developer on your project can more easily understand the packages just by looking at the file structure.
+Even though packages can have any file names you want, it can still be useful to have a standard directory structure. In particular, you can have directories named `client` and `server` to indicate which files are loaded where. This way, a new developer on your project can more easily understand the package code just by looking at the file structure.
 
 ## Structure of a large, multi-app project
 
