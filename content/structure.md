@@ -66,6 +66,8 @@ Here are some tips to keep in mind when you are building local packages that you
 1. **Avoid side effects.** These packages can define UI components, JavaScript functions, or LESS mixins, but they shouldn't add anything to the global properties of the app - this means no methods, collections, or publications. Any UI components included should be optimized for reusability. XXX link to reusable components guide here!
 2. **Expose a documented, testable API.** Treat the package like something you would publish. Since you have other developers working with you on this app, you might need to document how to use it and what other developers should expect to get when they include this package in their part of the app. This API should be tested so that when you optimize or update your package it's unlikely to break some other part of the app.
 
+XXX abigail's advice about package file names here
+
 ## Structure of a large, multi-app project
 
 The pattern for a medium-sized app can get you pretty far! However, you might end up in a situation where it's not sufficient. Here are some reasons you might want to split your project into multiple Meteor apps.
