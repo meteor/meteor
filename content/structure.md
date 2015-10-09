@@ -64,9 +64,11 @@ There isn't any concrete difference between the two, but it's good to keep in mi
 Here are some tips to keep in mind when you are building local packages that you expect to be used in lots of different parts of your app.
 
 1. **Avoid side effects.** These packages can define UI components, JavaScript functions, or LESS mixins, but they shouldn't add anything to the global properties of the app - this means no methods, collections, or publications. Any UI components included should be optimized for reusability. XXX link to reusable components guide here!
-2. **Expose a documented, testable API.** Treat the package like something you would publish. Since you have other developers working with you on this app, you might need to document how to use it and what other developers should expect to get when they include this package in their part of the app. This API should be tested so that when you optimize or update your package it's unlikely to break some other part of the app.
+2. **Expose a documented, testable API.** Treat the package like something you would publish. Since you have other developers working with you on this app, you might need to document how to use it and what other developers should expect to get when they include this package in their part of the app. This API should be tested so that when you optimize or update your package it's unlikely to break some other part of the app. XXX link to package testing here
 
-XXX abigail's advice about package file names here
+### Guidelines for directory names in a feature package
+
+Even though packages can have any file names you want, it can still be useful to have a standard directory structure for your package. In particular, you can have directories named `client` and `server` to indicate which files are loaded where. This way, a new developer on your project can more easily understand the packages just by looking at the file structure.
 
 ## Structure of a large, multi-app project
 
