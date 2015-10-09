@@ -36,6 +36,34 @@ This type of application structure is suitable for a small project, or the begin
 
 Since you don't need to declare any dependencies between files, and there are no hard-coded paths anywhere, you can split up and move files basically whenever you want. When you're trying to nail down an initial prototype and aren't ready to commit to a rigid structure yet, this can be quite valuable.
 
+### Filenames
+
+Name files after the thing they define. If it's an HTML, JS, or CSS file for a particular UI component, name it the same as the template:
+
+```
+page-blog-post.html
+page-blog-post.js
+page-blog-post.css
+```
+
+*Snippet: Name files that all relate to the same UI component by the same name.*
+
+If it's a JavaScript file that defines a certain function or namespace, name it after that object:
+
+```
+// A set of utility functions for formatting dates
+// should be named DateFormat.js, same as the exported object
+DateFormat = {
+  shortDate(date) { ... },
+  dateAndTime(date) { ... },
+  timeAgo(date) { ... }
+}
+```
+
+*Snippet: Name files that export JavaScript objects after the object they export.*
+
+If your file exports multiple functions or objects, put them together in a common namespace so it's easy to find which file they came from.
+
 XXX refactor todos example app to be the best example for this!
 
 ## Structure of a medium-sized app
