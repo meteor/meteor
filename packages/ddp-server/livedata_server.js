@@ -456,14 +456,14 @@ _.extend(Session.prototype, {
 
   // Send a message (doing nothing if no socket is connected right now.)
   // It should be a JSON object (it will be stringified.)
-  send: function (msg) {
+  send: Profile("ddp send", function (msg) {
     var self = this;
     if (self.socket) {
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
       self.socket.send(DDPCommon.stringifyDDP(msg));
     }
-  },
+  }),
 
   // Send a connection error.
   sendError: function (reason, offendingMessage) {
@@ -507,9 +507,9 @@ _.extend(Session.prototype, {
     // Any message counts as receiving a pong, as it demonstrates that
     // the client is still alive.
     if (self.heartbeat) {
-      Fiber(Profile("ddp heartbeat", function () {
+      Fiber(function () {
         self.heartbeat.messageReceived();
-      })).run();
+      }).run();
     }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
@@ -534,7 +534,7 @@ _.extend(Session.prototype, {
         return;
       }
 
-      Fiber(Profile("incoming ddp message", function () {
+      Fiber(Profile("process ddp message", function () {
         var blocked = true;
 
         var unblock = function () {
@@ -707,20 +707,15 @@ _.extend(Session.prototype, {
           () => DDP._CurrentInvocation.withValue(
             invocation,
             () => maybeAuditArgumentChecks(
-              Profile("actual method function call", handler),
+              Profile("run methods", handler),
               invocation, msg.params, "call to '" + msg.method + "'")
           )
         ));
       });
 
       function finish() {
-        Profile.time("fence.arm()", () => {
-          fence.arm();
-        });
-
-        Profile.time("unblock()", () => {
-          unblock();
-        });
+        fence.arm();
+        unblock();
       }
 
       const payload = {
@@ -935,11 +930,15 @@ _.extend(Session.prototype, {
 
 var subsByHandle = {};
 function descForSubHandle(subHandle) {
+  if (!subsByHandle[subHandle]) {
+    return "sub(UNKNOWN)";
+  }
+
   return [
     "sub(",
     JSON.stringify(subsByHandle[subHandle]._name),
     _.map(
-      subsByHandle[subHandle._params],
+      subsByHandle[subHandle]._params,
       param => ", " + JSON.stringify(param)).join(""),
     ")"
   ].join("");
@@ -1399,9 +1398,9 @@ Server = function (options) {
 
     socket.on('close', function () {
       if (socket._meteorSession) {
-        Fiber(Profile("close ddp connection", function () {
+        Fiber(function () {
           socket._meteorSession.close();
-        })).run();
+        }).run();
       }
     });
   });

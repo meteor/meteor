@@ -152,7 +152,7 @@ _.extend(ObserveMultiplexer.prototype, {
   },
   _applyCallback: function (callbackName, args) {
     var self = this;
-    self._queue.queueTask(Profile("observe multiplex", function () {
+    self._queue.queueTask(function () {
       // If we stopped in the meantime, do nothing.
       if (!self._handles)
         return;
@@ -184,7 +184,7 @@ _.extend(ObserveMultiplexer.prototype, {
         // clone arguments so that callbacks can mutate their arguments
         callback && callback.apply(null, EJSON.clone(args));
       });
-    }));
+    });
   },
 
   // Sends initial adds to a handle. It should only be called from within a task

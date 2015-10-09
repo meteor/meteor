@@ -566,7 +566,6 @@ _.extend(OplogObserveDriver.prototype, {
                 }
               }));
           });
-          console.log("wait");
           fut.wait();
           // Exit now if we've had a _pollQuery call (here or in another fiber).
           if (self._phase === PHASE.QUERYING)
