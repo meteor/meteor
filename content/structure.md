@@ -4,21 +4,15 @@ Since everything is JavaScript and code can be shared between all parts of your 
 
 This article won't attempt to document all of the different ways to lay out your app code, or every bit of functionality offered by Meteor's directory structure and package format. It will give you some recommended patterns that can get you started on the path to a nicely organized app, but at the end of the day you choose how your app's code is laid out.
 
+Read the docs about all of the [special file and folder names](http://docs.meteor.com/#/full/structuringyourapp). Once you're familiar with some of the tools at your disposal, let's see how to use them to structure your app.
+
 ### Code can be on the client, server, or both
 
-In a traditional web application, there is a hard line between client and server code. In some frameworks, they are even written in different languages - for example, in a Rails app, server code is in Ruby and client code is in JavaScript. In Meteor, all of your application logic will be written in JavaScript (or a language that compiles to JS, like CoffeeScript).
+In a traditional web application, there is a hard line between client and server code. In some frameworks, they are even written in different languages - for example, in a Rails app, server code is in Ruby and client code is in JavaScript.
 
-Once all of your code is in one language, it becomes possible to share code between the client and server. Meteor is built to make this code sharing natural, and a lot of components in a Meteor app expect to live on both sides of the wire.
+In Meteor, all of your application logic will be written in JavaScript (or a language that compiles to JS, like CoffeeScript). Once all of your code is in one language, it becomes possible to share code between the client and server. Meteor is built to make this code sharing natural, and a lot of components in a Meteor app expect to live on both sides of the wire.
 
-When you are running your app, Meteor automatically loads all of the code in your app directory, and treats some files specially based on their directory or file name. Here's a brief example:
-
-```
-file.js         # loaded on client and server
-client/file.js  # loaded on client only
-server/file.js  # loaded on server only
-```
-
-To learn more, read the docs about all of the [special file and folder names](http://docs.meteor.com/#/full/structuringyourapp). Once you're familiar with some of the tools at your disposal, let's see how to use them to structure your app.
+This also gives us freedom to structure our app code in terms of the features we are building, and not the layers of the technology stack. We can keep the server logic for a certain feature right next to our UI templates, so that a developer doesn't have to understand the entire code base just to add something to an app.
 
 ### Different sizes of application have different needs
 
