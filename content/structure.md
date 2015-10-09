@@ -78,15 +78,6 @@ To solve the three problems above, we need to move to a new application structur
 
 Read about how to make Meteor packages in the [packaging section](#XXX).
 
-### Types of packages
-
-You'll end up with two kinds of packages in your app:
-
-1. Packages that contain reusable bits of code or UI that are used across different features
-2. Packages that implement a specific feature, and the code is not reused elsewhere
-
-There isn't any concrete difference between the two, but it's good to keep in mind which are which. The feature packages will look a lot like small chunks of an app, so you can basically write them as you would any other app code. The packages with reusable code should probably follow a few extra guidelines.
-
 ### Have a lib package for your app that sets up common dependencies
 
 Once you split your app up into many smaller packages, it can become a hassle to manage all of their dependencies independently. To solve this problem, create a package in your app called `app-lib`, and have all of your app's packages depend on it. The `app-lib` package can then `imply` some core set of packages that will be used throughout your app. This way, if you want to update the version of one of your dependencies, you can just do it in one place: the `package.js` file of `app-lib`.
@@ -104,6 +95,15 @@ MyApp.DateFormat = { ... };
 ```
 
 Now, when you use this package somewhere else in your app, you can always reference it by `MyApp.DateFormat`. But make sure to still declare dependencies on packages you are using, so that Meteor can correctly calculate the load order!
+
+### Types of packages
+
+You'll end up with two kinds of packages in your app:
+
+1. Packages that contain reusable bits of code or UI that are used across different features
+2. Packages that implement a specific feature, and the code is not reused elsewhere
+
+There isn't any concrete difference between the two, but it's good to keep in mind which are which. The feature packages will look a lot like small chunks of an app, so you can basically write them as you would any other app code. The packages with reusable code should probably follow a few extra guidelines.
 
 ### Guidelines for reusable packages in an app
 
