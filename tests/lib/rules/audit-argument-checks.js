@@ -108,6 +108,18 @@ ruleTester.run('audit-argument-checks', rule(), {
         type: 'Identifier'
       }],
       parser: 'babel-eslint'
+    },
+    {
+      code: `
+        Meteor.methods({
+          foo: (bar) => 2
+        })
+      `,
+      errors: [{
+        message: 'bar is not checked',
+        type: 'Identifier'
+      }],
+      parser: 'babel-eslint'
     }
   ]
 })
