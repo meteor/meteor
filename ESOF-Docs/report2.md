@@ -7,4 +7,6 @@
 
 ## Levantamento de Requisitos
 
+## Validação de Requisitos
+
 ## FEUP ESOF MIEIC 
