@@ -59,7 +59,7 @@ Meteor.startup(function() {
 });
 ```
 
-*Note:* Migrations should be run from `Meteor.startup` to allow for log output configuration.
+*Note: Migrations should be run from `Meteor.startup` to allow for log output configuration.*
 
 By specifying a version, you can migrate directly to that version (if possible). The migrations system will automatically determine which direction to migrate in.
 
