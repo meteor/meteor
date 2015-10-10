@@ -18,8 +18,8 @@ import {
   NON_METEOR
 } from '../../../dist/util/environment.js'
 
-var rule = require('../../../dist/rules/core')
-var RuleTester = require('eslint').RuleTester
+const rule = require('../../../dist/rules/core')
+const RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
@@ -125,7 +125,7 @@ const errorFreeTests = {
   invalid: []
 }
 
-var ruleTester = new RuleTester()
+const ruleTester = new RuleTester()
 ruleTester.run('core', rule(() => ({env: SERVER})), tests)
 ruleTester.run('core', rule(() => ({env: CLIENT})), tests)
 ruleTester.run('core', rule(() => ({env: UNIVERSAL})), tests)

@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 import {SERVER, CLIENT} from '../../../dist/util/environment.js'
-var rule = require('../../../dist/rules/no-session')
-var RuleTester = require('eslint').RuleTester
+const rule = require('../../../dist/rules/no-session')
+const RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
@@ -38,7 +38,7 @@ const clientEnv = {
 // -----------------------------------------------------------------------------
 
 
-var ruleTester = new RuleTester()
+const ruleTester = new RuleTester()
 ruleTester.run('no-session', rule(() => serverEnv), {
 
   valid: [

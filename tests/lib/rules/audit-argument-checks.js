@@ -7,15 +7,15 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../dist/rules/audit-argument-checks')
-var RuleTester = require('eslint').RuleTester
+const rule = require('../../../dist/rules/audit-argument-checks')
+const RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-var ruleTester = new RuleTester()
+const ruleTester = new RuleTester()
 ruleTester.run('audit-argument-checks', rule(), {
 
   valid: [

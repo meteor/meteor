@@ -9,15 +9,15 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../dist/rules/no-blaze-lifecycle-assignment')
-var RuleTester = require('eslint').RuleTester
+const rule = require('../../../dist/rules/no-blaze-lifecycle-assignment')
+const RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-var ruleTester = new RuleTester()
+const ruleTester = new RuleTester()
 ruleTester.run('no-blaze-lifecycle-assignment', rule(), {
 
   valid: [

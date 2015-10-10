@@ -1,12 +1,12 @@
 /* eslint-env mocha */
 
-var plugin = require('../dist/index.js')
+const plugin = require('../dist/index.js')
 
-var assert = require('assert')
-var fs = require('fs')
-var path = require('path')
+const assert = require('assert')
+const fs = require('fs')
+const path = require('path')
 
-var rules = fs.readdirSync(path.resolve(__dirname, '../dist/rules/'))
+const rules = fs.readdirSync(path.resolve(__dirname, '../dist/rules/'))
   .filter(function (f) {
     return path.extname(f) === '.js'
   })
@@ -14,7 +14,7 @@ var rules = fs.readdirSync(path.resolve(__dirname, '../dist/rules/'))
     return path.basename(f, '.js')
   })
 
-var defaultSettings = {}
+const defaultSettings = {}
 
 describe('all rule files should be exported by the plugin', function() {
   rules.forEach(function(ruleName) {
@@ -26,7 +26,7 @@ describe('all rule files should be exported by the plugin', function() {
     })
 
     if (defaultSettings.hasOwnProperty(ruleName)) {
-      var val = defaultSettings[ruleName]
+      const val = defaultSettings[ruleName]
       it('should configure ' + ruleName + ' to ' + val + ' by default', function() {
         assert.equal(
           plugin.rulesConfig[ruleName],

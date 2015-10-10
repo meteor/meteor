@@ -7,15 +7,15 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-var rule = require('../../../dist/rules/no-zero-timeout')
-var RuleTester = require('eslint').RuleTester
+const rule = require('../../../dist/rules/no-zero-timeout')
+const RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-var ruleTester = new RuleTester()
+const ruleTester = new RuleTester()
 ruleTester.run('no-zero-timeout', rule(), {
 
   valid: [

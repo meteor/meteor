@@ -1,8 +1,8 @@
 /* eslint-env mocha */
 
 import assert from 'assert'
-var rewire = require('rewire')
-var isMeteorProject = rewire('../../../../dist/util/internal/isMeteorProject')
+const rewire = require('rewire')
+const isMeteorProject = rewire('../../../../dist/util/internal/isMeteorProject')
 
 isMeteorProject.__set__('pathExists', {
   sync: function (path) {
@@ -12,12 +12,12 @@ isMeteorProject.__set__('pathExists', {
 
 describe('isMeteorProject', function () {
   it('detects a Meteor project', function () {
-    var result = isMeteorProject('/Users/anon/git/meteor-project')
+    const result = isMeteorProject('/Users/anon/git/meteor-project')
     assert.ok(result)
   })
 
   it('does not detect a non-Meteor project', function () {
-    var result = isMeteorProject('/Users/anon/git/non-meteor-project')
+    const result = isMeteorProject('/Users/anon/git/non-meteor-project')
     assert.equal(result, false)
   })
 })

@@ -10,8 +10,8 @@
 // -----------------------------------------------------------------------------
 
 import {CLIENT, SERVER, UNIVERSAL} from '../../../dist/util/environment.js'
-var rule = require('../../../dist/rules/pubsub')
-var RuleTester = require('eslint').RuleTester
+const rule = require('../../../dist/rules/pubsub')
+const RuleTester = require('eslint').RuleTester
 
 
 // -----------------------------------------------------------------------------
@@ -54,7 +54,7 @@ const notInMeteorProject = {
 // -----------------------------------------------------------------------------
 
 
-var ruleTester = new RuleTester()
+const ruleTester = new RuleTester()
 ruleTester.run('pubsub', rule(() => serverEnv), {
   valid: [
     'Meteor.publish("foo", function () {})'

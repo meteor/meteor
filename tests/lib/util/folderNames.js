@@ -1,6 +1,6 @@
 /* eslint-env mocha */
 
-var assert = require('assert')
+const assert = require('assert')
 
 describe('folder names', function () {
   it('is defined', function () {
