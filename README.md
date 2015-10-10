@@ -98,7 +98,7 @@ ESLint-plugin-Meteor is licensed under the [MIT License](http://www.opensource.o
 
 [npm-url]: https://npmjs.org/package/eslint-plugin-meteor
 [npm-image]: http://img.shields.io/npm/v/eslint-plugin-meteor.svg?style=flat-square
-[npm-downloads-image]: https://img.shields.io/npm/dt/express.svg?style=flat-square
+[npm-downloads-image]: https://img.shields.io/npm/dt/eslint-plugin-meteor.svg?style=flat-square
 
 [travis-url]: https://travis-ci.org/dferber90/eslint-plugin-meteor
 [travis-image]: http://img.shields.io/travis/dferber90/eslint-plugin-meteor/master.svg?style=flat-square
