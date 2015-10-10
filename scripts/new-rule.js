@@ -62,15 +62,13 @@ const rule = `/**
 // Rule Definition
 // -----------------------------------------------------------------------------
 
+import {CLIENT, SERVER, UNIVERSAL} from '../util/environment'
+
 module.exports = getMeta => context => {
 
-  const {
-    isInMeteorProject,
-    isPackageConfig,
-    isMobileConfig
-  } = getMeta(context.getFilename())
+  const {env} = getMeta(context.getFilename())
 
-  if (!isInMeteorProject || isPackageConfig || isMobileConfig) {
+  if (env !== CLIENT && env !== SERVER && env !== UNIVERSAL) {
     return {}
   }
 
@@ -109,41 +107,17 @@ const test = `/**
 // Requirements
 // -----------------------------------------------------------------------------
 
-import { CLIENT, SERVER } from '../../../dist/util/environment.js'
+import {CLIENT, SERVER} from '../../../dist/util/environment.js'
 const rule = require('../../../dist/rules/${ruleId}')
 const RuleTester = require('eslint').RuleTester
-
-
-// -----------------------------------------------------------------------------
-// Environments
-// -----------------------------------------------------------------------------
-
-const serverEnv = {
-  path: 'server/${ruleId}.js',
-  env: SERVER,
-  isCompatibilityFile: false,
-  isInMeteorProject: true,
-  isPackageConfig: false,
-  isMobileConfig: false
-}
-
-const clientEnv = {
-  path: 'server/${ruleId}.js',
-  env: CLIENT,
-  isCompatibilityFile: false,
-  isInMeteorProject: true,
-  isPackageConfig: false,
-  isMobileConfig: false
-}
 
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-
 const ruleTester = new RuleTester()
-ruleTester.run('${ruleId}', rule(() => serverEnv), {
+ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
 
   valid: [
     // fill me in
@@ -160,7 +134,7 @@ ruleTester.run('${ruleId}', rule(() => serverEnv), {
 
 })
 
-ruleTester.run('${ruleId}', rule(() => clientEnv), {
+ruleTester.run('${ruleId}', rule(() => ({env: CLIENT})), {
 
   valid: [
     // fill me in
@@ -170,7 +144,7 @@ ruleTester.run('${ruleId}', rule(() => clientEnv), {
     {
       code: '${escapedFailingExample}',
       errors: [
-        {message: 'Unexpected Session statement.', type: 'MemberExpression'}
+        {message: 'The error message', type: 'MemberExpression'}
       ]
     }
   ]
@@ -193,9 +167,10 @@ try {
   fs.writeFileSync(testFileName, test, writeOptions)
   fs.writeFileSync(docFileName, doc, writeOptions)
 
-  console.log(colors.white('✓ ') + colors.green('create ' + ruleFileName))
-  console.log(colors.white('✓ ') + colors.green('create ' + testFileName))
-  console.log(colors.white('✓ ') + colors.green('create ' + docFileName))
+  console.log('')
+  console.log(colors.green('✓ ') + colors.white('create ' + ruleFileName))
+  console.log(colors.green('✓ ') + colors.white('create ' + testFileName))
+  console.log(colors.green('✓ ') + colors.white('create ' + docFileName))
 } catch (e) {
   if (e.code === 'EEXIST') {
     console.log(colors.red(`Aborting because rule already exists (${e.path})`))
