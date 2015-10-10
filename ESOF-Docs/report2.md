@@ -1,4 +1,4 @@
-# Relatório
+# Relatório - Gestão de Requisitos
 
 ### Alunos:
 * Luís Pedro Sousa Pinto, ee11169@fe.up.pt
