@@ -54,8 +54,12 @@ Migrations.add({
 As in 'Basics', you can migrate to the latest by running:
 
 ``` javascript
-Migrations.migrateTo('latest');
+Meteor.startup(function() {
+  Migrations.migrateTo('latest');
+});
 ```
+
+*Note:* Migrations should be run from `Meteor.startup` to allow for log output configuration.
 
 By specifying a version, you can migrate directly to that version (if possible). The migrations system will automatically determine which direction to migrate in.
 
