@@ -55,7 +55,7 @@ Finally, enable all of the rules that you would like to use.
   "rules": {
     "meteor/no-session": 2,
     "meteor/no-blaze-lifecycle-assignment": 2,
-    "meteor/no-blaze-zero-timeout": 2,
+    "meteor/no-zero-timeout": 2,
     "meteor/audit-argument-checks": 2,
     "meteor/core": 2,
     "meteor/pubsub": 2
