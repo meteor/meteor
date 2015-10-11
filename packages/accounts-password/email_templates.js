@@ -15,7 +15,6 @@ ${url}
 
 Thanks.
 `;
-    }
   };
 }
 
@@ -30,25 +29,26 @@ Accounts.emailTemplates = {
     text: function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
             ("Hello " + user.profile.name + ",") : "Hello,";
-      return greeting + "\n"
-        + "\n"
-        + "To reset your password, simply click the link below.\n"
-        + "\n"
-        + url + "\n"
-        + "\n"
-        + "Thanks.\n";
+      return `${greeting}
+
+To reset your password, simply click the link below.
+
+${url}
+
+Thanks.
+`;
     }
   },
   verifyEmail: {
     subject: function(user) {
       return "How to verify email address on " + Accounts.emailTemplates.siteName;
     },
-    text: greet("To verify your account email");
+    text: greet("To verify your account email")
   },
   enrollAccount: {
     subject: function(user) {
       return "An account has been created for you on " + Accounts.emailTemplates.siteName;
     },
-    text: greet("To start using the service");
+    text: greet("To start using the service")
   }
 };
