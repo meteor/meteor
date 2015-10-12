@@ -113,7 +113,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
        ("exec phantomjs " + phantomJsArgs + " /dev/stdin <<'END'\n" +
         phantomScript + "END\n")],
       {timeout: Spiderable.requestTimeoutMs, maxBuffer: MAX_BUFFER},
-      function (error, stdout, stderr) {
+      Meteor.bindEnvironment( function (error, stdout, stderr) {
         if (!error && /<html/i.test(stdout)) {
           res.writeHead(200, {'Content-Type': 'text/html; charset=UTF-8'});
           res.end(stdout);
@@ -127,7 +127,7 @@ WebApp.connectHandlers.use(function (req, res, next) {
 
           next();
         }
-      });
+      }));
   } else {
     next();
   }
