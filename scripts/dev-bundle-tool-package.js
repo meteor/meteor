@@ -38,7 +38,7 @@ var packageJson = {
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
     kexec: "0.2.0",
-    "source-map": "0.1.40",
+    "source-map": "0.1.43",
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",
