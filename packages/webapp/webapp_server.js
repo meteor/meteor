@@ -439,6 +439,15 @@ var getUrlPrefixForArch = function (arch) {
     '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
+// parse port to see if its a Windows Server style named pipe. If so, return as-is (String), otherwise return as Int
+WebAppInternals.parsePort = function (port) {
+  if( /\\\\?.+\\pipe\\?.+/.test(port) ) {
+    return port;
+  }
+
+  return parseInt(port);
+};
+
 var runWebAppServer = function () {
   var shuttingDown = false;
   var syncQueue = new Meteor._SynchronousQueue();
@@ -755,7 +764,7 @@ var runWebAppServer = function () {
     WebAppInternals.generateBoilerplate();
 
     // only start listening after all the startup code has run.
-    var localPort = parseInt(process.env.PORT) || 0;
+    var localPort = WebAppInternals.parsePort(process.env.PORT) || 0;
     var host = process.env.BIND_IP;
     var localIp = host || '0.0.0.0';
     httpServer.listen(localPort, localIp, Meteor.bindEnvironment(function() {
