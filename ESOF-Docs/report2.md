@@ -21,6 +21,8 @@ Na prática, a gestão de requisitos acaba por coincidir com o início de novos 
 
 ## Levantamento de Requisitos
 
+### Análise de Requisitos
+
 ## Validação de Requisitos
 
 ## FEUP ESOF MIEIC 
