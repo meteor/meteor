@@ -158,6 +158,7 @@ Tinytest.add("webapp - generating boilerplate should not change runtime config",
 
 // Support 'named pipes' (strings) as ports for support of Windows Server / Azure deployments
 Tinytest.add("webapp - port should be parsed as int unless it is a named pipe", function(test){
+  // Named pipes on Windows Server follow the format: \\.\pipe\{randomstring} or \\{servername}\pipe\{randomstring}
   var namedPipe = "\\\\.\\pipe\\b27429e9-61e3-4c12-8bfe-950fa3295f74";
   var namedPipeServer = "\\\\SERVERNAME-1234\\pipe\\6e157e98-faef-49e4-a0cf-241037223308";
 
@@ -169,7 +170,7 @@ Tinytest.add("webapp - port should be parsed as int unless it is a named pipe", 
       8080);
   test.equal(WebAppInternals.parsePort("8080"),
       8080);
-  test.equal(WebAppInternals.parsePort("8080abc"),
+  test.equal(WebAppInternals.parsePort("8080abc"), // ensure strangely formatted ports still work for backwards compatibility
       8080);
 });
 

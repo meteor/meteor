@@ -439,7 +439,7 @@ var getUrlPrefixForArch = function (arch) {
     '' : '/' + '__' + arch.replace(/^web\./, '');
 };
 
-// parse port to see if its a named pipe. If so, return as-is (String), otherwise return as Int
+// parse port to see if its a Windows Server style named pipe. If so, return as-is (String), otherwise return as Int
 WebAppInternals.parsePort = function (port) {
   if( /\\\\?.+\\pipe\\?.+/.test(port) ) {
     return port;
