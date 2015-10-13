@@ -121,6 +121,14 @@ Even though packages can have any file names you want, it can still be useful to
 The pattern for a medium-sized app can get you pretty far! However, you might end up in a situation where it's not sufficient. Here are some reasons you might want to split your project into multiple Meteor apps.
 
 1. **Totally separate user interfaces.** You might find that your project has two completely different kinds of users. For example, maybe you're building an Uber-like project and you want one app for the administrators, one for the support team, one for the drivers, and one for people requesting rides. They all deal with the same data, they might share UI components, and they have some common code, but a large part of the functionality is totally separate. You probably don't want to ship the entire administration UI as part of your end-user mobile app.
-2. XXX what else?
+2. **Independent scaling.** You might notice that different parts of your app might use different amounts of RAM, CPU, or network bandwidth. In that case, it might make sense to have them run on differently-specced machines or scale them independently. The only way to do this is to have them run as separate web servers in separate containers.
+3. **Several independent teams.** If you have people around the world working on somewhat decoupled parts of your project, it can make sense to keep those in separate repositories, deploy them separately, etc. By restricting the communication between these apps to data APIs or database calls, you can make it easier for those teams to act independently.
 
-XXX basically this: http://meteorpatterns.com/Sewdn/project-builds
+### Sharing code between apps through local packages
+
+Even though you might have separate Meteor apps for different UI or backend parts of your project, you might want to share a fair amount of your code. If you want to have different frontends on top of the same data, you probably want to share some of your model and validation logic. If you have separate data services, you can share some of the utilities for inter-server communication.
+
+The easy way to share code between two Meteor apps is to put it in a package. If you're already using the package-first app structure recommended for medium-sized apps, this will be a breeze since you already have all of the packages you need. To actually let the different apps use the packages, you have a few options:
+
+1. Downloading local packages via git submodules: Since Meteor currently doesn't support private package servers, you can just have a git repository for each package you want to share, and use git submodules to pull them into your app's `packages/` directory. However, managing git submodules can get pretty cumbersome, so you might want to try...
+2. Using the `PACKAGE_DIRS` environment variable: You can instruct Meteor to look in any directory for local packages by setting the environment variable `PACKAGE_DIRS` to a colon-separated list of paths. This way, you can just have a directory on your computer where you keep all of your shared packages, and load them from there. The packages can be in one repository or many depending on your preference. You could even keep all of your apps and packages in [one repository](http://meteorpatterns.com/Sewdn/project-builds).
