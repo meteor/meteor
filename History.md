@@ -13,7 +13,10 @@
   The complete list can be found
   [here](https://github.com/meteor/ecmascript-runtime/blob/master/server.js).
 
-* Check type of `onException` argument to `bindEnvironment`. #5271
+* Check type of `onException` argument to `bindEnvironment`. [#5271](https://github.com/meteor/meteor/issues/5271)
+
+* WebApp's `PORT` environment variable can now be a named pipe to better support
+  deployment on IIS on Windows. [4413](https://github.com/meteor/meteor/issues/4413)
 
 ## v1.2.0.2, 2015-Sept-28
 
