@@ -57,15 +57,19 @@ FlowRouter.route('/blog/:postId', {
 
 This route handler will run in two situations: if the page loads initially at a URL that matches the URL pattern, and if the URL changes to one that matches the pattern while the page is open. Note that, unlike in a server-side-rendered app, the URL can change without any additional requests to the server.
 
-When the route is matched, the `action` method executes, and you can perform any actions you need to.
-
-The `name` property of the route is optional, but will let us refer to this route more conveniently later on.
+When the route is matched, the `action` method executes, and you can perform any actions you need to. The `name` property of the route is optional, but will let us refer to this route more conveniently later on.
 
 ### URL pattern matching
 
-The above code snippet will match certain URLs. You may notice that one of the segments is prefixed by `:` - this means that it is a *url parameter*, and will match any string that is present in that segment of the path. Here are some example URLs and the resulting `pathParams` and `queryParams`:
+Consider the following URL pattern, used in the code snippet above:
 
-| URL           | action() called?	        | pathParams	         | queryParams
+```js
+'/blog/:postId'
+```
+
+The above pattern will match certain URLs. You may notice that one of the segments is prefixed by `:` - this means that it is a *url parameter*, and will match any string that is present in that segment of the path. Here are some example URLs and the resulting `pathParams` and `queryParams`:
+
+| URL           | matches pattern? | pathParams	         | queryParams
 | ---- | ---- | ---- | ---- |
 | /	            | no		
 | /about	      | no		
