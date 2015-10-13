@@ -2,7 +2,7 @@
 
 import assert from 'assert'
 const rewire = require('rewire')
-const getRootPath = rewire('../../../../dist/util/internal/getRootPath.js')
+const getRootPath = rewire('../../../../dist/util/meta/getRootPath.js')
 
 getRootPath.__set__('findOneUpwards', function (filename) {
   if (filename === '/Users/anon/git/meteor-project/file.js') {

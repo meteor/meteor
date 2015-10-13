@@ -9,29 +9,8 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {SERVER, CLIENT} from '../../../dist/util/environment.js'
 const rule = require('../../../dist/rules/no-session')
 const RuleTester = require('eslint').RuleTester
-
-
-// -----------------------------------------------------------------------------
-// Environments
-// -----------------------------------------------------------------------------
-
-const serverEnv = {
-  path: 'server/methods.js',
-  env: SERVER,
-  isCompatibilityFile: false,
-  isInMeteorProject: true
-}
-
-const clientEnv = {
-  path: 'client/methods.js',
-  env: CLIENT,
-  isCompatibilityFile: false,
-  isInMeteorProject: true
-}
-
 
 // -----------------------------------------------------------------------------
 // Tests
@@ -39,7 +18,7 @@ const clientEnv = {
 
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-session', rule(() => serverEnv), {
+ruleTester.run('no-session', rule(() => ({isLintedEnv: true})), {
 
   valid: [
     'session.get("foo")',
@@ -47,26 +26,17 @@ ruleTester.run('no-session', rule(() => serverEnv), {
   ],
 
   invalid: [
-    {code: 'Session.set("foo", true)', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
-    {code: 'Session.get("foo")', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
-    {code: 'Session.clear("foo")', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
-    {code: 'Session.all()', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]}
+    {code: 'Session.set("foo", true)', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]},
+    {code: 'Session.get("foo")', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]},
+    {code: 'Session.clear("foo")', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]},
+    {code: 'Session.all()', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]}
   ]
 
 })
-
-ruleTester.run('no-session', rule(() => clientEnv), {
-
+ruleTester.run('no-session', rule(() => ({isLintedEnv: false})), {
   valid: [
-    'session.get("foo")',
-    'foo(Session)'
+    'Session.set("foo", true)',
+    'Session.get("foo")'
   ],
-
-  invalid: [
-    {code: 'Session.set("foo", true)', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
-    {code: 'Session.get("foo")', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
-    {code: 'Session.clear("foo")', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]},
-    {code: 'Session.all()', errors: [{message: 'Unexpected Session statement.', type: 'MemberExpression'}]}
-  ]
-
+  invalid: []
 })

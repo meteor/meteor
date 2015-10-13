@@ -1,7 +1,7 @@
 /* eslint-env mocha */
 
 import assert from 'assert'
-import stripPathPrefix from '../../../../dist/util/internal/stripPathPrefix.js'
+import stripPathPrefix from '../../../../dist/util/meta/stripPathPrefix.js'
 
 describe('stripPathPrefix', function () {
   it('strips path correctly', function () {

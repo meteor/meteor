@@ -2,7 +2,7 @@
 
 import assert from 'assert'
 const rewire = require('rewire')
-const isMeteorProject = rewire('../../../../dist/util/internal/isMeteorProject')
+const isMeteorProject = rewire('../../../../dist/util/meta/isMeteorProject')
 
 isMeteorProject.__set__('pathExists', {
   sync: function (path) {

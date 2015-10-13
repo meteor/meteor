@@ -16,7 +16,7 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-zero-timeout', rule(), {
+ruleTester.run('no-zero-timeout', rule(() => ({isLintedEnv: true})), {
 
   valid: [
     'Meteor.setTimeout()',
@@ -65,4 +65,11 @@ ruleTester.run('no-zero-timeout', rule(), {
       }]
     }
   ]
+})
+
+ruleTester.run('no-zero-timeout', rule(() => ({isLintedEnv: false})), {
+  valid: [
+    'Meteor.setTimeout(function () {}, 0)'
+  ],
+  invalid: []
 })

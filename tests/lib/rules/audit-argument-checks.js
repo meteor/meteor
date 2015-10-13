@@ -16,7 +16,7 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('audit-argument-checks', rule(), {
+ruleTester.run('audit-argument-checks', rule(() => ({isLintedEnv: true})), {
 
   valid: [
     'foo()',
@@ -122,4 +122,11 @@ ruleTester.run('audit-argument-checks', rule(), {
       parser: 'babel-eslint'
     }
   ]
+})
+
+ruleTester.run('audit-argument-checks', rule(() => ({isLintedEnv: false})), {
+  valid: [
+    'Meteor.publish("foo", function (bar) { foo(); })'
+  ],
+  invalid: []
 })
