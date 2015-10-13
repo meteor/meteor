@@ -18,7 +18,7 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-blaze-lifecycle-assignment', rule(), {
+ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({isLintedEnv: true})), {
 
   valid: [
     'x += 1',
@@ -73,4 +73,11 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule(), {
       }]
     }
   ]
+})
+
+ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({isLintedEnv: false})), {
+  valid: [
+    'Template.foo.created = function () {}'
+  ],
+  invalid: []
 })

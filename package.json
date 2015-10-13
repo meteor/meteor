@@ -4,7 +4,7 @@
   "description": "Meteor specific linting rules for ESLint",
   "main": "dist/index.js",
   "scripts": {
-    "build": "babel lib -d dist --auxiliary-comment-before \"istanbul ignore next\"",
+    "build": "babel lib -d dist --optional runtime --auxiliary-comment-before \"istanbul ignore next\"",
     "build:w": "npm run build -- -w",
     "check-coverage": "istanbul check-coverage",
     "clean": "rimraf dist",
@@ -36,6 +36,7 @@
   "devDependencies": {
     "babel": "5.8.23",
     "babel-eslint": "4.1.3",
+    "babel-runtime": "5.8.25",
     "colors": "1.1.2",
     "coveralls": "2.11.4",
     "cz-conventional-changelog": "1.1.4",

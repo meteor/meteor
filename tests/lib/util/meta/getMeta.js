@@ -1,10 +1,10 @@
 /* eslint-env mocha */
 
 import assert from 'assert'
-import {NON_METEOR} from '../../../dist/util/environment'
+import {NON_METEOR} from '../../../../dist/util/environment'
 
 const rewire = require('rewire')
-const getMeta = rewire('../../../dist/util/getMeta')
+const getMeta = rewire('../../../../dist/util/meta/getMeta')
 getMeta.__set__('getRelativePath', function (path) {
   return path
 })

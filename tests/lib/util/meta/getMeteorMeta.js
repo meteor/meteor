@@ -4,7 +4,7 @@ import assert from 'assert'
 import path from 'path'
 
 import ENVIRONMENT from '../../../../dist/util/environment.js'
-import getMeteorMeta from '../../../../dist/util/internal/getMeteorMeta.js'
+import getMeteorMeta from '../../../../dist/util/meta/getMeteorMeta.js'
 
 
 describe('getMeteorMeta', function () {

@@ -9,15 +9,6 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {
-  CLIENT,
-  SERVER,
-  UNIVERSAL,
-  MOBILE_CONFIG,
-  PACKAGE_CONFIG,
-  NON_METEOR
-} from '../../../dist/util/environment.js'
-
 const rule = require('../../../dist/rules/core')
 const RuleTester = require('eslint').RuleTester
 
@@ -126,10 +117,5 @@ const errorFreeTests = {
 }
 
 const ruleTester = new RuleTester()
-ruleTester.run('core', rule(() => ({env: SERVER})), tests)
-ruleTester.run('core', rule(() => ({env: CLIENT})), tests)
-ruleTester.run('core', rule(() => ({env: UNIVERSAL})), tests)
-
-ruleTester.run('core', rule(() => ({env: NON_METEOR})), errorFreeTests)
-ruleTester.run('core', rule(() => ({env: PACKAGE_CONFIG})), errorFreeTests)
-ruleTester.run('core', rule(() => ({env: MOBILE_CONFIG})), errorFreeTests)
+ruleTester.run('core', rule(() => ({isLintedEnv: true})), tests)
+ruleTester.run('core', rule(() => ({isLintedEnv: false})), errorFreeTests)

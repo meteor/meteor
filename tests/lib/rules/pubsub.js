@@ -13,49 +13,12 @@ import {CLIENT, SERVER, UNIVERSAL} from '../../../dist/util/environment.js'
 const rule = require('../../../dist/rules/pubsub')
 const RuleTester = require('eslint').RuleTester
 
-
-// -----------------------------------------------------------------------------
-// Environments
-// -----------------------------------------------------------------------------
-
-const serverEnv = {
-  path: 'server/pubsub.js',
-  env: SERVER,
-  isCompatibilityFile: false,
-  isInMeteorProject: true,
-  isPackageConfig: false,
-  isMobileConfig: false
-}
-
-const clientEnv = {
-  path: 'server/pubsub.js',
-  env: CLIENT,
-  isCompatibilityFile: false,
-  isInMeteorProject: true,
-  isPackageConfig: false,
-  isMobileConfig: false
-}
-
-const universalEnv = {
-  path: 'pubsub.js',
-  env: UNIVERSAL,
-  isCompatibilityFile: false,
-  isInMeteorProject: true,
-  isPackageConfig: false,
-  isMobileConfig: false
-}
-
-const notInMeteorProject = {
-  isInMeteorProject: false
-}
-
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
-
 const ruleTester = new RuleTester()
-ruleTester.run('pubsub', rule(() => serverEnv), {
+ruleTester.run('pubsub', rule(() => ({env: SERVER, isLintedEnv: true})), {
   valid: [
     'Meteor.publish("foo", function () {})'
   ],
@@ -76,7 +39,7 @@ ruleTester.run('pubsub', rule(() => serverEnv), {
   ]
 })
 
-ruleTester.run('pubsub', rule(() => clientEnv), {
+ruleTester.run('pubsub', rule(() => ({env: CLIENT, isLintedEnv: true})), {
   valid: [
     'Meteor.subscribe("foo")'
   ],
@@ -97,10 +60,20 @@ ruleTester.run('pubsub', rule(() => clientEnv), {
   ]
 })
 
-ruleTester.run('pubsub', rule(() => universalEnv), {
+ruleTester.run('pubsub', rule(() => ({env: UNIVERSAL, isLintedEnv: true})), {
   valid: [
     'if (Meteor.isClient) { Meteor.subscribe("foo") }',
-    'if (Meteor.isServer) { Meteor.publish("foo", function () {}) }'
+    'if (Meteor.isServer) { Meteor.publish("foo", function () {}) }',
+    `
+      if (Meteor.isClient) {
+        if (Meteor.isServer) {
+
+          // valid because it is unreachable
+          Meteor.publish("foo", function () {})
+          Meteor.subscribe("foo")
+        }
+      }
+    `
   ],
 
   invalid: [
@@ -109,39 +82,11 @@ ruleTester.run('pubsub', rule(() => universalEnv), {
       errors: [
         {message: 'Allowed on client only', type: 'CallExpression'}
       ]
-    },
-    {
-      code: `
-        if (Meteor.isClient) {
-          if (Meteor.isServer) {
-            Meteor.publish("foo", function () {})
-            Meteor.subscribe("foo")
-          }
-        }
-      `,
-      errors: [
-        {message: 'Allowed on server only', type: 'CallExpression'},
-        {message: 'Allowed on client only', type: 'CallExpression'}
-      ]
-    },
-    {
-      code: `
-        if (Meteor.isServer) {
-          if (Meteor.isClient) {
-            Meteor.publish("foo", function () {})
-            Meteor.subscribe("foo")
-          }
-        }
-      `,
-      errors: [
-        {message: 'Allowed on server only', type: 'CallExpression'},
-        {message: 'Allowed on client only', type: 'CallExpression'}
-      ]
     }
   ]
 })
 
-ruleTester.run('pubsub', rule(() => notInMeteorProject), {
+ruleTester.run('pubsub', rule(() => ({isLintedEnv: false})), {
   valid: [
     'foo()'
   ],

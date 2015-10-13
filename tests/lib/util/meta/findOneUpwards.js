@@ -13,7 +13,7 @@ function matcher (filename) {
   )
 }
 
-const findOneUpwards = require('../../../../dist/util/internal/findOneUpwards.js')
+const findOneUpwards = require('../../../../dist/util/meta/findOneUpwards.js')
 
 describe('findOneUpwards', function () {
   it('returns false when no project is found', function () {

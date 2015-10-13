@@ -66,11 +66,7 @@ import {CLIENT, SERVER, UNIVERSAL} from '../util/environment'
 
 module.exports = getMeta => context => {
 
-  const {env} = getMeta(context.getFilename())
-
-  if (env !== CLIENT && env !== SERVER && env !== UNIVERSAL) {
-    return {}
-  }
+  const {isLintedEnv} = getMeta(context.getFilename())
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -81,6 +77,10 @@ module.exports = getMeta => context => {
   // ---------------------------------------------------------------------------
   // Public
   // ---------------------------------------------------------------------------
+
+  if (!isLintedEnv) {
+    return {}
+  }
 
   return {
 
@@ -107,7 +107,7 @@ const test = `/**
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {CLIENT, SERVER} from '../../../dist/util/environment.js'
+import {CLIENT, SERVER} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/${ruleId}')
 const RuleTester = require('eslint').RuleTester
 
@@ -117,7 +117,7 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
+ruleTester.run('${ruleId}', rule(() => ({env: SERVER, isLintedEnv: true})), {
 
   valid: [
     // fill me in
@@ -127,14 +127,14 @@ ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
     {
       code: '${escapedFailingExample}',
       errors: [
-        {message: 'Unexpected Session statement.', type: 'MemberExpression'}
+        {message: 'The error message', type: 'MemberExpression'}
       ]
     }
   ]
 
 })
 
-ruleTester.run('${ruleId}', rule(() => ({env: CLIENT})), {
+ruleTester.run('${ruleId}', rule(() => ({env: CLIENT, isLintedEnv: true})), {
 
   valid: [
     // fill me in
