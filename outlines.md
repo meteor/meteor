@@ -64,6 +64,7 @@ Meteor's login system works pretty well out of the box, but there are a few tips
 1. Picking an accounts UI package
 2. Setting up password reset, email verification, and enrollment emails
 3. Setting up OAuth login services
+4. Building your own login service
 4. Adding custom fields to the users collection and using them
 
 ### Meteor guide: Security
