@@ -32,6 +32,7 @@
     "escope": "3.2.0",
     "invariant": "2.1.1",
     "lodash.find": "3.2.1",
+    "lodash.memoize": "3.0.4",
     "path-exists": "2.0.0"
   },
   "devDependencies": {
