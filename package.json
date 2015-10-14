@@ -29,6 +29,7 @@
   "homepage": "https://github.com/dferber90/eslint-plugin-meteor",
   "bugs": "https://github.com/dferber90/eslint-plugin-meteor/issues",
   "dependencies": {
+    "escope": "3.2.0",
     "invariant": "2.1.1",
     "lodash.find": "3.2.1",
     "path-exists": "2.0.0"
