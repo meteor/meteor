@@ -64,7 +64,7 @@ LocalCollection._modify = function (doc, mod, options) {
         var noCreate = _.has(NO_CREATE_MODIFIERS, op);
         var forbidArray = (op === "$rename");
         var target = findModTarget(newDoc, keyparts, {
-          noCreate: NO_CREATE_MODIFIERS[op],
+          noCreate: noCreate,
           forbidArray: (op === "$rename"),
           arrayIndices: options.arrayIndices
         });
