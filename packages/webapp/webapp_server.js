@@ -37,8 +37,6 @@ var archPath = {};
 
 var bundledJsCssUrlRewriteHook;
 
-var JsCssHook;
-
 var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
   hash.update(contents);
@@ -797,7 +795,7 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
 };
 
 
-WebAppInternals.bundledJsCssUrlRewriteHook = function (hookFn) {
+WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
   bundledJsCssUrlRewriteHook = hookFn;
   WebAppInternals.generateBoilerplate();
 };
