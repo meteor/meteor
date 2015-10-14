@@ -802,7 +802,7 @@ WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
 
 WebAppInternals.setBundledJsCssPrefix = function (prefix) {
   var self = this;
-  self.bundledJsCssUrlRewriteHook(
+  self.setBundledJsCssUrlRewriteHook(
     function (url) {
       return prefix + url;
   });
