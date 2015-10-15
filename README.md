@@ -38,7 +38,7 @@ $ npm install eslint-plugin-meteor
 
 Add `plugins` section and specify ESLint-plugin-Meteor as a plugin.
 
-```json
+```js
 {
   "plugins": [
     "meteor"
@@ -49,7 +49,7 @@ Add `plugins` section and specify ESLint-plugin-Meteor as a plugin.
 
 Finally, enable all of the rules that you would like to use.
 
-```json
+```js
 {
   "rules": {
 
