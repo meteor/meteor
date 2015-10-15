@@ -4,7 +4,7 @@ Template.configureLoginServiceDialogForGoogle.helpers({
   },
   siteUrlNoTrail: function () {
     if (Meteor.absoluteUrl.slice(-1) === '/') {
-      return Meteor.absoluteUrl().slice(0, 1_;
+      return Meteor.absoluteUrl().slice(0, 1);
     } else {
       return Meteor.absoluteUrl();
     }
