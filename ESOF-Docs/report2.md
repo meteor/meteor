@@ -28,6 +28,8 @@ No contexto deste projeto, os *stakeholders* representam um público alvo mais e
 
 ## Análise de Requisitos
 
+## Especificação de Requisitos
+
 ## Validação de Requisitos
 
 ## FEUP ESOF MIEIC 
