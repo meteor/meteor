@@ -196,3 +196,10 @@ process.on('SIGHUP', Meteor.bindEnvironment(function () {
   enqueueVersionsRefresh();
 }, "handling SIGHUP signal for refresh"));
 
+
+// Log that a client is initiating a reload.
+Meteor.methods({
+  _logReload: function () {
+    Meteor._debug("A client is initiating a browser refresh.");
+  }
+});
