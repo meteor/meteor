@@ -141,6 +141,7 @@ Autoupdate._retrySubscription = function () {
 
             if (Package.reload) {
               Meteor._debug("Initiating browser refresh.");
+              Meteor.call("_logReload");
               Package.reload.Reload._reload();
             }
           }
