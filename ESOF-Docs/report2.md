@@ -9,7 +9,7 @@
 
 ## Gestão de Requisitos
 
-Os requisitos de um sistema, em especial em sistemas grandes, estão em evolução constante. Isto pode suceder o problema abordado de não conseguir ficar completamente definido antes da produção do documento de requisitos ou, por outro lado, pode também acontecer por os próprios requisitos se alterarem no decorrer do projeto.
+Os requisitos de um sistema, em especial os sistemas grandes, estão em evolução constante. Isto pode suceder o problema abordado de não conseguir ficar completamente definido antes da produção do documento de requisitos ou, por outro lado, pode também acontecer por os próprios requisitos se alterarem no decorrer do projeto.
 
 É natural que surjam requisitos por parte dos usuários por vários motivos:
 
