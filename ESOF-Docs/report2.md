@@ -21,7 +21,7 @@ Na prática, a gestão de requisitos acaba por coincidir com o início de novos 
 
 ## Levantamento de Requisitos
 
-No âmbito da engenharia de software, o levantamento, a análise e validação de requisitos são processos inevitáveis na realização da comunicação entre o cliente e as pessoas responsáveis pelo projeto. Isto irá aceitar que a "parte interessada" saiba o que é esperado do produto a ser desenvolvido.
+No âmbito da engenharia de software, o levantamento, a análise, a especificação e validação de requisitos são processos inevitáveis na realização da comunicação entre o cliente e as pessoas responsáveis pelo projeto. Isto irá aceitar que a "parte interessada" saiba o que é esperado do produto a ser desenvolvido.
 
 
 
