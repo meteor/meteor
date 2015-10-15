@@ -20,7 +20,8 @@ const RuleTester = require('eslint').RuleTester
 const ruleTester = new RuleTester()
 ruleTester.run('pubsub', rule(() => ({env: SERVER, isLintedEnv: true})), {
   valid: [
-    'Meteor.publish("foo", function () {})'
+    'Meteor.publish("foo", function () {})',
+    'Meteor.startup(function () {})'
   ],
 
   invalid: [
