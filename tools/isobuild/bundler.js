@@ -346,7 +346,7 @@ class File {
       return; // eg, already got setUrlToHash
     if (/\?/.test(this.url))
       throw new Error("URL already has a query string");
-    this.url += "?" + this.hash();
+    this.url += "?hash=" + this.hash();
     this.cacheable = true;
   }
 
