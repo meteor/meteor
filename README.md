@@ -88,6 +88,13 @@ For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_
 
 [Any rule idea is welcome !](https://github.com/dferber90/eslint-plugin-meteor/issues)
 
+## Limitations
+Executors (client, browser, server, cordova) are detected by looking at the location of the linted file relative to the Meteor project root. Locus checks such as `if (Meteor.isClient) {..}` are respected as well. They may be any logical expression as long as all expressions consist purely of `Meteor.isClient`, `Meteor.isServer` and `Meteor.isCordova`. So, this would work
+
+```js
+if ((Meteor.isClient || Meteor.isCordova) && !Meteor.isServer) { .. }
+```
+
 # Contributing
 
 Read about [set up of the development environment](docs/SETUP_DEVELOPMENT.md).

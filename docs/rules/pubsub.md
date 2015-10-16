@@ -7,7 +7,7 @@ Prevent misusage of [Publish and Subscribe](http://docs.meteor.com/#/full/publis
 
 This rule aims to prevent errors when using Publications and Subscriptions. It verifies `Meteor.publish` and `Meteor.subscribe` are used in the correct environments.
 
-It further prevents errors when using the Meteor API provided through the context of publication functions.
+It further prevents errors when using the publish handler object provided through the context of publication functions.
 
 The following patterns are considered warnings:
 
@@ -76,7 +76,6 @@ Meteor.publish('foo', function () {
 
 ## Limitations
 
-- `Meteor.isServer` and `Meteor.isClient` checks must happen in `if`-conditions containing no other expressions than `Meteor.isClient`, `Meteor.isServer` and `Meteor.isCordova`.
 - Variable used to keep track of context must be assigned to exactly once upon the definition. No transitive assignments possible.
 - Does not verify usage of DDPRateLimiter.
 
