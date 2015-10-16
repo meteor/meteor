@@ -67,6 +67,7 @@ const LINKER_CACHE = new LRU({
 
 exports.CompilerPluginProcessor = function (options) {
   var self = this;
+  self.buildMode = options.buildMode;
   self.unibuilds = options.unibuilds;
   self.arch = options.arch;
   self.isopackCache = options.isopackCache;
@@ -137,7 +138,9 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
             sourceProcessor.userPlugin.processFilesForTarget.bind(
               sourceProcessor.userPlugin));
           try {
-            markedMethod(inputFiles);
+            markedMethod(inputFiles, {
+              buildMode: self.buildMode
+            });
           } catch (e) {
             buildmessage.exception(e);
           }

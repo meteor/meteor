@@ -692,6 +692,7 @@ class Target {
   _runCompilerPlugins() {
     buildmessage.assertInJob();
     const processor = new compilerPluginModule.CompilerPluginProcessor({
+      buildMode: this.buildMode,
       unibuilds: this.unibuilds,
       arch: this.arch,
       isopackCache: this.isopackCache,
