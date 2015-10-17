@@ -31,7 +31,7 @@ A Meteor já disponibiliza vários requisitos que a caracteriza como:
 * A contrução de websites modernos através de um ambiente super simples.
 * A funcionalidade *core* da Meteor tem uma [API] (https://pt.wikipedia.org/wiki/Interface_de_programa%C3%A7%C3%A3o_de_aplica%C3%A7%C3%B5es) pura e simples.
 
-bibiub
+Os utilizadores podem também contribuir submetendo ideias e discutindo assuntos no fórum da Meteor
 
 
 ## Análise de Requisitos
