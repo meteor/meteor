@@ -9,9 +9,9 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {CLIENT, SERVER, PACKAGE} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/core')
 const RuleTester = require('eslint').RuleTester
+import {CLIENT, SERVER, PACKAGE, NON_METEOR} from '../../../dist/util/environment'
 
 
 // -----------------------------------------------------------------------------
@@ -118,9 +118,9 @@ const errorFreeTests = {
 }
 
 const ruleTester = new RuleTester()
-ruleTester.run('core', rule(() => ({isLintedEnv: true, env: CLIENT})), tests)
-ruleTester.run('core', rule(() => ({isLintedEnv: true, env: SERVER})), tests)
-ruleTester.run('core', rule(() => ({isLintedEnv: true, env: PACKAGE})), {
+ruleTester.run('core', rule(() => ({env: CLIENT})), tests)
+ruleTester.run('core', rule(() => ({env: SERVER})), tests)
+ruleTester.run('core', rule(() => ({env: PACKAGE})), {
   valid: [
     'Meteor.isClient = true',
     'Meteor.isClient++',
@@ -138,4 +138,4 @@ ruleTester.run('core', rule(() => ({isLintedEnv: true, env: PACKAGE})), {
     }
   ]
 })
-ruleTester.run('core', rule(() => ({isLintedEnv: false})), errorFreeTests)
+ruleTester.run('core', rule(() => ({env: NON_METEOR})), errorFreeTests)

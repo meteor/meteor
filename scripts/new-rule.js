@@ -62,11 +62,11 @@ const rule = `/**
 // Rule Definition
 // -----------------------------------------------------------------------------
 
-import {CLIENT, SERVER, UNIVERSAL} from '../util/environment'
+import {NON_METEOR, CLIENT, SERVER, UNIVERSAL} from '../util/environment'
 
 module.exports = getMeta => context => {
 
-  const {isLintedEnv} = getMeta(context.getFilename())
+  const {env} = getMeta(context.getFilename())
 
   // ---------------------------------------------------------------------------
   // Helpers
@@ -78,7 +78,7 @@ module.exports = getMeta => context => {
   // Public
   // ---------------------------------------------------------------------------
 
-  if (!isLintedEnv) {
+  if (env === NON_METEOR) {
     return {}
   }
 
@@ -117,7 +117,7 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('${ruleId}', rule(() => ({env: SERVER, isLintedEnv: true})), {
+ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
 
   valid: [
     // fill me in
@@ -134,7 +134,7 @@ ruleTester.run('${ruleId}', rule(() => ({env: SERVER, isLintedEnv: true})), {
 
 })
 
-ruleTester.run('${ruleId}', rule(() => ({env: CLIENT, isLintedEnv: true})), {
+ruleTester.run('${ruleId}', rule(() => ({env: CLIENT})), {
 
   valid: [
     // fill me in

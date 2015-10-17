@@ -11,14 +11,14 @@
 
 const rule = require('../../../dist/rules/no-blaze-lifecycle-assignment')
 const RuleTester = require('eslint').RuleTester
-
+import {NON_METEOR, CLIENT, SERVER} from '../../../dist/util/environment'
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({isLintedEnv: true})), {
+ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: CLIENT})), {
 
   valid: [
     'x += 1',
@@ -32,6 +32,17 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({isLintedEnv: true})
   invalid: [
     {
       code: 'Template.foo.created = function () {}',
+      errors: [{
+        message: 'Template callback assignment with `created` is deprecated. Use `onCreated` instead',
+        type: 'AssignmentExpression'
+      }]
+    },
+    {
+      code: `
+        if (Meteor.isCordova) {
+          Template.foo.created = function () {}
+        }
+      `,
       errors: [{
         message: 'Template callback assignment with `created` is deprecated. Use `onCreated` instead',
         type: 'AssignmentExpression'
@@ -75,7 +86,12 @@ ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({isLintedEnv: true})
   ]
 })
 
-ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({isLintedEnv: false})), {
+ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: SERVER})), {
+  valid: ['Template.foo.created = function () {}'],
+  invalid: []
+})
+
+ruleTester.run('no-blaze-lifecycle-assignment', rule(() => ({env: NON_METEOR})), {
   valid: [
     'Template.foo.created = function () {}'
   ],

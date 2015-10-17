@@ -9,9 +9,9 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {CLIENT, SERVER, UNIVERSAL} from '../../../dist/util/environment.js'
 const rule = require('../../../dist/rules/pubsub')
 const RuleTester = require('eslint').RuleTester
+import {CLIENT, SERVER, UNIVERSAL, NON_METEOR} from '../../../dist/util/environment.js'
 
 // -----------------------------------------------------------------------------
 // Tests
@@ -110,7 +110,7 @@ const commonValidTests = [
 ]
 
 const ruleTester = new RuleTester()
-ruleTester.run('pubsub - universal', rule(() => ({isLintedEnv: true, env: UNIVERSAL})), {
+ruleTester.run('pubsub - universal', rule(() => ({env: UNIVERSAL})), {
   valid: [
     ...commonValidTests,
     `
@@ -140,7 +140,7 @@ ruleTester.run('pubsub - universal', rule(() => ({isLintedEnv: true, env: UNIVER
   ]
 })
 
-ruleTester.run('pubsub - client', rule(() => ({isLintedEnv: true, env: CLIENT})), {
+ruleTester.run('pubsub - client', rule(() => ({env: CLIENT})), {
   valid: [...commonValidTests],
   invalid: [
     {
@@ -152,7 +152,7 @@ ruleTester.run('pubsub - client', rule(() => ({isLintedEnv: true, env: CLIENT}))
   ]
 })
 
-ruleTester.run('pubsub - server', rule(() => ({isLintedEnv: true, env: SERVER})), {
+ruleTester.run('pubsub - server', rule(() => ({env: SERVER})), {
   valid: [
     ...commonValidTests,
     `
@@ -390,7 +390,7 @@ ruleTester.run('pubsub - server', rule(() => ({isLintedEnv: true, env: SERVER}))
   ]
 })
 
-ruleTester.run('pubsub - non-meteor', rule(() => ({isLintedEnv: false})), {
+ruleTester.run('pubsub - non-meteor', rule(() => ({env: NON_METEOR})), {
   valid: [
     ...commonValidTests,
     'Meteor.publish()'

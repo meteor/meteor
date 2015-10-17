@@ -11,6 +11,7 @@
 
 const rule = require('../../../dist/rules/no-session')
 const RuleTester = require('eslint').RuleTester
+import {NON_METEOR, CLIENT, SERVER} from '../../../dist/util/environment'
 
 // -----------------------------------------------------------------------------
 // Tests
@@ -18,7 +19,7 @@ const RuleTester = require('eslint').RuleTester
 
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-session', rule(() => ({isLintedEnv: true})), {
+ruleTester.run('no-session', rule(() => ({env: CLIENT})), {
 
   valid: [
     'session.get("foo")',
@@ -26,14 +27,27 @@ ruleTester.run('no-session', rule(() => ({isLintedEnv: true})), {
   ],
 
   invalid: [
+    {
+      code: `
+        if (Meteor.isCordova) {
+          Session.set("foo", true)
+        }
+      `,
+      errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]
+    },
     {code: 'Session.set("foo", true)', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]},
     {code: 'Session.get("foo")', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]},
     {code: 'Session.clear("foo")', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]},
     {code: 'Session.all()', errors: [{message: 'Unexpected Session statement', type: 'MemberExpression'}]}
   ]
-
 })
-ruleTester.run('no-session', rule(() => ({isLintedEnv: false})), {
+
+ruleTester.run('no-session', rule(() => ({env: SERVER})), {
+  valid: ['Session.set("foo", true)'],
+  invalid: []
+})
+
+ruleTester.run('no-session', rule(() => ({env: NON_METEOR})), {
   valid: [
     'Session.set("foo", true)',
     'Session.get("foo")'

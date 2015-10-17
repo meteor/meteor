@@ -9,14 +9,14 @@
 
 const rule = require('../../../dist/rules/no-zero-timeout')
 const RuleTester = require('eslint').RuleTester
-
+import {NON_METEOR, CLIENT, SERVER} from '../../../dist/util/environment'
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('no-zero-timeout', rule(() => ({isLintedEnv: true})), {
+ruleTester.run('no-zero-timeout', rule(() => ({env: CLIENT})), {
 
   valid: [
     'Meteor.setTimeout()',
@@ -67,7 +67,12 @@ ruleTester.run('no-zero-timeout', rule(() => ({isLintedEnv: true})), {
   ]
 })
 
-ruleTester.run('no-zero-timeout', rule(() => ({isLintedEnv: false})), {
+ruleTester.run('no-zero-timeout', rule(() => ({env: SERVER})), {
+  valid: ['Meteor.setTimeout(function () {}, 0)'],
+  invalid: []
+})
+
+ruleTester.run('no-zero-timeout', rule(() => ({env: NON_METEOR})), {
   valid: [
     'Meteor.setTimeout(function () {}, 0)'
   ],

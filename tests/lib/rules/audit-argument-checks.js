@@ -9,14 +9,14 @@
 
 const rule = require('../../../dist/rules/audit-argument-checks')
 const RuleTester = require('eslint').RuleTester
-
+import {NON_METEOR, SERVER} from '../../../dist/util/environment'
 
 // -----------------------------------------------------------------------------
 // Tests
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('audit-argument-checks', rule(() => ({isLintedEnv: true})), {
+ruleTester.run('audit-argument-checks', rule(() => ({env: SERVER})), {
 
   valid: [
     'foo()',
@@ -124,7 +124,7 @@ ruleTester.run('audit-argument-checks', rule(() => ({isLintedEnv: true})), {
   ]
 })
 
-ruleTester.run('audit-argument-checks', rule(() => ({isLintedEnv: false})), {
+ruleTester.run('audit-argument-checks', rule(() => ({env: NON_METEOR})), {
   valid: [
     'Meteor.publish("foo", function (bar) { foo(); })'
   ],

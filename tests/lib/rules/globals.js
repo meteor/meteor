@@ -9,9 +9,9 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {SERVER, PACKAGE, NON_METEOR} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/globals')
 const RuleTester = require('eslint').RuleTester
+import {SERVER, PACKAGE, NON_METEOR} from '../../../dist/util/environment'
 
 
 // -----------------------------------------------------------------------------
