@@ -24,17 +24,15 @@ const commonValidTests = [
   `if (Meteor.isServer) { Meteor.publish('foo', function () {}) }`,
   `if (Meteor.isServer) { Meteor.publish('foo', function (a) {}) }`,
   {
-    code: `if (Meteor.isServer) { Meteor.publish('foo', (a) => { return [] }) }`,
-    parser: 'babel-eslint'
-  },
-  {
     code: `
       if (Meteor.isServer) {
-        Meteor.publish('foo', () => {
+        Meteor.publish('foo', (a) => {
+
+          // no publish handler object available in arrow functions,
+          // but valid anyways
           return []
         })
-      }
-    `,
+      }`,
     parser: 'babel-eslint'
   },
   `
@@ -126,7 +124,18 @@ ruleTester.run('pubsub - universal', rule(() => ({env: UNIVERSAL})), {
           Meteor.subscribe() // not checked because unreachable
         }
       }
-    `
+    `,
+    {
+      code: `
+        if (Meteor.isServer) {
+          Meteor.publish('foo', () => {
+            this.userId() // valid because this is not a publication fn
+            return []
+          })
+        }
+      `,
+      parser: 'babel-eslint'
+    }
   ],
   invalid: [
     {
