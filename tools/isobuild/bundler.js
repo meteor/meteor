@@ -1636,6 +1636,10 @@ class JsImage {
         nodeModulesDirectory: nmd
       };
 
+      if (item.isTest) {
+        loadItem.isTest = true;
+      }
+
       if (item.sourceMap) {
         // XXX this is the same code as isopack.initFromPath
         rejectBadPath(item.sourceMap);
@@ -1687,7 +1691,8 @@ class JsImageTarget extends Target {
         nodeModulesDirectory: file.nodeModulesDirectory,
         assets: file.assets,
         sourceMap: file.sourceMap,
-        sourceMapRoot: file.sourceMapRoot
+        sourceMapRoot: file.sourceMapRoot,
+        isTest: file.isTest
       });
     });
 

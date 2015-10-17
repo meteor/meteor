@@ -108,7 +108,7 @@ _.extend(Module.prototype, {
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
         const cacheKey = JSON.stringify([
-          file.sourceHash, file.bare, file.servePath]);
+          file.sourceHash, file.bare, file.servePath, file.isTest]);
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           return APP_PRELINK_CACHE.get(cacheKey);

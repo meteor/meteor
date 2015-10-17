@@ -1330,13 +1330,6 @@ _.extend(PackageSource.prototype, {
         });
         checkForInfiniteRecursion('');
 
-        // Inputs that should return true:
-        // tests/...
-        // .../tests/...
-        var isTestsSubdirectory = function (dir) {
-          return /^tests\//.test(dir) || /\/tests\//.test(dir)
-        }
-
         while (!_.isEmpty(sourceDirectories)) {
           var dir = sourceDirectories.shift();
 
@@ -1373,13 +1366,24 @@ _.extend(PackageSource.prototype, {
 
             if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1)
               sourceObj.fileOptions = {bare: true};
+          }
+          return sourceObj;
+        });
 
-            if (isTestsSubdirectory(relPath)) {
-              if (!sourceObj.fileOptions) {
-                sourceObj.fileOptions = {};
-              }
-              sourceObj.fileOptions.test = true;
+        // Inputs that should return true:
+        // tests/...
+        // .../tests/...
+        const isTestSource = function (dir) {
+          return /^tests\//.test(dir) || /\/tests\//.test(dir)
+        }
+
+        // Mark files under tests folders as tests
+        sources = _.map(sources, function (sourceObj) {
+          if (isTestSource(sourceObj.relPath)) {
+            if (!sourceObj.fileOptions) {
+              sourceObj.fileOptions = {};
             }
+            sourceObj.fileOptions.isTest = true;
           }
           return sourceObj;
         });

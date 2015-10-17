@@ -376,7 +376,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        bare: !! bare
+        bare: !! bare,
+        isTest: fileOptions.isTest
       });
     },
 
