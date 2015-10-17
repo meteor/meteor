@@ -7,8 +7,8 @@
 
 [![Join the chat at https://gitter.im/dferber90/eslint-plugin-meteor][gitter-image]][gitter-url]
 [![Maintenance Status][status-image]][status-url]
-[![semantic-release][semantic-release-image]](semantic-release)
-[![Commitizen friendly][commitizen-image]](commitizen)
+[![semantic-release][semantic-release-image]][semantic-release]
+[![Commitizen friendly][commitizen-image]][commitizen]
 
 [![NPM version][npm-image]][npm-url]
 [![NPM downloads][npm-downloads-image]][npm-url]
