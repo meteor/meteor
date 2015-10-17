@@ -902,7 +902,8 @@ class Target {
       return source._minifiedFiles.map((file) => {
         const newFile = new File({
           info: 'minified js',
-          data: new Buffer(file.data, 'utf8')
+          data: new Buffer(file.data, 'utf8'),
+          isTest: file.isTest
         });
         if (file.sourceMap) {
           newFile.setSourceMap(file.sourceMap, '/');
