@@ -134,113 +134,118 @@ var startCheckForLiveParent = function (parentPid) {
 
 
 Fiber(function () {
-  _.each(serverJson.load, function (fileInfo) {
-    var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
+  _.chain(_serverJson.load)
+    .filter(function (fileInfo) {
+      return !fileInfo.isTest;
+    })
+    .each(function (fileInfo) {
+      var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
-    var Npm = {
-      /**
-       * @summary Require a package that was specified using
-       * `Npm.depends()`.
-       * @param  {String} name The name of the package to require.
-       * @locus Server
-       * @memberOf Npm
-       */
-      require: function (name) {
-        if (! fileInfo.node_modules) {
-          return require(name);
-        }
-
-        var nodeModuleBase = path.resolve(serverDir,
-          files.convertToOSPath(fileInfo.node_modules));
-        var nodeModuleDir = path.resolve(nodeModuleBase, name);
-
-        // If the user does `Npm.require('foo/bar')`, then we should resolve to
-        // the package's node modules if `foo` was one of the modules we
-        // installed.  (`foo/bar` might be implemented as `foo/bar.js` so we
-        // can't just naively see if all of nodeModuleDir exists.
-        if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
-          return require(nodeModuleDir);
-        }
-
-        try {
-          return require(name);
-        } catch (e) {
-          // Try to guess the package name so we can print a nice
-          // error message
-          // fileInfo.path is a standard path, use files.pathSep
-          var filePathParts = fileInfo.path.split(files.pathSep);
-          var packageName = filePathParts[1].replace(/\.js$/, '');
-
-          // XXX better message
-          throw new Error(
-            "Can't find npm module '" + name +
-              "'. Did you forget to call 'Npm.depends' in package.js " +
-              "within the '" + packageName + "' package?");
+      var Npm = {
+        /**
+         * @summary Require a package that was specified using
+         * `Npm.depends()`.
+         * @param  {String} name The name of the package to require.
+         * @locus Server
+         * @memberOf Npm
+         */
+        require: function (name) {
+          if (! fileInfo.node_modules) {
+            return require(name);
           }
-      }
-    };
-    var getAsset = function (assetPath, encoding, callback) {
-      var fut;
-      if (! callback) {
-        fut = new Future();
-        callback = fut.resolver();
-      }
-      // This assumes that we've already loaded the meteor package, so meteor
-      // itself can't call Assets.get*. (We could change this function so that
-      // it doesn't call bindEnvironment if you don't pass a callback if we need
-      // to.)
-      var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
-        if (result && ! encoding)
-          // Sadly, this copies in Node 0.10.
-          result = new Uint8Array(result);
-        callback(err, result);
-      }, function (e) {
-        console.log("Exception in callback of getAsset", e.stack);
-      });
 
-      // Convert a DOS-style path to Unix-style in case the application code was
-      // written on Windows.
-      assetPath = files.convertToStandardPath(assetPath);
+          var nodeModuleBase = path.resolve(serverDir,
+            files.convertToOSPath(fileInfo.node_modules));
+          var nodeModuleDir = path.resolve(nodeModuleBase, name);
 
-      if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
-        _callback(new Error("Unknown asset: " + assetPath));
-      } else {
-        var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
-        fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
-      }
-      if (fut)
-        return fut.wait();
-    };
+          // If the user does `Npm.require('foo/bar')`, then we should resolve to
+          // the package's node modules if `foo` was one of the modules we
+          // installed.  (`foo/bar` might be implemented as `foo/bar.js` so we
+          // can't just naively see if all of nodeModuleDir exists.
+          if (fs.existsSync(path.resolve(nodeModuleBase, name.split("/")[0]))) {
+            return require(nodeModuleDir);
+          }
 
-    var Assets = {
-      getText: function (assetPath, callback) {
-        return getAsset(assetPath, "utf8", callback);
-      },
-      getBinary: function (assetPath, callback) {
-        return getAsset(assetPath, undefined, callback);
-      }
-    };
+          try {
+            return require(name);
+          } catch (e) {
+            // Try to guess the package name so we can print a nice
+            // error message
+            // fileInfo.path is a standard path, use files.pathSep
+            var filePathParts = fileInfo.path.split(files.pathSep);
+            var packageName = filePathParts[1].replace(/\.js$/, '');
 
-    // \n is necessary in case final line is a //-comment
-    var wrapped = "(function(Npm, Assets){" + code + "\n})";
+            // XXX better message
+            throw new Error(
+              "Can't find npm module '" + name +
+                "'. Did you forget to call 'Npm.depends' in package.js " +
+                "within the '" + packageName + "' package?");
+            }
+        }
+      };
+      var getAsset = function (assetPath, encoding, callback) {
+        var fut;
+        if (! callback) {
+          fut = new Future();
+          callback = fut.resolver();
+        }
+        // This assumes that we've already loaded the meteor package, so meteor
+        // itself can't call Assets.get*. (We could change this function so that
+        // it doesn't call bindEnvironment if you don't pass a callback if we need
+        // to.)
+        var _callback = Package.meteor.Meteor.bindEnvironment(function (err, result) {
+          if (result && ! encoding)
+            // Sadly, this copies in Node 0.10.
+            result = new Uint8Array(result);
+          callback(err, result);
+        }, function (e) {
+          console.log("Exception in callback of getAsset", e.stack);
+        });
 
-    // It is safer to use the absolute path when source map is present as
-    // different tooling, such as node-inspector, can get confused on relative
-    // urls.
+        // Convert a DOS-style path to Unix-style in case the application code was
+        // written on Windows.
+        assetPath = files.convertToStandardPath(assetPath);
 
-    // fileInfo.path is a standard path, convert it to OS path to join with
-    // __dirname
-    var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
-    var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+        if (!fileInfo.assets || !_.has(fileInfo.assets, assetPath)) {
+          _callback(new Error("Unknown asset: " + assetPath));
+        } else {
+          var filePath = path.join(serverDir, fileInfo.assets[assetPath]);
+          fs.readFile(files.convertToOSPath(filePath), encoding, _callback);
+        }
+        if (fut)
+          return fut.wait();
+      };
 
-    var scriptPath =
-      parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
-    // The final 'true' is an undocumented argument to runIn[Foo]Context that
-    // causes it to print out a descriptive error message on parse error. It's
-    // what require() uses to generate its errors.
-    var func = require('vm').runInThisContext(wrapped, scriptPath, true);
-    func.call(global, Npm, Assets); // Coffeescript
-  });
+      var Assets = {
+        getText: function (assetPath, callback) {
+          return getAsset(assetPath, "utf8", callback);
+        },
+        getBinary: function (assetPath, callback) {
+          return getAsset(assetPath, undefined, callback);
+        }
+      };
+
+      // \n is necessary in case final line is a //-comment
+      var wrapped = "(function(Npm, Assets){" + code + "\n})";
+
+      // It is safer to use the absolute path when source map is present as
+      // different tooling, such as node-inspector, can get confused on relative
+      // urls.
+
+      // fileInfo.path is a standard path, convert it to OS path to join with
+      // __dirname
+      var fileInfoOSPath = files.convertToOSPath(fileInfo.path);
+      var absoluteFilePath = path.resolve(__dirname, fileInfoOSPath);
+
+      var scriptPath =
+        parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
+      // The final 'true' is an undocumented argument to runIn[Foo]Context that
+      // causes it to print out a descriptive error message on parse error. It's
+      // what require() uses to generate its errors.
+      var func = require('vm').runInThisContext(wrapped, scriptPath, true);
+      func.call(global, Npm, Assets); // Coffeescript
+    })
+    .value();
 
   // run the user startup hooks.  other calls to startup() during this can still
   // add hooks to the end.

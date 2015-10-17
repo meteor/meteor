@@ -239,6 +239,7 @@ var NodeModulesDirectory = function (options) {
 // - sourceMap: if 'data' is given, can be given instead of
 //   sourcePath. a string or a JS Object. Will be stored as Object.
 // - cacheable
+// - isTest
 class File {
   constructor (options) {
     if (options.data && ! (options.data instanceof Buffer))
@@ -283,6 +284,8 @@ class File {
     // For server JS only. Assets associated with this slice; map from the path
     // that is the argument to Assets.getBinary, to a Buffer that is its contents.
     this.assets = null;
+
+    this.isTest = options.isTest || false;
 
     this._contents = options.data || null; // contents, if known, as a Buffer
     this._hash = options.hash || null; // hash, if known, as a hex string
@@ -772,7 +775,12 @@ class Target {
             // meteor.js?
             return;
 
-          const f = new File({ info: 'resource ' + resource.servePath, data: resource.data, cacheable: false});
+          const f = new File({
+            info: 'resource ' + resource.servePath,
+            data: resource.data,
+            cacheable: false,
+            isTest: resource.isTest
+          });
 
           const relPath = stripLeadingSlash(resource.servePath);
           f.setTargetPathFromRelPath(relPath);
@@ -1124,6 +1132,10 @@ class ClientTarget extends Target {
         url: file.url
       };
 
+      if (file.isTest) {
+        manifestItem.isTest = true;
+      }
+
       const antiXSSIPrepend = Profile("anti-XSSI header for source-maps", function (sourceMap) {
         // Add anti-XSSI header to this file which will be served over
         // HTTP. Note that the Mozilla and WebKit implementations differ as to
@@ -1451,6 +1463,10 @@ class JsImage {
         throw new Error("No targetPath?");
 
       var loadItem = {};
+
+      if (item.isTest) {
+        loadItem.isTest = true;
+      }
 
       if (item.nodeModulesDirectory) {
         // We need to make sure to use the directory name we got from
