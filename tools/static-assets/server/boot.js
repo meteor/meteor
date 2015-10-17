@@ -134,7 +134,7 @@ var startCheckForLiveParent = function (parentPid) {
 
 
 Fiber(function () {
-  _.each(serverJson.load).(function (fileInfo) {
+  _.each(serverJson.load, function (fileInfo) {
     if (fileInfo.isTest) {
       return;
     }
