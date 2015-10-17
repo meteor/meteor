@@ -9,7 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {SERVER, PACKAGE} from '../../../dist/util/environment'
+import {SERVER, PACKAGE, NON_METEOR} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/globals')
 const RuleTester = require('eslint').RuleTester
 
@@ -19,14 +19,14 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('globals', rule(() => ({env: SERVER, isLintedEnv: true})), {
+ruleTester.run('globals', rule(() => ({env: SERVER})), {
 
   valid: ['Session.set("hi", true)'],
   invalid: []
 
 })
 
-ruleTester.run('globals', rule(() => ({env: PACKAGE, isLintedEnv: true})), {
+ruleTester.run('globals', rule(() => ({env: PACKAGE})), {
 
   valid: [
     `
@@ -46,7 +46,7 @@ ruleTester.run('globals', rule(() => ({env: PACKAGE, isLintedEnv: true})), {
 
 })
 
-ruleTester.run('globals', rule(() => ({env: SERVER, isLintedEnv: false})), {
+ruleTester.run('globals', rule(() => ({env: NON_METEOR})), {
   valid: ['Session.set("hi", true)'],
   invalid: []
 })
