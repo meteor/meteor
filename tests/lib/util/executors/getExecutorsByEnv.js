@@ -59,13 +59,11 @@ describe('getExecutorsByEnv', function () {
   })
   it('packageConfig', function () {
     const result = getExecutorsByEnv(PACKAGE_CONFIG)
-    assert.equal(result.size, 1)
-    assert.ok(result.has('isobuild'))
+    assert.equal(result.size, 0)
   })
   it('mobileConfig', function () {
     const result = getExecutorsByEnv(MOBILE_CONFIG)
-    assert.equal(result.size, 1)
-    assert.ok(result.has('isobuild'))
+    assert.equal(result.size, 0)
   })
   it('compatibility', function () {
     const result = getExecutorsByEnv(COMPATIBILITY)

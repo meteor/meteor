@@ -40,10 +40,6 @@ ruleTester.run('globals', rule(() => ({env: PACKAGE, isLintedEnv: true})), {
     `
       /* eslint-meteor-env server */
       Session.set("hi", true)
-    `,
-    `
-      /* eslint-meteor-env isobuild */
-      Session.set("hi", true)
     `
   ],
   invalid: []
