@@ -21,4 +21,9 @@ describe('getRelativePath', function () {
     const result = getRelativePath('/Users/anon/git/file.js')
     assert.equal(result, false)
   })
+
+  it('returns false when called with default name', function () {
+    const result = getRelativePath('<input>')
+    assert.equal(result, false)
+  })
 })

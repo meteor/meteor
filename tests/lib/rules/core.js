@@ -126,16 +126,7 @@ ruleTester.run('core', rule(() => ({env: PACKAGE})), {
     'Meteor.isClient++',
     'Meteor.startup()'
   ],
-  invalid: [
-    {
-      code: `
-        /* eslint-meteor-env client */
-        Meteor.isClient = true
-      `,
-      errors: [
-        {message: 'Assignment not allowed', type: 'AssignmentExpression'}
-      ]
-    }
-  ]
+  invalid: []
 })
+
 ruleTester.run('core', rule(() => ({env: NON_METEOR})), errorFreeTests)

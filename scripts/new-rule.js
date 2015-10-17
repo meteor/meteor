@@ -66,7 +66,7 @@ import {NON_METEOR, CLIENT, SERVER, UNIVERSAL} from '../util/environment'
 
 module.exports = getMeta => context => {
 
-  const {env} = getMeta(context.getFilename())
+  const {env} = getMeta(context)
 
   // ---------------------------------------------------------------------------
   // Helpers
