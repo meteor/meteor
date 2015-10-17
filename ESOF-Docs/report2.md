@@ -36,10 +36,10 @@ Os utilizadores podem também contribuir submetendo ideias e discutindo assuntos
 ## Análise de Requisitos
 
 Existe uma variedade de requisitos que os utilizadores podem fazer ao Meteor. Algumas das possibilidades são:
-*Reportar problemas na plataforma
-*Pedidos de novas funcionalidades
-*Adicionar novos packages
-*Fazer alterações ao core do Meteor
+* Reportar problemas na plataforma
+* Pedidos de novas funcionalidades
+* Adicionar novos packages
+* Fazer alterações ao core do Meteor
 
 Para cada um destes requisitos há um procedimento específico que envolve a equipa do Meteor e, dependendo do tipo de requisito, a opinião da comunidade. Isto é o caso para alterações ao core do Meteor, visto tratar-se de um procedimento que afeta todos os utilizadores. Como tal, pode-se dizer que o Meteor tem uma metodologia organizada e rigorosa no que toca a requisitos por parte da comunidade, o que permite responder prontamente a requisitos sem arriscar a estabilidade da plataforma. A satisfação quase universal da comunidade poderá dever-se a essa metodologia.
 
