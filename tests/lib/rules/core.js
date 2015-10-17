@@ -9,6 +9,7 @@
 // Requirements
 // -----------------------------------------------------------------------------
 
+import {CLIENT, SERVER, PACKAGE} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/core')
 const RuleTester = require('eslint').RuleTester
 
@@ -88,8 +89,8 @@ const errorFreeTests = {
     'Meteor.isClient',
     'Meteor.isServer',
     'Meteor.isCordova',
-    'Meteor.startup(function () {})',
-    'Meteor.wrapAsync(function () {})',
+    'Meteor.startup()',
+    'Meteor.wrapAsync()',
     'Meteor.absoluteUrl()',
     'Meteor.settings',
     'Meteor.release',
@@ -117,5 +118,24 @@ const errorFreeTests = {
 }
 
 const ruleTester = new RuleTester()
-ruleTester.run('core', rule(() => ({isLintedEnv: true})), tests)
+ruleTester.run('core', rule(() => ({isLintedEnv: true, env: CLIENT})), tests)
+ruleTester.run('core', rule(() => ({isLintedEnv: true, env: SERVER})), tests)
+ruleTester.run('core', rule(() => ({isLintedEnv: true, env: PACKAGE})), {
+  valid: [
+    'Meteor.isClient = true',
+    'Meteor.isClient++',
+    'Meteor.startup()'
+  ],
+  invalid: [
+    {
+      code: `
+        /* eslint-meteor-env client */
+        Meteor.isClient = true
+      `,
+      errors: [
+        {message: 'Assignment not allowed', type: 'AssignmentExpression'}
+      ]
+    }
+  ]
+})
 ruleTester.run('core', rule(() => ({isLintedEnv: false})), errorFreeTests)

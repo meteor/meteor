@@ -20,7 +20,7 @@ const RuleTester = require('eslint').RuleTester
 
 const commonValidTests = [
   `if (Meteor.isClient) { Meteor.subscribe('foo') }`,
-  `if (Meteor.isClient) { Meteor.subscribe('foo', { bar: true }) }`,
+  `if (Meteor.isCordova) { Meteor.subscribe('foo', { bar: true }) }`,
   `if (Meteor.isServer) { Meteor.publish('foo', function () {}) }`,
   `if (Meteor.isServer) { Meteor.publish('foo', function (a) {}) }`,
   {
@@ -37,6 +37,25 @@ const commonValidTests = [
     `,
     parser: 'babel-eslint'
   },
+  `
+    if (Meteor.isServer) {
+      Meteor.publish('foo', function () {
+        bar(function () {
+          this.userId()
+        })
+      })
+    }
+  `,
+  `
+    if (Meteor.isServer) {
+      Meteor.publish('foo', function () {
+        bar(function () {
+          var self = this
+          self.userId()
+        })
+      })
+    }
+  `,
   `
     if (Meteor.isServer) {
       Meteor.publish('foo', function () {
