@@ -42,7 +42,7 @@
     "colors": "1.1.2",
     "coveralls": "2.11.4",
     "cz-conventional-changelog": "1.1.4",
-    "eslint": "1.6.0",
+    "eslint": "1.7.1",
     "ghooks": "0.3.2",
     "istanbul": "0.3.22",
     "mocha": "2.3.3",
