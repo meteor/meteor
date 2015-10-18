@@ -49,4 +49,9 @@ Para cada um destes requisitos há um procedimento específico que envolve a equ
 
 ## Validação de Requisitos
 
+  O objectivo de uma boa validação de requisitos é para descubrir se eles se enquandram na nossa aplicação, ou esses mesmo requisitos são inuteis ou incoerentes. Para tal é necessário rever todos os requisitos adicionados a nossa aplicação, para descubrir os que são verdadeiramente necessários e eliminar os que poucam adicionam de utilidade da nossa aplicação.
+  Cada requesito tem um custo, e apesar de numa fase inicial do projecto o custo ser baixo, numa fase final do projecto um erro pode ter valores avultados.
+  Como já foi referido anteriormente, o Meteor possui de uma grande comunidade aficcionada pela aplicação,o que leva que muitos dos requisitos adicionados sejam pedidos pelos utilizadores. Sendo um projecto que dispõe de 236 contribuidores no Github, em apenas uma semana foram feitas 12 pull requests. Tanta actividade por parte dos utilizadores, traz a benece que existe um grade apoio entre a equipa de Meteor e a comunidade aficcionada, levando a uma selecção cuidada dos requisitos propostos pelos utilizadores, pois cada requesito aumenta o custo do projecto, como referido anteriormente.
+
+
 ## FEUP ESOF MIEIC 
