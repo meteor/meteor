@@ -45,7 +45,9 @@ Para cada um destes requisitos há um procedimento específico que envolve a equ
 
 ## Especificação de Requisitos
 
+Num projeto da natureza do Meteor, em que as alterações são feitas de forma muito progressiva e com base no feedback da comunidade, torna-se difícil esquematizar rigorosamente o processo adotado nesta fase. Esta informalidade na especificação de requisitos é algo de comum em projetos desta natureza, dado que é difícil antecipar as necessidades de uma comunidade tão extensa. Como tal, é preferida uma abordagem mais iterativa e espontânea, permitindo uma noção constante das necessidades dos utilizadores. 
 
+Devido ao recente lançamento do Galaxy, uma versão paga do Meteor orientada para empresas e equipas, podemos concluir que existe de facto um processo organizado no que toca à exploração do lado empresarial em paralelo com a versão comunitária e open-source.
 
 ## Validação de Requisitos
 
