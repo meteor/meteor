@@ -99,6 +99,8 @@ Executors (client, browser, server, cordova) are detected by looking at the loca
 if ((Meteor.isClient || Meteor.isCordova) && !Meteor.isServer) { .. }
 ```
 
+If a test in a locus check is paired with any other expression that specific locus check will be ignored.
+
 ### Package files
 
 ESLint-plugin-Meteor is not able to detect where files in inlined packages are going to be executed. It needs hints to work around this. See [this guide](docs/SETUP_METEOR_PROJECT.md#packages) for details.

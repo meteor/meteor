@@ -158,33 +158,20 @@ describe('filterExecutorsByAncestors', function () {
     assert.ok(result.has('server'))
   })
 
-  it('returns no executors when an unresolvable IfStatement is in ancestors', function () {
+  it('ignores unresolvable IfStatements is in ancestors', function () {
     const consequent = {type: 'BlockStatement'}
-    const ifConsequent = {
-      test: {
-        type: 'MemberExpression',
-        object: {
-          type: 'Identifier',
-          name: 'Meteor'
-        },
-        property: {
-          type: 'Identifier',
-          name: 'isClient'
-        }
-      },
-      consequent: consequent
-    }
     const result = filterExecutorsByAncestors(new Set(['browser', 'server']), [
       {type: 'Program'},
       {
         type: 'IfStatement',
         test: {type: 'Identifier'},
-        consequent: ifConsequent
+        consequent: consequent
       },
-      ifConsequent,
       consequent
     ])
-    assert.equal(result.size, 0)
+    assert.equal(result.size, 2)
+    assert.ok(result.has('browser'))
+    assert.ok(result.has('server'))
   })
 
 })

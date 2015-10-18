@@ -119,7 +119,7 @@ ruleTester.run('pubsub - universal', rule(() => ({env: UNIVERSAL})), {
       }
     `,
     `
-      if (Meteor.Client) {
+      if (Meteor.isClient) {
         if (Meteor.isServer) {
           Meteor.subscribe() // not checked because unreachable
         }

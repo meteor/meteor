@@ -97,7 +97,7 @@ ruleTester.run('audit-argument-checks', rule(() => ({env: SERVER})), {
         Meteor.methods({
           foo () {},
           foo2 (bar) {
-            if (true) {
+            if (!Meteor.isServer) {
               check(bar, Meteor.any)
             }
           }
