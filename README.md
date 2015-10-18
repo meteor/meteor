@@ -58,6 +58,7 @@ Finally, enable all of the rules that you would like to use.
     "meteor/core": 2,
     "meteor/pubsub": 2,
     "meteor/methods": 2,
+    "meteor/check": 2,
 
     // Best Practices
     "meteor/audit-argument-checks": 2,
@@ -77,6 +78,7 @@ For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_
 * [core](docs/rules/core.md): Meteor Core API
 * [pubsub](docs/rules/pubsub.md): Prevent misusage of Publish and Subscribe
 * [methods](docs/rules/methods.md): Prevent misusage of methods
+* [check](docs/rules/check.md): Core API for check and Match
 
 ## Best Practices
 * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
