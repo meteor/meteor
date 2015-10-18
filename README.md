@@ -57,6 +57,7 @@ Finally, enable all of the rules that you would like to use.
     "meteor/globals": 2,
     "meteor/core": 2,
     "meteor/pubsub": 2,
+    "meteor/methods": 2,
 
     // Best Practices
     "meteor/audit-argument-checks": 2,
@@ -75,6 +76,7 @@ For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_
 * [globals](docs/rules/globals.md): Definitions for global Meteor variables based on environment
 * [core](docs/rules/core.md): Meteor Core API
 * [pubsub](docs/rules/pubsub.md): Prevent misusage of Publish and Subscribe
+* [methods](docs/rules/methods.md): Prevent misusage of methods
 
 ## Best Practices
 * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
