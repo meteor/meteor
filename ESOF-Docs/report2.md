@@ -58,6 +58,14 @@ Os utilizadores da aplicação podem contribuir de várias maneiras para o desen
   
  ![alt tag](https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/usercase.jpg)
  
- Os 
+ Devemos seguir as próximas instruções para efetuar um pull request:
+
+* Assinar o [contributor's agreement] (https://contribute.meteor.com/).
+* A base do nosso trabalho tem de ser realizada no devel branch. 
+* Mudar o nome do branch de acordo com o bug ou característica que estamos a submeter.
+* Apenas enviar um bug ou característica por pull request
+* Enviar com os testes realizados que comprovam que o código funciona.
+* Seguir o [MDG style guide] (https://github.com/meteor/meteor/wiki/Meteor-Style-Guide) para o código e para submeter mensagens.
+* Não se esquecer que a pessoa que fez o pull request ter o nome completo e o email no Git.
 
 ## FEUP ESOF MIEIC 
