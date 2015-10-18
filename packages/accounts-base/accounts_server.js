@@ -1348,6 +1348,15 @@ Ap.updateOrCreateUserFromExternalService = function (
     selector[serviceIdKey] = serviceData.id;
   }
 
+  // HOOK: Check if an update is needed to the user account from user supplied hook,
+  // caller should provide array of filter functions for modifying selector
+  var _checkUpdateHooks = Accounts.onUpdateUserFindExistingUserHooks || [];
+  if(_checkUpdateHooks && Array.isArray(_checkUpdateHooks) && _checkUpdateHooks.length > 0){
+	  _checkUpdateHooks.map(function (func) { //Each update hook can check the selector and apply a callback
+			selector = func(selector, serviceName, serviceData, options); //Each hook should return a modified selector
+		});
+	}
+
   var user = this.users.findOne(selector);
 
   if (user) {
