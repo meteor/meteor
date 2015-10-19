@@ -1,0 +1,8 @@
+melhoramentos:
+- colocar referências!!! e tentar ser original (pesquisa, entre outras)
+- Cuidado com algumas definições
+
+Ver Test Delivery Development -> testes antes do produto! (test-first)
+ver testes unitários
+
+report sobre software architecture
