@@ -8,15 +8,14 @@ We're tracking our progress using Waffle.io; see the board by clicking the badge
 
 We're building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor. We're going to do this totally out in the open, and we can't do it without the community.
 
-### Action items for community
+### Contributing
 
-1. Read the charter below and the [proposed outlines for guide articles](outlines.md)
-2. Ask questions on the [forum thread](https://forums.meteor.com/t/new-mdg-project-the-meteor-guide/10873)
+1. Read the [charter](charter.md) and [proposed outlines for guide articles](outlines.md)
 2. Submit pull requests on the outlines to add things that are missing
-3. File issues here for discussion
+3. File issues for discussion
+4. Follow along with progress on each guide article [on Waffle.io](https://waffle.io/meteor/guide?label=article)
 
-### Action items for MDG
+### MDG
 
-1. Consider and respond to all community feedback
-2. Set up GitHub pages site with basic theme and structure
-2. Set up hooks to deploy PRs and branches
+1. See the [standup notes and planning](plan.md)
+1. See the [code action items](https://github.com/meteor/guide/labels/code)
