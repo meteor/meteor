@@ -1,6 +1,6 @@
 # Meteor Guide
 
-[![Articles complete](https://badge.waffle.io/meteor/guide.svg?label=ready&title=Articles%20Complete)](http://waffle.io/meteor/guide)
+[![Articles complete](https://badge.waffle.io/meteor/guide.svg?label=ready&title=Articles%20Complete)](https://waffle.io/meteor/guide?label=article)
 
 We're getting started building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor. We're going to do this totally out in the open, and we can't do it without the community.
 
