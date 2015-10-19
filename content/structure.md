@@ -64,6 +64,15 @@ DateFormat = {
 
 If your file exports multiple functions or objects, put them together in a common namespace so it's easy to find which file they came from.
 
+### Avoid depending on load order
+
+In a small app, it's best to write your code in a style where it doesn't matter in which order the files are loaded. This generally means minimizing "top-level code" - code that isn't inside a function definition, event handler, or `Meteor.startup`.
+
+For example, if you want to initialize some data in your database when the app starts up, it's best to do that inside `Meteor.startup` so that the code definitely runs after the collection is defined and initialized.
+
+If you end up in a situation where load order issues are causing you a lot of headaches and you can't avoid depending on it, it might be a signal that you should transition to the "medium-sized" app structure in the next section, where you get much finer control over the files and modules in your app. It's not worth creating deeply nested `lib` directories just to convince the Meteor tool to order the files the way you want, and you _definitely_ don't want to end up in a situation where you are prefixing file names with numbers to ensure load order. If you're doing either of these things now, transitioning to the package-first app structure for medium sized apps is the way to go.
+
+
 XXX refactor todos example app to be the best example for this!
 
 ## Structure of a medium-sized app
