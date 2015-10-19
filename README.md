@@ -6,7 +6,7 @@ We're tracking our progress using Waffle.io; see the board by clicking the badge
 
 ---------
 
-We're getting started building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor. We're going to do this totally out in the open, and we can't do it without the community.
+We're building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor. We're going to do this totally out in the open, and we can't do it without the community.
 
 ### Action items for community
 
