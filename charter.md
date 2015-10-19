@@ -51,4 +51,3 @@ Let's get on the path to having a “Meteor Guide” – the most authoritative,
 5. Have an “edit on GitHub” button on every single page
 6. Review every guide contribution within one week of submission and give a conclusive response
 7. Accept 50 community pull requests
-8. Write and publish three of the sections outlined in [Meteor guide outlines](outlines.md)
