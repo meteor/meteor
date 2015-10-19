@@ -1,4 +1,4 @@
-# Relatório - Gestão de Requisitos
+# Relatório - Software Architecture
 
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/FEUP.jpg)
 
