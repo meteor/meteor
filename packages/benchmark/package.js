@@ -10,7 +10,8 @@ Package.describe({
 
 Npm.depends({
   "gc-profiler": "1.2.0",
-  "meteor-profiler": "https://github.com/meteor/meteor-profiler/tarball/eb8d5dc6d0f6006d2fec6326ca1536deeecef08e"
+  "meteor-profiler": "https://github.com/meteor/meteor-profiler/tarball/86a60ec8f351b18a56f4df83fd4ab26cf21aecb8",
+  "getrusage": "0.3.3"
 });
 
 Package.onUse(function(api) {
