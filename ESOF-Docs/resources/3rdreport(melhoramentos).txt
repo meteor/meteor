@@ -8,3 +8,9 @@ ver testes unitários
 report sobre software architecture
 
 http://pt.slideshare.net/mongodb/meteor-next-generation-stack
+
+podemos perguntar a este https://github.com/sauveregarder sobre a meteor
+
+http://pt.discovermeteor.com/
+
+www.discovermeteor.com
