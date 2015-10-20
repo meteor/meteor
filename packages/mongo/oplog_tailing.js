@@ -95,12 +95,12 @@ _.extend(OplogHandle.prototype, {
     self._readyFuture.wait();
 
     var originalCallback = callback;
-    callback = Meteor.bindEnvironment(Profile("oplog", function (notification) {
+    callback = Meteor.bindEnvironment(function (notification) {
       // XXX can we avoid this clone by making oplog.js careful?
       originalCallback(EJSON.clone(notification));
     }), function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
-    });
+    };
 
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
@@ -249,7 +249,7 @@ _.extend(OplogHandle.prototype, {
     if (self._workerActive)
       return;
     self._workerActive = true;
-    Meteor.defer(Profile("analyze oplog entry", function () {
+    Meteor.defer(Profile("oplog", function () {
       try {
         while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
