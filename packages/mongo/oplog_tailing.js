@@ -132,26 +132,22 @@ _.extend(OplogHandle.prototype, {
     self._readyFuture.wait();
 
     var lastEntry;
-    Profile.time("while !self._stopped", () => {
-      while (!self._stopped) {
-        // We need to make the selector at least as restrictive as the actual
-        // tailing selector (ie, we need to specify the DB name) or else we might
-        // find a TS that won't show up in the actual tail stream.
-        try {
-          Profile.time("oplogLastEntryConnection.findOne", () => {
-            lastEntry = self._oplogLastEntryConnection.findOne(
-              OPLOG_COLLECTION, self._baseOplogSelector,
-              {fields: {ts: 1}, sort: {$natural: -1}});
-          });
-          break;
-        } catch (e) {
-          // During failover (eg) if we get an exception we should log and retry
-          // instead of crashing.
-          Meteor._debug("Got exception while reading last entry: " + e);
-          Meteor._sleepForMs(100);
-        }
+    while (!self._stopped) {
+      // We need to make the selector at least as restrictive as the actual
+      // tailing selector (ie, we need to specify the DB name) or else we might
+      // find a TS that won't show up in the actual tail stream.
+      try {
+        lastEntry = self._oplogLastEntryConnection.findOne(
+          OPLOG_COLLECTION, self._baseOplogSelector,
+          {fields: {ts: 1}, sort: {$natural: -1}});
+        break;
+      } catch (e) {
+        // During failover (eg) if we get an exception we should log and retry
+        // instead of crashing.
+        Meteor._debug("Got exception while reading last entry: " + e);
+        Meteor._sleepForMs(100);
       }
-    });
+    }
 
     if (self._stopped)
       return;
@@ -170,19 +166,17 @@ _.extend(OplogHandle.prototype, {
       return;
     }
 
-    Profile.time("insert future into list", () => {
-      // Insert the future into our list. Almost always, this will be at the end,
-      // but it's conceivable that if we fail over from one primary to another,
-      // the oplog entries we see will go backwards.
-      var insertAfter = self._catchingUpFutures.length;
-      while (insertAfter - 1 > 0
-             && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
-        insertAfter--;
-      }
-      var f = new Future;
-      self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
-      f.wait();
-    });
+    // Insert the future into our list. Almost always, this will be at the end,
+    // but it's conceivable that if we fail over from one primary to another,
+    // the oplog entries we see will go backwards.
+    var insertAfter = self._catchingUpFutures.length;
+    while (insertAfter - 1 > 0
+           && self._catchingUpFutures[insertAfter - 1].ts.greaterThan(ts)) {
+      insertAfter--;
+    }
+    var f = new Future;
+    self._catchingUpFutures.splice(insertAfter, 0, {ts: ts, future: f});
+    f.wait();
   },
   _startTailing: function () {
     var self = this;
@@ -242,11 +236,11 @@ _.extend(OplogHandle.prototype, {
       OPLOG_COLLECTION, oplogSelector, {tailable: true});
 
     self._tailHandle = self._oplogTailConnection.tail(
-      cursorDescription, Profile("tail oplog", function (doc) {
+      cursorDescription, function (doc) {
         self._entryQueue.push(doc);
         self._maybeStartWorker();
       }
-    ));
+    );
     self._readyFuture.return();
   },
 
@@ -306,9 +300,7 @@ _.extend(OplogHandle.prototype, {
             trigger.id = idForOp(doc);
           }
 
-          Profile.time("fire invalidation crossbar", () => {
-            self._crossbar.fire(trigger);
-          });
+          self._crossbar.fire(trigger);
 
           // Now that we've processed this operation, process pending
           // sequencers.

@@ -117,7 +117,7 @@ OplogObserveDriver = function (options) {
     self._stopHandles.push(self._mongoHandle._oplogHandle.onOplogEntry(
       trigger, function (notification) {
         Meteor._noYieldsAllowed(
-          self._measure("handle oplog entry", finishIfNeedToPollQuery(function () {
+          finishIfNeedToPollQuery(function () {
             var op = notification.op;
             if (notification.dropCollection || notification.dropDatabase) {
               // Note: this call is not allowed to block on anything (especially
@@ -131,7 +131,7 @@ OplogObserveDriver = function (options) {
               else
                 self._handleOplogEntrySteadyOrFetching(op);
             }
-          })));
+          }));
       }));
   });
 
@@ -151,40 +151,31 @@ OplogObserveDriver = function (options) {
       fence._oplogObserveDrivers = {};
       fence._oplogObserveDrivers[self._id] = self;
 
-      fence.onBeforeFire(Profile("onBeforeFire??", function () {
+      fence.onBeforeFire(function () {
         var drivers = fence._oplogObserveDrivers;
         delete fence._oplogObserveDrivers;
 
-        Profile.time("waitUntilCaughtUp", () => {
-          // This fence cannot fire until we've caught up to "this point" in the
-          // oplog, and all observers made it back to the steady state.
-          self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-        });
+        // This fence cannot fire until we've caught up to "this point" in the
+        // oplog, and all observers made it back to the steady state.
+        self._mongoHandle._oplogHandle.waitUntilCaughtUp();
 
         _.each(drivers, function (driver) {
           if (driver._stopped)
             return;
 
-          var write;
-          Profile.time("beginWrite", () => {
-            write = fence.beginWrite();
-          });
+          var write = fence.beginWrite();
           if (driver._phase === PHASE.STEADY) {
             // Make sure that all of the callbacks have made it through the
             // multiplexer and been delivered to ObserveHandles before committing
             // writes.
             driver._multiplexer.onFlush(function () {
-              Profile.time("write.committed()", () => {
-                write.committed();
-              });
+              write.committed();
             });
           } else {
-            Profile.time("writesToCommitWhenWeReachSteady.push", () => {
-              driver._writesToCommitWhenWeReachSteady.push(write);
-            });
+            driver._writesToCommitWhenWeReachSteady.push(write);
           }
         });
-      }));
+      });
     }))
   );
 
@@ -205,7 +196,7 @@ OplogObserveDriver = function (options) {
 
 _.extend(OplogObserveDriver.prototype, {
   _measure: function (optAdditionalKey, f) {
-    if (optAdditionalKey) {
+    if (f) {
       return Profile(this._cursorDescStr(), Profile(optAdditionalKey, f));
     } else {
       f = optAdditionalKey;
@@ -592,15 +583,13 @@ _.extend(OplogObserveDriver.prototype, {
       });
     });
   },
-  _handleOplogEntryQuerying: Profile("in querying phase", function (op) {
+  _handleOplogEntryQuerying: function (op) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       self._needToFetch.set(idForOp(op), op.ts.toString());
     });
-  }),
-  _handleOplogEntrySteadyOrFetching: Profile(function () {
-    return `in ${this._phase} phase`;
-  }, function (op) {
+  },
+  _handleOplogEntrySteadyOrFetching: function (op) {
     var self = this;
     Meteor._noYieldsAllowed(function () {
       var id = idForOp(op);
@@ -678,7 +667,7 @@ _.extend(OplogObserveDriver.prototype, {
         throw Error("XXX SURPRISING OPERATION: " + op);
       }
     });
-  }),
+  },
   // Yields!
   _runInitialQuery: function () {
     var self = this;

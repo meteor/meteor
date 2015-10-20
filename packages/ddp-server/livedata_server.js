@@ -1378,9 +1378,9 @@ Server = function (options) {
             sendError("Already connected", msg);
             return;
           }
-          Fiber(Profile("handle new ddp connection", function () {
+          Fiber(function () {
             self._handleConnect(socket, msg);
-          })).run();
+          }).run();
           return;
         }
 

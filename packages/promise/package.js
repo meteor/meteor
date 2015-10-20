@@ -7,19 +7,20 @@ Package.describe({
 });
 
 Npm.depends({
-  "meteor-promise": "0.5.0"
+  "meteor-promise": "https://github.com/avital/promise/tarball/02a6accf997a5768c6994b9a5346ba8d95d90980"
 });
+
 
 Package.onUse(function(api) {
   api.addFiles("promise_server.js", "server");
-
+/*
   api.addFiles(
     // This may not be the most robust way of referring to an NPM asset,
     // but at least api.addFiles will fail if the file does not exist.
     ".npm/package/node_modules/meteor-promise/promise.bundle.js",
     "client"
   );
-
+*/
   api.export("Promise");
 });
 

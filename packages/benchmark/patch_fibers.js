@@ -1,9 +1,10 @@
 var Fiber = Npm.require("fibers");
+var _ = Npm.require("underscore");
 
 var nextFiberId = 0; // incrementing counter
 
 var savedFiberRun = Fiber.prototype.run;
-Fiber.prototype.run = function () {
+Fiber.prototype.run = function (...args) {
   // helps with debugging, and seems harmless enough
   if (!this.id) {
     this.id = nextFiberId++;
@@ -13,17 +14,15 @@ Fiber.prototype.run = function () {
     this.timers = [];
   }
 
-//  if (!this.profilerEntry) {
-//    this.profilerEntry = Fiber.current ? Fiber.current.profilerEntry : [];
-//  }
-
   Fiber.current && pauseTimers(Fiber.current.timers);
   resumeTimers(this.timers);
 
-  savedFiberRun.apply(this, arguments);
-
-  pauseTimers(this.timers);
-  Fiber.current && resumeTimers(Fiber.current.timers);
+  try {
+    return savedFiberRun.apply(this, args);
+  } finally {
+    pauseTimers(this.timers);
+    Fiber.current && resumeTimers(Fiber.current.timers);
+  }
 };
 
 function pauseTimers(timers) {
