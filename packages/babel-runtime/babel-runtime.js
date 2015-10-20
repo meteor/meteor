@@ -173,6 +173,10 @@ babelHelpers = {
     };
   })(),
 
+  interopRequireDefault: function (obj) {
+    return obj && obj.__esModule ? obj : { 'default': obj };
+  },
+
   // es7.objectRestSpread and react (JSX)
   _extends: Object.assign || (function (target) {
     for (var i = 1; i < arguments.length; i++) {
