@@ -1,5 +1,7 @@
 ## v.NEXT
 
+## v.1.2.1, ???
+
 * `coll.insert()` now uses a faster (but cryptographically insecure)
   algorithm to generate document IDs when called outside of a method
   and an `_id` field is not explicitly passed. With this change, there
