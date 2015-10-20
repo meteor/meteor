@@ -10,16 +10,18 @@ Package.describe({
 
 Npm.depends({
   "gc-profiler": "1.2.0",
-  "meteor-profiler": "https://github.com/meteor/meteor-profiler/tarball/1fe8724a38b6463189b0b408062cc90d90e98a6f",
+  "meteor-profiler": "https://github.com/meteor/meteor-profiler/tarball/758c71affdf6b369607a9a2dd7421a11d504662e",
   "getrusage": "0.3.3"
 });
 
 Package.onUse(function(api) {
   api.use('ecmascript');
+  api.use('ddp-server', {unordered: true});
   api.export('Profile');
 
   api.addFiles("profile.js", "server");
   api.addFiles("patch_fibers.js", "server");
+  api.addFiles("methods.js", "server");
 });
 
 Package.onTest(function(api) {
