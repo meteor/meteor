@@ -1,8 +1,10 @@
 melhoramentos:
-- colocar referÍncias!!! e tentar ser original (pesquisa, entre outras)
-- Cuidado com algumas definiÁıes
+- colocar refer√™ncias!!! e tentar ser original (pesquisa, entre outras)
+- Cuidado com algumas defini√ß√µes
 
 Ver Test Delivery Development -> testes antes do produto! (test-first)
-ver testes unit·rios
+ver testes unit√°rios
 
 report sobre software architecture
+
+http://pt.slideshare.net/mongodb/meteor-next-generation-stack
