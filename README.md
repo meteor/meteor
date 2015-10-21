@@ -71,7 +71,7 @@ Finally, enable all of the rules that you would like to use.
 }
 ```
 
-For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_METEOR_PROJECT.md).
+For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_DEVELOPMENT.md).
 
 # List of supported rules
 
