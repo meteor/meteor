@@ -364,60 +364,70 @@ selftest.define("compiler plugins - addAssets", () => {
   run.match("Printing out my own source code!");
 
   // Test client-side asset.
-  const body = getUrl('http://localhost:3000/packages/' +
+  let body = getUrl('http://localhost:3000/packages/' +
+    'asset-and-source/asset-and-source.js');
+  selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
+
+  // Test that deprecated API still works (added in 1.2.1 in response to people
+  // having trouble upgrading to 1.2)
+  s.write("packages/asset-and-source/package.js", `Package.describe({
+      name: 'asset-and-source',
+      version: '0.0.1'
+    });
+
+    Package.onUse(function(api) {
+      api.addFiles('asset-and-source.js');
+      api.addFiles('asset-and-source.js',
+        ['client', 'server'], { isAsset: true });
+    });
+  `);
+
+  // Test server-side asset.
+  run.match("Printing out my own source code!");
+
+  // Test client-side asset.
+  body = getUrl('http://localhost:3000/packages/' +
     'asset-and-source/asset-and-source.js');
   selftest.expectTrue(body.indexOf('Printing out my own source code!') !== -1);
 
   // Test error messages for malformed package files
   s.write("packages/asset-and-source/package.js", `Package.describe({
-    name: 'asset-and-source',
-    version: '0.0.1'
-  });
+      name: 'asset-and-source',
+      version: '0.0.1'
+    });
 
-  Package.onUse(function(api) {
-    api.addFiles('asset-and-source.js');
-    api.addAssets('asset-and-source.js', ['client', 'server']);
-    api.addFiles('asset-and-source.js');
-  });
-`);
+    Package.onUse(function(api) {
+      api.addFiles('asset-and-source.js');
+      api.addAssets('asset-and-source.js', ['client', 'server']);
+      api.addFiles('asset-and-source.js');
+    });
+  `);
 
   run.match(/Duplicate source file/);
 
   s.write("packages/asset-and-source/package.js", `Package.describe({
-    name: 'asset-and-source',
-    version: '0.0.1'
-  });
+      name: 'asset-and-source',
+      version: '0.0.1'
+    });
 
-  Package.onUse(function(api) {
-    api.addFiles('asset-and-source.js');
-    api.addAssets('asset-and-source.js', ['client', 'server']);
-    api.addAssets('asset-and-source.js', ['client', 'server']);
-  });
-`);
+    Package.onUse(function(api) {
+      api.addFiles('asset-and-source.js');
+      api.addAssets('asset-and-source.js', ['client', 'server']);
+      api.addAssets('asset-and-source.js', ['client', 'server']);
+    });
+  `);
 
   run.match(/Duplicate asset file/);
 
   s.write("packages/asset-and-source/package.js", `Package.describe({
-    name: 'asset-and-source',
-    version: '0.0.1'
-  });
+      name: 'asset-and-source',
+      version: '0.0.1'
+    });
 
-  Package.onUse(function(api) {
-    api.addFiles('asset-and-source.js', 'client', { isAsset: true });
-  });
+    Package.onUse(function(api) {
+      api.addAssets('asset-and-source.js');
+    });
   `);
-
-  run.match(/deprecated/);
-
-  s.write("packages/asset-and-source/package.js", `Package.describe({
-    name: 'asset-and-source',
-    version: '0.0.1'
-  });
-
-  Package.onUse(function(api) {
-    api.addAssets('asset-and-source.js');
-  });
-`);
 
   run.match(/requires a second argument/);
 
