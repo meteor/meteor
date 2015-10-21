@@ -20,14 +20,11 @@ import {SERVER, PACKAGE, NON_METEOR} from '../../../dist/util/environment'
 
 const ruleTester = new RuleTester()
 ruleTester.run('globals', rule(() => ({env: SERVER})), {
-
   valid: ['Session.set("hi", true)'],
   invalid: []
-
 })
 
 ruleTester.run('globals', rule(() => ({env: PACKAGE})), {
-
   valid: [
     `
       /* eslint-meteor-env client, server */
@@ -40,10 +37,18 @@ ruleTester.run('globals', rule(() => ({env: PACKAGE})), {
     `
       /* eslint-meteor-env server */
       Session.set("hi", true)
-    `
+    `,
+    {
+      code: 'Users.find()',
+      settings: {meteor: {collections: ['Users']}}
+    },
+    {
+      code: 'Users.find()',
+      settings: {meteor: {}}
+    }
   ],
-  invalid: []
 
+  invalid: []
 })
 
 ruleTester.run('globals', rule(() => ({env: NON_METEOR})), {

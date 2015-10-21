@@ -3,7 +3,7 @@
 This rule defines global variables based on the environment the file is executed in.
 This rule never emits warnings on its own. It is meant to be used with ESLint's `no-undef`.
 
-Do not use the Meteor environment.
+This rule also marks collections defined through settings as globals.
 
 ## Rule Details
 
@@ -20,6 +20,18 @@ Do not use the Meteor environment (`env: meteor` in `.eslintrc` or `$ eslint ./ 
   'meteor/globals': 1,
   'no-undef': 2
 }
+```
+
+Collections defined in `.eslintrc`'s settings will be marked as globals as well.
+
+```js
+
+settings: {
+  meteor: {
+    collections: ['Posts', 'Items'] // all universal collections
+  }
+}
+
 ```
 
 ## Further Reading
