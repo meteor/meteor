@@ -14,6 +14,7 @@ const rule = require('../../../dist/rules/methods')
 const RuleTester = require('eslint').RuleTester
 
 const commonValidCode = [
+  'new Meteor.foo()',
   'Meteor.call("foo")',
   'Meteor.call("foo", true)',
   'Meteor.apply("foo", [], function () {})',
