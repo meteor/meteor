@@ -73,13 +73,9 @@ Example of an `.eslintrc` file declaring the collections `Users` and `Posts`:
   - [Mongo.ObjectID](http://docs.meteor.com/#/full/mongo_object_id)
   - [Mongo Cursors](http://docs.meteor.com/#/full/mongo_cursor)
   - Arguments to collection methods, e.g. `find()`
+- Does not warn when declaring the same collection multiple times
 
 
 ## Further Reading
 
 - http://docs.meteor.com/#/full/collections
-
-
-## Possible Improvements
-
-* Verify arguments to collection methods

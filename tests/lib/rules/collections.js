@@ -33,6 +33,10 @@ const commonValidCode = [
     }
   `,
   {
+    code: 'Users = new Mongo.Collection("users")',
+    settings: {meteor: {collections: ['Users']}}
+  },
+  {
     code: 'Users.find()',
     settings: {meteor: {collections: ['Users']}}
   },
@@ -124,7 +128,7 @@ const commonInvalidCode = [
     ]
   },
   {
-    code: 'Users = new Mongo.Collection("users")',
+    code: 'Users = true',
     settings: {meteor: {collections: ['Users']}},
     errors: [
       {message: 'Can not overwrite collection', type: 'AssignmentExpression'}
