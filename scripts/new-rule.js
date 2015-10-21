@@ -62,7 +62,7 @@ const rule = `/**
 // Rule Definition
 // -----------------------------------------------------------------------------
 
-import {NON_METEOR, CLIENT, SERVER, UNIVERSAL} from '../util/environment'
+import {NON_METEOR} from '../util/environment'
 
 module.exports = getMeta => context => {
 
@@ -107,9 +107,17 @@ const test = `/**
 // Requirements
 // -----------------------------------------------------------------------------
 
-import {CLIENT, SERVER} from '../../../dist/util/environment'
+import {NON_METEOR, UNIVERSAL, CLIENT, SERVER} from '../../../dist/util/environment'
 const rule = require('../../../dist/rules/${ruleId}')
 const RuleTester = require('eslint').RuleTester
+
+const commonValidCode = [
+
+]
+
+const commonInvalidCode = [
+
+]
 
 
 // -----------------------------------------------------------------------------
@@ -117,13 +125,14 @@ const RuleTester = require('eslint').RuleTester
 // -----------------------------------------------------------------------------
 
 const ruleTester = new RuleTester()
-ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
 
+ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
   valid: [
-    // fill me in
+    ...commonValidCode
   ],
 
   invalid: [
+    ...commonInvalidCode,
     {
       code: '${escapedFailingExample}',
       errors: [
@@ -131,16 +140,25 @@ ruleTester.run('${ruleId}', rule(() => ({env: SERVER})), {
       ]
     }
   ]
-
 })
 
 ruleTester.run('${ruleId}', rule(() => ({env: CLIENT})), {
-
   valid: [
-    // fill me in
+    ...commonValidCode
   ],
 
   invalid: [
+    ...commonInvalidCode
+  ]
+})
+
+ruleTester.run('${ruleId}', rule(() => ({env: UNIVERSAL})), {
+  valid: [
+    ...commonValidCode
+  ],
+
+  invalid: [
+    ...commonInvalidCode
     {
       code: '${escapedFailingExample}',
       errors: [
@@ -148,7 +166,15 @@ ruleTester.run('${ruleId}', rule(() => ({env: CLIENT})), {
       ]
     }
   ]
+})
 
+ruleTester.run('${ruleId}', rule(() => ({env: NON_METEOR})), {
+  valid: [
+    ...commonValidCode,
+    ...commonInvalidCode
+  ],
+
+  invalid: []
 })
 
 `
