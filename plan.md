@@ -19,8 +19,8 @@ With Zol, Tom, and Sashko
 
 * All ideations initiated
 * All outlines written
-* First draft -> concerted effort to get feedback from everyone
-* Website, CI, and tooling set up
-* Visual design finalized
-* Soft launch of entire site
-* Content edited in detail, link on the homepage
+* First draft -> concerted effort to get feedback from everyone (Mid Dec)
+* Website, CI, and tooling set up (Mid Dec)
+* Visual design finalized (Mid Dec)
+* Soft launch of entire site (Christmas)
+* Content edited in detail, link on the homepage (Early Feb)
