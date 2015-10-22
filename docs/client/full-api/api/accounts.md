@@ -36,7 +36,7 @@ user document:
 
     {
       _id: "bbca5d6a-2156-41c4-89da-0329e8c99a4f",  // Meteor.userId()
-      username: "cool_kid_13", // unique name
+      username: "cool_kid_13", // non-unique name
       emails: [
         // each email address can only belong to one user.
         { address: "cool@example.com", verified: true },
@@ -64,7 +64,7 @@ user document:
 A user document can contain any data you want to store about a user. Meteor
 treats the following fields specially:
 
-- `username`: a unique String identifying the user.
+- `username`: a non-unique String identifying the user.
 - `emails`: an Array of Objects with keys `address` and `verified`;
   an email address may belong to at most one user. `verified` is
   a Boolean which is true if the user has [verified the
