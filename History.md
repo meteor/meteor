@@ -6,7 +6,7 @@
   algorithm to generate document IDs when called outside of a method
   and an `_id` field is not explicitly passed. With this change, there
   are no longer two algorithms used to generate document
-  IDs. `Random.id()` can still be used to generate crpytographically
+  IDs. `Random.id()` can still be used to generate cryptographically
   secure document IDs. [#5161](https://github.com/meteor/meteor/issues/5161)
 
 * The `ecmascript-collections` package has been renamed to
