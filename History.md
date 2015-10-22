@@ -36,6 +36,10 @@
   renamed to `loginHint`, and now supports Google accounts as well. The old
   option still works for backwards compatibility. [#2422](https://github.com/meteor/meteor/issues/2422) [#5313](https://github.com/meteor/meteor/pull/5313)
 
+* The old `addFiles` API for adding package assets no longer throws an error,
+  making it easier to share packages between pre- and post-1.2 versions of
+  Meteor. [#5458](https://github.com/meteor/meteor/issues/5458)
+
 ## v1.2.0.2, 2015-Sept-28
 
 * Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
