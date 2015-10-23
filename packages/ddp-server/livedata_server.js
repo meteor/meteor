@@ -156,20 +156,22 @@ _.extend(SessionCollectionView.prototype, {
     self.callbacks.changed(self.collectionName, id, fields);
   },
 
-  added: Profile(descForSubHandle, Profile("added", function (subscriptionHandle, id, fields) {
+  added: Profile(descForSubHandle, Profile("added document", function (subscriptionHandle, id, fields) {
     var self = this;
-    var docView = self.documents[id];
     var added = false;
-    if (!docView) {
-      added = true;
-      docView = new SessionDocumentView();
-      self.documents[id] = docView;
-    }
-    docView.existsIn[subscriptionHandle] = true;
     var changeCollector = {};
-    _.each(fields, function (value, key) {
-      docView.changeField(
-        subscriptionHandle, key, value, changeCollector, true);
+    Profile.time("merge results", () => {
+      var docView = self.documents[id];
+      if (!docView) {
+        added = true;
+        docView = new SessionDocumentView();
+        self.documents[id] = docView;
+      }
+      docView.existsIn[subscriptionHandle] = true;
+      _.each(fields, function (value, key) {
+        docView.changeField(
+          subscriptionHandle, key, value, changeCollector, true);
+      });
     });
     if (added)
       self.callbacks.added(self.collectionName, id, changeCollector);
@@ -177,41 +179,49 @@ _.extend(SessionCollectionView.prototype, {
       self.callbacks.changed(self.collectionName, id, changeCollector);
   })),
 
-  changed: Profile(descForSubHandle, Profile("changed", function (subscriptionHandle, id, changed) {
+  changed: Profile(descForSubHandle, Profile("changed document", function (subscriptionHandle, id, changed) {
     var self = this;
     var changedResult = {};
-    var docView = self.documents[id];
-    if (!docView)
-      throw new Error("Could not find element with id " + id + " to change");
-    _.each(changed, function (value, key) {
-      if (value === undefined)
-        docView.clearField(subscriptionHandle, key, changedResult);
-      else
-        docView.changeField(subscriptionHandle, key, value, changedResult);
+    Profile.time("merge results", () => {
+      var docView = self.documents[id];
+      if (!docView)
+        throw new Error("Could not find element with id " + id + " to change");
+      _.each(changed, function (value, key) {
+        if (value === undefined)
+          docView.clearField(subscriptionHandle, key, changedResult);
+        else
+          docView.changeField(subscriptionHandle, key, value, changedResult);
+      });
     });
     self.callbacks.changed(self.collectionName, id, changedResult);
   })),
 
-  removed: Profile(descForSubHandle, Profile("removed", function (subscriptionHandle, id) {
+  removed: Profile(descForSubHandle, Profile("removed document", function (subscriptionHandle, id) {
     var self = this;
-    var docView = self.documents[id];
-    if (!docView) {
-      var err = new Error("Removed nonexistent document " + id);
-      throw err;
-    }
-    delete docView.existsIn[subscriptionHandle];
-    if (_.isEmpty(docView.existsIn)) {
-      // it is gone from everyone
+    var removed = false;
+    var changed = {};
+    Profile.time("merge results", () => {
+      var docView = self.documents[id];
+      if (!docView) {
+        var err = new Error("Removed nonexistent document " + id);
+        throw err;
+      }
+      delete docView.existsIn[subscriptionHandle];
+      if (_.isEmpty(docView.existsIn)) {
+        // it is gone from everyone
+        removed = true;
+        delete self.documents[id];
+      } else {
+        // remove this subscription from every precedence list
+        // and record the changes
+        _.each(docView.dataByKey, function (precedenceList, key) {
+          docView.clearField(subscriptionHandle, key, changed);
+        });
+      }
+    });
+    if (removed) {
       self.callbacks.removed(self.collectionName, id);
-      delete self.documents[id];
     } else {
-      var changed = {};
-      // remove this subscription from every precedence list
-      // and record the changes
-      _.each(docView.dataByKey, function (precedenceList, key) {
-        docView.clearField(subscriptionHandle, key, changed);
-      });
-
       self.callbacks.changed(self.collectionName, id, changed);
     }
   }))
@@ -456,7 +466,7 @@ _.extend(Session.prototype, {
 
   // Send a message (doing nothing if no socket is connected right now.)
   // It should be a JSON object (it will be stringified.)
-  send: Profile("ddp send", function (msg) {
+  send: Profile("ddp outgoing", function (msg) {
     var self = this;
     if (self.socket) {
       if (Meteor._printSentDDP)
@@ -489,7 +499,7 @@ _.extend(Session.prototype, {
   // way, but it's the easiest thing that's correct. (unsub needs to
   // be ordered against sub, methods need to be ordered against each
   // other.)
-  processMessage: Profile("process ddp message", function (msg_in) {
+  processMessage: Profile("ddp incoming", function (msg_in) {
     var self = this;
     if (!self.inQueue) // we have been destroyed.
       return;
@@ -534,7 +544,7 @@ _.extend(Session.prototype, {
         return;
       }
 
-      Fiber(Profile("process ddp message", function () {
+      Fiber(Profile("ddp incoming", function () {
         var blocked = true;
 
         var unblock = function () {
@@ -707,7 +717,7 @@ _.extend(Session.prototype, {
           () => DDP._CurrentInvocation.withValue(
             invocation,
             () => maybeAuditArgumentChecks(
-              Profile("run methods", handler),
+              Profile("method execution", handler),
               invocation, msg.params, "call to '" + msg.method + "'")
           )
         ));

@@ -1,0 +1,42 @@
+{
+  "dependencies": {
+    "gc-profiler": {
+      "version": "1.2.0",
+      "dependencies": {
+        "nan": {
+          "version": "1.9.0"
+        }
+      }
+    },
+    "getrusage": {
+      "version": "0.3.3",
+      "dependencies": {
+        "bindings": {
+          "version": "1.2.1"
+        }
+      }
+    },
+    "meteor-profiler": {
+      "version": "https://github.com/meteor/meteor-profiler/tarball/acba17efcc7e67865d0d3d030fe10cf003452bc8",
+      "dependencies": {
+        "fibers": {
+          "version": "1.0.7"
+        },
+        "getrusage": {
+          "version": "1.0.0",
+          "dependencies": {
+            "bindings": {
+              "version": "1.2.1"
+            },
+            "nan": {
+              "version": "2.1.0"
+            }
+          }
+        },
+        "underscore": {
+          "version": "1.8.3"
+        }
+      }
+    }
+  }
+}

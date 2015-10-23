@@ -1083,7 +1083,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
 
   var stopped = false;
   var lastTS = undefined;
-  var loop = Profile("oplog", function () {
+  var loop = function () {
     while (true) {
       if (stopped)
         return;
@@ -1122,7 +1122,7 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback) {
         break;
       }
     }
-  });
+  };
 
   Meteor.defer(loop);
 

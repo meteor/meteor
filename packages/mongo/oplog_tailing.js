@@ -249,7 +249,7 @@ _.extend(OplogHandle.prototype, {
     if (self._workerActive)
       return;
     self._workerActive = true;
-    Meteor.defer(Profile("oplog", function () {
+    Meteor.defer(Profile("oplog tailing", function () {
       try {
         while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
@@ -300,7 +300,9 @@ _.extend(OplogHandle.prototype, {
             trigger.id = idForOp(doc);
           }
 
-          self._crossbar.fire(trigger);
+          Profile.time("invalidation crossbar", () => {
+            self._crossbar.fire(trigger);
+          });
 
           // Now that we've processed this operation, process pending
           // sequencers.
