@@ -20,7 +20,7 @@ delimited by `{{` and `}}` (two curly braces).
     <div class="post">
       <h3>{{title}}</h3>
       <div class="post-content">
-        {{{content}}}
+        {{content}}
       </div>
     </div>
   {{/each}}
