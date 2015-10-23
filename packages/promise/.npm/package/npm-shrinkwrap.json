@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "meteor-promise": {
-      "version": "0.5.0",
+      "version": "https://github.com/avital/promise/tarball/02a6accf997a5768c6994b9a5346ba8d95d90980",
       "dependencies": {
         "promise": {
           "version": "7.0.4",

@@ -98,9 +98,10 @@ _.extend(OplogHandle.prototype, {
     callback = Meteor.bindEnvironment(function (notification) {
       // XXX can we avoid this clone by making oplog.js careful?
       originalCallback(EJSON.clone(notification));
-    }, function (err) {
+    }), function (err) {
       Meteor._debug("Error in oplog callback", err.stack);
-    });
+    };
+
     var listenHandle = self._crossbar.listen(trigger, callback);
     return {
       stop: function () {
@@ -130,12 +131,13 @@ _.extend(OplogHandle.prototype, {
     // be ready.
     self._readyFuture.wait();
 
+    var lastEntry;
     while (!self._stopped) {
       // We need to make the selector at least as restrictive as the actual
       // tailing selector (ie, we need to specify the DB name) or else we might
       // find a TS that won't show up in the actual tail stream.
       try {
-        var lastEntry = self._oplogLastEntryConnection.findOne(
+        lastEntry = self._oplogLastEntryConnection.findOne(
           OPLOG_COLLECTION, self._baseOplogSelector,
           {fields: {ts: 1}, sort: {$natural: -1}});
         break;
@@ -163,7 +165,6 @@ _.extend(OplogHandle.prototype, {
       // We've already caught up to here.
       return;
     }
-
 
     // Insert the future into our list. Almost always, this will be at the end,
     // but it's conceivable that if we fail over from one primary to another,
@@ -248,7 +249,7 @@ _.extend(OplogHandle.prototype, {
     if (self._workerActive)
       return;
     self._workerActive = true;
-    Meteor.defer(function () {
+    Meteor.defer(Profile("oplog tailing", function () {
       try {
         while (! self._stopped && ! self._entryQueue.isEmpty()) {
           // Are we too far behind? Just tell our observers that they need to
@@ -299,7 +300,9 @@ _.extend(OplogHandle.prototype, {
             trigger.id = idForOp(doc);
           }
 
-          self._crossbar.fire(trigger);
+          Profile.time("invalidation crossbar", () => {
+            self._crossbar.fire(trigger);
+          });
 
           // Now that we've processed this operation, process pending
           // sequencers.
@@ -310,7 +313,7 @@ _.extend(OplogHandle.prototype, {
       } finally {
         self._workerActive = false;
       }
-    });
+    }));
   },
   _setLastProcessedTS: function (ts) {
     var self = this;

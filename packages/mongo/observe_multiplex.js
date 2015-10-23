@@ -1,5 +1,7 @@
 var Future = Npm.require('fibers/future');
 
+Error.stackTraceLimit = Infinity;
+
 ObserveMultiplexer = function (options) {
   var self = this;
 

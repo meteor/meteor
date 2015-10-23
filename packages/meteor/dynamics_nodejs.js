@@ -82,7 +82,9 @@ _.extend(Meteor.EnvironmentVariable.prototype, {
 // callback, and when an exception is raised a debug message will be
 // printed with the description.
 Meteor.bindEnvironment = function (func, onException, _this) {
-  Meteor._nodeCodeMustBeInFiber();
+  if (Fiber.current.overrideMeasureId) {
+    throw new Error("Can't nest \"entireTime\" measures");
+  }
 
   var boundValues = _.clone(Fiber.current._meteor_dynamics || []);
 

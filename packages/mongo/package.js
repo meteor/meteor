@@ -21,6 +21,8 @@ Npm.strip({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
+
   api.use('npm-mongo', 'server');
 
   api.use(['random', 'ejson', 'underscore', 'minimongo',
@@ -50,6 +52,7 @@ Package.onUse(function (api) {
   // If the facts package is loaded, publish some statistics.
   api.use('facts', 'server', {weak: true});
 
+  api.use('benchmark', 'server');
   api.use('callback-hook', 'server');
 
   // Stuff that should be exposed via a real API, but we haven't yet.

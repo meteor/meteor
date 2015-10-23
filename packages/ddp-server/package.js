@@ -33,8 +33,9 @@ Package.onUse(function (api) {
   // If the facts package is loaded, publish some statistics.
   api.use('facts', 'server', {weak: true});
 
+  api.use('benchmark', 'server');
   api.use('callback-hook', 'server');
-
+;
   // we depend on LocalCollection._diffObjects, _applyChanges,
   // _idParse, _idStringify.
   api.use('minimongo', 'server');
