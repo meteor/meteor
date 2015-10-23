@@ -33,6 +33,7 @@ var Connection = function (url, options) {
     },
     heartbeatInterval: 17500,
     heartbeatTimeout: 15000,
+    npmFayeOptions: {},
     // These options are only for testing.
     reloadWithOutstanding: false,
     supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
@@ -59,7 +60,8 @@ var Connection = function (url, options) {
       // should have a real API for handling client-stream-level
       // errors.
       _dontPrintErrors: options._dontPrintErrors,
-      connectTimeoutMs: options.connectTimeoutMs
+      connectTimeoutMs: options.connectTimeoutMs,
+      npmFayeOptions: options.npmFayeOptions
     });
   }
 

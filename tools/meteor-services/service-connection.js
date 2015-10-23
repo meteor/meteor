@@ -1,6 +1,7 @@
 var Future = require("fibers/future");
 var _ = require("underscore");
 var isopackets = require('../tool-env/isopackets.js');
+var files = require('../fs/files.js');
 
 // Wrapper to manage a connection to a DDP service. The main difference between
 // it and a raw DDP connection is that the constructor blocks until a successful
@@ -50,6 +51,11 @@ var ServiceConnection = function (endpointUrl, options) {
       connectFuture.return();
     }
   });
+  if (process.env.CAFILE) {
+    options.npmFayeOptions = {
+      ca: files.readFile(process.env.CAFILE)
+    }
+  }
 
   self.connection = Package['ddp-client'].DDP.connect(endpointUrl, options);
 
