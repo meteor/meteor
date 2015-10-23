@@ -103,7 +103,7 @@ DocsData = {
     "name": "createUser",
     "options": [
       {
-        "description": "<p>A unique name for this user.</p>",
+        "description": "<p>A name for this user.</p>",
         "name": "username",
         "type": {
           "names": [
