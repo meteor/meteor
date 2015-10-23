@@ -103,7 +103,7 @@ Here is a list of the Babel transformers that are currently enabled:
 
 * [`es6.blockScoping`](http://babeljs.io/docs/learn-es2015/#let-const)<br>
   Enables the `let` and `const` keywords as alternatives to `var`. The key
-  difference is that that variables defined using `let` or `const` are
+  difference is that variables defined using `let` or `const` are
   visible only within the block where they are declared, rather than being
   visible anywhere in the enclosing function. For example:
   ```js
