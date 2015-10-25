@@ -344,7 +344,10 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        self.jsOutputResources.push(self.inputResource);
+        self.jsOutputResources.push({
+          ...self.inputResource,
+          sourcePath: self.inputResource.path,
+        });
       } else {
         self.outputResources.push(self.inputResource);
       }
@@ -389,6 +392,9 @@ class ResourceSlot {
     self.jsOutputResources.push({
       type: "js",
       data: data,
+      // The sourcePath should not be alterable by plugins, so it makes
+      // sense to set it unconditionally here.
+      sourcePath: self.inputResource.path,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       // XXX should we allow users to be trusted and specify a hash?
