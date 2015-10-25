@@ -388,14 +388,14 @@ main.registerCommand(_.extend(
 ///////////////////////////////////////////////////////////////////////////////
 // shell
 ///////////////////////////////////////////////////////////////////////////////
-
-main.registerCommand({
-  name: 'shell',
+var shellCommandOptions = {
   requiresRelease: false,
   requiresApp: true,
   pretty: false,
   catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+};
+
+function doShellCommand(options) {
   if (!options.appDir) {
     Console.error(
       "The " + Console.command("'meteor shell'") + " command must be run",
@@ -414,38 +414,21 @@ main.registerCommand({
 
     throw new main.WaitForExit;
   }
-});
+}
+
+main.registerCommand(_.extend(
+  { name: 'shell' },
+  shellCommandOptions
+), doShellCommand);
 
 ///////////////////////////////////////////////////////////////////////////////
 // console - alias for shell
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand({
-  name: 'console',
-  requiresRelease: false,
-  requiresApp: true,
-  pretty: false,
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  if (!options.appDir) {
-    Console.error(
-      "The " + Console.command("'meteor console'") + " command must be run",
-      "in a Meteor app directory."
-    );
-  } else {
-    var projectContext = new projectContextModule.ProjectContext({
-      projectDir: options.appDir
-    });
-
-    // Convert to OS path here because shell/server.js doesn't know how to
-    // convert paths, since it exists in the app and in the tool.
-    require('../shell-client.js').connect(
-      files.convertToOSPath(projectContext.getMeteorShellDirectory())
-    );
-
-    throw new main.WaitForExit;
-  }
-});
+main.registerCommand(_.extend(
+  { name: 'console' },
+  shellCommandOptions
+), doShellCommand);
 
 ///////////////////////////////////////////////////////////////////////////////
 // create
