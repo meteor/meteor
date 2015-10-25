@@ -475,6 +475,7 @@ class PackageSourceBatch {
     self.processor = processor;
     self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
+
     var sourceProcessorSet = self._getSourceProcessorSet();
     self.resourceSlots = [];
     unibuild.resources.forEach(function (resource) {
@@ -507,6 +508,41 @@ class PackageSourceBatch {
         }
       }
       self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
+    });
+
+    // Compute imports by merging the exports of all of the packages we
+    // use. Note that in the case of conflicting symbols, later packages get
+    // precedence.
+    //
+    // We don't get imports from unordered dependencies (since they may not be
+    // defined yet) or from weak/debugOnly dependencies (because the meaning of
+    // a name shouldn't be affected by the non-local decision of whether or not
+    // an unrelated package in the target depends on something).
+    self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
+    self.usedPackageNames = {};
+
+    compiler.eachUsedUnibuild({
+      dependencies: self.unibuild.uses,
+      arch: self.processor.arch,
+      isopackCache: self.processor.isopackCache,
+      skipUnordered: true,
+      // don't import symbols from debugOnly and prodOnly packages, because
+      // if the package is not linked it will cause a runtime error.
+      // the code must access them with `Package["my-package"].MySymbol`.
+      skipDebugOnly: true,
+      skipProdOnly: true,
+      // We only care about getting exports here, so it's OK if we get the Mac
+      // version when we're bundling for Linux.
+      allowWrongPlatform: true,
+    }, depUnibuild => {
+      _.each(depUnibuild.declaredExports, function (symbol) {
+        // Slightly hacky implementation of test-only exports.
+        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
+          self.importedSymbolToPackageName[symbol.name] = depUnibuild.pkg.name;
+        }
+      });
+
+      self.usedPackageNames[depUnibuild.pkg.name] = true;
     });
   }
 
@@ -554,57 +590,25 @@ class PackageSourceBatch {
     const self = this;
     buildmessage.assertInJob();
 
-    var isopackCache = self.processor.isopackCache;
     var bundleArch = self.processor.arch;
-
-    // Compute imports by merging the exports of all of the packages we
-    // use. Note that in the case of conflicting symbols, later packages get
-    // precedence.
-    //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak/debugOnly dependencies (because the meaning of
-    // a name shouldn't be affected by the non-local decision of whether or not
-    // an unrelated package in the target depends on something).
-    var imports = {}; // map from symbol to supplying package name
-
-    var addImportsForUnibuild = function (depUnibuild) {
-      _.each(depUnibuild.declaredExports, function (symbol) {
-        // Slightly hacky implementation of test-only exports.
-        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
-          imports[symbol.name] = depUnibuild.pkg.name;
-        }
-      });
-    };
-    compiler.eachUsedUnibuild({
-      dependencies: self.unibuild.uses,
-      arch: bundleArch,
-      isopackCache: isopackCache,
-      skipUnordered: true,
-      // don't import symbols from debugOnly and prodOnly packages, because
-      // if the package is not linked it will cause a runtime error.
-      // the code must access them with `Package["my-package"].MySymbol`.
-      skipDebugOnly: true,
-      skipProdOnly: true,
-      // We only care about getting exports here, so it's OK if we get the Mac
-      // version when we're bundling for Linux.
-      allowWrongPlatform: true,
-    }, addImportsForUnibuild);
 
     // Run the linker.
     const isApp = ! self.unibuild.pkg.name;
     const linkerOptions = {
       useGlobalNamespace: isApp,
+      sourceRoot: self.sourceRoot,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
-      combinedServePath: isApp ? null :
+      combinedServePath: isApp ? "/app.js" :
         "/packages/" + colonConverter.convert(
           self.unibuild.pkg.name +
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
-      imports: imports,
+      imports: self.importedSymbolToPackageName,
+      usedPackageNames: self.usedPackageNames,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")

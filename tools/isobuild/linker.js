@@ -5,7 +5,9 @@ var watch = require('../fs/watch.js');
 var Profile = require('../tool-env/profile.js').Profile;
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
+import files from '../fs/files.js';
 import {findAssignedGlobals} from './js-analyze.js';
+import ImportScanner from './import-scanner.js';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -44,6 +46,7 @@ var Module = function (options) {
   self.files = [];
 
   // options
+  self.useMeteorInstall = options.useMeteorInstall;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
   self.noLineNumbers = options.noLineNumbers;
@@ -107,7 +110,8 @@ _.extend(Module.prototype, {
     // If we don't want to create a separate scope for this module,
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
-    if (self.useGlobalNamespace) {
+    if (self.useGlobalNamespace &&
+        ! self.useMeteorInstall) {
       return _.map(self.files, function (file) {
         if (file.lazy) {
           // Ignore lazy files unless we have a module system.
@@ -133,6 +137,7 @@ _.extend(Module.prototype, {
 
         const prelinked = {
           source: results.code,
+          sourcePath: file.sourcePath,
           servePath: file.servePath,
           sourceMap: sourceMap
         };
@@ -151,21 +156,98 @@ _.extend(Module.prototype, {
     var chunks = [];
 
     // Emit each file
-    _.each(self.files, function (file) {
-      if (file.lazy) {
-        // Ignore lazy files unless we have a module system.
-        return;
+    if (self.useMeteorInstall) {
+      const tree = {};
+
+      _.each(self.files, function (file) {
+        if (file.bare) {
+          // Bare files will be added in between the synchronous require
+          // calls below.
+          return;
+        }
+
+        const parts = file.installPath.split("/");
+        let t = tree;
+        _.each(parts, function (part, i) {
+          const isLastPart = i === parts.length - 1;
+          t = _.has(t, part)
+            ? t[part]
+            : t[part] = isLastPart ? file : {};
+        });
+      });
+
+      let moduleCount = 0;
+
+      function walk(t) {
+        if (t instanceof File) {
+          ++moduleCount;
+          chunks.push(t.getPrelinkedOutput({
+            sourceWidth,
+            noLineNumbers: self.noLineNumbers
+          }));
+        } else if (_.isObject(t)) {
+          chunks.push("{");
+          const keys = _.keys(t);
+          _.each(keys, (key, i) => {
+            chunks.push(JSON.stringify(key), ":");
+            walk(t[key]);
+            if (i < keys.length - 1) {
+              chunks.push(",");
+            }
+          });
+          chunks.push("}");
+        }
       }
 
-      if (!_.isEmpty(chunks)) {
-        chunks.push("\n\n\n\n\n\n");
+      const chunksLengthBeforeWalk = chunks.length;
+
+      // The tree of nested directories and module functions built above
+      // allows us to call meteorInstall just once to install everything.
+      chunks.push("var require = meteorInstall(");
+      walk(tree);
+      chunks.push(");");
+
+      if (moduleCount === 0) {
+        // If no files were actually added to the chunks array, roll back
+        // to before the `var require = meteorInstall(` chunk.
+        chunks.length = chunksLengthBeforeWalk;
       }
 
-      chunks.push(file.getPrelinkedOutput({
-        sourceWidth: sourceWidth,
-        noLineNumbers: self.noLineNumbers
-      }));
-    });
+      // Now that we have installed everything in this package or
+      // application, immediately require the non-lazy modules and
+      // evaluate the bare files.
+      _.each(self.files, file => {
+        if (file.bare) {
+          chunks.push("\n", file.getPrelinkedOutput({
+            sourceWidth,
+            noLineNumbers: self.noLineNumbers
+          }));
+        } else if (moduleCount > 0 && ! file.lazy) {
+          chunks.push(
+            "\nrequire(",
+            JSON.stringify("./" + file.installPath),
+            ");"
+          );
+        }
+      });
+
+    } else {
+      _.each(self.files, function (file) {
+        if (file.lazy) {
+          // Ignore lazy files unless we have a module system.
+          return;
+        }
+
+        if (!_.isEmpty(chunks)) {
+          chunks.push("\n\n\n\n\n\n");
+        }
+
+        chunks.push(file.getPrelinkedOutput({
+          sourceWidth: sourceWidth,
+          noLineNumbers: self.noLineNumbers
+        }));
+      });
+    }
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
@@ -252,8 +334,23 @@ var File = function (inputFile, module) {
   // produced by plugins)
   self.sourceHash = inputFile.hash || watch.sha1(self.source);
 
+  // The path of the source file, relative to the root directory of the
+  // package or application.
+  self.sourcePath = inputFile.sourcePath;
+
+  // Absolute module identifier to use when installing this file via
+  // meteorInstall.
+  self.installPath = files.convertToPosixPath(
+    module.name
+      ? files.pathJoin("node_modules", module.name, inputFile.sourcePath)
+      : inputFile.sourcePath
+  );
+
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
+
+  // Module identifiers imported or required by this module, if any.
+  self.deps = inputFile.deps || [];
 
   // True if the input file should not be evaluated eagerly.
   self.lazy = !!inputFile.lazy;
@@ -324,6 +421,35 @@ _.extend(File.prototype, {
       return [];
     }
   }),
+
+  _useMeteorInstall() {
+    return this.module.useMeteorInstall;
+  },
+
+  _getClosureHeader() {
+    if (this._useMeteorInstall()) {
+      var header = "";
+      if (this.deps.length > 0) {
+        header += "[";
+        _.each(this.deps, dep => {
+          header += JSON.stringify(dep) + ",";
+        });
+      }
+      return header + "function(require,exports,module){";
+    }
+    return "(function(){";
+  },
+
+  _getClosureFooter() {
+    if (this._useMeteorInstall()) {
+      var footer = "}";
+      if (this.deps.length > 0) {
+        footer += "]";
+      }
+      return footer;
+    }
+    return "}).call(this);\n";
+  },
 
   // Options:
   // - preserveLineNumbers: if true, decorate minimally so that line
@@ -448,7 +574,7 @@ _.extend(File.prototype, {
     var pathNoSlash = self.servePath.replace(/^\//, "");
 
     if (! self.bare) {
-      var closureHeader = "(function(){";
+      var closureHeader = self._getClosureHeader();
       chunks.push(
         closureHeader,
         preserveLineNumbers ? "" : "\n\n"
@@ -502,13 +628,19 @@ _.extend(File.prototype, {
     }
 
     // Footer
-    if (! self.bare) {
+    if (self.bare) {
+      if (! preserveLineNumbers) {
+        chunks.push(dividerLine(bannerWidth), "\n");
+      }
+    } else {
+      const closureFooter = self._getClosureFooter();
       if (preserveLineNumbers) {
-        chunks.push("}).call(this);\n");
+        chunks.push(closureFooter);
       } else {
         chunks.push(
           dividerLine(bannerWidth),
-          "\n}).call(this);\n"
+          "\n",
+          closureFooter
         );
       }
     }
@@ -587,7 +719,7 @@ var bannerPadding = function (bannerWidth) {
 //     sourceMap (a string) (XXX)
 // - assignedPackageVariables: an array of variables assigned to without
 //   being declared
-var prelink = Profile("linker.prelink", function (options) {
+export var prelink = Profile("linker.prelink", function (options) {
   var module = new Module({
     name: options.name,
     combinedServePath: options.combinedServePath,
@@ -702,52 +834,71 @@ var getFooter = function (options) {
 //  - bare: if true, don't wrap this file in a closure
 //  - sourceMap: an optional source map (as object) for the input file
 //
-// useGlobalNamespace: make the top level namespace be the same as the global
-// namespace, so that symbols are accessible from the console, and don't
-// actually combine files into a single file. used when linking apps (as opposed
-// to packages).
-//
-// combinedServePath: if we end up combining all of the files into
-// one, use this as the servePath.
-//
-// name: the name of this module (for stashing exports to be later
-// read by the imports of other modules); null if the module has no
-// name (in that case exports will not work properly)
-//
-// declaredExports: an array of symbols that the module exports. Symbols are
-// {name,testOnly} pairs.
-//
-// imports: a map from imported symbol to the name of the package that it is
-// imported from
-//
-// importStubServePath: if useGlobalNamespace is set, this is the name of the
-// file to create with imports into the global namespace
-//
-// includeSourceMapInstructions: true if JS files with source maps should
-// have a comment explaining how to use them in a browser.
-//
 // Output is an array of output files: objects with keys source, servePath,
 // sourceMap.
-var fullLink = Profile("linker.fullLink", function (inputFiles, {
-    useGlobalNamespace, combinedServePath, name, declaredExports, imports,
-    importStubServePath, includeSourceMapInstructions
-  }) {
+export var fullLink = Profile("linker.fullLink", function (inputFiles, {
+  // If true, make the top level namespace be the same as the global
+  // namespace, so that symbols are accessible from the console, and don't
+  // actually combine files into a single file. used when linking apps (as
+  // opposed to packages).
+  useGlobalNamespace,
+  // If we end up combining all of the files into one, use this as the
+  // servePath.
+  combinedServePath,
+  // The name of this module (for stashing exports to be later read by the
+  // imports of other modules); null if the module has no name (in that
+  // case exports will not work properly)
+  name,
+  // An array of symbols that the module exports. Symbols are
+  // {name,testOnly} pairs.
+  declaredExports,
+  // a map from imported symbol to the name of the package that it is
+  // imported from
+  imports,
+  // If useGlobalNamespace is set, this is the name of the file to create
+  // with imports into the global namespace.
+  importStubServePath,
+  // Object whose keys are the names of all the packages used by this
+  // package or application.
+  usedPackageNames,
+  // True if JS files with source maps should have a comment explaining
+  // how to use them in a browser.
+  includeSourceMapInstructions,
+  // Absolute path of the package or application root directory. Can be
+  // joined with the .path of an input file to determine the absolute path
+  // of the file.
+  sourceRoot
+}) {
   buildmessage.assertInJob();
 
+  const useMeteorInstall =
+    _.isString(sourceRoot) &&
+    _.has(usedPackageNames, "modules");
+
   var module = new Module({
-    name, useGlobalNamespace, combinedServePath,
+    name,
+    useMeteorInstall,
+    useGlobalNamespace,
+    combinedServePath,
     noLineNumbers: false
   });
 
-  _.each(inputFiles, function (inputFile) {
-    module.addFile(inputFile);
-  });
+  if (useMeteorInstall) {
+    inputFiles = new ImportScanner({
+      name,
+      sourceRoot,
+      usedPackageNames,
+    }).addInputFiles(inputFiles)
+      .getOutputFiles();
+  }
+
+  _.each(inputFiles, file => module.addFile(file));
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
   // If we're in the app, then we just add the import code as its own file in
   // the front.
-  if (useGlobalNamespace) {
+  if (useGlobalNamespace && ! useMeteorInstall) { // TODO
     if (!_.isEmpty(imports)) {
       prelinkedFiles.unshift({
         source: getImportCode(imports,
@@ -806,19 +957,16 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
         sourceMap.mappings;
       return {
         source: header + file.source + footer,
+        sourcePath: file.sourcePath,
         servePath: file.servePath,
         sourceMap: sourceMap
       };
     } else {
       return {
         source: header + file.source + footer,
+        sourcePath: file.sourcePath,
         servePath: file.servePath
       };
     }
   });
 });
-
-var linker = module.exports = {
-  prelink: prelink,
-  fullLink: fullLink
-};
