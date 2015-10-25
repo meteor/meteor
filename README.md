@@ -83,6 +83,7 @@ For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_
 * [check](docs/rules/check.md): Core API for check and Match
 * [connections](docs/rules/connections.md): Core API for connections
 * [collections](docs/rules/collections.md): Core API for collections
+* [session](docs/rules/session.md): Core API for Session
 
 ## Best Practices
 * [audit-argument-checks](docs/rules/audit-argument-checks.md): Enforce check on all arguments passed to methods and publish functions
