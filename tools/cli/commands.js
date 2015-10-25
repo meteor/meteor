@@ -417,6 +417,37 @@ main.registerCommand({
 });
 
 ///////////////////////////////////////////////////////////////////////////////
+// console - alias for shell
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand({
+  name: 'console',
+  requiresRelease: false,
+  requiresApp: true,
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  if (!options.appDir) {
+    Console.error(
+      "The " + Console.command("'meteor console'") + " command must be run",
+      "in a Meteor app directory."
+    );
+  } else {
+    var projectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir
+    });
+
+    // Convert to OS path here because shell/server.js doesn't know how to
+    // convert paths, since it exists in the app and in the tool.
+    require('../shell-client.js').connect(
+      files.convertToOSPath(projectContext.getMeteorShellDirectory())
+    );
+
+    throw new main.WaitForExit;
+  }
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // create
 ///////////////////////////////////////////////////////////////////////////////
 
