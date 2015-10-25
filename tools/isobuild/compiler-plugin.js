@@ -68,6 +68,7 @@ export class CompilerPluginProcessor {
   constructor({
     unibuilds,
     arch,
+    sourceRoot,
     isopackCache,
     linkerCacheDir,
   }) {
@@ -75,6 +76,7 @@ export class CompilerPluginProcessor {
 
     self.unibuilds = unibuilds;
     self.arch = arch;
+    self.sourceRoot = sourceRoot;
     self.isopackCache = isopackCache;
 
     self.linkerCacheDir = linkerCacheDir;
@@ -91,7 +93,13 @@ export class CompilerPluginProcessor {
     var sourceProcessorsWithSlots = {};
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
+      const { pkg: { name }, arch } = unibuild;
+      const sourceRoot = name
+        ? self.isopackCache.getSourceRoot(name, arch)
+        : self.sourceRoot;
+
       return new PackageSourceBatch(unibuild, self, {
+        sourceRoot,
         linkerCacheDir: self.linkerCacheDir
       });
     });
@@ -453,12 +461,16 @@ class ResourceSlot {
 }
 
 class PackageSourceBatch {
-  constructor(unibuild, processor, {linkerCacheDir}) {
+  constructor(unibuild, processor, {
+    sourceRoot,
+    linkerCacheDir,
+  }) {
     const self = this;
     buildmessage.assertInJob();
 
     self.unibuild = unibuild;
     self.processor = processor;
+    self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
 
     var sourceProcessorSet = self._getSourceProcessorSet();

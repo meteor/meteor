@@ -118,6 +118,27 @@ _.extend(exports.IsopackCache.prototype, {
     });
   },
 
+  getSourceRoot(name, arch) {
+    const packageInfo = this._packageMap.getInfo(name);
+
+    if (packageInfo) {
+      if (packageInfo.kind === "local") {
+        return packageInfo.packageSource.sourceRoot;
+      }
+
+      if (packageInfo.kind === "versioned") {
+        const isopackPath = this._tropohouse.packagePath(
+          name,
+          packageInfo.version
+        );
+
+        return files.realpath(files.pathJoin(isopackPath, arch));
+      }
+    }
+
+    return null;
+  },
+
   _ensurePackageLoaded: function (name, onStack) {
     var self = this;
     buildmessage.assertInCapture();
