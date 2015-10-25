@@ -84,6 +84,7 @@ tools/isobuild/bundler.js
 tools/isobuild/compiler-deprecated-compile-step.js
 tools/isobuild/compiler-plugin.js
 tools/isobuild/compiler.js
+tools/isobuild/import-scanner.js
 tools/isobuild/isopack-cache.js
 tools/isobuild/isopack.js
 tools/isobuild/js-analyze.js
