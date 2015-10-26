@@ -16,3 +16,5 @@ http://pt.discovermeteor.com/
 www.discovermeteor.com
 
 uma arquitetura simples! -> http://stackoverflow.com/questions/30990484/is-there-a-simple-meteor-architecture-picture-somewhere
+
+http://www.slideshare.net/kieras/arquitetura-de-software-na-prtica-1476447
