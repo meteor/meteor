@@ -14,6 +14,7 @@ var urlParser = Npm.require('url');
 // here. I shed a silent tear.
 Spiderable.userAgentRegExps = [
   /^facebookexternalhit/i,
+  /^Facebot/,
   /^linkedinbot/i,
   /^twitterbot/i,
   /^slackbot-linkexpanding/i
