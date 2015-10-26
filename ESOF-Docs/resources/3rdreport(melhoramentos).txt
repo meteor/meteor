@@ -14,3 +14,5 @@ podemos perguntar a este https://github.com/sauveregarder sobre a meteor
 http://pt.discovermeteor.com/
 
 www.discovermeteor.com
+
+uma arquitetura simples! -> http://stackoverflow.com/questions/30990484/is-there-a-simple-meteor-architecture-picture-somewhere
