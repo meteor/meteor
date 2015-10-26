@@ -282,6 +282,37 @@ Tinytest.add("check - Match error path", function (test) {
   match({ "return": 0 }, { "return": String }, "[\"return\"]");
 });
 
+Tinytest.add("check - Match error message", function (test) {
+  var match = function (value, pattern, expectedMessage) {
+    try {
+      check(value, pattern);
+    } catch (err) {
+      if (err.message !== "Match error: " + expectedMessage)
+        test.fail({
+          type: "match-error-message",
+          message: "The message of Match.Error doesn't match.",
+          pattern: JSON.stringify(pattern),
+          value: JSON.stringify(value),
+          errorMessage: err.message,
+          expectedErrorMessage: expectedMessage
+        });
+    }
+  };
+
+  match(2, String, "Expected string, got number");
+  match({key: 0}, Number, "Expected number, got object");
+  match(null, Boolean, "Expected boolean, got null");
+  match("string", undefined, "Expected undefined, got string");
+  match(true, null, "Expected null, got true");
+  match("bar", "foo", "Expected foo, got \"bar\"");
+  match(3.14, Match.Integer, "Expected Integer, got 3.14");
+  match(false, [Boolean], "Expected array, got false");
+  match([null, null], [String], "Expected string, got null in field [0]");
+  match(2, {key: 2}, "Expected object, got number");
+  match(null, {key: 2}, "Expected object, got null");
+  match(new Date, {key: 2}, "Expected plain object");
+});
+
 // Regression test for https://github.com/meteor/meteor/issues/2136
 Meteor.isServer && Tinytest.addAsync("check - non-fiber check works", function (test, onComplete) {
   var Fiber = Npm.require('fibers');
