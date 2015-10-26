@@ -7,7 +7,13 @@
 * Rúben Alexandre da Fonseca Marques, ei10117@fe.up.pt 
 * Nuno Soares Marques, ee11291@fe.up.pt
 
-## Software Architecture
+## Vista Lógica
+
+## Vista de Implementação
+
+## Vista de Processo
+
+## Vista Física ou de Deployment
 
 ##Referências
 
