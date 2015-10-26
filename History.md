@@ -40,6 +40,15 @@
   making it easier to share packages between pre- and post-1.2 versions of
   Meteor. [#5458](https://github.com/meteor/meteor/issues/5458)
 
+* Normally, you can't deploy to free meteor.com hosting or Galaxy from a
+  non-Linux machine if you have *local* non-published packages with binary
+  dependencies, nor can you run `meteor build --architecture SomeOtherArch`. As
+  a temporary workaround, if you set the `METEOR_DEP_BINARY_WORKAROUND`
+  variable, you will be able to deploy to Galaxy (but not free meteor.com
+  hosting), and tarballs built with `meteor build` will contain a
+  `programs/server/setup.sh` shell script which should be run on the server to
+  install those packages.
+
 ## v1.2.0.2, 2015-Sept-28
 
 * Update Crosswalk plugin for Cordova to 1.3.1. [#5267](https://github.com/meteor/meteor/issues/5267)
