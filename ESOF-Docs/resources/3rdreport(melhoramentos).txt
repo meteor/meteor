@@ -20,3 +20,5 @@ uma arquitetura simples! -> http://stackoverflow.com/questions/30990484/is-there
 http://www.slideshare.net/kieras/arquitetura-de-software-na-prtica-1476447
 
 http://epf.eclipse.org/wikis/openuppt/openup_basic/guidances/guidelines/architectural_view,_T9nygClEEduLGM8dfVsrKg.html
+
+https://github.com/awatson1978/meteor-cookbook/blob/master/table-of-contents.md
