@@ -152,7 +152,7 @@ var testSubtree = function (value, pattern) {
       if (typeof value === typeofChecks[i][1])
         return false;
       return {
-        message: "Expected " + typeofChecks[i][1] + ", got " + typeof value,
+        message: "Expected " + typeofChecks[i][1] + ", got " + (value === null ? "null" : typeof value),
         path: ""
       };
     }
