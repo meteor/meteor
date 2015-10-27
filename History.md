@@ -41,7 +41,7 @@
   Meteor. [#5458](https://github.com/meteor/meteor/issues/5458)
 
 * Normally, you can't deploy to free meteor.com hosting or Galaxy from a
-  non-Linux machine if you have *local* non-published packages with binary
+  non-Unix machine if you have *local* non-published packages with binary
   dependencies, nor can you run `meteor build --architecture SomeOtherArch`. As
   a temporary workaround, if you set the `METEOR_DEP_BINARY_WORKAROUND`
   variable, you will be able to deploy to Galaxy (but not free meteor.com
