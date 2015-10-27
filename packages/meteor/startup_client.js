@@ -52,23 +52,26 @@ if (document.addEventListener) {
 /**
  * @summary Run code when a client or a server starts.
  * @locus Anywhere
- * @param {Function} func A function to run on startup.
+ * @param {Function} cb A function to run on startup.
  */
+var interval;
 Meteor.startup = function (cb) {
   var doScroll = !document.addEventListener &&
     document.documentElement.doScroll;
 
   if (!doScroll || window !== top) {
-    if (loaded)
-      cb();
-    else
-      queue.push(cb);
   } else {
-    try { doScroll('left'); }
+    try { if (!loaded) { doScroll('left'); clearInterval(interval); ready(); } }
     catch (e) {
-      setTimeout(function() { Meteor.startup(cb); }, 50);
-      return;
-    };
-    cb();
+      if (!interval)
+        interval = setInterval(function() { Meteor.startup(null); }, 50);
+    }
   }
+
+  if (!cb) return;
+
+  if (loaded)
+    cb();
+  else
+    queue.push(cb);
 };
