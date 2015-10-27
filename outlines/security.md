@@ -2,6 +2,7 @@
 
 1. Main concept: Security surface area of a Meteor app
     1. The way to security is to understand the attack surface, and guard against all possible attacks
+    1. This is one of the reasons why you shouldn't use `allow/deny` in serious production apps - it's just too hard to judge the attack surface
     2. Conclusion: Never Trust The Client - anyone can call all of your app's endpoints, not just the client you wrote. There's no way to guard against this, so you may as well not even try. Consider projects like SnapchatFS
     3. It's not always clear where the server ends and the client begins in a Meteor app, but it's important to be aware of that for security
 2. Methods
