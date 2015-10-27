@@ -14,8 +14,8 @@
 3. Publications
     1. Most of the points about methods are still relevant!
     2. Publications re-run when the user ID changes (describe this in detail)
-    3. Don't let people pass arbitrary queries into publications, this is bad both for performance and security
-    4. Make sure to filter the data so that the client can't get anything sensitive
+    3. Don't let people pass arbitrary queries into publications, this is bad both for performance and securityu. this includes not taking arbitrary options, so make sure to validate any sort or limit data that comes from the client, and impose a max limit.
+    4. Make sure to filter the data using specific queries and field projections so that the client can't get anything sensitive
 4. Served files
     1. Your source code can contain secret information. If you have code with secret stuff in it:
         1. Consider putting the secrets in settings
