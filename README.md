@@ -17,5 +17,5 @@ We're building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.
 
 ### MDG
 
-1. See the [standup notes and planning](plan.md)
+1. See the [standup notes and planning](meeting-notes.md)
 1. See the [code action items](https://github.com/meteor/guide/labels/code)
