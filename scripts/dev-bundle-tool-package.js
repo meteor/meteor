@@ -26,8 +26,8 @@ var packageJson = {
     fibers: fibersVersion,
     "meteor-babel": "0.5.8",
     "meteor-promise": "0.5.0",
-    // For Map and Set polyfills.
-    "core-js": "1.1.4",
+    // For various ES2015 polyfills, such as Map and Set.
+    "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
     // in the package too) because we should consider using lodash instead
     // (and there are backwards-incompatible changes either way).
@@ -38,7 +38,7 @@ var packageJson = {
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
     kexec: "0.2.0",
-    "source-map": "0.1.40",
+    "source-map": "0.1.43",
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",
@@ -65,7 +65,7 @@ var packageJson = {
     // in a subdirectory. See tools/cordova/README.md for instructions on how
     // to build and upload our own tarball.
     // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
-    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-d5ff7cf04757335762b6695f1664bca6c6cfc272.tar.gz",
+    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-1512fc069c7ea51c7a112cf14a8d93d69726a6f7.tar.gz",
     // Also include the Cordova CLI because it is used in tests
     "cordova": "5.2.0",
     "ios-sim": "4.1.1",

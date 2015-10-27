@@ -828,6 +828,28 @@ if (Meteor.isServer) {
 
     _.each(['insert', 'update', 'remove'], function (key) {
       var options = {};
+      options[key] = false;
+      test.throws(function () {
+        collection.allow(options);
+      });
+      test.throws(function () {
+        collection.deny(options);
+      });
+    });
+
+    _.each(['insert', 'update', 'remove'], function (key) {
+      var options = {};
+      options[key] = undefined;
+      test.throws(function () {
+        collection.allow(options);
+      });
+      test.throws(function () {
+        collection.deny(options);
+      });
+    });
+
+    _.each(['insert', 'update', 'remove'], function (key) {
+      var options = {};
       options[key] = ['an array']; // this should be a function, not an array
       test.throws(function () {
         collection.allow(options);

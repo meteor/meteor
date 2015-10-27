@@ -37,21 +37,24 @@ function randomToken() {
   return Random.hexString(20);
 };
 
-// Returns the random stream with the specified name, in the specified scope.
-// If scope is null (or otherwise falsey) then we will use Random, which will
-// give us as random numbers as possible, but won't produce the same
-// values across client and server.
-// However, scope will normally be the current DDP method invocation, so
-// we'll use the stream with the specified name, and we should get consistent
-// values on the client and server sides of a method call.
+// Returns the random stream with the specified name, in the specified
+// scope. If a scope is passed, then we use that to seed a (not
+// cryptographically secure) PRNG using the fast Alea algorithm.  If
+// scope is null (or otherwise falsey) then we use a generated seed.
+//
+// However, scope will normally be the current DDP method invocation,
+// so we'll use the stream with the specified name, and we should get
+// consistent values on the client and server sides of a method call.
 DDPCommon.RandomStream.get = function (scope, name) {
   if (!name) {
     name = "default";
   }
   if (!scope) {
-    // There was no scope passed in;
-    // the sequence won't actually be reproducible.
-    return Random;
+    // There was no scope passed in; the sequence won't actually be
+    // reproducible. but make it fast (and not cryptographically
+    // secure) anyways, so that the behavior is similar to what you'd
+    // get by passing in a scope.
+    return Random.insecure;
   }
   var randomStream = scope.randomStream;
   if (!randomStream) {

@@ -266,3 +266,45 @@ package is installed:
 * [`Set`](https://github.com/zloirock/core-js#set)<br>
   A collection of unique JavaScript values of any type. Lookup and
   insertion take constant time.
+
+* [`Symbol`](https://github.com/zloirock/core-js#ecmascript-6-symbol)<br>
+  An implementation of the global
+  [`Symbol`](http://www.2ality.com/2014/12/es6-symbols.html)s namespace
+  that enables a number of other ES2015 features, such as `for`-`of` loops
+  and `Symbol.iterator` methods: `[1,2,3][Symbol.iterator]()`.
+
+* Polyfills for the following [`Object`](https://github.com/zloirock/core-js#ecmascript-6-object)-related methods:
+  * `Object.assign`
+  * `Object.is`
+  * `Object.setPrototypeOf`
+  * `Object.prototype.toString` (fixes `@@toStringTag` support)<br>
+
+  Complete reference [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object).
+
+* Polyfills for the following [`String`](https://github.com/zloirock/core-js#ecmascript-6-string)-related methods:
+  * `String.fromCodePoint`
+  * `String.raw`
+  * `String.prototype.includes`
+  * `String.prototype.startsWith`
+  * `String.prototype.endsWith`
+  * `String.prototype.repeat`
+  * `String.prototype.codePointAt`
+  * `String.prototype.trim`<br>
+
+  Complete reference [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String).
+
+* Polyfills for the following [`Array`](https://github.com/zloirock/core-js#ecmascript-6-array)-related methods:
+  * `Array.from`
+  * `Array.of`
+  * `Array.prototype.copyWithin`
+  * `Array.prototype.fill`
+  * `Array.prototype.find`
+  * `Array.prototype.findIndex`
+
+  Complete reference [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).
+
+* Polyfills for the following [`Function`](https://github.com/zloirock/core-js#ecmascript-6-function)-related properties:
+  * `Function.prototype.name` (fixes IE9+)
+  * `Function.prototype[Symbol.hasInstance]` (fixes IE9+)
+
+  Complete reference [here](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array).

@@ -518,11 +518,6 @@ _.extend(PackageSourceBatch.prototype, {
     var isopackCache = self.processor.isopackCache;
     var bundleArch = self.processor.arch;
 
-    if (! archinfo.matches(bundleArch, self.unibuild.arch))
-      throw new Error(
-        "unibuild of arch '" + self.unibuild.arch + "' does not support '" +
-          bundleArch + "'?");
-
     // Compute imports by merging the exports of all of the packages we
     // use. Note that in the case of conflicting symbols, later packages get
     // precedence.
@@ -551,6 +546,9 @@ _.extend(PackageSourceBatch.prototype, {
       // the code must access them with `Package["my-package"].MySymbol`.
       skipDebugOnly: true,
       skipProdOnly: true,
+      // We only care about getting exports here, so it's OK if we get the Mac
+      // version when we're bundling for Linux.
+      allowWrongPlatform: true,
     }, addImportsForUnibuild);
 
     // Run the linker.

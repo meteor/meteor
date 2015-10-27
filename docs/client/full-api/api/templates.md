@@ -326,10 +326,13 @@ or the DOM API.
 `Template.dynamic` allows you to include a template by name, where the name
 may be calculated by a helper and may change reactively.  The `data`
 argument is optional, and if it is omitted, the current data context
-is used.
+is used. It's also possible, to use `Template.dynamic` as a block helper
+(`{{#Template.dynamic}} ... {{/Template.dynamic}}`)
 
 For example, if there is a template named "foo", `{{dstache}}> Template.dynamic
-template="foo"}}` is equivalent to `{{dstache}}> foo}}`.
+template="foo"}}` is equivalent to `{{dstache}}> foo}}` and
+`{{dstache}}#Template.dynamic template="foo"}} ... {{dstache}}/Template.dynamic}}`
+is equivalent to `{{dstache}}#foo}} ... {{dstache}}/foo}}`.
 
 {{> apiBoxTitle name="Event Maps" id="eventmaps"}}
 
