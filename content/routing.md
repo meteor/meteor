@@ -441,6 +441,8 @@ That's it! The analytics package hooks into Flow Router and records all of the p
 
 Learn about advanced features of Flow Router:
 
+- [Simple Template-Based Authorization Example](https://github.com/alanning/meteor-roles/tree/master/examples/flow-router)
+- [Advanced Authorization with Auth Controllers Example](https://github.com/alanning/meteor-roles/tree/master/examples/flow-router-advanced)
 - Nested routes
 - XXX
 
