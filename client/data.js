@@ -162,17 +162,6 @@ DocsData = {
     "scope": "static",
     "summary": "Create a new user."
   },
-  "Accounts.emailTemplates": {
-    "filepath": "accounts-password/email_templates.js",
-    "kind": "member",
-    "lineno": 5,
-    "locus": "Server",
-    "longname": "Accounts.emailTemplates",
-    "memberof": "Accounts",
-    "name": "emailTemplates",
-    "scope": "static",
-    "summary": "Options to customize emails sent from the Accounts system."
-  },
   "Accounts.findUserByEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
@@ -2885,7 +2874,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An object where the keys are plugin\nnames and the values are version numbers or GitHub tarball URLs\nin string form.\nExample:</p>\n<pre class=\"prettyprint source lang-js\"><code>Cordova.depends({\n  &quot;org.apache.cordova.camera&quot;: &quot;0.3.0&quot;\n});</code></pre><p>Alternatively, with a GitHub URL:</p>\n<pre class=\"prettyprint source lang-js\"><code>Cordova.depends({\n  &quot;org.apache.cordova.camera&quot;:\n    &quot;https://github.com/apache/cordova-plugin-camera/tarball/d84b875c&quot;\n});</code></pre>",
+        "description": "<p>An object where the keys are plugin\nnames and the values are version numbers or GitHub tarball URLs\nin string form.\nExample:</p>\n<pre class=\"prettyprint source lang-js\"><code>Cordova.depends({\n  &quot;org.apache.cordova.camera&quot;: &quot;0.3.0&quot;\n});</code></pre><p>Alternatively, with a GitHub URL:</p>\n<pre class=\"prettyprint source lang-js\"><code>Cordova.depends({\n  &quot;org.apache.cordova.camera&quot;:\n    &quot;https://github.com/apache/cordova-plugin-camera/tarball/d84b875c449d68937520a1b352e09f6d39044fbf&quot;\n});</code></pre>",
         "name": "dependencies",
         "type": {
           "names": [
@@ -2895,7 +2884,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Specify which [Cordova / PhoneGap](http://cordova.apache.org/)\nplugins your Meteor package depends on.\n\nPlugins are installed from\n[plugins.cordova.io](http://plugins.cordova.io/), so the plugins and\nversions specified must exist there. Alternatively, the version\ncan be replaced with a GitHub tarball URL as described in the\n[Cordova / PhoneGap](https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration#meteor-packages-with-cordovaphonegap-dependencies)\npage of the Meteor wiki on GitHub."
+    "summary": "Specify which [Cordova / PhoneGap](http://cordova.apache.org/)\nplugins your Meteor package depends on.\n\nPlugins are installed from\n[plugins.cordova.io](http://plugins.cordova.io/), so the plugins and\nversions specified must exist there. Alternatively, the version\ncan be replaced with a GitHub tarball URL as described in the\n[Cordova](https://github.com/meteor/meteor/wiki/Meteor-Cordova-integration#meteor-packages-with-cordova-dependencies)\npage of the Meteor wiki on GitHub."
   },
   "DDP": {
     "filepath": "ddp-client/namespace.js",
@@ -4393,7 +4382,7 @@ DocsData = {
   "Match": {
     "filepath": "check/match.js",
     "kind": "namespace",
-    "lineno": 40,
+    "lineno": 42,
     "longname": "Match",
     "name": "Match",
     "scope": "global",
@@ -4402,7 +4391,7 @@ DocsData = {
   "Match.test": {
     "filepath": "check/match.js",
     "kind": "function",
-    "lineno": 90,
+    "lineno": 92,
     "locus": "Anywhere",
     "longname": "Match.test",
     "memberof": "Match",
@@ -4814,8 +4803,8 @@ DocsData = {
         }
       },
       {
-        "description": "<p>An email address that the external service will use to pre-fill the login prompt. Currently only supported with Meteor developer accounts.</p>",
-        "name": "userEmail",
+        "description": "<p>An email address that the external service will use to pre-fill the login prompt. Currently only supported with Meteor developer accounts and Google accounts. If used with Google, the Google User ID can also be passed.</p>",
+        "name": "loginHint",
         "type": {
           "names": [
             "String"
@@ -4959,7 +4948,7 @@ DocsData = {
   "Meteor.methods": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1530,
+    "lineno": 1536,
     "locus": "Anywhere",
     "longname": "Meteor.methods",
     "memberof": "Meteor",
@@ -4982,7 +4971,7 @@ DocsData = {
   "Meteor.onConnection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1391,
+    "lineno": 1397,
     "locus": "Server",
     "longname": "Meteor.onConnection",
     "memberof": "Meteor",
@@ -5005,7 +4994,7 @@ DocsData = {
   "Meteor.publish": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1465,
+    "lineno": 1471,
     "locus": "Server",
     "longname": "Meteor.publish",
     "memberof": "Meteor",
@@ -6456,7 +6445,7 @@ DocsData = {
       }
     ],
     "scope": "instance",
-    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use your package. If your package sets the `debugOnly`\nor `prodOnly` options to `true` when it calls `Package.describe()`, then\npackages that use your package will need to use \n`Package[\"package-name\"].ExportedVariableName` to access the value of an\nexported variable."
+    "summary": "Export package-level variables in your package. The specified\nvariables (declared without `var` in the source code) will be available\nto packages that use your package. If your package sets the `debugOnly`\nor `prodOnly` options to `true` when it calls `Package.describe()`, then\npackages that use your package will need to use\n`Package[\"package-name\"].ExportedVariableName` to access the value of an\nexported variable."
   },
   "PackageAPI#imply": {
     "kind": "function",
@@ -6955,7 +6944,7 @@ DocsData = {
   "Subscription#added": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1221,
+    "lineno": 1227,
     "locus": "Server",
     "longname": "Subscription#added",
     "memberof": "Subscription",
@@ -6996,7 +6985,7 @@ DocsData = {
   "Subscription#changed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1239,
+    "lineno": 1245,
     "locus": "Server",
     "longname": "Subscription#changed",
     "memberof": "Subscription",
@@ -7048,7 +7037,7 @@ DocsData = {
   "Subscription#error": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1164,
+    "lineno": 1170,
     "locus": "Server",
     "longname": "Subscription#error",
     "memberof": "Subscription",
@@ -7071,7 +7060,7 @@ DocsData = {
   "Subscription#onStop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1196,
+    "lineno": 1202,
     "locus": "Server",
     "longname": "Subscription#onStop",
     "memberof": "Subscription",
@@ -7094,7 +7083,7 @@ DocsData = {
   "Subscription#ready": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1272,
+    "lineno": 1278,
     "locus": "Server",
     "longname": "Subscription#ready",
     "memberof": "Subscription",
@@ -7107,7 +7096,7 @@ DocsData = {
   "Subscription#removed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1255,
+    "lineno": 1261,
     "locus": "Server",
     "longname": "Subscription#removed",
     "memberof": "Subscription",
@@ -7139,7 +7128,7 @@ DocsData = {
   "Subscription#stop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1182,
+    "lineno": 1188,
     "locus": "Server",
     "longname": "Subscription#stop",
     "memberof": "Subscription",
@@ -8119,6 +8108,18 @@ DocsData = {
     ],
     "scope": "global",
     "summary": "Returns the extension that matched the compiler plugin.\nThe longest prefix is preferred."
+  },
+  "greet": {
+    "filepath": "accounts-password/email_templates.js",
+    "kind": "function",
+    "lineno": 6,
+    "locus": "Server",
+    "longname": "greet",
+    "name": "greet",
+    "options": [],
+    "params": [],
+    "scope": "global",
+    "summary": "Options to customize emails sent from the Accounts system."
   },
   "loggingIn": {
     "filepath": "accounts-base/accounts_client.js",
