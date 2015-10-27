@@ -19,10 +19,10 @@
     6. Perhaps this should include copypasta boilerplate - a standard template/component, a standard publication, standard route, etc? Basically the stuff a scaffolding framework would generate for you?
 5. Small app
     1. Directory structure around features, not client/server
-    2. LESS/SCSS files are in the same directory as components, with a separate directory for reusable mixins, other common stuff
+    2. LESS/SCSS files are in the same directory as components
     3. One file per unit - template, method, collection, etc
     4. Each app-scoped variable is a cost to maintainability, use JS scope as much as possible to control access
-    5. XXX
+    5. There is a common directory called `imports` which has reusable JS/LESS/etc code, which can be imported from the rest of app code.
 6. Medium app
     1. Why you want to switch to this structure
         1. You're starting to have a lot of app-scoped variables
