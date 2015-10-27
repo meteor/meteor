@@ -1,4 +1,21 @@
-## Guide Standup 16th Oct
+## Standup 26th Oct
+
+With Zol, Tom, and Sashko
+
+### Decisions
+
+- Sashko/Tom will create Pull Requests with completed outlines and the other person will merge and/or discuss first. The outlines will stay in a separate
+file to the finished articles.
+- Todos will live in a new repo.
+- All outlines dones this week.
+- Example code the week after.
+- Outlines will be completed before example code is written.
+- Zol: Figure out how/when to get Matt's buy in.
+- Zol: Check whether it's true that Evan can build the website.
+- Zol: Find someone to proof/edit the english.
+
+
+## Standup 16th Oct
 
 With Zol, Tom, and Sashko
 
