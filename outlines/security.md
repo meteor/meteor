@@ -9,7 +9,7 @@
     2. Rate limiting as a first line of defense against brute force
     3. Make sure method side effects don't give away information. For example, returning how many items were affected should only tell the user about documents they should be able to access
     4. Use this.userId, never take the current user as an argument in a method
-    5. Always include the user ID and any prerequisites directly in the query, in case that stuff changed since you did the security check
+    5. Always include the user ID and any prerequisites in the selector part of every update query, in case that stuff changed since you did the security check. This is the only way to do "atomic" updates in Mongo.
     6. Check types, use audit-argument-checks and check-checker
 3. Publications
     1. Most of the points about methods are still relevant!
