@@ -24,7 +24,7 @@
         3. Any settings files should be in private or a dotted folder like .config? This saves you from a poorly-coded .json build plugin exposing your file
 5. Secret keys in settings.json
     1. Have a different settings file for each environment
-    2. Don't keep them in source control? If not, then where? LastPass?
+    2. Don't keep sensitive keys in source control, because source control systems have other priorities than security, and you might want to show someone your code without exposing secret data. You should keep your settings files in something like LastPass and then only copy them out when you need to change the settings. Most deployment platforms will have a standard way to manage this stuff on their end.
     3. Server only vs. client/server settings
 6. Roles and permissions
     1. alanning:roles
