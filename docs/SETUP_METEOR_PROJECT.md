@@ -164,5 +164,9 @@ These environments can be combined in any way. Possible values are `client` and 
 
 Environments from multiple comments in a single file will be merged. Specifying unknown environments will result in no environment being detected. Specifying environments in a file outside of a package will overwrite the environment detected by the file location.
 
+
+## Example
+A complete example of how to set up ESLint-plugin-Meteor in your project can be found [here](https://github.com/wekan/wekan/pull/370).
+
 ## Next steps
 Set up ESLint to work with your editor to benefit fully from linting.

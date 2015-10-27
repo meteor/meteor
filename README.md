@@ -72,6 +72,7 @@ Finally, enable all of the rules that you would like to use.
 ```
 
 For a more thorough introduction, read [setting up a Meteor project](docs/SETUP_DEVELOPMENT.md).
+A complete example of how to set up ESLint-plugin-Meteor in a Meteor project can be found [here](https://github.com/wekan/wekan/pull/370).
 
 # List of supported rules
 
