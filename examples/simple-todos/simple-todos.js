@@ -49,7 +49,7 @@ if (Meteor.isClient) {
       // Clear form
       event.target.text.value = "";
     },
-    "change .hide-completed input": function (event) {
+    "change .hide-completed": function (event) {
       Session.set("hideCompleted", event.target.checked);
     }
   });
