@@ -7,6 +7,8 @@
 * Rúben Alexandre da Fonseca Marques, ei10117@fe.up.pt 
 * Nuno Soares Marques, ee11291@fe.up.pt
 
+A arquitetura de software compreende o conjunto de decisões significativas acerca da organização de um sistema de software, nomeadamente: nível mais elevado da decomposição do sistema em partes (estrutura de alto nível), com indicação dos blocos básicos de construção de cada parte (classes, tabelas, ficheiros) e especificação de comportamentos envolvendo colaborações entre as várias partes do sistema (mecanismos importantes).
+
 ## Vista Lógica
 
 ## Vista de Implementação
