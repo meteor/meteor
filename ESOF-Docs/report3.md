@@ -17,11 +17,11 @@
 
 ##Referências
 
-http://pt.slideshare.net/mongodb/meteor-next-generation-stack
-https://www.meteor.com/tutorials/blaze/creating-an-app
-http://docs.meteor.com/#/full/
-https://www.meteor.com/mini-databases
-https://www.mongodb.com/
+* http://pt.slideshare.net/mongodb/meteor-next-generation-stack
+* https://www.meteor.com/tutorials/blaze/creating-an-app
+* http://docs.meteor.com/#/full/
+* https://www.meteor.com/mini-databases
+* https://www.mongodb.com/
 
 
 
