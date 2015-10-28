@@ -19,6 +19,8 @@ diagramas de pacotes lógicos em UML. Os diagramas de pacotes lógicos incluem p
 modelar a base de dados e a interface com o utilizador) e dependências entre pacotes, sem preocupação de alocar classes a
 componentes, processos ou máquinas.
 
+O seguinte diagrama mostra a vista lógica alusivo ao projeto Meteor:
+
 ## Vista de Implementação
 
 ## Vista de Processo
