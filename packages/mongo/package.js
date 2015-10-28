@@ -22,11 +22,20 @@ Npm.strip({
 
 Package.onUse(function (api) {
   api.use('npm-mongo', 'server');
+  api.use('allow-deny');
 
-  api.use(['random', 'ejson', 'underscore', 'minimongo',
-           'ddp', 'tracker', 'diff-sequence', 'mongo-id'],
-          ['client', 'server']);
-  api.use('check', ['client', 'server']);
+  api.use([
+    'random',
+    'ejson',
+    'underscore',
+    'minimongo',
+    'ddp',
+    'tracker',
+    'diff-sequence',
+    'mongo-id',
+    'check',
+    'ecmascript'
+  ]);
 
   // Binary Heap data structure is used to optimize oplog observe driver
   // performance.
