@@ -21,6 +21,8 @@ componentes, processos ou máquinas.
 
 O seguinte diagrama mostra a vista lógica alusivo ao projeto Meteor:
 
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/LogicDiagram.png)
+
 ## Vista de Implementação
 
 ## Vista de Processo
