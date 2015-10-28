@@ -67,6 +67,7 @@ Finally, enable all of the rules that you would like to use.
     "meteor/no-session": 2,
     "meteor/no-blaze-lifecycle-assignment": 2,
     "meteor/no-zero-timeout": 2
+    "meteor/blaze-consistent-eventmap-params": 2,
   }
 }
 ```
@@ -91,6 +92,7 @@ A complete example of how to set up ESLint-plugin-Meteor in a Meteor project can
 * [no-session](docs/rules/no-session.md): Prevent usage of Session
 * [no-blaze-lifecycle-assignment](docs/rules/no-blaze-lifecycle-assignment.md): Prevent deprecated template lifecycle callback assignments
 * [no-zero-timeout](docs/rules/no-zero-timeout.md): Prevent usage of Meteor.setTimeout with zero delay
+* [blaze-consistent-eventmap-params](docs/rules/blaze-consistent-eventmap-params.md): Force consistent event handler parameters in event maps
 
 ## To Do
 
