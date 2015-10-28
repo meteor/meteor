@@ -17,4 +17,10 @@
 
 ##Referências
 
+http://pt.slideshare.net/mongodb/meteor-next-generation-stack
+
+https://www.meteor.com/tutorials/blaze/creating-an-app
+
+http://docs.meteor.com/#/full/
+
 ## FEUP ESOF MIEIC 
