@@ -1,12 +1,16 @@
 # Security
 
 1. Main concept: Security surface area of a Meteor app
-    1. The way to security is to understand the attack surface, and guard against all possible attacks
-    1. This is one of the reasons why you shouldn't use `allow/deny` in serious production apps - it's just too hard to judge the attack surface
-    2. Conclusion: Never Trust The Client - anyone can call all of your app's endpoints, not just the client you wrote. There's no way to guard against this, so you may as well not even try. Consider projects like SnapchatFS
-    3. It's not always clear where the server ends and the client begins in a Meteor app, but it's important to be aware of that for security
+    1. The way to security is mainly through two ideas:
+        1. Understand the security domains of your app - code on the client is inherently not secure, and code on the server can be trusted
+            1. Never Trust The Client - anyone can call all of your app's endpoints, not just the client you wrote. There's no way to guard against this, so you may as well not even try. Consider projects like SnapchatFS
+            2. It's valuable to do validation of data when it crosses this boundary, so that most of your "secure" code doesn't have to check its inputs all of the time
+        2. Understand the attack surface, which is the boundary between insecure and secure code, and guard against all possible attacks
+            1. It's not always clear where the server ends and the client begins in a Meteor app, but it's important to be aware of that for security
+            1. This is one of the reasons why you shouldn't use `allow/deny` in serious production apps - it's just too hard to judge the attack surface
 2. Methods
-    1. Don't write generic methods, make sure you know what each argument is exactly, and what it could do
+    1. Don't write generic methods, make sure you know what each argument is exactly, and what it could do when passed through your method's code
+        1. This means if you have a method that inserts a document that came from the client, you need to ensure that all of the keys and values are what you expect so that you don't get "Mongo injection"
     2. Rate limiting as a first line of defense against brute force
     3. Make sure method side effects don't give away information. For example, returning how many items were affected should only tell the user about documents they should be able to access
     4. Use this.userId, never take the current user as an argument in a method
