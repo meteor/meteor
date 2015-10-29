@@ -1499,6 +1499,39 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.add(
+  "livedata stub - unmocking a method after a test",
+  function (test) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    conn.methods({
+      foo: function () {
+        return 'not mocked';
+      }
+    });
+
+    conn.mockMethods({
+      foo: function () {
+        return 'mocked'
+      }
+    });
+
+    conn.unmockMethods(['foo']);
+
+    conn.call('foo', _.identity);
+
+    testGotMessage(test, stream, {
+      msg: 'method',
+      method: 'foo',
+      params: '*',
+      id: '*',
+    });
+  }
+);
+
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
     var ddpUrl = Meteor._relativeToSiteRootUrl("/");

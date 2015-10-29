@@ -736,6 +736,13 @@ _.extend(Connection.prototype, {
     });
   },
 
+  unmockMethods: function (methodNames) {
+    var self = this;
+    methodNames.forEach(function (methodName) {
+      delete self._methodMocks[methodName];
+    });
+  },
+
   /**
    * @memberOf Meteor
    * @summary Invokes a method passing any number of arguments.
