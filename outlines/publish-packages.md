@@ -11,9 +11,8 @@
 3. How to write great documentation.
   1. README vs longer documentation/guide
   2. Is the documentation too complicated? Maybe the package should be simpler?
-  3. Writing guide documentation ;)
-  4. Maintaining a changelog
-  5. Licensing
+  3. Maintaining a changelog
+  4. Licensing
 4. Testing your package now and in the future
   1. See testing chapter
   2. Use travis + special badge to test against core + devel
