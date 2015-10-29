@@ -1,4 +1,4 @@
-## Initial meeting about guide website
+## Initial meeting about guide website 29th Oct
 
 With Evan and Sashko
 
