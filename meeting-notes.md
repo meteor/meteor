@@ -1,3 +1,32 @@
+## Initial meeting about guide website
+
+With Evan and Sashko
+
+1. Evan has experience with Hexo, so we can get going the fastest using that
+    1. You can see an example at http://vuejs.org/guide/
+2. Deployment
+    1. Continuously deployed from one or more branches
+        1. Different branches will eventually be different versions/languages
+    2. Deployment from PRs is a nice to have
+    3. Deployment location - whatever is easiest
+        1. Digital ocean
+        2. S3
+3. UI components
+    1. A component for representing an external packages
+        1. https://www.dropbox.com/s/w5229hslbcl7gql/Screenshot%202015-10-29%2013.46.40.png?dl=0
+    2. Citing an external source or article
+    3. Table of contents
+        1. Could be in the sidebar, or at the top of the page
+4. Navigation structure
+    1. To start, two types of content
+        1. Guide articles
+        2. Random articles like how to install mobile stuff on Mac OS
+    2. In the future, an API reference section
+5. Get a design from Dom
+    4. Ask him if he has time
+    5. We want the navbar from meteor.com (http://meteor.com/) eventually
+5. Invite Evan to checkin meeting
+
 ## Standup 26th Oct
 
 With Zol, Tom, and Sashko
