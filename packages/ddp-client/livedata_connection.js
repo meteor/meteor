@@ -727,7 +727,7 @@ _.extend(Connection.prototype, {
     });
   },
 
-  mockMethods: function (methods) {
+  stubMethods: function (methods) {
     var self = this;
     _.each(methods, function (func, name) {
       if (typeof func !== 'function')
@@ -736,7 +736,7 @@ _.extend(Connection.prototype, {
     });
   },
 
-  unmockMethods: function (methodNames) {
+  unstubMethods: function (methodNames) {
     var self = this;
     methodNames.forEach(function (methodName) {
       delete self._methodMocks[methodName];

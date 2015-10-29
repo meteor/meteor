@@ -1442,7 +1442,7 @@ _.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function (version) {
 });
 
 Tinytest.addAsync(
-  "livedata stub - mocking a method for testing to return something",
+  "livedata stub - stubbing a method for testing to return something",
   function (test, onComplete) {
     var stream = new StubStream();
     var conn = newConnection(stream);
@@ -1455,7 +1455,7 @@ Tinytest.addAsync(
       }
     });
 
-    conn.mockMethods({
+    conn.stubMethods({
       foo: function () {
         return 'mocked';
       }
@@ -1470,7 +1470,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "livedata stub - mocking a method for testing to throw",
+  "livedata stub - stubbing a method for testing to throw",
   function (test, onComplete) {
     var stream = new StubStream();
     var conn = newConnection(stream);
@@ -1485,7 +1485,7 @@ Tinytest.addAsync(
 
     var error = new Error('mocked method error');
 
-    conn.mockMethods({
+    conn.stubMethods({
       foo: function () {
         throw error;
       }
@@ -1500,7 +1500,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.add(
-  "livedata stub - unmocking a method after a test",
+  "livedata stub - unstubbing a method after a test",
   function (test) {
     var stream = new StubStream();
     var conn = newConnection(stream);
@@ -1513,13 +1513,13 @@ Tinytest.add(
       }
     });
 
-    conn.mockMethods({
+    conn.stubMethods({
       foo: function () {
         return 'mocked'
       }
     });
 
-    conn.unmockMethods(['foo']);
+    conn.unstubMethods(['foo']);
 
     conn.call('foo', _.identity);
 
@@ -1527,7 +1527,7 @@ Tinytest.add(
       msg: 'method',
       method: 'foo',
       params: '*',
-      id: '*',
+      id: '*'
     });
   }
 );
