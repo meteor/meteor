@@ -8,9 +8,13 @@
   1. Throttling
 3. Responsive design
   1. Very basic ideas using media queries
-  2. Reference mobile chapter, talk about Cordova wrapper
+  2. Suggest some helpful UI libraries such as bootstrap, ionic
+  3. Reference mobile chapter, talk about Cordova wrapper
 4. Accessiblity
 5. Internationalization - using `tap:i18n`
+  1. Template / HTML text
+  2. Error messages / results of methods
+  3. Emails and server-generated communication
 6. Subscriptions and readiness
   1. Common patterns around ready vs not-found
 7. Pagination + Listing data
