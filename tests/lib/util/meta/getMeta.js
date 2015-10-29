@@ -8,12 +8,17 @@ const getMeta = rewire('../../../../dist/util/meta/getMeta')
 getMeta.__set__('memoizedGetRelativePath', function (path) {
   return path === '<input>' ? false : path
 })
+getMeta.__set__('process', {
+  cwd: function () {
+    return '/Users/foo/project/client'
+  }
+})
 
 describe('getMeta', function () {
   it('returns information when a filename is set', function () {
     const context = {
       getFilename () {
-        return 'client/index1.js'
+        return '/User/foo/project/client/index1.js'
       },
       getSourceCode () {
         return {
@@ -31,7 +36,7 @@ describe('getMeta', function () {
   it('overwrites the env with the one from comments', function () {
     const context = {
       getFilename () {
-        return 'client/index2.js'
+        return '/User/foo/project/client/index2.js'
       },
       getSourceCode () {
         return {
@@ -62,5 +67,23 @@ describe('getMeta', function () {
     const result = getMeta(context)
     assert.equal(typeof result, 'object')
     assert.equal(result.env, NON_METEOR)
+  })
+
+  it('uses the working directory in SublimeLinter', function () {
+    const context = {
+      getFilename () {
+        return 'client/index3.js'
+      },
+      getSourceCode () {
+        return {
+          getAllComments () {
+            return []
+          }
+        }
+      }
+    }
+    const result = getMeta(context)
+    assert.equal(typeof result, 'object')
+    assert.equal(result.env, CLIENT)
   })
 })
