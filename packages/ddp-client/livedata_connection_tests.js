@@ -1441,6 +1441,64 @@ _.each(LivedataTest.SUPPORTED_DDP_VERSIONS, function (version) {
   });
 });
 
+Tinytest.addAsync(
+  "livedata stub - mocking a method for testing to return something",
+  function (test, onComplete) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    conn.methods({
+      foo: function () {
+        return 'not mocked';
+      }
+    });
+
+    conn.mockMethods({
+      foo: function () {
+        return 'mocked';
+      }
+    });
+
+    conn.call('foo', function (error, result) {
+      test.equal(error, undefined);
+      test.equal(result, 'mocked');
+      onComplete();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  "livedata stub - mocking a method for testing to throw",
+  function (test, onComplete) {
+    var stream = new StubStream();
+    var conn = newConnection(stream);
+
+    startAndConnect(test, stream);
+
+    conn.methods({
+      foo: function () {
+        return 'not mocked';
+      }
+    });
+
+    var error = new Error('mocked method error');
+
+    conn.mockMethods({
+      foo: function () {
+        throw error;
+      }
+    });
+
+    conn.call('foo', function (error, result) {
+      test.equal(error, error);
+      test.equal(result, undefined);
+      onComplete();
+    });
+  }
+);
+
 var getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
     var ddpUrl = Meteor._relativeToSiteRootUrl("/");
