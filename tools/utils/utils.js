@@ -477,9 +477,10 @@ exports.isUrlWithFileScheme = function (x) {
 };
 
 exports.isUrlWithSha = function (x) {
-  // For now, just support http/https, which is at least less restrictive than
-  // the old "github only" rule.
-  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+  // These are the various protocols that NPM supports, which we use to download
+  // both NPM and Cordova dependencies
+  // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
+  return /^(https|git|git\+ssh|git\+http|git\+https)?:\/\/.*[0-9a-f]{40}/.test(x);
 };
 
 exports.isPathRelative = function (x) {
