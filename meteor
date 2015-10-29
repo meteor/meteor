@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Note: 0.5.17 used on branch origin/npm3
 BUNDLE_VERSION=0.5.16
 
 # OS Check. Put here because here is where we download the precompiled
