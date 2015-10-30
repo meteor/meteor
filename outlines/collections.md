@@ -24,7 +24,7 @@
 4. Custom mutators
   1. In a public API it's best to be *less* general rather than *more* general (see security article)
   2. Your methods are your public API.
-  3. So, if in doubt, write a `bar.addFoo` mutator rather than allowing `bar.update` to add `foo`.
+  3. So write a `bar.addFoo` mutator rather than allowing `bar.update` to add `foo`.
   4. Using the `Method` pattern to wrap a mutator in a public API of the same name.
     1. Reference to Dave Weldon's post on the subject / see also Form chapter.
 4. Designing your data schema
