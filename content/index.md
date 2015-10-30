@@ -1,4 +1,6 @@
-# Welcome!
+---
+title: Welcome!
+---
 
 This is a work in progress deployment of the Meteor Guide.
 

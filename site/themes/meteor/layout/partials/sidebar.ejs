@@ -1,0 +1,9 @@
+<ul class="menu-root">
+  <% site.pages.find({}).each(function (p) { %>
+    <li>
+      <a href="/<%- p.path %>" class="sidebar-link<%- page.title === p.title ? ' current' : '' %>">
+        <%- p.title %>
+      </a>
+    </li>
+  <% }) %>
+</ul>

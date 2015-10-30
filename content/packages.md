@@ -1,4 +1,6 @@
-# Building packages
+---
+title: Building Packages
+---
 
 In Meteor, there are two environments for writing code: apps and packages. The app environment is designed for rapid iteration and does a lot for you automatically. The package environment gives you much more control and enables you to ship more easily reusable and testable code.
 

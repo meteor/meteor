@@ -1,4 +1,6 @@
-# Application structure
+---
+title: "Application structure"
+---
 
 Since everything is JavaScript and code can be shared between all parts of your app, Meteor presents new opportunities for code organization. But with great power comes great responsibility.
 

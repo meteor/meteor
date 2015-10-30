@@ -1,4 +1,6 @@
-# Meteor Guide: Routing
+---
+title: "Meteor Guide: Routing"
+---
 
 After reading this guide, you'll know:
 
