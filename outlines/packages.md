@@ -15,6 +15,10 @@
     6. Cordova plugins
     7. NPM packages
         1. NPM on the client with Browserify
+        2. Converting asynchronous Node APIs to synchronous-looking Fiber APIs
+            1. Meteor.wrapAsync
+            2. Promise and Promise.await
+            3. (Probably in Meteor 1.3) `async`/`await`
 8. Local packages vs. published packages, and the Isopack format
 9. Testing your package (basically just link to testing guide)
 9. Structuring your package
