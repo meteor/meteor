@@ -6,10 +6,10 @@ render the template. -->
 <template name="__dynamic">
   {{checkContext}}
   {{#if dataContextPresent}}
-    {{> __dynamicWithDataContext}}
+    {{# __dynamicWithDataContext}}{{> Template.contentBlock}}{{/__dynamicWithDataContext}}
   {{else}}
     {{! if there was no explicit 'data' argument, use the parent context}}
-    {{> __dynamicWithDataContext template=template data=..}}
+    {{# __dynamicWithDataContext template=template data=..}}{{> Template.contentBlock}}{{/__dynamicWithDataContext}}
   {{/if}}
 </template>
 
@@ -17,6 +17,7 @@ render the template. -->
 the template to render) and a `data` property, which can be falsey. -->
 <template name="__dynamicWithDataContext">
   {{#with chooseTemplate template}}
-    {{> .. ../data}}    {{!-- The .. is evaluated inside {{#with ../data}} --}}
+    {{!-- The .. is evaluated inside {{#with ../data}} --}}
+    {{# .. ../data}}{{> Template.contentBlock}}{{/ ..}}
   {{/with}}
 </template>

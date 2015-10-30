@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.1.2'
+  version: '1.1.3'
 });
 
 Package.onUse(function (api) {
-  api.use(['underscore', 'tracker', 'ejson']);
+  api.use(['underscore', 'tracker', 'ejson', 'ecmascript']);
   // If we are loading mongo-livedata, let you store ObjectIDs in it.
   api.use('mongo', {weak: true});
   api.export('ReactiveDict');

@@ -62,14 +62,18 @@ Mongo.Collection = function (name, options) {
   switch (options.idGeneration) {
   case 'MONGO':
     self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      var src = name
+            ? DDP.randomStream('/collection/' + name)
+            : Random.insecure;
       return new Mongo.ObjectID(src.hexString(24));
     };
     break;
   case 'STRING':
   default:
     self._makeNewID = function () {
-      var src = name ? DDP.randomStream('/collection/' + name) : Random;
+      var src = name
+            ? DDP.randomStream('/collection/' + name)
+            : Random.insecure;
       return src.id();
     };
     break;
@@ -746,7 +750,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
     self._restricted = true;
 
     _.each(['insert', 'update', 'remove'], function (name) {
-      if (options[name]) {
+      if (options.hasOwnProperty(name)) {
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }

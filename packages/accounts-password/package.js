@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.1.3"
+  version: "1.1.4"
 });
 
 Package.onUse(function(api) {
@@ -21,6 +21,7 @@ Package.onUse(function(api) {
   api.use('random', ['server']);
   api.use('check');
   api.use('underscore');
+  api.use('ecmascript');
 
   api.addFiles('email_templates.js', 'server');
   api.addFiles('password_server.js', 'server');

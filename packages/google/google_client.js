@@ -54,6 +54,10 @@ Google.requestCredential = function (options, credentialRequestCompleteCallback)
     loginUrlParameters.prompt = 'consent'
   }
 
+  if (options.loginHint) {
+    loginUrlParameters.login_hint = options.loginHint;
+  }
+
   var loginStyle = OAuth._loginStyle('google', config, options);
   // https://developers.google.com/accounts/docs/OAuth2WebServer#formingtheurl
   _.extend(loginUrlParameters, {
