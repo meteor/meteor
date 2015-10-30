@@ -2,10 +2,24 @@
 
 1. Introduction to Blaze -- the tracker-backed handlebars like templating syntax
   1. Example of spacebars syntax, data context + helpers
-  2. Hmmm. this is basically just the exact content of https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md#each I'm tempted to more or less just work through this verbatim for the first few sections. (sans the complicated stuff)
+  2. Data contexts and access - name lookup (`.`, `this`, `..`, `[0]`), and null values
+  3. Helpers, arguments, options
+  4. Inclusion of other templates + arguments, passing data contexts
+  5. Helpers inside tags -- returning strings and objects, `checked={{isChecked}}`
+  6. Nested helpers + sub expressions
+  7. Block helpers (you can create them with templates, see 10. below)
+  8. Safestrings and `{{{`
+  9. Builtin block helpers
+    1. `{{#if/unless}}`
+    2. `{{#with}}`
+    3. `{{#each}}`
+    3. `{{#let}}`
+  10. Comments
+  11. Strictness
+  12. Escaping
 2. Creating reusable "pure" components with Blaze / best practice (a lot of this is repeating @sanjo's boilerplate)
   1. Validating data context fits a schema
-  2. Always set data contexts to `{name: doc}` rather than just `doc`
+  2. Always set data contexts to `{name: doc}` rather than just `doc`. Always set a d.c on an inclusion.
   3. Use `{{#each .. in .. }}` to achieve the above
   4. Use the template instance as a component -- adding a `{{template}}` helper to access it
   5. Use a (named / scoped on _id if possible) reactive dict for instance state
