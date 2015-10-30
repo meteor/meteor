@@ -41,6 +41,8 @@
 8. Packaging
     1. Meteor packages
         1. Packages on Atmosphere vs. local packages
+            1. The built format is totally different
+            2. See an example of a built package in `~/.meteor/packages` (we'll pick a specific example and compare the source code and output)
         2. Link to chapter about building a package
     2. NPM
         1. In your app with meteorhacks:npm
@@ -48,4 +50,3 @@
         3. Bundle for client-side with cosmos:browserify, link to React guide for React components
     3. Bower
         1. mquandalle:bower, learn more about this. Perhaps it's just a link
-
