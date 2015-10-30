@@ -33,7 +33,7 @@
     "invariant": "2.1.2",
     "lodash.find": "3.2.1",
     "lodash.memoize": "3.0.4",
-    "babel-runtime": "5.8.29",
+    "babel-runtime": "6.0.14",
     "path-exists": "2.0.0"
   },
   "devDependencies": {
