@@ -43,9 +43,7 @@
   2. Returning a cursors from a helper to get related documents
   3. Using a `cursor-utils` package to narrow down cursors etc [HELP NEEDED?]
 7. Advanced schema usage
-  1. Sub-schemas
-  2. Object + array properties
-  3. Custom validation
+  1. https://github.com/aldeed/meteor-simple-schema
   4. Using JSONSchema with SS
 8. Other packages / approaches
   1. Astronomy
