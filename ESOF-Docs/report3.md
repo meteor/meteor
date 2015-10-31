@@ -25,7 +25,7 @@ O seguinte diagrama mostra a vista lógica alusivo ao projeto Meteor:
 
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/LogicDiagram.png)
 
-O Meteor é composto por 4 pacotes que definem a estrutura base do projeto. Sendo eles Meteor Packages, Client, Server e Command Line Tool "Meteor". Os pacotes MongoDB e Minimongo são pacotes referentes às bases de dados que o Meteor recorre.
+O Meteor é composto por 4 pacotes que definem a estrutura base do projeto. Sendo eles Meteor Packages, Client, Server e Command Line Tool "Meteor". Os pacotes MongoDB e MiniMongo são pacotes referentes às bases de dados que o Meteor recorre.
 Os restantes pacotes são pacotes essenciais para o funcionamento dos pacotes da estrutura base.
 
 **Meteor Packages** é o conjunto de todos os pacotes que o Meteor utiliza para o funcionamento "base" da app que queremos criar. É designado como a biblioteca dos pacotes do Meteor. Todos os pacotes podem ser consultados [aqui] (https://github.com/meteor/meteor/tree/devel/packages). 
