@@ -25,6 +25,8 @@ O seguinte diagrama mostra a vista lógica alusivo ao projeto Meteor:
 
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/LogicDiagram.png)
 
+O Meteor é composto por 
+
 ## Vista de Implementação
 
 ## Vista de Processo
