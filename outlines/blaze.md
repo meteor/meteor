@@ -1,6 +1,6 @@
 # Blaze
 
-1. Introduction to Blaze -- the tracker-backed handlebars like templating syntax
+1. Introduction to Spacebars -- the tracker-backed handlebars like templating syntax
   1. Example of spacebars syntax, data context + helpers
   2. Data contexts and access - name lookup (`.`, `this`, `..`, `[0]`), and null values
   3. Helpers, arguments, options
@@ -11,9 +11,9 @@
   8. Safestrings and `{{{`
   9. Builtin block helpers
     1. `{{#if/unless}}`
-    2. `{{#with}}`
-    3. `{{#each}}`
+    2. `{{#each .. in ..}}`
     3. `{{#let}}`
+      1. NOTE: we need to ensure that issues around lexical scope and event handlers are resolved before we fail to even mention `{{#each}}` and `{{#with}}`. But we should attempt it.
   10. Comments
   11. Strictness
   12. Escaping
@@ -21,7 +21,7 @@
   1. Validating data context fits a schema
   2. Always set data contexts to `{name: doc}` rather than just `doc`. Always set a d.c on an inclusion.
   3. Use `{{#each .. in .. }}` to achieve the above
-  4. Use the template instance as a component -- adding a `{{template}}` helper to access it
+  4. Use the template instance as a component -- adding a `{{instance}}` helper to access it
   5. Use a (named / scoped on _id if possible) reactive dict for instance state
   6. Attach functions to the template instance (in `onCreated`) to sensibly modify state
   7. Place `const template = Template.instance()` at the top of all helpers that care about state
@@ -29,10 +29,12 @@
   9. Use `.js-X` in event maps
   10. Pass extra content to components with `Template.contentBlock`, or named template arguments
   11. Use the `onRendered` callback to integrate w/ 3rd party libraries
+    1. Waiting on subscriptions w/ `autorun` pattern: https://github.com/meteor/guide/pull/75/files#r43545240
 3. Writing "smart" components with Blaze
   1. All of section 2.
   2. Use `this.autorun` and `this.subscribe`, listening to `FlowRouter` and `this.state`
   3. Set up cursors in helpers to be passed into pure sub-components, and filtered with `cursor-utils`
+    1. Why cursors are preferred to arrays.
   4. Access stores directly from helpers.
 4. Reusing code between templates
   1. Prefer utilities/composition to mixins or inheritance
