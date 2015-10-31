@@ -36,6 +36,8 @@ O seguinte diagrama mostra a vista lógica alusivo ao projeto Meteor:
 * http://docs.meteor.com/#/full/
 * https://www.meteor.com/mini-databases
 * https://www.mongodb.com/
+* https://www.npmjs.com/
+* http://coffeescript.org/
 
 
 
