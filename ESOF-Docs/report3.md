@@ -30,7 +30,9 @@ Os restantes pacotes são pacotes essenciais para o funcionamento dos pacotes da
 
 Meteor Package é o conjunto de todos os pacotes que o Meteor utiliza para o funcionamento "base" da app que queremos criar. Podem ser consultados [aqui] (https://github.com/meteor/meteor/tree/devel/packages). 
 
-O pacote Client, como o nome indica, vai ser responsável  
+O pacote Client, como o nome indica, vai ser responsável por efetuar todos os movimentos pretendidos pelo utilizador. Dentro do pacote contém templates globais que são de intervenção em caso de erro, estilos de app, templates de app com código Javascript e dois ficheiros, main.html e main.js, que estão responsáveis por guardar o main template e o seu código. 
+
+O pacote Server irá interagir, a partir do protocolo DDP, com o Client. DDP é um protocolo dinâmico de websockets que será usado para a comunicação entre o Server e o Client. O Server possui dois ficheiros que contém o nosso código de publicação como responsável da app e código que irá alimentar a nossa base de dados a partir da primeira vez que corremos a app.
 
 ## Vista de Implementação
 
@@ -47,6 +49,8 @@ O pacote Client, como o nome indica, vai ser responsável
 * https://www.mongodb.com/
 * https://www.npmjs.com/
 * http://coffeescript.org/
+* https://www.meteor.com/ddp
+* https://www.discovermeteor.com/blog/what-goes-where/
 
 
 
