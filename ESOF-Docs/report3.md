@@ -12,6 +12,8 @@ nomeadamente: nível mais elevado da decomposição do sistema em partes (estrut
 básicos de construção de cada parte (classes, tabelas, ficheiros) e especificação de comportamentos envolvendo colaborações
 entre as várias partes do sistema.
 
+A abordagem à arquitetura do Meteor será fundamentado no modelo de 4+1 vistas de arquitetura de software. As 4 vistas representam a vista lógica, vista de implementação, vista de processo e vista física. A vista adicional (+1) trata-se da vista de casos de utilização cujo diagrama foi já apresentado no último relatório exposto.
+
 ## Vista Lógica
 
 A estrutura lógica de alto nível do sistema de software (divisão de responsabilidades), é descrita através de um ou mais
