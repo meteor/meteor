@@ -60,8 +60,9 @@ PollingObserveDriver = function (options) {
   if (options._testOnlyPollCallback) {
     self._testOnlyPollCallback = options._testOnlyPollCallback;
   } else {
+    var pollingInterval = self._cursorDescription.options._pollingInterval || 10 * 1000;
     var intervalHandle = Meteor.setInterval(
-      _.bind(self._ensurePollIsScheduled, self), 10 * 1000);
+      _.bind(self._ensurePollIsScheduled, self), pollingInterval);
     self._stopCallbacks.push(function () {
       Meteor.clearInterval(intervalHandle);
     });
