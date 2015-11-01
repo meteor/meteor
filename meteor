@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Note: 0.5.17 used on branch origin/npm3
 BUNDLE_VERSION=0.5.16
