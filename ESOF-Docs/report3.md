@@ -42,6 +42,8 @@ O **pacote Command Line Tool "Meteor"**, como no diagrama indica, irá ser uma p
 
 ## Vista Física ou de Deployment
 
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Deployment.png)
+
 ##Referências
 
 * http://pt.slideshare.net/mongodb/meteor-next-generation-stack
