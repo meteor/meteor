@@ -356,6 +356,20 @@ selftest.define("rails reminders", function () {
   run = s.run("dbconsole");
   run.matchErr("Did you mean 'meteor mongo'?");
   run.expectExit(1);
+
+  // It should ignore args
+  run = s.run("server", "ignoredArg");
+  run.matchErr("Did you mean 'meteor run'?");
+  run.expectExit(1);
+  run = s.run("console", "ignoredArg");
+  run.matchErr("Did you mean 'meteor shell'?");
+  run.expectExit(1);
+  run = s.run("new", "ignoredArg");
+  run.matchErr("Did you mean 'meteor create'?");
+  run.expectExit(1);
+  run = s.run("dbconsole", "ignoredArg");
+  run.matchErr("Did you mean 'meteor mongo'?");
+  run.expectExit(1);
 });
 
 selftest.define("old cli tests (converted)", function () {

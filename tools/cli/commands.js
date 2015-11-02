@@ -376,6 +376,7 @@ function doRunCommand(options) {
 // Convenience reminder for Rails refugees. :)
 main.registerCommand({
   name: 'server',
+  maxArgs: Infinity,
   requiresRelease: false,
   requiresApp: false,
   pretty: false,
@@ -431,6 +432,7 @@ main.registerCommand({
 // Convenience reminder for Rails refugees. :)
 main.registerCommand({
   name: 'console',
+  maxArgs: Infinity,
   requiresRelease: false,
   requiresApp: false,
   pretty: false,
@@ -791,6 +793,7 @@ ${nonCodeFileExts.join(', ')}
 // Convenience reminder for Rails refugees. :)
 main.registerCommand({
   name: 'new',
+  maxArgs: Infinity,
   requiresRelease: false,
   requiresApp: false,
   pretty: false,
@@ -1209,6 +1212,7 @@ to this command.`);
 // Convenience reminder for Rails refugees. :)
 main.registerCommand({
   name: 'dbconsole',
+  maxArgs: Infinity,
   requiresRelease: false,
   requiresApp: false,
   pretty: false,
