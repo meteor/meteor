@@ -37,4 +37,4 @@
     2. There's a community project in progress to make this simpler
 8. Authentication, roles, and permissions
     1. Read about roles and permissions in the security article
-    2. Read about hiding certain views from people in the Routing chapter (XXX perhaps we should move that stuff here instead?)
+    2. Read about hiding certain views from people in the Routing chapter
