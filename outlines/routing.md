@@ -31,6 +31,7 @@
     * Displaying a link
     * Going to a route programmatically
     * Setting individual parameters with Flow Router
+    * Setting a parameter with serialized JSON data
 * Redirects
     * Redirecting when a page has been moved to a different URL
     * Redirecting when data has been moved
