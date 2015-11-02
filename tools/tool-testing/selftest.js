@@ -1061,8 +1061,8 @@ _.extend(BrowserStackClient.prototype, {
       '-skipCheck'
     ];
     self.tunnelProcess = child_process.execFile(
-      '/bin/bash',
-      ['-c', args.join(' ')]
+      '/usr/bin/env',
+      ['bash', '-c', args.join(' ')]
     );
 
     // Called when the SSH tunnel is established.
