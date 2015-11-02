@@ -1,7 +1,7 @@
 1. What does Meteor do for you?
     1. Standardized concept of userId in DDP
     2. accounts-base package that has a standard user database, and can be plugged with different login systems
-2. The fastest way to get set up for a prototype- accounts-ui
+2. The fastest way to get set up for a prototype: accounts-ui
     1. List of easy to set up login providers, code examples
     2. Read more about accounts user interfaces later
 3. Password login
@@ -28,10 +28,10 @@
     2. Get help from splendido to flesh out this section - just the basics, then link to the docs
     3. Figure out what to do about useraccounts and adding fields to profile
 6. Adding custom data about users
-    1. Why it's not great to add to the default user collection
-        1. How to disable profile
-    2. Creating a new collection called UserProfiles and denormalizing the right data there
-    3. Using a collection helper to get the profile for a user
+    1. Adding new top-level fields onto the users collection
+    2. How and why to disable profile
+    3. Why top-level fields are better than nested objects in DDP (link to collections/schema article)
+    4. Security concerns - don't accidentally publish secret data to the client
 7. Allowing the same user to log in through different methods - “account merging”
     1. Update the existing account using requestCredential
     2. There's a community project in progress to make this simpler
