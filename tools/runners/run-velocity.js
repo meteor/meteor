@@ -1,5 +1,6 @@
 var Console = require('../console/console.js').Console;
-var isopackets = require('../tool-env/isopackets.js');
+var isopackets = require("../tool-env/isopackets.js");
+var files = require('../fs/files.js');
 
 var phantomjs = require('phantomjs');
 var child_process = require('child_process');
@@ -49,13 +50,21 @@ var runVelocity = function (url) {
           this.connection.registerStore("velocityTestReports", {
             update: function (msg) {
               if (msg.msg === "added") {
-                var testDesc = msg.fields.framework + " : " +
-                      msg.fields.ancestors.join(":") + " => " + msg.fields.name;
+                var testDesc = msg.fields.framework + " : ";
+                if (msg.fields.ancestors) {
+                  testDesc += msg.fields.ancestors.join(":") + " ";
+                }
+                testDesc += " => " + msg.fields.name;
                 if (msg.fields.result === "passed") {
                   console.log("PASSED", testDesc);
                 } else if (msg.fields.result === "failed") {
                   console.error("FAILED", testDesc);
-                  console.log(msg.fields.failureStackTrace);
+                  if (msg.fields.failureMessage) {
+                    console.error(msg.fields.failureMessage);
+                  }
+                  if (msg.fields.failureStackTrace) {
+                    console.error(msg.fields.failureStackTrace);
+                  }
                 }
               }
             }
@@ -116,11 +125,24 @@ var runVelocity = function (url) {
 
       function visitWithPhantom (url) {
         var phantomScript = "require('webpage').create().open('" + url + "');";
+        var tempDir = files.mkdtemp('phantomjs-');
+        var phantomScriptPath = files.pathJoin(tempDir, 'visit-mirror.js');
+        files.writeFile(phantomScriptPath, phantomScript, 'utf8');
         var browserProcess = child_process.execFile(
           '/bin/bash',
           ['-c',
-           ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
-            phantomScript + "END\n")]);
+          ("exec " + phantomjs.path + " " + files.convertToOSPath(phantomScriptPath))
+          ]
+        );
+        var prependPhantomJSOutput = function (data) {
+          return data.toString().replace(/^(.+)$/gm, '[PhantomJS] $1');
+        };
+        browserProcess.stdout.on('data', function (data) {
+          process.stdout.write(prependPhantomJSOutput(data));
+        });
+        browserProcess.stderr.on('data', function (data) {
+          process.stderr.write(prependPhantomJSOutput(data));
+        });
         browserProcesses.push(browserProcess);
       }
 

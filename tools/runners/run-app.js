@@ -298,7 +298,7 @@ _.extend(AppProcess.prototype, {
 //   for connections.
 //
 // - Other options: port, mongoUrl, oplogUrl, buildOptions, rootUrl,
-//   settingsFile, program, proxy, recordPackageUsage
+//   settingsFile, program, proxy, recordPackageUsage, includeTests
 //
 // To use, construct an instance of AppRunner, and then call start() to start it
 // running. To stop it, either return false from onRunEnd, or call stop().  (But
@@ -364,6 +364,7 @@ var AppRunner = function (options) {
     options.recordPackageUsage === undefined ? true : options.recordPackageUsage;
   self.omitPackageMapDeltaDisplayOnFirstRun =
     options.omitPackageMapDeltaDisplayOnFirstRun;
+  self.includeTests = options.includeTests;
 
   self.fiber = null;
   self.startFuture = null;
@@ -554,7 +555,8 @@ _.extend(AppRunner.prototype, {
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: builders
+          previousBuilders: builders,
+          includeTests: self.includeTests
         });
 
         // save new builders with their caches

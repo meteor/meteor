@@ -257,6 +257,16 @@ var runCommandOptions = {
     'raw-logs': { type: Boolean },
     settings: { type: String },
     test: {type: Boolean, default: false},
+    // A path relative ot the /tests directory or undefined.
+    // All files inside this directory will be included in the app.
+    // This allows running integration tests with Velocity.
+    'include-tests': {type: String},
+    // Test the app. Similar to test-packages.
+    // Used by Velocity.
+    'test-app': {type: Boolean, default: false},
+    // Sets the path of where the temporary app should be created.
+    // Used by Velocity.
+    'test-app-path': { type: String },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -286,11 +296,43 @@ function doRunCommand(options) {
   const { parsedServerUrl, parsedMobileServerUrl } =
     parseServerOptionsForRunCommand(options, runTargets);
 
-  var projectContext = new projectContextModule.ProjectContext({
+  var projectContextOptions = {
     projectDir: options.appDir,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
     lintAppAndLocalPackages: !options['no-lint']
-  });
+  }
+  if (options['test-app']) {
+    // Make a temporary app dir (based on the test runner app). This will be
+    // cleaned up on process exit. Using a temporary app dir means that we can
+    // run multiple "test-app" commands in parallel without them stomping
+    // on each other.
+    var testRunnerAppDir =
+      options['test-app-path'] || files.mkdtemp('meteor-test-run');
+    files.rm_recursive(testRunnerAppDir);
+    // Meteor will not use these files itself but maybe some packages will
+    // For example sanjo:meteor-files-helpers
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor'),
+      files.pathJoin(testRunnerAppDir, '.meteor'),
+      {preserveSymlinks: true, ignore: [/^local$/, /^\.id$/, /^cordova-plugins$/]}
+    );
+    // Copy the existing build and isopacks to speed up the initial start
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
+      {preserveSymlinks: true}
+    );
+    projectContextOptions.projectLocalDir = files.pathJoin(
+      testRunnerAppDir, '.meteor', 'local');
+  }
+  var projectContext = new projectContextModule.ProjectContext(
+    projectContextOptions
+  );
 
   main.captureAndExit("=> Errors while initializing project:", function () {
     // We're just reading metadata here --- we'll wait to do the full build
@@ -331,6 +373,7 @@ function doRunCommand(options) {
   //
   // NOTE: this calls process.exit() when testing is done.
   if (options['test']){
+    process.env.VELOCITY_CI = '1';
     options.once = true;
     const serverUrlForVelocity =
     `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
@@ -369,7 +412,8 @@ function doRunCommand(options) {
     oplogUrl: process.env.MONGO_OPLOG_URL,
     mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
     once: options.once,
-    cordovaRunner: cordovaRunner
+    cordovaRunner: cordovaRunner,
+    includeTests: options['include-tests']
   });
 }
 
@@ -394,7 +438,10 @@ main.registerCommand({
   requiresRelease: false,
   requiresApp: true,
   pretty: false,
-  catalogRefresh: new catalog.Refresh.Never()
+  catalogRefresh: new catalog.Refresh.Never(),
+  options: {
+    'local-dir': { type: String }
+  }
 }, function (options) {
   if (!options.appDir) {
     Console.error(
@@ -403,7 +450,8 @@ main.registerCommand({
     );
   } else {
     var projectContext = new projectContextModule.ProjectContext({
-      projectDir: options.appDir
+      projectDir: options.appDir,
+      projectLocalDir: options['local-dir']
     });
 
     // Convert to OS path here because shell/server.js doesn't know how to
@@ -1578,6 +1626,7 @@ main.registerCommand({
   options.cordovaRunner = cordovaRunner;
 
   if (options.velocity) {
+    process.env.VELOCITY_CI = '1';
     const serverUrlForVelocity =
     `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
     const velocity = require('../runners/run-velocity.js');

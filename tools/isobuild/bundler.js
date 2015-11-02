@@ -2063,6 +2063,10 @@ Find out more about Meteor at meteor.com.
  * - hasCachedBundle: true if we already have a cached bundle stored in
  *   /build. When true, we only build the new client targets in the bundle.
  *
+ * - includeTests: A path relative ot the /tests directory or undefined.
+ *   All files inside this directory will be included in the app.
+ *   This allows running integration tests with Velocity.
+ *
  * Returns an object with keys:
  * - errors: A buildmessage.MessageSet, or falsy if bundling succeeded.
  * - serverWatchSet: Information about server files and paths that were
@@ -2091,7 +2095,8 @@ exports.bundle = function ({
   buildOptions,
   previousBuilders,
   hasCachedBundle,
-  providePackageJSONForUnavailableBinaryDeps
+  providePackageJSONForUnavailableBinaryDeps,
+  includeTests
 }) {
   buildOptions = buildOptions || {};
 
@@ -2177,7 +2182,10 @@ exports.bundle = function ({
     // XXX should this be part of prepareProjectForBuild and get cached?
     //     at the very least, would speed up deploy after build.
     var packageSource = new PackageSource;
-    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+    packageSource.initFromAppDir(projectContext, {
+      ignoreFiles: exports.ignoreFiles,
+      includeTests: includeTests
+    });
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,

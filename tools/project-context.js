@@ -66,6 +66,8 @@ _.extend(ProjectContext.prototype, {
     resetOptions = resetOptions || {};
 
     self.projectDir = options.projectDir;
+    self.projectLocalDir = options.projectLocalDir ||
+      files.pathJoin(self.projectDir, '.meteor', 'local');
     self.tropohouse = options.tropohouse || tropohouse.default;
 
     self._packageMapFilename = options.packageMapFilename ||
@@ -263,7 +265,7 @@ _.extend(ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
+    return files.pathJoin(self.projectLocalDir, subdirectory);
   },
 
   getMeteorShellDirectory: function(projectDir) {
@@ -1146,7 +1148,8 @@ exports.CordovaPluginsFile = function (options) {
   var self = this;
   buildmessage.assertInCapture();
 
-  self.filename = files.pathJoin(options.projectDir, '.meteor', 'cordova-plugins');
+  self.filename = files.pathJoin(
+    options.projectDir, '.meteor', 'cordova-plugins');
   self.watchSet = null;
   // Map from plugin name to version.
   self._plugins = null;

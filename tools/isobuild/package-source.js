@@ -1216,8 +1216,12 @@ _.extend(PackageSource.prototype, {
     }
   },
 
-  // Initialize a package from an application directory (has .meteor/packages).
-  initFromAppDir: Profile("initFromAppDir", function (projectContext, ignoreFiles) {
+  /*
+   * Initialize a package from an application directory (has .meteor/packages).
+   *
+   * options are: ignoreFiles, includeTests
+   */
+  initFromAppDir: Profile("initFromAppDir", function (projectContext, options) {
     var self = this;
     var appDir = projectContext.projectDir;
     self.name = null;
@@ -1268,7 +1272,7 @@ _.extend(PackageSource.prototype, {
         // 'names').
         sourceReadOptions.exclude.push(/^\./);
         // Ignore the usual ignorable files.
-        sourceReadOptions.exclude.push(...ignoreFiles);
+        sourceReadOptions.exclude.push(...options.ignoreFiles);
 
         // Wrapper around watch.readAndWatchDirectory which takes in and returns
         // sourceRoot-relative directories.
@@ -1312,23 +1316,97 @@ _.extend(PackageSource.prototype, {
 
         // Read top-level subdirectories. Ignore subdirectories that have
         // special handling.
+        var excludedTopLevelSubdirectories = [/^packages\/$/,
+          // XXX We no longer actually have special handling
+          //     for the programs subdirectory, but let's not
+          //     suddenly start treating it as part of the main
+          //     app program.
+          /^programs\/$/,
+          // node.js based tooling often uses dependencies which
+          // are installed into node_modules in the root of the
+          // project.
+          /^node_modules\/$/,
+          /^public\/$/, /^private\/$/,
+          /^cordova-build-override\/$/,
+          otherUnibuildRegExp
+        ].concat(sourceReadOptions.exclude)
+        if (!options.includeTests) {
+          excludedTopLevelSubdirectories.push(/^tests\/$/);
+        }
         var sourceDirectories = readAndWatchDirectory('', {
           include: [/\/$/],
-          exclude: [/^packages\/$/, /^tests\/$/,
-                    // XXX We no longer actually have special handling
-                    //     for the programs subdirectory, but let's not
-                    //     suddenly start treating it as part of the main
-                    //     app program.
-                    /^programs\/$/,
-                    // node.js based tooling often uses dependencies which
-                    // are installed into node_modules in the root of the
-                    // project.
-                    /^node_modules\/$/,
-                    /^public\/$/, /^private\/$/,
-                    /^cordova-build-override\/$/,
-                    otherUnibuildRegExp].concat(sourceReadOptions.exclude)
+          exclude: excludedTopLevelSubdirectories
         });
         checkForInfiniteRecursion('');
+
+        // Inputs that should return true:
+        // tests/...
+        // .../tests/...
+        var isTestsSubdirectory = function (dir) {
+          return /^tests\//.test(dir) || /\/tests\//.test(dir)
+        }
+
+        // Given options.includeTests is "jasmine/server/integration"
+        //
+        // Inputs that should return true:
+        // tests/jasmine/server/integration/
+        // .../jasmine/server/integration/
+        var includedTestsDirectoryMatchers = options.includeTests ?
+          (function () {
+            return [
+              new RegExp('^tests/' + options.includeTests + '/?'),
+              new RegExp('/tests/' + options.includeTests + '/?')
+            ];
+          })() : [];
+
+        // Given options.includeTests is "jasmine/server/integration"
+        //
+        // Inputs that should return true:
+        // tests/
+        // tests/jasmine/
+        // tests/jasmine/server/
+        // .../tests/
+        // .../tests/jasmine/
+        // .../tests/jasmine/server/
+        var includedTestsParentDirectoryMatchers = options.includeTests ?
+          (function () {
+            var matchers = [
+              new RegExp('^tests/?$'),
+              new RegExp('/tests/?$')
+            ];
+            var partialDir;
+            var dirParts = options.includeTests.split('/');
+            for (var i = 1; i < dirParts.length; i++) {
+              partialDir = dirParts.slice(0, i).join('/');
+              matchers.push(
+                new RegExp('^tests/' + partialDir + '/?$'),
+                new RegExp('/tests/' + partialDir + '/?$')
+              );
+            }
+
+            return matchers;
+          })() : [];
+
+        var isDirectoryMatching = function (dir, matchers) {
+          return _.any(matchers, function (matcher) {
+            return matcher.test(dir);
+          });
+        };
+
+        var isIncludedTestsDirectory = function (dir) {
+          return isDirectoryMatching(dir, includedTestsDirectoryMatchers);
+        };
+
+        var isIncludedTestsDirectoryParent = function (dir) {
+          return isDirectoryMatching(dir, includedTestsParentDirectoryMatchers);
+        };
+
+        var shouldWatchDirectory = function (dir) {
+          return !options.includeTests ||
+            !isTestsSubdirectory(dir) ||
+            isIncludedTestsDirectory(dir) ||
+            isIncludedTestsDirectoryParent(dir);
+        };
 
         while (!_.isEmpty(sourceDirectories)) {
           var dir = sourceDirectories.shift();
@@ -1339,16 +1417,27 @@ _.extend(PackageSource.prototype, {
           if (checkForInfiniteRecursion(dir))
             return [];  // pretend we found no files
 
-          // Find source files in this directory.
-          sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
+          if (!isIncludedTestsDirectoryParent(dir)) {
+            // Find source files in this directory.
+            sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
+          }
 
           // Find sub-sourceDirectories. Note that we DON'T need to ignore the
           // directory names that are only special at the top level.
-          sourceDirectories.push(...readAndWatchDirectory(dir, {
+          var excludedSubSourceDirectories = [otherUnibuildRegExp]
+            .concat(sourceReadOptions.exclude);
+          if (!options.includeTests) {
+            excludedSubSourceDirectories.push(/^tests\/$/);
+          }
+
+          var subdirectories = readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
-              sourceReadOptions.exclude)
-          }));
+            exclude: excludedSubSourceDirectories
+          });
+
+          subdirectories = _.filter(subdirectories, shouldWatchDirectory)
+
+          sourceDirectories.push(...subdirectories);
         }
 
         // We've found all the source files. Sort them!
@@ -1367,6 +1456,13 @@ _.extend(PackageSource.prototype, {
 
             if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1)
               sourceObj.fileOptions = {bare: true};
+
+            if (isTestsSubdirectory(relPath)) {
+              if (!sourceObj.fileOptions) {
+                sourceObj.fileOptions = {};
+              }
+              sourceObj.fileOptions.test = true;
+            }
           }
           return sourceObj;
         });
@@ -1393,7 +1489,7 @@ _.extend(PackageSource.prototype, {
             var assetsAndSubdirs = readAndWatchDirectory(dir, {
               include: [/.?/],
               // we DO look under dot directories here
-              exclude: ignoreFiles
+              exclude: options.ignoreFiles
             });
 
             _.each(assetsAndSubdirs, function (item) {

@@ -32,6 +32,7 @@ class Runner {
     rootUrl,
     selenium,
     seleniumBrowser,
+    includeTests,
     ...optionsForAppRunner
   }) {
     const self = this;
@@ -97,7 +98,8 @@ class Runner {
       rootUrl: self.rootUrl,
       proxy: self.proxy,
       noRestartBanner: self.quiet,
-      cordovaRunner: cordovaRunner
+      cordovaRunner: cordovaRunner,
+      includeTests
     });
 
     self.selenium = null;
