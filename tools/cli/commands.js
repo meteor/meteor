@@ -373,6 +373,18 @@ function doRunCommand(options) {
   });
 }
 
+// Convenience reminder for Rails refugees. :)
+main.registerCommand({
+  name: 'server',
+  requiresRelease: false,
+  requiresApp: false,
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  Console.error("Did you mean " + Console.command("'meteor run'") + "?");
+  throw new main.ExitWithCode(1);
+});
+
 ///////////////////////////////////////////////////////////////////////////////
 // debug
 ///////////////////////////////////////////////////////////////////////////////
@@ -414,6 +426,18 @@ main.registerCommand({
 
     throw new main.WaitForExit;
   }
+});
+
+// Convenience reminder for Rails refugees. :)
+main.registerCommand({
+  name: 'console',
+  requiresRelease: false,
+  requiresApp: false,
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  Console.error("Did you mean " + Console.command("'meteor shell'") + "?");
+  throw new main.ExitWithCode(1);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -762,6 +786,18 @@ ${nonCodeFileExts.join(', ')}
       Console.options({ indent: 2 }));
 
   Console.info("");
+});
+
+// Convenience reminder for Rails refugees. :)
+main.registerCommand({
+  name: 'new',
+  requiresRelease: false,
+  requiresApp: false,
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  Console.error("Did you mean " + Console.command("'meteor create'") + "?");
+  throw new main.ExitWithCode(1);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1168,6 +1204,18 @@ to this command.`);
     runMongo.runMongoShell(mongoUrl);
     throw new main.WaitForExit;
   }
+});
+
+// Convenience reminder for Rails refugees. :)
+main.registerCommand({
+  name: 'dbconsole',
+  requiresRelease: false,
+  requiresApp: false,
+  pretty: false,
+  catalogRefresh: new catalog.Refresh.Never()
+}, function (options) {
+  Console.error("Did you mean " + Console.command("'meteor mongo'") + "?");
+  throw new main.ExitWithCode(1);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
