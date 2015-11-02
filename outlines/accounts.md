@@ -36,6 +36,7 @@
 7. Allowing the same user to log in through different methods - “account merging”
     1. Update the existing account using requestCredential
     2. accounts-meld in case you want to do more complicated things, but make sure you understand the risk!
+        1. Check out this package for security
     2. There's a community project in progress to make this simpler
 8. Authentication, roles, and permissions
     1. Read about roles and permissions in the security article
