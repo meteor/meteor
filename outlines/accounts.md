@@ -14,6 +14,7 @@
         2. Reset password
         3. Verify email
         4. How to customize emails
+        5. Generating HTML or text emails on the server using template strings
 4. OAuth login
     1. Meteor has core packages for some of the most common login services
     2. Facebook
