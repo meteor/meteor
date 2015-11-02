@@ -20,7 +20,7 @@ Tinytest.add("spacebars-compiler - compiler output", function (test) {
       var postProcess = function (string) {
         // remove initial and trailing parens
         string = string.replace(/^\(([\S\s]*)\)$/, '$1');
-        if (! (Package.minifiers && Package.minifiers.UglifyJSMinify)) {
+        if (! (Package['minifiers-js'] && Package['minifiers-js'].UglifyJSMinify)) {
           // these tests work a lot better with access to beautification,
           // but let's at least do some sort of test without it.
           // These regexes may have to be adjusted if new tests are added.
