@@ -13,7 +13,8 @@
     1. `{{#if/unless}}`
     2. `{{#each .. in ..}}`
     3. `{{#let}}`
-      1. NOTE: we need to ensure that issues around lexical scope and event handlers are resolved before we fail to even mention `{{#each}}` and `{{#with}}`. But we should attempt it.
+    4. Explain `{{#each}}` and `{{#with}}`, indicate that it's better not to use them.
+      1. NOTE: we need to ensure that issues around lexical scope and event handlers are resolved for `{{#each .. in ..}}` and `{{#let}}`.
   10. Comments
   11. Strictness
   12. Escaping
@@ -22,7 +23,7 @@
   2. Always set data contexts to `{name: doc}` rather than just `doc`. Always set a d.c on an inclusion.
   3. Use `{{#each .. in .. }}` to achieve the above
   4. Use the template instance as a component -- adding a `{{instance}}` helper to access it
-  5. Use a (named / scoped on _id if possible) reactive dict for instance state
+  5. Use a (named / scoped on `_id` if possible) reactive dict for instance state
   6. Attach functions to the template instance (in `onCreated`) to sensibly modify state
   7. Place `const template = Template.instance()` at the top of all helpers that care about state
   8. Always scope DOM lookups with `this.$`
@@ -44,6 +45,7 @@
   2. When does a helper-rerun? (when its data context or reactive deps change)
     1. So be careful, this can happen a lot! If your helper is expensive, consider something like https://github.com/peerlibrary/meteor-computed-field
   3. How does an each tag re-run / decide when new data should appear?
+    1. How does the `{{attrs}` syntax work, some tricks on how to use it.
   4. How do name lookups work?
   5. What does the build system do exactly?
   6. What is a view?
