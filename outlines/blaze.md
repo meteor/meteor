@@ -25,7 +25,7 @@
   4. Use the template instance as a component -- adding a `{{instance}}` helper to access it
   5. Use a (named / scoped on `_id` if possible) reactive dict for instance state
   6. Attach functions to the template instance (in `onCreated`) to sensibly modify state
-  7. Place `const template = Template.instance()` at the top of all helpers that care about state
+  7. Place `const instance = Template.instance()` at the top of all helpers/event handlers that care about state
   8. Always scope DOM lookups with `this.$`
   9. Use `.js-X` in event maps
   10. Pass extra content to components with `Template.contentBlock`, or named template arguments
