@@ -33,9 +33,12 @@ UglifyJSMinifier.prototype.processFilesForBundle = function (files, options) {
 
   var allJs = '';
   files.forEach(function (file) {
-    allJs += UglifyJSMinify(file.getContentsAsString(), minifyOptions).code;
+    if (/\.min\.js$/.test(file.getPathInBundle())) {
+      allJs += file.getContentsAsString();
+    } else {
+      allJs += UglifyJSMinify(file.getContentsAsString(), minifyOptions).code;
+    }
     allJs += '\n\n';
-
     Plugin.nudge();
   });
 
