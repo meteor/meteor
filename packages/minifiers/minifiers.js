@@ -109,7 +109,7 @@ var rewriteRules = function (rules) {
     // a folder starting with "/packages/" is served on the same path as
     // it was on the filesystem and everything else is served on root "/".
     if (! basePath.match(/^\/?packages\//i))
-        basePath = "/";
+        basePath = (process.env.ROOT_URL_PATH_PREFIX || "") + "/";
 
     _.each(rule.declarations, function(declaration, declarationIndex) {
       var parts, resource, absolutePath, quotes, oldCssUrl, newCssUrl;

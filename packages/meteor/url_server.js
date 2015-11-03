@@ -14,6 +14,6 @@ if (process.env.ROOT_URL &&
     }
     __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = pathPrefix;
   } else {
-    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = "";
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX = process.env.ROOT_URL_PATH_PREFIX || "";
   }
 }
