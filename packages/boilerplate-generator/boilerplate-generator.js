@@ -61,6 +61,10 @@ Boilerplate.prototype._generateBoilerplateFromManifestAndSource =
     _.extend(boilerplateBaseData, options.baseDataExtension);
 
     _.each(manifest, function (item) {
+      if (item.isTest) {
+        return;
+      }
+
       var urlPath = urlMapper(item.url);
       var itemObj = { url: urlPath };
 

@@ -98,7 +98,7 @@ _.extend(Module.prototype, {
   }),
 
   // Output is a list of objects with keys 'source', 'servePath', 'sourceMap',
-  // 'sourcePath'
+  // 'sourcePath', 'isTest'
   getPrelinkedFiles: Profile("linker Module#getPrelinkedFiles", function () {
     var self = this;
 
@@ -108,7 +108,7 @@ _.extend(Module.prototype, {
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
         const cacheKey = JSON.stringify([
-          file.sourceHash, file.bare, file.servePath]);
+          file.sourceHash, file.bare, file.servePath, file.isTest]);
 
         if (APP_PRELINK_CACHE.has(cacheKey)) {
           return APP_PRELINK_CACHE.get(cacheKey);
@@ -127,7 +127,8 @@ _.extend(Module.prototype, {
         const prelinked = {
           source: results.code,
           servePath: file.servePath,
-          sourceMap: sourceMap
+          sourceMap: sourceMap,
+          isTest: file.isTest
         };
 
         APP_PRELINK_CACHE.set(cacheKey, prelinked);
@@ -238,6 +239,9 @@ var File = function (inputFile, module) {
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
+
+  // If true, the file is not loaded by the app.
+  self.isTest = !!inputFile.isTest;
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;

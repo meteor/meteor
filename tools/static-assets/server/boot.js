@@ -135,6 +135,10 @@ var startCheckForLiveParent = function (parentPid) {
 
 Fiber(function () {
   _.each(serverJson.load, function (fileInfo) {
+    if (fileInfo.isTest) {
+      return;
+    }
+
     var code = fs.readFileSync(path.resolve(serverDir, fileInfo.path));
 
     var Npm = {

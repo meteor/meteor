@@ -65,7 +65,8 @@ export class JsFile extends InputFile {
     self._minifiedFiles.push({
       data: options.data,
       sourceMap: options.sourceMap,
-      path: options.path
+      path: options.path,
+      isTest: this._source.isTest
     });
   }
 }

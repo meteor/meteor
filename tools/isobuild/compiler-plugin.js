@@ -325,7 +325,9 @@ var ResourceSlot = function (unibuildResourceInfo,
           (self.inputResource.fileOptions.bare ||
            // XXX eventually get rid of backward-compatibility "raw" name
            // XXX COMPAT WITH 0.6.4
-           self.inputResource.fileOptions.raw)
+           self.inputResource.fileOptions.raw),
+        isTest: !!(self.inputResource.fileOptions &&
+          self.inputResource.fileOptions.isTest)
       });
     }
   } else {
@@ -373,6 +375,12 @@ _.extend(ResourceSlot.prototype, {
       bare = options.bare;
     }
 
+    var isTest = self.inputResource.fileOptions &&
+      self.inputResource.fileOptions.isTest;
+    if (options.hasOwnProperty('isTest')) {
+      isTest = options.isTest;
+    }
+
     var data = new Buffer(
       files.convertToStandardLineEndings(options.data), 'utf8');
     self.jsOutputResources.push({
@@ -385,7 +393,8 @@ _.extend(ResourceSlot.prototype, {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      bare: !! bare
+      bare: !! bare,
+      isTest: !! isTest
     });
   },
   addAsset: function (options) {
@@ -652,7 +661,8 @@ _.extend(PackageSourceBatch.prototype, {
         // to cache).
         data: file.source,
         servePath: file.servePath,
-        sourceMap: sm
+        sourceMap: sm,
+        isTest: file.isTest
       };
     });
 

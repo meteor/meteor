@@ -1314,7 +1314,7 @@ _.extend(PackageSource.prototype, {
         // special handling.
         var sourceDirectories = readAndWatchDirectory('', {
           include: [/\/$/],
-          exclude: [/^packages\/$/, /^tests\/$/,
+          exclude: [/^packages\/$/,
                     // XXX We no longer actually have special handling
                     //     for the programs subdirectory, but let's not
                     //     suddenly start treating it as part of the main
@@ -1346,8 +1346,7 @@ _.extend(PackageSource.prototype, {
           // directory names that are only special at the top level.
           sourceDirectories.push(...readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
-              sourceReadOptions.exclude)
+            exclude: [otherUnibuildRegExp].concat(sourceReadOptions.exclude)
           }));
         }
 
@@ -1367,6 +1366,24 @@ _.extend(PackageSource.prototype, {
 
             if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1)
               sourceObj.fileOptions = {bare: true};
+          }
+          return sourceObj;
+        });
+
+        // Inputs that should return true:
+        // tests/...
+        // .../tests/...
+        const isTestSource = function (dir) {
+          return /^tests\//.test(dir) || /\/tests\//.test(dir)
+        }
+
+        // Mark files under tests folders as tests
+        sources = _.map(sources, function (sourceObj) {
+          if (isTestSource(sourceObj.relPath)) {
+            if (!sourceObj.fileOptions) {
+              sourceObj.fileOptions = {};
+            }
+            sourceObj.fileOptions.isTest = true;
           }
           return sourceObj;
         });
