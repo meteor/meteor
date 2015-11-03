@@ -3,7 +3,7 @@ var catalog = require('../packaging/catalog/catalog.js');
 var Console = require('../console/console.js').Console;
 
 ///////////////////////////////////////////////////////////////////////////////
-// command reminders for those more familiar with Rails
+// Command reminders for those more familiar with Rails
 ///////////////////////////////////////////////////////////////////////////////
 
 main.registerCommand({
@@ -30,7 +30,6 @@ main.registerCommand({
   throw new main.ExitWithCode(1);
 });
 
-// Convenience reminder for Rails refugees. :)
 main.registerCommand({
   name: 'new',
   maxArgs: Infinity,
@@ -43,7 +42,6 @@ main.registerCommand({
   throw new main.ExitWithCode(1);
 });
 
-// Convenience reminder for Rails refugees. :)
 main.registerCommand({
   name: 'dbconsole',
   maxArgs: Infinity,
