@@ -34,6 +34,7 @@ Package.onUse(function (api) {
   api.addFiles('livedata_common.js', ['client', 'server']);
   api.addFiles('random_stream.js', ['client', 'server']);
 
+  api.addFiles('method_mock_invoker.js', ['client', 'server']);
   api.addFiles('livedata_connection.js', ['client', 'server']);
 
   api.addFiles('client_convenience.js', 'client');
