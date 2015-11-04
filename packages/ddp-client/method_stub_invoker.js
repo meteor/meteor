@@ -1,25 +1,26 @@
 // A MethodMockInvoker calls a mock implementation for a method without
 // needing to communicate with the server. This is useful for client tests.
-MethodStubInvoker = function (options) {
-  var self = this;
+MethodStubInvoker = class {
+  constructor(options) {
+    var self = this;
 
-  // Public (within this file) fields.
-  self.methodId = options.methodId;
-  self.sentMessage = false;
+    // Public (within this file) fields.
+    self.methodId = options.methodId;
+    self.sentMessage = false;
 
-  self._callback = options.callback;
-  self._connection = options.connection;
-  self._message = options.message;
-  self._onResultReceived = options.onResultReceived || function () {};
-  self._wait = options.wait;
-  self._methodResult = null;
-  self._dataVisible = false;
+    self._callback = options.callback;
+    self._connection = options.connection;
+    self._message = options.message;
+    self._onResultReceived = options.onResultReceived || function () {};
+    self._wait = options.wait;
+    self._methodResult = null;
+    self._dataVisible = false;
 
-  // Register with the connection.
-  self._connection._methodInvokers[self.methodId] = self;
-};
-_.extend(MethodStubInvoker.prototype, {
-  sendMessage: function () {
+    // Register with the connection.
+    self._connection._methodInvokers[self.methodId] = self;
+  }
+
+  sendMessage() {
     var self = this;
     // This function is called before sending a method (including resending on
     // reconnect). We should only (re)send methods where we don't already have a
@@ -36,10 +37,11 @@ _.extend(MethodStubInvoker.prototype, {
       self.receiveResult(error);
     }
     self.dataVisible();
-  },
+  }
+
   // Invoke the callback, if we have both a result and know that all data has
   // been written to the local cache.
-  _maybeInvokeCallback: function () {
+  _maybeInvokeCallback() {
     var self = this;
     if (self._methodResult && self._dataVisible) {
       // Call the callback. (This won't throw: the callback was wrapped with
@@ -49,23 +51,26 @@ _.extend(MethodStubInvoker.prototype, {
       // Forget about this method.
       delete self._connection._methodInvokers[self.methodId];
     }
-  },
-  receiveResult: function (err, result) {
+  }
+
+  receiveResult(err, result) {
     var self = this;
     if (self.gotResult())
       throw new Error("Methods should only receive results once");
     self._methodResult = [err, result];
     self._onResultReceived(err, result);
     self._maybeInvokeCallback();
-  },
-  dataVisible: function () {
+  }
+
+  dataVisible() {
     var self = this;
     self._dataVisible = true;
     self._maybeInvokeCallback();
-  },
+  }
+
   // True if receiveResult has been called.
-  gotResult: function () {
+  gotResult() {
     var self = this;
     return !!self._methodResult;
   }
-});
+};

@@ -11,7 +11,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'retry', 'id-map'],
+           'retry', 'id-map', 'ecmascript'],
           ['client', 'server']);
 
   // common functionality
