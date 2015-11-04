@@ -35,7 +35,8 @@
     2. Media queries/CSS libraries
     3. Scroll bounce
     4. Swiping
-    5. Animations
+    5. Animations - link to UX article about animations, mention that they are especially important on mobile
+    6. Fastclick, installed by default, explain what it does
 5. Native functionality with Cordova plugins
     1. How to add a plugin with meteor add cordova:something, or depending on it in a package
     2. Make sure to wait until Meteor.startup for plugins to load
