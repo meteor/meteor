@@ -1,21 +1,21 @@
+const MAX_LENGTH = 500; // if you change this, also change the appropriate test
+
 makeErrorByStatus = function(statusCode, content) {
-  var MAX_LENGTH = 500; // if you change this, also change the appropriate test
+  let message = `failed [${statusCode}]`;
 
-  var truncate = function(str, length) {
-    return str.length > length ? str.slice(0, length) + '...' : str;
-  };
+  if (content) {
+    const stringContent = typeof content == "string" ?
+      content : content.toString();
 
-  var contentToCheck = typeof content == "string" ? content : content.toString();
-
-  var message = "failed [" + statusCode + "]";
-
-  if (contentToCheck) {
-    message += " " + truncate(contentToCheck.replace(/\n/g, " "), MAX_LENGTH);
+    message += ' ' + truncate(stringContent.replace(/\n/g, ' '), MAX_LENGTH);
   }
 
   return new Error(message);
 };
 
+function truncate(str, length) {
+  return str.length > length ? str.slice(0, length) + '...' : str;
+}
 
 // Fill in `response.data` if the content-type is JSON.
 populateData = function(response) {
