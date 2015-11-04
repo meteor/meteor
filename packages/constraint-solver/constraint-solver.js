@@ -56,16 +56,29 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                 'upgradeIndirectDepPatchVersions'));
   });
 
-  Profile.time(
-    "Input#loadFromCatalog (sqlite)",
-    function () {
-      input.loadFromCatalog(self.catalogLoader);
-    });
 
   var resultCache = self._options.resultCache;
-  if (resultCache && resultCache.lastInput &&
-      input.isEqual(resultCache.lastInput)) {
-    return resultCache.lastOutput;
+
+  // Option for skipping the SQLite query to get new package,
+  // and just assume that the packages haven't changed.
+  // 
+  // See: https://github.com/meteor/meteor/issues/2950
+
+  var AssumeCacheValid = process.env.METEOR_ASSUME_PACKAGE_CACHE_VALID;
+
+  if (AssumeCacheValid && resultCache && resultCache.lastInput) {
+      return resultCache.lastOutput;
+  } else {
+    Profile.time(
+      "Input#loadFromCatalog (sqlite)",
+      function () {
+        input.loadFromCatalog(self.catalogLoader);
+      });
+
+    if (resultCache && resultCache.lastInput &&
+        input.isEqual(resultCache.lastInput)) {
+      return resultCache.lastOutput;
+    }
   }
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
