@@ -1,5 +1,7 @@
 ## v.NEXT
 
+* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these 2 minifiers.
+
 ## v.1.2.1, 2015-Oct-26
 
 * `coll.insert()` now uses a faster (but cryptographically insecure)

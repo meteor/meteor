@@ -75,42 +75,6 @@
           }
         }
       }
-    },
-    "uglify-js": {
-      "version": "2.4.20",
-      "dependencies": {
-        "async": {
-          "version": "0.2.10"
-        },
-        "source-map": {
-          "version": "0.1.34",
-          "dependencies": {
-            "amdefine": {
-              "version": "0.1.0"
-            }
-          }
-        },
-        "yargs": {
-          "version": "3.5.4",
-          "dependencies": {
-            "camelcase": {
-              "version": "1.0.2"
-            },
-            "decamelize": {
-              "version": "1.0.0"
-            },
-            "window-size": {
-              "version": "0.1.0"
-            },
-            "wordwrap": {
-              "version": "0.0.2"
-            }
-          }
-        },
-        "uglify-to-browserify": {
-          "version": "1.0.2"
-        }
-      }
     }
   }
 }
