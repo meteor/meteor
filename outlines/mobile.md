@@ -34,7 +34,7 @@
     1. Credit: https://github.com/awatson1978/meteor-cookbook/blob/master/cookbook/mobile.md
     2. Media queries/CSS libraries
     3. Scroll bounce with cordova settings and CSS properties
-    4. Swiping
+    4. Swiping - Hammer.js
     5. Animations - link to UX article about animations, mention that they are especially important on mobile
     6. Fastclick, installed by default, explain what it does
 5. Native functionality with Cordova plugins
