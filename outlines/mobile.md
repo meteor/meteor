@@ -58,8 +58,7 @@
             4. Reloaded to a new updated version
         2. reload-on-resume
         3. Special case: when your app needs to hot code push right after the user downloaded it; you should display an upgrade screen in this case
-7. Push notifications
-    1. Raix:push just works
+7. Push notifications with Raix:push
 8. Accessing local files
     1. Files/assets from the app bundle
     2. Local files (not possible in Meteor 1.2, we're working on it)
