@@ -64,21 +64,27 @@ const LINKER_CACHE = new LRU({
   }
 });
 
+export class CompilerPluginProcessor {
+  constructor({
+    unibuilds,
+    arch,
+    isopackCache,
+    linkerCacheDir,
+  }) {
+    const self = this;
 
-exports.CompilerPluginProcessor = function (options) {
-  var self = this;
-  self.unibuilds = options.unibuilds;
-  self.arch = options.arch;
-  self.isopackCache = options.isopackCache;
+    self.unibuilds = unibuilds;
+    self.arch = arch;
+    self.isopackCache = isopackCache;
 
-  self.linkerCacheDir = options.linkerCacheDir;
-  if (self.linkerCacheDir) {
-    files.mkdir_p(self.linkerCacheDir);
+    self.linkerCacheDir = linkerCacheDir;
+    if (self.linkerCacheDir) {
+      files.mkdir_p(self.linkerCacheDir);
+    }
   }
-};
-_.extend(exports.CompilerPluginProcessor.prototype, {
-  runCompilerPlugins: function () {
-    var self = this;
+
+  runCompilerPlugins() {
+    const self = this;
     buildmessage.assertInJob();
 
     // plugin id -> {sourceProcessor, resourceSlots}
@@ -147,7 +153,7 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
 
     return sourceBatches;
   }
-});
+}
 
 var InputFile = function (resourceSlot) {
   var self = this;
