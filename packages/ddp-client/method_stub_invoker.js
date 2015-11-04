@@ -1,6 +1,6 @@
 // A MethodMockInvoker calls a mock implementation for a method without
 // needing to communicate with the server. This is useful for client tests.
-MethodMockInvoker = function (options) {
+MethodStubInvoker = function (options) {
   var self = this;
 
   // Public (within this file) fields.
@@ -18,7 +18,7 @@ MethodMockInvoker = function (options) {
   // Register with the connection.
   self._connection._methodInvokers[self.methodId] = self;
 };
-_.extend(MethodMockInvoker.prototype, {
+_.extend(MethodStubInvoker.prototype, {
   sendMessage: function () {
     var self = this;
     // This function is called before sending a method (including resending on

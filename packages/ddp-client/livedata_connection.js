@@ -895,7 +895,7 @@ _.extend(Connection.prototype, {
     }
 
     var MethodInvokerImplementation = self._methodMocks[name] ?
-      MethodMockInvoker : MethodInvoker;
+      MethodStubInvoker : MethodInvoker;
 
     var methodInvoker = new MethodInvokerImplementation({
       methodId: methodId(),
