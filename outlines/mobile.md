@@ -46,10 +46,7 @@
         1. http://docs.telerik.com/platform/appbuilder/creating-your-project/using-plugins/using-core-plugins/using-core-plugins
         2. Microsoft plugin kits: http://taco.tools/docs/validated-kits.html
 6. Hot code push on mobile
-    1. Dangers
-        1. If you deploy broken code, your users will get it in their app and it won't ever work again
-        2. percolate:safe-reload
-        3. You need a new app to use new Cordova plugins; so if you add any you need to make sure their app shell has the right plugins
+    1. Be careful when analyzing the outcome of hot code push - for example, you need a new app to use new Cordova plugins; so if you add any you need to make sure their app shell has the right plugins
     2. Controlling when reload happens
         1. Different states your app can be in
             1. Never hot code pushed, fresh
