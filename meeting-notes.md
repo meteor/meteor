@@ -1,4 +1,4 @@
-## Meeting about guide example apps and post-outline plans
+## Meeting about example app and post-outline plans 4th Nov
 
 #### Meeting part 1 with Tom
 
