@@ -5,7 +5,9 @@
   <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height">
   <meta name="msapplication-tap-highlight" content="no">
 
-{{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{../bundledJsCssPrefix}}{{url}}">{{/each}}
+{{! We are explicitly not using bundledJsCssUrlRewriteHook: in cordova we serve assets up directly from disk, so rewriting the URL does not make sense }}
+
+{{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{url}}">{{/each}}
 
   <script type='text/javascript'>
     __meteor_runtime_config__ = JSON.parse(decodeURIComponent({{meteorRuntimeConfig}}));
@@ -22,7 +24,7 @@
   </script>
 
   <script type="text/javascript" src="/cordova.js"></script>
-{{#each js}}  <script type="text/javascript" src="{{../bundledJsCssPrefix}}{{url}}"></script>
+{{#each js}}  <script type="text/javascript" src="{{url}}"></script>
 {{/each}}
 {{#each additionalStaticJs}}
   {{#if ../inlineScriptsAllowed}}
