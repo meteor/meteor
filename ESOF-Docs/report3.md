@@ -40,15 +40,28 @@ O **pacote Command Line Tool "Meteor"**, como no diagrama indica, irá ser uma p
 
 ## Vista de Processo
 
+A vista de processo mostra os aspetos dinâmicos do sistema, explica os processos do sistema e como eles comunicam.
+
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Data_flow.png)
+
+Achámos pertinente a inclusão de um diagrama de data flow de modo a compreendermos melhor o percurso que a informação percorre antes de ser refletida no DOM. 
+
+Diagrama de Atividade
 
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Atividade.png)
 
+A partir de ambos os diagramas podemos verificar como funciona o processo do Meteor. As alterações feitas ao cliente são comunicadas à base de dados (Mongo DB) através de um websocket. Essas alterações são por sua vez enviadas para a cache de dados do cliente (Minimongo) através do mesmo websocket. A partir daí é feita uma verificação de quais as alterações feitas e uma consequente re-renderização do DOM, alterando apenas os elementos necessários. De seguida, as alterações são exibidas na DOM.
+A presença do Minimongo constitui uma das funcionalidades chave do Meteor, pois permite a reflexão das alterações em tempo real. Esta funcionalidade tem o nome de reatividade.
 
 
 ## Vista Física ou de Deployment
 
+A vista física mostra a estrutura dos nós de hardware e os artefactos que neles correm. O diagrama seguinte mostra a vista de deployment do Meteor:
+
+
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Deployment.png)
+
+Como podemos verificar no diagrama, a comunicação entre o servidor do Meteor e o cliente é feita através de HTTP, enquanto que a comunicação entre a cache de dados do cliente (Minimongo) e o Mongo no servidor é feita através do protocolo DDP. Isto permite que as alterações ao código se reflitam em tempo real no DOM. Por sua vez, o servidor do Meteor envia para o servidor da base de dados toda a informação alterada.
 
 ##Referências
 
