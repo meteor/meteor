@@ -9,7 +9,7 @@
 5. Tom has the linter running in his editor, Sashko should add it to his Atom
 6. **Action item:** Mobile config js should be in the mobile article
 
-Splitting up tasks for the todos example app:
+#### Splitting up tasks for the todos example app:
 
 * Application Structure - Sashko
 * Less / CSS / PostCSS - Sashko
