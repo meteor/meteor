@@ -233,7 +233,7 @@ In this case, the function of the `page-blog-post` component is just to get the 
 
 If you are experienced in Meteor, you know that in order for `BlogPosts.findOne(...)` in the snippet above to return anything useful, you need to subscribe to that data from the server using `Meteor.subscribe`. The `page-blog-post` template would be a great place to do that:
 
-```html
+```js
 Template["page-blog-post"].onCreated(function () {
   this.autorun(() => {
     this.subscribe("blog-post", FlowRouter.getParam("postId"));
