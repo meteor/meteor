@@ -1,3 +1,26 @@
+## Standup 5th Nov
+
+With Zol, Tom, Evan and Sashko
+
+* Only a couple hours work for the code.
+* Stick to 2 articles per person per week schedule.
+* Aim to have complete but rough articles by mid Dec rather than better articles with some incomplete.
+* Two articles will be complete by the end of next week.
+* Evan has made a staging s3 bucket
+* SEO is important, when folks search for something they should find hits from the latest version of the guide unless they explicitly search for a specific version.
+* Master at /, other versions/branch at /version/
+* If the user is not on a page for the latest version, display a banner telling them so (with a link to the latest).
+* Guide will live at guide.meteor.com
+* Mid next week for infrastructure part of Guide website (push to deploy)
+* Use css classes for components
+* We can (should) use themes to customize.
+* Don't worry about Markdown consistency for the first pass. Do it later.
+* We realized there are no good form examples in the Todos app.
+* The two options are rewrite Microscope with forms and the guided approach or build something else.
+* Revisit this Monday week after having built 2 articles.
+* Schedule 2 hour meeting with Matt once Todos is done to walk through the code and outlines.
+
+
 ## Meeting about example app and post-outline plans 4th Nov
 
 #### Meeting part 1 with Tom
