@@ -4,7 +4,7 @@
 
 We're tracking our progress using Waffle.io; see the board by clicking the badge above!
 
-Current goal: Get all articles into the **outline** stage by the end of the week.
+Current goal: Get all articles into the **example app** stage by next week (Nov 9 2015).
 
 ---------
 
