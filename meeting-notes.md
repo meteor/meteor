@@ -7,7 +7,6 @@
 3. Prefix the package names with app- instead of todos- it's silly to have a package called todos-todos
 4. should stub collections be debugOnly? Open question
 5. Tom has the linter running in his editor, Sashko should add it to his Atom
-6. **Action item:** Mobile config js should be in the mobile article
 
 #### Splitting up tasks for the todos example app:
 
