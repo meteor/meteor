@@ -6,7 +6,7 @@ With Zol, Tom, Evan and Sashko
 * Stick to 2 articles per person per week schedule.
 * Aim to have complete but rough articles by mid Dec rather than better articles with some incomplete.
 * Two articles will be complete by the end of next week.
-* Evan has made a staging s3 bucket
+* Evan has made a staging s3 bucket - http://meteor-guide-staging.s3-website-us-west-1.amazonaws.com/
 * SEO is important, when folks search for something they should find hits from the latest version of the guide unless they explicitly search for a specific version.
 * Master at /, other versions/branch at /version/
 * If the user is not on a page for the latest version, display a banner telling them so (with a link to the latest).
