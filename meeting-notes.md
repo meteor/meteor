@@ -1,3 +1,52 @@
+## Meeting about guide example apps and post-outline plans
+
+#### Meeting part 1 with Tom
+
+1. Do modules solve testing the same way packages do? If so, this means we don't need package-focused apps anymore
+2. Let's unprefix the file names in packages - so it's OK to just have a file called methods.js and not lists-methods.js, since the package is already called lists
+3. Prefix the package names with app- instead of todos- it's silly to have a package called todos-todos
+4. should stub collections be debugOnly? Open question
+5. Tom has the linter running in his editor, Sashko should add it to his Atom
+6. **Action item:** Mobile config js should be in the mobile article
+
+Splitting up tasks for the todos example app:
+
+* Application Structure - Sashko
+* Less / CSS / PostCSS - Sashko
+* Methods - remove allow/deny - Sashko
+* Using Stores + Template level subscription - Tom
+* Simple Schema / Collection 2 - Tom
+* Autoform - Sashko
+* User Accounts - Sashko
+* LaunchScreen (add to mobile article) - Sashko
+* Momentum - Tom
+* “Componentize” Blaze templates - Tom
+* Tests - Tom
+* Deploy to Galaxy w/ Kadira - Tom
+
+**Action item:** File all of these as issues on meteor/todos
+
+#### Meeting part 2 with Zol
+
+1. When is an article moved to the example app column? When it is fully reflected in meteor/todos
+2. Todos is the only complete example app we care about - all other code snippets can be written as we go, and don't need to be from a particular app. They will be filled in during the first draft phase.
+3. Sashko took some time for on-call stuff, so we can push back the example app deadline to Monday/Tuesday
+4. Zol should look at https://github.com/meteor/guide/blob/master/meeting-notes.md#initial-meeting-about-guide-website-29th-oct and meet with Evan about planning
+
+#### Quick discussion about code tasks (labeled `code` in the guide repo)
+
+1. Testing packages - we'll find out more as we test Todos
+2. Cursor utils - shouldn't be hard
+3. Complex authorization means a way to re-run publications when authorization data changes - could be easy to add a small API
+4. Badge against master and devel - sashko is working on it
+5. Update meteor create - we can do this after we finish the initial guide
+6. Methods package - sashko is already doing this as part of Todos
+7. Best JS validation library - we are going with SS, let's close it
+8. Modify simple-schema to work like check, make autoform accept errors
+9. Validation error format + there needs to be a “core” error package that supports it
+10. Remove/rename mutator methods - not necessary if we just split by dots
+11. Make dotted names is not a big deal
+
 ## Initial meeting about guide website 29th Oct
 
 With Evan and Sashko
