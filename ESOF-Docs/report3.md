@@ -40,6 +40,12 @@ O **pacote Command Line Tool "Meteor"**, como no diagrama indica, irá ser uma p
 
 ## Vista de Processo
 
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Data_flow.png)
+
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Atividade.png)
+
+
+
 ## Vista Física ou de Deployment
 
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/Deployment.png)
