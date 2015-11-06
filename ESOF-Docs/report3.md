@@ -37,7 +37,7 @@ O **pacote Server** irá interagir, a partir do protocolo DDP, com o Client. DDP
 O **pacote Command Line Tool "Meteor"**, como no diagrama indica, irá ser uma peça fundamental para a conexão de todos os outros pacotes principais. É utilizado para juntar todas as peças do fluxo de trabalho de desenvolvimento do Meteor.
 
 ## Vista de Implementação
-Um diagrama de componentes tem como objectivo como os componentes de um sistema comunicam entre si. Nos paragrafos abaixo tem uma descrição, dos principais componentes constituintes da aplicação Meteor.
+Um diagrama de componentes tem como objectivo como os componentes de um sistema comunicam entre si. Nos parágrafos abaixo tem uma descrição, dos principais componentes constituintes da aplicação Meteor.
 
 O **MongoDB** é responsável pela gestão da base de dados global das aplicações criadas em Meteor. Sendo uma base de dados de tipo “NOSQL”, esta base de dados é gerida usando JavaScript. Como uma das ideias fundamentais do Meteor, é criar aplicações usando apenas uma linguagem de programação, seja no servidor ou no cliente, o MongoDB foi escolhido para gestão dos dados pois usa Javascript na sua gestão de documentos tipo JSON. 
 
@@ -45,7 +45,7 @@ O **MiniMongo** é um reimplementação do MongoDB, mas que corre localmente. Qu
 
 O **Atmosphere** é um repositório de packages criados pelos utilizadores ou programadores da Meteor. Pode ser usado para procurar utilitários que facilitem o desenvolvimento de aplicações. Também é possível adicionar os nossos próprios packages a Atmosphere.
 
-O **Blaze** é uma biblioteca para criar interfaces para o utilizadores, através de “templates” pré-definidas.  
+O **Blaze** é uma biblioteca para criar interfaces para o utilizadores, através de “templates” predefinidas.  
 
 ## Vista de Processo
 
