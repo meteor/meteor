@@ -37,6 +37,8 @@ O **pacote Server** irá interagir, a partir do protocolo DDP, com o Client. DDP
 O **pacote Command Line Tool "Meteor"**, como no diagrama indica, irá ser uma peça fundamental para a conexão de todos os outros pacotes principais. É utilizado para juntar todas as peças do fluxo de trabalho de desenvolvimento do Meteor.
 
 ## Vista de Implementação
+Um diagrama de componentes tem como objectivo como os componentes de um sistema comunicam entre si. Nos paragrafos abaixo tem uma descrição, dos principais componentes constituintes da aplicação Meteor.
+
 O **MongoDB** é responsável pela gestão da base de dados global das aplicações criadas em Meteor. Sendo uma base de dados de tipo “NOSQL”, esta base de dados é gerida usando JavaScript. Como uma das ideias fundamentais do Meteor, é criar aplicações usando apenas uma linguagem de programação, seja no servidor ou no cliente, o MongoDB foi escolhido para gestão dos dados pois usa Javascript na sua gestão de documentos tipo JSON. 
 
 O **MiniMongo** é um reimplementação do MongoDB, mas que corre localmente. Quando um utilizador interage com uma aplicação criada em Meteor, ele acede a informação guardada no servidor global, que será guardada localmente para um mais rápido acesso. Caso essa informação seja modificada no servidor, a aplicação vai atualizar a nossa informação local automaticamente. No caso de ser o utilizador a modificar informação, a nossa base de dados será atualizada instantaneamente e a aplicação tratará de enviar a informação para o servidor global. Este método de troca de informação chama-se DDP(Distributed Data Protocol) e é baseado em “websockets”, aonde uma base dados local é parte de uma base de dados global.
