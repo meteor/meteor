@@ -114,7 +114,18 @@
       var localPathPrefix = cordova.file.dataDirectory + 'meteor/';
       loadApp(localPathPrefix);
     };
-
+    
+    // If we're still on the loading screen after 10 seconds
+    // fallback to the bundled version of the app
+    var loadingPath = window.location;
+    setTimeout(function() {
+      if (loadingPath === window.location) {
+        var err = 'Timed out trying to load a new version of the app';
+        log(err);
+        fallback(err);
+      }
+    }, 10000);
+    
     startLoading();
   }, false);
 })();
