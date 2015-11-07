@@ -1,0 +1,21 @@
+machine:
+  node:
+    version: 0.12
+
+dependencies:
+  override:
+    - npm install -g hexo-cli
+    - npm install:
+        pwd: site
+
+test:
+  override:
+    # maybe we will need tests in the future
+    - echo 'ok!'
+
+deployment:
+  s3:
+    branch: /.*/
+    commands:
+      - node deploy:
+          pwd: site
