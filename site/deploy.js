@@ -38,8 +38,12 @@ function getGitBranch () {
     exec('git status', function (err, out) {
       if (err) return reject(err)
       var branch = out.toString().match(/^On branch (.+)/)[1]
-      var versionMatch = branch.match(/^version-(.*)/)
-      resolve(versionMatch ? 'v' + versionMatch[1] : 'branch-' + branch)
+      if (branch === 'master') {
+        resolve('')
+      } else {
+        var versionMatch = branch.match(/^version-(.*)/)
+        resolve(versionMatch ? 'v' + versionMatch[1] : 'branch-' + branch)
+      }
     })
   })
 }
@@ -81,7 +85,7 @@ function generateSite (branch) {
 
 function deployToS3 (branch) {
   console.log('deploying to S3...')
-  s3options.prefix = branch === 'master' ? '' : (branch + '/')
+  s3options.prefix = branch ? branch + '/' : ''
   readdirp({root: 'public'})
     .pipe(s3sync(s3options).on('data', function(file) {
       console.log(file.path + ' -> ' + file.url)
