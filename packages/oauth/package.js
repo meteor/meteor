@@ -35,6 +35,11 @@ Package.onUse(function (api) {
     'end_of_redirect_response.html'
   ], 'server');
 
+  api.addAssets([
+    'end_of_popup_response.js',
+    'end_of_redirect_response.js'
+  ], 'client');
+
   api.addFiles('oauth_common.js');
 
   // XXX COMPAT WITH 0.8.0
