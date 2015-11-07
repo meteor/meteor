@@ -16,3 +16,16 @@ hexo server
 ```
 
 The static site shell is in `themes/meteor`.
+
+### Manual Deployment
+
+1. Create `keys.json` (search for "Meteor guide AWS S3 keys" in LastPass):
+
+  ``` json
+  {
+    "key": "xxx",
+    "secret": "xxx"
+  }
+  ```
+
+2. `node deploy`.
