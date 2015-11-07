@@ -6,7 +6,7 @@
 var interceptedEmails = {}; // (email address) -> (array of options)
 
 // add html email templates that just contain the url
-Accounts.emailTemplates.resetPassword.html = 
+Accounts.emailTemplates.resetPassword.html =
   Accounts.emailTemplates.enrollAccount.html =
   Accounts.emailTemplates.verifyEmail.html = function (user, url) {
     return url;
