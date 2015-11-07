@@ -1,7 +1,7 @@
 <ul class="menu-root">
   <% site.pages.find({}).each(function (p) { %>
     <li>
-      <a href="<%- url_for(p.path) %>" class="sidebar-link<%- page.title === p.title ? ' current' : '' %>">
+      <a href="<%- relative_url(page.path, p.path) %>" class="sidebar-link<%- page.title === p.title ? ' current' : '' %>">
         <%- p.title %>
       </a>
     </li>

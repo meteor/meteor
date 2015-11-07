@@ -4,14 +4,14 @@ var exec = require('child_process').exec
 var s3sync = require('s3-sync')
 var readdirp = require('readdirp')
 
-var s3options = {
+var s3Options = {
   key: process.env.AWS_KEY,
   secret: process.env.AWS_SECRET,
   bucket: 'meteor-guide',
   region: 'us-west-1'
 }
 
-if (!(s3options.key && s3options.secret)) {
+if (!(s3Options.key && s3Options.secret)) {
   var config
   try {
     config = require('./keys.json')
@@ -21,12 +21,12 @@ if (!(s3options.key && s3options.secret)) {
     )
     process.exit(1)
   }
-  s3options.key = config.key
-  s3options.secret = config.secret
+  s3Options.key = config.key
+  s3Options.secret = config.secret
 }
 
 getGitBranch()
-  .then(updateHexoConfig)
+  // .then(updateHexoConfig)
   .then(generateSite)
   .then(deployToS3)
   .catch(function (err) {
@@ -85,9 +85,15 @@ function generateSite (branch) {
 
 function deployToS3 (branch) {
   console.log('deploying to S3...')
-  s3options.prefix = branch ? branch + '/' : ''
-  readdirp({root: 'public'})
-    .pipe(s3sync(s3options).on('data', function(file) {
+  s3Options.prefix = branch ? branch + '/' : ''
+  var fileOptions = { root: 'public' }
+  // for non-master branches, we can skip assets
+  // and just upload html files.
+  if (branch) {
+    fileOptions.fileFilter = '*.html'
+  }
+  readdirp(fileOptions)
+    .pipe(s3sync(s3Options).on('data', function(file) {
       console.log(file.path + ' -> ' + file.url)
     }).on('end', function() {
       console.log('All done!')
