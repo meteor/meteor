@@ -3,6 +3,8 @@ machine:
     version: 0.12
 
 dependencies:
+  cache_directories:
+    - "site/node_modules"
   override:
     - npm install -g hexo-cli
     - npm install:
@@ -15,7 +17,7 @@ test:
 
 deployment:
   s3:
-    branch: /.*/
+    branch: /^(master|version-.*)/
     commands:
       - node deploy:
           pwd: site

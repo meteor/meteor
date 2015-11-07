@@ -17,6 +17,16 @@ hexo server
 
 The static site shell is in `themes/meteor`.
 
+### Continuous Deployment
+
+For a non-master branch to be automatically deployed to S3 on push, its name must either start with `version-`, or be matched by [the branch regex in the deployment section of `circle.yml`](https://github.com/meteor/guide/blob/master/circle.yml#L18).
+
+The `master` branch is deployed to the root of the S3 bucket.
+
+A branch with the name `version-1.2` will be deployed under the `v1.2` folder.
+
+Any other branch, if added to the regex, will be deployed with the `branch-` prefix. For example, branch `test` will be deployed under the `branch-test` folder.
+
 ### Manual Deployment
 
 1. Create `keys.json` (search for "Meteor guide AWS S3 keys" in LastPass):

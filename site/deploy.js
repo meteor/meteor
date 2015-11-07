@@ -37,7 +37,9 @@ function getGitBranch () {
   return new Promise(function (resolve, reject) {
     exec('git status', function (err, out) {
       if (err) return reject(err)
-      resolve(out.toString().match(/^On branch (.+)/)[1])
+      var branch = out.toString().match(/^On branch (.+)/)[1]
+      var versionMatch = branch.match(/^version-(.*)/)
+      resolve(versionMatch ? 'v' + versionMatch[1] : 'branch-' + branch)
     })
   })
 }
