@@ -22,4 +22,5 @@ Read more in the [interview on the Meteor Blog](http://info.meteor.com/blog/mete
 ### MDG
 
 1. See the [standup notes and planning](meeting-notes.md)
-1. See the [code action items](https://github.com/meteor/guide/labels/code)
+2. See the [code action items](https://github.com/meteor/guide/labels/code)
+3. See the [static site shell readme](site/README.md)

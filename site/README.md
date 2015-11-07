@@ -2,9 +2,13 @@
 
 This is a setup to generate a static site from the markdown files location in `/content` using [Hexo](https://hexo.io/).
 
-Note in order for Hexo to pick up the title of a page, each markdown file should provide a `title` field using [YAML front matter](http://jekyllrb.com/docs/frontmatter/).
+### Notes on Content Authoring
 
-### Development
+- In order for Hexo to pick up the title of a page, each markdown file should provide a `title` field using [YAML front matter](http://jekyllrb.com/docs/frontmatter/). We can optionally include more meta information for each article, e.g. `authors`, if needed.
+
+- Use **relative links** when linking to other pages in the guide. This is necessary because we are deploying multiple versions/branches of the site into nested folders.
+
+### Theme Development
 
 ``` bash
 npm install -g hexo-cli
@@ -15,7 +19,7 @@ npm install
 hexo server
 ```
 
-The static site shell is in `themes/meteor`.
+The static site theme is in `themes/meteor` and is responsible for the visual representation of the site. For more information, check out the [Hexo docs](https://hexo.io/docs/index.html).
 
 ### Continuous Deployment
 
