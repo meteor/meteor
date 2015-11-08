@@ -83,6 +83,7 @@ Como podemos verificar no diagrama, a comunicação entre o servidor do Meteor e
 * http://coffeescript.org/
 * https://www.meteor.com/ddp
 * https://www.discovermeteor.com/blog/what-goes-where/
+* https://www.youtube.com/watch?v=dOCMpoeuwTI
 
 
 
