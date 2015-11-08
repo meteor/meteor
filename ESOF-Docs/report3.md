@@ -45,7 +45,9 @@ O **MiniMongo** é um reimplementação do MongoDB, mas que corre localmente. Qu
 
 O **Atmosphere** é um repositório de packages criados pelos utilizadores ou programadores da Meteor. Pode ser usado para procurar utilitários que facilitem o desenvolvimento de aplicações. Também é possível adicionar os nossos próprios packages a Atmosphere.
 
-O **Blaze** é uma biblioteca para criar interfaces para o utilizadores, através de “templates” predefinidas.  
+O **Blaze** é uma biblioteca para criar interfaces para o utilizadores, através de “templates” predefinidas.
+
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/componentes.jpg)
 
 ## Vista de Processo
 
@@ -84,7 +86,9 @@ Como podemos verificar no diagrama, a comunicação entre o servidor do Meteor e
 * https://www.meteor.com/ddp
 * https://www.discovermeteor.com/blog/what-goes-where/
 * https://www.youtube.com/watch?v=dOCMpoeuwTI
-
+* https://www.youtube.com/watch?v=SYqyWff6iMQ&list=PLMU-CDS0eyO9_J8OfywMYTsYuiWhqyhBf
+* https://meteorhacks.com/introduction-to-ddp
+* https://www.meteor.com/blaze
 
 
 ## FEUP ESOF MIEIC 
