@@ -89,6 +89,7 @@ Como podemos verificar no diagrama, a comunicação entre o servidor do Meteor e
 * https://www.youtube.com/watch?v=SYqyWff6iMQ&list=PLMU-CDS0eyO9_J8OfywMYTsYuiWhqyhBf
 * https://meteorhacks.com/introduction-to-ddp
 * https://www.meteor.com/blaze
+* http://www.uml-diagrams.org/component-diagrams.html
 
 
 ## FEUP ESOF MIEIC 
