@@ -1,10 +1,27 @@
 ## Standup 9th Nov
 
+With Zol, Tom, Evan and Sashko
+
 ### Agenda:
 
 - Progress.
 - Thoughts on testing.
 - Meeting Matt on Thu for feedback.
+
+### Notes
+
+- Deployment is merged to master. CirclCI is set up to push to s3 on a push to master. Branches with the version prefix will be pushed to deploy. Edit circle.yaml to push a specific branch. 
+- QA push to deploy.
+- Open issues in Github for feature requests. Use the 'website' label.
+- Each article should have the title meta block. Use relative links when linking to content.
+- Functional site with navbars and decent styling by the end of the week. Presentable.
+- Tom: most of the big ticket conversion is done. Big ticket item left on todos is testing - unfortunately there is actually not much out there in for testing, lack of mocks. We could build stuff that would fill significant gaps. PR against Meteor out there that enables method mocking, this is required in addition to mocking publications as well as ... Todos app has some unit tests but not great coverage. End-end tests with Gagarin seems like a good approach.
+- Open question on building unit test infrastructure?
+- Leave testing questions till after the guide.
+- Still on track to have todos done by Wed.
+- Remember we want an iterative process.
+- Tom to get gagarin, selenium, CI done. Identify the risks and try to eliminate the largest one.
+- On track for 2 articles drafted this week.
 
 ## Standup 5th Nov
 
