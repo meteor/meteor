@@ -1,8 +1,3 @@
-/**
- * @summary Options to customize emails sent from the Accounts system.
- * @locus Server
- */
-
 function greet(welcomeMsg) {
   return function(user, url) {
       var greeting = (user.profile && user.profile.name) ?
@@ -18,6 +13,10 @@ Thanks.
   };
 }
 
+/**
+ * @summary Options to customize emails sent from the Accounts system.
+ * @locus Server
+ */
 Accounts.emailTemplates = {
   from: "Meteor Accounts <no-reply@meteor.com>",
   siteName: Meteor.absoluteUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''),
