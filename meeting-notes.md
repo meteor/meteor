@@ -3,6 +3,7 @@
 ### Agenda:
 
 - Progress.
+- Thoughts on testing.
 - Meeting Matt on Thu for feedback.
 
 ## Standup 5th Nov
