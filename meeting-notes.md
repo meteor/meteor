@@ -1,3 +1,10 @@
+## Standup 9th Nov
+
+### Agenda:
+
+- Progress.
+- Meeting Matt on Thu for feedback.
+
 ## Standup 5th Nov
 
 With Zol, Tom, Evan and Sashko
