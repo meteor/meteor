@@ -7,7 +7,7 @@
  * - connection {Object} Optional DDP connection to reuse.
  * - ddpUrl {String} Optional URL for creating a new DDP connection.
  */
-AccountsCommon = class AccountsCommon {
+export class AccountsCommon {
   constructor(options) {
     // Currently this is read directly by packages like accounts-password
     // and accounts-ui-unstyled.

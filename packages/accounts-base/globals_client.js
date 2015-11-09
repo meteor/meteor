@@ -1,3 +1,5 @@
+import {AccountsClient} from "./accounts_client.js";
+
 /**
  * @namespace Accounts
  * @summary The namespace for all client-side accounts-related methods.

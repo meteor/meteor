@@ -38,7 +38,6 @@ Package.onUse(function (api) {
   api.export('Accounts');
   api.export('AccountsClient', 'client');
   api.export('AccountsServer', 'server');
-  api.export('AccountsTest', {testOnly: true});
 
   api.addFiles('accounts_common.js', ['client', 'server']);
   api.addFiles('accounts_server.js', 'server');
@@ -64,6 +63,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use([
     'accounts-base',
+    'ecmascript',
     'tinytest',
     'random',
     'test-helpers',
