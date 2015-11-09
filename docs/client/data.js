@@ -162,6 +162,17 @@ DocsData = {
     "scope": "static",
     "summary": "Create a new user."
   },
+  "Accounts.emailTemplates": {
+    "filepath": "accounts-password/email_templates.js",
+    "kind": "member",
+    "lineno": 20,
+    "locus": "Server",
+    "longname": "Accounts.emailTemplates",
+    "memberof": "Accounts",
+    "name": "emailTemplates",
+    "scope": "static",
+    "summary": "Options to customize emails sent from the Accounts system."
+  },
   "Accounts.findUserByEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
@@ -8108,18 +8119,6 @@ DocsData = {
     ],
     "scope": "global",
     "summary": "Returns the extension that matched the compiler plugin.\nThe longest prefix is preferred."
-  },
-  "greet": {
-    "filepath": "accounts-password/email_templates.js",
-    "kind": "function",
-    "lineno": 6,
-    "locus": "Server",
-    "longname": "greet",
-    "name": "greet",
-    "options": [],
-    "params": [],
-    "scope": "global",
-    "summary": "Options to customize emails sent from the Accounts system."
   },
   "loggingIn": {
     "filepath": "accounts-base/accounts_client.js",
