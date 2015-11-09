@@ -1,3 +1,5 @@
+import {AccountsCommon} from "./accounts_common.js";
+
 var Ap = AccountsCommon.prototype;
 var defaultRateLimiterRuleId;
 // Removes default rate limiting rule
