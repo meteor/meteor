@@ -48,7 +48,7 @@
 6. Hot code push on mobile
     1. Be careful when analyzing the outcome of hot code push - for example, you need a new app to use new Cordova plugins; so if you add any you need to make sure their app shell has the right plugins
     2. Controlling when reload happens
-        1. Different states your app can be in
+        1. Different states your app can be in, and how to detect them
             1. Never hot code pushed, fresh
             2. New update currently downloading
             3. New update downloaded, not reloaded yet
