@@ -597,6 +597,7 @@ class PackageSourceBatch {
     const linkerOptions = {
       useGlobalNamespace: isApp,
       sourceRoot: self.sourceRoot,
+      nodeModulesPath: self.unibuild.nodeModulesPath,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
@@ -606,6 +607,7 @@ class PackageSourceBatch {
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
+      bundleArch,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
       imports: self.importedSymbolToPackageName,
       usedPackageNames: self.usedPackageNames,

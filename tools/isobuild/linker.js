@@ -166,6 +166,13 @@ _.extend(Module.prototype, {
           return;
         }
 
+        if (file.lazy && ! file.imported) {
+          // If the file is not eagerly evaluated, and no other files
+          // import or require it, then it need not be included in the
+          // bundle.
+          return;
+        }
+
         const parts = file.installPath.split("/");
         let t = tree;
         _.each(parts, function (part, i) {
@@ -339,12 +346,9 @@ var File = function (inputFile, module) {
   self.sourcePath = inputFile.sourcePath;
 
   // Absolute module identifier to use when installing this file via
-  // meteorInstall.
-  self.installPath = files.convertToPosixPath(
-    module.name
-      ? files.pathJoin("node_modules", module.name, inputFile.sourcePath)
-      : inputFile.sourcePath
-  );
+  // meteorInstall. If the inputFile has no .installPath, then this file
+  // cannot be installed as a module.
+  self.installPath = inputFile.installPath || null;
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
@@ -354,6 +358,10 @@ var File = function (inputFile, module) {
 
   // True if the input file should not be evaluated eagerly.
   self.lazy = !!inputFile.lazy;
+
+  // True if the file is an eagerly evaluated entry point, or if some
+  // other file imports or requires it.
+  self.imported = !!inputFile.imported;
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
@@ -849,6 +857,8 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // imports of other modules); null if the module has no name (in that
   // case exports will not work properly)
   name,
+  // The architecture for which this bundle is to be linked.
+  bundleArch,
   // An array of symbols that the module exports. Symbols are
   // {name,testOnly} pairs.
   declaredExports,
@@ -867,7 +877,11 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // Absolute path of the package or application root directory. Can be
   // joined with the .path of an input file to determine the absolute path
   // of the file.
-  sourceRoot
+  sourceRoot,
+  // Absolute path to the node_modules directory to use at runtime to
+  // resolve require() calls for this package, or null if we're not
+  // linking a package, or if this package has no node_modules.
+  nodeModulesPath,
 }) {
   buildmessage.assertInJob();
 
@@ -886,8 +900,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   if (useMeteorInstall) {
     inputFiles = new ImportScanner({
       name,
+      bundleArch,
       sourceRoot,
       usedPackageNames,
+      nodeModulesPath,
     }).addInputFiles(inputFiles)
       .getOutputFiles();
   }
