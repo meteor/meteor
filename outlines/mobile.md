@@ -37,6 +37,7 @@
     4. Swiping - Hammer.js
     5. Animations - link to UX article about animations, mention that they are especially important on mobile
     6. Fastclick, installed by default, explain what it does
+    7. Loading screens, installed by default, explain how to control it
 5. Native functionality with Cordova plugins
     1. How to add a plugin with meteor add cordova:something, or depending on it in a package
     2. Make sure to wait until Meteor.startup for plugins to load
