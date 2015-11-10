@@ -30,7 +30,7 @@
         4. Question: where exactly do we capture logs correctly and log them to terminal?
     3. Testing
     4. Debugging
-4. Designing for mobile - see UX article (XXX need to PR that outline)
+4. Designing for mobile - link to external resources or UX guide for all points
     1. Credit: https://github.com/awatson1978/meteor-cookbook/blob/master/cookbook/mobile.md
     2. Media queries/CSS libraries
     3. Scroll bounce with cordova settings and CSS properties
@@ -59,7 +59,7 @@
 8. Accessing local files
     1. Files/assets from the app bundle
     2. Local files (not possible in Meteor 1.2, we're working on it)
-9. Offline data
+9. Offline data - just call out that there isn't a good story for this, and mention the below points briefly
     1. Not sure if GroundDB covers this
     2. You can use Cordova plugins for SQLite across different platforms
     3. You might need to migrate data across different app versions
