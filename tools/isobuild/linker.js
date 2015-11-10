@@ -150,6 +150,13 @@ _.extend(Module.prototype, {
     // Prologue
     var chunks = [];
 
+    const result = {
+      // This object will be populated with .source, .servePath,
+      // .sourceMap, and (optionally) .exportsName properties before being
+      // returned from this method in a singleton array.
+      servePath: self.combinedServePath,
+    };
+
     // Emit each file
     if (self.useMeteorInstall) {
       const tree = {};
@@ -218,8 +225,13 @@ _.extend(Module.prototype, {
             noLineNumbers: self.noLineNumbers
           }));
         } else if (moduleCount > 0 && ! file.lazy) {
+          if (file.mainModule) {
+            result.exportsName = "exports";
+          }
+
           chunks.push(
-            "\nrequire(",
+            file.mainModule ? "\nvar " + result.exportsName + " = " : "\n",
+            "require(",
             JSON.stringify("./" + file.installPath),
             ");"
           );
@@ -240,19 +252,19 @@ _.extend(Module.prototype, {
 
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
-    var results = Profile.time(
+    Profile.time(
       'getPrelinkedFiles toStringWithSourceMap (packages)',
       function () {
-        return node.toStringWithSourceMap({
+        const { code, map } = node.toStringWithSourceMap({
           file: self.combinedServePath
-        }); // results has 'code' and 'map' attributes
+        });
+
+        result.source = code;
+        result.sourceMap = map.toJSON();
       }
     );
-    return [{
-      source: results.code,
-      servePath: self.combinedServePath,
-      sourceMap: results.map.toJSON()
-    }];
+
+    return [result];
   })
 });
 
@@ -342,6 +354,10 @@ var File = function (inputFile, module) {
 
   // If true, don't require this file immediately after meteorInstall.
   self.lazy = !!inputFile.lazy;
+
+  // Boolean indicating whether this file is the main entry point module
+  // for its package.
+  self.mainModule = !!inputFile.mainModule;
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;
@@ -774,30 +790,30 @@ var getImportCode = function (imports, header, omitvar) {
   return buf;
 };
 
-var getFooter = function (options) {
+var getFooter = function ({
+  name,
+  exported,
+  exportsName,
+}) {
   var chunks = [];
 
-  if (options.name && options.exported) {
+  if (name && exported) {
     chunks.push("\n\n/* Exports */\n");
     chunks.push("if (typeof Package === 'undefined') Package = {};\n");
-    chunks.push(packageDot(options.name), " = ");
-
-    // Even if there are no exports, we need to define Package.foo, because the
-    // existence of Package.foo is how another package (eg, one that weakly
-    // depends on foo) can tell if foo is loaded.
-    if (_.isEmpty(options.exported)) {
-      chunks.push("{};\n");
+    const pkgInit = packageDot(name) + " = " + (exportsName || "{}");
+    if (_.isEmpty(exported)) {
+      // Even if there are no exports, we need to define Package.foo,
+      // because the existence of Package.foo is how another package
+      // (e.g., one that weakly depends on foo) can tell if foo is loaded.
+      chunks.push(pkgInit, ";\n");
     } else {
-      // A slightly overkill way to print out a properly indented version of
-      // {Foo: Foo, Bar: Bar, Quux: Quux}. (This was less overkill back when
-      // you could export dotted symbols.)
-      var scratch = {};
-      _.each(options.exported, function (symbol) {
-        scratch[symbol] = symbol;
-      });
-      var exportTree = buildSymbolTree(scratch);
-      chunks.push(writeSymbolTree(exportTree));
-      chunks.push(";\n");
+      const scratch = {};
+      _.each(exported, symbol => scratch[symbol] = symbol);
+      const symbolTree = writeSymbolTree(buildSymbolTree(scratch));
+      chunks.push("(function (pkg, symbols) {\n",
+                  "  for (var s in symbols)\n",
+                  "    (s in pkg) || (pkg[s] = symbols[s]);\n",
+                  "})(", pkgInit, ", ", symbolTree, ");\n");
     }
   }
 
@@ -917,8 +933,16 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     packageVariables: _.union(assignedVariables, declaredExports)
   });
 
+  let exportsName;
+  _.each(prelinkedFiles, file => {
+    if (file.exportsName) {
+      exportsName = file.exportsName;
+    }
+  });
+
   var footer = getFooter({
     exported: declaredExports,
+    exportsName,
     name
   });
 

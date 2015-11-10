@@ -387,10 +387,11 @@ class ResourceSlot {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
+    const fileOptions = self.inputResource.fileOptions;
+
     // By default, use the 'bare' option given to addFiles, but allow the option
     // passed to addJavaScript to override it.
-    var bare = self.inputResource.fileOptions &&
-      self.inputResource.fileOptions.bare;
+    var bare = fileOptions && fileOptions.bare;
     if (options.hasOwnProperty('bare')) {
       bare = options.bare;
     }
@@ -410,6 +411,9 @@ class ResourceSlot {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
+      // Boolean indicating whether this module is the main entry point
+      // for this package.
+      mainModule: !! (fileOptions && fileOptions.mainModule),
       bare: !! bare
     });
   }
