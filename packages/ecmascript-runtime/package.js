@@ -11,13 +11,9 @@ Npm.depends({
 });
 
 Package.onUse(function(api) {
-  api.addFiles("runtime.js", "server");
+  api.use("modules");
 
-  api.addFiles(
-    ".npm/package/node_modules/meteor-ecmascript-runtime/client.js",
-    "client",
-    { bare: true }
-  );
+  api.mainModule("runtime.js");
 
   api.export("Symbol");
   api.export("Map");
