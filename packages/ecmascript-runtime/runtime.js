@@ -1,5 +1,2 @@
-var runtime = Npm.require("meteor-ecmascript-runtime");
-
-Symbol = runtime.Symbol;
-Map = runtime.Map;
-Set = runtime.Set;
+// TODO Allow just api.mainModule("meteor-ecmascript-runtime");
+module.exports = require("meteor-ecmascript-runtime");
