@@ -388,6 +388,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
                                          files.convertToStandardPath),
         lazy: !! getOption("lazy"),
         bare: !! getOption("bare"),
+        mainModule: !! getOption("mainModule"),
       });
     },
 
