@@ -4,8 +4,10 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use('modules');
   api.export('GeoJSON');
-  api.addFiles(['pre.js', 'geojson-utils.js', 'post.js']);
+  api.addFiles('geojson-utils.js');
+  api.mainModule('main.js');
 });
 
 Package.onTest(function (api) {
