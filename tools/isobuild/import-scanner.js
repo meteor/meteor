@@ -9,6 +9,7 @@ import {
   pathDirname,
   statOrNull,
   readFile,
+  convertToPosixPath,
 } from "../fs/files.js";
 
 export default class ImportScanner {
@@ -17,12 +18,14 @@ export default class ImportScanner {
     sourceRoot,
     extensions,
     usedPackageNames = {},
+    nodeModulesPath,
   }) {
     assert.ok(isString(sourceRoot));
 
     this.name = name;
     this.sourceRoot = sourceRoot;
     this.usedPackageNames = usedPackageNames;
+    this.nodeModulesPath = nodeModulesPath;
     this.absPathToOutputIndex = {};
     this.outputFiles = [];
 
@@ -41,6 +44,7 @@ export default class ImportScanner {
     flatFiles.forEach(file => {
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
       file.lazy = this._isFileLazy(file);
+      file.installPath = this._getInstallPath(file.sourcePath);
 
       if (has(this.absPathToOutputIndex, absPath)) {
         const index = this.absPathToOutputIndex[absPath];
@@ -95,6 +99,7 @@ export default class ImportScanner {
       depFile.type = "js"; // TODO Is this correct?
       depFile.data = readFile(absImportedPath);
       depFile.sourcePath = relImportedPath;
+      depFile.installPath = this._getInstallPath(relImportedPath);
       depFile.servePath = relImportedPath;
       depFile.hash = sha1(depFile.data);
       depFile.lazy = true;
@@ -105,6 +110,30 @@ export default class ImportScanner {
 
       this._scanFile(depFile);
     });
+  }
+
+  // Module path to use when installing this file via meteorInstall.
+  _getInstallPath(relSourcePath) {
+    if (this.name) {
+      if (this.nodeModulesPath) {
+        const absPath = pathJoin(this.sourceRoot, relSourcePath);
+        const relPathWithinNodeModules =
+          pathRelative(this.nodeModulesPath, absPath);
+
+        if (! relPathWithinNodeModules.startsWith("..")) {
+          // Install path/to/node_modules/foo/bar.js as
+          // node_modules/<packageName>/node_modules/foo/bar.js.
+          return convertToPosixPath(pathJoin(
+            "node_modules", this.name,
+            "node_modules", relPathWithinNodeModules
+          ));
+        }
+      }
+
+      relSourcePath = pathJoin("node_modules", this.name, relSourcePath);
+    }
+
+    return convertToPosixPath(relSourcePath);
   }
 
   _tryToResolveImportedPath(id, path) {
@@ -155,6 +184,12 @@ export default class ImportScanner {
         dir = pathDirname(dir);
         resolved = this._joinAndStat(dir, "node_modules", id);
       } while (! resolved && dir !== this.sourceRoot);
+
+      if (! resolved && this.nodeModulesPath) {
+        // After checking any local node_modules directories, fall back to
+        // the package NPM directory, if one was specified.
+        resolved = this._joinAndStat(this.nodeModulesPath, id);
+      }
     }
 
     return resolved;
@@ -204,6 +239,7 @@ export default class ImportScanner {
         data,
         deps: [], // Avoid accidentally re-scanning this file.
         sourcePath: relPkgJsonPath,
+        installPath: this._getInstallPath(relPkgJsonPath),
         servePath: relPkgJsonPath,
         hash: sha1(data),
         lazy: true,

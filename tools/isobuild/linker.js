@@ -341,11 +341,7 @@ var File = function (inputFile, module) {
 
   // Absolute module identifier to use when installing this file via
   // meteorInstall.
-  self.installPath = files.convertToPosixPath(
-    module.name
-      ? files.pathJoin("node_modules", module.name, inputFile.sourcePath)
-      : inputFile.sourcePath
-  );
+  self.installPath = inputFile.installPath || inputFile.sourcePath;
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
@@ -871,7 +867,11 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // Absolute path of the package or application root directory. Can be
   // joined with the .path of an input file to determine the absolute path
   // of the file.
-  sourceRoot
+  sourceRoot,
+  // Absolute path to the node_modules directory to use at runtime to
+  // resolve require() calls for this package, or null if we're not
+  // linking a package, or if this package has no node_modules.
+  nodeModulesPath,
 }) {
   buildmessage.assertInJob();
 
@@ -892,6 +892,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
       name,
       sourceRoot,
       usedPackageNames,
+      nodeModulesPath,
     }).addInputFiles(inputFiles)
       .getOutputFiles();
   }

@@ -589,8 +589,8 @@ api.addAssets('${relPath}', 'client').`);
   }
 
   let nodeModulesPathOrUndefined = nodeModulesPath;
-  if (! archinfo.matches(arch, "os")) {
-    // npm modules only work on server architectures
+  if (! archinfo.matches(arch, "os") && ! isPortable) {
+    // non-portable npm modules only work on server architectures
     nodeModulesPathOrUndefined = undefined;
   }
 
