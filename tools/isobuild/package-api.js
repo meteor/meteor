@@ -95,7 +95,8 @@ function PackageAPI (options) {
   _.each(compiler.ALL_ARCHES, function (arch) {
     self.files[arch] = {
       assets: [],
-      sources: []
+      sources: [],
+      main: null,
     };
 
     self.exports[arch] = [];
@@ -334,6 +335,29 @@ _.extend(PackageAPI.prototype, {
     // Watch out - we rely on the levels of stack traces inside this
     // function so don't wrap it in another function without changing that logic
     this._addFiles("sources", paths, arch, fileOptions);
+  },
+
+  mainModule(path, arch) {
+    arch = toArchArray(arch);
+    forAllMatchingArchs(arch, a => {
+      const filesForArch = this.files[a];
+      const source = {
+        relPath: path,
+        fileOptions: {
+          mainModule: true
+        }
+      };
+
+      const oldMain = filesForArch.main;
+      if (oldMain) {
+        // It's not an error to call api.mainModule multiple times, but
+        // the last call takes precedence over the earlier calls.
+        oldMain.fileOptions.mainModule = false;
+      }
+
+      filesForArch.main = source;
+      filesForArch.sources.push(source);
+    });
   },
 
   /**

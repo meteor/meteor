@@ -414,6 +414,7 @@ class ResourceSlot {
       sourceMap: options.sourceMap,
       lazy: !! getOption("lazy"),
       bare: !! getOption("bare"),
+      mainModule: !! getOption("mainModule"),
     });
   }
 
