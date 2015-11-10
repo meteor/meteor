@@ -286,6 +286,7 @@ require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
+require('./commands-aliases.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Long-form help

@@ -1,5 +1,5 @@
 
-Tinytest.add("minifiers - simple css minification", function (test) {
+Tinytest.add("minifiers-css - simple css minification", function (test) {
   var t = function (css, expected, desc) {
     test.equal(CssTools.minifyCss(css), [expected], desc);
   }

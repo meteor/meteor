@@ -410,7 +410,7 @@ _.extend(PackageAPI.prototype, {
           source.fileOptions = fileOptions;
         }
 
-        filesOfType[path] = source;
+        filesOfType.push(source);
       });
     });
 

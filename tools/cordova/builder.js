@@ -383,9 +383,7 @@ export class CordovaBuilder {
       release.current.isCheckout() ? "none" : release.current.name;
 
     let configDummy = {};
-    if (publicSettings) {
-      configDummy.PUBLIC_SETTINGS = publicSettings;
-    }
+    configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
     const { WebAppHashing } =
       isopackets.load('cordova-support')['webapp-hashing'];

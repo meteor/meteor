@@ -35,7 +35,7 @@ WebApp.clientPrograms = {};
 // XXX maps archs to program path on filesystem
 var archPath = {};
 
-var bundledJsCssPrefix;
+var bundledJsCssUrlRewriteHook;
 
 var sha1 = function (contents) {
   var hash = crypto.createHash('sha1');
@@ -271,16 +271,11 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
     additionalOptions.runtimeConfigOverrides || {}
   );
 
-  var jsCssPrefix;
-  if (arch === 'web.cordova') {
-    // in cordova we serve assets up directly from disk so it doesn't make
-    // sense to use the prefix (ordinarily something like a CDN) and go out
-    // to the internet for those files.
-    jsCssPrefix = '';
-  } else {
-    jsCssPrefix = bundledJsCssPrefix ||
-      __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
-  }
+  var jsCssUrlRewriteHook = bundledJsCssUrlRewriteHook || function (url) {
+    var bundledPrefix =
+       __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+    return bundledPrefix + url;
+  };
 
   return new Boilerplate(arch, manifest,
     _.extend({
@@ -305,7 +300,7 @@ WebAppInternals.generateBoilerplateInstance = function (arch,
         meteorRuntimeConfig: JSON.stringify(
           encodeURIComponent(JSON.stringify(runtimeConfig))),
         rootUrlPathPrefix: __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '',
-        bundledJsCssPrefix: jsCssPrefix,
+        bundledJsCssUrlRewriteHook: jsCssUrlRewriteHook,
         inlineScriptsAllowed: WebAppInternals.inlineScriptsAllowed(),
         inline: additionalOptions.inline
       }
@@ -799,9 +794,18 @@ WebAppInternals.setInlineScriptsAllowed = function (value) {
   WebAppInternals.generateBoilerplate();
 };
 
-WebAppInternals.setBundledJsCssPrefix = function (prefix) {
-  bundledJsCssPrefix = prefix;
+
+WebAppInternals.setBundledJsCssUrlRewriteHook = function (hookFn) {
+  bundledJsCssUrlRewriteHook = hookFn;
   WebAppInternals.generateBoilerplate();
+};
+
+WebAppInternals.setBundledJsCssPrefix = function (prefix) {
+  var self = this;
+  self.setBundledJsCssUrlRewriteHook(
+    function (url) {
+      return prefix + url;
+  });
 };
 
 // Packages can call `WebAppInternals.addStaticJs` to specify static

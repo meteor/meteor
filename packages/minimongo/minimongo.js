@@ -696,12 +696,26 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // it. (We don't need to save the original results of paused queries because
   // they already have a resultsSnapshot and we won't be diffing in
   // _recomputeResults.)
-  var qidToOriginalResults = {};
+  var qidToOriginalResults = {},
+      docMap = {}, // We should only clone each document once, even if it appears in multiple queries
+      onlyIDQuery = LocalCollection._selectorIsIdPerhapsAsObject(selector), // If the selector is just looking up a single _id, then we only need to clone that document
+      selectorID = onlyIDQuery ? (selector._id || selector) : undefined;
   _.each(self.queries, function (query, qid) {
     // XXX for now, skip/limit implies ordered observe, so query.results is
     // always an array
-    if ((query.cursor.skip || query.cursor.limit) && ! self.paused)
-      qidToOriginalResults[qid] = EJSON.clone(query.results);
+    if ((query.cursor.skip || query.cursor.limit) && ! self.paused) {
+
+      qidToOriginalResults[qid] = query.results.map(function(result) {
+
+        if (!_.has(docMap, result._id)) {
+          docMap[result._id] = !onlyIDQuery || (onlyIDQuery && result._id === selectorID) 
+                                ? EJSON.clone(result) 
+                                : result;
+        }
+
+        return docMap[result._id];
+      });
+    }
   });
   var recomputeQids = {};
 

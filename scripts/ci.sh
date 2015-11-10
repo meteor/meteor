@@ -1,6 +1,6 @@
-export TIMEOUT_SCALE_FACTOR=10
+export TIMEOUT_SCALE_FACTOR=15
 export TEST_PACKAGES_EXCLUDE="less"
-export SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^logs - logged out|^mongo - logged out|^minifiers can't register non-js|^minifiers: apps can't use"
+export SELF_TEST_EXCLUDE="^can't publish package with colons|^old cli tests|^logs - logged (in|out)|^mongo - logged (in|out)|^minifiers can't register non-js|^minifiers: apps can't use|^compiler plugins - addAssets"
 
 # run different jobs based on CicleCI parallel container index
 case $CIRCLE_NODE_INDEX in

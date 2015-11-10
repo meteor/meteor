@@ -1,52 +1,59 @@
-var queue = [];
-var loaded = !Meteor.isCordova &&
-  (document.readyState === "loaded" || document.readyState == "complete");
+var callbackQueue = [];
+var isLoadingCompleted = false;
+var isReady = false;
 
-var awaitingEventsCount = 1;
-var ready = function() {
-  awaitingEventsCount--;
-  if (awaitingEventsCount > 0)
+// Keeps track of how many events to wait for in addition to loading completing,
+// before we're considered ready.
+var readyHoldsCount = 0;
+
+var holdReady =  function () {
+  readyHoldsCount++;
+}
+
+var releaseReadyHold = function () {
+  readyHoldsCount--;
+  maybeReady();
+}
+
+var maybeReady = function () {
+  if (isReady || !isLoadingCompleted || readyHoldsCount > 0)
     return;
 
-  loaded = true;
-  var runStartupCallbacks = function () {
-    if (Meteor.isCordova) {
-      if (! cordova.plugins || ! cordova.plugins.CordovaUpdate) {
-        // XXX This timeout should not be necessary.
-        // Cordova indicates that all the cordova plugins files have been loaded
-        // and plugins are ready to be used when the "deviceready" callback
-        // fires. Even though we wait for the "deviceready" event, plugins
-        // have been observed to still not be ready (likely a Cordova bug).
-        // We check the availability of the Cordova-Update plugin (the only
-        // plugin that we always include for sure) and retry a bit later if it
-        // is nowhere to be found. Experiments have found that either all
-        // plugins are attached or none.
-        Meteor.setTimeout(runStartupCallbacks, 20);
-        return;
-      }
-    }
+  isReady = true;
 
-    while (queue.length)
-      (queue.shift())();
-  };
-  runStartupCallbacks();
+  // Run startup callbacks
+  while (callbackQueue.length)
+    (callbackQueue.shift())();
 };
 
-if (document.addEventListener) {
-  document.addEventListener('DOMContentLoaded', ready, false);
-
-  if (Meteor.isCordova) {
-    awaitingEventsCount++;
-    document.addEventListener('deviceready', ready, false);
+var loadingCompleted = function () {
+  if (!isLoadingCompleted) {
+    isLoadingCompleted = true;
+    maybeReady();
   }
+}
 
-  window.addEventListener('load', ready, false);
-} else {
-  document.attachEvent('onreadystatechange', function () {
-    if (document.readyState === "complete")
-      ready();
-  });
-  window.attachEvent('load', ready);
+if (Meteor.isCordova) {
+  holdReady();
+  document.addEventListener('deviceready', releaseReadyHold, false);
+}
+
+if (document.readyState === 'complete' || document.readyState === 'loaded') {
+  // Loading has completed,
+  // but allow other scripts the opportunity to hold ready
+  window.setTimeout(loadingCompleted);
+} else { // Attach event listeners to wait for loading to complete
+  if (document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', loadingCompleted, false);
+    window.addEventListener('load', loadingCompleted, false);
+  } else { // Use IE event model for < IE9
+    document.attachEvent('onreadystatechange', function () {
+      if (document.readyState === "complete") {
+        loadingCompleted();
+      }
+    });
+    window.attachEvent('load', loadingCompleted);
+  }
 }
 
 /**
@@ -54,21 +61,22 @@ if (document.addEventListener) {
  * @locus Anywhere
  * @param {Function} func A function to run on startup.
  */
-Meteor.startup = function (cb) {
+Meteor.startup = function (callback) {
+  // Fix for < IE9, see http://javascript.nwbox.com/IEContentLoaded/
   var doScroll = !document.addEventListener &&
     document.documentElement.doScroll;
 
   if (!doScroll || window !== top) {
-    if (loaded)
-      cb();
+    if (isReady)
+      callback();
     else
-      queue.push(cb);
+      callbackQueue.push(callback);
   } else {
     try { doScroll('left'); }
-    catch (e) {
-      setTimeout(function() { Meteor.startup(cb); }, 50);
+    catch (error) {
+      setTimeout(function () { Meteor.startup(callback); }, 50);
       return;
     };
-    cb();
+    callback();
   }
 };

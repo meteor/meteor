@@ -117,8 +117,8 @@ var runVelocity = function (url) {
       function visitWithPhantom (url) {
         var phantomScript = "require('webpage').create().open('" + url + "');";
         var browserProcess = child_process.execFile(
-          '/bin/bash',
-          ['-c',
+          '/usr/bin/env',
+          ['bash', '-c',
            ("exec " + phantomjs.path + " /dev/stdin <<'END'\n" +
             phantomScript + "END\n")]);
         browserProcesses.push(browserProcess);

@@ -72,9 +72,13 @@ var packageJson = {
   }
 };
 
+if (process.platform !== 'darwin') {
+  // Remove dependencies that require darwin on non-darwin platforms.
+  delete packageJson.dependencies['ios-sim'];
+}
+
 if (process.platform === 'win32') {
   // Remove dependencies that do not work on Windows
-  delete packageJson.dependencies['ios-sim'];
   delete packageJson.dependencies.netroute;
   delete packageJson.dependencies.kexec;
 }
