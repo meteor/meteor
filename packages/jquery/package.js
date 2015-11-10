@@ -9,7 +9,9 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.addFiles(['jquery.js', 'post.js'], 'client');
+  api.use('modules');
+
+  api.mainModule('main.js', 'client');
 
   api.export('$', 'client');
   api.export('jQuery', 'client');
