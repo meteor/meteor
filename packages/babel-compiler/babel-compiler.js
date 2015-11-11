@@ -16,8 +16,9 @@ BCp.processFilesForTarget = function (inputFiles) {
 
   inputFiles.forEach(function (inputFile) {
     var source = inputFile.getContentsAsString();
+    var packageName = inputFile.getPackageName();
     var inputFilePath = inputFile.getPathInPackage();
-    var outputFilePath = inputFile.getPathInPackage();
+    var outputFilePath = inputFilePath;
     var fileOptions = inputFile.getFileOptions();
     var toBeAdded = {
       sourcePath: inputFilePath,
@@ -50,9 +51,12 @@ BCp.processFilesForTarget = function (inputFiles) {
       var babelOptions = Babel.getDefaultOptions(self.extraFeatures);
 
       babelOptions.sourceMap = true;
-      babelOptions.filename = inputFilePath;
-      babelOptions.sourceFileName = "/" + inputFilePath;
-      babelOptions.sourceMapName = "/" + outputFilePath + ".map";
+      babelOptions.filename =
+      babelOptions.sourceFileName = packageName
+        ? "/packages/" + packageName + "/" + inputFilePath
+        : "/" + inputFilePath;
+
+      babelOptions.sourceMapName = babelOptions.filename + ".map";
 
       try {
         var result = Babel.compile(source, babelOptions);
