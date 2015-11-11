@@ -416,7 +416,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
         res.end();
       })
       .on('directory', function () {
-        Log.error("Unexpected directory " + info.absolutePath);
+        Log.error("Unexpected directory " + pathname);
         res.writeHead(500);
         res.end();
       })
