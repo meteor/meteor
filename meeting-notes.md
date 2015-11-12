@@ -22,15 +22,14 @@ With Zol, Tom, Sashko and Matt
 - Flag save() in Collections & Modles and come back to it
 - Should forms and methods go in the same section?
 
-Matt's Ordering:
-----------------
-App Structure
-Collections and Schemas (migrations)
-Data Loading/Publications
-Methods (stubs, optimistic UI)
-Routing
-UI-UX / Blaze in here somewhere
-Everything else...
+*Matt's Ordering for articles (TBD):*
+- App Structure
+- Collections and Schemas (migrations)
+- Data Loading/Publications
+- Methods (stubs, optimistic UI)
+- Routing
+- UI-UX / Blaze in here somewhere
+- Everything else...
 
 - Detailed walk through.
 - *App Structure:*
