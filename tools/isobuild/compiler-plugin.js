@@ -368,16 +368,36 @@ class ResourceSlot {
       throw Error("addStylesheet on non-source ResourceSlot?");
     }
 
-    self.outputResources.push({
-      type: "css",
-      refreshable: true,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
-      // XXX do we need to call convertSourceMapPaths here like we did
-      //     in legacy handlers?
-      sourceMap: options.sourceMap
-    });
+    if (self.packageSourceBatch.usesModules()) {
+      const data = new Buffer(
+        'require("modules/css").addStyles(' + JSON.stringify(
+          files.convertToStandardLineEndings(options.data)
+        ) + ');\n'
+      );
+
+      self.jsOutputResources.push({
+        type: "js",
+        refreshable: true, // TODO Really?
+        data,
+        sourcePath: self.inputResource.path,
+        servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
+          options.path),
+        hash: sha1(data),
+        sourceMap: null, // TODO Improve this?
+      });
+
+    } else {
+      self.outputResources.push({
+        type: "css",
+        refreshable: true,
+        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+        servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
+          options.path),
+        // XXX do we need to call convertSourceMapPaths here like we did
+        //     in legacy handlers?
+        sourceMap: options.sourceMap
+      });
+    }
   }
 
   addJavaScript(options) {
@@ -545,6 +565,11 @@ class PackageSourceBatch {
 
       self.usedPackageNames[depUnibuild.pkg.name] = true;
     });
+  }
+
+  usesModules() {
+    return _.isString(this.sourceRoot) &&
+      _.has(this.usedPackageNames, "modules");
   }
 
   _getSourceProcessorSet() {
