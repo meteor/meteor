@@ -433,50 +433,51 @@ class ResourceSlot {
   }
 }
 
-var PackageSourceBatch = function (unibuild, processor, {linkerCacheDir}) {
-  var self = this;
-  buildmessage.assertInJob();
+class PackageSourceBatch {
+  constructor(unibuild, processor, {linkerCacheDir}) {
+    const self = this;
+    buildmessage.assertInJob();
 
-  self.unibuild = unibuild;
-  self.processor = processor;
-  self.linkerCacheDir = linkerCacheDir;
-  var sourceProcessorSet = self._getSourceProcessorSet();
-  self.resourceSlots = [];
-  unibuild.resources.forEach(function (resource) {
-    let sourceProcessor = null;
-    if (resource.type === "source") {
-      var extension = resource.extension;
-      if (extension === null) {
-        const filename = files.pathBasename(resource.path);
-        sourceProcessor = sourceProcessorSet.getByFilename(filename);
-        if (! sourceProcessor) {
-          buildmessage.error(
-            `no plugin found for ${ resource.path } in ` +
-              `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
-              `was active when it was published but none is now`);
-          return;
-          // recover by ignoring
-        }
-      } else {
-        sourceProcessor = sourceProcessorSet.getByExtension(extension);
-        // If resource.extension === 'js', it's ok for there to be no
-        // sourceProcessor, since we #HardcodeJs in ResourceSlot.
-        if (! sourceProcessor && extension !== 'js') {
-          buildmessage.error(
-            `no plugin found for ${ resource.path } in ` +
-            `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
-            `was active when it was published but none is now`);
-          return;
-          // recover by ignoring
+    self.unibuild = unibuild;
+    self.processor = processor;
+    self.linkerCacheDir = linkerCacheDir;
+    var sourceProcessorSet = self._getSourceProcessorSet();
+    self.resourceSlots = [];
+    unibuild.resources.forEach(function (resource) {
+      let sourceProcessor = null;
+      if (resource.type === "source") {
+        var extension = resource.extension;
+        if (extension === null) {
+          const filename = files.pathBasename(resource.path);
+          sourceProcessor = sourceProcessorSet.getByFilename(filename);
+          if (! sourceProcessor) {
+            buildmessage.error(
+              `no plugin found for ${ resource.path } in ` +
+                `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
+                `was active when it was published but none is now`);
+            return;
+            // recover by ignoring
+          }
+        } else {
+          sourceProcessor = sourceProcessorSet.getByExtension(extension);
+          // If resource.extension === 'js', it's ok for there to be no
+          // sourceProcessor, since we #HardcodeJs in ResourceSlot.
+          if (! sourceProcessor && extension !== 'js') {
+            buildmessage.error(
+              `no plugin found for ${ resource.path } in ` +
+                `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
+                `was active when it was published but none is now`);
+            return;
+            // recover by ignoring
+          }
         }
       }
-    }
-    self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
-  });
-};
-_.extend(PackageSourceBatch.prototype, {
-  _getSourceProcessorSet: function () {
-    var self = this;
+      self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
+    });
+  }
+
+  _getSourceProcessorSet() {
+    const self = this;
 
     buildmessage.assertInJob();
 
@@ -496,14 +497,14 @@ _.extend(PackageSourceBatch.prototype, {
     });
 
     return sourceProcessorSet;
-  },
+  }
 
   // Called by bundler's Target._emitResources.  It returns the actual resources
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources: Profile("PackageSourceBatch#getResources", function () {
-    var self = this;
+  getResources() {
+    const self = this;
     buildmessage.assertInJob();
 
     var flatten = function (arrays) {
@@ -513,10 +514,10 @@ _.extend(PackageSourceBatch.prototype, {
     var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
     Array.prototype.push.apply(resources, self._linkJS(jsResources));
     return resources;
-  }),
+  }
 
-  _linkJS: Profile("PackageSourceBatch#_linkJS", function (jsResources) {
-    var self = this;
+  _linkJS(jsResources) {
+    const self = this;
     buildmessage.assertInJob();
 
     var isopackCache = self.processor.isopackCache;
@@ -677,5 +678,16 @@ _.extend(PackageSourceBatch.prototype, {
     }
 
     return ret;
-  })
+  }
+}
+
+_.each([
+  "getResources",
+  "_linkJS",
+], method => {
+  const proto = PackageSourceBatch.prototype;
+  proto[method] = Profile(
+    "PackageSourceBatch#" + method,
+    proto[method]
+  );
 });
