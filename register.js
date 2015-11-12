@@ -17,8 +17,7 @@ var config = {
 
 exports = module.exports = function reconfigure(newConfig) {
   Object.keys(newConfig).forEach(function (key) {
-    // Sanitize config values and prevent circular references.
-    config[key] = JSON.parse(JSON.stringify(newConfig[key]));
+    config[key] = newConfig[key];
   });
 
   return reconfigure;
@@ -100,7 +99,7 @@ function getBabelResult(filename) {
 
     babelOptions.filename = filename;
     babelOptions.sourceFileName = filename;
-    babelOptions.sourceMapName = filename + ".map";
+    babelOptions.sourceMapTarget = filename + ".map";
   }
 
   var result = meteorBabel.compile(source, babelOptions);

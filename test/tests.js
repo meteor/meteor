@@ -1,5 +1,9 @@
 import assert from "assert";
 import {transform} from "babel-core";
+import {
+  default as testDefault,
+  helper as testHelper,
+} from "./test-module";
 
 describe("Babel", function() {
   it("es3.{property,memberExpression}Literals", () => {
@@ -63,13 +67,13 @@ describe("Babel", function() {
     assert.strictEqual(d.value, 2);
   });
 
-  it("es6.constants", () => {
+  it("es6.constants", function () {
     let code = `
 const val = "oyez";
 val = "zxcv";`;
 
     try {
-      transform(code, { whitelist: ["es6.constants"] });
+      transform(code, { presets: ["meteor"] });
     } catch (error) {
       assert.ok(/"val" is read-only/.test(error.message));
       return;
@@ -111,8 +115,8 @@ val = "zxcv";`;
   });
 
   it("es6.parameters.rest", () => {
-    function f(a, b, ...[c, d]) { // TODO
-      return [a, b, c, d];
+    function f(a, b, ...cd) {
+      return [a, b, cd[0], cd[1]];
     }
 
     assert.deepEqual(
@@ -181,9 +185,8 @@ val = "zxcv";`;
   });
 
   it("es6.modules", () => {
-    import f, { helper as h } from "./test-module";
-    assert.strictEqual(f(), "default");
-    assert.strictEqual(h(), "helper");
+    assert.strictEqual(testDefault(), "default");
+    assert.strictEqual(testHelper(), "helper");
   });
 
   it("es7.trailingFunctionCommas", () => {

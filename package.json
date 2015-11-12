@@ -29,8 +29,13 @@
     "url": "https://github.com/meteor/babel/issues"
   },
   "dependencies": {
-    "babel-core": "5.8.24",
-    "convert-source-map": "^1.1.1"
+    "babel-core": "^6.2.4",
+    "babel-plugin-transform-runtime": "^6.2.4",
+    "babel-preset-meteor": "^6.2.4",
+    "babel-preset-react": "^6.2.4",
+    "babel-runtime": "^5.8.34",
+    "convert-source-map": "^1.1.2",
+    "meteor-async-await": "^0.1.1"
   },
   "devDependencies": {
     "fibers": "^1.0.5",

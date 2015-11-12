@@ -1,25 +1,25 @@
 module.exports = function (babel) {
-  var Plugin = babel.Plugin;
   var t = babel.types;
 
-  return new Plugin("meteor-named-function-expressions", {
+  return {
     visitor: {
       // From https://github.com/babel-plugins/babel-plugin-jscript
       // Solves http://kiro.me/blog/nfe_dilemma.html
       FunctionExpression: {
-        exit: function (node) {
+        exit: function (path) {
+          var node = path.node;
           if (! node.id) return;
           node._ignoreUserWhitespace = true;
 
-          return t.callExpression(
+          path.replaceWith(t.callExpression(
             t.functionExpression(null, [], t.blockStatement([
               t.toStatement(node),
               t.returnStatement(node.id)
             ])),
             []
-          );
+          ));
         }
       }
     }
-  });
+  };
 };

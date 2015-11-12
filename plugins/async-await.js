@@ -1,22 +1,18 @@
 module.exports = function (babel) {
-  var Plugin = babel.Plugin;
   var t = babel.types;
 
-  return new babel.Plugin("meteor-async-await", {
-    metadata: {
-      group: "builtin-pre"
-    },
-
+  return {
     visitor: {
-      Function: function (node, parent, scope) {
+      Function: function (path) {
+        var node = path.node;
         if (! node.async) {
-          return node;
+          return;
         }
 
         node.async = false;
 
         node.body = t.blockStatement([
-          t.expressionStatement(t.literal("use strict")),
+          t.expressionStatement(t.stringLiteral("use strict")),
           t.returnStatement(
             t.callExpression(
               t.memberExpression(
@@ -38,16 +34,17 @@ module.exports = function (babel) {
         ]);
       },
 
-      AwaitExpression: function (node) {
-        return t.callExpression(
+      AwaitExpression: function (path) {
+        var node = path.node;
+        path.replaceWith(t.callExpression(
           t.memberExpression(
             t.identifier("Promise"),
             t.identifier(node.all ? "awaitAll" : "await"),
             false
           ),
           [node.argument]
-        );
+        ));
       }
     }
-  });
+  };
 };
