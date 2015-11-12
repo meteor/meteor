@@ -1,3 +1,82 @@
+## Standup 12th Nov
+
+With Zol, Tom, Sashko and Matt
+
+### Agenda:
+
+- Feedback and sign off on outlines so far.
+
+### Notes
+
+- Matt found it hard to read the outlines and conclude if it was correct.
+- No mention of jobs or workers.
+- Move deployment to a more prominent place in the guide.
+- Feels like about the right amount of stuff.
+- Maybe there's a good way to prioritize the issues.
+- Guide is sort of targetted at 1.3 but since modules aren't there yet guide still targets 1.2.
+- We should be opinionated in the guide.
+- Clear point of view about what kind of app you're building (e.g MVP) is missing.
+- Rails guide has something like this, maybe we're missing an intro section.
+- Be aggressive about ES2015, a lot of people don't know it so we should be really upfront. Highlight the linter and our linting rules.
+- Looking at article ordering...
+- Flag save() in Collections & Modles and come back to it
+- Should forms and methods go in the same section?
+
+Matt's Ordering:
+----------------
+App Structure
+Collections and Schemas (migrations)
+Data Loading/Publications
+Methods (stubs, optimistic UI)
+Routing
+UI-UX / Blaze in here somewhere
+Everything else...
+
+- Detailed walk through.
+- *App Structure:*
+- 1. Sounds great.
+- Things seem reasonable but we're just going to have to see the text.
+- 2. ok.
+- 3. This is a bummer for Matt, that the small & medium apps are different. Modules could unify this. Matt wishes instead of S, M, L we had a taxonomy that didn't make you classify your app in one of these categories.
+- We should fold modules into the mix early on.
+- 1. Let's not target something that doesn't exist yet
+- 2. We believe modules are the correct thing to document in the guide.
+- 3. Let's make sure we aren't making any bad decisions on modules that would be obvious if we applied the guide to our current module plan.
+- Rather than small medium large, Matt would be comfortable if there was a recommended app structure and progressive enhancement.
+- ** Speak to Ben ** Matt would delay M1.3 into Jan if it meant writing the guide first would tell us how to solve the load order problem and hook we need to write app tests.
+- 7ii) Tell people just to use submodules for private packages with local package. Put PACKAGE_DIRS in the package chapter (if at all).
+- We can link out to other articles on the web, e.g for large app structure.
+- Section 7 seems like a separate article to Matt.
+- *Collections:*
+- Matt thinks we didn't like Collection2
+- Can we put Collection2 in core?
+- Matt is surprised that designing your schema doesn't come earlier.
+- 4. custom mutators belongs in the methods chapter.
+- 8,9 are all just links. Matt and Tom are confused whether we're linking to things we use or are popular. 
+- Consider removing 9.
+- Does 7i) go higher up? 
+- 8i) SimpleSchema link should go in it's own section. 
+- *Data Loading*
+- 1. Spot on.
+- 3. Switch ii & iii.
+- 4 i, ii) About right.
+- ! The guide should have a server performance article. E.g it's really easy to write slow queries. !
+- 5. Looks good. Perhaps shouldn't be in this section.
+- Move 5&6 out of here.
+- 7ii) Investigate, actually use publish-composite
+- Remove 7iii)
+- Matt suggests a section called using the low level publish API.
+- Turn 9ii) into 11 so it's side by side with 10.
+- *Forms and Methods*
+- Maybe there's two parts to this, the distinction between defining them and calling them.
+- ! 1ii) Get the package out to the broader community. ! Prioritize wrapping it up along with a forum post.
+- 1-7 seems about right. Better discussed with some content around it.
+- Thing Matt would push on hard is seeing what we can line up with 1.3, especially a half reasonable story with modules as the best structure for all apps, and if this happens to give us a good story for testing that's great.
+- ! write up a sketch/proposal for fixing app testing !
+- Go all in on ES15, this is the opportunity for us to lay down what a proper ES15 app looks like.
+- Let's get another 2 hours on the calendar for next week.
+
+
 ## Standup 9th Nov
 
 With Zol, Tom, Evan and Sashko
