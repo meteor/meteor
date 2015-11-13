@@ -15,8 +15,9 @@ _.extend(Updater.prototype, {
   start: function () {
     var self = this;
 
-    if (self.timer)
+    if (self.timer) {
       throw new Error("already running?");
+    }
 
     // Check every 3 hours. (Should not share buildmessage state with
     // the main fiber.)
@@ -50,8 +51,9 @@ _.extend(Updater.prototype, {
   stop: function () {
     var self = this;
 
-    if (self.timer)
+    if (self.timer) {
       return;
+    }
     clearInterval(self.timer);
     self.timer = null;
   }

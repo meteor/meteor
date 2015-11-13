@@ -20,10 +20,11 @@ const APP_PRELINK_CACHE = new LRU({
 });
 
 var packageDot = function (name) {
-  if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name))
+  if (/^[a-zA-Z][a-zA-Z0-9]*$/.exec(name)) {
     return "Package." + name;
-  else
+  } else {
     return "Package['" + name + "']";
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -64,8 +65,9 @@ _.extend(Module.prototype, {
     _.each(self.files, function (file) {
       var m = 0;
       _.each(file.source.split('\n'), function (line) {
-        if (line.length <= ignoreOver && line.length > m)
+        if (line.length <= ignoreOver && line.length > m) {
           m = line.length;
+        }
       });
       maxInFile.push(m);
     });
@@ -145,8 +147,9 @@ _.extend(Module.prototype, {
 
     // Emit each file
     _.each(self.files, function (file) {
-      if (!_.isEmpty(chunks))
+      if (!_.isEmpty(chunks)) {
         chunks.push("\n\n\n\n\n\n");
+      }
       chunks.push(file.getPrelinkedOutput({
         sourceWidth: sourceWidth,
         noLineNumbers: self.noLineNumbers
@@ -187,13 +190,15 @@ var buildSymbolTree = function (symbolMap) {
 
     var walk = ret;
     _.each(parts, function (part) {
-      if (! (part in walk))
+      if (! (part in walk)) {
         walk[part] = {};
+      }
       walk = walk[part];
     });
 
-    if (value)
+    if (value) {
       walk[lastPart] = value;
+    }
   });
 
   return ret;
@@ -275,8 +280,9 @@ _.extend(File.prototype, {
       return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
               _.keys(findAssignedGlobals(self.source)));
     } catch (e) {
-      if (!e.$ParseError)
+      if (!e.$ParseError) {
         throw e;
+      }
 
       var errorOptions = {
         file: self.servePath,
@@ -502,8 +508,9 @@ _.extend(File.prototype, {
 // (bannerWidth - 6); if bannerWidth is not provided, the smallest width that
 // fits is used.
 var banner = function (lines, bannerWidth) {
-  if (!bannerWidth)
+  if (!bannerWidth) {
     bannerWidth = 6 + _.max(lines, function (x) { return x.length; }).length;
+  }
 
   var divider = dividerLine(bannerWidth);
   var spacer = "// " + new Array(bannerWidth - 6 + 1).join(' ') + " //\n";
@@ -611,8 +618,9 @@ var getHeader = function (options) {
 var getImportCode = function (imports, header, omitvar) {
   var self = this;
 
-  if (_.isEmpty(imports))
+  if (_.isEmpty(imports)) {
     return "";
+  }
 
   // Imports
   var scratch = {};
@@ -744,8 +752,10 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
     assignedVariables = module.computeAssignedVariables();
     return buildmessage.jobHasMessages();
   });
-  if (failed)
-    return [];  // recover by pretending there are no files
+  if (failed) {
+    // recover by pretending there are no files
+    return [];
+  }
 
   // Otherwise we're making a package and we have to actually combine the files
   // into a single scope.
@@ -761,8 +771,9 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   return _.map(prelinkedFiles, function (file) {
     if (file.sourceMap) {
-      if (includeSourceMapInstructions)
+      if (includeSourceMapInstructions) {
         header = SOURCE_MAP_INSTRUCTIONS_COMMENT + "\n\n" + header;
+      }
 
       // Bias the source map by the length of the header without
       // (fully) parsing and re-serializing it. (We used to do this
@@ -771,8 +782,10 @@ var fullLink = Profile("linker.fullLink", function (inputFiles, {
       // if we could use "index maps" for this (the 'sections' key),
       // as that would let us avoid even JSON-parsing the source map,
       // but that doesn't seem to be supported by Firefox yet.
-      if (header.charAt(header.length - 1) !== "\n")
-        header += "\n"; // make sure it's a whole number of lines
+      if (header.charAt(header.length - 1) !== "\n") {
+        // make sure it's a whole number of lines
+        header += "\n";
+      }
       var headerLines = header.split('\n').length - 1;
       var sourceMap = file.sourceMap;
       sourceMap.mappings = (new Array(headerLines + 1).join(';')) +

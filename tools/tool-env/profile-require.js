@@ -24,16 +24,20 @@ var RequireInvocation = function (name, filename) {
 RequireInvocation.prototype.isOurCode = function () {
   var self = this;
 
-  if (! self.filename)
+  if (! self.filename) {
     return self.name === 'TOP';
+  }
 
-  if (! self.name.match(/\//))
-    return false; // we always require our stuff via a path
+  if (! self.name.match(/\//)) {
+    // we always require our stuff via a path
+    return false;
+  }
 
   var ourSource = path.resolve(__dirname);
   var required = path.resolve(path.dirname(self.filename), self.name);
-  if (ourSource.length > required.length)
+  if (ourSource.length > required.length) {
     return false;
+  }
   return required.substr(0, ourSource.length) === ourSource;
 };
 
@@ -47,10 +51,12 @@ RequireInvocation.prototype.why = function () {
     walk = walk.parent;
   }
 
-  if (! walk)
+  if (! walk) {
     return "???";
-  if (last)
+  }
+  if (last) {
     return path.basename(walk.name) + ":" + path.basename(last.name);
+  }
   return path.basename(walk.name);
 };
 
@@ -88,8 +94,9 @@ exports.printReport = function () {
       childTime += child.totalTime;
     });
 
-    if (inv.totalTime !== null)
+    if (inv.totalTime !== null) {
       inv.selfTime = inv.totalTime - childTime;
+    }
   };
   computeTimes(currentInvocation);
 
@@ -97,9 +104,10 @@ exports.printReport = function () {
   var summarize = function (inv, depth) {
     // var padding = (new Array(depth*2 + 1)).join(' ');
     // console.log(padding + inv.name + " [" + inv.selfTime + "]");
-    if (! (inv.name in summary))
+    if (! (inv.name in summary)) {
       summary[inv.name] = { name: inv.name, time: 0, ours: inv.isOurCode(),
                             via: {} };
+    }
     summary[inv.name].time += inv.selfTime;
     if (! inv.isOurCode()) {
       summary[inv.name].via[inv.why()] = true;
@@ -115,19 +123,22 @@ exports.printReport = function () {
   var ourTotal = 0, otherTotal = 0;
   _.each(times, function (item) {
     var line = (item.time * 1000).toFixed(2) + " " + item.name;
-    if (! item.ours)
+    if (! item.ours) {
       line += " [via " + _.keys(item.via).join(", ") + "]";
+    }
     console.log(line);
-    if (item.ours)
+    if (item.ours) {
       ourTotal += item.time;
-    else
+    } else {
       otherTotal += item.time;
+    }
   });
 
 
   var grandTotal = currentInvocation.totalTime;
-  if (grandTotal - ourTotal - otherTotal > 1/1000)
+  if (grandTotal - ourTotal - otherTotal > 1/1000) {
     throw new Error("Times don't add up");
+  }
   console.log("TOTAL: ours " + (ourTotal * 1000).toFixed(2) +
               ", other " + (otherTotal * 1000).toFixed(2) +
               ", grand total " + (grandTotal * 1000).toFixed(2));

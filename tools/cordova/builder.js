@@ -234,8 +234,9 @@ export class CordovaBuilder {
     // Copy all the access rules
     _.each(this.accessRules, (rule, pattern) => {
       var opts = { origin: pattern };
-      if (rule === 'external')
+      if (rule === 'external') {
         opts['launch-external'] = true;
+      }
 
       config.element('access', opts);
     });
@@ -298,8 +299,9 @@ export class CordovaBuilder {
       const [width, height] = size.split('x');
 
       const suppliedPath = this.imagePaths[tag][name];
-      if (!suppliedPath)
+      if (!suppliedPath) {
         return;
+      }
 
       const suppliedFilename = _.last(suppliedPath.split(files.pathSep));
       let extension = _.last(suppliedFilename.split('.'));
@@ -405,8 +407,9 @@ export class CordovaBuilder {
       appId: this.projectContext.appIdentifier
     };
 
-    if (publicSettings)
+    if (publicSettings) {
       runtimeConfig.PUBLIC_SETTINGS = publicSettings;
+    }
 
     const { Boilerplate } =
       isopackets.load('cordova-support')['boilerplate-generator'];
@@ -453,8 +456,9 @@ function createAppConfiguration(builder) {
     info: function (options) {
       // check that every key is meaningful
       _.each(options, function (value, key) {
-        if (!_.has(builder.metadata, key))
+        if (!_.has(builder.metadata, key)) {
           throw new Error("Unknown key in App.info configuration: " + key);
+        }
       });
 
       _.extend(builder.metadata, options);
@@ -515,8 +519,9 @@ Valid platforms are: ios, android.`);
       var validDevices =
         _.keys(iconsIosSizes).concat(_.keys(iconsAndroidSizes));
       _.each(icons, function (value, key) {
-        if (!_.include(validDevices, key))
+        if (!_.include(validDevices, key)) {
           throw new Error(key + ": unknown key in App.icons configuration.");
+        }
       });
       _.extend(builder.imagePaths.icon, icons);
     },
@@ -558,8 +563,9 @@ Valid platforms are: ios, android.`);
         _.keys(launchIosSizes).concat(_.keys(launchAndroidSizes));
 
       _.each(launchScreens, function (value, key) {
-        if (!_.include(validDevices, key))
+        if (!_.include(validDevices, key)) {
           throw new Error(key + ": unknown key in App.launchScreens configuration.");
+        }
       });
       _.extend(builder.imagePaths.splash, launchScreens);
     },

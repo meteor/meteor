@@ -45,7 +45,9 @@ var checkPackages = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/packages").split("\n");
   var i = 0;
   _.each(lines, function(line) {
-    if (!line) return;
+    if (!line) {
+      return;
+    }
     // If the specified package contains an @ sign, then it has a version
     // number, so we should match everything.
     if (packages[i].split('@').length > 1) {
@@ -80,7 +82,9 @@ var checkVersions = selftest.markStack(function(sand, packages) {
   var lines = sand.read(".meteor/versions").split("\n");
   var depend = {};
   _.each(lines, function(line) {
-    if (!line) return;
+    if (!line) {
+      return;
+    }
     // Packages are stored of the form foo@1.0.0, so this should give us an
     // array [foo, 1.0.0].
     var split = line.split('@');
@@ -141,13 +145,17 @@ _.extend(DataStub.prototype, {
   getSortedVersions: function (p) {
     var self = this;
     var rec = self.packages[p];
-    if (!rec) return null;
+    if (!rec) {
+      return null;
+    }
     return rec.versions;
   },
   getPackage: function (p) {
     var self = this;
     var rec = self.packages[p];
-    if (!rec) return null;
+    if (!rec) {
+      return null;
+    }
     return rec.record;
   },
   getAllReleaseTracks: function () {
@@ -156,13 +164,17 @@ _.extend(DataStub.prototype, {
   getSortedRecommendedReleaseVersions: function (t) {
     var self = this;
     var rec = self.releases[t];
-    if (!rec) return null;
+    if (!rec) {
+      return null;
+    }
     return rec.versions;
   },
   getReleaseVersion: function (t, v) {
     var self = this;
     var rec = self.releases[t];
-    if (!rec) return null;
+    if (!rec) {
+      return null;
+    }
     return rec.records[v];
   }
 });
