@@ -8,7 +8,11 @@
   "main": "index.js",
   "dependencies": {
     "babel-plugin-check-es2015-constants": "^6.1.18",
+    "babel-plugin-external-helpers-2": "^6.1.18",
+    "babel-plugin-syntax-async-functions": "^6.1.18",
+    "babel-plugin-syntax-async-generators": "^6.1.18",
     "babel-plugin-syntax-flow": "^6.1.18",
+    "babel-plugin-syntax-object-rest-spread": "^6.1.18",
     "babel-plugin-syntax-trailing-function-commas": "^6.1.18",
     "babel-plugin-transform-es2015-arrow-functions": "^6.1.18",
     "babel-plugin-transform-es2015-block-scoped-functions": "^6.1.18",
@@ -31,6 +35,8 @@
     "babel-plugin-transform-es3-member-expression-literals": "^6.1.18",
     "babel-plugin-transform-es3-property-literals": "^6.1.18",
     "babel-plugin-transform-flow-strip-types": "^6.1.18",
-    "babel-plugin-transform-regenerator": "^6.1.18"
+    "babel-plugin-transform-object-rest-spread": "^6.1.18",
+    "babel-plugin-transform-regenerator": "^6.1.18",
+    "babel-plugin-transform-runtime": "^6.1.18"
   }
 }
