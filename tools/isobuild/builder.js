@@ -164,8 +164,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // If we want this bit to be a directory, and we don't need it to be
           // unique (ie, it isn't the very last bit), and it's currently a
           // directory, then that's OK.
-          if (!(mustBeUnique || this.usedAsFile[candidate]))
+          if (!(mustBeUnique || this.usedAsFile[candidate])) {
             break;
+          }
           // OK, either we want it to be unique and it already exists; or it is
           // currently a file (and we want it to be either a different file or a
           // directory).  Try a new suffix.

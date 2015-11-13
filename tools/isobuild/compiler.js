@@ -386,11 +386,10 @@ var compileUnibuild = function (options) {
   // things that the getFiles consulted (such as directory
   // listings or, in some hypothetical universe, control files) to
   // determine its source files.
-  const {
-    sources = [],
-    assets = []
-  } = sourceProcessorSet ?
-    inputSourceArch.getFiles(sourceProcessorSet, watchSet) : {};
+  const sourceProcessorFiles = sourceProcessorSet
+    ? inputSourceArch.getFiles(sourceProcessorSet, watchSet) : {};
+  const sources = sourceProcessorFiles.sources || [];
+  const assets = sourceProcessorFiles.assets || [];
 
   if (nodeModulesPath) {
     // If this slice has node modules, we should consider the shrinkwrap file

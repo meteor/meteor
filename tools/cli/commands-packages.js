@@ -379,8 +379,11 @@ main.registerCommand({
 
   // Make sure that both the package and its test (if any) are actually built.
   _.each([packageName, packageSource.testName], function (name) {
-    if (! name)  // for testName
+    if (! name) {
+      // for testName
       return;
+    }
+
     // If we're already using this package, that's OK; no need to override.
     if (projectContext.projectConstraintsFile.getConstraint(name))
       return;

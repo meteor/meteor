@@ -1509,8 +1509,10 @@ var getAllTests = function () {
   var testdir = files.pathJoin(__dirname, '..', 'tests');
   var filenames = files.readdir(testdir);
   _.each(filenames, function (n) {
-    if (! n.match(/^[^.].*\.js$/)) // ends in '.js', doesn't start with '.'
+    if (! n.match(/^[^.].*\.js$/)) {
+      // ends in '.js', doesn't start with '.'
       return;
+    }
     try {
       if (fileBeingLoaded)
         throw new Error("called recursively?");

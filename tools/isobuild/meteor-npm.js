@@ -364,9 +364,11 @@ var runNpmCommand = function (args, cwd) {
     npmPath = files.pathJoin(nodeBinDir, "npm");
   }
 
-  if (meteorNpm._printNpmCalls) // only used by test-bundler.js
+  if (meteorNpm._printNpmCalls) {
+    // only used by test-bundler.js
     process.stdout.write('cd ' + cwd + ' && ' + npmPath + ' ' +
                          args.join(' ') + ' ...\n');
+  }
 
   if (cwd)
     cwd = files.convertToOSPath(cwd);
