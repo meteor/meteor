@@ -161,7 +161,9 @@ export class AndroidRunTarget extends CordovaRunTarget {
 
 function logFromAndroidLogcatLine(Log, line) {
   // Ignore lines indicating beginning of logging
-  if (line.match(/^--------- beginning of /)) return null;
+  if (line.match(/^--------- beginning of /)) {
+    return null;
+  }
 
   // Matches logcat brief format
   // "I/Tag(  PID): message"
@@ -209,7 +211,9 @@ function logFromAndroidLogcatLine(Log, line) {
 };
 
 function logFromConsoleOutput(Log, message, filename, lineNumber) {
-  if (isDebugOutput(message) && !Console.verbose) return null;
+  if (isDebugOutput(message) && !Console.verbose) {
+    return null;
+  }
 
   filename = filename.replace(/\?.*$/, '');
 

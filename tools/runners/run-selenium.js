@@ -51,8 +51,9 @@ _.extend(Selenium.prototype, {
   start: function () {
     var self = this;
 
-    if (self.server)
+    if (self.server) {
       throw new Error("already running?");
+    }
 
     self.xunitLines = [];
 
@@ -94,8 +95,9 @@ _.extend(Selenium.prototype, {
   stop: function () {
     var self = this;
 
-    if (! self.driver)
+    if (! self.driver) {
       return;
+    }
 
     _promiseToFuture(self.driver.close()).wait();
     _promiseToFuture(self.driver.quit()).wait();
@@ -169,7 +171,9 @@ _.extend(Selenium.prototype, {
         return;
       }
       msg = match[3];
-      if (msg === DUMMY_FLUSH) return;
+      if (msg === DUMMY_FLUSH) {
+        return;
+      }
       if (msg.indexOf(MAGIC_PREFIX) === 0) {
         msg = msg.substring(MAGIC_PREFIX.length);
         var colonIndex = msg.indexOf(': ');

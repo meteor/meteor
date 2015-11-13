@@ -133,8 +133,9 @@ export class SourceProcessorSet {
 
   addLegacyHandler({ extension, handler, packageDisplayName, isTemplate,
                      archMatching }) {
-    if (this._allowConflicts)
+    if (this._allowConflicts) {
       throw Error("linters have no legacy handlers");
+    }
 
     if (this._byExtension.hasOwnProperty(extension)) {
       this._conflictError(packageDisplayName,
@@ -175,8 +176,9 @@ export class SourceProcessorSet {
 
   // Note: Only returns SourceProcessors, not legacy handlers.
   getByExtension(extension) {
-    if (this._allowConflicts)
+    if (this._allowConflicts) {
       throw Error("Can't call getByExtension for linters");
+    }
 
     if (this._byExtension.hasOwnProperty(extension)) {
       return this._byExtension[extension][0];
@@ -186,8 +188,9 @@ export class SourceProcessorSet {
 
   // Note: Only returns SourceProcessors, not legacy handlers.
   getByFilename(filename) {
-    if (this._allowConflicts)
+    if (this._allowConflicts) {
       throw Error("Can't call getByFilename for linters");
+    }
 
     if (this._byFilename.hasOwnProperty(filename)) {
       return this._byFilename[filename][0];

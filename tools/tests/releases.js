@@ -200,10 +200,11 @@ selftest.define("checkout", ['checkout'], function () {
 selftest.define("download and springboard to pre-0.9.0 release", ['net', 'slow'], function () {
   var s, run;
 
-  if (files.inCheckout())
+  if (files.inCheckout()) {
     s = new Sandbox({ warehouse: { v1: { tools: 'tools1', latest: true } } });
-  else
+  } else {
     s = new Sandbox;
+  }
 
   // End-to-end, online test of downloading and springboarding. This
   // release was built from the

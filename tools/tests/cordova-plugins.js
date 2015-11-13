@@ -54,7 +54,9 @@ var checkCordovaPlugins = selftest.markStack(function(sand, plugins) {
 
   var i = 0;
   _.each(cordovaPlugins, function(line) {
-    if (!line || line === '') return;
+    if (!line || line === '') {
+      return;
+    }
     // XXX should check for the version as well?
     selftest.expectEqual(line.split(' ')[0], plugins[i]);
     i++;
@@ -67,7 +69,9 @@ var checkCordovaPluginExists = selftest.markStack(function(sand, plugin) {
   var cordovaPlugins = getCordovaPluginsList(sand);
   var found = false;
   cordovaPlugins = cordovaPlugins.map(function (line) {
-    if (line && line !== '') return line.split(' ')[0];
+    if (line && line !== '') {
+      return line.split(' ')[0];
+    }
   });
   selftest.expectTrue(_.contains(cordovaPlugins, plugin));
 });
@@ -88,7 +92,9 @@ var checkUserPlugins = function(sand, plugins) {
   var lines = sand.read(".meteor/cordova-plugins").split("\n");
   var depend = {};
   _.each(lines, function(line) {
-    if (!line) return;
+    if (!line) {
+      return;
+    }
     // plugins are stored of the form foo@1.0.0, so this should give us an
     // array [foo, 1.0.0].
     var split = line.split('@');

@@ -86,16 +86,18 @@ compiler.compile = Profile(function (packageSource, options) {
       // and have the runner restart.
       pluginWatchSet.merge(buildResult.watchSet);
 
-      if (buildmessage.jobHasMessages())
+      if (buildmessage.jobHasMessages()) {
         return;
+      }
 
       _.each(buildResult.usedPackageNames, function (packageName) {
         pluginProviderPackageNames[packageName] = true;
       });
 
       // Register the built plugin's code.
-      if (!_.has(plugins, info.name))
+      if (!_.has(plugins, info.name)) {
         plugins[info.name] = {};
+      }
       plugins[info.name][buildResult.image.arch] = buildResult.image;
     });
   });
@@ -169,8 +171,9 @@ compiler.compile = Profile(function (packageSource, options) {
   });
 
   _.each(packageSource.architectures, function (architecture) {
-    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild)
+    if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       return;
+    }
 
     var unibuildResult = compileUnibuild({
       isopack: isopk,
@@ -664,8 +667,9 @@ function runLinters({inputSourceArch, isopackCache, sources,
     // version when we're bundling for Linux.
     allowWrongPlatform: true,
   }, (unibuild) => {
-    if (unibuild.pkg.name === inputSourceArch.pkg.name)
+    if (unibuild.pkg.name === inputSourceArch.pkg.name) {
       return;
+    }
     _.each(unibuild.declaredExports, (symbol) => {
       if (! symbol.testOnly || inputSourceArch.isTest) {
         globalImports.push(symbol.name);
@@ -683,8 +687,9 @@ function runLinters({inputSourceArch, isopackCache, sources,
     // If we don't have a linter for this file (or we do but it's only on
     // another arch), skip without even reading the file into a WatchSet.
     if (classification.type === 'wrong-arch' ||
-        classification.type === 'unmatched')
+        classification.type === 'unmatched') {
       return;
+    }
     // We shouldn't ever add a legacy handler and we're not hardcoding JS for
     // linters, so we should always have SourceProcessor if anything matches.
     if (! classification.sourceProcessors) {
@@ -723,12 +728,15 @@ function runLinters({inputSourceArch, isopackCache, sources,
     const linter = sourceProcessor.userPlugin.processFilesForPackage;
 
     function archToString(arch) {
-      if (arch.match(/web\.cordova/))
+      if (arch.match(/web\.cordova/)) {
         return "Cordova";
-      if (arch.match(/web\..*/))
+      }
+      if (arch.match(/web\..*/)) {
         return "Client";
-      if (arch.match(/os.*/))
+      }
+      if (arch.match(/os.*/)) {
         return "Server";
+      }
       throw new Error("Don't know how to display the arch: " + arch);
     }
 
@@ -769,8 +777,9 @@ export function getActivePluginPackages(isopk, {
   // the implies field is on the target unibuild, but we really only care
   // about packages.)
   var activePluginPackages = [isopk];
-  if (pluginProviderPackageNames)
+  if (pluginProviderPackageNames) {
     pluginProviderPackageNames[isopk.name] = true;
+  }
 
   // We don't use plugins from weak dependencies, because the ability
   // to compile a certain type of file shouldn't depend on whether or
@@ -790,16 +799,18 @@ export function getActivePluginPackages(isopk, {
     skipUnordered: true
     // implicitly skip weak deps by not specifying acceptableWeakPackages option
   }, function (unibuild) {
-    if (unibuild.pkg.name === isopk.name)
+    if (unibuild.pkg.name === isopk.name) {
       return;
+    }
     if (pluginProviderPackageNames) {
       pluginProviderPackageNames[unibuild.pkg.name] = true;
     }
     if (pluginProviderWatchSet) {
       pluginProviderWatchSet.merge(unibuild.pkg.pluginWatchSet);
     }
-    if (_.isEmpty(unibuild.pkg.plugins))
+    if (_.isEmpty(unibuild.pkg.plugins)) {
       return;
+    }
     activePluginPackages.push(unibuild.pkg);
   });
 
@@ -825,10 +836,12 @@ compiler.eachUsedUnibuild = function (
   var processedUnibuildId = {};
   var usesToProcess = [];
   _.each(dependencies, function (use) {
-    if (options.skipUnordered && use.unordered)
+    if (options.skipUnordered && use.unordered) {
       return;
-    if (use.weak && !_.has(acceptableWeakPackages, use.package))
+    }
+    if (use.weak && !_.has(acceptableWeakPackages, use.package)) {
       return;
+    }
     usesToProcess.push(use);
   });
 
@@ -836,18 +849,21 @@ compiler.eachUsedUnibuild = function (
     var use = usesToProcess.shift();
 
     // We only care about real packages, not isobuild:* psuedo-packages.
-    if (isIsobuildFeaturePackage(use.package))
+    if (isIsobuildFeaturePackage(use.package)) {
       continue;
+    }
 
     var usedPackage = isopackCache.getIsopack(use.package);
 
     // Ignore this package if we were told to skip debug-only packages and it is
     // debug-only.
-    if (usedPackage.debugOnly && options.skipDebugOnly)
+    if (usedPackage.debugOnly && options.skipDebugOnly) {
       continue;
+    }
     // Ditto prodOnly.
-    if (usedPackage.prodOnly && options.skipProdOnly)
+    if (usedPackage.prodOnly && options.skipProdOnly) {
       continue;
+    }
 
     var unibuild = usedPackage.getUnibuildAtArch(arch, {allowWrongPlatform});
     if (!unibuild) {
@@ -856,8 +872,9 @@ compiler.eachUsedUnibuild = function (
       continue;
     }
 
-    if (_.has(processedUnibuildId, unibuild.id))
+    if (_.has(processedUnibuildId, unibuild.id)) {
       continue;
+    }
     processedUnibuildId[unibuild.id] = true;
 
     callback(unibuild, {

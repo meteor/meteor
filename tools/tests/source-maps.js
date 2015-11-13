@@ -4,8 +4,9 @@ var files = require('../fs/files.js');
 var catalog = require('../packaging/catalog/catalog.js');
 
 function matchPath (text, doubleBS) {
-  if (process.platform === 'win32')
+  if (process.platform === 'win32') {
     return text.replace(/\//g, doubleBS ? '\\\\' : '\\');
+  }
   return text;
  }
  function matchPathRegexp (regexp) {

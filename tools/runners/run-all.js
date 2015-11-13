@@ -131,8 +131,9 @@ class Runner {
       buildmessage.enterJob({ title: "starting your app" }, function () {
         self.appRunner.start();
       });
-      if (! self.quiet && ! self.stopped)
+      if (! self.quiet && ! self.stopped) {
         runLog.log("Started your app.",  { arrow: true });
+      }
     }
 
     if (! self.stopped && ! self.quiet) {
@@ -149,8 +150,9 @@ class Runner {
       buildmessage.enterJob({ title: "starting Selenium" }, function () {
         self.selenium.start();
       });
-      if (! self.quiet && ! self.stopped)
+      if (! self.quiet && ! self.stopped) {
         runLog.log("Started Selenium.", { arrow: true });
+      }
     }
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
@@ -180,8 +182,9 @@ class Runner {
   // Idempotent
   stop() {
     const self = this;
-    if (self.stopped)
+    if (self.stopped) {
       return;
+    }
 
     self.stopped = true;
     self.proxy.stop();
@@ -206,10 +209,12 @@ class Runner {
     } else {
       self.appPort = require('../utils/utils.js').randomPort();
     }
-    if (self.proxy)
+    if (self.proxy) {
       self.proxy.proxyToPort = self.appPort;
-    if (self.appRunner)
+    }
+    if (self.appRunner) {
       self.appRunner.port = self.appPort;
+    }
   }
 }
 
@@ -321,10 +326,11 @@ exports.run = function (options) {
   }
 
   if (result.outcome === "wrong-release") {
-    if (once)
+    if (once) {
       // We lost a race where the user ran 'meteor update' and 'meteor
       // run --once' simultaneously.
       throw new Error("wrong release?");
+    }
 
     // If the user did not specify a --release on the command line,
     // and simultaneously runs `meteor update` during this run, just

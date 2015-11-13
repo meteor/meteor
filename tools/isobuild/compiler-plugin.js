@@ -106,8 +106,9 @@ export class CompilerPluginProcessor {
       _.each(sourceBatch.resourceSlots, function (resourceSlot) {
         var sourceProcessor = resourceSlot.sourceProcessor;
         // Skip non-sources.
-        if (! sourceProcessor)
+        if (! sourceProcessor) {
           return;
+        }
 
         if (! _.has(sourceProcessorsWithSlots, sourceProcessor.id)) {
           sourceProcessorsWithSlots[sourceProcessor.id] = {
@@ -352,8 +353,9 @@ class ResourceSlot {
 
   addStylesheet(options) {
     const self = this;
-    if (! self.sourceProcessor)
+    if (! self.sourceProcessor) {
       throw Error("addStylesheet on non-source ResourceSlot?");
+    }
 
     self.outputResources.push({
       type: "css",
@@ -370,8 +372,9 @@ class ResourceSlot {
   addJavaScript(options) {
     const self = this;
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! self.sourceProcessor && self.inputResource.extension !== "js")
+    if (! self.sourceProcessor && self.inputResource.extension !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
+    }
 
     // By default, use the 'bare' option given to addFiles, but allow the option
     // passed to addJavaScript to override it.
@@ -399,8 +402,9 @@ class ResourceSlot {
 
   addAsset(options) {
     const self = this;
-    if (! self.sourceProcessor)
+    if (! self.sourceProcessor) {
       throw Error("addAsset on non-source ResourceSlot?");
+    }
 
     if (! (options.data instanceof Buffer)) {
       if (_.isString(options.data)) {
@@ -424,13 +428,16 @@ class ResourceSlot {
     const self = this;
     const unibuild = self.packageSourceBatch.unibuild;
 
-    if (! archinfo.matches(unibuild.arch, "web"))
+    if (! archinfo.matches(unibuild.arch, "web")) {
       throw new Error("Document sections can only be emitted to " +
                       "web targets");
-    if (options.section !== "head" && options.section !== "body")
+    }
+    if (options.section !== "head" && options.section !== "body") {
       throw new Error("'section' must be 'head' or 'body'");
-    if (typeof options.data !== "string")
+    }
+    if (typeof options.data !== "string") {
       throw new Error("'data' option to appendDocument must be a string");
+    }
 
     self.outputResources.push({
       type: options.section,
@@ -625,8 +632,9 @@ class PackageSourceBatch {
         diskCached = files.readJSONOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
-        if (!(e instanceof SyntaxError))
+        if (!(e instanceof SyntaxError)) {
           throw e;
+        }
       }
       if (diskCached && diskCached instanceof Array) {
         // Fix the non-JSON part of our return value.

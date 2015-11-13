@@ -16,8 +16,9 @@ exports.parallelEach = function (collection, callback, context) {
 exports.firstTimeResolver = function (fut) {
   var resolver = fut.resolver();
   return function (err, val) {
-    if (fut.isResolved())
+    if (fut.isResolved()) {
       return;
+    }
     resolver(err, val);
   };
 };
@@ -28,10 +29,12 @@ exports.firstTimeResolver = function (fut) {
 // the other be throw-only.)
 exports.waitForOne = function (...futures) {
   var fiber = Fiber.current;
-  if (!fiber)
+  if (!fiber) {
     throw Error("Can't waitForOne without a fiber");
-  if (futures.length === 0)
+  }
+  if (futures.length === 0) {
     throw Error("Must wait for at least one future");
+  }
 
   var combinedFuture = new Future;
   for (var i = 0; i < futures.length; ++i) {
@@ -91,10 +94,12 @@ _.extend(exports.EnvironmentVariable.prototype, {
     var self = this;
     exports.nodeCodeMustBeInFiber();
 
-    if (!Fiber.current._meteorDynamics)
+    if (!Fiber.current._meteorDynamics) {
       return self.defaultValue;
-    if (!_.has(Fiber.current._meteorDynamics, self.slot))
+    }
+    if (!_.has(Fiber.current._meteorDynamics, self.slot)) {
       return self.defaultValue;
+    }
     return Fiber.current._meteorDynamics[self.slot];
   },
 
@@ -102,8 +107,9 @@ _.extend(exports.EnvironmentVariable.prototype, {
     var self = this;
     exports.nodeCodeMustBeInFiber();
 
-    if (!Fiber.current._meteorDynamics)
+    if (!Fiber.current._meteorDynamics) {
       Fiber.current._meteorDynamics = {};
+    }
     var currentValues = Fiber.current._meteorDynamics;
 
     var saved = _.has(currentValues, self.slot)
@@ -140,8 +146,9 @@ exports.bindEnvironment = function (func) {
       }
     };
 
-    if (Fiber.current)
+    if (Fiber.current) {
       return runWithEnvironment();
+    }
     Fiber(runWithEnvironment).run();
   };
 };

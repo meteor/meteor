@@ -43,10 +43,12 @@ var ServiceConnection = function (endpointUrl, options) {
     retry: false,
     onConnected: function () {
       self.connected = true;
-      if (!self.currentFuture)
+      if (!self.currentFuture) {
         throw Error("nobody waiting for connection?");
-      if (self.currentFuture !== connectFuture)
+      }
+      if (self.currentFuture !== connectFuture) {
         throw Error("waiting for something that isn't connection?");
+      }
       self.currentFuture = null;
       connectFuture.return();
     }
@@ -69,8 +71,9 @@ var ServiceConnection = function (endpointUrl, options) {
       //
       // This ought to have happened before we successfully connect, unless
       // somebody adds other calls to forced reconnect to Meteor...
-      if (connectFuture.isResolved())
+      if (connectFuture.isResolved()) {
         throw Error("disconnect before connect?");
+      }
       // Otherwise, ignore this error. We're going to reconnect!
       return;
     }
@@ -99,8 +102,9 @@ _.extend(ServiceConnection.prototype, {
   apply: function (...args) {
     var self = this;
 
-    if (self.currentFuture)
+    if (self.currentFuture) {
       throw Error("Can't wait on two things at once!");
+    }
     self.currentFuture = new Future;
 
     args.push(function (err, result) {
@@ -124,8 +128,9 @@ _.extend(ServiceConnection.prototype, {
   subscribeAndWait: function (...args) {
     var self = this;
 
-    if (self.currentFuture)
+    if (self.currentFuture) {
       throw Error("Can't wait on two things at once!");
+    }
     var subFuture = self.currentFuture = new Future;
 
     args.push({
