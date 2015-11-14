@@ -57,9 +57,10 @@ _.extend(Roles, {
    *
    * @method createRole
    * @param {String} role Name of role
+   * @param {Boolean} [unlessExists] Optional. If true, existence of a role will not throw an exception.
    * @return {String} id of new role
    */
-  createRole: function (role) {
+  createRole: function (role, unlessExists) {
     var id,
         match
 
@@ -77,10 +78,12 @@ _.extend(Roles, {
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
       if (e.name !== 'MongoError') throw e
-      match = e.err.match(/^E11000 duplicate key error index: ([^ ]+)/)
+      match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/)
       if (!match) throw e
-      if (match[1].indexOf('$name') !== -1)
+      if (match[1].indexOf('$name') !== -1) {
+        if (unlessExists) return null
         throw new Meteor.Error(403, "Role already exists.")
+      }
       throw e
     }
   },
@@ -639,15 +642,22 @@ _.extend(Roles, {
     //if (roles.length === 0) return
 
     // ensure all roles exist in 'roles' collection
-    existingRoles = _.reduce(Meteor.roles.find({}).fetch(), function (memo, role) {
-      memo[role.name] = true
-      return memo
-    }, {})
-    _.each(roles, function (role) {
-      if (!existingRoles[role]) {
-        Roles.createRole(role)
-      }
-    })
+    if (Meteor.isClient) {
+      existingRoles = _.reduce(Meteor.roles.find({}).fetch(), function (memo, role) {
+        memo[role.name] = true
+        return memo
+      }, {})
+      _.each(roles, function (role) {
+        if (!existingRoles[role]) {
+          Roles.createRole(role)
+        }
+      })
+    }
+    else {
+      _.each(roles, function (role) {
+        Roles.createRole(role, true)
+      })
+    }
 
     // ensure users is an array of user ids
     users = _.reduce(users, function (memo, user) {
