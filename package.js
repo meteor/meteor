@@ -20,11 +20,11 @@ Package.onUse(function (api) {
 
   api.export('Roles');
 
-  api.addFiles('roles_server.js', 'server');
-  api.addFiles('roles_common.js', both);
-  api.addFiles(['client/debug.js',
-                'client/uiHelpers.js',
-                'client/subscriptions.js'], 'client');
+  api.addFiles('roles/roles_server.js', 'server');
+  api.addFiles('roles/roles_common.js', both);
+  api.addFiles(['roles/client/debug.js',
+                'roles/client/uiHelpers.js',
+                'roles/client/subscriptions.js'], 'client');
 });
 
 Package.onTest(function (api) {
@@ -37,6 +37,6 @@ Package.onTest(function (api) {
            'underscore',
            'tinytest'], both);
 
-  api.addFiles('tests/client.js', 'client');
-  api.addFiles('tests/server.js', 'server');
+  api.addFiles('roles/tests/client.js', 'client');
+  api.addFiles('roles/tests/server.js', 'server');
 });
