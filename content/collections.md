@@ -75,7 +75,64 @@ You create what's known as a *local collection*. This is a Minimongo collection 
 
 A local collection is simply a convienent way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you'll need to sophisticated queries over your set of data. Or you may want to take advatange of it's *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
+## Defining Collections with a Schema
 
+Although Mongo is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema.
+
+In Meteor, the pre-eminent schema package is [aldeed:simple-schema](http://atmospherejs.com/aldeed/simple-schema). It's an expressive, Mongo based schema that's used to insert and update documents.
+
+To write a schema using `simple-schema`, you can simply create a new instance of the `SimpleSchema` class:
+
+```js
+Lists.schema = new SimpleSchema({
+  name: {type: String},
+  incompleteCount: {type: Number, defaultValue: 0},
+  userId: {type: String, regEx: SimpleSchema.RegEx.Id, optional: true}
+});
+```
+
+In this example, from the Todos app, we are doing a few things that are interesting:
+
+1. We attach the schema to the namespace of `Lists` directly. This allows us to check things against the schema of a list directly (rather than via inserting into the DB, see below), such as in a form (see the forms article).
+2. We specify that the `name` field of a list must be a string, and must exist.
+3. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
+4. We specify that the `userId`, which is optional, must be a string matching an id regular expression.
+
+You can see from this example, that with relatively little code we've managed to restrict the format of a list significantly.
+
+### Checking documents against a schema
+
+Now we have a schema, how do we use it?
+
+The straightforward way to use a schema is by using the `check` package. We can write:
+
+```js
+const list = {
+  name: 'My list',
+  incompleteCount: 3
+};
+
+check(list, Lists.schema);
+```
+
+In this case, as the list is valid according to the schema, the `check()` line will run without problems. If however, we wrote:
+
+```js
+const list = {
+  name: 'My list',
+  incompleteCount: 3,
+  madeUpField: 'this should not be here'
+};
+
+check(list, Lists.schema);
+```
+
+// XXX: this isn't actually the case yet. Change this unless we update simple schema to do so..
+Then the `check()` call will throw a `Meteor.ValidationError` which contains details about what is wrong with the `list` document.
+
+### The `Meteor.ValidationError`
+
+What is a `Meteor.ValidationError` [link to docs]? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what a user did wrong. In the "Methods and Forms" article, we'll see more about how this works.
 
 
 # OUTLINE: Collections and Models
