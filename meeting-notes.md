@@ -1,3 +1,13 @@
+## Standup 16th Nov
+
+With XXX
+
+### Agenda:
+
+- Progress, will we get this done by mid Dec?
+- Aligning the guide with M1.3 and vice versa.
+- Plan around testing & M1.3, what's the low hanging fruit and who does it?
+
 ## Standup 12th Nov
 
 With Zol, Tom, Sashko and Matt
