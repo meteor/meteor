@@ -4,7 +4,14 @@
 
 We're tracking our progress using Waffle.io; see the board by clicking the badge above!
 
-Current goal: Get all articles into the **example app** stage by next week (Nov 9 2015).
+- See the example app we're working to embody the principles from the guide at [meteor/todos](https://github.com/meteor/todos)
+- Check out the [outlines we've written](https://github.com/meteor/guide/tree/master/outlines)
+
+Current goals:
+
+1. Get feedback internally at MDG about the article outlines and polish them up
+2. Pump out some rough drafts of articles as fast as we can
+3. Get the guide website up and running
 
 ---------
 
