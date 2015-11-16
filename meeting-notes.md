@@ -23,11 +23,11 @@ With Tom, Zol and Sashko.
 
 ### Action items:
 
-- Setup a meeting with Ben to go over the implications of modules both on the guide and vice versa. Start with Sashko's highlevel questions then work through points found in the outlines that are impacted by modules.
-- Should clean up the guide repo a little bit. Make sure github issues are updated with the outlines. Get the community people back into the conversation. Post on the forums.
-- Polish up the Method package readme and docs and post it for feedback on the forums.
-- Create package for validation error format, get feedback.
-- Ask if something like cursor-utils exists (on the forums).
+- Setup a meeting with Ben to go over the implications of modules both on the guide and vice versa. Start with Sashko's highlevel questions then work through points found in the outlines that are impacted by modules. (Sashko + Tom working on doc with questions, Zol to schedule meeting)
+- Should clean up the guide repo a little bit. Make sure github issues are updated with the outlines. Get the community people back into the conversation. Post on the forums. (Sashko)
+- Polish up the Method package readme and docs and post it for feedback on the forums. (Sashko)
+- Create package for validation error format, get feedback. (Tom) (Blocking publishing methods)
+- Ask if something like cursor-utils exists (on the forums). (Tom)
  
 
 ## Standup 12th Nov
