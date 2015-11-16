@@ -1,12 +1,34 @@
 ## Standup 16th Nov
 
-With XXX
+With Tom, Zol and Sashko.
 
 ### Agenda:
 
 - Progress, will we get this done by mid Dec?
 - Aligning the guide with M1.3 and vice versa.
 - Plan around testing & M1.3, what's the low hanging fruit and who does it?
+- Blaze.
+
+### Notes:
+
+- Some chapter are easier and will definitely be done on time. 
+- Tests, i8n, etc - shouldn't try to have real world coverage.
+- Cut scope instead of pushing back the date.
+- Do we cut scope by not doing articles?
+- Let's re-visit next week when we've had a chance to do some writing.
+- Incorporate Matt's feedback on the app structure chapter by revisiting outlines (ex modules).
+- Current guide is sort of a requirements for modules.
+- Proceed as plan on the Blaze chapter.
+- Method package. Good feedback from Robert on the README.
+
+### Action items:
+
+- Setup a meeting with Ben to go over the implications of modules both on the guide and vice versa. Start with Sashko's highlevel questions then work through points found in the outlines that are impacted by modules.
+- Should clean up the guide repo a little bit. Make sure github issues are updated with the outlines. Get the community people back into the conversation. Post on the forums.
+- Polish up the Method package readme and docs and post it for feedback on the forums.
+- Create package for validation error format, get feedback.
+- Ask if something like cursor-utils exists (on the forums).
+ 
 
 ## Standup 12th Nov
 
