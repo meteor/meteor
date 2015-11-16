@@ -6,8 +6,8 @@ After reading this guide, you'll know:
 
 1. What the different flavors of Mongo Collection in Meteor are, and how to use them.
 2. How to define a schema for a collection to control it's content.
-3. How to modify the content of a collection in a sensible way
-4. What considerations you should take when defining your collection's schema
+3. What considerations you should take when defining your collection's schema
+4. How to modify the content of a collection in a sensible way
 5. How to change the schema of your collection in a careful way.
 6. How to deal with relations between records in collections
 
@@ -134,6 +134,115 @@ Then the `check()` call will throw a `Meteor.ValidationError` which contains det
 
 What is a `Meteor.ValidationError` [link to docs]? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what a user did wrong. In the "Methods and Forms" article, we'll see more about how this works.
 
+## Designing your data schama
+
+Now you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any Mongo data schema, there are some important differences.
+
+The most important consideration is due to the way that DDP communicates documents over the wire. The key thing to realize is that DDP sends changes to documents at the level of document *fields*. What this means is that if you have large and complex subfields on document that change often, DDP can send unnecessary changes over the wire.
+
+For instance, in "pure" Mongo you might design the schema so that each list document had a field called `todos` which was an array of todo items:
+
+```js
+Lists.schema = new SimpleSchema({
+  name: {type: String},
+  todos: {type: [Object]},
+  'todos.$.text': {type: String}
+});
+```
+
+(Notice the new Simple Schema syntax here, that allows you describe an array of objects one field at a time).
+
+The issue with this schema is that due to the DDP behaviour just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the wire. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to (say) `[{text: 'first'}, {text: 'second'}]`".
+
+### Denormalization and multiple collections
+
+The implication of the above is that we need to create more collections to contain sub-documents. In the case of the Todos application, we need both a `Lists` collection and a `Todos` collection to contain each list's todo items. Consequently we need to do more things that you'd typically associate with a SQL database, like using foreign keys (`todo.listId`) to associate one document with another.
+
+In Meteor, it's often less of a problem doing this than it would be in a typical Mongo application, as we tend to publish overlapping sets of documents anyway (we might need one set of users to render one screen of our app, and an intersecting set for another), which may stay on the client as we move around the application. So in that scenario there is an advantage to separating the subdocuments from the parent.
+
+However, given that Mongo doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
+
+Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
+
+### Designing schemas for the future
+
+An application, especially a web application, is rarely finished, and it's useful to consider potential future changes when designing your data schema. As in most things, it's rarely a good idea to add fields before you actually need them (often what you anticipate doesn't actually end up happening, after all).
+
+However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good change that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
+
+As with all things it depends, and can be judgement call on your part.
+
+## Using schemas -- writing data to collections
+
+Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), ultimately, the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to run every mutator (`insert/update/upsert` call) through the schema.
+
+To do so, we use `attachSchema()`:
+
+```js
+Lists.attachSchema(Lists.schema);
+```
+
+What this means is that now every time we call `Lists.insert()`, `Lists.update()`, `Lists.upsert()`, first our document or modifier will be checked against the schema (in subtly different ways depending on the exact mutator). 
+
+### Using `defaultValue` and cleaning
+
+// XXX: do we actually like this?
+
+One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) amd removing attributes not in the schema.
+
+Another important thing it does is set values to fields that have not been set, and which have `defaultValue` set in the schema definition.
+
+However, sometimes it's useful to do more complex initialization to documents before inserting them into collections. For instance, in the Todos app, we want to set the name of new lists to be `List X` where `X` is the next available unique letter.
+
+To do so, we can subclass `Mongo.Collection` and write our own `insert()` method:
+
+```js
+class ListsCollection extends Mongo.Collection {
+  insert(list, callback) {
+    if (!list.name) {
+      let nextLetter = 'A';
+      list.name = `List ${nextLetter}`;
+
+      while (Lists.findOne({name: list.name})) {
+        // not going to be too smart here, can go past Z
+        nextLetter = String.fromCharCode(nextLetter.charCodeAt(0) + 1);
+        list.name = `List ${nextLetter}`;
+      }
+    }
+
+    return super(list, callback);
+  }
+}
+
+Lists = new ListsCollection('Lists');
+```
+
+### Writing "hooks"
+
+The technique above can also be used to provide a location to "hook" extra functionality into the collection. For instance, when removing a list, we *always* want to remove all of its todos at the same time.
+
+To do so in an easy to understand way, we can again subclass, overriding the `remove()` method:
+
+```js
+class ListsCollection extends Mongo.Collection {
+  ...
+  remove(selector, callback) {
+    Package.todos.Todos.remove({listId: selector});
+    return super(selector, callback);
+  }
+}
+```
+
+This technique has a couple of downsides:
+
+  1. Mutators can get very long when you want to hook in multiple times
+  2. Sometimes a single piece of functionality can be spread over multiple mutators
+  3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
+
+A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We can see in the "Forms and Methods" chapter an example of how we do that in the list and todo denormalizers mentioned above.
+
+Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
+
 
 # OUTLINE: Collections and Models
 
@@ -158,12 +267,6 @@ What is a `Meteor.ValidationError` [link to docs]? It's a special error that is 
   5. EG: Denormalization patterns
     1. Define your denormalizer in a different file
     2. Hook the denormalizer in various `insert/update/remove` functions
-4. Custom mutators
-  1. In a public API it's best to be *less* general rather than *more* general (see security article)
-  2. Your methods are your public API.
-  3. So write a `bar.addFoo` mutator rather than allowing `bar.update` to add `foo`.
-  4. Using the `Method` pattern to wrap a mutator in a public API of the same name.
-    1. Reference to Dave Weldon's post on the subject / see also Form chapter.
 4. Designing your data schema
   1. "Impure" mongo -- i.e. things that Meteor will force you to do that you might not have done otherwise
     - Avoid subdocuments and large changing properties
@@ -182,8 +285,3 @@ What is a `Meteor.ValidationError` [link to docs]? It's a special error that is 
 7. Advanced schema usage
   1. https://github.com/aldeed/meteor-simple-schema
   4. Using JSONSchema with SS
-8. Other packages / approaches
-  1. Astronomy
-    1. Brings the "ORM-y" `.save()` to your models.
-  2. Collection hooks
-    1. Allows you to follow a hook/aspect oriented patterns you don't need to fully describe your mutators in one go.
