@@ -3,7 +3,10 @@ var verifyEmailToken;
 var enrollAccountToken;
 
 Accounts._isolateLoginTokenForTest();
-Accounts.removeDefaultRateLimit();
+
+if (Meteor.isServer) {
+  Accounts.removeDefaultRateLimit();
+}
 
 testAsyncMulti("accounts emails - reset password flow", [
   function (test, expect) {
