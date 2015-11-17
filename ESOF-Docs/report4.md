@@ -9,6 +9,22 @@
 
 ## Introdução
 
+## Testabilidade do Software
+
+### Controlabilidade
+
+### Observabilidade
+
+### Isolabilidade
+
+### Separação de Funcionalidades
+
+### Compreensibilidade
+
+### Heterogeneidade
+
+## Estatísticas de Teste
+
 ## Referências
 
 ## FEUP ESOF MIEIC
