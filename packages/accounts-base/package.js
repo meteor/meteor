@@ -43,7 +43,7 @@ Package.onUse(function (api) {
   api.addFiles('accounts_common.js', ['client', 'server']);
   api.addFiles('accounts_server.js', 'server');
 
-  api.addFiles('accounts_rate_limit.js');
+  api.addFiles('accounts_rate_limit.js', 'server');
   api.addFiles('url_server.js', 'server');
 
   // accounts_client must be before localstorage_token, because

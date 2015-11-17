@@ -1,6 +1,8 @@
 Accounts._noConnectionCloseDelayForTest = true;
-Accounts.removeDefaultRateLimit();
+
 if (Meteor.isServer) {
+  Accounts.removeDefaultRateLimit();
+  
   Meteor.methods({
     getResetToken: function () {
       var token = Meteor.users.findOne(this.userId).services.password.reset;
