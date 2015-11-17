@@ -326,6 +326,9 @@ Mongo.Collection._publishCursor = function (cursor, sub, collection) {
 
   // register stop callback (expects lambda w/ no args).
   sub.onStop(function () {observeHandle.stop();});
+
+  // return the observeHandle in case it needs to be stopped early
+  return observeHandle;
 };
 
 // protect against dangerous selectors.  falsey and {_id: falsey} are both
