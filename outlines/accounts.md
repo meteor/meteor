@@ -23,6 +23,7 @@
     5. Twitter
     6. Meetup
     7. Meteor Developer Accounts
+    8. Getting extra data from the OAuth services
     8. Building your own OAuth login handler
 5. The useraccounts package for a production-grade login UI
     1. Pick the right package based on your CSS framework
