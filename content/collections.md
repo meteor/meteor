@@ -15,7 +15,7 @@ After reading this guide, you'll know:
 
 At its core, a web application offers its users a view into, and a way to modify, a persistent set of data. Whether managing a list of todos, or ordering a car to pick you up, you are, at some level, fundamentally interacting with a permanent (if changing) data layer. 
 
-In Meteor, that data layer is typically stored in the Mongo database engine. A set of data in Mongo is referred to as a "collection", and in Meteor, it's collections that forms the persistence layer.
+In Meteor, that data layer is typically stored in the Mongo database engine. A set of data in Mongo is referred to as a "collection", and in Meteor, it's [collections](http://docs.meteor.com/#/full/mongo_collection) that forms the persistence layer.
 
 However, collections are a lot more than a way to store data. They also provide the core of the realtime, connected user experience that the best applications provide, and which Meteor makes easy to implement.
 
@@ -98,7 +98,7 @@ In this example, from the Todos app, we are doing a few things that are interest
 3. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
 4. We specify that the `userId`, which is optional, must be a string matching an id regular expression.
 
-You can see from this example, that with relatively little code we've managed to restrict the format of a list significantly.
+You can see from this example, that with relatively little code we've managed to restrict the format of a list significantly. You can read more in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema) about more complex things that can be done with schemas.
 
 ### Checking documents against a schema
 
@@ -128,11 +128,12 @@ check(list, Lists.schema);
 ```
 
 // XXX: this isn't actually the case yet. Change this unless we update simple schema to do so..
+
 Then the `check()` call will throw a `Meteor.ValidationError` which contains details about what is wrong with the `list` document.
 
 ### The `Meteor.ValidationError`
 
-What is a `Meteor.ValidationError` [link to docs]? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what a user did wrong. In the "Methods and Forms" article, we'll see more about how this works.
+What is a [`Meteor.ValidationError`](https://github.com/tmeasday/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the "Methods and Forms" article, we'll see more about how this works.
 
 ## Designing your data schama
 
@@ -145,12 +146,9 @@ For instance, in "pure" Mongo you might design the schema so that each list docu
 ```js
 Lists.schema = new SimpleSchema({
   name: {type: String},
-  todos: {type: [Object]},
-  'todos.$.text': {type: String}
+  todos: {type: [Object]}
 });
 ```
-
-(Notice the new Simple Schema syntax here, that allows you describe an array of objects one field at a time).
 
 The issue with this schema is that due to the DDP behaviour just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the wire. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to (say) `[{text: 'first'}, {text: 'second'}]`".
 
@@ -203,7 +201,7 @@ class ListsCollection extends Mongo.Collection {
       let nextLetter = 'A';
       list.name = `List ${nextLetter}`;
 
-      while (Lists.findOne({name: list.name})) {
+      while (!!this.findOne({name: list.name})) {
         // not going to be too smart here, can go past Z
         nextLetter = String.fromCharCode(nextLetter.charCodeAt(0) + 1);
         list.name = `List ${nextLetter}`;
