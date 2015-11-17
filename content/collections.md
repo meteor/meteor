@@ -241,6 +241,60 @@ A way to deal with points 1. and 2. is to separate out the set of hooks into the
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
 
+## Changing your schema: using data migrations
+
+As we discussed above, trying to predict all future requirements of your data schema ahead of time is of course impossible. So inevitably as a project matures, there'll come a time when you need to change the schema of its data. To do so safely, you need to be careful about how you make the changes.
+
+### Writing migrations
+
+A useful package for writing migrations is the [`percolate:migrations`](https://atmospherejs.com/percolate/migrations) package. Suppose, as an example, that we wanted to add a `list.todoCount` field, and ensure that it was set for all existing lists. Then we might write:
+
+```js
+Migrations.add({
+  version: 1,
+  up() => {
+    Lists.find({todoCount: {$exists: false}}).forEach(list => {
+      const todoCount = Todos.find({listId: list._id})).count();
+      Lists.update(list._id, {$set: {todoCount}});
+    });
+  },
+  down() {
+    Lists.update({}, {$unset: {todoCount: true}});
+  }
+});
+```
+
+This migration, which is sequenced to be the first migration to run over the database, will, when called, bring each list up to date with the current todo count.
+
+### Running migrations
+
+To run a migration, run your app locally in production mode (with production settings, including database settings), with the `MIGRATION` environment variable set:
+
+```bash
+MIGRATION=latest meteor --production --settings path/to/production/settings.json
+```
+
+What this does is run the `up()` function of all outstanding migrations (by default apps are considered at migrations "zero"), against your production database. In our case, it should ensure all lists have a `todoCount` field set.
+
+### Making breaking schema changes
+
+Sometimes when we change the schema of an application, we do so in a breaking way -- so that the old schema doesn't work properly with the new code base. For instance, if we had some UI code that heavily relied on all lists having a `todoCount` set, there would be a period, before the migration runs, in which the UI of our app would be broken after we deployed.
+
+The simple way to work around the problem is to take the application down for the period in between deployment and completing the migration. This is far from ideal, especially considering some migrations can take hours to run!
+
+A better approach is a multi-stage deployment. The basic idea is that:
+
+1. First you deploy a version of your application that can handle both the old and the new schema.
+  - In our case, it'd be code that doesn't expect the `todoCount` to be there, but which correctly updates it when new todos are created.
+2. Second you run the migration.
+  - At this point you should be confident that all lists have a `todoCount`.
+3. Finally, you deploy the new code that relies on the new schema and no longer copes with the old schema.
+  - Now we are safe to rely on `list.todoCount` in our UI.
+
+Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migration _back_ to version `x`. 
+
+If you find you need to roll your code version back, you'll need to be careful about the data, and step careful through your deployment steps in reverse.
+
 
 # OUTLINE: Collections and Models
 
