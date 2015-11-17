@@ -1,4 +1,4 @@
-# Relatório - Software Verification
+# Relatório - Software Verification And Validation
 
 ![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/FEUP.jpg)
 
