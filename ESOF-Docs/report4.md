@@ -14,10 +14,12 @@
 ### Controlabilidade
 
 ### Observabilidade
+-- The degree to which it is possible to observe (intermediate and final) test results.
 
 ### Isolabilidade
 
 ### Separação de Funcionalidades
+-- The degree to which the component under test has a single, well defined responsibility.
 
 ### Compreensibilidade
 
