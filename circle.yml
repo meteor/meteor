@@ -17,7 +17,7 @@ test:
 
 deployment:
   s3:
-    branch: site
+    branch: /^(master|version-.*)/
     commands:
       - node deploy:
           pwd: site
