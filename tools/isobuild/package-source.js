@@ -1217,7 +1217,10 @@ _.extend(PackageSource.prototype, {
   },
 
   // Initialize a package from an application directory (has .meteor/packages).
-  initFromAppDir: Profile("initFromAppDir", function (projectContext, ignoreFiles) {
+  initFromAppDir: Profile("initFromAppDir", function (
+    projectContext,
+    {ignoreFiles, buildMode}
+  ) {
     var self = this;
     var appDir = projectContext.projectDir;
     self.name = null;
@@ -1312,21 +1315,25 @@ _.extend(PackageSource.prototype, {
 
         // Read top-level subdirectories. Ignore subdirectories that have
         // special handling.
+        const excludedSourceDirectories = [/^packages\/$/,
+          // XXX We no longer actually have special handling
+          //     for the programs subdirectory, but let's not
+          //     suddenly start treating it as part of the main
+          //     app program.
+          /^programs\/$/,
+          // node.js based tooling often uses dependencies which
+          // are installed into node_modules in the root of the
+          // project.
+          /^node_modules\/$/,
+          /^public\/$/, /^private\/$/,
+          /^cordova-build-override\/$/,
+          otherUnibuildRegExp].concat(sourceReadOptions.exclude)
+        if (buildMode !== 'development') {
+          excludedSourceDirectories.unshift(/^tests\/$/);
+        }
         var sourceDirectories = readAndWatchDirectory('', {
           include: [/\/$/],
-          exclude: [/^packages\/$/,
-                    // XXX We no longer actually have special handling
-                    //     for the programs subdirectory, but let's not
-                    //     suddenly start treating it as part of the main
-                    //     app program.
-                    /^programs\/$/,
-                    // node.js based tooling often uses dependencies which
-                    // are installed into node_modules in the root of the
-                    // project.
-                    /^node_modules\/$/,
-                    /^public\/$/, /^private\/$/,
-                    /^cordova-build-override\/$/,
-                    otherUnibuildRegExp].concat(sourceReadOptions.exclude)
+          exclude: excludedSourceDirectories
         });
         checkForInfiniteRecursion('');
 
@@ -1344,9 +1351,14 @@ _.extend(PackageSource.prototype, {
 
           // Find sub-sourceDirectories. Note that we DON'T need to ignore the
           // directory names that are only special at the top level.
+          const excludedSourceSubDirectories =
+            [otherUnibuildRegExp].concat(sourceReadOptions.exclude);
+          if (buildMode !== 'development') {
+            excludedSourceSubDirectories.unshift(/^tests\/$/);
+          }
           sourceDirectories.push(...readAndWatchDirectory(dir, {
             include: [/\/$/],
-            exclude: [otherUnibuildRegExp].concat(sourceReadOptions.exclude)
+            exclude: excludedSourceSubDirectories
           }));
         }
 
@@ -1370,23 +1382,25 @@ _.extend(PackageSource.prototype, {
           return sourceObj;
         });
 
-        // Inputs that should return true:
-        // tests/...
-        // .../tests/...
-        const isTestSource = function (dir) {
-          return /^tests\//.test(dir) || /\/tests\//.test(dir)
-        }
-
-        // Mark files under tests folders as tests
-        sources = _.map(sources, function (sourceObj) {
-          if (isTestSource(sourceObj.relPath)) {
-            if (!sourceObj.fileOptions) {
-              sourceObj.fileOptions = {};
-            }
-            sourceObj.fileOptions.isTest = true;
+        if (buildMode !== 'development') {
+          // Inputs that should return true:
+          // tests/...
+          // .../tests/...
+          const isTestSource = function (dir) {
+            return /^tests\//.test(dir) || /\/tests\//.test(dir)
           }
-          return sourceObj;
-        });
+
+          // Mark files under tests folders as tests
+          sources = _.map(sources, function (sourceObj) {
+            if (isTestSource(sourceObj.relPath)) {
+              if (!sourceObj.fileOptions) {
+                sourceObj.fileOptions = {};
+              }
+              sourceObj.fileOptions.isTest = true;
+            }
+            return sourceObj;
+          });
+        }
 
         // Now look for assets for this unibuild.
         const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";

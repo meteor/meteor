@@ -2199,7 +2199,10 @@ exports.bundle = function ({
     // XXX should this be part of prepareProjectForBuild and get cached?
     //     at the very least, would speed up deploy after build.
     var packageSource = new PackageSource;
-    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+    packageSource.initFromAppDir(projectContext, {
+      buildMode,
+      ignoreFiles: exports.ignoreFiles
+    });
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,
