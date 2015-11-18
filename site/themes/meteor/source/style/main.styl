@@ -1,3 +1,52 @@
-html, body
+@import './reset.styl'
+
+@font-face
+  font-family 'ProximaNova-Semibold'
+  src url('/webfonts/2C4B9D_C_0.eot')
+  src url('/webfonts/2C4B9D_C_0.eot?#iefix') format('embedded-opentype'),
+      url('/webfonts/2C4B9D_C_0.woff2') format('woff2'),
+      url('/webfonts/2C4B9D_C_0.woff') format('woff'),
+      url('/webfonts/2C4B9D_C_0.ttf') format('truetype')
+
+$body-text()
   font-family 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif
+
+$header-text()
+  font-family 'ProximaNova-Semibold'
+
+*
+  box-sizing border-box
+
+html, body
+  $body-text()
   font-size 16px
+  font-weight 400
+
+h1, h2, h3
+  $header-text()
+  font-weight 200
+
+#header
+  $header-text()
+  background-color #27272b
+  color #fff
+  height 30px
+  line-height 30px
+  position relative
+
+#nav
+  list-style-type none
+  position absolute
+  top 0
+  right 30px
+  li
+    float left
+    margin-left 20px
+  a
+    display inline-block
+    height 30px
+    padding 0 5px
+    color #fff
+    font-size 10px
+    letter-spacing 1.5px
+    text-transform uppercase
