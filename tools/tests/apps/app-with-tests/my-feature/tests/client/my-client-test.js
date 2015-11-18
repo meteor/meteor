@@ -1,1 +1,1 @@
-console.log('Client test executed');
+console.log('My Feature client test executed');

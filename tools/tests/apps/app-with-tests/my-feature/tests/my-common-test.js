@@ -1,1 +1,1 @@
-console.log('Common test executed');
+console.log('My Feature common test executed');
