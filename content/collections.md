@@ -304,45 +304,67 @@ Another thing to be aware of, especially with such multi-stage deploys, is that 
 
 If you find you need to roll your code version back, you'll need to be careful about the data, and step careful through your deployment steps in reverse.
 
+## Relations between collections
 
-# OUTLINE: Collections and Models
+As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested (for instance all the todos that are on a single list).
 
-1. Mongo Collections in Meteor
-  1. Server side Mongo "real" collections backed by a DB
-  2. Client side Minimongo "remote-backed" collections backed by a DDP connection
-  3. Local Minimongo Collections backed by nothing.
-2. Definining a Collection with a Schema
-  1. Why schemas are important in a schema-less db
-    1. Controlling the database
-    2. Avoiding "writing schemas in code" -- which is what you end up doing if you don't have a schema
-  2. The Simple Schema package and how to define a schema
-  3. Using schemas -- running a validation, getting errors back
-  4. The `ValidationError` and how it relates to the form chapter.
-3. Mutating data -- writing insert/update/remove functions
-  1. Using an instance of a `Collection2` to force Schema checks.
-  2. Using `autovalue` and `defaultValue` to "define" more complex insert/update code.
-  3. Subclassing `Collection2` to do arbitrary things on mutations.
-  4. "Hooking" data by subclassing Collection2.
-    1. Description of the need for hooks
-    2. How the careful use of utilities can allow readable mutators that have hooks
-  5. EG: Denormalization patterns
-    1. Define your denormalizer in a different file
-    2. Hook the denormalizer in various `insert/update/remove` functions
-4. Designing your data schema
-  1. "Impure" mongo -- i.e. things that Meteor will force you to do that you might not have done otherwise
-    - Avoid subdocuments and large changing properties
-    - Use more collections, normalize more
-  2. Thinking ahead to future database changes
-    - Don't try to predict the future but be flexible
-5. Changing data schema - how to use migrations
-  1. percolate:migrations package
-  2. How to run migrations against a production db
-    [is our best advice run locally pointing at the production db, use Meteor shell?]
-  3. Multiple stage deploys which can handle both new and old format
-6. Relational data and other helpers
-  1. Using `dburles:collection-helpers` to add "methods" to your documents
-  2. Returning a cursors from a helper to get related documents
-  3. Using a `cursor-utils` package to narrow down cursors etc [HELP NEEDED?]
-7. Advanced schema usage
-  1. https://github.com/aldeed/meteor-simple-schema
-  4. Using JSONSchema with SS
+To do so, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
+
+### Collection Helpers
+
+To do, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
+
+```js
+Lists.helpers({
+  // A list is considered to be private if it has a userId set
+  isPrivate() {
+    return !!this.userId;
+  }
+});
+```
+
+Once we've attached this helper to the `Lists` collection, every time we fetch a list from the database (on the client or server), it will have a `.isPrivate()` helper available:
+
+```js
+const list = Lists.findOne();
+if (list.isPrivate()) {
+  console.log('The first list is private!');
+}
+```
+
+### Relational helpers
+
+Now we can attach helpers to documents, it's simple to define a helper that fetches related documents
+
+// XXX: we don't actually have this in the Todos app, but we probably should
+// XXX: is this .todos() or .getTodos() ?
+
+```js
+Lists.helpers({
+  todos() {
+    return Todos.find({listId: this._id}, {sort: {createdAt: -1}});
+  }
+});
+```
+
+Now we can find all the todos for a list easily:
+```js
+const list = Lists.findOne();
+console.log(`The first list has ${list.todos().count()} todos`);
+```
+
+### Query modification
+
+It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos on the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
+
+// XXX: this package doesn't exist and the API isn't decided on
+
+A great way to do this is to use the `simple:cursor-utils` package, which allows you to modify a cursor from outside:
+
+```js
+const list = Lists.findOne();
+const incompleteTodos = CursorUtils.find(list.todos(), {checked: false});
+console.log(`The first list has ${incompleteTodos.count()} incomplete todos`);
+```
+
+The `cursor-utils` package gives a simple way to slice cursors, change their ordering or make other such modifications.
