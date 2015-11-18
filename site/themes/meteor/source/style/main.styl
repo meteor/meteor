@@ -1,21 +1,11 @@
 @import './reset.styl'
-
-@font-face
-  font-family 'ProximaNova-Semibold'
-  src url('/webfonts/2C4B9D_C_0.eot')
-  src url('/webfonts/2C4B9D_C_0.eot?#iefix') format('embedded-opentype'),
-      url('/webfonts/2C4B9D_C_0.woff2') format('woff2'),
-      url('/webfonts/2C4B9D_C_0.woff') format('woff'),
-      url('/webfonts/2C4B9D_C_0.ttf') format('truetype')
+@import './fonts.styl'
 
 $body-text()
   font-family 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif
 
 $header-text()
   font-family 'ProximaNova-Semibold'
-
-*
-  box-sizing border-box
 
 html, body
   $body-text()
