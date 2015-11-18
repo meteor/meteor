@@ -268,7 +268,16 @@ This migration, which is sequenced to be the first migration to run over the dat
 
 ### Running migrations
 
-To run a migration, run your app locally in production mode (with production settings, including database settings), with the `MIGRATION` environment variable set:
+To run a migration against you development database, it's easiest to use the Meteor shell:
+
+```js
+// After running `meteor shell` on the command line:
+Migrations.migrateTo('latest');
+```
+
+If the migration logs anything to the console, you'll see it in the terminal window that is running the Meteor server.
+
+To run a migration against your production database, run your app locally in production mode (with production settings, including database settings), with the `MIGRATION` environment variable set:
 
 ```bash
 MIGRATION=latest meteor --production --settings path/to/production/settings.json
