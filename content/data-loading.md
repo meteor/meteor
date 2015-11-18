@@ -14,7 +14,63 @@ After reading this guide, you'll know:
 8. How to turn a 3rd-party REST endpoint into a publication.
 9. How to turn a publication into your app into a REST endpoint.
 
+## Publications and Subscriptions
 
+Unlike in Meteor, a traditional web application communicates between client and server in a "request-response" fashion. Typically the client makes RESTful HTTP requests to the server and receives data (either in pre-rendered HTML, or perhaps some on-the-wire data format) in response. However there's no way for the server to "push" data to the client when changes happen at the backend.
+
+Meteor however is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. So (although you can), building a Meteor app doesn't require fashion REST endpoints to serialize and send data. Instead you create *publication* endpoints to push data from server to client.
+
+In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then,over time a set of updates as that data set changes. 
+
+So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the "Collections" article, corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription a pipe that connects a subset of the true collection with the clients version, but that constantly keeps it up to date with the latest information on the server.
+
+## Defining a publication
+
+A publication should be defined in a server-only file. For instance, in the Todos example app, we want to publish the set of public lists to all users:
+
+```js
+Meteor.publish('lists/public', function() {
+  return Lists.find({userId: {$exists: false}});
+});
+```
+
+There are a few things to understand about this code block. Firstly, we've named the publication `lists/public`, and that will be how we access it from the client. Secondly, we are simply returning a Mongo *cursor* from the publication function.
+
+What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `'Lists'` on the client (which we called `Lists` of course) will have all of the public lists that are available in the server collection named `'Lists'` whilst that subscription is open (which is all the time in our example app).
+
+There are two types of parameters of a publish function. Firstly, a publication always has the current user's `id` available at `this.userId` (this is why we use the `function() {}` form for publications rather than the ecmascript `() => {}`. You can disable the linting rule for publication files with `eslint-disable prefer-arrow-callback`).
+
+```js
+Meteor.publish('lists/private', function() {
+  if (!this.userId) {
+    return this.ready();
+  }
+
+  return Lists.find({userId: this.userId});
+});
+```
+
+What this means is that the above publication can be confident (thanks to Meteor's accounts system) that it will only ever publish private lists to the user that they belong to. Note also that the publication will re-run if the user logs out (or back in again), which means that the published set of private lists will reflect this.
+
+In the case of a non-logged in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none).
+
+The other type of publication argument is a simple named argument:
+
+```js
+Meteor.publish('list/todos', function(listId) {
+  check(listId, String);
+
+  ...
+});
+```
+
+When we create a subscription to this piblication on the client, we can provide this argument via the `Meteor.subscribe()` call:
+
+```js
+Meteor.subscribe('list/todos', list._id);
+```
+
+Also note that we are careful to check the `listId` is a string as we expect, as described in the Security article.
 
 
 # OUTLINE
