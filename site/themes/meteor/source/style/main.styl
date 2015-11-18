@@ -1,66 +1,17 @@
 @import './reset.styl'
 @import './fonts.styl'
 
-$body-text()
+html, body
   font-family 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif
   font-size 16px
   font-weight 400
   color #444
 
-$header-text()
-  font-family 'ProximaNova-Semibold'
-
-html, body
-  $body-text()
-
 h1, h2, h3
-  $header-text()
+  font-family 'ProximaNova-Semibold'
   font-weight 200
 
-#wrap
-  padding-top 102px
-
-#header
-  $header-text()
-  position fixed
-  top 0
-  left 0
-  width 100%
-
-#top-nav
-  height 30px
-  line-height 30px
-  background-color #27272b
-
-#top-nav-links
-  list-style-type none
-  position absolute
-  top 0
-  right 30px
-  li
-    float left
-    margin-left 20px
-  a
-    display inline-block
-    height 30px
-    padding 0 5px
-    color #fff
-    font-size 10px
-    letter-spacing 1.5px
-    text-transform uppercase
-
-#site-nav
-  background-color #fff
-  border-bottom 1px solid #eee
-  padding 15px 30px 20px
-  a, span, select
-    vertical-align bottom
-
-#logo
-  display inline-block
-  width 150px
-  height 36px
-  text-indent -9999px
-  background url(https://www.meteor.com/assets/meteor-logo.png)
-  background-size 100%
-  margin-right 10px
+// components
+@import './header.styl'
+@import './sidebar.styl'
+@import './content.styl'
