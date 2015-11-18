@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.2.2"
+  version: "1.2.3"
 });
 
 Package.onUse(function (api) {
@@ -18,9 +18,9 @@ Package.onUse(function (api) {
   // (service-configuration needs Accounts.connection)
   api.use('service-configuration', ['client', 'server'], { unordered: true });
 
-  // needed for getting the currently logged-in user
-  api.use('ddp', ['client', 'server']);
-
+  // needed for getting the currently logged-in user and handling reconnects
+  api.use('ddp@1.3.0', ['client', 'server']);
+  
   // need this because of the Meteor.users collection but in the future
   // we'd probably want to abstract this away
   api.use('mongo', ['client', 'server']);
