@@ -2,7 +2,22 @@
 title: Data Loading and Management
 ---
 
+After reading this guide, you'll know:
 
+1. What publications and subscriptions are in the Meteor framework
+2. How to define a publication on the server
+3. Where to subscribe on the client and in which template
+4. Useful patterns to follow to subscribe sensibly and help users understand the state of subscriptions.
+5. How to create publish sets of related data in a reactive way.
+6. How to ensure your publication is properly authorized in a reactive way.
+7. How to use the low-level publish API to publish anything.
+8. How to turn a 3rd-party REST endpoint into a publication.
+9. How to turn a publication into your app into a REST endpoint.
+
+
+
+
+# OUTLINE
 
 1. Publications + Subscriptions
   1. What are they? - compare REST endpoint
