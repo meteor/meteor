@@ -97,12 +97,25 @@ function await(promise) {
   // The overridden es6PromiseThen function is adequate here because these
   // two callbacks do not need to run in a Fiber.
   es6PromiseThen.call(promise, function (result) {
-    process.nextTick(run.bind(fiber, result));
+    tryCatchNextTick(fiber, run, [result]);
   }, function (error) {
-    process.nextTick(throwInto.bind(fiber, error));
+    tryCatchNextTick(fiber, throwInto, [error]);
   });
 
   return Fiber.yield();
+}
+
+// Invoke method with args against object in a try-catch block,
+// re-throwing any exceptions in the next tick of the event loop, so that
+// they won't get captured/swallowed by the caller.
+function tryCatchNextTick(object, method, args) {
+  try {
+    return method.apply(object, args);
+  } catch (error) {
+    process.nextTick(function () {
+      throw error;
+    });
+  }
 }
 
 MeteorPromise.awaitAll = function (args) {
