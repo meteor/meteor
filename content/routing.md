@@ -73,9 +73,9 @@ The above pattern will match certain URLs. You may notice that one of the segmen
 
 | URL           | matches pattern? | pathParams	         | queryParams
 | ---- | ---- | ---- | ---- |
-| /	            | no		
-| /about	      | no		
-| /blog/        | no		
+| /	            | no | | |
+| /about	      | no | | |
+| /blog/        | no | | |
 | /blog/eMtGij5AFESbTKfkT |	yes |	{ postId: "eMtGij5AFESbTKfkT"} |	{ }
 | /blog/1	| yes	| { postId: "1"} | { }
 | /blog/1?commentSort=top	| yes	| { postId: "1"} | { commentSort: "top" }

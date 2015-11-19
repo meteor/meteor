@@ -1,3 +1,8 @@
+code-font()
+  font-family Menlo, Monaco, Consolas, "Courier New", monospace
+  font-size 0.8em
+  line-height 1.6em
+
 #content
   max-width 760px
   margin 0px auto
@@ -25,13 +30,12 @@
     color #de4f4f
 
   .highlight
+    code-font()
+    margin 20px 0
     overflow-x auto
     position relative
     background-color #f8f8f8
     padding 20px 30px
-    font-family Menlo, Monaco, Consolas, "Courier New", monospace
-    font-size 0.8em
-    line-height 1.6em
     table, tr, td
       width 100%
       border-collapse collapse
@@ -62,3 +66,19 @@
         content 'Shell'
       &.css .code:after
         content 'CSS'
+
+  > table
+    margin 20px 0
+    tr
+      border-top 1px solid #eee
+      &:nth-child(2n)
+        background-color #f8f8f8
+    th
+      font-family 'ProximaNova-Semibold'
+      padding 12px 13px
+    th, td
+      border 1px solid #eee
+      vertical-align middle
+    td
+      padding 6px 13px
+      code-font()
