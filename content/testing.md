@@ -44,18 +44,17 @@ We should test that the `Todos` collection indeed behaves as we expect and sets 
 
 ```js
 import {mocha, chai} from "practicalmeteor:mocha";
-import Todos from 'Todos.js'
+import Todos from './Todos.js'
 import Factory from "mdg:factory";
 
 const {describe, it} = mocha;
 const {assert} = chai;
 
-const assert = chai.assert;
-
 describe('todos', () => {
   describe('mutators', () => {
     it('builds correctly from factory', () => {
-      const todo = Factory.create('todo');
+      const todoId = Todos.insert(Factory.build('todo'));
+      const todo = Todos.findOne(todoId);
       assert.typeOf(todo, 'object');
       assert.typeOf(todo.createdAt, 'date');
     });
@@ -72,15 +71,15 @@ Now, importantly, we don't `import` this test file from anywhere in our applicat
 
 ### `meteor test` -- running Meteor in test mode
 
-Ordinarily when we run Meteor via `meteor run`, any files within the `test/` directory are ignored. However, when we run Meteor in a special test mode, via `meteor test`, the contents of that directory *are* included.
-
-So we can include a special file that includes all our tests for us (much like our `client.js`, `server.js` and `common.js` setup our application for us):
+So far in our application, imported everything that we need from a `client.js` and `server.js` file. We can do the same with a `test.js` (which is ordinarily ignored by the build system):
 
 ```
 import 'imports/todos/todos-test.js';
 
 ```
 ['tests.js']
+
+By importing the test file we defined above, we add the test case to Mocha, which means when it's time to run the test, the test case will run.
 
 The other thing that we need to get our test working is a *test-reporter*. When we run the app in test mode, most of the default things that happen no longer occur. For instance, Flow Router will no longer attempt to route URLs for you. If you are using Blaze, the `<body>` template is no longer rendered for you. (If you are using Angular or React, you can use `Meteor.isTest` to opt out of rendering to the screen [XXX]).
 
@@ -91,9 +90,21 @@ meteor add practicalmeteor:mocha-web-reporter
 ```
 
 
-If we add that package, we can now view Mocha tests nicely in the web browser when we run `meteor test`.
+If we add that package, we can now start the testing system via `meteor test`, then trigger a set of tests to run by visiting `localhost:3000`. If you do so, you should see something like this:
 
+[IMAGE]
 
+Usually, while developing an application, it make sense to run `meteor test` on a second port (say `3100`), while also running your main application
+
+```bash
+# in one terminal window
+meteor
+
+# in another
+meteor test --port 3100
+```
+
+Then you can open two browser windows to see the app in action as well as ensuring you don't break any tests as you develop it.
 
 # Testing
 
