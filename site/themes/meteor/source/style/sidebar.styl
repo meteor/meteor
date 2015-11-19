@@ -16,4 +16,15 @@
     margin 15px 0
     font-size 14px
     .active
-      color #de4f4f
+      position relative
+      &:before
+        content ""
+        position absolute
+        top 2px
+        left -15px
+        display inline-block
+        width 0
+        height 0
+        border-top 4px solid transparent
+        border-bottom 4px solid transparent
+        border-left 6px solid #de4f4f
