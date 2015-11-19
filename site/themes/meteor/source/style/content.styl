@@ -25,7 +25,19 @@ code-font()
   h3
     font-size 1.2em
     margin-top 30px
-    
+
+  h2, h3
+    position relative
+    .anchor
+      opacity 0
+      position absolute
+      font-size 16px
+      top 2px
+      left -21px
+    &:hover
+      .anchor
+        opacity 1
+
   ul, ol
     list-style-type disc
     padding-left 1.5em
