@@ -696,21 +696,31 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
   // it. (We don't need to save the original results of paused queries because
   // they already have a resultsSnapshot and we won't be diffing in
   // _recomputeResults.)
-  var qidToOriginalResults = {},
-      docMap = {}, // We should only clone each document once, even if it appears in multiple queries
-      onlyIDQuery = LocalCollection._selectorIsIdPerhapsAsObject(selector), // If the selector is just looking up a single _id, then we only need to clone that document
-      selectorID = onlyIDQuery ? (selector._id || selector) : undefined;
+  var qidToOriginalResults = {};
+  // We should only clone each document once, even if it appears in multiple queries
+  var docMap = {};
+  var idsMatchedBySelector = LocalCollection._idsMatchedBySelector(selector);
+
   _.each(self.queries, function (query, qid) {
-    // XXX for now, skip/limit implies ordered observe, so query.results is
-    // always an array
     if ((query.cursor.skip || query.cursor.limit) && ! self.paused) {
+      // XXX for now, skip/limit implies ordered observe, so query.results is
+      // always an array
+      if (!(query.results instanceof Array)) {
+        throw new Error("Assertion failed: query.results not an array");
+      }
 
       qidToOriginalResults[qid] = query.results.map(function(result) {
-
         if (!_.has(docMap, result._id)) {
-          docMap[result._id] = !onlyIDQuery || (onlyIDQuery && result._id === selectorID) 
-                                ? EJSON.clone(result) 
-                                : result;
+          // Clone each document because it may be modified it before
+          // the new and old result sets are diffed. But if we know
+          // exactly which document IDs we're going to modify, then we
+          // only need to clone those.
+          docMap[result._id] =
+            (idsMatchedBySelector && !_.any(idsMatchedBySelector, function(id) {
+              return EJSON.equals(id, result._id);
+            }))
+            ? result
+            : EJSON.clone(result);
         }
 
         return docMap[result._id];
