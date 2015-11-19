@@ -8,5 +8,27 @@
   <div id="content">
     <h1><%- page.title %></h1>
     <%- page.content %>
+    <div id="bottom-nav">
+      <%
+        function findAdjacent (direction) {
+          var pages = site.pages.find({}).map(function (page) { return page })
+          var i = pages.length
+          while (i--) {
+            if (pages[i].title === page.title) {
+              break
+            }
+          }
+          return direction > 0
+            ? pages[i + 1]
+            : pages[i - 1]
+        }
+      %>
+      <% var prev = findAdjacent(-1); if (prev) { %>
+        <span>← <a href="<%- relative_url(page.path, prev.path) %>"><%- prev.title %></a></span>
+      <% } %>
+      <% var next = findAdjacent(1); if (next) { %>
+        <span style="float:right"><a href="<%- relative_url(page.path, next.path) %>"><%- next.title %></a> →</span>
+      <% } %>
+    </div>
   </div>
 </div>
