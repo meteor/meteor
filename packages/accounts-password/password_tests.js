@@ -1163,6 +1163,34 @@ if (Meteor.isClient) (function () {
     },
     logoutStep
   ]);
+
+  testAsyncMulti("passwords - forgotPassword client return error when empty email", [
+    function (test, expect) {
+      // setup
+      this.email = '';
+    },
+    // forgotPassword called on client with blank email
+    function (test, expect) {
+      Accounts.forgotPassword(
+        { email: this.email }, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+  ]);
+
+  testAsyncMulti("passwords - verifyEmail client return error when empty token", [
+    function (test, expect) {
+      // setup
+      this.token = '';
+    },
+    // verifyEmail called on client with blank token
+    function (test, expect) {
+      Accounts.verifyEmail(
+        this.token, expect(function (error) {
+          test.isTrue(error);
+      }));
+    },
+  ]);
 }) ();
 
 

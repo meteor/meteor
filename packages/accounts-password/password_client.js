@@ -208,8 +208,10 @@ Accounts.changePassword = function (oldPassword, newPassword, callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.forgotPassword = function(options, callback) {
-  if (!options.email)
-    throw new Error("Must pass options.email");
+  if (!options.email) {
+    callback(new Meteor.Error(400, "Must pass options.email"));
+    return;
+  }
   Accounts.connection.call("forgotPassword", options, callback);
 };
 
@@ -255,8 +257,10 @@ Accounts.resetPassword = function(token, newPassword, callback) {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  */
 Accounts.verifyEmail = function(token, callback) {
-  if (!token)
-    throw new Error("Need to pass token");
+  if (!token) {
+    callback(new Meteor.Error(400, "Need to pass token"));
+    return;
+  }
 
   Accounts.callLoginMethod({
     methodName: 'verifyEmail',
