@@ -20,13 +20,16 @@ h1, h2, h3, h4, h5, h6
 
 #header
   position fixed
+  z-index 2
   top 0
   left 0
   width 100%
   height 100px
 
 #sidebar
+  background-color #fff
   position fixed
+  z-index 1
   top 100px
   left 0
   bottom 0
@@ -42,3 +45,4 @@ h1, h2, h3, h4, h5, h6
 @import './header.styl'
 @import './sidebar.styl'
 @import './content.styl'
+@import './syntax.styl'

@@ -1,5 +1,5 @@
 #content
-  max-width 720px
+  max-width 760px
   margin 0px auto
 
   h1, h2, h3, h4, h5, h6, p, ul, ol, figure
@@ -24,11 +24,41 @@
   a
     color #de4f4f
 
-  figure
+  .highlight
+    overflow-x auto
+    position relative
     background-color #f8f8f8
     padding 20px 30px
     font-family Menlo, Monaco, Consolas, "Courier New", monospace
-    font-size 0.85em
+    font-size 0.8em
+    line-height 1.6em
+    table, tr, td
+      width 100%
+      border-collapse collapse
+      padding 0
+      margin 0
     .gutter
-      color #ccc
+      width 1.5em
       padding-right 30px
+    &.html, &.js, &.bash, &.css
+      .code:after
+        font-family 'ProximaNova-Semibold'
+        position absolute
+        top 0
+        right 0
+        color #ccc
+        text-align right
+        font-size .75em
+        padding 5px 10px 0
+        letter-spacing 1.5px
+        line-height 15px
+        height 15px
+        font-weight 600
+      &.html .code:after
+        content 'HTML'
+      &.js .code:after
+        content 'JS'
+      &.bash .code:after
+        content 'Shell'
+      &.css .code:after
+        content 'CSS'
