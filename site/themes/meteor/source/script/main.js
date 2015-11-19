@@ -80,7 +80,6 @@
   function setActive (link) {
     var previousActive = document.querySelector('.sub-menu .active')
     var id = link.id || link.hash.slice(1)
-    console.log(id)
     var currentActive = document.querySelector('.sub-menu a[href="#' + id + '"]')
     if (currentActive !== previousActive) {
       if (previousActive) previousActive.classList.remove('active')
