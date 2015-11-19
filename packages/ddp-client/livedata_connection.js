@@ -38,7 +38,11 @@ var Connection = function (url, options) {
     reloadWithOutstanding: false,
     supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
     retry: true,
-    respondToPings: true
+    respondToPings: true,
+    // When updates are coming within this ms interval, batch them together.
+    updatesBatchingInterval: 5,
+    // But if batching is happening for more than this ms, process it anyway.
+    updatesBatchingMaxAge: 500
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -173,6 +177,17 @@ var Connection = function (url, options) {
   self._updatesForUnknownStores = {};
   // if we're blocking a migration, the retry func
   self._retryMigrate = null;
+
+  self.__processBatchedUpdates = _.bind(self._processBatchedUpdates, self);
+  // Collection name -> array of messages.
+  self._batchedUpdates = {};
+  // When current batching of a updates started, in ms timestamp.
+  self._batchedUpdatesStart = null;
+  // Timeout handle for the next processing of batched updates.
+  self._batchedUpdatesProcessingHandle = null;
+
+  self._updatesBatchingInterval = options.updatesBatchingInterval;
+  self._updatesBatchingMaxAge = options.updatesBatchingMaxAge;
 
   // metadata for subscriptions.  Map from sub ID to object with keys:
   //   - id
@@ -1183,9 +1198,6 @@ _.extend(Connection.prototype, {
   _livedata_data: function (msg) {
     var self = this;
 
-    // collection name -> array of messages
-    var updates = {};
-
     if (self._waitingForQuiescence()) {
       self._messagesBufferedUntilQuiescence.push(msg);
 
@@ -1206,22 +1218,48 @@ _.extend(Connection.prototype, {
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
       _.each(self._messagesBufferedUntilQuiescence, function (bufferedMsg) {
-        self._processOneDataMessage(bufferedMsg, updates);
+        self._processOneDataMessage(bufferedMsg, self._batchedUpdates);
       });
       self._messagesBufferedUntilQuiescence = [];
     } else {
-      self._processOneDataMessage(msg, updates);
+      self._processOneDataMessage(msg, self._batchedUpdates);
     }
 
-    if (self._resetStores || !_.isEmpty(updates)) {
+    if (self._batchedUpdatesStart === null) {
+      self._batchedUpdatesStart = new Date().valueOf();
+    }
+    else if (self._batchedUpdatesStart + self._updatesBatchingMaxAge < new Date().valueOf()) {
+      self._processBatchedUpdates();
+      return;
+    }
+
+    if (self._batchedUpdatesProcessingHandle) {
+      clearTimeout(self._batchedUpdatesProcessingHandle);
+    }
+    self._batchedUpdatesProcessingHandle = setTimeout(self.__processBatchedUpdates,
+                                                      self._updatesBatchingInterval);
+  },
+
+  _processBatchedUpdates: function () {
+    var self = this;
+
+    if (self._batchedUpdatesProcessingHandle) {
+      clearTimeout(self._batchedUpdatesProcessingHandle);
+      self._batchedUpdatesProcessingHandle = null;
+    }
+
+    self._batchedUpdatesStart = null;
+
+    if (self._resetStores || !_.isEmpty(self._batchedUpdates)) {
       // Begin a transactional update of each store.
       _.each(self._stores, function (s, storeName) {
-        s.beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0,
+        s.beginUpdate(_.has(self._batchedUpdates, storeName) ?
+                      self._batchedUpdates[storeName].length : 0,
                       self._resetStores);
       });
       self._resetStores = false;
 
-      _.each(updates, function (updateMessages, storeName) {
+      _.each(self._batchedUpdates, function (updateMessages, storeName) {
         var store = self._stores[storeName];
         if (store) {
           _.each(updateMessages, function (updateMessage) {
@@ -1239,6 +1277,8 @@ _.extend(Connection.prototype, {
                                      updateMessages);
         }
       });
+
+      self._batchedUpdates = {};
 
       // End update transaction.
       _.each(self._stores, function (s) { s.endUpdate(); });
