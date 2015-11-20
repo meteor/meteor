@@ -2,6 +2,7 @@
 // they fail without trying to recreate a user with the same email
 // address
 var email1;
+var email1withDifferentCase;
 var email2;
 var email3;
 var email4;
@@ -14,14 +15,17 @@ Accounts._isolateLoginTokenForTest();
 Accounts.removeDefaultRateLimit();
 testAsyncMulti("accounts emails - reset password flow", [
   function (test, expect) {
-    email1 = Random.id() + "-intercept@example.com";
+    var id = Random.id();
+    var intercept = "-intercept@example.com";
+    email1 = id + intercept;
+    email1withDifferentCase = id.toLowerCase() + intercept;
     Accounts.createUser({email: email1, password: 'foobar'},
                         expect(function (error) {
                           test.equal(error, undefined);
                         }));
   },
   function (test, expect) {
-    Accounts.forgotPassword({email: email1}, expect(function (error) {
+    Accounts.forgotPassword({email: email1withDifferentCase}, expect(function (error) {
       test.equal(error, undefined);
     }));
   },

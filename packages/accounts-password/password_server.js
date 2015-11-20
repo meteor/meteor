@@ -500,7 +500,7 @@ Accounts.setPassword = function (userId, newPlaintextPassword, options) {
 Meteor.methods({forgotPassword: function (options) {
   check(options, {email: String});
 
-  var user = Meteor.users.findOne({"emails.address": options.email});
+  var user = Accounts._findUserByQuery(options);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
@@ -525,14 +525,21 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
   if (!email && user.emails && user.emails[0])
     email = user.emails[0].address;
   // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
+  var pluckLowerCaseEmailAddresses = function(email) {
+    return email.address.toLowerCase();
+  };
+  if (!email || !_.contains(_.map(user.emails || [], pluckLowerCaseEmailAddresses), email.toLowerCase()))
     throw new Error("No such email for user.");
+
+  // find the email in it's original form and insert that into the token record
+  var emails = _.map(user.emails || [], pluckLowerCaseEmailAddresses);
+  var tokenEmail = (user.emails || [])[emails.indexOf(email.toLowerCase())].address;
 
   var token = Random.secret();
   var when = new Date();
   var tokenRecord = {
     token: token,
-    email: email,
+    email: tokenEmail, // use the email in it's original form
     when: when
   };
   Meteor.users.update(userId, {$set: {

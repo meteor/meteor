@@ -6,7 +6,7 @@
 var interceptedEmails = {}; // (email address) -> (array of options)
 
 // add html email templates that just contain the url
-Accounts.emailTemplates.resetPassword.html = 
+Accounts.emailTemplates.resetPassword.html =
   Accounts.emailTemplates.enrollAccount.html =
   Accounts.emailTemplates.verifyEmail.html = function (user, url) {
     return url;
@@ -29,10 +29,10 @@ EmailTest.hookSend(function (options) {
   if (!to || to.indexOf('intercept') === -1) {
     return true; // go ahead and send
   } else {
-    if (!interceptedEmails[to])
-      interceptedEmails[to] = [];
+    if (!interceptedEmails[to.toLowerCase()])
+      interceptedEmails[to.toLowerCase()] = [];
 
-    interceptedEmails[to].push(options);
+    interceptedEmails[to.toLowerCase()].push(options);
     return false; // skip sending
   }
 });
@@ -40,7 +40,7 @@ EmailTest.hookSend(function (options) {
 Meteor.methods({
   getInterceptedEmails: function (email) {
     check(email, String);
-    return interceptedEmails[email];
+    return interceptedEmails[email.toLowerCase()];
   },
 
   addEmailForTestAndVerify: function (email) {
