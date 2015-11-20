@@ -111,11 +111,28 @@ babelHelpers = {
       //
       // For correctness when writing code, don't add static methods to a class
       // after you subclass it.
-      for (var k in superClass) {
-        if (hasOwn.call(superClass, k)) {
-          subClass[k] = superClass[k];
+
+      // The ecmascript-runtime package provides adequate polyfills for
+      // all of these Object.* functions (and Array#forEach), and anyone
+      // using babel-runtime is almost certainly using it because of the
+      // ecmascript package, which also implies ecmascript-runtime.
+      Object.getOwnPropertyNames(superClass).forEach(function (k) {
+        if (Object.getOwnPropertyDescriptor(subClass, k)) {
+          // If subClass already has a property by this name, then it
+          // would not be inherited, so it should not be copied. This
+          // notably excludes properties like .prototype and .name.
+          return;
         }
-      }
+
+        // This property descriptor dance preserves getter/setter behavior
+        // in browsers that support accessor properties (all except
+        // IE8). In IE8, the superClass can't have accessor properties
+        // anyway, so this code is still safe.
+        Object.defineProperty(
+          subClass, k,
+          Object.getOwnPropertyDescriptor(superClass, k)
+        );
+      });
     }
   },
 
