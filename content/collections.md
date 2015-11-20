@@ -66,10 +66,10 @@ To write data back to the server, you use a *method*, the subject of the "method
 
 ### Local Collections
 
-There is a third way to use a collection in Meteor. On the client or server, if you create a collection but do *not* give it a name:
+There is a third way to use a collection in Meteor. On the client or server, if you create a collection but pass `null` instead of a name:
 
 ```js
-Scratch = new Mongo.Collection(null);
+SelectedTodos = new Mongo.Collection(null);
 ```
 You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a publication on the client). 
 
@@ -77,7 +77,7 @@ A local collection is simply a convienent way to use the full power of the Minim
 
 ## Defining Collections with a Schema
 
-Although Mongo is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema.
+Although Mongo is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
 
 In Meteor, the pre-eminent schema package is [aldeed:simple-schema](http://atmospherejs.com/aldeed/simple-schema). It's an expressive, Mongo based schema that's used to insert and update documents.
 
@@ -158,7 +158,9 @@ The implication of the above is that we need to create more collections to conta
 
 In Meteor, it's often less of a problem doing this than it would be in a typical Mongo application, as we tend to publish overlapping sets of documents anyway (we might need one set of users to render one screen of our app, and an intersecting set for another), which may stay on the client as we move around the application. So in that scenario there is an advantage to separating the subdocuments from the parent.
 
-However, given that Mongo doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
+However, given that Mongo doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). Mongo is a database where denormalizing is encouraged, and thus optimized for this practice.
+
+In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
 
 Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
 
@@ -266,6 +268,8 @@ Migrations.add({
 
 This migration, which is sequenced to be the first migration to run over the database, will, when called, bring each list up to date with the current todo count.
 
+To find out more about the API of the Migrations package, refer to [its documentation](https://atmospherejs.com/percolate/migrations).
+
 ### Running migrations
 
 To run a migration against you development database, it's easiest to use the Meteor shell:
@@ -284,6 +288,7 @@ MIGRATION=latest meteor --production --settings path/to/production/settings.json
 ```
 
 What this does is run the `up()` function of all outstanding migrations (by default apps are considered at migrations "zero"), against your production database. In our case, it should ensure all lists have a `todoCount` field set.
+
 
 ### Making breaking schema changes
 
