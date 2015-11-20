@@ -1,3 +1,50 @@
+## Modules meeting 18th Nov
+
+With Ben, Matt, Tom, Zol, and Sashko.
+
+We talked about what would need to be supported by ES2015 modules in Meteor 1.3 for us to switch to that for the guide.
+
+Forum post here: https://forums.meteor.com/t/ideas-from-mdg-meteor-1-3-the-meteor-guide-and-es2015-modules/13591
+
+- **Testing**: Realistically we need a sensible way to unit test a module in a reasonably isolated way.
+  - Ben: Perhaps testing just comes down to not eagerly-loading application code, and just loading the modules you want to test?
+  - Tom: Whole app testing might not actually be related to modules. We should just find out if we can simulate the `meteor test-packages` experience with a module. This is basically “compile the package as usual, but also include the `onTest` files and dependencies”.
+  - Ben: We could just have a “sub-app” in `test/` that is loaded when you are running tests, and those could have modules that are test-only.
+  - Could we have `.meteor/packages` just specify which packages are test-only, dev-only, etc. For example, you could have `mocha` as an app dependency, but only in test mode.
+  - You’d also have an eagerly-loaded test runner where you can register tests to be run.
+  - `meteor test` could accept an argument that filters the tests based on the name they were registered with, or the module in which the tests are defined. Should also start a test database, etc.
+  - Matt would like to see the hypothetical guide article that outlines how you write and run your tests in the module world. Then we can make sure the module system supports all of that.
+  - Tom will write the testing article against an idealized module system, if we ship the guide before modules ship, we’ll just omit that section or put it in some “future” area.
+- **Blaze**: How do blaze templates, which don't have any concept of `import`/`export`, work with this? Can you co-locate templates and their JS logic?
+  - We could make these lazily evaluated, and only be executed when you import them
+  - `{{> templateName}}` means `Template.templateName`. In module world, do we need to first `import templateName from ‘../module/templateName.html’` somehow? Answer: no, given the other discussions about Blaze/React, it's not worth making major changes to the Spacebars syntax at the moment.
+  - Sashko/Matt say - it’s OK if all template files are eagerly evaluated and work as they do now. Sashko says it’s important to him that all code can be put in the `imports` directory, including templates, so that we can make the code structure nice for the guide.
+  - For further discussion: How important is it that feature code (JS, HTML, CSS, images, etc) can be co-located?
+- **Build plugins**: Do build plugins work as-is? how do you use modules with CoffeeScript, does this open up TypeScript? Have we compared what we are building to what is needed by the Angular/Angular2 community? What about CSS pre-processors?
+  - The dependency tree is analyzed based on the output code - so as long as the CoffeeScript compiler outputs `require(‘myFile.coffee’)`, we’ll detect that dependency.
+  - LESS does all of its own importing and exports CSS, which could either be added as a style tag or a JavaScript resource. The CSS pre-processor stuff isn't affected by ES2015 module work for Meteor 1.3, and will work just as before.
+- **Meteor package system**: What’s it for? Should people start shipping reusable Meteor code on NPM as of 1.3?
+  - Meteor packages are really good at doing totally different things on the client and the server - you can set up the full stack just by adding the package
+  - For example, for DDP, you’d need to `import ‘ddp/client’` on the client and `import ‘ddp/server’` on the server if you want different functionality, but in a Meteor package you can just use `ddp` and it does the right thing.
+  - `client/` and `server/` directories in NPM packages don’t have a special meaning at the moment, but they could - or we could have a special `package.json` format. Probably won't tackle this for 1.3.
+  - If you don’t have the above special build system requirements, there is basically no reason you need to publish your package on Atmosphere over NPM - this also removes the need for robotic wrapper packages that just re-bundle the same code that's already on NPM.
+- **Assets**: What about assets like fonts and images? In the current package system, you can organize them in `package.js`, but in a Meteor app today you'd have to put everything in `public/`. What do you do in module world?
+  - Modules are about loading things that compile to JavaScript code
+  - Images aren’t something you would ‘require’ since there is no JavaScript content involved
+  - Perhaps you should be able to stick images anywhere in the app (not just `public/`), and have a sane way of referring to them
+  - Idea from Sashko: Perhaps we want `getPathToAsset(‘../relative/path’);`, so that you can put images next to templates and refer to them without having to know the absolute path to the containing directory.
+- **Apps with multiple entry points/UIs/services**: Right now, you can have lots of packages and lots of apps, is this possible with modules? Do you need to make modules into NPM packages for this? Are Meteor packages still the way to go? If so, do you still need to list all of the files?
+  - Didn't have time to address this in the meeting.
+- **Cordova**: Can you import Cordova plugins?
+  - We don’t yet have a good mental model here yet. It would be nice if you could import a cordova plugin, and make sure the necessary side effects run.
+  - These things can work like “legacy” meteor packages - the dependency scanner doesn’t need to understand them. This is one advantage over using Webpack in Meteor 1.3 - it assumes everything is a node-style JavaScript module.
+- **File structure**: Do we want to keep the  `imports` directory convention proposed in the PR?
+  - Ben says backwards compatibility with the existing loading logic was important to him, and `imports` is just one way to get that.
+  - Other ways are special file names, special comments, etc.
+  - Matt says this directory should sound more “default” and less “opting into a fancy new feature”
+  - Ben said one big reason was that the LESS package picked this name. `modules` is another possibility, feels like `node_modules`. This is kind of a bike-shedding topic overall.
+  - We could also have an app “control file” that just specifies entry point. Either a JSON file we can statically read, or a JavaScript file that just imports stuff inside conditionals somehow.
+
 ## Standup 16th Nov
 
 With Tom, Zol and Sashko.
