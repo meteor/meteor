@@ -48,7 +48,7 @@
     "mocha": "2.3.3",
     "readline-sync": "1.2.21",
     "rewire": "2.4.0",
-    "rimraf": "2.4.3",
+    "rimraf": "2.4.4",
     "semantic-release": "4.3.5",
     "validate-commit-msg": "1.0.0"
   },
