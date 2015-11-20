@@ -309,6 +309,122 @@ WindowSize.simulateMobile = (device) => {
 }
 ```
 
+## Publishing Relational Data
+
+It's common to need a related sets of data from multiple collections on a given page. For instance, in the Todos app, when we render a todo list, we want the list itself, as well as the set of todos that belong to that list.
+
+One way you might do this is to return more than one cursor from your publication function:
+
+```js
+Meteor.publish('list/todos', function(listId) {
+  check(listId, String);
+
+  const list = List.findOne(listId);
+
+  if (list && (!list.userId || list.userId === this.userId)) {
+    return [
+      Lists.find(listId),
+      Todos.find({listId});
+    ];
+  } else {
+    // The list doesn't exist, or the user isn't allowed to see it. In either case,
+    //   make it appear like there is no list.
+    return this.ready();
+  }
+});
+
+However, this example will not work as you might expect. The reason is that reactivity doesn't work in the same way on the server as it does on the client. On the client, if *anything* in a reactive function changes, the whole function will re-run, and the results are fairly intuitive.
+
+On the server however, the reactivity is limited to the behaviour of the cursors you return from your publish functions. You'll see any changes to the data that matches their queries, but *their queries will never change*.
+
+So in the case above, if a user subscribes to a list that is later made private by another user, although the `list.userId` will change to a value that no longer passes the condition, the body of the publication will not re-run, and so the query to the `Todos` collection (`{listId}`) will not change. So the first user will continue to see items they shouldn't.
+
+However, we can write publications that are properly reactive to changes across collections. To do this, we use the [`reywood:publish-composite`](https://atmospherejs.com/reywood/publish-composite) package. 
+
+The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor.
+
+XXX: this example isn't actually in the app yet: https://github.com/meteor/todos/issues/48
+
+```js
+Meteor.publishComposite('list/todos', function(listId) {
+  check(listId, String);
+
+  const userId = this.userId;
+  return {
+    find() {
+      const query = {
+        _id: listId, 
+        userId: {$or: [{$exists: false}, userId]}
+      };
+
+      return Lists.find(query);
+    },
+    children: [{
+      find(list) {
+        return Todos.find({listId: list._id});
+      }
+    }]
+  };
+});
+```
+
+In this example, we write a complicated query to make sure that we only ever find a list if we are allowed to see it, then, once per list we find (which can be one or zero times depending on access), we publish the todos for that list. Publish Composite takes care of stopping and starting the dependent cursors if the list stops matching the original query or otherwise.
+
+## Complex Authorization in publications
+
+We can also use `publish-composite` to perform complex authorization in publications. For instance, consider if we had a `admin/list/todos` publication that allowed an admin to bypass default publication's security for users with an `admin` flag set.
+
+We might want to write:
+
+```js
+Meteor.publish('admin/list/todos', function(listId) {
+  check(listId, String);
+
+  const user = Meteor.users.findOne(this.userId);
+
+  if (user && user.admin) {
+    return [
+      Lists.find(listId),
+      Todos.find({listId});
+    ];
+  } else {
+    return this.ready();
+  }
+});
+```
+
+However, due to the same reasons discussed above, the publication *will not re-run* if the user's `admin` status changes. If this is something that is likely to happen and reactive changes are needed, then we'll need to make the publication reactive. We can do this via the same technique as above however:
+
+```js
+Meteor.publishComposite('admin/list/todos', function(listId) {
+  check(listId, String);
+
+  const userId = this.userId;
+  return {
+    find() {
+      return Meteor.users.find({userId, admin: true});
+    },
+    children: [{
+      find() {
+        return [
+          Lists.find(listId),
+          Todos.find({listId});
+        ];
+      }  
+    }]
+  };
+});
+```
+
+## The low level publish API
+
+
+8. The low-level publish API
+  1. Custom publication patterns - how to decouple your backend data format from your frontend (if you want!)
+  2. Be super careful about leaking!! (How to detect this, perf article)
+9. Turning pubs into REST endpoints (via `simple:rest`)
+10. Turning REST endpoints into pubs via `poll-publish`
+
 # OUTLINE
 
 1. Publications + Subscriptions
