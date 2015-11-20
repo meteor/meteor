@@ -703,8 +703,13 @@ LocalCollection.prototype.update = function (selector, mod, options, callback) {
 
   _.each(self.queries, function (query, qid) {
     if ((query.cursor.skip || query.cursor.limit) && ! self.paused) {
-      // XXX for now, skip/limit implies ordered observe, so query.results is
-      // always an array
+      // Catch the case of a reactive `count()` on a cursor with skip
+      // or limit, which registers an unordered observe
+      if (query.results instanceof LocalCollection._IdMap) {
+        qidToOriginalResults[qid] = EJSON.clone(query.results);
+        return;
+      }
+
       if (!(query.results instanceof Array)) {
         throw new Error("Assertion failed: query.results not an array");
       }
