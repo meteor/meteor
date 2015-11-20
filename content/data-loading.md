@@ -72,6 +72,60 @@ Meteor.subscribe('list/todos', list._id);
 
 Also note that we are careful to check the `listId` is a string as we expect, as described in the Security article.
 
+### Organizing Publications
+
+It makes sense to place a publication in a package alongside the feature that it's targeted. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
+
+Often, however, a publication is more general. For example in the Todos example application, we create a `list/todos` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
+
+## Using publications: Subscriptions
+
+To use publications, you need to create a subscription to it on the client. To do so, you call `Meteor.subscribe()` with the name of the publication. When you do this, it opens up a subscription to that publication, and the server starts sending data down the wire to ensure that your client collections contain up to date copies of the data that's pushed by the publication.
+
+### Organizing Subscriptions
+
+It is best to place the subscription as close as possible to the place where the data from the subscription is needed. This reduces "action at a distance" and makes it easier to understand the flow of data through your application.
+
+What this means in practice is that you should place your subscription calls in *templates*. In Blaze, it's best to do this in the `onCreated()` callback:
+
+```js
+Template.listsShowPage.onCreated(function() {
+  this.state = new ReactiveDict();
+  this.autorun(() => {
+    this.state.set('listId', FlowRouter.getParam('_id'));
+    this.subscribe('list/todos', this.state.get('listId'));
+  });
+});
+```
+
+In this code snippet we can see two important techniques for subscribing in Blaze templates:
+
+1. Calling `this.subscribe()` (rather than `Meteor.subscribe`) means that the subscription will automatically get torn down when the template is taken off the screen.
+
+2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive variable `this.state.get('listId')` changes.
+
+### Fetching subscription data
+
+Once you've subscribed to a set of data, you then need to query the client collections to fetch the data again. There are a few important rules of thumb when doing this.
+
+1. Always use the same query to fetch the data from the collection that you use to publish it. 
+
+  If you don't do this, then you open yourself up to problem if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
+
+2. Fetch the data as close as possible to where you subscribe to it.
+
+  We do this for the same reason we subscribe in the template in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child template, as we'll see in in the {% post_link ui-ux "UI/UX Article"%}.
+
+  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template heirarchy as an argument to each template (although you could do this if you want to be "pure" about everything). 
+
+  A second exception is sometimes in Blaze when you want to be more performant by controlling re-renderings. As an example in the Todos example application, although we subscribe to the `lists/todos` publication in the `listShowPage`, we don't actually fetch the todos further down the template heirarchy, in order to avoid the todos rendering too much when properties of the list change.
+
+### Global subscriptions
+
+One place where you might be tempted to not subscribe to a subscription is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the {% post_link accounts "Accounts Article" %}) that you need on every screen of your app.
+
+However, it's generally a good idea to use a layout template (which you wrap all your templates in) to subscribe to this subscription anyway. It's better to be consistent about such things, and it makes for a more flexible system if you ever decide you have a screen that *doesn't* need that data.
+
 
 # OUTLINE
 
