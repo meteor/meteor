@@ -17,6 +17,8 @@ Na segunda e última parte serão apresentadas algumas estatísticas de teste do
 
 ## Testabilidade do Software
 
+Neste tópico iremos analisar o grau de testibilidade do **Meteor**, isto é, o grau de facilidade dos testes deste software. O *Meteor* apresenta alguma complexidade e, para a facilidade de teste, os testes de software são distribuidos pelos seus módulos e pelas suas funcionalidades. 
+
 ### Controlabilidade
 
 ### Observabilidade
