@@ -32,7 +32,7 @@ Para o **Velocity** poderiamos usar como suporte de framework o [Jasmine](https:
 Para testes de integração podemos utilizar como suporte de framework para o **Velocity** o [Nightwatch](http://nightwatchjs.org/). Esta ferramenta irá realizar testes automatizados e integração de estrutura contínua baseado em **Node.js** e em *Selenium Webdriver*.
 Apesar de ser uma boa escolha, é um processo complicado mas que depois irá servir para guardar mos os testes num diretório próprio. Exemplo de um teste Nightwatch:
 
-//imagem
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/nightwatch.PNG)
 
 ### Isolabilidade
 
