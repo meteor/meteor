@@ -57,6 +57,7 @@ Consideramos que o Meteor possui uma documentação que ajuda a explicar os prin
 ## Referências
 * http://docs.meteor.com/#/full/
 * http://www.softwaretestingclass.com/why-documentation-is-important-in-software-testing/
+* https://semaphoreci.com/blog/2014/11/19/meteorjs-getting-started.html
 
 
 ## FEUP ESOF MIEIC
