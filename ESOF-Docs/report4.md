@@ -37,8 +37,8 @@ Consideramos que o Meteor possui uma documentação que ajuda a explicar os prin
 ## Estatísticas de Teste
 
 ## Referências
-http://docs.meteor.com/#/full/
-http://www.softwaretestingclass.com/why-documentation-is-important-in-software-testing/
+* http://docs.meteor.com/#/full/
+* http://www.softwaretestingclass.com/why-documentation-is-important-in-software-testing/
 
 
 ## FEUP ESOF MIEIC
