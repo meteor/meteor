@@ -26,7 +26,7 @@ O **Meteor** utiliza uma ferramenta chamada [Velocity](https://github.com/meteor
 
 Para o **Velocity** poderiamos usar como suporte de framework o [Jasmine](https://github.com/xolvio/meteor-jasmine), [Mocha](https://github.com/mad-eye/meteor-mocha-web) ou [Cucumba](http://www.mhurwi.com/a-basic-cucumber-meteor-tutorial/), sendo o **Jasmine** o mais usado pelos utilizadores que realizem os seus testes unitários. Após a introdução do **Jasmine** e **Velocity** e uma série de comandos no **Meteor** teriamos de criar um diretório próprio para os testes. Com isto, é possível realizar os testes e vericá-los através de um relatório HTML que mostra a nossa app. A imagem abaixo ilustra como exemplo um teste realizado numa app:
 
-//imagem
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/jasmineexample.PNG)
 
 
 Para testes de integração podemos utilizar como suporte de framework para o **Velocity** o [Nightwatch](http://nightwatchjs.org/). Esta ferramenta irá realizar testes automatizados e integração de estrutura contínua baseado em **Node.js** e em *Selenium Webdriver*.
