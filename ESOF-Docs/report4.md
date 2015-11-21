@@ -21,6 +21,14 @@ Neste tópico iremos analisar o grau de testibilidade do **Meteor**, isto é, o 
 
 ### Controlabilidade
 
+Pode-se distinguir dois tipos fundamentais de testes para o **Meteor**: os testes unitários e os testes de integração.
+
+Os testes unitários não tem acesso ao código do **Meteor**. Este incidem em funções específicas ou classes personalizadas, forçando-as a retornar aquilo que é esperado. Existem diversos frameworks que podem ser utilizados na realização de testes unitários, sendo que os mais populares são o **Jasmine** e o **Mocha**.
+
+Os testes de integração por sua vez cobrem funcionalidades inteiras da aplicação, independentemente do número de funções que engloba. Interpretam o programa ou as suas funcionalidades como sistemas fechados, testando apenas as entradas e saídas. Para estes testes, pode-se recorrer ao framework Nightwatch.
+
+Dado que, através dos testes unitários, é possível forçar os estados das funções a serem testadas, podemos então verificar que é possível controlar o estado dos componentes a serem testados.
+
 ### Observabilidade
 
 O **Meteor** utiliza uma ferramenta chamada [Velocity](https://github.com/meteor-velocity/velocity) para testes de integração e unitários.
