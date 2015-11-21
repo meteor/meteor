@@ -37,7 +37,8 @@ Apesar de ser uma boa escolha, é um processo complicado mas que depois irá ser
 ### Isolabilidade
 
 ### Separação de Funcionalidades
--- The degree to which the component under test has a single, well defined responsibility.
+
+No desenvolvimento de software, é importante assegurar que cada funcionalidade seja implementada da melhor maneira possível, isto é, que fique isolada ao componente no qual diz respeito. Assim, as componentes poderão ser mais testáveis. O **Meteor** deve ter em atenção este aspeto para ser fácil a sua restruturação e manutenção. A separação de funcionalidades está explicita no [último relatório realizado] (https://github.com/lpinto93/meteor/devel/ESOF-Docs/report3.md) e, cada um dos seus módulos, está responsável por tarefas complexas. Contudo, os módulos tem as suas estruturas bastante organizadas e isoladas. Este tópico é relevante para a funcionalidade dos testes, como foi dito em cima, apesar que dada a estrutura do **Meteor**, os testes não são feitos em todas as funcionalidades.
 
 ### Compreensibilidade
 
