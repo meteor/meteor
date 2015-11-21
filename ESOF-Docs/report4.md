@@ -11,7 +11,7 @@
 
 Este relatório tem como objetivo a análise dos processos de verificação e validação (V&V) seguidos no desenvolvimento e na utilização do Meteor.
 
-Na primeira parte iremos apresentar um diagnóstico do grau de testabilidade do Meteor, explicando a controlabilidade do estado dos componentes testados, a observabilidade dos resultados dos testes, a isolabilidade dos componentes, o grau de separação de funcionalidades, a compreensibilidade dos componentes e a heterogeneidade das tecnologias utilizadas.
+Na primeira parte iremos apresentar um diagnóstico do grau de testabilidade do Meteor, explicando a controlabilidade dos componentes testados, a observabilidade dos resultados dos testes, a isolabilidade dos componentes, o grau de separação de funcionalidades, a compreensibilidade dos componentes e a heterogeneidade das tecnologias utilizadas.
 
 Na segunda e última parte serão apresentadas algumas estatísticas de teste do Meteor relacionadas com os processos V&V do software. 
 
