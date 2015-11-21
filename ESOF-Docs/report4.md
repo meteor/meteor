@@ -9,11 +9,11 @@
 
 ## Introdução
 
-Este relatório tem como objetivo a análise dos processos de verificação e validação (V&V) seguidos no desenvolvimento e na utilização do Meteor.
+Este relatório tem como objetivo a análise dos processos de verificação e validação (V&V) seguidos no desenvolvimento e na utilização do **Meteor**.
 
-Na primeira parte iremos apresentar um diagnóstico do grau de testabilidade do Meteor, explicando a controlabilidade dos componentes testados, a observabilidade dos resultados dos testes, a isolabilidade dos componentes, o grau de separação de funcionalidades, a compreensibilidade dos componentes e a heterogeneidade das tecnologias utilizadas.
+Na primeira parte iremos apresentar um diagnóstico do grau de testabilidade do **Meteor**, explicando a controlabilidade dos componentes testados, a observabilidade dos resultados dos testes, a isolabilidade dos componentes, o grau de separação de funcionalidades, a compreensibilidade dos componentes e a heterogeneidade das tecnologias utilizadas.
 
-Na segunda e última parte serão apresentadas algumas estatísticas de teste do Meteor relacionadas com os processos V&V do software. 
+Na segunda e última parte serão apresentadas algumas estatísticas de teste do **Meteor** relacionadas com os processos V&V do software. 
 
 ## Testabilidade do Software
 
@@ -21,15 +21,15 @@ Na segunda e última parte serão apresentadas algumas estatísticas de teste do
 
 ### Observabilidade
 
-O Meteor utiliza uma ferramenta chamada Velocity para testes de integração e unitários.
-Velocity é a estrutura oficial de corredor de testes do Meteor.js. Permite que todos os utilizadores adicionem facilmente pacotes com estrutura de teste que conecte com o Meteor. Esta ferramenta lida com a criação de uma instância separada da nossa app para correr testes contra, com verificação de ficheiros e, em alterações, reativa novamente a execução dos testes, e imprime os resultados dos testes num formato que coisas como velocity-html-reporter tem de funcionar. 
+O **Meteor** utiliza uma ferramenta chamada [Velocity](https://github.com/meteor-velocity/velocity) para testes de integração e unitários.
+**Velocity** é a estrutura oficial de corredor de testes do **Meteor.js**. Permite que todos os utilizadores adicionem facilmente pacotes com estrutura de teste que conecte com o **Meteor**. Esta ferramenta lida com a criação de uma instância separada da nossa app para correr testes contra, com verificação de ficheiros e, em alterações, reativa novamente a execução dos testes, e imprime os resultados dos testes num formato que coisas como [velocity-html-reporter](https://github.com/meteor-velocity/html-reporter/ ) tem de funcionar. 
 
-Para o Velocity poderiamos usar como suporte de framework o [Jasmine] (https://github.com/xolvio/meteor-jasmine), Mocha ou Cucumba, sendo o Jasmine o mais usado pelos utilizadores que realizem os seus testes unitários. Após a introdução do Jasmine e Velocity e uma série de comandos no Meteor teriamos de criar um diretório próprio para os testes. Com isto, é possível realizar os testes e vericá-los através de um relatório HTML que mostra a nossa app. A imagem abaixo ilustra como exemplo um teste realizado numa app:
+Para o **Velocity** poderiamos usar como suporte de framework o [Jasmine](https://github.com/xolvio/meteor-jasmine), Mocha ou Cucumba, sendo o Jasmine o mais usado pelos utilizadores que realizem os seus testes unitários. Após a introdução do **Jasmine** e **Velocity** e uma série de comandos no **Meteor** teriamos de criar um diretório próprio para os testes. Com isto, é possível realizar os testes e vericá-los através de um relatório HTML que mostra a nossa app. A imagem abaixo ilustra como exemplo um teste realizado numa app:
 
 //imagem
 
 
-Para testes de integração podemos utilizar como suporte de framework para o Velocity o Nightwatch. Esta ferramenta irá realizar testes automatizados e integração de estrutura contínua baseado em Node.js e em Selenium Webdriver.
+Para testes de integração podemos utilizar como suporte de framework para o **Velocity** o [Nightwatch](http://nightwatchjs.org/). Esta ferramenta irá realizar testes automatizados e integração de estrutura contínua baseado em **Node.js** e em *Selenium Webdriver*.
 Apesar de ser uma boa escolha, é um processo complicado mas que depois irá servir para guardar mos os testes num diretório próprio. Exemplo de um teste Nightwatch:
 
 //imagem
