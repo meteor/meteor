@@ -43,7 +43,7 @@
     "coveralls": "2.11.4",
     "cz-conventional-changelog": "1.1.4",
     "eslint": "1.10.0",
-    "ghooks": "0.3.2",
+    "ghooks": "1.0.1",
     "istanbul": "0.4.0",
     "mocha": "2.3.3",
     "readline-sync": "1.2.21",
