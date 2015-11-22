@@ -750,7 +750,7 @@ Mongo.Collection.ObjectID = Mongo.ObjectID;
     self._restricted = true;
 
     _.each(['insert', 'update', 'remove'], function (name) {
-      if (options[name]) {
+      if (options.hasOwnProperty(name)) {
         if (!(options[name] instanceof Function)) {
           throw new Error(allowOrDeny + ": Value for `" + name + "` must be a function");
         }

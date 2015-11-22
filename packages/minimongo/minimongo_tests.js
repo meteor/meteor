@@ -2326,6 +2326,7 @@ Tinytest.add("minimongo - modify", function (test) {
   modify({a: [2, 1, 2]}, {$pull: {a: 1}}, {a: [2, 2]});
   modify({a: [2, 1, 2]}, {$pull: {a: 2}}, {a: [1]});
   modify({a: [2, 1, 2]}, {$pull: {a: 3}}, {a: [2, 1, 2]});
+  modify({a: [1, null, 2, null]}, {$pull: {a: null}}, {a: [1, 2]});
   modify({a: []}, {$pull: {a: 3}}, {a: []});
   modify({a: [[2], [2, 1], [3]]}, {$pull: {a: [2, 1]}},
          {a: [[2], [3]]}); // tested

@@ -1,13 +1,13 @@
 <html {{htmlAttributes}}>
 <head>
-{{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{../bundledJsCssPrefix}}{{url}}">{{/each}}
+{{#each css}}  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="{{../bundledJsCssUrlRewriteHook url}}">{{/each}}
 
 {{#if inlineScriptsAllowed}}
 <script type='text/javascript'>__meteor_runtime_config__ = JSON.parse(decodeURIComponent({{meteorRuntimeConfig}}));</script>
 {{else}}
 <script type='text/javascript' src='{{rootUrlPathPrefix}}/meteor_runtime_config.js'></script>
 {{/if}}
-{{#each js}}  <script type="text/javascript" src="{{../bundledJsCssPrefix}}{{url}}"></script>
+{{#each js}}  <script type="text/javascript" src="{{../bundledJsCssUrlRewriteHook url}}"></script>
 {{/each}}
 {{#each additionalStaticJs}}
   {{#if ../inlineScriptsAllowed}}

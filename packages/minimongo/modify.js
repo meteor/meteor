@@ -361,7 +361,7 @@ var MODIFIERS = {
       throw MinimongoError("Cannot apply $pull/pullAll modifier to non-array");
     else {
       var out = [];
-      if (typeof arg === "object" && !(arg instanceof Array)) {
+      if (arg != null && typeof arg === "object" && !(arg instanceof Array)) {
         // XXX would be much nicer to compile this once, rather than
         // for each document we modify.. but usually we're not
         // modifying that many documents, so we'll let it slide for

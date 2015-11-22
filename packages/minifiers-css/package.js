@@ -4,29 +4,26 @@ Package.describe({
 });
 
 Npm.depends({
-  "uglify-js": "2.4.20",
   "css-parse": "2.0.0",
   "css-stringify": "2.0.0"
 });
 
 Npm.strip({
-  "uglify-js": ["test/"],
   "css-parse": ["test/"],
   "css-stringify": ["test/"]
 });
 
 Package.onUse(function (api) {
   api.use('underscore', 'server');
-  api.export(['CssTools', 'UglifyJSMinify', 'UglifyJS']);
+  api.export(['CssTools']);
   api.addFiles(['minification.js', 'minifiers.js'], 'server');
 });
 
 Package.onTest(function (api) {
-  api.use('minifiers', 'server');
+  api.use('minifiers-css', 'server');
   api.use('tinytest');
 
   api.addFiles([
-    'beautify-tests.js',
     'minifiers-tests.js',
     'urlrewriting-tests.js'
   ], 'server');

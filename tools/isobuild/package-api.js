@@ -322,8 +322,9 @@ _.extend(PackageAPI.prototype, {
    */
   addFiles: function (paths, arch, fileOptions) {
     if (fileOptions && fileOptions.isAsset) {
-      buildmessage.error('The `isAsset` option to `addFiles` is deprecated. ' +
-        'Use PackageAPI#addAssets instead.', { useMyCaller: true });
+      // XXX it would be great to print a warning here, see the issue:
+      // https://github.com/meteor/meteor/issues/5495
+      this._addFiles("assets", paths, arch);
       return;
     }
 
@@ -409,7 +410,7 @@ _.extend(PackageAPI.prototype, {
           source.fileOptions = fileOptions;
         }
 
-        filesOfType[path] = source;
+        filesOfType.push(source);
       });
     });
 
@@ -507,7 +508,7 @@ _.extend(PackageAPI.prototype, {
    * variables (declared without `var` in the source code) will be available
    * to packages that use your package. If your package sets the `debugOnly`
    * or `prodOnly` options to `true` when it calls `Package.describe()`, then
-   * packages that use your package will need to use 
+   * packages that use your package will need to use
    * `Package["package-name"].ExportedVariableName` to access the value of an
    * exported variable.
    * @locus package.js

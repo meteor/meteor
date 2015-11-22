@@ -742,7 +742,7 @@ _.extend(PackageSource.prototype, {
        * @param {String[]} options.sources The source files that make up the
        * build plugin, independent from [api.addFiles](#pack_addFiles).
        * @param {Object} options.npmDependencies An object where the keys
-       * are NPM package names, and the keys are the version numbers of
+       * are NPM package names, and the values are the version numbers of
        * required NPM packages, just like in [Npm.depends](#Npm-depends).
        * @memberOf Package
        * @locus package.js
@@ -911,7 +911,7 @@ _.extend(PackageSource.prototype, {
        * [plugins.cordova.io](http://plugins.cordova.io/), so the plugins and
        * versions specified must exist there. Alternatively, the version
        * can be replaced with a GitHub tarball URL as described in the
-       * [Cordova / PhoneGap](https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration#meteor-packages-with-cordovaphonegap-dependencies)
+       * [Cordova](https://github.com/meteor/meteor/wiki/Meteor-Cordova-integration#meteor-packages-with-cordova-dependencies)
        * page of the Meteor wiki on GitHub.
        * @param  {Object} dependencies An object where the keys are plugin
        * names and the values are version numbers or GitHub tarball URLs
@@ -929,7 +929,7 @@ _.extend(PackageSource.prototype, {
        * ```js
        * Cordova.depends({
        *   "org.apache.cordova.camera":
-       *     "https://github.com/apache/cordova-plugin-camera/tarball/d84b875c"
+       *     "https://github.com/apache/cordova-plugin-camera/tarball/d84b875c449d68937520a1b352e09f6d39044fbf"
        * });
        * ```
        *

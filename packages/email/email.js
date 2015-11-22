@@ -124,6 +124,15 @@ EmailTest.hookSend = function (f) {
  * @summary Send an email. Throws an `Error` on failure to contact mail server
  * or if mail server returns an error. All fields should match
  * [RFC5322](http://tools.ietf.org/html/rfc5322) specification.
+ *
+ * If the `MAIL_URL` environment variable is set, actually sends the email.
+ * Otherwise, prints the contents of the email to standard out.
+ *
+ * Note that this package is based on mailcomposer version `0.1.15`, so make
+ * sure to refer to the documentation for that version if using the
+ * `attachments` or `mailComposer` options.
+ * [Click here to read the mailcomposer 0.1.15 docs](https://github.com/andris9/mailcomposer/blob/7c0422b2de2dc61a60ba27cfa3353472f662aeb5/README.md).
+ *
  * @locus Server
  * @param {Object} options
  * @param {String} options.from "From:" address (required)
@@ -133,7 +142,7 @@ EmailTest.hookSend = function (f) {
  * @param {String} [options.text|html] Mail body (in plain text and/or HTML)
  * @param {Object} [options.headers] Dictionary of custom headers
  * @param {Object[]} [options.attachments] Array of attachment objects, as
- * described in the [mailcomposer documentation](https://github.com/andris9/mailcomposer#add-attachments).
+ * described in the [mailcomposer documentation](https://github.com/andris9/mailcomposer/blob/7c0422b2de2dc61a60ba27cfa3353472f662aeb5/README.md#add-attachments).
  * @param {MailComposer} [options.mailComposer] A [MailComposer](https://github.com/andris9/mailcomposer)
  * object representing the message to be sent. Overrides all other options. You
  * can access the `mailcomposer` npm module at

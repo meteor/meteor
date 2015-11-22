@@ -28,11 +28,13 @@ check = function (value, pattern) {
   var argChecker = currentArgumentChecker.getOrNullIfOutsideFiber();
   if (argChecker)
     argChecker.checking(value);
-  try {
-    checkSubtree(value, pattern);
-  } catch (err) {
-    if ((err instanceof Match.Error) && err.path)
-      err.message += " in field " + err.path;
+  var result = testSubtree(value, pattern);
+  if (result) {
+    var err = new Match.Error(result.message);
+    if (result.path) {
+      err.message += " in field " + result.path;
+      err.path = result.path;
+    }
     throw err;
   }
 };
@@ -88,15 +90,7 @@ Match = {
    * @param {MatchPattern} pattern The pattern to match `value` against
    */
   test: function (value, pattern) {
-    try {
-      checkSubtree(value, pattern);
-      return true;
-    } catch (e) {
-      if (e instanceof Match.Error)
-        return false;
-      // Rethrow other errors.
-      throw e;
-    }
+    return !testSubtree(value, pattern);
   },
 
   // Runs `f.apply(context, args)`. If check() is not called on every element of
@@ -145,33 +139,41 @@ var typeofChecks = [
   [undefined, "undefined"]
 ];
 
-var checkSubtree = function (value, pattern) {
+// Return `false` if it matches. Otherwise, return an object with a `message` and a `path` field.
+var testSubtree = function (value, pattern) {
   // Match anything!
   if (pattern === Match.Any)
-    return;
+    return false;
 
   // Basic atomic types.
   // Do not match boxed objects (e.g. String, Boolean)
   for (var i = 0; i < typeofChecks.length; ++i) {
     if (pattern === typeofChecks[i][0]) {
       if (typeof value === typeofChecks[i][1])
-        return;
-      throw new Match.Error("Expected " + typeofChecks[i][1] + ", got " +
-                            typeof value);
+        return false;
+      return {
+        message: "Expected " + typeofChecks[i][1] + ", got " + (value === null ? "null" : typeof value),
+        path: ""
+      };
     }
   }
   if (pattern === null) {
     if (value === null)
-      return;
-    throw new Match.Error("Expected null, got " + EJSON.stringify(value));
+      return false;
+    return {
+      message: "Expected null, got " + EJSON.stringify(value),
+      path: ""
+    };
   }
 
   // Strings, numbers, and booleans match literally. Goes well with Match.OneOf.
   if (typeof pattern === "string" || typeof pattern === "number" || typeof pattern === "boolean") {
     if (value === pattern)
-      return;
-    throw new Match.Error("Expected " + pattern + ", got " +
-                          EJSON.stringify(value));
+      return false;
+    return {
+      message: "Expected " + pattern + ", got " + EJSON.stringify(value),
+      path: ""
+    };
   }
 
   // Match.Integer is special type encoded with array
@@ -183,9 +185,11 @@ var checkSubtree = function (value, pattern) {
     // Bitwise operators work consistantly but always cast variable to 32-bit
     // signed integer according to JavaScript specs.
     if (typeof value === "number" && (value | 0) === value)
-      return
-    throw new Match.Error("Expected Integer, got "
-                + (value instanceof Object ? EJSON.stringify(value) : value));
+      return false;
+    return {
+      message: "Expected Integer, got " + (value instanceof Object ? EJSON.stringify(value) : value),
+      path: ""
+    };
   }
 
   // "Object" is shorthand for Match.ObjectIncluding({});
@@ -194,33 +198,50 @@ var checkSubtree = function (value, pattern) {
 
   // Array (checked AFTER Any, which is implemented as an Array).
   if (pattern instanceof Array) {
-    if (pattern.length !== 1)
-      throw Error("Bad pattern: arrays must have one type element" +
-                  EJSON.stringify(pattern));
+    if (pattern.length !== 1) {
+      return {
+        message: "Bad pattern: arrays must have one type element" + EJSON.stringify(pattern),
+        path: ""
+      };
+    }
     if (!_.isArray(value) && !_.isArguments(value)) {
-      throw new Match.Error("Expected array, got " + EJSON.stringify(value));
+      return {
+        message: "Expected array, got " + EJSON.stringify(value),
+        path: ""
+      };
     }
 
-    _.each(value, function (valueElement, index) {
-      try {
-        checkSubtree(valueElement, pattern[0]);
-      } catch (err) {
-        if (err instanceof Match.Error) {
-          err.path = _prependPath(index, err.path);
-        }
-        throw err;
+    for (var i = 0, length = value.length; i < length; i++) {
+      var result = testSubtree(value[i], pattern[0]);
+      if (result) {
+        result.path = _prependPath(i, result.path);
+        return result;
       }
-    });
-    return;
+    }
+    return false;
   }
 
   // Arbitrary validation checks. The condition can return false or throw a
   // Match.Error (ie, it can internally use check()) to fail.
   if (pattern instanceof Where) {
+    var result;
+    try {
+      result = pattern.condition(value);
+    } catch (err) {
+      if (!(err instanceof Match.Error))
+        throw err;
+      return {
+        message: err.message,
+        path: err.path
+      };
+    }
     if (pattern.condition(value))
-      return;
+      return false;
     // XXX this error is terrible
-    throw new Match.Error("Failed Match.Where validation");
+    return {
+      message: "Failed Match.Where validation",
+      path: ""
+    };
   }
 
 
@@ -229,28 +250,29 @@ var checkSubtree = function (value, pattern) {
 
   if (pattern instanceof OneOf) {
     for (var i = 0; i < pattern.choices.length; ++i) {
-      try {
-        checkSubtree(value, pattern.choices[i]);
+      var result = testSubtree(value, pattern.choices[i]);
+      if (!result) {
         // No error? Yay, return.
-        return;
-      } catch (err) {
-        // Other errors should be thrown. Match errors just mean try another
-        // choice.
-        if (!(err instanceof Match.Error))
-          throw err;
+        return false;
       }
+      // Match errors just mean try another choice.
     }
     // XXX this error is terrible
-    throw new Match.Error("Failed Match.OneOf or Match.Optional validation");
+    return {
+      message: "Failed Match.OneOf or Match.Optional validation",
+      path: ""
+    };
   }
 
   // A function that isn't something we special-case is assumed to be a
   // constructor.
   if (pattern instanceof Function) {
     if (value instanceof pattern)
-      return;
-    throw new Match.Error("Expected " + (pattern.name ||
-                                         "particular constructor"));
+      return false;
+    return {
+      message: "Expected " + (pattern.name ||"particular constructor"),
+      path: ""
+    };
   }
 
   var unknownKeysAllowed = false;
@@ -265,18 +287,34 @@ var checkSubtree = function (value, pattern) {
     pattern = {};  // no required keys
   }
 
-  if (typeof pattern !== "object")
-    throw Error("Bad pattern: unknown pattern type");
+  if (typeof pattern !== "object") {
+    return {
+      message: "Bad pattern: unknown pattern type",
+      path: ""
+    };
+  }
 
   // An object, with required and optional keys. Note that this does NOT do
   // structural matches against objects of special types that happen to match
   // the pattern: this really needs to be a plain old {Object}!
-  if (typeof value !== 'object')
-    throw new Match.Error("Expected object, got " + typeof value);
-  if (value === null)
-    throw new Match.Error("Expected object, got null");
-  if (value.constructor !== Object)
-    throw new Match.Error("Expected plain object");
+  if (typeof value !== 'object') {
+    return {
+      message: "Expected object, got " + typeof value,
+      path: ""
+    };
+  }
+  if (value === null) {
+    return {
+      message: "Expected object, got null",
+      path: ""
+    };
+  }
+  if (value.constructor !== Object) {
+    return {
+      message: "Expected plain object",
+      path: ""
+    };
+  }
 
   var requiredPatterns = {};
   var optionalPatterns = {};
@@ -287,30 +325,46 @@ var checkSubtree = function (value, pattern) {
       requiredPatterns[key] = subPattern;
   });
 
-  _.each(value, function (subValue, key) {
-    try {
-      if (_.has(requiredPatterns, key)) {
-        checkSubtree(subValue, requiredPatterns[key]);
-        delete requiredPatterns[key];
-      } else if (_.has(optionalPatterns, key)) {
-        checkSubtree(subValue, optionalPatterns[key]);
-      } else {
-        if (!unknownKeysAllowed)
-          throw new Match.Error("Unknown key");
-        if (unknownKeyPattern) {
-          checkSubtree(subValue, unknownKeyPattern[0]);
+  for (var keys = _.keys(value), i = 0, length = keys.length; i < length; i++) {
+    var key = keys[i];
+    var subValue = value[key];
+    if (_.has(requiredPatterns, key)) {
+      var result = testSubtree(subValue, requiredPatterns[key]);
+      if (result) {
+        result.path = _prependPath(key, result.path);
+        return result;
+      }
+      delete requiredPatterns[key];
+    } else if (_.has(optionalPatterns, key)) {
+      var result = testSubtree(subValue, optionalPatterns[key]);
+      if (result) {
+        result.path = _prependPath(key, result.path);
+        return result;
+      }
+    } else {
+      if (!unknownKeysAllowed) {
+        return {
+          message: "Unknown key",
+          path: key
+        };
+      }
+      if (unknownKeyPattern) {
+        var result = testSubtree(subValue, unknownKeyPattern[0]);
+        if (result) {
+          result.path = _prependPath(key, result.path);
+          return result;
         }
       }
-    } catch (err) {
-      if (err instanceof Match.Error)
-        err.path = _prependPath(key, err.path);
-      throw err;
     }
-  });
+  }
 
-  _.each(requiredPatterns, function (subPattern, key) {
-    throw new Match.Error("Missing key '" + key + "'");
-  });
+  var keys = _.keys(requiredPatterns);
+  if (keys.length) {
+    return {
+      message: "Missing key '" + keys[0] + "'",
+      path: ""
+    };
+  }
 };
 
 var ArgumentChecker = function (args, description) {

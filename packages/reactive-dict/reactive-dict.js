@@ -163,8 +163,10 @@ _.extend(ReactiveDict.prototype, {
 
     _.each(oldKeys, function(value, key) {
       changed(self.keyDeps[key]);
-      changed(self.keyValueDeps[key][value]);
-      changed(self.keyValueDeps[key]['undefined']);
+      if (self.keyValueDeps[key]) {
+        changed(self.keyValueDeps[key][value]);
+        changed(self.keyValueDeps[key]['undefined']);
+      }
     });
 
   },

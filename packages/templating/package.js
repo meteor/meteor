@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Allows templates to be defined in .html files",
-  version: '1.1.3'
+  version: '1.1.5'
 });
 
 // Today, this package is closely intertwined with Handlebars, meaning
@@ -10,7 +10,7 @@ Package.describe({
 
 Package.registerBuildPlugin({
   name: "compileTemplatesBatch",
-  // minifiers is a weak dependency of spacebars-compiler; adding it here
+  // minifiers-js is a weak dependency of spacebars-compiler; adding it here
   // ensures that the output is minified.  (Having it as a weak dependency means
   // that we don't ship uglify etc with built apps just because
   // boilerplate-generator uses spacebars-compiler.)

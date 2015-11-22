@@ -60,7 +60,6 @@ BCp.processFilesForTarget = function (inputFiles) {
         if (e.loc) {
           inputFile.error({
             message: e.message,
-            sourcePath: inputFilePath,
             line: e.loc.line,
             column: e.loc.column,
           });

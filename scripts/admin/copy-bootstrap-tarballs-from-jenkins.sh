@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Requires awscli to be installed and an appropriate ~/.aws/config.
 # Usage:

@@ -1,26 +1,12 @@
 Package.describe({
   name: 'standard-minifiers',
-  version: '1.0.0',
+  version: '1.0.2',
   summary: 'Standard minifiers used with Meteor apps by default.',
   documentation: 'README.md'
 });
 
-Package.registerBuildPlugin({
-  name: "minifyStd",
-  use: [
-    'minifiers'
-  ],
-  npmDependencies: {
-    "source-map": "0.4.2"
-  },
-  sources: [
-    'plugin/minify-js.js',
-    'plugin/minify-css.js'
-  ]
-});
-
 Package.onUse(function(api) {
-  api.use('isobuild:minifier-plugin@1.0.0');
+  api.imply(['standard-minifiers-css','standard-minifiers-js']);
 });
 
 Package.onTest(function(api) {

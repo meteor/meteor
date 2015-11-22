@@ -148,6 +148,13 @@ treated specially by Meteor:
     `node_modules` directories will not be available to your Meteor code. Use
     `Npm.depends` in your package `package.js` file for that.
 
+The following directories are also not loaded as part of your app code:
+
+- Files/directories whose names start with a dot, like `.meteor` and `.git`
+- `packages/`: Used for local packages, covered below
+- `programs`: For legacy reasons
+- [`cordova-build-override`](https://github.com/meteor/meteor/wiki/Meteor-Cordova-Phonegap-integration#advanced-build-customization)
+
 ### Files outside special directories
 
 All JavaScript files outside special directories are loaded on both the client

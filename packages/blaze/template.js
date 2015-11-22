@@ -364,7 +364,7 @@ Blaze.TemplateInstance.prototype.subscribe = function (/* arguments */) {
 
     if (_.isFunction(lastParam)) {
       options.onReady = args.pop();
-    } else if (lastParam && Match.test(lastParam, lastParamOptionsPattern)) {
+    } else if (lastParam && ! _.isEmpty(lastParam) && Match.test(lastParam, lastParamOptionsPattern)) {
       options = args.pop();
     }
   }

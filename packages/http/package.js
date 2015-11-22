@@ -6,8 +6,12 @@ Package.describe({
 Npm.depends({request: "2.53.0"});
 
 Package.onUse(function (api) {
-  api.use('underscore');
-  api.use('url');
+  api.use([
+    'underscore',
+    'url',
+    'ecmascript'
+  ]);
+
   api.export('HTTP');
   api.export('HTTPInternals', 'server');
   api.addFiles('httpcall_common.js', ['client', 'server']);

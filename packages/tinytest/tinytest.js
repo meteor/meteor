@@ -662,3 +662,8 @@ Tinytest._debugTest = function (cookie, onReport, onComplete) {
 // done.  This is used to provide a live display of the current
 // running client test on the test results page.
 Tinytest._onCurrentClientTest = function (name) {};
+
+Tinytest._TestCaseResults = TestCaseResults;
+Tinytest._TestCase = TestCase;
+Tinytest._TestManager = TestManager;
+Tinytest._TestRun = TestRun;
