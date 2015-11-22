@@ -46,12 +46,13 @@ Apesar de ser uma boa escolha, é um processo complicado mas que depois irá ser
 
 ### Isolabilidade
 
-Com o aparecimento de novas bibliotecas, por parte da comunidade ou da equipa do Meteor, é importante que existe separação do "core" da aplicação. O [Atmosphere](https://atmospherejs.com/), foi criado com a finalidade de ser um repositório de bibliotecas, para que a código-fonte da aplicação seja o mais curto possível, apenas com os componentes mais importante a construção de aplicações. Cada biblioteca no **Atmosphere**, além do código-fonte traz uma bateria de testes e documentação sobre a sua utilizade. No caso da Atmosphere, não temos isolabilidade no teste de componentes, mas no caso da utilização de uma biblioteca, pudemos testar os resultados que ela apresenta.
+Com o aparecimento de novas bibliotecas, por parte da comunidade ou da equipa do Meteor, é importante que existe separação do "core" da aplicação. O [Atmosphere](https://atmospherejs.com/), foi criado com a finalidade de ser um repositório de bibliotecas, para que a código-fonte da aplicação seja o mais curto possível, apenas com os componentes mais importante a construção de aplicações. Cada biblioteca no **Atmosphere**, além do código-fonte traz uma bateria de testes e documentação sobre a sua utilizade.
 
 O Meteor, também disponibiliza testes para cada um dos seus componentes, pertencentes ao core da api. Na pasta ["packages"](https://github.com/meteor/meteor/tree/devel/packages), no repositório da aplicação, estão contidos as pastas dos componentes do Meteor, como [Mongo](https://github.com/meteor/meteor/tree/devel/packages/mongo),[Minimongo](https://github.com/meteor/meteor/tree/devel/packages/minimongo) ou [Blaze](https://github.com/meteor/meteor/tree/devel/packages/blaze). Na listagem abaixo, pudemos aceder ao código-fonte do teste de alguns componentes:
 * [Mongo](https://github.com/meteor/meteor/blob/devel/packages/mongo/mongo_livedata_tests.js)
 * [Minimongo(https://github.com/meteor/meteor/blob/devel/packages/minimongo/minimongo_tests.js)
 * [Blaze](https://github.com/meteor/meteor/blob/devel/packages/blaze/render_tests.js)
+
 ### Separação de Funcionalidades
 
 No desenvolvimento de software, é importante assegurar que cada funcionalidade seja implementada da melhor maneira possível, isto é, que fique isolada ao componente no qual diz respeito. Assim, as componentes poderão ser mais testáveis. O **Meteor** deve ter em atenção este aspeto para ser fácil a sua restruturação e manutenção. A separação de funcionalidades está explicita no [último relatório realizado] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/report3.md) e, cada um dos seus módulos, está responsável por tarefas complexas. Contudo, os módulos tem as suas estruturas bastante organizadas e isoladas. Este tópico é relevante para a funcionalidade dos testes, como foi dito em cima, apesar que dada a estrutura do **Meteor**, os testes não são feitos em todas as funcionalidades.
