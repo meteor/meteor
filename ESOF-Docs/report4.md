@@ -50,7 +50,7 @@ Com o aparecimento de novas bibliotecas, por parte da comunidade ou da equipa do
 
 O Meteor, também disponibiliza testes para cada um dos seus componentes, pertencentes ao "core" da adplicação. Na pasta ["packages"](https://github.com/meteor/meteor/tree/devel/packages), no repositório da aplicação, estão contidos as pastas dos componentes do Meteor, como [Mongo](https://github.com/meteor/meteor/tree/devel/packages/mongo),[Minimongo](https://github.com/meteor/meteor/tree/devel/packages/minimongo) ou [Blaze](https://github.com/meteor/meteor/tree/devel/packages/blaze). Na listagem abaixo, pudemos aceder ao código-fonte que nos permite testar isoladamente os seguintes componentes:
 * [Mongo](https://github.com/meteor/meteor/blob/devel/packages/mongo/mongo_livedata_tests.js)
-* [Minimongo(https://github.com/meteor/meteor/blob/devel/packages/minimongo/minimongo_tests.js)
+* [Minimongo](https://github.com/meteor/meteor/blob/devel/packages/minimongo/minimongo_tests.js)
 * [Blaze](https://github.com/meteor/meteor/blob/devel/packages/blaze/render_tests.js)
 
 ### Separação de Funcionalidades
