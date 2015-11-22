@@ -75,6 +75,8 @@ Apesar do dinamismo e abertura do **Meteor**, as ferramentas de testes são univ
 * http://docs.meteor.com/#/full/
 * http://www.softwaretestingclass.com/why-documentation-is-important-in-software-testing/
 * https://semaphoreci.com/blog/2014/11/19/meteorjs-getting-started.html
+* http://webtempest.com/meteor-js-testing
+* http://jasmine.github.io/2.1/introduction.html
 
 
 ## FEUP ESOF MIEIC
