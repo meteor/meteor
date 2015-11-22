@@ -36,7 +36,7 @@ O **Meteor** utiliza uma ferramenta chamada [Velocity](https://github.com/meteor
 
 Para o **Velocity** poderiamos usar como suporte de framework o [Jasmine](https://github.com/xolvio/meteor-jasmine), [Mocha](https://github.com/mad-eye/meteor-mocha-web) ou [Cucumba](http://www.mhurwi.com/a-basic-cucumber-meteor-tutorial/), sendo o **Jasmine** o mais usado pelos utilizadores que realizem os seus testes unitários. Após a introdução do **Jasmine** e **Velocity** e uma série de comandos no **Meteor** teriamos de criar um diretório próprio para os testes. Com isto, é possível realizar os testes e verificá-los através de um relatório HTML que mostra a nossa app. A imagem abaixo ilustra, como exemplo, um teste realizado numa app:
 
-![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/jasmineexample.png)
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/jasmineexample.PNG)
 
 
 Para testes de integração podemos utilizar como suporte de framework para o **Velocity** o [Nightwatch](http://nightwatchjs.org/). Esta ferramenta irá realizar testes automatizados e integração de estrutura contínua baseado em **Node.js** e em *Selenium Webdriver*.
@@ -64,7 +64,7 @@ O Meteor está em continuo crescimento e possui uma documentação detalhada par
 
 Na versão [completa](http://docs.meteor.com/#/full/) da aplicação é fornecido uma informação detalhada sobre os seus componentes e sua funcionalidade. Na descrição de cada método pertencente a um componente é dado uma descrição do que o método executa, os seus argumentos de entrada e o breve explicação dos mesmos, e caso tenha retorno, explica-o. Como os métodos podem ser executados no cliente ou no servidor, ou em ambos, também indica aonde é utilizado. A imagem abaixo ilustra a documentação pertence do método [insert](http://docs.meteor.com/#/full/insert) pertence ao componente Collections:
 
-![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/metodo-static.PNG)
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/metodo-static.png)
 
 Consideramos que o Meteor possui uma documentação que ajuda a explicar os principais componentes da aplicação, fator muito importante para a testabilidade de uma aplicação. 
 
