@@ -64,7 +64,7 @@ O Meteor está em continuo crescimento e possui uma documentação detalhada par
 
 Na versão [completa](http://docs.meteor.com/#/full/) da aplicação é fornecido uma informação detalhada sobre os seus componentes e sua funcionalidade. Na descrição de cada método pertencente a um componente é dado uma descrição do que o método executa, os seus argumentos de entrada e o breve explicação dos mesmos, e caso tenha retorno, explica-o. Como os métodos podem ser executados no cliente ou no servidor, ou em ambos, também indica aonde é utilizado. A imagem abaixo ilustra a documentação pertence do método [insert](http://docs.meteor.com/#/full/insert) pertence ao componente Collections:
 
-//imagem
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/metodo-static.PNG)
 
 Consideramos que o Meteor possui uma documentação que ajuda a explicar os principais componentes da aplicação, fator muito importante para a testabilidade de uma aplicação. 
 
