@@ -63,6 +63,12 @@ Consideramos que o Meteor possui uma documentação que ajuda a explicar os prin
 
 ### Heterogeneidade
 
+Como o **Meteor** é uma plataforma open-source, recebe contribuições numerosas e frequentes dos utilizadores. Como tal, são necessários testes não só para garantir o funcionamento das contribuições individuais, mas também para garantir o correto funcionamento integral da plataforma.
+
+Os testes unitários permitem testar o funcionamento isolado das contribuições, enquanto que os testes de integração testam o funcionamento do **Meteor** como plataforma.
+
+Apesar do dinamismo e abertura do **Meteor**, as ferramentas de testes são universais dentro da plataforma, podendo-se recorrer ao **Velocity** e aos seus frameworks para efetuar os testes necessários. 
+
 ## Estatísticas de Teste
 
 ## Referências
