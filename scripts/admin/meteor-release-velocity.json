@@ -1,10 +1,10 @@
 {
     "track": "velocity:METEOR",
-    "version": "1.2.1_1",
+    "version": "1.2.1_2",
     "recommended": false,
     "official": false,
     "description": "Extends Meteor with testing functionality",
-    "tool": "velocity:meteor-tool@1.1.10_1",
+    "tool": "velocity:meteor-tool@1.1.10_2",
     "packages": {
         "accounts-base": "1.2.2",
         "accounts-facebook": "1.0.6",
