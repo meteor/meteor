@@ -418,63 +418,139 @@ Meteor.publishComposite('admin/list/todos', function(listId) {
 
 ## The low level publish API
 
+In all of our examples so far (outside of using`Meteor.publishComposite()`) we've returned a cursor from our `Meteor.publish()` handlers. Doing this ensures Meteor takes care of the job of keeping the contents of that cursor in sync between the server and the client. However, there's another API you can use for publish functions which is closer to the way the underlying Distributed Data Protocol (DDP) works.
 
-8. The low-level publish API
-  1. Custom publication patterns - how to decouple your backend data format from your frontend (if you want!)
-  2. Be super careful about leaking!! (How to detect this, perf article)
-9. Turning pubs into REST endpoints (via `simple:rest`)
-10. Turning REST endpoints into pubs via `poll-publish`
+DDP uses three main messages to communicate changes in the data for a publication: the `added`, `updated` and `removed` messages. So, we can simiarly do the same for a publication:
 
-# OUTLINE
+```js
+Meteor.publish('custom-publication', function() {
+  // We can add documents one at a time
+  this.added('collection-name', 'id', {field: 'values'});
 
-1. Publications + Subscriptions
-  1. What are they? - compare REST endpoint
-  2. How do they work? - talk about bridging data from server-client collections
-  3. What's a pub / what's a sub
-2. Defining a publication on the server
-  1. Rules around what arguments it should take
-  2. Where should it go? (which package -- depends on universality)
-3. Subscribing on the client
-  1. Subscriptions should be initiated by templates/components that need the data
-  2. Retrieve the data from the sub at the same point as subscribing, pass down and filter via `cursor-utils`
-  3. Global required data should be subscribed by an always there "layout" template
-4. Data loading patterns
-  4. Monitoring subscription readiness + errors
-    1. Using `Template.subscriptionsReady`
-    2. Passing subscription readiness into sub-components alongside data (see UI/UX chapter)
-  5. Subscriptions + changing inputs, how autoruns can help.
-    1. Basic techniques using `this.autorun`/other reactive contexts and `Template.currentData()`/other reactive sources
-    2. How it works
-      1. The subscription realizes it's called from within a reactive context
-      2. When invalidated, subscription marks itself invalid
-      3. When re-running, if re-run with the same arguments, the sub is a no-op
-      4. Otherwise the new sub starts, *goes ready*, then the old sub is stopped.
-  6. Paginating subscription data -- combining the above
-    1. A basic paginated publication
-    2. A publication that returns a count
-    3. Passing pagination info into a template/component
-      1. `totalCount`, `requested`, `currentItems`
-    4. Passing a `loadMore` callback into a template/component, using it to increment `requested`.
-5. Other data -- global client only data # NOTE LIVES SOMEWHERE ELSE I GUESS?
-  1. Concept of a "store"
-  2. Types of store:
-    1. If it's a single dimension, use a reactive var
-    2. If it's a few dimensions (or you need HCR), use a named reactive dict
-    3. If you need to query it, use a local collection.
-  3. How to listen to a store (autorun / helper / getMeteorData / angular version?)
-  4. How to update a store:
-    1. Built in APIs
-    2. Adding APIs to stores via `XStore.foo = () => {}` (they are singletons, so no need to make class)
-6. Publishing relational data
-  1. Common misconceptions about publication reactivity + naive implementation
-    1. There's no reactivity in a publish function apart from:
-      1. `userId`
-      2. The way that `publishCursor` works.
-  2. Using publish-composite to get it done the way you'd expect.
-7. Complex authorization in publications
-  1. Is kind of impossible to do correctly - https://github.com/meteor/meteor/issues/5529 (unelss we recommend a fully reactive publish solution, which we don't)
-8. The low-level publish API
-  1. Custom publication patterns - how to decouple your backend data format from your frontend (if you want!)
-  2. Be super careful about leaking!! (How to detect this, perf article)
-9. Turning pubs into REST endpoints (via `simple:rest`)
-10. Turning REST endpoints into pubs via `poll-publish`
+  // We can call ready to indicate to the client that the initial document sent has been sent
+  this.ready();
+
+  // We may respond to some 3rd party event and want to send notifications
+  Meteor.setTimeout(() => {
+    // If we want to modify a document that we've already added
+    this.updated('collection-name', 'id', {field: 'new-value'});
+
+    // Or if we don't want the client to see it any more
+    this.removed('collection-name', 'id');
+  });
+
+  // It's very important to clean up things in the subscription's onStop handler
+  this.onStop(() => {
+    // Perhaps kill the connection with the 3rd party server
+  });
+});
+```
+
+Data published like this, from the client's perspective doesn't look any different -- there's actually no way for the client to know the difference as the DDP messages are the same. So even if you are connecting to, and mirroring, some esoteric data source, on the client it'll appear like any other Mongo collection.
+
+One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication. 
+
+
+XXX: should we talk about sharing observers?
+
+XXX: should we talk about techniques to share data/work between common custom publications?
+
+## Turning a REST endpoint into a publication
+
+As a concrete example of using the low-level API, consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available to your users?
+
+One option would be to provide a Method that simply proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc etc. Although this is possible (you could use a Local Collection to store the polled data in, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
+
+XXX: is there anything on atmosphere that does this?
+
+A pattern for turning a polled REST endpoint looks something like this:
+
+```js
+const POLL_INTERVAL = 5000;
+
+Meteor.publish('polled-publication', function() {
+  const publishedKeys = {};
+
+  const poll = () => {
+    // Let's assume the data comes back as an array of JSON documents, with an _id field, for simplicity
+    const data = HTTP.get(REST_URL, REST_OPTIONS);
+
+    _.each(data, (doc) => {
+      if (publishedKeys(doc._id)) {
+        this.updated(COLLECTION_NAME, doc._id, doc);
+      } else {
+        publishedKeys[doc._id] = true;
+        if (publishedKeys(doc._id)) {
+          this.added(COLLECTION_NAME, doc._id, doc);
+        }
+      }
+    });
+  };
+
+  poll();
+  this.ready();
+
+  const interval = Meteor.setInterval(poll, POLL_INTERVAL);
+
+  this.onStop(() => {
+    Meteor.clearInterval(interval);
+  });
+});
+```
+
+Things can get more complicated; for instance you may want to deal with documents being removed, or share the polling between multiple users (in a case where the data being polled isn't private to that user). 
+
+
+## Turning a publication into a REST endpoint
+
+The alternate scenario occurs when you want to publish data to be consumed by a 3rd party, typically over REST. If the data we want to publish is the same as what we already publish via a publication, then we can use the [simple:rest](https://atmospherejs.com/simple/rest) package to do this really easily.
+
+In the Todos example app, we have done this, and you can now access our publications over HTTP:
+
+```bash
+$ curl localhost:3000/publications/lists/public
+{
+  "Lists": [
+    {
+      "_id": "rBt5iZQnDpRxypu68",
+      "name": "Meteor Principles",
+      "incompleteCount": 7
+    },
+    {
+      "_id": "Qzc2FjjcfzDy3GdsG",
+      "name": "Languages",
+      "incompleteCount": 9
+    },
+    {
+      "_id": "TXfWkSkoMy6NByGNL",
+      "name": "Favorite Scientists",
+      "incompleteCount": 6
+    }
+  ]
+}
+```
+
+You can also access authenticated publications (such as `lists/private`). Suppose we've signed up (via the web UI) as `user@example.com`, with the password `password`, and created a private list. Then we can access it as follows:
+
+```bash
+# First, we need to "login" on the commandline to get an access token
+$ curl localhost:3000/users/login  -H "Content-Type: application/json" --data '{"email": "user@example.com", "password": "password"}'
+{
+  "id": "wq5oLMLi2KMHy5rR6",
+  "token": "6PN4EIlwxuVua9PFoaImEP9qzysY64zM6AfpBJCE6bs",
+  "tokenExpires": "2016-02-21T02:27:19.425Z"
+}
+
+# Then, we can make an authenticated API call
+$ curl localhost:3000/publications/lists/private -H "Authorization: Bearer 6PN4EIlwxuVua9PFoaImEP9qzysY64zM6AfpBJCE6bs"
+{
+  "Lists": [
+    {
+      "_id": "92XAn3rWhjmPEga4P",
+      "name": "My Private List",
+      "incompleteCount": 5,
+      "userId": "wq5oLMLi2KMHy5rR6"
+    }
+  ]
+}
+```
