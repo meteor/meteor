@@ -1,12 +1,44 @@
 ## Standup 23rd Nov
 
-With ?
+With Evan, Tom, Sashko, Zol
 
 ### Agenda
 
 - Article writing cadence, how did we go last week?
 - Website progress, when can we expect the TODOs finished?
 - Modules collabororation with Ben, does this require more structure than ad-hoc. Are there blockers?
+
+### Notes
+
+- Sashko got help up with customer day and publishing method package.
+- Sashko has done more than half of the security article.
+- Tom has done collections and data loading along with some other code things.
+- Some XXX's still around.
+- Tom feels confident on everything apart from the testing article and structure article.
+- Perhaps Tom and Sashko should swap on the form article.
+- Tom suggests we could drop the testing and app structure articles because they're hard to write and in the air.
+- The other is blaze.
+- Prioritize 1.3 related articles to the end and let's calibrate our writing velocity on the less nebulus articles.
+- Trade methods<->routing. 
+- Tom will do Routing, UI/UX this week.
+- Sashko focused on Security, Build Tool, Accounts.
+- Most of the static stuff is good, 3 things left on the TODO
+- Use swifttype for search integration.
+- Headings should function as table of contents in a book.
+- Add one more level of nesting.
+- Deploy guide to guide.meteor.com, add Do Not Read banner.
+- Evan will work on todos tomorrow, check most of them before holiday (goal for this week).
+- Ideally after this week Evan wants to focus primarily on blaze.
+- We'll QA it next week, then after another pass over these we'll be done.
+- Modules converstion with Ben not an urgent issue right now because of our priorties.
+- Testing is a big body of work without ownership.
+- Shared document(s) regarding features Ben is planning to build. Currently no two way channel between the guide and Ben
+- Let's figure out this channel of comms (to be realtime).
+- Who is the product manager and who is the customer. Zol to ask Matt.
+
+### Action Items
+
+- Zol meet with Matt re: modules/testing product plan.
 
 ## Modules meeting 18th Nov
 
