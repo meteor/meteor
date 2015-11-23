@@ -31,6 +31,11 @@ Twitter.requestCredential = function (options, credentialRequestCompleteCallback
   var loginPath = '_oauth/twitter/?requestTokenAndRedirect=true'
         + '&state=' + OAuth._stateParam(loginStyle, credentialToken, options && options.redirectUrl);
 
+  // Handle force login (request the user to enter their credentials)
+  if (options.force_login) {
+    loginPath = loginPath + "&force_login=true"
+  }
+
   if (Meteor.isCordova) {
     loginPath = loginPath + "&cordova=true";
     if (/Android/i.test(navigator.userAgent)) {
