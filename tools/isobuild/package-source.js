@@ -429,11 +429,11 @@ _.extend(PackageSource.prototype, {
     // serveRoot is actually a part of a url path, root here is a forward slash
     self.serveRoot = options.serveRoot || '/';
 
-    utils.ensureOnlyExactVersions(options.npmDependencies);
+    utils.ensureOnlyExactVersions(options.npmDependencies, {forNpm: true});
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
 
-    utils.ensureOnlyExactVersions(options.cordovaDependencies);
+    utils.ensureOnlyExactVersions(options.cordovaDependencies, {forNpm: false});
     self.cordovaDependencies = options.cordovaDependencies;
 
     const sources = options.sources.map((source) => {
@@ -864,7 +864,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          utils.ensureOnlyExactVersions(_npmDependencies);
+          utils.ensureOnlyExactVersions(_npmDependencies, {forNpm: true});
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line
@@ -976,7 +976,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          utils.ensureOnlyExactVersions(_cordovaDependencies);
+          utils.ensureOnlyExactVersions(_cordovaDependencies, {forNpm: false});
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line

@@ -477,10 +477,16 @@ exports.isUrlWithFileScheme = function (x) {
 };
 
 exports.isUrlWithSha = function (x) {
-  // These are the various protocols that NPM supports, which we use to download
-  // both NPM and Cordova dependencies
+  // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
+  // a URL like isNpmUrl(), there are a variety of problems with this, 
+  // see https://github.com/meteor/meteor/pull/5562
+  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+}
+
+exports.isNpmUrl = function (x) {
+  // These are the various protocols that NPM supports, which we use to download NPM dependencies
   // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
-  return /^(https|git|git\+ssh|git\+http|git\+https)?:\/\/.*[0-9a-f]{40}/.test(x);
+  return exports.isUrlWithSha(x) || /^(git|git\+ssh|git\+http|git\+https)?:\/\/.*#/.test(x);
 };
 
 exports.isPathRelative = function (x) {
@@ -493,21 +499,21 @@ exports.isPathRelative = function (x) {
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-exports.ensureOnlyExactVersions = function (dependencies) {
+exports.ensureOnlyExactVersions = function (dependencies, {forNpm}) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (! exports.isExactVersion(version)) {
+    if (! exports.isExactVersion(version, {forNpm})) {
       throw new Error(
         "Must declare exact version of dependency: " + name + '@' + version);
     }
   });
 };
-exports.isExactVersion = function (version) {
-  return semver.valid(version) || exports.isUrlWithSha(version)
-    || exports.isUrlWithFileScheme(version);
+exports.isExactVersion = function (version, {forNpm}) {
+  return semver.valid(version) || exports.isUrlWithFileScheme(version)
+    || (forNpm ? exports.isNpmUrl(version) : exports.isUrlWithSha(version));
 };
 
 
