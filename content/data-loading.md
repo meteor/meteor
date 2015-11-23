@@ -353,8 +353,8 @@ Meteor.publishComposite('list/todos', function(listId) {
   return {
     find() {
       const query = {
-        _id: listId, 
-        userId: {$or: [{$exists: false}, userId]}
+        _id: listId,
+        $or: [{userId: {$exists: false}}, {userId}]
       };
 
       return Lists.find(query);
