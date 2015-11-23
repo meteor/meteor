@@ -1,3 +1,13 @@
+## Standup 23rd Nov
+
+With ?
+
+### Agenda
+
+- Article writing cadence, how did we go last week?
+- Website progress, when can we expect the TODOs finished?
+- Modules collabororation with Ben, does this require more structure than ad-hoc. Are there blockers?
+
 ## Modules meeting 18th Nov
 
 With Ben, Matt, Tom, Zol, and Sashko.
