@@ -306,9 +306,10 @@ function doRunCommand(options) {
     // cleaned up on process exit. Using a temporary app dir means that we can
     // run multiple "test-app" commands in parallel without them stomping
     // on each other.
+    var testAppPathAlreadyExisted = options['test-app-path'] &&
+      files.exists(options['test-app-path']);
     var testRunnerAppDir =
       options['test-app-path'] || files.mkdtemp('meteor-test-run');
-    files.rm_recursive(testRunnerAppDir);
     // Meteor will not use these files itself but maybe some packages will
     // For example sanjo:meteor-files-helpers
     files.cp_r(
@@ -316,17 +317,29 @@ function doRunCommand(options) {
       files.pathJoin(testRunnerAppDir, '.meteor'),
       {preserveSymlinks: true, ignore: [/^local$/, /^\.id$/, /^cordova-plugins$/]}
     );
-    // Copy the existing build and isopacks to speed up the initial start
-    files.cp_r(
-      files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
-      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
-      {preserveSymlinks: true}
-    );
-    files.cp_r(
-      files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
-      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
-      {preserveSymlinks: true}
-    );
+    if (!testAppPathAlreadyExisted) {
+      // Copy the existing build and isopacks to speed up the initial start
+      files.cp_r(
+        files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
+        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
+        {preserveSymlinks: true}
+      );
+      files.cp_r(
+        files.pathJoin(options.appDir, '.meteor', 'local', 'bundler-cache'),
+        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'bundler-cache'),
+        {preserveSymlinks: true}
+      );
+      files.cp_r(
+        files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
+        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
+        {preserveSymlinks: true}
+      );
+      files.cp_r(
+        files.pathJoin(options.appDir, '.meteor', 'local', 'plugin-cache'),
+        files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'plugin-cache'),
+        {preserveSymlinks: true}
+      );
+    }
     projectContextOptions.projectLocalDir = files.pathJoin(
       testRunnerAppDir, '.meteor', 'local');
   }
