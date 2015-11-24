@@ -4,18 +4,18 @@ title: Collections and Models
 
 After reading this guide, you'll know:
 
-1. What the different flavors of Mongo Collection in Meteor are, and how to use them.
+1. What the different flavors of MongoDB Collection in Meteor are, and how to use them.
 2. How to define a schema for a collection to control it's content.
 3. What considerations you should take when defining your collection's schema
 4. How to modify the content of a collection in a sensible way
 5. How to change the schema of your collection in a careful way.
 6. How to deal with relations between records in collections
 
-## Mongo Collections in Meteor
+## MongoDB Collections in Meteor
 
 At its core, a web application offers its users a view into, and a way to modify, a persistent set of data. Whether managing a list of todos, or ordering a car to pick you up, you are, at some level, fundamentally interacting with a permanent (if changing) data layer. 
 
-In Meteor, that data layer is typically stored in the Mongo database engine. A set of data in Mongo is referred to as a "collection", and in Meteor, it's [collections](http://docs.meteor.com/#/full/mongo_collection) that forms the persistence layer.
+In Meteor, that data layer is typically stored in the MongoDB engine. A set of data in MongoDB is referred to as a "collection", and in Meteor, it's [collections](http://docs.meteor.com/#/full/mongo_collection) that forms the persistence layer.
 
 However, collections are a lot more than a way to store data. They also provide the core of the realtime, connected user experience that the best applications provide, and which Meteor makes easy to implement.
 
@@ -28,7 +28,7 @@ When you create a collection on the server:
 Todos = new Mongo.Collection('Todos');
 ```
 
-You are creating a collection within Mongo itself, and a interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node Mongo driver, but with a synchronous (fibers-based) API:
+You are creating a collection within MongoDB itself, and a interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous (fibers-based) API:
 
 ```js
 // This line won't complete until the insert is done
@@ -48,9 +48,9 @@ Todos = new Mongo.Collection('Todos');
 
 It does something totally different!
 
-On the client, there is no direct connection to the Mongo database server, and in fact a sychronous API to it is not possible (nor probably what you want). Instead, on the client, a collection is a client side *cache* of the database, with a Mongo API. This is achieved thanks to the [Minimongo](https://www.meteor.com/mini-databases) library.
+On the client, there is no direct connection to the MongoDB server, and in fact a sychronous API to it is not possible (nor probably what you want). Instead, on the client, a collection is a client side *cache* of the database, with a MongoDB API. This is achieved thanks to the [Minimongo](https://www.meteor.com/mini-databases) library.
 
-Minimongo is an in-memory, all JS, Mongo implementation. What this means is that on the client, when you write:
+Minimongo is an in-memory, all JS, MongoDB implementation. What this means is that on the client, when you write:
 ```js
 // This line is changing an in-memory datastructure
 Todos.insert({_id: 'my-todo'});
@@ -60,7 +60,7 @@ const todo = Todos.findOne({_id: 'my-todo'});
 console.log(todo);
 ```
 
-The way that you move data from the server (and Mongo-backed) collection into the client (in-memory) collection is the subject of the "data loading" article. But, generally speaking, you use a *subscription* to a *publication* to push data from the server to the client. Usually, you can assume that the client contains an up-to-date copy of some subset of the full Mongo collection.
+The way that you move data from the server (and MongoDB-backed) collection into the client (in-memory) collection is the subject of the "data loading" article. But, generally speaking, you use a *subscription* to a *publication* to push data from the server to the client. Usually, you can assume that the client contains an up-to-date copy of some subset of the full MongoDB collection.
 
 To write data back to the server, you use a *method*, the subject of the "methods and forms" article.
 
@@ -77,9 +77,9 @@ A local collection is simply a convienent way to use the full power of the Minim
 
 ## Defining Collections with a Schema
 
-Although Mongo is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
+Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
 
-In Meteor, the pre-eminent schema package is [aldeed:simple-schema](http://atmospherejs.com/aldeed/simple-schema). It's an expressive, Mongo based schema that's used to insert and update documents.
+In Meteor, the pre-eminent schema package is [aldeed:simple-schema](http://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents.
 
 To write a schema using `simple-schema`, you can simply create a new instance of the `SimpleSchema` class:
 
@@ -137,11 +137,11 @@ What is a [`Meteor.ValidationError`](https://github.com/tmeasday/validation-erro
 
 ## Designing your data schama
 
-Now you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any Mongo data schema, there are some important differences.
+Now you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any MongoDB data schema, there are some important differences.
 
 The most important consideration is due to the way that DDP communicates documents over the wire. The key thing to realize is that DDP sends changes to documents at the level of document *fields*. What this means is that if you have large and complex subfields on document that change often, DDP can send unnecessary changes over the wire.
 
-For instance, in "pure" Mongo you might design the schema so that each list document had a field called `todos` which was an array of todo items:
+For instance, in "pure" MongoDB you might design the schema so that each list document had a field called `todos` which was an array of todo items:
 
 ```js
 Lists.schema = new SimpleSchema({
@@ -156,9 +156,9 @@ The issue with this schema is that due to the DDP behaviour just mentioned, each
 
 The implication of the above is that we need to create more collections to contain sub-documents. In the case of the Todos application, we need both a `Lists` collection and a `Todos` collection to contain each list's todo items. Consequently we need to do more things that you'd typically associate with a SQL database, like using foreign keys (`todo.listId`) to associate one document with another.
 
-In Meteor, it's often less of a problem doing this than it would be in a typical Mongo application, as we tend to publish overlapping sets of documents anyway (we might need one set of users to render one screen of our app, and an intersecting set for another), which may stay on the client as we move around the application. So in that scenario there is an advantage to separating the subdocuments from the parent.
+In Meteor, it's often less of a problem doing this than it would be in a typical MongoDB application, as we tend to publish overlapping sets of documents anyway (we might need one set of users to render one screen of our app, and an intersecting set for another), which may stay on the client as we move around the application. So in that scenario there is an advantage to separating the subdocuments from the parent.
 
-However, given that Mongo doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). Mongo is a database where denormalizing is encouraged, and thus optimized for this practice.
+However, given that MongoDB doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
 
 In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
 
