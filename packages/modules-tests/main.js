@@ -1,0 +1,1 @@
+requiredFoo = require("./foo.js");
