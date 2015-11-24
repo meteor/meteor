@@ -14,7 +14,7 @@
         1. If you depend on load order, your best bet is a package
     3. Naming guidelines for everything [see bottom]
     4. Templates should have a CSS class that matches the template name, and other Blaze suggestions
-    5. Meteor ES2015 style guide (link to it, don't reproduce all of it)
+    5. Meteor ES2015 style guide and linter (link to it, don't reproduce all of it)
     6. Perhaps this should include copypasta boilerplate - a standard template/component, a standard publication, standard route, etc? Basically the stuff a scaffolding framework would generate for you?
 5. Small app
     1. Directory structure around features, not client/server
