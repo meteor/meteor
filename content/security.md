@@ -39,6 +39,17 @@ There have been several articles about the potential pitfalls of accepting Mongo
 
 Given the points above, we're going to recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
 
+Here's a code snippet to disable client-side updates on a collection; this will make sure no other part of the code can use `allow`:
+
+```js
+// Deny all client-side updates on the Lists collection
+Lists.deny({
+  insert() { return true },
+  update() { return true },
+  remove() { return true },
+});
+```
+
 
 ### Methods
 
@@ -176,9 +187,37 @@ All of the stuff about methods listed above applies to publications as well:
 1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client
 1. Use rate limiting to stop people from spamming you with subscriptions
 
+#### Use the fields option when publishing data from a collection
+
+`Mongo.Collection#find` has an option called `fields` which lets you filter the fields on the fetched documents. You should always use this in publications, to make sure you don't accidentally publish secret data.
+
+For example, you could write a publication, then later add a secret field to the published collection. Now, the publication would be sending that secret to the client. If you filter the fields on every publication when you first write it, then adding another field won't automatically publish it.
+
+```js
+// #1: Bad! If we add a secret field to Lists later, the client
+// will see it
+Meteor.publish('lists/public', function () {
+  return Lists.find({userId: {$exists: false}});
+});
+
+// #2: Good, if we add a secret field to Lists later, the client
+// will only publish it if we add it to the list of fields
+Meteor.publish('lists/public', function () {
+  return Lists.find({userId: {$exists: false}}, {
+    fields: {
+      name: 1,
+      incompleteCount: 1,
+      userId: 1
+    }
+  });
+});
+```
+
 #### Publications only re-run when the logged in user changes
 
-The data publications return will often be dependent on the currently logged in user, and perhaps some properties about that user - whether they are an admin, whether they own a certain document, etc. Because of this, it's easy to accidentally write a publication that is secure when it first runs, but doesn't respond to changes in the app environment. Let's look at an example:
+The data publications return will often be dependent on the currently logged in user, and perhaps some properties about that user - whether they are an admin, whether they own a certain document, etc.
+
+Publications are not reactive, and they only re-run when the currently logged in `userId` changes, which can be accessed through `this.userId`. Because of this, it's easy to accidentally write a publication that is secure when it first runs, but doesn't respond to changes in the app environment. Let's look at an example:
 
 ```js
 // #1: Bad! If the owner of the list changes, the old owner will still see it
@@ -189,7 +228,13 @@ Meteor.publish('list', function (listId) {
     throw new Meteor.Error('list.unauthorized', 'This list doesn\'t belong to you.');
   }
 
-  return Lists.find(listId);
+  return Lists.find(listId, {
+    fields: {
+      name: 1,
+      incompleteCount: 1,
+      userId: 1
+    }
+  });
 });
 
 // #2: Good! When the owner of the list changes, the old owner won't see it anymore
@@ -197,6 +242,139 @@ Meteor.publish('list', function (listId) {
   return Lists.find({
     _id: listId,
     userId: this.userId
+  }, {
+    fields: {
+      name: 1,
+      incompleteCount: 1,
+      userId: 1
+    }
   });
 });
 ```
+
+In the first example, if the `userId` property on the selected list changes, the query in the publication will still return the data, since the security check in the beginning will not re-run. In the second example, we have fixed this by putting the security check in the returned query itself.
+
+Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the data loading article.
+
+#### Passing options into publications
+
+For certain applications, for example pagination, you'll want to pass options into the publication to control things like how many documents should be sent to the client. There are some extra considerations to keep in mind for this particular case.
+
+1. **Passing a limit**: In the case where you are passing the `limit` option of the query from the client, make sure to set a maximum limit. Otherwise, a malicious client could request too many documents at once, which could raise performance issues.
+2. **Passing in a filter**: If you want to pass fields to filter on because you don't want all of the data, for example in the case of a search query, make sure to intersect the fields passed from the client with the fields it is allowed to see. Otherwise, a client could query on secret fields it's not supposed to be able to access.
+3. **Passing in fields**: If you want the client to be able to decide which fields of the collection should be fetched, make sure to intersect that with the fields that client is allowed to see, so that you don't accidentally send secret data to the client.
+
+### Served files
+
+Publications are not the only place the client gets data from the server. The set of source code files and static assets that are served by your application server could also potentially contain sensitive data:
+
+1. Business logic an attacker could analyze to find weak points
+1. Secret algorithms that a competitor could steal
+1. Secret API keys
+
+While the client-side UI of your application is basically open source, every application will have some secret code on the server that you don't want to share with the world.
+
+Secret business logic in your app should be located in code that only runs on the server. This means it is in the `server/` directory of your app, in a package that is only included on the server, or in a file inside a package that was loaded only on the server.
+
+Keep in mind that code inside `if (Meteor.isServer)` blocks is still sent to the client, it is just not executed. So don't put any secret code in there.
+
+Secret API keys should never be stored in your source code at all, the next section will talk about how to handle them.
+
+### Securing API keys
+
+Every app will have some secret API keys or passwords:
+
+1. Your database password
+1. API keys for external APIs
+
+These should never be stored as part of your app's source code in version control; the appropriate place to put secret keys is in a _settings file_ or an _environment variable_.
+
+Most of your app settings should be in JSON files that you pass in when starting your app. You can start your app with a settings file by passing the `--settings` flag:
+
+```sh
+# Pass development settings when running your app locally
+meteor --settings development.json
+
+# Pass production settings when deploying your app
+meteor deploy myapp.com --settings production.json
+```
+
+Here's what a settings file with some API keys might look like:
+
+```js
+{
+  "facebook": {
+    "clientId": "12345",
+    "secret": "1234567"
+  }
+}
+```
+
+In your app's JavaScript code, these settings can be accessed from the variable `Meteor.settings`.
+
+#### Passing settings to the client
+
+In most normal situations, API keys from your settings file will only be used by the server, and by default the data passed in through `--settings` is only available on the server. However, if you put data under a special key called `public`, it will be available on the client. You might want to do this if, for example, you need to make an API call from the client. Public settings will be available on the client under `Meteor.settings.public`.
+
+#### API keys for Meteor OAuth login
+
+For the `accounts-facebook` package to pick up these keys, you need to add them to the service configuration collection in the database. Here's how you do that:
+
+First, add the `service-configuration` package:
+
+```sh
+meteor add service-configuration
+```
+
+Then, upsert into the exported collection:
+
+```js
+ServiceConfiguration.configurations.upsert(
+  { service: "facebook" },
+  {
+    $set: {
+      clientId: Meteor.settings.facebook.clientId,
+      loginStyle: "popup",
+      secret: Meteor.settings.facebook.secret
+    }
+  }
+);
+```
+
+Now, `accounts-facebook` will be able to find that API key and Facebook login will work properly.
+
+### SSL
+
+This is a very short section, but it deserves its own place in the table of contents.
+
+**Every production Meteor app that handles user data should run with SSL.**
+
+For the uninitiated, this means all of your HTTP requests should go over HTTPS, and all websocket data should be sent over WSS.
+
+Yes, Meteor does hash your password on the client before sending it over the wire, but hashing a password in this way provides only minimal security, and someone who intercepts that sent password will be able to, with time, decode it into the actual password. That's why passwords in the database are _salted_ - a random string is appended to the password before hashing. It is not possible to do this on the client, so the passwords sent over the wire are not secure even though they are hashed. The only way to secure that transfer is by using SSL.
+
+You can ensure that any unsecured connection to your app redirects to a secure connection by adding the `force-ssl` package.
+
+#### Setting up SSL
+
+1. On `meteor deploy` free hosting, just add `force-ssl` and you're good to go
+2. On Galaxy, most things are set up for you, but you need to add a certificate. [See the help article about SSL on Galaxy](https://galaxy.meteor.com/help/using-ssl).
+3. If you are running on your own infrastructure, there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+
+### Security checklist
+
+// XXX to be finalized later
+
+1. Remove the `insecure` package
+1. Remove the `autopublish` package
+1. Validate all method and publication arguments
+  1. Use `audit-argument-checks` to ensure this
+1. Deny writes to the `profile` field on user documents // XXX link to accounts
+1. Use methods instead of client-side insert/update/remove and allow/deny
+1. Use specific selectors and filter fields in publications
+1. Don't use the `{{{ ... }}}` raw string inclusion in Blaze unless you really know what you are doing
+1. Make sure secret API keys and passwords aren't in your source code
+1. Use package scan as a safety net
+1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature
+1. Don't ever trust user IDs passed from the client. Use `this.userId` inside methods and publications.
+1. Set up browser policy, but know that not all browsers support it so it's mostly a convenience/extra layer thing
