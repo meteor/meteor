@@ -108,7 +108,7 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 ### Fetching subscription data
 
-Once you've subscribed to a set of data, you then need to query the client collections to fetch the data again. There are a few important rules of thumb when doing this.
+Subscribing to data puts it in your client-side collections. To use the data in your templates, you need to query those collections for that data. There are a few important rules of thumb when doing this.
 
 1. Always use the same query to fetch the data from the collection that you use to publish it. 
 
@@ -120,13 +120,13 @@ Once you've subscribed to a set of data, you then need to query the client colle
 
   We do this for the same reason we subscribe in the template in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child template, as we'll see in in the {% post_link ui-ux "UI/UX Article"%}.
 
-  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template heirarchy as an argument to each template (although you could do this if you want to be "pure" about everything). 
+  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template heirarchy as an argument to each template. Although you could do this if you want to be "pure" about everything, and it's best not to use it in too many places as it makes templates harder to test.
 
   A second exception is sometimes in Blaze when you want to be more performant by controlling re-renderings. As an example in the Todos example application, although we subscribe to the `lists/todos` publication in the `listShowPage`, we don't actually fetch the todos further down the template heirarchy, in order to avoid the todos rendering too much when properties of the list change.
 
 ### Global subscriptions
 
-One place where you might be tempted to not subscribe to a subscription is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the {% post_link accounts "Accounts Article" %}) that you need on every screen of your app.
+One place where you might be tempted to not subscribe inside a template is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the {% post_link accounts "Accounts Article" %}) that you need on every screen of your app.
 
 However, it's generally a good idea to use a layout template (which you wrap all your templates in) to subscribe to this subscription anyway. It's better to be consistent about such things, and it makes for a more flexible system if you ever decide you have a screen that *doesn't* need that data.
 
@@ -152,7 +152,7 @@ Tracker.autorun(() => {
 
 We can use this information to be more subtle about when we try and show data to users, and when we show a loading screen.
 
-### Changing subscription arguments
+### Reactively changing subscription arguments
 
 We've seen an example already of using an `autorun` to re-subscribe when the (reactive) arguments to a subscription change. It's worth digging in a little more detail to understand what happens in this scenario.
 
@@ -174,14 +174,14 @@ In our example, the `autorun` will re-run whenever `this.state.get('listId')` ch
 
 Technically, what happens when one of these reactive sources changes is the following:
 
-1. The reactive data source *invalidates* the autorun computation (tells it to re-run itself)
+1. The reactive data source *invalidates* the autorun computation (marks it so that it re-runs in the next Tracker flush cycle).
 2. The subscription detects this, and given that anything is possible in next computation run, marks itself for destruction.
 3. The computation re-runs, with `.subscribe()` being re-called either with new or different arguments.
-4a. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that sitting around, with the same data already ready, and simply reuses that.
-4b. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server
-5. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
+4. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that sitting around, with the same data already ready, and simply reuses that.
+5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server
+6. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
 
-The important detail in the above is in 4a --- that they system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template heirarchy.
+The important detail in the above is in 4---that they system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template heirarchy.
 
 For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessarily subscribing will happen.
 
@@ -247,9 +247,9 @@ Meteor.publish('list/todoCount', function(listId) {
 });
 ```
 
-Then on the client, after subscribing to that publication, we can access the count with `Counts.get(``list/todoCount${listId}`)`.
+Then on the client, after subscribing to that publication, we can access the count with `Counts.get(`list/todoCount${listId}`)`.
 
-## Other (non-published) data sets: Stores
+## Client-side data management: Stores
 
 In Meteor, persistent or shared data comes over the wire on publications. However, there are some types of data which doesn't need to be persistent or shared between users. For instance, the "logged-in-ness" of the current user, or the route they are currently viewing. 
 
@@ -274,7 +274,7 @@ If the store is multi-dimensional, you may want to use a `ReactiveDict` (from th
 
 ```js
 const $window = $(window);
-const getDimensions = () => {
+function getDimensions() {
   return {
     width: $window.width(),
     height: $window.height()
@@ -287,7 +287,7 @@ $window.on('resize', () => {
 });
 ```
 
-The advantage of a `ReactiveDict` is you can access each property individually (`WindowSize.get('width')`), and isolate the reactivity.
+The advantage of a `ReactiveDict` is you can access each property individually (`WindowSize.get('width')`), and the dict will diff the field and track changes on it individually (so your template will re-render less often for instance).
 
 If you need to query the store, or store many related items, it's probably a good idea to use a Local Collection (see the {% page_link collections "Collections Article" %}.
 
@@ -317,7 +317,7 @@ It's common to need a related sets of data from multiple collections on a given 
 
 One way you might do this is to return more than one cursor from your publication function:
 
-```js
+```jsbad
 Meteor.publish('list/todos', function(listId) {
   check(listId, String);
 
@@ -418,7 +418,7 @@ Meteor.publishComposite('admin/list/todos', function(listId) {
 });
 ```
 
-## The low level publish API
+## Writing custom publications with the low level publish API
 
 In all of our examples so far (outside of using`Meteor.publishComposite()`) we've returned a cursor from our `Meteor.publish()` handlers. Doing this ensures Meteor takes care of the job of keeping the contents of that cursor in sync between the server and the client. However, there's another API you can use for publish functions which is closer to the way the underlying Distributed Data Protocol (DDP) works.
 
