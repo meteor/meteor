@@ -500,7 +500,7 @@ Accounts.setPassword = function (userId, newPlaintextPassword, options) {
 Meteor.methods({forgotPassword: function (options) {
   check(options, {email: String});
 
-  var user = Accounts._findUserByQuery({email: options.email});
+  var user = Accounts.findUserByEmail(options.email);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
