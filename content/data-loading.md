@@ -52,12 +52,13 @@ Meteor.publish('lists/private', function() {
 
 What this means is that the above publication can be confident (thanks to Meteor's accounts system) that it will only ever publish private lists to the user that they belong to. Note also that the publication will re-run if the user logs out (or back in again), which means that the published set of private lists will reflect this.
 
-In the case of a non-logged in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none).
+In the case of a non-logged in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
 
 The other type of publication argument is a simple named argument:
 
 ```js
 Meteor.publish('list/todos', function(listId) {
+  // We always need to check the `listId` is the type we expect
   check(listId, String);
 
   ...
@@ -70,8 +71,6 @@ When we create a subscription to this piblication on the client, we can provide 
 Meteor.subscribe('list/todos', list._id);
 ```
 
-Also note that we are careful to check the `listId` is a string as we expect, as described in the Security article.
-
 ### Organizing Publications
 
 It makes sense to place a publication in a package alongside the feature that it's targeted. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
@@ -81,6 +80,9 @@ Often, however, a publication is more general. For example in the Todos example 
 ## Using publications: Subscriptions
 
 To use publications, you need to create a subscription to it on the client. To do so, you call `Meteor.subscribe()` with the name of the publication. When you do this, it opens up a subscription to that publication, and the server starts sending data down the wire to ensure that your client collections contain up to date copies of the data that's pushed by the publication.
+
+Also, `Meteor.subscribe()` returns a "subscription handle", with a property called `.ready()` defined -- a reactive function that returns `true` when the publication becomes ready (either you call `this.ready()` explicitly, or the current contents of a returned cursor are sent over).
+
 
 ### Organizing Subscriptions
 
