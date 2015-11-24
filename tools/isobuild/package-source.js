@@ -15,6 +15,8 @@ var compiler = require('./compiler.js');
 var packageAPIModule = require('./package-api.js');
 var Profile = require('../tool-env/profile.js').Profile;
 
+import SourceArch from './source-arch.js';
+
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
 // world in some way.
@@ -185,96 +187,6 @@ var getExcerptFromReadme = function (text) {
 
   // Strip the preceeding and trailing new lines.
   return excerpt.replace(/^\n+|\n+$/g, "");
-};
-
-///////////////////////////////////////////////////////////////////////////////
-// SourceArch
-///////////////////////////////////////////////////////////////////////////////
-
-// Options:
-// - kind [required]
-// - arch [required]
-// - uses
-// - implies
-// - getFiles
-// - declaredExports
-// - watchSet
-//
-// Do not include the source files in watchSet. They will be
-// added at compile time when the sources are actually read.
-var SourceArch = function (pkg, options) {
-  var self = this;
-  options = options || {};
-  self.pkg = pkg;
-
-  // Kind of this sourceArchitecture. At the moment, there are really three
-  // options -- package, plugin, and app. We use these in linking.
-  self.kind = options.kind;
-
-  // The architecture (fully or partially qualified) that can use this
-  // unibuild.
-  self.arch = options.arch;
-
-  // Packages used. The ordering is significant only for determining
-  // import symbol priority (it doesn't affect load order), and a
-  // given package could appear more than once in the list, so code
-  // that consumes this value will need to guard appropriately. Each
-  // element in the array has keys:
-  // - package: the package name
-  // - constraint: the constraint on the version of the package to use,
-  //   as a string (may be null)
-  // - unordered: If true, we don't want the package's imports and we
-  //   don't want to force the package to load before us. We just want
-  //   to ensure that it loads if we load.
-  // - weak: If true, we don't *need* to load the other package, but
-  //   if the other package ends up loaded in the target, it must
-  //   be forced to load before us. We will not get its imports
-  //   or plugins.
-  // It is an error for both unordered and weak to be true, because
-  // such a dependency would have no effect.
-  //
-  // In most places, instead of using 'uses' directly, you want to use
-  // something like compiler.eachUsedUnibuild so you also take into
-  // account implied packages.
-  //
-  // Note that if `package` starts with 'isobuild:', it actually represents a
-  // dependency on a feature of the Isobuild build tool, not a real package. You
-  // need to be aware of this when processing a `uses` array, which is another
-  // reason to use eachUsedUnibuild instead.
-  self.uses = options.uses || [];
-
-  // Packages which are "implied" by using this package. If a unibuild X
-  // uses this unibuild Y, and Y implies Z, then X will effectively use Z
-  // as well (and get its imports and plugins).  An array of objects
-  // of the same type as the elements of self.uses (although for now
-  // unordered and weak are not allowed).
-  self.implies = options.implies || [];
-
-  // A function that returns the source files for this architecture. Object with
-  // keys `sources` and `assets`, where each is an array of objects with keys
-  // "relPath" and "fileOptions". Null if loaded from isopack.
-  //
-  // fileOptions is optional and represents arbitrary options passed
-  // to "api.addFiles"; they are made available on to the plugin as
-  // compileStep.fileOptions.
-  //
-  // This is a function rather than a literal array because for an
-  // app, we need to know the file extensions registered by the
-  // plugins in order to compute the sources list, so we have to wait
-  // until build time (after we have loaded any plugins, including
-  // local plugins in this package) to compute this.
-  self.getFiles = options.getFiles || null;
-
-  // Symbols that this architecture should export. List of symbols (as
-  // strings).
-  self.declaredExports = options.declaredExports || null;
-
-  // Files and directories that we want to monitor for changes in
-  // development mode, as a watch.WatchSet. In the latest refactoring
-  // of the code, this does not include source files or directories,
-  // but only control files such as package.js and .meteor/packages,
-  // since the rest are not determined until compile time.
-  self.watchSet = options.watchSet || new watch.WatchSet;
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1231,7 +1143,7 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: api.uses[arch],
         implies: api.implies[arch],
-        getFiles: function () {
+        getFiles() {
           return api.files[arch];
         },
         declaredExports: api.exports[arch],
@@ -1284,142 +1196,80 @@ _.extend(PackageSource.prototype, {
       var sourceArch = new SourceArch(self, {
         kind: 'app',
         arch: arch,
-        uses: uses
-      });
-      self.architectures.push(sourceArch);
+        uses: uses,
+        getFiles(sourceProcessorSet, watchSet) {
+          const sourceReadOptions =
+            sourceProcessorSet.appReadDirectoryOptions(arch);
+          // Ignore files starting with dot (unless they are explicitly in
+          // 'names').
+          sourceReadOptions.exclude.push(/^\./);
+          // Ignore the usual ignorable files.
+          sourceReadOptions.exclude.push(...ignoreFiles);
 
-      // sourceArch's WatchSet should include all the project metadata files
-      // read by the ProjectContext.
-      sourceArch.watchSet.merge(projectWatchSet);
+          // Wrapper around watch.readAndWatchDirectory which takes in and returns
+          // sourceRoot-relative directories.
+          var readAndWatchDirectory = (relDir, {include, exclude, names}) => {
+            var absPath = files.pathJoin(self.sourceRoot, relDir);
+            var contents = watch.readAndWatchDirectory(
+              watchSet, {absPath, include, exclude, names});
+            return contents.map(x => files.pathJoin(relDir, x));
+          };
 
-      // Determine source files
-      sourceArch.getFiles = (sourceProcessorSet, watchSet) => {
-        const sourceReadOptions =
-                sourceProcessorSet.appReadDirectoryOptions(arch);
-        // Ignore files starting with dot (unless they are explicitly in
-        // 'names').
-        sourceReadOptions.exclude.push(/^\./);
-        // Ignore the usual ignorable files.
-        sourceReadOptions.exclude.push(...ignoreFiles);
+          // Read top-level source files.
+          var sources = readAndWatchDirectory('', sourceReadOptions);
 
-        // Wrapper around watch.readAndWatchDirectory which takes in and returns
-        // sourceRoot-relative directories.
-        var readAndWatchDirectory = (relDir, {include, exclude, names}) => {
-          var absPath = files.pathJoin(self.sourceRoot, relDir);
-          var contents = watch.readAndWatchDirectory(
-            watchSet, {absPath, include, exclude, names});
-          return contents.map(x => files.pathJoin(relDir, x));
-        };
+          // don't include watched but not included control files
+          sources = _.difference(sources, controlFiles);
 
-        // Read top-level source files.
-        var sources = readAndWatchDirectory('', sourceReadOptions);
+          var otherUnibuildRegExp =
+            (arch === "os" ? /^client\/$/ : /^server\/$/);
 
-        // don't include watched but not included control files
-        sources = _.difference(sources, controlFiles);
-
-        var otherUnibuildRegExp =
-              (arch === "os" ? /^client\/$/ : /^server\/$/);
-
-        // The paths that we've called checkForInfiniteRecursion on.
-        var seenPaths = {};
-        // Used internally by files.realpath as an optimization.
-        var realpathCache = {};
-        var checkForInfiniteRecursion = function (relDir) {
-          var absPath = files.pathJoin(self.sourceRoot, relDir);
-          try {
-            var realpath = files.realpath(absPath, realpathCache);
-          } catch (e) {
-            if (!e || e.code !== 'ELOOP') {
-              throw e;
+          // The paths that we've called checkForInfiniteRecursion on.
+          var seenPaths = {};
+          // Used internally by files.realpath as an optimization.
+          var realpathCache = {};
+          var checkForInfiniteRecursion = function (relDir) {
+            var absPath = files.pathJoin(self.sourceRoot, relDir);
+            try {
+              var realpath = files.realpath(absPath, realpathCache);
+            } catch (e) {
+              if (!e || e.code !== 'ELOOP') {
+                throw e;
+              }
+              // else leave realpath undefined
             }
-            // else leave realpath undefined
-          }
-          if (realpath === undefined || _.has(seenPaths, realpath)) {
-            buildmessage.error("Symlink cycle detected at " + relDir);
-            // recover by returning no files
-            return true;
-          }
-          seenPaths[realpath] = true;
-          return false;
-        };
+            if (realpath === undefined || _.has(seenPaths, realpath)) {
+              buildmessage.error("Symlink cycle detected at " + relDir);
+              // recover by returning no files
+              return true;
+            }
+            seenPaths[realpath] = true;
+            return false;
+          };
 
-        // Read top-level subdirectories. Ignore subdirectories that have
-        // special handling.
-        var sourceDirectories = readAndWatchDirectory('', {
-          include: [/\/$/],
-          exclude: [/^packages\/$/, /^tests\/$/,
-                    // XXX We no longer actually have special handling
-                    //     for the programs subdirectory, but let's not
-                    //     suddenly start treating it as part of the main
-                    //     app program.
-                    /^programs\/$/,
-                    // node.js based tooling often uses dependencies which
-                    // are installed into node_modules in the root of the
-                    // project.
-                    /^node_modules\/$/,
-                    /^public\/$/, /^private\/$/,
-                    /^cordova-build-override\/$/,
-                    otherUnibuildRegExp].concat(sourceReadOptions.exclude)
-        });
-        checkForInfiniteRecursion('');
-
-        while (!_.isEmpty(sourceDirectories)) {
-          var dir = sourceDirectories.shift();
-
-          // remove trailing slash
-          dir = dir.substr(0, dir.length - 1);
-
-          if (checkForInfiniteRecursion(dir)) {
-            // pretend we found no files
-            return [];
-          }
-
-          // Find source files in this directory.
-          sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
-
-          // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-          // directory names that are only special at the top level.
-          sourceDirectories.push(...readAndWatchDirectory(dir, {
+          // Read top-level subdirectories. Ignore subdirectories that have
+          // special handling.
+          var sourceDirectories = readAndWatchDirectory('', {
             include: [/\/$/],
-            exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
-              sourceReadOptions.exclude)
-          }));
-        }
+            exclude: [/^packages\/$/, /^tests\/$/,
+                      // XXX We no longer actually have special handling
+                      //     for the programs subdirectory, but let's not
+                      //     suddenly start treating it as part of the main
+                      //     app program.
+                      /^programs\/$/,
+                      // node.js based tooling often uses dependencies which
+                      // are installed into node_modules in the root of the
+                      // project.
+                      /^node_modules\/$/,
+                      /^public\/$/, /^private\/$/,
+                      /^cordova-build-override\/$/,
+                      otherUnibuildRegExp].concat(sourceReadOptions.exclude)
+          });
+          checkForInfiniteRecursion('');
 
-        // We've found all the source files. Sort them!
-        sources.sort(loadOrderSort(sourceProcessorSet, arch));
+          while (!_.isEmpty(sourceDirectories)) {
+            var dir = sourceDirectories.shift();
 
-        // Convert into relPath/fileOptions objects.
-        sources = _.map(sources, function (relPath) {
-          var sourceObj = {relPath: relPath};
-
-          // Special case: on the client, JavaScript files in a
-          // `client/compatibility` directory don't get wrapped in a closure.
-          if (archinfo.matches(arch, "web") && relPath.match(/\.js$/)) {
-            var clientCompatSubstr =
-              files.pathSep + 'client' +
-              files.pathSep + 'compatibility' + files.pathSep;
-
-            if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1) {
-              sourceObj.fileOptions = {bare: true};
-            }
-          }
-          return sourceObj;
-        });
-
-        // Now look for assets for this unibuild.
-        const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
-        var assetDirs = readAndWatchDirectory('', {names: [assetDir]});
-
-        const assets = [];
-
-        if (!_.isEmpty(assetDirs)) {
-          if (!_.isEqual(assetDirs, [assetDir])) {
-            throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
-          }
-
-          while (!_.isEmpty(assetDirs)) {
-            dir = assetDirs.shift();
             // remove trailing slash
             dir = dir.substr(0, dir.length - 1);
 
@@ -1428,32 +1278,93 @@ _.extend(PackageSource.prototype, {
               return [];
             }
 
-            // Find asset files in this directory.
-            var assetsAndSubdirs = readAndWatchDirectory(dir, {
-              include: [/.?/],
-              // we DO look under dot directories here
-              exclude: ignoreFiles
-            });
+            // Find source files in this directory.
+            sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
 
-            _.each(assetsAndSubdirs, function (item) {
-              if (item[item.length - 1] === '/') {
-                // Recurse on this directory.
-                assetDirs.push(item);
-              } else {
-                // This file is an asset.
-                assets.push({
-                  relPath: item
-                });
-              }
-            });
+            // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+            // directory names that are only special at the top level.
+            sourceDirectories.push(...readAndWatchDirectory(dir, {
+              include: [/\/$/],
+              exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
+                sourceReadOptions.exclude)
+            }));
           }
-        }
 
-        return {
-          sources,
-          assets
-        };
-      };
+          // We've found all the source files. Sort them!
+          sources.sort(loadOrderSort(sourceProcessorSet, arch));
+
+          // Convert into relPath/fileOptions objects.
+          sources = _.map(sources, function (relPath) {
+            var sourceObj = {relPath: relPath};
+
+            // Special case: on the client, JavaScript files in a
+            // `client/compatibility` directory don't get wrapped in a closure.
+            if (archinfo.matches(arch, "web") && relPath.match(/\.js$/)) {
+              var clientCompatSubstr =
+                files.pathSep + 'client' +
+                files.pathSep + 'compatibility' + files.pathSep;
+
+              if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1) {
+                sourceObj.fileOptions = {bare: true};
+              }
+            }
+            return sourceObj;
+          });
+
+          // Now look for assets for this unibuild.
+          const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
+          var assetDirs = readAndWatchDirectory('', {names: [assetDir]});
+
+          const assets = [];
+
+          if (!_.isEmpty(assetDirs)) {
+            if (!_.isEqual(assetDirs, [assetDir])) {
+              throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
+            }
+
+            while (!_.isEmpty(assetDirs)) {
+              dir = assetDirs.shift();
+              // remove trailing slash
+              dir = dir.substr(0, dir.length - 1);
+
+              if (checkForInfiniteRecursion(dir)) {
+                // pretend we found no files
+                return [];
+              }
+
+              // Find asset files in this directory.
+              var assetsAndSubdirs = readAndWatchDirectory(dir, {
+                include: [/.?/],
+                // we DO look under dot directories here
+                exclude: ignoreFiles
+              });
+
+              _.each(assetsAndSubdirs, function (item) {
+                if (item[item.length - 1] === '/') {
+                  // Recurse on this directory.
+                  assetDirs.push(item);
+                } else {
+                  // This file is an asset.
+                  assets.push({
+                    relPath: item
+                  });
+                }
+              });
+            }
+          }
+
+          return {
+            sources,
+            assets
+          };
+        }
+      });
+
+      self.architectures.push(sourceArch);
+
+      // sourceArch's WatchSet should include all the project metadata files
+      // read by the ProjectContext.
+      sourceArch.watchSet.merge(projectWatchSet);
     });
 
     if (! self._checkCrossUnibuildVersionConstraints()) {
