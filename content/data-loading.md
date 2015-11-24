@@ -86,7 +86,7 @@ Also, `Meteor.subscribe()` returns a "subscription handle", with a property call
 
 ### Organizing Subscriptions
 
-It is best to place the subscription as close as possible to the place where the data from the subscription is needed. This reduces "action at a distance" and makes it easier to understand the flow of data through your application.
+It is best to place the subscription as close as possible to the place where the data from the subscription is needed. This reduces "action at a distance" and makes it easier to understand the flow of data through your application. If the subscription and fetch are separated, then it's not always clear how and why changes to the subscriptions (such as changing arguments), will affect the contents of the cursor.
 
 What this means in practice is that you should place your subscription calls in *templates*. In Blaze, it's best to do this in the `onCreated()` callback:
 
@@ -102,7 +102,7 @@ Template.listsShowPage.onCreated(function() {
 
 In this code snippet we can see two important techniques for subscribing in Blaze templates:
 
-1. Calling `this.subscribe()` (rather than `Meteor.subscribe`) means that the subscription will automatically get torn down when the template is taken off the screen.
+1. Calling `this.subscribe()` (rather than `Meteor.subscribe`), which attaches a special `this.subscriptionsReady()` function to the template instance, which is true when this and other subscriptions are ready.
 
 2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive variable `this.state.get('listId')` changes.
 
