@@ -7,7 +7,7 @@ After reading this guide, you'll know:
 1. What the different flavors of MongoDB Collection in Meteor are, and how to use them.
 2. How to define a schema for a collection to control it's content.
 3. What considerations you should take when defining your collection's schema
-4. How to modify the content of a collection in a sensible way
+4. How to modify the content of a collection whilst respecting its schema
 5. How to change the schema of your collection in a careful way.
 6. How to deal with relations between records in collections
 
@@ -341,9 +341,6 @@ if (list.isPrivate()) {
 
 Now we can attach helpers to documents, it's simple to define a helper that fetches related documents
 
-// XXX: we don't actually have this in the Todos app, but we probably should
-// XXX: is this .todos() or .getTodos() ?
-
 ```js
 Lists.helpers({
   todos() {
@@ -362,9 +359,7 @@ console.log(`The first list has ${list.todos().count()} todos`);
 
 It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos on the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
 
-// XXX: this package doesn't exist and the API isn't decided on
-
-A great way to do this is to use the `simple:cursor-utils` package, which allows you to modify a cursor from outside:
+A great way to do this is to use the `mdg:cursor-utils` package, which allows you to modify a cursor from outside:
 
 ```js
 const list = Lists.findOne();
