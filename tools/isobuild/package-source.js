@@ -1208,9 +1208,6 @@ _.extend(PackageSource.prototype, {
     self.sourceRoot = appDir;
     self.serveRoot = '/';
 
-    // special files those are excluded from app's top-level sources
-    var controlFiles = ['mobile-config.js'];
-
     // Determine used packages. Note that these are the same for all arches,
     // because there's no way to specify otherwise in .meteor/packages.
     var uses = [];
@@ -1238,144 +1235,31 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: uses,
         getFiles(sourceProcessorSet, watchSet) {
-          const sourceReadOptions =
-            sourceProcessorSet.appReadDirectoryOptions(arch);
-
           sourceProcessorSet.watchSet = watchSet;
 
-          // Ignore files starting with dot (unless they are explicitly in
-          // 'names').
-          sourceReadOptions.exclude.push(/^\./);
-          // Ignore the usual ignorable files.
-          sourceReadOptions.exclude.push(...ignoreFiles);
-
-          // Read top-level source files.
-          var sources = self._readAndWatchDirectory(
-            '', watchSet, sourceReadOptions
-          );
-
-          // don't include watched but not included control files
-          sources = _.difference(sources, controlFiles);
-
-          var otherUnibuildRegExp =
-            (arch === "os" ? /^client\/$/ : /^server\/$/);
-
-          const loopChecker = new SymlinkLoopChecker(self.sourceRoot);
-
-          // Read top-level subdirectories. Ignore subdirectories that have
-          // special handling.
-          var sourceDirectories = self._readAndWatchDirectory('', watchSet, {
-            include: [/\/$/],
-            exclude: [/^packages\/$/, /^tests\/$/,
-                      // XXX We no longer actually have special handling
-                      //     for the programs subdirectory, but let's not
-                      //     suddenly start treating it as part of the main
-                      //     app program.
-                      /^programs\/$/,
-                      // node.js based tooling often uses dependencies which
-                      // are installed into node_modules in the root of the
-                      // project.
-                      /^node_modules\/$/,
-                      /^public\/$/, /^private\/$/,
-                      /^cordova-build-override\/$/,
-                      otherUnibuildRegExp].concat(sourceReadOptions.exclude)
-          });
-
-          loopChecker.check('');
-
-          while (!_.isEmpty(sourceDirectories)) {
-            var dir = sourceDirectories.shift();
-
-            // remove trailing slash
-            dir = dir.substr(0, dir.length - 1);
-
-            if (loopChecker.check(dir)) {
-              // pretend we found no files
-              return [];
-            }
-
-            // Find source files in this directory.
-            sources.push(...self._readAndWatchDirectory(
-              dir, watchSet, sourceReadOptions
-            ));
-
-            // Find sub-sourceDirectories. Note that we DON'T need to ignore the
-            // directory names that are only special at the top level.
-            sourceDirectories.push(...self._readAndWatchDirectory(dir, watchSet, {
-              include: [/\/$/],
-              exclude: [/^tests\/$/, otherUnibuildRegExp].concat(
-                sourceReadOptions.exclude)
-            }));
-          }
-
-          // We've found all the source files. Sort them!
-          sources.sort(loadOrderSort(sourceProcessorSet, arch));
-
-          // Convert into relPath/fileOptions objects.
-          sources = _.map(sources, function (relPath) {
-            var sourceObj = {relPath: relPath};
-
-            // Special case: on the client, JavaScript files in a
-            // `client/compatibility` directory don't get wrapped in a closure.
-            if (archinfo.matches(arch, "web") && relPath.match(/\.js$/)) {
-              var clientCompatSubstr =
-                files.pathSep + 'client' +
-                files.pathSep + 'compatibility' + files.pathSep;
-
-              if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1) {
-                sourceObj.fileOptions = {bare: true};
-              }
-            }
-            return sourceObj;
-          });
-
-          // Now look for assets for this unibuild.
-          const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
-          var assetDirs = self._readAndWatchDirectory('', watchSet, {
-            names: [assetDir]
-          });
-
-          const assets = [];
-
-          if (!_.isEmpty(assetDirs)) {
-            if (!_.isEqual(assetDirs, [assetDir])) {
-              throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
-            }
-
-            while (!_.isEmpty(assetDirs)) {
-              dir = assetDirs.shift();
-              // remove trailing slash
-              dir = dir.substr(0, dir.length - 1);
-
-              if (loopChecker.check(dir)) {
-                // pretend we found no files
-                return [];
-              }
-
-              // Find asset files in this directory.
-              var assetsAndSubdirs = self._readAndWatchDirectory(dir, watchSet, {
-                include: [/.?/],
-                // we DO look under dot directories here
-                exclude: ignoreFiles
-              });
-
-              _.each(assetsAndSubdirs, function (item) {
-                if (item[item.length - 1] === '/') {
-                  // Recurse on this directory.
-                  assetDirs.push(item);
-                } else {
-                  // This file is an asset.
-                  assets.push({
-                    relPath: item
-                  });
-                }
-              });
-            }
-          }
+          const findOptions = {
+            sourceProcessorSet,
+            watchSet,
+            arch,
+            ignoreFiles,
+            isApp: true,
+            loopChecker: new SymlinkLoopChecker(self.sourceRoot),
+          };
 
           return {
-            sources,
-            assets
+            sources: self._findSources(findOptions).sort(
+              loadOrderSort(sourceProcessorSet, arch)
+            ).map(relPath => {
+              return {
+                relPath,
+                fileOptions: self._inferFileOptions(relPath, {
+                  arch,
+                  isApp: true,
+                }),
+              };
+            }),
+
+            assets: self._findAssets(findOptions),
           };
         }
       });
@@ -1394,6 +1278,170 @@ _.extend(PackageSource.prototype, {
       throw new Error("conflicting constraints in a package?");
     }
   }),
+
+  _inferFileOptions(relPath, {arch, isApp}) {
+    const fileOptions = {};
+    const dirs = files.pathDirname(relPath).split(files.pathSep);
+
+    if (dirs.indexOf("node_modules") >= 0) {
+      fileOptions.lazy = true;
+      fileOptions.transpile = false;
+    }
+
+    // Special case: in app code on the client, JavaScript files in a
+    // `client/compatibility` directory don't get wrapped in a closure.
+    if (isApp && // Skip this check for packages.
+        archinfo.matches(arch, "web") &&
+        relPath.endsWith(".js")) {
+      for (var i = 1; i < dirs.length; ++i) {
+        if (dirs[i - 1] === "client" &&
+            dirs[i] === "compatibility") {
+          fileOptions.bare = true;
+          break;
+        }
+      }
+    }
+
+    return fileOptions;
+  },
+
+  _findSources({
+    sourceProcessorSet,
+    watchSet,
+    isApp,
+    arch,
+    loopChecker = new SymlinkLoopChecker(this.sourceRoot),
+    ignoreFiles = [],
+  }) {
+    const sourceReadOptions =
+      sourceProcessorSet.appReadDirectoryOptions(arch);
+
+    // Ignore files starting with dot (unless they are explicitly in
+    // 'names').
+    sourceReadOptions.exclude.push(/^\./);
+    // Ignore the usual ignorable files.
+    sourceReadOptions.exclude.push(...ignoreFiles);
+
+    // Read top-level source files, excluding control files that were not
+    // explicitly included.
+    const controlFiles = ['mobile-config.js'];
+
+    if (! isApp) {
+      controlFiles.push('package.js');
+    }
+
+    const sources = _.difference(
+      this._readAndWatchDirectory('', watchSet, {
+        ...sourceReadOptions,
+      }),
+      controlFiles
+    );
+
+    const anyLevelExcludes = [
+      /^tests\/$/,
+      /^node_modules\/$/,
+      arch === "os" ? /^client\/$/ : /^server\/$/,
+      ...sourceReadOptions.exclude
+    ];
+
+    const topLevelExcludes = isApp ? [
+      ...anyLevelExcludes,
+      /^packages\/$/,
+      /^programs\/$/,
+      /^public\/$/, /^private\/$/,
+      /^cordova-build-override\/$/
+    ] : anyLevelExcludes;
+
+    // Read top-level subdirectories. Ignore subdirectories that have
+    // special handling.
+    var sourceDirectories = this._readAndWatchDirectory('', watchSet, {
+      include: [/\/$/],
+      exclude: topLevelExcludes,
+    });
+
+    loopChecker.check('');
+
+    while (!_.isEmpty(sourceDirectories)) {
+      var dir = sourceDirectories.shift();
+
+      // remove trailing slash
+      dir = dir.substr(0, dir.length - 1);
+
+      if (loopChecker.check(dir)) {
+        // pretend we found no files
+        return [];
+      }
+
+      // Find source files in this directory.
+      sources.push(...this._readAndWatchDirectory(
+        dir, watchSet, sourceReadOptions
+      ));
+
+      // Find sub-sourceDirectories. Note that we DON'T need to ignore the
+      // directory names that are only special at the top level.
+      sourceDirectories.push(...this._readAndWatchDirectory(dir, watchSet, {
+        include: [/\/$/],
+        exclude: anyLevelExcludes,
+      }));
+    }
+
+    return sources;
+  },
+
+  _findAssets({
+    sourceProcessorSet,
+    watchSet,
+    isApp,
+    arch,
+    loopChecker = new SymlinkLoopChecker(this.sourceRoot),
+    ignoreFiles = [],
+  }) {
+    // Now look for assets for this unibuild.
+    const assetDir = archinfo.matches(arch, "web") ? "public/" : "private/";
+    var assetDirs = this._readAndWatchDirectory('', watchSet, {
+      names: [assetDir]
+    });
+
+    const assets = [];
+
+    if (!_.isEmpty(assetDirs)) {
+      if (!_.isEqual(assetDirs, [assetDir])) {
+        throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
+      }
+
+      while (!_.isEmpty(assetDirs)) {
+        dir = assetDirs.shift();
+        // remove trailing slash
+        dir = dir.substr(0, dir.length - 1);
+
+        if (loopChecker.check(dir)) {
+          // pretend we found no files
+          return [];
+        }
+
+        // Find asset files in this directory.
+        var assetsAndSubdirs = this._readAndWatchDirectory(dir, watchSet, {
+          include: [/.?/],
+          // we DO look under dot directories here
+          exclude: ignoreFiles
+        });
+
+        _.each(assetsAndSubdirs, function (item) {
+          if (item[item.length - 1] === '/') {
+            // Recurse on this directory.
+            assetDirs.push(item);
+          } else {
+            // This file is an asset.
+            assets.push({
+              relPath: item
+            });
+          }
+        });
+      }
+    }
+
+    return assets;
+  },
 
   // True if the package defines any plugins.
   containsPlugins: function () {
