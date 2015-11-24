@@ -1133,7 +1133,7 @@ _.extend(exports.PlatformList.prototype, {
   getWebArchs: function () {
     var self = this;
     var archs = [ "web.browser" ];
-    if (! _.isEmpty(self.getCordovaPlatforms())) {
+    if (self.usesCordova()) {
       archs.push("web.cordova");
     }
     return archs;
