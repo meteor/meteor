@@ -345,8 +345,6 @@ However, we can write publications that are properly reactive to changes across 
 
 The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor.
 
-XXX: this example isn't actually in the app yet: https://github.com/meteor/todos/issues/48
-
 ```js
 Meteor.publishComposite('list/todos', function(listId) {
   check(listId, String);
@@ -452,10 +450,6 @@ Data published like this, from the client's perspective doesn't look any differe
 
 One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication. 
 
-
-XXX: should we talk about sharing observers?
-
-XXX: should we talk about techniques to share data/work between common custom publications?
 
 ## Turning a REST endpoint into a publication
 
