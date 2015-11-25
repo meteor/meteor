@@ -252,7 +252,7 @@ A useful package for writing migrations is the [`percolate:migrations`](https://
 ```js
 Migrations.add({
   version: 1,
-  up() => {
+  up() {
     Lists.find({todoCount: {$exists: false}}).forEach(list => {
       const todoCount = Todos.find({listId: list._id})).count();
       Lists.update(list._id, {$set: {todoCount}});
