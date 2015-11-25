@@ -12,7 +12,7 @@ DocsData = {
   "Accounts.addEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 847,
+    "lineno": 852,
     "locus": "Server",
     "longname": "Accounts.addEmail",
     "memberof": "Accounts",
@@ -353,7 +353,7 @@ DocsData = {
   "Accounts.removeEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 930,
+    "lineno": 935,
     "locus": "Server",
     "longname": "Accounts.removeEmail",
     "memberof": "Accounts",
@@ -427,7 +427,7 @@ DocsData = {
   "Accounts.sendEnrollmentEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 584,
+    "lineno": 589,
     "locus": "Server",
     "longname": "Accounts.sendEnrollmentEmail",
     "memberof": "Accounts",
@@ -460,7 +460,7 @@ DocsData = {
   "Accounts.sendResetPasswordEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 519,
+    "lineno": 524,
     "locus": "Server",
     "longname": "Accounts.sendResetPasswordEmail",
     "memberof": "Accounts",
@@ -493,7 +493,7 @@ DocsData = {
   "Accounts.sendVerificationEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 723,
+    "lineno": 728,
     "locus": "Server",
     "longname": "Accounts.sendVerificationEmail",
     "memberof": "Accounts",
@@ -5207,7 +5207,7 @@ DocsData = {
         "optional": true,
         "type": {
           "names": [
-            "Any"
+            "EJSONable"
           ]
         }
       },
@@ -5659,7 +5659,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 426,
+    "lineno": 429,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5718,7 +5718,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 568,
+    "lineno": 571,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5751,7 +5751,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 507,
+    "lineno": 510,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -6088,7 +6088,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An object where the keys are package\nnames and the values are version numbers in string form or URLs to a\ngit commit by SHA.  You can only depend on exact versions of NPM\npackages. Example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre>",
+        "description": "<p>An object where the keys are package\nnames and the values are one of:</p>\n<ol>\n<li>Version numbers in string form</li>\n<li>Http(s) URLs to a git commit by SHA.   </li>\n<li>Git URLs in the format described <a href=\"https://docs.npmjs.com/files/package.json#git-urls-as-dependencies\">here</a></li>\n<li>Absolute file:// paths</li>\n</ol>\n<p>Https URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre><p>Git URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;git+https://github.com/caolan/async#master&quot;\n});</code></pre>",
         "name": "dependencies",
         "type": {
           "names": [
