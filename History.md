@@ -10,6 +10,8 @@
 * Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It
   will now error if referenced from the client at all.
 
+* Allow `git+` URL schemes for npm dependencies #844
+
 Patches contributed by GitHub users vereed, ...
 
 

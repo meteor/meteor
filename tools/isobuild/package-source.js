@@ -827,14 +827,27 @@ _.extend(PackageSource.prototype, {
        * @summary Specify which [NPM](https://www.npmjs.org/) packages
        * your Meteor package depends on.
        * @param  {Object} dependencies An object where the keys are package
-       * names and the values are version numbers in string form or URLs to a
-       * git commit by SHA.  You can only depend on exact versions of NPM
-       * packages. Example:
+       * names and the values are one of:
+       *   1. Version numbers in string form
+       *   2. Http(s) URLs to a git commit by SHA.   
+       *   3. Git URLs in the format described [here](https://docs.npmjs.com/files/package.json#git-urls-as-dependencies)
+       *   4. Absolute file:// paths
+       *
+       * Https URL example:
        *
        * ```js
        * Npm.depends({
        *   moment: "2.8.3",
        *   async: "https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz"
+       * });
+       * ```
+       *
+       * Git URL example:
+       *
+       * ```js
+       * Npm.depends({
+       *   moment: "2.8.3",
+       *   async: "git+https://github.com/caolan/async#master"
        * });
        * ```
        * @locus package.js
