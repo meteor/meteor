@@ -429,11 +429,11 @@ _.extend(PackageSource.prototype, {
     // serveRoot is actually a part of a url path, root here is a forward slash
     self.serveRoot = options.serveRoot || '/';
 
-    utils.ensureOnlyValidVersions(options.npmDependencies, {forNpm: true});
+    utils.ensureOnlyValidVersions(options.npmDependencies, {forCordova: false});
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
 
-    utils.ensureOnlyValidVersions(options.cordovaDependencies, {forNpm: false});
+    utils.ensureOnlyValidVersions(options.cordovaDependencies, {forCordova: true});
     self.cordovaDependencies = options.cordovaDependencies;
 
     const sources = options.sources.map((source) => {
@@ -864,7 +864,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          utils.ensureOnlyValidVersions(_npmDependencies, {forNpm: true});
+          utils.ensureOnlyValidVersions(_npmDependencies, {forCordova: false});
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line
@@ -976,7 +976,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          utils.ensureOnlyValidVersions(_cordovaDependencies, {forNpm: false});
+          utils.ensureOnlyValidVersions(_cordovaDependencies, {forCordova: true});
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line

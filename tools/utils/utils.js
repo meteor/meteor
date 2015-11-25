@@ -499,21 +499,21 @@ exports.isPathRelative = function (x) {
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-exports.ensureOnlyValidVersions = function (dependencies, {forNpm}) {
+exports.ensureOnlyValidVersions = function (dependencies, {forCordova}) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (! exports.isValidVersion(version, {forNpm})) {
+    if (! exports.isValidVersion(version, {forCordova})) {
       throw new Error(
         "Must declare valid version of dependency: " + name + '@' + version);
     }
   });
 };
-exports.isValidVersion = function (version, {forNpm}) {
+exports.isValidVersion = function (version, {forCordova}) {
   return semver.valid(version) || exports.isUrlWithFileScheme(version)
-    || (forNpm ? exports.isNpmUrl(version) : exports.isUrlWithSha(version));
+    || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
 };
 
 
