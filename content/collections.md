@@ -112,7 +112,7 @@ const list = {
   incompleteCount: 3
 };
 
-Lists.schema.validate(doc);
+Lists.schema.validate(list);
 ```
 
 In this case, as the list is valid according to the schema, the `check()` line will run without problems. If however, we wrote:
@@ -124,7 +124,7 @@ const list = {
   madeUpField: 'this should not be here'
 };
 
-Lists.schema.validate(doc);
+Lists.schema.validate(list);
 ```
 
 // XXX: this isn't actually the case yet. We are waiting on https://github.com/meteor/method/issues/4
