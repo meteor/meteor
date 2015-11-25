@@ -109,6 +109,11 @@ _.extend(Module.prototype, {
     // preserving the line numbers.
     if (self.useGlobalNamespace) {
       return _.map(self.files, function (file) {
+        if (file.lazy) {
+          // Ignore lazy files unless we have a module system.
+          return;
+        }
+
         const cacheKey = JSON.stringify([
           file.sourceHash, file.bare, file.servePath]);
 
@@ -147,9 +152,15 @@ _.extend(Module.prototype, {
 
     // Emit each file
     _.each(self.files, function (file) {
+      if (file.lazy) {
+        // Ignore lazy files unless we have a module system.
+        return;
+      }
+
       if (!_.isEmpty(chunks)) {
         chunks.push("\n\n\n\n\n\n");
       }
+
       chunks.push(file.getPrelinkedOutput({
         sourceWidth: sourceWidth,
         noLineNumbers: self.noLineNumbers
@@ -243,6 +254,9 @@ var File = function (inputFile, module) {
 
   // the path where this file would prefer to be served if possible
   self.servePath = inputFile.servePath;
+
+  // True if the input file should not be evaluated eagerly.
+  self.lazy = !!inputFile.lazy;
 
   // If true, don't wrap this individual file in a closure.
   self.bare = !!inputFile.bare;

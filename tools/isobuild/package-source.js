@@ -1176,8 +1176,41 @@ _.extend(PackageSource.prototype, {
         arch: arch,
         uses: api.uses[arch],
         implies: api.implies[arch],
-        getFiles() {
-          return api.files[arch];
+        getFiles(sourceProcessorSet, watchSet) {
+          const result = api.files[arch];
+          const relPathToSourceObj = {};
+          const sources = result.sources;
+
+          // Files explicitly passed to api.addFiles remain at the
+          // beginning of api.files[arch].sources in their given order.
+          sources.forEach(sourceObj => {
+            relPathToSourceObj[sourceObj.relPath] = sourceObj;
+          });
+
+          self._findSources({
+            sourceProcessorSet,
+            watchSet,
+            arch,
+            isApp: false
+          }).forEach(relPath => {
+            if (! _.has(relPathToSourceObj, relPath)) {
+              const fileOptions = self._inferFileOptions(relPath, {
+                arch,
+                isApp: false,
+              });
+
+              // Since this file was not explicitly added with
+              // api.addFiles, it should not be evaluated eagerly.
+              fileOptions.lazy = true;
+
+              sources.push(relPathToSourceObj[relPath] = {
+                relPath,
+                fileOptions,
+              });
+            }
+          });
+
+          return result;
         },
         declaredExports: api.exports[arch],
         watchSet: watchSet
