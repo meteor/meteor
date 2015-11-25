@@ -104,7 +104,7 @@ You can see from this example, that with relatively little code we've managed to
 
 Now we have a schema, how do we use it?
 
-The straightforward way to use a schema is by using the `check` package. We can write:
+It's pretty straightforward to validate a document with a schema. We can write:
 
 ```js
 const list = {
@@ -112,7 +112,7 @@ const list = {
   incompleteCount: 3
 };
 
-check(list, Lists.schema);
+Lists.schema.validate(doc);
 ```
 
 In this case, as the list is valid according to the schema, the `check()` line will run without problems. If however, we wrote:
@@ -124,16 +124,16 @@ const list = {
   madeUpField: 'this should not be here'
 };
 
-check(list, Lists.schema);
+Lists.schema.validate(doc);
 ```
 
-// XXX: this isn't actually the case yet. Change this unless we update simple schema to do so..
+// XXX: this isn't actually the case yet. We are waiting on https://github.com/meteor/method/issues/4
 
-Then the `check()` call will throw a `Meteor.ValidationError` which contains details about what is wrong with the `list` document.
+Then the `validate()` call will throw a `ValidationError` which contains details about what is wrong with the `list` document.
 
-### The `Meteor.ValidationError`
+### The `ValidationError`
 
-What is a [`Meteor.ValidationError`](https://github.com/tmeasday/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the "Methods and Forms" article, we'll see more about how this works.
+What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the "Methods and Forms" article, we'll see more about how this works.
 
 ## Designing your data schama
 
@@ -185,8 +185,6 @@ Lists.attachSchema(Lists.schema);
 What this means is that now every time we call `Lists.insert()`, `Lists.update()`, `Lists.upsert()`, first our document or modifier will be checked against the schema (in subtly different ways depending on the exact mutator). 
 
 ### Using `defaultValue` and cleaning
-
-// XXX: do we actually like this?
 
 One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) amd removing attributes not in the schema.
 
