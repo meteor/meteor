@@ -159,7 +159,7 @@ selftest.define("change cordova plugins", ["cordova"], function () {
 
   // Introduce an error.
   s.cp('packages/contains-cordova-plugin/package3.js', 'packages/contains-cordova-plugin/package.js');
-  run.match("exact version");
+  run.match("valid version");
 
   // Fix the error.
   s.cp('packages/contains-cordova-plugin/package2.js', 'packages/contains-cordova-plugin/package.js');
@@ -191,7 +191,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.expectExit(0);
 
   run = s.run("add", "cordova:cordova-plugin-file");
-  run.matchErr("exact version");
+  run.matchErr("valid version");
   run.expectExit(1);
 
   // The current behavior doesn't fail if a plugin is not in the registry until
@@ -258,7 +258,7 @@ selftest.define("add cordova plugins", ["slow", "cordova"], function () {
   run.expectExit(0);
 
   run = s.run("add", "cordova:com.example.plugin@file://");
-  run.matchErr("exact version");
+  run.matchErr("valid version");
   run.expectExit(1);
 
   run = s.run("add", "cordova:com.example.plugin@file://../../plugin_directory");
