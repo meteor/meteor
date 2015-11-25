@@ -1892,7 +1892,7 @@ main.registerCommand({
 
       const newId = cordova.newPluginId(id);
 
-      if (!(version && utils.isExactVersion(version, {forNpm: false}))) {
+      if (!(version && utils.isValidVersion(version, {forNpm: false}))) {
         Console.error(`${id}: Meteor requires either an exact version \
 (e.g. ${id}@1.0.0), a Git URL with a SHA reference, or a local path.`);
         exitCode = 1;
