@@ -361,11 +361,14 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
-      // By default, use fileOptions for the `bare` option but also allow
-      // overriding it with the options
-      var bare = fileOptions.bare;
-      if (options.hasOwnProperty("bare")) {
-        bare = options.bare;
+      const fileOptions = self.inputResource.fileOptions;
+
+      function getOption(name) {
+        // By default, use fileOptions for these options but also allow
+        // overriding them with the options.
+        return _.has(options, name)
+          ? options.name
+          : fileOptions && fileOptions[name];
       }
 
       var data = new Buffer(
@@ -384,7 +387,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        bare: !! bare
+        lazy: !! getOption("lazy"),
+        bare: !! getOption("bare"),
       });
     },
 
