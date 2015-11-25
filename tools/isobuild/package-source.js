@@ -831,7 +831,6 @@ _.extend(PackageSource.prototype, {
        *   1. Version numbers in string form
        *   2. Http(s) URLs to a git commit by SHA.   
        *   3. Git URLs in the format described [here](https://docs.npmjs.com/files/package.json#git-urls-as-dependencies)
-       *   4. Absolute file:// paths
        *
        * Https URL example:
        *
