@@ -477,36 +477,43 @@ exports.isUrlWithFileScheme = function (x) {
 };
 
 exports.isUrlWithSha = function (x) {
-  // For now, just support http/https, which is at least less restrictive than
-  // the old "github only" rule.
+  // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
+  // a URL like isNpmUrl(), there are a variety of problems with this, 
+  // see https://github.com/meteor/meteor/pull/5562
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+}
+
+exports.isNpmUrl = function (x) {
+  // These are the various protocols that NPM supports, which we use to download NPM dependencies
+  // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
+  return exports.isUrlWithSha(x) || /^(git|git\+ssh|git\+http|git\+https)?:\/\//.test(x);
 };
 
 exports.isPathRelative = function (x) {
   return x.charAt(0) !== '/';
 };
 
-// If there is a version that isn't exact, throws an Error with a
+// If there is a version that isn't valid, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-exports.ensureOnlyExactVersions = function (dependencies) {
+exports.ensureOnlyValidVersions = function (dependencies, {forCordova}) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (! exports.isExactVersion(version)) {
+    if (! exports.isValidVersion(version, {forCordova})) {
       throw new Error(
-        "Must declare exact version of dependency: " + name + '@' + version);
+        "Must declare valid version of dependency: " + name + '@' + version);
     }
   });
 };
-exports.isExactVersion = function (version) {
-  return semver.valid(version) || exports.isUrlWithSha(version)
-    || exports.isUrlWithFileScheme(version);
+exports.isValidVersion = function (version, {forCordova}) {
+  return semver.valid(version) || exports.isUrlWithFileScheme(version)
+    || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
 };
 
 

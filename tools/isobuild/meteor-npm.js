@@ -470,7 +470,7 @@ var getShrinkwrappedDependenciesTree = function (dir) {
 //
 // If more logic is added here, it should probably go in minimizeModule too.
 var canonicalVersion = function (depObj) {
-  if (utils.isUrlWithSha(depObj.from)) {
+  if (utils.isNpmUrl(depObj.from)) {
     return depObj.from;
   } else {
     return depObj.version;
@@ -500,7 +500,7 @@ var getShrinkwrappedDependencies = function (dir) {
 var installNpmModule = function (name, version, dir) {
   ensureConnected();
 
-  var installArg = utils.isUrlWithSha(version)
+  var installArg = utils.isNpmUrl(version)
     ? version : (name + "@" + version);
 
   // We don't use npm.commands.install since we couldn't figure out
@@ -640,7 +640,7 @@ var minimizeDependencyTree = function (tree) {
     if (module.resolved &&
         !module.resolved.match(/^https:\/\/registry.npmjs.org\//)) {
       version = module.resolved;
-    } else if (utils.isUrlWithSha(module.from)) {
+    } else if (utils.isNpmUrl(module.from)) {
       version = module.from;
     } else {
       version = module.version;
