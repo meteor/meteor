@@ -3,6 +3,7 @@ var sourcemap = require('source-map');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch.js');
 var Profile = require('../tool-env/profile.js').Profile;
+import assert from 'assert';
 import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import files from '../fs/files.js';
@@ -152,9 +153,6 @@ _.extend(Module.prototype, {
     // Find the maximum line length.
     var sourceWidth = _.max([68, self.maxLineLength(120 - 2)]);
 
-    // Prologue
-    var chunks = [];
-
     const result = {
       // This object will be populated with .source, .servePath,
       // .sourceMap, and (optionally) .exportsName properties before being
@@ -162,93 +160,16 @@ _.extend(Module.prototype, {
       servePath: self.combinedServePath,
     };
 
+    // An array of strings and SourceNode objects.
+    let chunks = [];
+
     // Emit each file
     if (self.useMeteorInstall) {
-      const tree = {};
-
-      _.each(self.files, function (file) {
-        if (file.bare) {
-          // Bare files will be added in between the synchronous require
-          // calls below.
-          return;
-        }
-
-        if (file.lazy && ! file.imported) {
-          // If the file is not eagerly evaluated, and no other files
-          // import or require it, then it need not be included in the
-          // bundle.
-          return;
-        }
-
-        const parts = file.installPath.split("/");
-        let t = tree;
-        _.each(parts, function (part, i) {
-          const isLastPart = i === parts.length - 1;
-          t = _.has(t, part)
-            ? t[part]
-            : t[part] = isLastPart ? file : {};
-        });
-      });
-
-      let moduleCount = 0;
-
-      function walk(t) {
-        if (t instanceof File) {
-          ++moduleCount;
-          chunks.push(t.getPrelinkedOutput({
-            sourceWidth,
-            noLineNumbers: self.noLineNumbers
-          }));
-        } else if (_.isObject(t)) {
-          chunks.push("{");
-          const keys = _.keys(t);
-          _.each(keys, (key, i) => {
-            chunks.push(JSON.stringify(key), ":");
-            walk(t[key]);
-            if (i < keys.length - 1) {
-              chunks.push(",");
-            }
-          });
-          chunks.push("}");
-        }
-      }
-
-      const chunksLengthBeforeWalk = chunks.length;
-
-      // The tree of nested directories and module functions built above
-      // allows us to call meteorInstall just once to install everything.
-      chunks.push("var require = meteorInstall(");
-      walk(tree);
-      chunks.push(");");
-
-      if (moduleCount === 0) {
-        // If no files were actually added to the chunks array, roll back
-        // to before the `var require = meteorInstall(` chunk.
-        chunks.length = chunksLengthBeforeWalk;
-      }
-
-      // Now that we have installed everything in this package or
-      // application, immediately require the non-lazy modules and
-      // evaluate the bare files.
-      _.each(self.files, file => {
-        if (file.bare) {
-          chunks.push("\n", file.getPrelinkedOutput({
-            sourceWidth,
-            noLineNumbers: self.noLineNumbers
-          }));
-        } else if (moduleCount > 0 && ! file.lazy) {
-          if (file.mainModule) {
-            result.exportsName = "exports";
-          }
-
-          chunks.push(
-            file.mainModule ? "\nvar " + result.exportsName + " = " : "\n",
-            "require(",
-            JSON.stringify("./" + file.installPath),
-            ");"
-          );
-        }
-      });
+      const tree = self._buildModuleTree();
+      const moduleCount =
+        self._chunkifyModuleTree(tree, chunks, sourceWidth);
+      result.exportsName =
+        self._chunkifyEagerRequires(chunks, moduleCount, sourceWidth);
 
     } else {
       _.each(self.files, function (file) {
@@ -283,7 +204,131 @@ _.extend(Module.prototype, {
     );
 
     return [result];
-  })
+  }),
+
+  // Builds a tree of nested objects where the properties are names of
+  // files or directories, and the values are either nested objects
+  // (representing directories) or File objects (representing modules).
+  // Bare files and lazy files that are never imported are ignored.
+  _buildModuleTree() {
+    assert.ok(this.useMeteorInstall);
+
+    const tree = {};
+
+    _.each(this.files, function (file) {
+      if (file.bare) {
+        // Bare files will be added in between the synchronous require
+        // calls in _chunkifyEagerRequires.
+        return;
+      }
+
+      if (file.lazy && ! file.imported) {
+        // If the file is not eagerly evaluated, and no other files
+        // import or require it, then it need not be included in the
+        // bundle.
+        return;
+      }
+
+      const parts = file.installPath.split("/");
+      let t = tree;
+      _.each(parts, function (part, i) {
+        const isLastPart = i === parts.length - 1;
+        t = _.has(t, part)
+          ? t[part]
+          : t[part] = isLastPart ? file : {};
+      });
+    });
+
+    return tree;
+  },
+
+  // Takes the tree generated by _buildModuleTree and populates the chunks
+  // array with strings and SourceNode objects that can be combined into a
+  // single SourceNode object. Returns the count of modules in the tree.
+  _chunkifyModuleTree(tree, chunks, sourceWidth) {
+    const self = this;
+
+    assert.ok(self.useMeteorInstall);
+    assert.ok(_.isArray(chunks));
+    assert.ok(_.isNumber(sourceWidth));
+
+    let moduleCount = 0;
+
+    function walk(t) {
+      if (t instanceof File) {
+        ++moduleCount;
+        chunks.push(t.getPrelinkedOutput({
+          sourceWidth,
+          noLineNumbers: self.noLineNumbers
+        }));
+      } else if (_.isObject(t)) {
+        chunks.push("{");
+        const keys = _.keys(t);
+        _.each(keys, (key, i) => {
+          chunks.push(JSON.stringify(key), ":");
+          walk(t[key]);
+          if (i < keys.length - 1) {
+            chunks.push(",");
+          }
+        });
+        chunks.push("}");
+      }
+    }
+
+    const chunksLengthBeforeWalk = chunks.length;
+
+    // The tree of nested directories and module functions built above
+    // allows us to call meteorInstall just once to install everything.
+    chunks.push("var require = meteorInstall(");
+    walk(tree);
+    chunks.push(");");
+
+    if (moduleCount === 0) {
+      // If no files were actually added to the chunks array, roll back
+      // to before the `var require = meteorInstall(` chunk.
+      chunks.length = chunksLengthBeforeWalk;
+    }
+
+    return moduleCount;
+  },
+
+  // Adds require calls to the chunks array for all modules that should be
+  // eagerly evaluated, and also includes bare files in the appropriate
+  // order with respect to the require calls. Returns the name of the
+  // variable that holds the main exports object, if api.mainModule was
+  // used to define a main module.
+  _chunkifyEagerRequires(chunks, moduleCount, sourceWidth) {
+    assert.ok(_.isArray(chunks));
+    assert.ok(_.isNumber(moduleCount));
+    assert.ok(_.isNumber(sourceWidth));
+
+    let exportsName;
+
+    // Now that we have installed everything in this package or
+    // application, immediately require the non-lazy modules and
+    // evaluate the bare files.
+    _.each(this.files, file => {
+      if (file.bare) {
+        chunks.push("\n", file.getPrelinkedOutput({
+          sourceWidth,
+          noLineNumbers: this.noLineNumbers
+        }));
+      } else if (moduleCount > 0 && ! file.lazy) {
+        if (file.mainModule) {
+          exportsName = "exports";
+        }
+
+        chunks.push(
+          file.mainModule ? "\nvar " + exportsName + " = " : "\n",
+          "require(",
+          JSON.stringify("./" + file.installPath),
+          ");"
+        );
+      }
+    });
+
+    return exportsName;
+  }
 });
 
 // Given 'symbolMap' like {Foo: 's1', 'Bar.Baz': 's2', 'Bar.Quux.A': 's3', 'Bar.Quux.B': 's4'}
