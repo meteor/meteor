@@ -357,16 +357,29 @@ class File {
     this.cacheable = true;
   }
 
+  // XXX Duplicate of a function in webapp_server.js.
+  getUrlPrefixForArch(arch) {
+    // XXX we rely on the fact that arch names don't contain slashes
+    // in that case we would need to uri escape it
+
+    // We add '__' to the beginning of non-standard archs to "scope" the url
+    // to Meteor internals.
+    return arch === 'web.browser' ?
+      '' : '/' + '__' + arch.replace(/^web\./, '');
+  }
+
   // Given a relative path like 'a/b/c' (where '/' is this system's
   // path component separator), produce a URL that always starts with
   // a forward slash and that uses a literal forward slash as the
   // component separator.
-  setUrlFromRelPath(relPath) {
+  setUrlFromRelPath(relPath, arch) {
     var url = relPath;
 
     if (url.charAt(0) !== '/') {
       url = '/' + url;
     }
+
+    url = this.getUrlPrefixForArch(arch) + url;
 
     // XXX replacing colons with underscores as colon is hard to escape later
     // on different targets and generally is not a good separator for web.
@@ -767,7 +780,7 @@ class Target {
         f.setTargetPathFromRelPath(relPath);
 
         if (isWeb) {
-          f.setUrlFromRelPath(resource.servePath);
+          f.setUrlFromRelPath(resource.servePath, this.arch);
         } else {
           unibuildAssets[resource.path] = resource.data;
         }
@@ -799,7 +812,7 @@ class Target {
           f.setTargetPathFromRelPath(relPath);
 
           if (isWeb) {
-            f.setUrlFromRelPath(resource.servePath);
+            f.setUrlFromRelPath(resource.servePath, this.arch);
           }
 
           if (resource.type === 'js' && isOs) {
@@ -924,7 +937,7 @@ class Target {
         }
 
         if (file.path) {
-          newFile.setUrlFromRelPath(file.path);
+          newFile.setUrlFromRelPath(file.path, this.arch);
           newFile.targetPath = file.path;
         } else {
           newFile.setUrlToHash('.js', '?meteor_js_resource=true');
@@ -1105,7 +1118,7 @@ class ClientTarget extends Target {
         }
 
         if (file.path) {
-          newFile.setUrlFromRelPath(file.path);
+          newFile.setUrlFromRelPath(file.path, this.arch);
           newFile.targetPath = file.path;
         } else {
           newFile.setUrlToHash('.css', '?meteor_css_resource=true');

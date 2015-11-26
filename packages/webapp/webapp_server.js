@@ -422,6 +422,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 };
 
+// XXX Duplicate of a function in bundler.js.
 var getUrlPrefixForArch = function (arch) {
   // XXX we rely on the fact that arch names don't contain slashes
   // in that case we would need to uri escape it
