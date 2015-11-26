@@ -5,7 +5,7 @@ title: User Interfaces and User Experience
 After reading this guide, you'll know:
 
 1. How to build re-usable client side components in any templating language
-2. How to build a styleguide to allow you to visually test such components
+2. How to build a styleguide to allow you to visually test such pure components
 3. Patterns for building front end components in a performant way in Meteor
 4. How to design responsively across device sizes, accessibly for different users, and universally across languages.
 5. How to build components that can cope with a variety of different data sources
@@ -63,6 +63,27 @@ A typical use case for a smart component is the "page" component that the router
   {{/each}}
 </template>
 ```
+
+## Visually testing pure components
+
+A useful property of pure components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _styleguide_ or harness.
+
+A styleguide consists of two parts:
+
+1. A list of "entries"---a component coupled with a list of specifications; basically a list of different arguments that the component expects which trigger different behaviour.
+
+2. A special route in the development version of the application that renders one or more components with one or more of the specificiations.
+
+For instance, in Galaxy, we have a component styleguide that renders each pure component either one specification at a time, or with all specifications at once. 
+
+[ss]
+
+Such rendering enables very quick development of visual aspects of the component in all possible states. Typically in a complex application, it can be quite difficult to achieve certain states of components purely by "using" the application. For example, in Galaxy, the component screen enters quite a complex state if two deploys to the same application are happening simutaneously. This is a very hard to state to reach for a extended period of time if you are simply using the application!
+
+[ss]
+
+XXX: could say a lot more about this, but I feel like we might just blog about it / do a whole article on it's own once we've had a chance to release some code.
+
 
 # UI / UX
 
