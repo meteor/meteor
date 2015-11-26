@@ -398,7 +398,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   } else if (info.type === "json") {
     res.setHeader("Content-Type", "application/json; charset=UTF-8");
     // XXX if it is a manifest we are serving, set additional headers
-    if (/\/manifest.json$/.test(pathname)) {
+    if (/\/manifest\.json$/.test(pathname)) {
       res.setHeader("Access-Control-Allow-Origin", "*");
     }
   }
@@ -502,7 +502,7 @@ var runWebAppServer = function () {
 
         // Serve the program as a string at /foo/<arch>/manifest.json
         // XXX change manifest.json -> program.json
-        staticFiles[path.join(urlPrefix, 'manifest.json')] = {
+        staticFiles[path.join(urlPrefix, getItemPathname('/manifest.json'))] = {
           content: JSON.stringify(program),
           cacheable: true,
           type: "json"
