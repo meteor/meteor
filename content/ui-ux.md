@@ -17,13 +17,52 @@ Regardless of the rendering library that you are using, there are some patterns 
 
 In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more modular like a component which has an API, rather than a template which is usually seen in a looser way.
 
-To begin with, let's consider two categories of components that are useful to keep in mind
+To begin with, let's consider two categories of components that are useful to think about:
 
 ### Pure Components
 
-A "pure" component is a component which doesn't rely on anything apart from it's inputs (it's )
+A "pure" component is a component which doesn't rely on anything apart from it's inputs (it's *template arguments* in Blaze, or *props* in React) to render. 
 
+In Meteor, specifically this means a component which does not access data from any global sources (typically either Collections or Stores). For instance, in the Todos example app, the `todosItem` template takes in the todo that it is rendering and does not ever look directly in the `Todos` collection.
 
+The advantages of pure components are the following:
+
+ 1. They are easy to reason about---you don't need to understand how the data in the global store changes, simply how the arguments to the component change.
+
+ 2. They are easy to test---you don't need to be careful about the environment you render them in, all you need to do is provide the right arguments.
+
+ 3. They are easy to styleguide---as we'll see in the next section, when styleguiding components, a clean environment makes things much easier to work with.
+
+ 4. They are a lot more flexible, and thus can be re-used without requiring re-working.
+
+ ### Global Data stores
+
+ So which are the global data stores that you should be avoiding in pure components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in pure ones:
+
+  - Your collections, as well as the `Meteor.users` collection,
+  - Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
+  - Current route information
+  - Any other client-side data stores (see XXX not sure which article? maybe this one)
+
+### Smart Components
+
+Of course sometimes you do need to access the global data sources to feed data into your application. We call components that need to access data "smart". Such components typically the following things
+
+ 1. Subscribe to data, using subscriptions.
+ 2. Fetch data from those subscriptions.
+ 3. Fetch global client-side state from stores such as the Router, Accounts, and your own stores.
+
+Ideally, once a smart component has assembled such a set of data, it passes it off to a pure component child to render with. The smart component actually does not render anything apart from one or more pure children.
+
+A typical use case for a smart component is the "page" component that the router points you to when you access a URL. Such a component typically needs to do the three things above and then can pass the resulting arguments into child components. In the Todos example app, the `listShowPage` does exactly this, with a resultingly simple template:
+
+```
+<template name="listsShowPage">
+  {{#each listIdArray}}
+    {{> listsShow todosReady=Template.subscriptionsReady list=list}}
+  {{/each}}
+</template>
+```
 
 # UI / UX
 
