@@ -230,23 +230,206 @@ This is one reason why being able to achieve any state at will in the component 
 
 ### Pagination
 
-### Latency compensation
+In the {% page_link data-loading 'Data Loading' %} we discuss a pattern of paging through an "infinite scroll" type subscription which increases one page at a time as a user steps through data in your application. It's interesting to consider UX patterns to both consume that data and indicate what's happening to the user.
 
-7. Pagination + Listing data
-  1. A list component pattern
-    1. What are the properties we need to render all the cases we care about?
-    2. Using the styleguide to mock out these states
-  2. A pagination "controller" pattern (see data loading chapter for details around subscriptions)
-  3. Dealing with new data (see 9.2 and 8.3)
-    1. Display a "something's changed" indicater to rendered 
-      1. Using a local collection to store "rendered" data, and a function to re-sync
-    2. Calling out data as it appears (see animations).
-    3. Link to Dom's design for realtime post
-8. Latency compensation + reactivity
-  1. Deciding if something is "likely" to go wrong (i.e. do we route *before* the method returns? If so what happens if it fails?)
-  2. Attaching client-side properties to LC-ed documents ("pending").
-  3. Thinking about what happens if the data changes under you (what if the object is deleted?)
-  4. Using a "flash-notifications" pattern to call out "out-of-band" information
+#### A list component
+
+Let's consider any generic item-listing component. To fix on a concrete example, we could consider the todo list in the Todos example app. Although it does not, it certainly could paginate through the todos for a given list.
+
+There are a variety of states that such a list can be in:
+
+ 1. Initially loading, no data available yet.
+ 2. Showing a subset of the items with more available.
+ 3. Showing a subset of the items with more loading.
+ 4. Showing *all* the items.
+ 5. Showing *no* items because none exist.
+
+It's instructive to think about what arguments such a component would need to differentiate between those five states. Let's consider a generic pattern that would work in all cases where we provide the following information:
+
+ - A `count` of the total number of items.
+ - A `countReady` boolean that indicates if we know that count yet (remember we need to load even that information).
+ - A number of items that we have `requested`.
+ - A list of `items` that we currently know about.
+
+We can now distinguish between the 5 states above based on these flags:
+
+1. If `countReady` is false, or `count > 0` and `items` is still empty. (These are actually two different states, but doesn't seem important to visually separate them).
+2. If `items.length === requested` but `count > requested`.
+3. If `0 < items.length < requested`.
+4. If `items.length === requested === count > 0`
+5. If `items.length === requested === count === 0`
+
+You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component styleguide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our styleguide for each of the lists of our app and we can ensure all work as expected and appear correctly:
+
+[ss]
+
+#### A pagination "controller" pattern
+
+A list is also a good opportunity to understand the benefits of the smart vs pure component split. We've seen above that correctly rendering and visualising all the possible states of a list is non-trivial and is made much easier by having a pure list component that takes all the required information in as arguments.
+
+However, we still need to subscribe to the list of items and the count, and collect that data somewhere. To do this, it's sensible to use a smart wrapper component (sort of analogous to an MVC "controller") who's job it is to subscribe and fetch the relevant data.
+
+In the Todos example app, we already have a wrapping component for the list that talks to the router and sets up subscriptions. This component could easily be extended to understand pagination:
+
+```js
+const PER_PAGE = 10;
+
+Template.listsShowPage.onCreated(function() {
+  this.state = new ReactiveDict();
+  this.autorun(() => {
+    this.state.set('listId', FlowRouter.getParam('_id'));
+    this.subscribe('list/todos', this.state.get('listId'), this.state.get('requested'));
+    this.countSub = this.subscribe('list/todoCount', this.state.get('listId'));
+  });
+  this.onNextPage = () => {
+    this.state.set('requested', this.state.get('requested') + PER_PAGE);
+  };
+});
+
+Template.listsShowPage.helpers({
+  listShowArguments() {
+    const instance = Template.instance();
+    const listId = instance.state.get('listId');
+    const list = Lists.findOne(listId);
+    const requested = instance.state.get('requested');
+    return {
+      list,
+      todos: list.todos({}, {limit: requested}),
+      requested,
+      countReady: instance.countSub.ready(),
+      count: Counts.get(`list/todoCount${listId}`),
+      onNextPage: instance.onNextPage
+    };
+  }
+});
+```
+
+#### UX patterns for displaying new data
+
+An interesting UX challenge in a realtime system like Meteor involves how to bring new information (like changing data in a list) to the user's attention. As [Dominic](http://blog.percolatestudio.com/design/design-for-realtime/) points out, it's not always a good idea to simply update the contents of a list as quickly as possible as it's easy to miss changes or get confused about what's happened.
+
+One solution to this problem is to *animate* list changes (which we'll look at below), but this isn't always the best approach. For instance, if a user is reading a list of comments, they may not want to see any changes until they are done with their current reading.
+
+An option in this case is to call out that there are changes to the data the user is looking at without actually making UI updates. Of course with a reactive across the board system like Meteor, it isn't necessarily easy to stop such changes from happening! 
+
+However, it is possible to do this thanks to our split between smart and pure components. The pure component simply renders what it's given, so we use our smart component to control that information. We can use a *Local Collection* to store the rendered data, and then push data into it when the user requests:
+
+```js
+Template.listsShowPage.onCreated(function() {
+  ...
+
+  this.visibleTodos = new Mongo.Collection();
+
+  this.getTodos = () => {
+    const list = Lists.findOne(this.state.get('listId'));
+    return list.todos({}, {limit: instance.state.get('requested')});
+  };
+  this.syncTodos = (todos) => {
+    todos.forEach(todo => this.visibleTodos.insert(todo));
+    this.state.set('hasChanges', false);
+  };
+  this.onShowChanges = () => {
+    this.syncTodos(this.getTodos());
+  };
+
+  this.autorun((computation) => {
+    const todos = this.getTodos();
+
+    // if this autorun re-runs, the list or set of todos much have changed
+    if (!computation.firstRun) {
+      this.state.set('hasChanges', true);
+    } else {
+      this.syncTodos(todos);
+    }
+  });
+});
+
+Template.listsShowPage.helpers({
+  listShowArguments() {
+    const instance = Template.instance();
+    const listId = instance.state.get('listId');
+    const list = Lists.findOne(listId);
+    const requested = instance.state.get('requested');
+    return {
+      list,
+      todos: instance.visibleTodos.find({}, {limit: requested}),
+      requested,
+      countReady: instance.countSub.ready(),
+      count: Counts.get(`list/todoCount${listId}`),
+      onNextPage: instance.onNextPage,
+      hasChanges: instance.state.get('hasChanges'),
+      onShowChanges:instance.onShowChanges
+    };
+  }
+});
+```
+
+The pure sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
+
+### Optimisitic UI
+
+Another UX pattern which is worth thinking about in Meteor and which isn't necessarily something that comes up in other frameworks is how to approach optimistic UI. Optimistic UI is the process of showing user-generated changes in the UI without waiting for the server to acknowledge that the change has succeeded (thus the "optimism"). It is a cruicial feature of Meteor to allow you to build your UIs in this kind of way.
+
+However, it's not *always* necessarily a good idea to be optimistic. Sometimes we may actually want to wait for the server's response. For instance, when a user is logging in, you *have* to wait for the server to check the password is correct before you can start allowing them into the site.
+
+So when should you wait for the server and when not? It basically comes down to how optimistic you are; how likely it is something go wrong. In the case of a password, you really can't tell on the client, so you need to be conservative. In other cases, you can be pretty confident that the method call will succeed, and so you can move on. 
+
+For instance, in the Todos example app, when creating a new list, it's hard to imagine what could go wrong on the server, so we write:
+
+```js
+Template.appBody.events({
+  'click .js-new-list'() {
+    const listId = Lists.methods.insert.call((err) => {
+      if (err) {
+        // At this point, we have already redirected to the new list page, but
+        // for some reason the list didn't get created. This should almost never
+        // happen, but it's good to handle it anyway.
+        FlowRouter.go('home');
+        alert('Could not create list.');
+      }
+    });
+
+    FlowRouter.go('listsShow', { _id: listId });
+  }
+});
+```
+
+By placing the `FlowRouter.go('listsShow')` outside of the callback of the Method call (which happens once the server has finished), we ensure that it runs right away. So first we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice), or in the unlikely event that it 
+fails, we show an error and redirect back to the homepage.
+
+### Indicating when a write has succeeded
+
+Sometimes the user may be interested to know when the update has hit the server. For instance, in a chat application, it's a typical pattern to optimistically display the message in the chat log, bit indicate that it is "pending" until the server has acknowledged the write. We can do this easily in Meteor by simply modifying the Method to act differently on the client:
+
+```js
+Messages.methods.insert = new Method({
+  name: 'Messages.methods.insert',
+  schema: new SimpleSchema({
+    text: {type: String}
+  }),
+  run(message) {
+    // In the simulation (on the client), we add an extra pending field. 
+    // It will be removed when the server comes back with the "true" data.
+    if (this.isSimulation) {
+      message.pending = true;
+    }
+
+    Messages.insert(message);
+  }
+})
+```
+
+Of course in this scenario, you also need to be prepared for the server to fail, and again, indicate it to the user somehow.
+
+### Unexpected failures
+
+We've seen examples above of failures which you don't really anticipate will happen. It's difficult to program fully defensively and cover off every situation, however unlikely. However, there are some catchall patterns that you can use for failures that are truly unexpected.
+
+Thanks to Meteor's automatic handling of optimistic UI, usually if a method unexpectedly fails your Minimongo database will end up in a consistent state, and if you are rendering directly from it, the user should see something that makes sense (even if it's not what they anticipated of course!). In some cases, you may need to make changes to local state (like the routing that we did in the new list example able) to reflect this.
+
+However, it's a terrible UX to simply jump the user to an unexpected state without explaining what's happened. We used a `alert()` above, which is a pretty poor option, but gets the job done. One better approach is to indicate changes via a "flash notification", which is a UI element that's displayed "out-of-band", typically in the top right of the screen, given the user *some* indication of what's happened.
+
+[ss of galaxy]
 
 
 ## Animation
