@@ -434,9 +434,81 @@ However, it's a terrible UX to simply jump the user to an unexpected state witho
 
 ## Animation
 
+Animation is the process indicating changes in the UI *over time* rather than *instantly*. Although animation is often seen as "window dressing" or ostentatiousness, in fact it serves a very important purpose, highlighted by the example of the changing list above. In a connected-client world where changes in the UI aren't always initiated by user action (i.e. sometimes they happen as a result of the server sending changes made by other users), instant changes rarely make for a comprehendable or pleasing interaction.
 
-# UI / UX
-9. Animation
-  1. Animating attributes changing (velocity-react, not sure of a good Blaze lib)
-  2. Animating things appearing + disappearing (velocity-react, momentum)
-  3. Animating page changes (complexities around subscriptions, etc)
+### Animating changes in visiblity
+
+Probably the most fundamental type of UI change that requires animation is when items appear or disappear. In Blaze, we can use the [`percolate:momentum`](https://atmospherejs.com/percolate/momentum) to plug a standard set of animations from the [`velocity`](http://julian.com/research/velocity/) into such state changes.
+
+A good example of this is the editing state of the list from the Todos example app:
+
+```blaze lists-show.js
+{{#momentum plugin="fade"}}
+  {{#if instance.state.get 'editing'}}
+    <form class="js-edit-form list-edit-form">...</form>
+  {{else}}
+    <div class="nav-group">...</div>
+  {{/if}}
+{{/momentum}}
+```
+
+Momentum acts by defining the way that child HTML elements appear an disappear. In this case, when the list component goes into the `editing` state, the `.nav-group` disappears, and the `form` appears. Momentum takes care of the job of making sure that both items fade an the change is made a lot clearer.
+
+### Animating changes to attributes
+
+Another common type of animation is when an attribute of an element changes. For instance, a button may change color when you click on it. These type of animations are easiest achieved with [CSS transitions](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_Transitions/Using_CSS_transitions), as for example with the link in the Todos example app:
+
+```less
+a {
+  transition: all 200ms ease-in;
+  color: @color-secondary;
+  cursor: pointer;
+  text-decoration: none;
+
+  &:hover { color: darken(@color-primary, 10%); }
+  &:active { color: @color-well; }
+  &:focus { outline:none; } //removes FF dotted outline
+}
+```
+
+### Animating page changes
+
+Finally, it's common to animate when the user switches between routes of the application. Especially in mobile, this adds a sense of navigation to the app via positioning pages relative to each other. This can be done in a similar way to animating things appearing and disappearing (after all one page is appearing and other is disappearing), but there are some tricks that are worth being aware of.
+
+Let's consider the case of the Todos example app. Here we do a similar thing to achieve animation between pages, by using Momentum in the main layout template:
+
+```blaze
+{{#momentum plugin="fade"}}
+  {{#if Template.subscriptionsReady}}
+    {{> Template.dynamic template=main}}
+  {{else}}
+    {{> appLoading}}
+  {{/if}}
+{{/momentum}}
+```
+
+The primary issue is that the rendering system may prefer to simply change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze would try to simply re-render the `listsShow` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that we want to avoid here! However, we want to make sure this *only* happens when the `listId` changes and not on other reactive changes.
+
+To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{{#each}}` helper treats arrays of documents with an `_id` as keyed on `_id`. So we wrap our template in an `{{}}
+
+```blaze
+<template name="listsShowPage">
+  {{#each list in listArray}}
+    {{> listsShow todosReady=Template.subscriptionsReady list=list}}
+  {{/each}}
+</template>
+```
+
+```js
+Template.listsShowPage.helpers({
+  // We use #each on an array of one item so that the "list" template is
+  // removed and a new copy is added when changing lists, which is
+  // important for animation purposes. #each looks at the _id property of it's
+  // items to know when to insert a new item and when to update an old one.
+  listArray() {
+    const instance = Template.instance();
+    const list = Lists.findOne(instance.state.get('listId'));
+    return [list];
+  }
+});
+```
