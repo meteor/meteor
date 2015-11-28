@@ -8,7 +8,81 @@ After reading this guide, you'll know:
 2. How to define client and server routes for your app using Flow Router
 3. How to have your app display different content depending on the URL
 4. How to construct links to routes and go to routes programmatically
-5. How to handle URLs in your app that should only be accessible to certain users
+
+## Client-side Routing
+
+In a web application, _routing_ is the process of using URLs to drive the user interface (UI). URLs are a prominent feature in every single web browser, and have several main functions from the user's point of view:
+
+1. **Bookmarking** - Users can bookmark URLs in their web browser to save content they want to come back to later
+2. **Sharing** - Users can share content with others by sending a link to a certain page
+3. **Navigation** - URLs are used to drive the web browser's back/forward functions
+
+In a traditional web application stack, where the server renders HTML one page at a time, the URL is the fundamental entry point for the user to access the application. Users navigate an application by clicking through URLs, which are sent to the server via HTTP, and the server responds appropriately via a server-side router.
+
+In contrast, Meteor operates on the principle of _data on the wire_, where the server doesn’t think in terms of URLs or HTML pages. The client application communicates with the server over DDP. Typically as an application loads, it boots up with a series of _subscriptions_ which fetch the data required to render the application. As the user interacts with the application, different subscriptions may load, but there’s no technical need for URLs to be involved in this process.
+
+However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Now that the server is not URL-driven, the URL just becomes a useful representation of the client-side state the user is currently looking at. However, unlike in a server-rendered application, it does not need to describe the entirety of the user’s current state; it simply needs to contain the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
+
+## Using Flow Router
+
+To add routing to your app, install the [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) package:
+
+```
+meteor add kadira:flow-router
+```
+
+Flow Router is a community routing package for Meteor. At the time of writing this guide, it is at version 2.x.
+
+- [Flow Router on GitHub](https://github.com/kadirahq/flow-router)
+- [Kadira Meteor routing guide](https://kadira.io/academy/meteor-routing-guide)
+
+### Other options for routing
+
+Flow Router is one of several popular routing packages for Meteor. Another is iron:router. You can search for router on Atmosphere to find more. Hopefully, the concepts in this routing guide will be relevant no matter which router you use, as long as it provides basic functions for URL management.
+
+## Defining a simple route
+
+The basic purpose of a router is to match certain URLs and perform actions as a result. This all happens on the client side, in the app user's browser. Let's take an example from the Todos example app:
+
+```js
+FlowRouter.route('/lists/:_id', {
+  name: 'listsShow',
+  action: () => {
+    BlazeLayout.render('appBody', {main: 'listsShowPage'});
+  }
+});
+```
+
+This route handler will run in two situations: if the page loads initially at a URL that matches the URL pattern, and if the URL changes to one that matches the pattern while the page is open. Note that, unlike in a server-side-rendered app, the URL can change without any additional requests to the server.
+
+When the route is matched, the `action` method executes, and you can perform any actions you need to. The `name` property of the route is optional, but will let us refer to this route more conveniently later on.
+
+### URL pattern matching
+
+Consider the following URL pattern, used in the code snippet above:
+
+```js
+'/lists/:_id'
+```
+
+The above pattern will match certain URLs. You may notice that part of the URL is prefixed by `:` - this means that it is a *url parameter*, and will match any string that is present in that segment of the path. Flow Router will make that part of the URL available as a `param` of the current URL match.
+
+Additionally, the URL could contain an HTTP [**query string**](https://en.wikipedia.org/wiki/Query_string) (the part after an optional `?`). If so, Flow Router will also split it up into named parameters, which it calls `queryParams`.
+
+
+Here are some example URLs and the resulting `params` and `queryParams`:
+
+| URL           | matches pattern? | params          | queryParams
+| ---- | ---- | ---- | ---- |
+| /             | no | | |
+| /about        | no | | |
+| /lists/        | no | | |
+| /lists/eMtGij5AFESbTKfkT | yes | { _id: "eMtGij5AFESbTKfkT"} |  { }
+| /lists/1 | yes | { _id: "1"} | { }
+| /lists/1?todoSort=top | yes | { _id: "1"} | { todoSort: "top" }
+
+
+Note that all of the values in `params` and `queryParams` are always strings since URLs don't have any way of encoding data types. For example, if you wanted a parameter to represent a number, you might need to use `parseInt(value, 10)` to convert it when you access it.
 
 
 
