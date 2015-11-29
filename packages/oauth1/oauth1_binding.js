@@ -67,6 +67,7 @@ OAuth1Binding.prototype.prepareAccessToken = function(query, requestTokenSecret)
 
   self.accessToken = tokens.oauth_token;
   self.accessTokenSecret = tokens.oauth_token_secret;
+  self.accessTokenRawResponse = tokens;
 };
 
 OAuth1Binding.prototype.call = function(method, url, params, callback) {
