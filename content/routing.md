@@ -48,7 +48,7 @@ The basic purpose of a router is to match certain URLs and perform actions as a 
 FlowRouter.route('/lists/:_id', {
   name: 'listsShow',
   action: () => {
-    BlazeLayout.render('appBody', {main: 'listsShowPage'});
+    console.log("Looking at a list?")
   }
 });
 ```
@@ -84,7 +84,81 @@ Here are some example URLs and the resulting `params` and `queryParams`:
 
 Note that all of the values in `params` and `queryParams` are always strings since URLs don't have any way of encoding data types. For example, if you wanted a parameter to represent a number, you might need to use `parseInt(value, 10)` to convert it when you access it.
 
+## Accessing Route information
 
+Flow Router makes a variety of information available via (reactive and otherwise) functions on the global singleton `FlowRouter` (this is the same object that we attached routes to above). As the user navigates around your app, the values of these functions will change (reactively in some cases) correspondingly.
+
+Like any other global singleton in your application (see the X article for info about stores), it's best to limit your access to `FlowRouter`. That way the parts of your app with remain modular and more independent. In the case of `FlowRouter`, it's best to access it solely from the top of your component hierarchy, either in the "page" component, or the layouts that wrap it (see below).
+
+### The current route
+
+To access the current route, you can use `FlowRouter.current()`. This is a object representing all aspects of the route, and as it changes often it is not reactive. 
+
+Often it's more useful to access just exactly what parts of the route you care about. Here are some useful reactive functions you can call:
+
+* `FlowRouter.getRouteName()` gets the name of the route
+* `FlowRouter.getParam(paramName)` returns the value of a single URL parameter
+* `FlowRouter.getQueryParam(paramName)` returns the value of a single URL query parameter
+
+So in our example of the list page form the Todos app, we access the current list's id with `FlowRouter.getParam('_id')` (we'll see more on this below).
+
+### Highlighting the active route
+
+One situation where it is sensible to access the global `FlowRouter` singleton to access the current route's information deeper in the component hierarchy is when rendering links via a navigation component. It's often required to highlight the "active" route in some way (this is the route or section of the site that the user is currently looking at).
+
+A convenient package for this is [`zimme:active-route`](https://github.com/zimme/meteor-active-route):
+
+```bash
+meteor add zimme:active-route
+```
+
+In the Todos example app, we link to each list the user knows about in the `appBody` template:
+
+```blaze
+{{#each list in lists}}
+  <a class="list-todo {{activeListClass list}}">
+    ...
+
+    {{list.name}}
+  </a>
+{{/each}}
+```
+
+We can determine if the user is currently viewing the list with the `activeListClass` helper:
+
+```js
+Template.appBody.helpers({
+  activeListClass(list) {
+    const active = ActiveRoute.name('listsShow')
+      && FlowRouter.getParam('_id') === list._id;
+
+    return active && 'active';
+  }
+});
+```
+
+
+## Rendering based on the route
+
+```js
+FlowRouter.route('/lists/:_id', {
+  name: 'listsShow',
+  action: () => {
+    BlazeLayout.render('appBody', {main: 'listsShowPage'});
+  }
+});
+```
+
+
+
+
+
+* Getting information about the current route
+    * Be careful about where you do this, the best way is to have the page component and layouts responsible for this
+        * Otherwise, complications can arise when doing transitions between pages, since the parameters are changing
+    * Getting the currently active route
+    * Getting the parameters
+    * Highlighting the currently active route
 
 
 
