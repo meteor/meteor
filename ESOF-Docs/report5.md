@@ -7,6 +7,12 @@
 * Rúben Alexandre da Fonseca Marques, ei10117@fe.up.pt 
 * Nuno Soares Marques, ee11291@fe.up.pt
 
+##TÓPICOS:
+* Identificar uma feature que deva ser evoluida
+* Identificar componentes que implementam essa feature
+* Evoluir a feature, verificando que as restantes funcionalidades não são quebradas
+* Submeter um patch
+
 ## Introdução
 
 ## Referências
