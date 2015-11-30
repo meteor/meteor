@@ -12,7 +12,7 @@
     createSubMenu(activeLink.parentNode, h2s, 2)
     smoothScroll.init({
       speed: 400,
-      offset: 115,
+      offset: window.innerWidth > 560 ? 115 : 55,
       callback: function () {
         scrolling = false
       }
@@ -69,6 +69,7 @@
       setActive(e.target)
     }
     scrolling = true
+    document.body.classList.remove('sidebar-open')
   }
 
   // setup active h3 update
@@ -125,4 +126,13 @@
 
   // search box
   // TODO
+  
+  // mobile
+  document.querySelector('#mobile-header .menu-button')
+    .addEventListener('click', function () {
+      document.body.classList.toggle('sidebar-open')
+    })
+  document.getElementById('mobile-shade').addEventListener('click', function () {
+    document.body.classList.remove('sidebar-open')
+  })
 })()

@@ -1,7 +1,7 @@
 @import './reset.styl'
 @import './fonts.styl'
 
-html, body
+body
   font-family 'Source Sans Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif
   -webkit-font-smoothing antialiased
   -moz-osx-font-smoothing grayscale
@@ -29,7 +29,7 @@ h1, h2, h3, h4, h5, h6
 #sidebar
   background-color #fff
   position fixed
-  z-index 1
+  z-index 2
   top 100px
   left 0
   bottom 0
@@ -37,12 +37,61 @@ h1, h2, h3, h4, h5, h6
   padding 20px 30px
   overflow-x hidden
   overflow-y scroll
+  -webkit-overflow-scrolling touch
+  -ms-overflow-style none
+  &::-webkit-scrollbar
+      width: 0 !important
 
 #content
   padding 20px 30px
+
+#mobile-header
+  z-index 3
+  
+#mobile-shade
+  z-index 1
+  display none
+  pointer-events none
+  opacity 0
+  transition opacity .3s ease
+  position fixed
+  top 0
+  left 0
+  right 0
+  bottom 0
+  background-color rgba(0,0,0,.4)
 
 // components
 @import './header.styl'
 @import './sidebar.styl'
 @import './content.styl'
 @import './syntax.styl'
+
+@media screen and (max-width: 560px)
+  body
+    font-size 14px
+    &.sidebar-open
+      #sidebar
+        transform translate3d(0,0,0)
+      #mobile-shade
+        opacity 1
+        pointer-events auto
+  #header
+    height 40px
+  #top-nav, #site-nav
+    display none
+  #mobile-header
+    display block
+  #wrap
+    padding-top 40px
+    padding-left 0
+  #sidebar
+    top 0
+    left 0
+    padding-top 60px
+    border-right none
+    box-shadow 0 0 4px rgba(0,0,0,.25)
+    transition transform .3s ease
+    transform translate3d(-120%, 0, 0)
+  #mobile-shade
+    display block
