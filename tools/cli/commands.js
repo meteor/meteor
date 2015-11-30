@@ -260,6 +260,7 @@ var runCommandOptions = {
     'raw-logs': { type: Boolean },
     settings: { type: String },
     test: {type: Boolean, default: false},
+    'test-app': { type: Boolean, 'default': false },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -376,6 +377,19 @@ function doRunCommand(options) {
     cordovaRunner: cordovaRunner
   });
 }
+
+///////////////////////////////////////////////////////////////////////////////
+// test
+///////////////////////////////////////////////////////////////////////////////
+
+main.registerCommand(_.extend(
+  { name: 'test-app' },
+  runCommandOptions
+), function (options) {
+  // meteor run --test-app
+  options['test-app'] = true;
+  return doRunCommand(options);
+});
 
 ///////////////////////////////////////////////////////////////////////////////
 // debug
