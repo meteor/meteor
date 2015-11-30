@@ -36,13 +36,31 @@ Environment vars are used to set process specific things, which could conceivabl
 
 A final note on storing these settings: As noted in the {% link_to 'security' 'Security Article' %}, it's not a good idea to store settings in your code repository, instead a more secure place is preferred.
 
+## Deployment errata
 
-2. Other things to consider when deploying
-  1. Domain names
-  2. SSL certificates
-  3. CDNs
-    1. What they are for
-    2. How they are usually used -- e.g. CloudFront (find a useful general article to link to)
+There are some other considerations that you should make before you deploy your application to a production host. Remember that you should if possible do this step for both your production *and* staging environments.
+
+### Domain name
+
+What URL will users use to access your site? You'll probably need to register a domain name with a domain registrar, and setup DNS entries to point to the site (this will depend on how you deploy, see below). If you deploy to the free Meteor servers, you can use a `x.meteor.com` domain while you are testing the app.
+
+### SSL Certificate
+
+It's always a good idea to use SSL for Meteor Applications (see the {% link_to 'security' 'Security Article'} for a discussion of why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain.
+
+### CDN
+
+It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the larger assets in your site (such as JS and CSS files, as well as potentially images) and caches copies of those files in locations that are closer to the location of the user. So for instance, although the actual web server for your application is on the East Coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
+
+There are two ways you can set up your CDN. A simple approach is simply to place the CDN in front of the assets that Meteor knows about. You can use `WebAppInternals.setBundledJsCssPrefix(DNS_HOSTNAME)` to set a prefix that applies to all of the bundled JS and CSS assets that the Meteor app serves. In particular, if you have relative image URLs inside your CSS files, they will also be served from the CDN.
+
+If you are following the above approach, you may also want to manually write out the CDN's hostname whenever you put an image/other asset URL in your application's code, probably via a `image_url()`-style helper.
+
+A second approach is to place the CDN completely in front of your site. In this scenario you point your DNS entry (e.g. `www.example.com`) directly at the CDN, so the initial boilerplate for the Meteor application is proxied by the CDN from a hidden 'real' URL (say `www-backend.example.com`). In this way, any asset referenced in your application will be served by the CDN.
+
+XXX: do we actually know anyone that has done this? What domains are typically used?
+
+
 3. Deployment options
   1. Deploying to .meteor.com via `meteor deploy`.
     1. How to do it
