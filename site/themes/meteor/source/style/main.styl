@@ -61,37 +61,23 @@ h1, h2, h3, h4, h5, h6
   bottom 0
   background-color rgba(0,0,0,.4)
 
+.search-box
+  width 240px
+  outline none
+  font-family 'ProximaNova-Regular'
+  font-size 14px
+  padding 6px 12px 5px 32px
+  border-radius 20px
+  border 1px solid #ddd
+  background url(../images/search.png) 8px 5px no-repeat
+  background-size 20px
+  transition border-color .25s ease
+  &:focus
+    border-color #de4f4f
+
 // components
 @import './header.styl'
 @import './sidebar.styl'
 @import './content.styl'
 @import './syntax.styl'
-
-@media screen and (max-width: 560px)
-  body
-    font-size 14px
-    &.sidebar-open
-      #sidebar
-        transform translate3d(0,0,0)
-      #mobile-shade
-        opacity 1
-        pointer-events auto
-  #header
-    height 40px
-  #top-nav, #site-nav
-    display none
-  #mobile-header
-    display block
-  #wrap
-    padding-top 40px
-    padding-left 0
-  #sidebar
-    top 0
-    left 0
-    padding-top 60px
-    border-right none
-    box-shadow 0 0 4px rgba(0,0,0,.25)
-    transition transform .3s ease
-    transform translate3d(-120%, 0, 0)
-  #mobile-shade
-    display block
+@import './mobile.styl'

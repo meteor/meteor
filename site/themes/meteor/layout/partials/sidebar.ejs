@@ -1,3 +1,12 @@
+<div id="sidebar-mobile">
+  <input class="search-box">
+  <br>
+  <select class="version-select">
+    <% config.versions.forEach(function (v) { %>
+      <option value="v<%- v %>">v<%- v %></option>
+    <% }) %>
+  </select>
+</div>
 <ul class="menu-root">
   <% site.pages.find({}).each(function (p) { %>
     <li>

@@ -1,0 +1,27 @@
+@media screen and (max-width: 560px)
+  body
+    font-size 14px
+    &.sidebar-open
+      #sidebar
+        transform translate3d(0,0,0)
+      #mobile-shade
+        opacity 1
+        pointer-events auto
+  #header
+    height 40px
+  #top-nav, #site-nav
+    display none
+  #mobile-header, #mobile-shade, #sidebar-mobile
+    display block
+  #wrap
+    padding-top 40px
+    padding-left 0
+  #sidebar
+    top 0
+    left 0
+    padding-top 60px
+    border-right none
+    box-shadow 0 0 4px rgba(0,0,0,.25)
+    transition transform .3s ease
+    transform translate3d(-120%, 0, 0)
+    display block
