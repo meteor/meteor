@@ -102,14 +102,17 @@ _.extend(Job.prototype, {
             }
           }
 
-          if (! frame.func && ! where)
-            return; // that's a pretty lame stack frame
+          if (! frame.func && ! where) {
+            // that's a pretty lame stack frame
+            return;
+          }
 
           line += "  at ";
-          if (frame.func)
+          if (frame.func) {
             line += frame.func + " (" + where + ")\n";
-          else
+          } else {
             line += where + "\n";
+          }
         });
         line += "\n";
       }
@@ -223,8 +226,9 @@ var getCurrentProgressTracker = function () {
 
 var addChildTracker = function (title) {
   var options = {};
-  if (title !== undefined)
+  if (title !== undefined) {
     options.title = title;
+  }
   return getCurrentProgressTracker().addChildTask(options);
 };
 
@@ -242,8 +246,9 @@ var capture = function (options, f) {
   var parentMessageSet = currentMessageSet.get();
 
   var title;
-  if (typeof options === "object" && options.title)
+  if (typeof options === "object" && options.title) {
     title = options.title;
+  }
   var progress = addChildTracker(title);
 
   currentProgress.withValue(progress, function () {
@@ -371,8 +376,9 @@ var enterJob = function (options, f) {
 // (including subjobs created inside this job), else false.
 var jobHasMessages = function () {
   var search = function (job) {
-    if (job.hasMessages())
+    if (job.hasMessages()) {
       return true;
+    }
     return !! _.find(job.children, search);
   };
 
@@ -418,14 +424,18 @@ var markBoundary = function (f) {
 var error = function (message, options) {
   options = options || {};
 
-  if (options.downcase)
+  if (options.downcase) {
     message = message.slice(0,1).toLowerCase() + message.slice(1);
+  }
 
-  if (! currentJob.get())
+  if (! currentJob.get()) {
     throw new Error("Error: " + message);
+  }
 
-  if (options.secondary && jobHasMessages())
-    return; // skip it
+  if (options.secondary && jobHasMessages()) {
+    // skip it
+    return;
+  }
 
   var info = _.extend({
     message: message
@@ -510,22 +520,26 @@ var exception = function (error) {
 };
 
 var assertInJob = function () {
-  if (! currentJob.get())
+  if (! currentJob.get()) {
     throw new Error("Expected to be in a buildmessage job");
+  }
 };
 
 var assertInCapture = function () {
-  if (! currentMessageSet.get())
+  if (! currentMessageSet.get()) {
     throw new Error("Expected to be in a buildmessage capture");
+  }
 };
 
 var mergeMessagesIntoCurrentJob = function (innerMessages) {
   var outerMessages = currentMessageSet.get();
-  if (! outerMessages)
+  if (! outerMessages) {
     throw new Error("Expected to be in a buildmessage capture");
+  }
   var outerJob = currentJob.get();
-  if (! outerJob)
+  if (! outerJob) {
     throw new Error("Expected to be in a buildmessage job");
+  }
   _.each(innerMessages.jobs, function (j) {
     outerJob.children.push(j);
   });

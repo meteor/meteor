@@ -19,8 +19,10 @@ selftest.define('subset generator', function () {
   out = [];
   utils.generateSubsetsOfIncreasingSize(['a', 'b', 'c'], function (x) {
     out.push(x);
-    if (x[1] === 'c')
-      return true;  // stop iterating
+    if (x[1] === 'c') {
+      // stop iterating
+      return true;
+    }
   });
   selftest.expectEqual(out, [
     [],

@@ -1,33 +1,33 @@
-// intentionally initialize later so that we can debug tests after
-// they fail without trying to recreate a user with the same email
-// address
-var email1;
-var email2;
-var email3;
-var email4;
-
 var resetPasswordToken;
 var verifyEmailToken;
 var enrollAccountToken;
 
 Accounts._isolateLoginTokenForTest();
-Accounts.removeDefaultRateLimit();
+
+if (Meteor.isServer) {
+  Accounts.removeDefaultRateLimit();
+}
+
 testAsyncMulti("accounts emails - reset password flow", [
   function (test, expect) {
-    email1 = Random.id() + "-intercept@example.com";
-    Accounts.createUser({email: email1, password: 'foobar'},
-                        expect(function (error) {
-                          test.equal(error, undefined);
-                        }));
+    this.randomSuffix = Random.id();
+    this.email = "Ada-intercept@example.com" + this.randomSuffix;
+    // Create the user with another email and add the tested for email later,
+    // so we can test whether forgotPassword respects the passed in email
+    Accounts.createUser({email: "another@example.com" + this.randomSuffix, password: 'foobar'},
+      expect((error) => {
+        test.equal(error, undefined);
+        Meteor.call("addEmailForTestAndVerify", this.email);
+      }));
   },
   function (test, expect) {
-    Accounts.forgotPassword({email: email1}, expect(function (error) {
+    Accounts.forgotPassword({email: this.email}, expect((error) => {
       test.equal(error, undefined);
     }));
   },
   function (test, expect) {
     Accounts.connection.call(
-      "getInterceptedEmails", email1, expect(function (error, result) {
+      "getInterceptedEmails", this.email, expect((error, result) => {
         test.equal(error, undefined);
         test.notEqual(result, undefined);
         test.equal(result.length, 2); // the first is the email verification
@@ -44,25 +44,87 @@ testAsyncMulti("accounts emails - reset password flow", [
       }));
   },
   function (test, expect) {
-    Accounts.resetPassword(resetPasswordToken, "newPassword", expect(function(error) {
+    Accounts.resetPassword(resetPasswordToken, "newPassword", expect((error) => {
       test.isFalse(error);
     }));
   },
   function (test, expect) {
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
   },
   function (test, expect) {
     Meteor.loginWithPassword(
-      {email: email1}, "newPassword",
-      expect(function (error) {
+      {email: this.email}, "newPassword",
+      expect((error) => {
         test.isFalse(error);
       }));
   },
   function (test, expect) {
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
+      test.equal(error, undefined);
+      test.equal(Meteor.user(), null);
+    }));
+  }
+]);
+
+testAsyncMulti(`accounts emails - \
+reset password flow with case insensitive email`, [
+  function (test, expect) {
+    this.randomSuffix = Random.id();
+    this.email = "Ada-intercept@example.com" + this.randomSuffix;
+    // Create the user with another email and add the tested for email later,
+    // so we can test whether forgotPassword respects the passed in email
+    Accounts.createUser({email: "another@example.com" + this.randomSuffix, password: 'foobar'},
+      expect((error) => {
+        test.equal(error, undefined);
+        Meteor.call("addEmailForTestAndVerify", this.email);
+      }));
+  },
+  function (test, expect) {
+    Accounts.forgotPassword({email: "ada-intercept@example.com" + this.randomSuffix}, expect((error) => {
+      test.equal(error, undefined);
+    }));
+  },
+  function (test, expect) {
+    Accounts.connection.call(
+      "getInterceptedEmails", this.email, expect((error, result) => {
+        test.equal(error, undefined);
+        test.notEqual(result, undefined);
+        test.equal(result.length, 2); // the first is the email verification
+        var options = result[1];
+
+        var re = new RegExp(Meteor.absoluteUrl() + "#/reset-password/(\\S*)");
+        var match = options.text.match(re);
+        test.isTrue(match);
+        resetPasswordToken = match[1];
+        test.isTrue(options.html.match(re));
+
+        test.equal(options.from, 'test@meteor.com');
+        test.equal(options.headers['My-Custom-Header'], 'Cool');
+      }));
+  },
+  function (test, expect) {
+    Accounts.resetPassword(resetPasswordToken, "newPassword", expect((error) => {
+      test.isFalse(error);
+    }));
+  },
+  function (test, expect) {
+    Meteor.logout(expect((error) => {
+      test.equal(error, undefined);
+      test.equal(Meteor.user(), null);
+    }));
+  },
+  function (test, expect) {
+    Meteor.loginWithPassword(
+      {email: this.email}, "newPassword",
+      expect((error) => {
+        test.isFalse(error);
+      }));
+  },
+  function (test, expect) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
@@ -71,7 +133,7 @@ testAsyncMulti("accounts emails - reset password flow", [
 
 var getVerifyEmailToken = function (email, test, expect) {
   Accounts.connection.call(
-    "getInterceptedEmails", email, expect(function (error, result) {
+    "getInterceptedEmails", email, expect((error, result) => {
       test.equal(error, undefined);
       test.notEqual(result, undefined);
       test.equal(result.length, 1);
@@ -89,7 +151,7 @@ var getVerifyEmailToken = function (email, test, expect) {
 };
 
 var loggedIn = function (test, expect) {
-  return expect(function (error) {
+  return expect((error) => {
     test.equal(error, undefined);
     test.isTrue(Meteor.user());
   });
@@ -97,25 +159,25 @@ var loggedIn = function (test, expect) {
 
 testAsyncMulti("accounts emails - verify email flow", [
   function (test, expect) {
-    email2 = Random.id() + "-intercept@example.com";
-    email3 = Random.id() + "-intercept@example.com";
+    this.email = Random.id() + "-intercept@example.com";
+    this.anotherEmail = Random.id() + "-intercept@example.com";
     Accounts.createUser(
-      {email: email2, password: 'foobar'},
+      {email: this.email, password: 'foobar'},
       loggedIn(test, expect));
   },
   function (test, expect) {
     test.equal(Meteor.user().emails.length, 1);
-    test.equal(Meteor.user().emails[0].address, email2);
+    test.equal(Meteor.user().emails[0].address, this.email);
     test.isFalse(Meteor.user().emails[0].verified);
     // We should NOT be publishing things like verification tokens!
     test.isFalse(_.has(Meteor.user(), 'services'));
   },
   function (test, expect) {
-    getVerifyEmailToken(email2, test, expect);
+    getVerifyEmailToken(this.email, test, expect);
   },
   function (test, expect) {
     // Log out, to test that verifyEmail logs us back in.
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
@@ -126,26 +188,26 @@ testAsyncMulti("accounts emails - verify email flow", [
   },
   function (test, expect) {
     test.equal(Meteor.user().emails.length, 1);
-    test.equal(Meteor.user().emails[0].address, email2);
+    test.equal(Meteor.user().emails[0].address, this.email);
     test.isTrue(Meteor.user().emails[0].verified);
   },
   function (test, expect) {
     Accounts.connection.call(
-      "addEmailForTestAndVerify", email3,
-      expect(function (error, result) {
+      "addEmailForTestAndVerify", this.anotherEmail,
+      expect((error, result) => {
         test.isFalse(error);
         test.equal(Meteor.user().emails.length, 2);
-        test.equal(Meteor.user().emails[1].address, email3);
+        test.equal(Meteor.user().emails[1].address, this.anotherEmail);
         test.isFalse(Meteor.user().emails[1].verified);
       }));
   },
   function (test, expect) {
-    getVerifyEmailToken(email3, test, expect);
+    getVerifyEmailToken(this.anotherEmail, test, expect);
   },
   function (test, expect) {
     // Log out, to test that verifyEmail logs us back in. (And if we don't
     // do that, waitUntilLoggedIn won't be able to prevent race conditions.)
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
@@ -155,11 +217,11 @@ testAsyncMulti("accounts emails - verify email flow", [
                          loggedIn(test, expect));
   },
   function (test, expect) {
-    test.equal(Meteor.user().emails[1].address, email3);
+    test.equal(Meteor.user().emails[1].address, this.anotherEmail);
     test.isTrue(Meteor.user().emails[1].verified);
   },
   function (test, expect) {
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
@@ -168,7 +230,7 @@ testAsyncMulti("accounts emails - verify email flow", [
 
 var getEnrollAccountToken = function (email, test, expect) {
   Accounts.connection.call(
-    "getInterceptedEmails", email, expect(function (error, result) {
+    "getInterceptedEmails", email, expect((error, result) => {
       test.equal(error, undefined);
       test.notEqual(result, undefined);
       test.equal(result.length, 1);
@@ -187,18 +249,18 @@ var getEnrollAccountToken = function (email, test, expect) {
 
 testAsyncMulti("accounts emails - enroll account flow", [
   function (test, expect) {
-    email4 = Random.id() + "-intercept@example.com";
-    Accounts.connection.call("createUserOnServer", email4,
-      expect(function (error, result) {
+    this.email = Random.id() + "-intercept@example.com";
+    Accounts.connection.call("createUserOnServer", this.email,
+      expect((error, result) => {
         test.isFalse(error);
         var user = result;
         test.equal(user.emails.length, 1);
-        test.equal(user.emails[0].address, email4);
+        test.equal(user.emails[0].address, this.email);
         test.isFalse(user.emails[0].verified);
       }));
   },
   function (test, expect) {
-    getEnrollAccountToken(email4, test, expect);
+    getEnrollAccountToken(this.email, test, expect);
   },
   function (test, expect) {
     Accounts.resetPassword(enrollAccountToken, 'password',
@@ -206,26 +268,26 @@ testAsyncMulti("accounts emails - enroll account flow", [
   },
   function (test, expect) {
     test.equal(Meteor.user().emails.length, 1);
-    test.equal(Meteor.user().emails[0].address, email4);
+    test.equal(Meteor.user().emails[0].address, this.email);
     test.isTrue(Meteor.user().emails[0].verified);
   },
   function (test, expect) {
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));
   },
   function (test, expect) {
-    Meteor.loginWithPassword({email: email4}, 'password',
+    Meteor.loginWithPassword({email: this.email}, 'password',
                              loggedIn(test ,expect));
   },
   function (test, expect) {
     test.equal(Meteor.user().emails.length, 1);
-    test.equal(Meteor.user().emails[0].address, email4);
+    test.equal(Meteor.user().emails[0].address, this.email);
     test.isTrue(Meteor.user().emails[0].verified);
   },
   function (test, expect) {
-    Meteor.logout(expect(function (error) {
+    Meteor.logout(expect((error) => {
       test.equal(error, undefined);
       test.equal(Meteor.user(), null);
     }));

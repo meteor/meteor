@@ -28,8 +28,9 @@ _.extend(Proxy.prototype, {
   start: function () {
     var self = this;
 
-    if (self.server)
+    if (self.server) {
       throw new Error("already running?");
+    }
 
     self.started = false;
 
@@ -127,8 +128,9 @@ _.extend(Proxy.prototype, {
   stop: function () {
     var self = this;
 
-    if (! self.server)
+    if (! self.server) {
       return;
+    }
 
     if (! self.started) {
       // This probably means that we failed to listen. However, there could be a
@@ -167,8 +169,9 @@ _.extend(Proxy.prototype, {
     var self = this;
 
     while (self.httpQueue.length) {
-      if (self.mode !== "errorpage" && self.mode !== "proxy")
+      if (self.mode !== "errorpage" && self.mode !== "proxy") {
         break;
+      }
 
       var c = self.httpQueue.shift();
       if (self.mode === "errorpage") {
@@ -181,8 +184,9 @@ _.extend(Proxy.prototype, {
     }
 
     while (self.websocketQueue.length) {
-      if (self.mode !== "proxy")
+      if (self.mode !== "proxy") {
         break;
+      }
 
       var c = self.websocketQueue.shift();
       self.proxy.ws(c.req, c.socket, c.head, {

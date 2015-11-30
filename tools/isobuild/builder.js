@@ -96,8 +96,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // root. Throws an exception on failure.
   _ensureDirectory(relPath) {
     const parts = files.pathNormalize(relPath).split(files.pathSep);
-    if (parts.length > 1 && parts[parts.length - 1] === '')
-      parts.pop(); // remove trailing slash
+    if (parts.length > 1 && parts[parts.length - 1] === '') {
+      // remove trailing slash
+      parts.pop();
+    }
 
     const partsSoFar = [];
     parts.forEach(part => {
@@ -139,8 +141,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       const mustBeUnique = (i === parts.length - 1);
 
       // Basic sanitization
-      if (part.match(/^\.+$/))
+      if (part.match(/^\.+$/)) {
         throw new Error(`Path contains forbidden segment '${part}'`);
+      }
 
       part = part.replace(/[^a-zA-Z0-9._\:-]/g, '');
 
@@ -148,8 +151,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       let ext = '';
       if (shouldBeFile) {
         const split = part.split('.');
-        if (split.length > 1)
+        if (split.length > 1) {
           ext = "." + split.pop();
+        }
         part = split.join('.');
       }
 
@@ -159,13 +163,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         const candidate = files.pathJoin(partsOut.join(files.pathSep), part + suffix + ext);
         if (candidate.length) {
           // If we've never heard of this, then it's unique enough.
-          if (!(candidate in this.usedAsFile))
+          if (!(candidate in this.usedAsFile)) {
             break;
+          }
           // If we want this bit to be a directory, and we don't need it to be
           // unique (ie, it isn't the very last bit), and it's currently a
           // directory, then that's OK.
-          if (!(mustBeUnique || this.usedAsFile[candidate]))
+          if (!(mustBeUnique || this.usedAsFile[candidate])) {
             break;
+          }
           // OK, either we want it to be unique and it already exists; or it is
           // currently a file (and we want it to be either a different file or a
           // directory).  Try a new suffix.
@@ -203,20 +209,24 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // If `file` is used then it will be added to the builder's WatchSet.
   write(relPath, {data, file, hash, sanitize, executable, symlink}) {
     // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep)
+    if (relPath.slice(-1) === files.pathSep) {
       relPath = relPath.slice(0, -1);
+    }
 
     // In sanitize mode, ensure path does not contain segments like
     // '..', does not contain forbidden characters, and is unique.
-    if (sanitize)
+    if (sanitize) {
       relPath = this._sanitize(relPath);
+    }
 
     let getData = null;
     if (data) {
-      if (! (data instanceof Buffer))
+      if (! (data instanceof Buffer)) {
         throw new Error("data must be a Buffer");
-      if (file)
+      }
+      if (file) {
         throw new Error("May only pass one of data and file, not both");
+      }
       getData = () => data;
     } else if (file) {
       // postpone reading the file into memory
@@ -254,8 +264,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // necessary. Throw an exception if the file already exists.
   writeJson(relPath, data) {
     // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep)
+    if (relPath.slice(-1) === files.pathSep) {
       relPath = relPath.slice(0, -1);
+    }
 
     this._ensureDirectory(files.pathDirname(relPath));
     const absPath = files.pathJoin(this.buildPath, relPath);
@@ -284,8 +295,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //   directory rather than a file.
   reserve(relPath, {directory} = {}) {
     // Ensure no trailing slash
-    if (relPath.slice(-1) === files.pathSep)
+    if (relPath.slice(-1) === files.pathSep) {
       relPath = relPath.slice(0, -1);
+    }
 
     const parts = relPath.split(files.pathSep);
     const partsSoFar = [];
@@ -293,8 +305,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       const part = parts[i];
       partsSoFar.push(part);
       const soFar = partsSoFar.join(files.pathSep);
-      if (this.usedAsFile[soFar])
+      if (this.usedAsFile[soFar]) {
         throw new Error("Path reservation conflict: " + relPath);
+      }
 
       const shouldBeDirectory = (i < parts.length - 1) || directory;
       if (shouldBeDirectory) {
@@ -373,8 +386,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // - specificFiles: just copy these paths (specified as relative to 'to').
   // - symlink: true if the directory should be symlinked instead of copying
   copyDirectory({from, to, ignore, specificFiles, symlink, npmDiscards}) {
-    if (to.slice(-1) === files.pathSep)
+    if (to.slice(-1) === files.pathSep) {
       to = to.slice(0, -1);
+    }
 
     const absPathTo = files.pathJoin(this.buildPath, to);
     if (symlink) {
@@ -448,7 +462,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         // skip excluded files
-        if (ignore.some(pattern => itemForMatch.match(pattern))) return;
+        if (ignore.some(pattern => itemForMatch.match(pattern))) {
+          return;
+        }
 
         if (npmDiscards instanceof NpmDiscards &&
             npmDiscards.shouldDiscard(thisAbsFrom, isDirectory)) {
@@ -506,11 +522,13 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (method === "generateFilename") {
           // fix up the returned path to be relative to the
           // sub-bundle, not the parent bundle
-          if (ret.substr(0, 1) === '/')
+          if (ret.substr(0, 1) === '/') {
             ret = ret.substr(1);
-          if (ret.substr(0, relPathWithSep.length) !== relPathWithSep)
+          }
+          if (ret.substr(0, relPathWithSep.length) !== relPathWithSep) {
             throw new Error("generateFilename returned path outside of " +
                             "sub-bundle?");
+          }
           ret = ret.substr(relPathWithSep.length);
         }
 

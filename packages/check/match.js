@@ -235,7 +235,7 @@ var testSubtree = function (value, pattern) {
         path: err.path
       };
     }
-    if (pattern.condition(value))
+    if (result)
       return false;
     // XXX this error is terrible
     return {

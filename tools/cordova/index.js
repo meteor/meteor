@@ -37,13 +37,13 @@ export function splitPluginsAndPackages(packages) {
     packages: []
   };
 
-  for (package of packages) {
-    const [namespace, ...rest] = package.split(':');
+  for (let pkg of packages) {
+    const [namespace, ...rest] = pkg.split(':');
     if (namespace === 'cordova') {
       const name = rest.join(':');
       result.plugins.push(name);
     } else {
-      result.packages.push(package);
+      result.packages.push(pkg);
     }
   }
 

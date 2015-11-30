@@ -263,8 +263,9 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      * @returns {Buffer}
      */
     read: function (n) {
-      if (n === undefined || readOffset + n > contents.length)
+      if (n === undefined || readOffset + n > contents.length) {
         n = contents.length - readOffset;
+      }
       var ret = contents.slice(readOffset, readOffset + n);
       readOffset += n;
       return ret;
@@ -281,13 +282,16 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      * @instance
      */
     addHtml: function (options) {
-      if (! archinfo.matches(inputSourceArch.arch, "web"))
+      if (! archinfo.matches(inputSourceArch.arch, "web")) {
         throw new Error("Document sections can only be emitted to " +
                         "web targets");
-      if (options.section !== "head" && options.section !== "body")
+      }
+      if (options.section !== "head" && options.section !== "body") {
         throw new Error("'section' must be 'head' or 'body'");
-      if (typeof options.data !== "string")
+      }
+      if (typeof options.data !== "string") {
         throw new Error("'data' option to appendDocument must be a string");
+      }
       resources.push({
         type: options.section,
         data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
@@ -314,11 +318,13 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      * @instance
      */
     addStylesheet: function (options) {
-      if (! archinfo.matches(inputSourceArch.arch, "web"))
+      if (! archinfo.matches(inputSourceArch.arch, "web")) {
         throw new Error("Stylesheets can only be emitted to " +
                         "web targets");
-      if (typeof options.data !== "string")
+      }
+      if (typeof options.data !== "string") {
         throw new Error("'data' option to addStylesheet must be a string");
+      }
       resources.push({
         type: "css",
         refreshable: true,
@@ -348,10 +354,12 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
      * @instance
      */
     addJavaScript: function (options) {
-      if (typeof options.data !== "string")
+      if (typeof options.data !== "string") {
         throw new Error("'data' option to addJavaScript must be a string");
-      if (typeof options.sourcePath !== "string")
+      }
+      if (typeof options.sourcePath !== "string") {
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
+      }
 
       // By default, use fileOptions for the `bare` option but also allow
       // overriding it with the options

@@ -1,6 +1,7 @@
 var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
-if (showRequireProfile)
+if (showRequireProfile) {
   require('../tool-env/profile-require.js').start();
+}
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -54,26 +55,32 @@ function Command(options) {
     notOnWindows: false
   }, options);
 
-  if (! _.has(options, 'maxArgs'))
+  if (! _.has(options, 'maxArgs')) {
     options.maxArgs = options.minArgs;
+  }
 
   _.each(["name", "func"], function (key) {
-    if (! _.has(options, key))
+    if (! _.has(options, key)) {
       throw new Error("command missing '" + key + "'?");
+    }
   });
 
   _.extend(this, options);
 
   _.each(this.options, function (value, key) {
-    if (key === "args" || key === "appDir")
+    if (key === "args" || key === "appDir") {
       throw new Error(options.name + ": bad option name " + key);
-    if (! _.has(value, 'type'))
+    }
+    if (! _.has(value, 'type')) {
       value.type = String;
-    if (_.has(value, 'default') && _.has(value, 'required'))
+    }
+    if (_.has(value, 'default') && _.has(value, 'required')) {
       throw new Error(options.name + ": " + key + " can't be both optional " +
                       "and required");
-    if (_.has(value, 'short') && value.short.length !== 1)
+    }
+    if (_.has(value, 'short') && value.short.length !== 1) {
       throw new Error(options.name + ": " + key + " has a bad short option");
+    }
   });
 };
 
@@ -82,8 +89,9 @@ function Command(options) {
 // command-line options object.
 Command.prototype.evaluateOption = function (optionName, options) {
   var self = this;
-  if (typeof self[optionName] === 'function')
+  if (typeof self[optionName] === 'function') {
     return self[optionName](options);
+  }
   return self[optionName];
 };
 
@@ -245,8 +253,9 @@ main.registerCommand = function (options, func) {
   var target = commands;
   while (nameParts.length > 1) {
     var part = nameParts.shift();
-    if (! _.has(target, part))
+    if (! _.has(target, part)) {
       target[part] = {};
+    }
     target = target[part];
   }
 
@@ -313,8 +322,9 @@ var longHelp = exports.longHelp = function (commandName) {
   var parts = commandName.length ? commandName.split(' ') : [];
   var node = commands;
   _.each(parts, function (part) {
-    if (! _.has(node, part))
+    if (! _.has(node, part)) {
       throw new Error("walked off edge of command tree?");
+    }
     node = node[part];
   });
 
@@ -339,8 +349,9 @@ var longHelp = exports.longHelp = function (commandName) {
       // there is nothing to display.
       // For now, there's no way to mark commands with subcommands (eg 'admin')
       // as hidden.
-      if (! n.hidden && helpDict[fullName])
+      if (! n.hidden && helpDict[fullName]) {
         commandsWanted[fullName] = { name: shortName };
+      }
     });
 
     var maxNameLength = _.max(_.map(commandsWanted, function (c) {
@@ -366,11 +377,13 @@ var longHelp = exports.longHelp = function (commandName) {
   var entry = _.find(help, function (c) {
     return c.name === commandName;
   });
-  if (! entry)
+  if (! entry) {
     throw new Error("help missing for " + commandName + "?");
+  }
   var ret = entry.body.split('\n').slice(1).join('\n');
-  if (commandList !== null)
+  if (commandList !== null) {
     ret = ret.replace('{{commands}}', commandList);
+  }
 
   return ret;
 };
@@ -392,8 +405,9 @@ var longHelp = exports.longHelp = function (commandName) {
 //   release.  affects error messages.
 var springboard = function (rel, options) {
   options = options || {};
-  if (process.env.METEOR_DEBUG_SPRINGBOARD)
+  if (process.env.METEOR_DEBUG_SPRINGBOARD) {
     console.log("WILL SPRINGBOARD TO", rel.getToolsPackageAtVersion());
+  }
 
   var archinfo = require('../utils/archinfo.js');
   var isopack = require('../isobuild/isopack.js');
@@ -457,9 +471,10 @@ var springboard = function (rel, options) {
   toolIsopack.initFromPath(toolsPkg, packagePath);
   var toolRecord = _.findWhere(toolIsopack.toolsOnDisk,
                                {arch: archinfo.host()});
-  if (!toolRecord)
+  if (!toolRecord) {
     throw Error("missing tool for " + archinfo.host() + " in " +
                 toolsPkg + "@" + toolsVersion);
+  }
   var executable = files.pathJoin(packagePath, toolRecord.path, 'meteor');
 
   // Strip off the "node" and "meteor.js" from argv and replace it with the
@@ -592,8 +607,9 @@ Fiber(function () {
       if (value instanceof Command) {
         _.each(value.options || {}, function (optionInfo, optionName) {
           var names = ["--" + optionName];
-          if (_.has(optionInfo, 'short'))
+          if (_.has(optionInfo, 'short')) {
             names.push("-" + optionInfo.short);
+          }
           _.each(names, function (name) {
             var optionIsBoolean = (optionInfo.type === Boolean);
             if (_.has(isBoolean, name)) {
@@ -619,8 +635,9 @@ Fiber(function () {
   // a little weird but it feels good and it follows a grand Unix
   // tradition.
   _.each(commands['--'] || {}, function (value, key) {
-    if (_.has(isBoolean, "--" + key))
+    if (_.has(isBoolean, "--" + key)) {
       throw new Error("--" + key + " is both an option and a command?");
+    }
     isBoolean["--" + key] = true;
   });
 
@@ -660,8 +677,9 @@ Fiber(function () {
         term = term.substr(0, equals);
       }
 
-      if (! _.has(rawOptions, term))
+      if (! _.has(rawOptions, term)) {
         rawOptions[term] = [];
+      }
 
       // Save off the value of the option. true for (known) booleans,
       // null if value is missing, else a string. Don't try to
@@ -686,8 +704,9 @@ Fiber(function () {
     // in place into '-a -b -c', '-p 45', '-a -b -c -p 45'. Not that
     // anyone really talks this way anymore.
     if (term.match(/^-/)) {
-      if (term.match(/^-[-=]?$/))
+      if (term.match(/^-[-=]?$/)) {
         throw Error("these cases should be handled above?");
+      }
 
       var replacements = [];
       for (var j = 1; j < term.length; j++) {
@@ -701,8 +720,9 @@ Fiber(function () {
           if (remainder.length) {
             // If there's an '=' here, don't include it in the option value. A
             // trailing '=' *should* cause us to set the option value to ''.
-            if (remainder.charAt(0) === '=')
+            if (remainder.charAt(0) === '=') {
               remainder = remainder.substr(1);
+            }
             replacements.push(remainder);
             break;
           }
@@ -710,8 +730,9 @@ Fiber(function () {
                    j + 1 < term.length && term.charAt(j + 1) === '=') {
           // We know it's a boolean, but we've been given an '='. This will
           // cause a pretty error later.
-          if (! _.has(rawOptions, subterm))
+          if (! _.has(rawOptions, subterm)) {
             rawOptions[subterm] = [];
+          }
           rawOptions[subterm].push(false);
           // Don't process the '=' on the next pass.
           j ++;
@@ -898,13 +919,15 @@ Fiber(function () {
       try {
         rel = release.load(releaseName);
       } catch (e) {
-        if (!(e instanceof release.NoSuchReleaseError))
+        if (!(e instanceof release.NoSuchReleaseError)) {
           throw e;
+        }
       }
 
       if (!rel) {
-        if (releaseName === null)
+        if (releaseName === null) {
           throw Error("huh? couldn't load from-checkout release?");
+        }
 
         // ATTEMPT 2: legacy release, on disk. (And it's a "real" release, not a
         // "red pill" release which has the same name as a modern release!)
@@ -1072,8 +1095,9 @@ Fiber(function () {
       if (! showHelp) {
         command = commands.run
         commandName = "run";
-        if (! command)
+        if (! command) {
           throw new Error("no 'run' command?");
+        }
       }
     } else {
       // Find the command they specified.
@@ -1163,10 +1187,12 @@ Fiber(function () {
     // long and short versions, and across possibly multiple
     // occurrences of the option on the command line
     var values = [];
-    if (presentLong)
+    if (presentLong) {
       values = values.concat(rawOptions["--" + optionName]);
-    if (presentShort)
+    }
+    if (presentShort) {
       values = values.concat(rawOptions["-" + optionInfo.short]);
+    }
 
     if (values.length > 1) {
       // in the future, we could support multiple values, but we don't
@@ -1218,10 +1244,12 @@ Fiber(function () {
 
       // Remove from the list of input arguments so that later we can
       // detect unrecognized arguments.
-      if (presentLong)
+      if (presentLong) {
         delete rawOptions["--" + optionName];
-      if (presentShort)
+      }
+      if (presentShort) {
         delete rawOptions["-" + optionInfo.short];
+      }
     } else {
       // Option not supplied. Throw an error if it was required,
       // supply a default value if one is defined, or just leave it
@@ -1311,8 +1339,9 @@ Fiber(function () {
 
   if (requiresPackage || usesPackage || requiresAppOrPackage) {
     var packageDir = files.findPackageDir();
-    if (packageDir)
+    if (packageDir) {
       packageDir = files.pathResolve(packageDir);
+    }
     if (packageDir) {
       options.packageDir = packageDir;
     }
@@ -1354,8 +1383,9 @@ Fiber(function () {
 
   // Now that we're ready to start executing the command, if we are in
   // startup time profiling mode, print the profile.
-  if (showRequireProfile)
+  if (showRequireProfile) {
     require('../tool-env/profile-require.js').printReport();
+  }
 
   Console.setPretty(command.evaluateOption('pretty', options));
   Console.enableProgressDisplay(true);
@@ -1416,9 +1446,11 @@ Fiber(function () {
 
   // Exit. (We will not get here if the command threw an exception
   // such as main.WaitForExit).
-  if (ret === undefined)
+  if (ret === undefined) {
     ret = 0;
-  if (typeof ret !== "number")
+  }
+  if (typeof ret !== "number") {
     throw new Error("command returned non-number?");
+  }
   process.exit(ret);
 }).run();

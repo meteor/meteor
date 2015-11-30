@@ -3046,3 +3046,36 @@ Tinytest.add("minimongo - fine-grained reactivity of query with fields projectio
 
   computation.stop();
 });
+
+// Tests that the logic in `LocalCollection.prototype.update`
+// correctly deals with count() on a cursor with skip or limit (since
+// then the result set is an IdMap, not an array)
+Tinytest.add("minimongo - reactive skip/limit count while updating", function(test) {
+  var X = new LocalCollection;
+  var count = -1;
+
+  var c = Tracker.autorun(function() {
+    count = X.find({}, {skip: 1, limit: 1}).count();
+  });
+
+  test.equal(count, 0);
+
+  X.insert({});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 0);
+
+  X.insert({});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 1);
+
+  X.update({}, {$set: {foo: 1}});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 1);
+
+  // Make sure a second update also works
+  X.update({}, {$set: {foo: 2}});
+  Tracker.flush({_throwFirstError: true});
+  test.equal(count, 1);
+
+  c.stop();
+});

@@ -76,11 +76,15 @@ yet supported.`);
 
       const outdated = _.some(minPlatformVersions, (minVersion, platform) => {
         // If the platform is not installed, it cannot be outdated
-        if (!_.contains(installedPlatforms, platform)) return false;
+        if (!_.contains(installedPlatforms, platform)) {
+          return false;
+        }
 
         const installedVersion = this.installedVersionForPlatform(platform);
         // If we cannot establish the installed version, we consider it outdated
-        if (!installedVersion) return true;
+        if (!installedVersion) {
+          return true;
+        }
 
         return semver.lt(installedVersion, minVersion);
       });
@@ -116,7 +120,9 @@ outdated platforms`);
 
       builder.processControlFile();
 
-      if (buildmessage.jobHasMessages()) return;
+      if (buildmessage.jobHasMessages()) {
+        return;
+      }
 
       // Don't copy resources (they will be copied as part of the prepare)
       builder.writeConfigXmlAndCopyResources(false);
@@ -153,7 +159,9 @@ outdated platforms`);
 
     builder.processControlFile();
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     builder.writeConfigXmlAndCopyResources();
     builder.copyWWW(bundlePath);
@@ -345,7 +353,9 @@ from Cordova project`, async () => {
     const installedPlatforms = this.listInstalledPlatforms();
 
     for (platform of platforms) {
-      if (_.contains(installedPlatforms, platform)) continue;
+      if (_.contains(installedPlatforms, platform)) {
+        continue;
+      }
 
       this.addPlatform(platform);
     }
@@ -461,7 +471,9 @@ to Cordova project`, async () => {
 
   // plugins is an array of plugin IDs.
   removePlugins(plugins) {
-    if (_.isEmpty(plugins)) return;
+    if (_.isEmpty(plugins)) {
+      return;
+    }
 
     this.runCommands(`removing plugins ${plugins} \
 from Cordova project`, async () => {
@@ -487,7 +499,9 @@ from Cordova project`, async () => {
       // SHA reference.
       pluginVersions = convertPluginVersions(pluginVersions);
 
-      if (buildmessage.jobHasMessages()) return;
+      if (buildmessage.jobHasMessages()) {
+        return;
+      }
 
       // Also, we warn if any App.configurePlugin calls in mobile-config.js
       // need to be updated (and in the meantime we take care of the

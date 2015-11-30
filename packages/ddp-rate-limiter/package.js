@@ -12,10 +12,9 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-//  api.versionsFrom('1.1.0.2');
-  api.use('rate-limit');
-  api.export('DDPRateLimiter');
-  api.addFiles('ddp-rate-limiter.js');
+  api.use('rate-limit', 'server');
+  api.export('DDPRateLimiter', 'server');
+  api.addFiles('ddp-rate-limiter.js', 'server');
 });
 
 Package.onTest(function(api) {

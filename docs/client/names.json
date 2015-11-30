@@ -4,6 +4,7 @@
   "Accounts.addEmail",
   "Accounts.changePassword",
   "Accounts.createUser",
+  "Accounts.emailTemplates",
   "Accounts.findUserByEmail",
   "Accounts.findUserByUsername",
   "Accounts.forgotPassword",
@@ -283,6 +284,5 @@
   "execFileAsync",
   "execFileSync",
   "getExtension",
-  "greet",
   "loggingIn"
 ]

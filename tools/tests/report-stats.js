@@ -279,9 +279,10 @@ var fetchPackageUsageForApp = function (identifier) {
     }
   });
 
-  if (! found)
+  if (! found) {
     selftest.fail("Couldn't find app identifier in usage " +
                   "returned from package stats server");
+  }
 
   return found;
 };

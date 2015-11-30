@@ -48,7 +48,9 @@ main.registerCommand({
       }
     }
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     const cordovaProject = new CordovaProject(projectContext);
 
@@ -56,7 +58,9 @@ main.registerCommand({
     const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
     cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     // Only write the new platform list when we have succesfully synchronized
     projectContext.platformList.write(installedPlatforms);
@@ -92,7 +96,9 @@ version of Meteor`);
       }
     }
 
-    if (buildmessage.jobHasMessages()) return;
+    if (buildmessage.jobHasMessages()) {
+      return;
+    }
 
     installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
     projectContext.platformList.write(installedPlatforms);

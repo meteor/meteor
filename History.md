@@ -1,6 +1,19 @@
 ## v.NEXT
 
-* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these 2 minifiers.
+* Improve minimongo performance on updating documents when there are
+  many active observes. #5627
+
+* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS
+  minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these
+  2 minifiers.
+
+* Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It
+  will now error if referenced from the client at all.
+
+* Allow `git+` URL schemes for npm dependencies #844
+
+Patches contributed by GitHub users vereed, ...
+
 
 ## v.1.2.1, 2015-Oct-26
 

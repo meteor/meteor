@@ -78,7 +78,9 @@ export class CordovaRunner {
       this.cordovaProject.prepareFromAppBundle(bundlePath,
         pluginVersions, options);
 
-      if (buildmessage.jobHasMessages()) return;
+      if (buildmessage.jobHasMessages()) {
+        return;
+      }
 
       for (platform of this.platformsForRunTargets) {
         this.cordovaProject.prepareForPlatform(platform);
@@ -107,7 +109,9 @@ export class CordovaRunner {
 
   havePlatformsChangedSinceLastRun() {
     const platformsForRunTargets = this.platformsForRunTargets;
-    if (!platformsForRunTargets) return false;
+    if (!platformsForRunTargets) {
+      return false;
+    }
 
     const cordovaPlatformsInApp = this.cordovaProject.cordovaPlatformsInApp;
 

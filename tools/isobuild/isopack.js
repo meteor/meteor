@@ -15,8 +15,9 @@ var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile.js').Profile;
 
 var rejectBadPath = function (p) {
-  if (p.match(/\.\./))
+  if (p.match(/\.\./)) {
     throw new Error("bad path: " + p);
+  }
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -239,10 +240,12 @@ Isopack.convertIsopackFormat = Profile(
   var toPos = _.indexOf(Isopack.knownFormats, toFormat);
   var step = fromPos < toPos ? 1 : -1;
 
-  if (fromPos === -1)
+  if (fromPos === -1) {
     throw new Error("Can't convert from unknown Isopack format: " + fromFormat);
-  if (toPos === -1)
+  }
+  if (toPos === -1) {
     throw new Error("Can't convert to unknown Isopack format: " + toFormat);
+  }
 
   while (fromPos !== toPos) {
     if (step > 0) {
@@ -361,8 +364,9 @@ _.extend(Isopack.prototype, {
         anySourceFiles = true;
         var relativePath = files.pathRelative(sourceRoot, filename);
         // We only want files that are actually under sourceRoot.
-        if (relativePath.substr(0, 3) === '..' + files.pathSep)
+        if (relativePath.substr(0, 3) === '..' + files.pathSep) {
           return;
+        }
         sourceFiles[relativePath] = true;
       });
     };
@@ -374,8 +378,9 @@ _.extend(Isopack.prototype, {
     // Were we actually built from source or loaded from an IsopackCache? If so
     // then there should be at least one source file in some WatchSet. If not,
     // return null.
-    if (! anySourceFiles)
+    if (! anySourceFiles) {
       return null;
+    }
     return _.keys(sourceFiles);
   }),
 
@@ -467,8 +472,9 @@ _.extend(Isopack.prototype, {
 
   _checkPluginsInitialized: function () {
     var self = this;
-    if (self._pluginsInitialized)
+    if (self._pluginsInitialized) {
       return;
+    }
     throw Error("plugins not yet initialized?");
   },
 
@@ -479,8 +485,9 @@ _.extend(Isopack.prototype, {
 
     buildmessage.assertInJob();
 
-    if (self._pluginsInitialized)
+    if (self._pluginsInitialized) {
       return;
+    }
 
     self.sourceProcessors.compiler = new buildPluginModule.SourceProcessorSet(
       self.displayName(), { hardcodeJs: true, singlePackage: true });
@@ -892,8 +899,9 @@ _.extend(Isopack.prototype, {
     // PackageMap which can be subset to create a new PackageMap object.)
     var unibuildWatchSets = {};
     if (options.isopackBuildInfoJson) {
-      if (! options.firstIsopack)
+      if (! options.firstIsopack) {
         throw Error("can't merge isopacks with buildinfo");
+      }
 
       // XXX should comprehensively sanitize (eg, typecheck) everything
       // read from json files
@@ -948,8 +956,9 @@ _.extend(Isopack.prototype, {
       var alreadyHaveUnibuild = _.find(self.unibuilds, function (unibuild) {
         return unibuild.arch === unibuildMeta.arch;
       });
-      if (alreadyHaveUnibuild)
+      if (alreadyHaveUnibuild) {
         return;
+      }
 
       var unibuildJson = JSON.parse(
         files.readFile(files.pathJoin(dir, unibuildMeta.path)));
@@ -1038,9 +1047,10 @@ _.extend(Isopack.prototype, {
             servePath: resource.servePath || undefined,
             path: resource.path || undefined
           });
-        } else
+        } else {
           throw new Error("bad resource type in isopack: " +
                           JSON.stringify(resource.type));
+        }
       });
 
       var declaredExports;
@@ -1296,8 +1306,9 @@ _.extend(Isopack.prototype, {
               concat[resource.type].push(new Buffer("\n", "utf8"));
               offset[resource.type]++;
             }
-            if (! (resource.data instanceof Buffer))
+            if (! (resource.data instanceof Buffer)) {
               throw new Error("Resource data must be a Buffer");
+            }
             unibuildJson.resources.push({
               type: resource.type,
               file: files.pathJoin(unibuildDir, resource.type),
@@ -1318,8 +1329,10 @@ _.extend(Isopack.prototype, {
 
         // Output other resources each to their own file
         _.each(unibuild.resources, function (resource) {
-          if (_.contains(["head", "body"], resource.type))
-            return; // already did this one
+          if (_.contains(["head", "body"], resource.type)) {
+            // already did this one
+            return;
+          }
 
           // If we're going to write a legacy prelink file later, track the
           // original form of the resource object (with the source in a Buffer,
@@ -1481,8 +1494,9 @@ _.extend(Isopack.prototype, {
             packageVariables = [];
             var packageVariableNames = {};
             _.each(unibuild.declaredExports, function (symbol) {
-              if (_.has(packageVariableNames, symbol.name))
+              if (_.has(packageVariableNames, symbol.name)) {
                 return;
+              }
               packageVariables.push({
                 name: symbol.name,
                 export: symbol.testOnly? "tests" : true
@@ -1512,8 +1526,9 @@ _.extend(Isopack.prototype, {
               prelinkData = new Buffer(prelinkFile.source, 'utf8');
 
               _.each(results.assignedVariables, function (name) {
-                if (_.has(packageVariableNames, name))
+                if (_.has(packageVariableNames, name)) {
                   return;
+                }
                 packageVariables.push({
                   name: name
                 });
@@ -1724,8 +1739,9 @@ _.extend(Isopack.prototype, {
           title: "compiling " + isopacketName + " packages for the tool"
         }, function () {
           isopacketBuildContext.isopackCache.buildLocalPackages(packages);
-          if (buildmessage.jobHasMessages())
+          if (buildmessage.jobHasMessages()) {
             return;
+          }
 
           var image = bundler.buildJsImage({
             name: "isopacket-" + isopacketName,
@@ -1733,8 +1749,9 @@ _.extend(Isopack.prototype, {
             isopackCache: isopacketBuildContext.isopackCache,
             use: packages
           }).image;
-          if (buildmessage.jobHasMessages())
+          if (buildmessage.jobHasMessages()) {
             return;
+          }
 
           image.write(
             builder.enter(files.pathJoin('isopackets', isopacketName)));
@@ -1798,8 +1815,9 @@ _.extend(Isopack.prototype, {
     var self = this;
     var packages = {};
     var processUse = function (use) {
-      if (use.weak || use.unordered)
+      if (use.weak || use.unordered) {
         return;
+      }
       // Only include real packages, not isobuild:* pseudo-packages.
       if (compiler.isIsobuildFeaturePackage(use.package)) {
         return;

@@ -39,7 +39,9 @@ var getReleaseVersionPublishedOn = function (versionRecord) {
   var toolName = toolPackage[0];
   var toolVersion = toolPackage[1];
   var toolRecord = catalog.official.getVersion(toolName, toolVersion);
-  if (! toolRecord || ! toolRecord.published) return null;
+  if (! toolRecord || ! toolRecord.published) {
+    return null;
+  }
   return new Date(toolRecord.published);
 };
 
@@ -243,8 +245,9 @@ _.extend(PkgExports.prototype, {
     var strExports = _.map(self.data, function (exp) {
       // If this export is valid for all architectures, don't specify
       // architectures here.
-      if (exp.architectures.length === compiler.ALL_ARCHES.length)
+      if (exp.architectures.length === compiler.ALL_ARCHES.length) {
         return exp.name;
+      }
 
       // Don't split descriptions of individual pkgExports between lines.
       return Console.noWrap(
@@ -269,7 +272,9 @@ var PkgImplies = function (pkgDeps) {
     // and save their architectures. Also, we want to replace 'os' with
     // 'server', as with exports.
     _.each(ref.references, function (r) {
-      if (! r.implied) return;
+      if (! r.implied) {
+        return;
+      }
       var archName = (r.arch === "os") ? "server" : r.arch;
       architectures.push(archName);
     });
@@ -294,8 +299,9 @@ _.extend(PkgImplies.prototype, {
     var self = this;
     var strImplies = _.map(self.data, function (ref) {
       // If an imply is valid for all architectures, don't specify it here.
-      if (ref["architectures"].length === compiler.ALL_ARCHES.length)
+      if (ref["architectures"].length === compiler.ALL_ARCHES.length) {
         return ref.name;
+      }
 
       // Don't split descriptions of individual implies between lines.
       return Console.noWrap(
@@ -638,7 +644,9 @@ _.extend(PackageQuery.prototype, {
     if (self.showArchitecturesOS) {
       var allBuilds = catalog.official.getAllBuilds(self.name, version);
       var architectures = _.map(allBuilds, function (build) {
-        if (! build['buildArchitectures']) return "unknown";
+        if (! build['buildArchitectures']) {
+          return "unknown";
+        }
         var archOS =
           _.filter(build.buildArchitectures.split('+'), function (arch) {
              return ( arch !== "web.browser" ) && ( arch !== "web.cordova" );
@@ -1493,8 +1501,9 @@ main.registerCommand({
   var filterBroken = function (match, isRelease, name) {
     // If the package does not match, or it is not a package at all or if we
     // don't want to filter anyway, we do not care.
-    if (!match || isRelease)
+    if (!match || isRelease) {
       return match;
+    }
     var vr;
     if (!options["show-all"]) {
       // If we can't find a version in the local catalog, we want to get the

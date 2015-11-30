@@ -64,21 +64,27 @@ const LINKER_CACHE = new LRU({
   }
 });
 
+export class CompilerPluginProcessor {
+  constructor({
+    unibuilds,
+    arch,
+    isopackCache,
+    linkerCacheDir,
+  }) {
+    const self = this;
 
-exports.CompilerPluginProcessor = function (options) {
-  var self = this;
-  self.unibuilds = options.unibuilds;
-  self.arch = options.arch;
-  self.isopackCache = options.isopackCache;
+    self.unibuilds = unibuilds;
+    self.arch = arch;
+    self.isopackCache = isopackCache;
 
-  self.linkerCacheDir = options.linkerCacheDir;
-  if (self.linkerCacheDir) {
-    files.mkdir_p(self.linkerCacheDir);
+    self.linkerCacheDir = linkerCacheDir;
+    if (self.linkerCacheDir) {
+      files.mkdir_p(self.linkerCacheDir);
+    }
   }
-};
-_.extend(exports.CompilerPluginProcessor.prototype, {
-  runCompilerPlugins: function () {
-    var self = this;
+
+  runCompilerPlugins() {
+    const self = this;
     buildmessage.assertInJob();
 
     // plugin id -> {sourceProcessor, resourceSlots}
@@ -100,8 +106,9 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
       _.each(sourceBatch.resourceSlots, function (resourceSlot) {
         var sourceProcessor = resourceSlot.sourceProcessor;
         // Skip non-sources.
-        if (! sourceProcessor)
+        if (! sourceProcessor) {
           return;
+        }
 
         if (! _.has(sourceProcessorsWithSlots, sourceProcessor.id)) {
           sourceProcessorsWithSlots[sourceProcessor.id] = {
@@ -147,7 +154,7 @@ _.extend(exports.CompilerPluginProcessor.prototype, {
 
     return sourceBatches;
   }
-});
+}
 
 var InputFile = function (resourceSlot) {
   var self = this;
@@ -346,8 +353,9 @@ class ResourceSlot {
 
   addStylesheet(options) {
     const self = this;
-    if (! self.sourceProcessor)
+    if (! self.sourceProcessor) {
       throw Error("addStylesheet on non-source ResourceSlot?");
+    }
 
     self.outputResources.push({
       type: "css",
@@ -364,8 +372,9 @@ class ResourceSlot {
   addJavaScript(options) {
     const self = this;
     // #HardcodeJs this gets called by constructor in the "js" case
-    if (! self.sourceProcessor && self.inputResource.extension !== "js")
+    if (! self.sourceProcessor && self.inputResource.extension !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
+    }
 
     // By default, use the 'bare' option given to addFiles, but allow the option
     // passed to addJavaScript to override it.
@@ -393,8 +402,9 @@ class ResourceSlot {
 
   addAsset(options) {
     const self = this;
-    if (! self.sourceProcessor)
+    if (! self.sourceProcessor) {
       throw Error("addAsset on non-source ResourceSlot?");
+    }
 
     if (! (options.data instanceof Buffer)) {
       if (_.isString(options.data)) {
@@ -418,13 +428,16 @@ class ResourceSlot {
     const self = this;
     const unibuild = self.packageSourceBatch.unibuild;
 
-    if (! archinfo.matches(unibuild.arch, "web"))
+    if (! archinfo.matches(unibuild.arch, "web")) {
       throw new Error("Document sections can only be emitted to " +
                       "web targets");
-    if (options.section !== "head" && options.section !== "body")
+    }
+    if (options.section !== "head" && options.section !== "body") {
       throw new Error("'section' must be 'head' or 'body'");
-    if (typeof options.data !== "string")
+    }
+    if (typeof options.data !== "string") {
       throw new Error("'data' option to appendDocument must be a string");
+    }
 
     self.outputResources.push({
       type: options.section,
@@ -433,50 +446,51 @@ class ResourceSlot {
   }
 }
 
-var PackageSourceBatch = function (unibuild, processor, {linkerCacheDir}) {
-  var self = this;
-  buildmessage.assertInJob();
+class PackageSourceBatch {
+  constructor(unibuild, processor, {linkerCacheDir}) {
+    const self = this;
+    buildmessage.assertInJob();
 
-  self.unibuild = unibuild;
-  self.processor = processor;
-  self.linkerCacheDir = linkerCacheDir;
-  var sourceProcessorSet = self._getSourceProcessorSet();
-  self.resourceSlots = [];
-  unibuild.resources.forEach(function (resource) {
-    let sourceProcessor = null;
-    if (resource.type === "source") {
-      var extension = resource.extension;
-      if (extension === null) {
-        const filename = files.pathBasename(resource.path);
-        sourceProcessor = sourceProcessorSet.getByFilename(filename);
-        if (! sourceProcessor) {
-          buildmessage.error(
-            `no plugin found for ${ resource.path } in ` +
-              `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
-              `was active when it was published but none is now`);
-          return;
-          // recover by ignoring
-        }
-      } else {
-        sourceProcessor = sourceProcessorSet.getByExtension(extension);
-        // If resource.extension === 'js', it's ok for there to be no
-        // sourceProcessor, since we #HardcodeJs in ResourceSlot.
-        if (! sourceProcessor && extension !== 'js') {
-          buildmessage.error(
-            `no plugin found for ${ resource.path } in ` +
-            `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
-            `was active when it was published but none is now`);
-          return;
-          // recover by ignoring
+    self.unibuild = unibuild;
+    self.processor = processor;
+    self.linkerCacheDir = linkerCacheDir;
+    var sourceProcessorSet = self._getSourceProcessorSet();
+    self.resourceSlots = [];
+    unibuild.resources.forEach(function (resource) {
+      let sourceProcessor = null;
+      if (resource.type === "source") {
+        var extension = resource.extension;
+        if (extension === null) {
+          const filename = files.pathBasename(resource.path);
+          sourceProcessor = sourceProcessorSet.getByFilename(filename);
+          if (! sourceProcessor) {
+            buildmessage.error(
+              `no plugin found for ${ resource.path } in ` +
+                `${ unibuild.pkg.displayName() }; a plugin for ${ filename } ` +
+                `was active when it was published but none is now`);
+            return;
+            // recover by ignoring
+          }
+        } else {
+          sourceProcessor = sourceProcessorSet.getByExtension(extension);
+          // If resource.extension === 'js', it's ok for there to be no
+          // sourceProcessor, since we #HardcodeJs in ResourceSlot.
+          if (! sourceProcessor && extension !== 'js') {
+            buildmessage.error(
+              `no plugin found for ${ resource.path } in ` +
+                `${ unibuild.pkg.displayName() }; a plugin for *.${ extension } ` +
+                `was active when it was published but none is now`);
+            return;
+            // recover by ignoring
+          }
         }
       }
-    }
-    self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
-  });
-};
-_.extend(PackageSourceBatch.prototype, {
-  _getSourceProcessorSet: function () {
-    var self = this;
+      self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
+    });
+  }
+
+  _getSourceProcessorSet() {
+    const self = this;
 
     buildmessage.assertInJob();
 
@@ -496,14 +510,14 @@ _.extend(PackageSourceBatch.prototype, {
     });
 
     return sourceProcessorSet;
-  },
+  }
 
   // Called by bundler's Target._emitResources.  It returns the actual resources
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources: Profile("PackageSourceBatch#getResources", function () {
-    var self = this;
+  getResources() {
+    const self = this;
     buildmessage.assertInJob();
 
     var flatten = function (arrays) {
@@ -513,10 +527,10 @@ _.extend(PackageSourceBatch.prototype, {
     var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
     Array.prototype.push.apply(resources, self._linkJS(jsResources));
     return resources;
-  }),
+  }
 
-  _linkJS: Profile("PackageSourceBatch#_linkJS", function (jsResources) {
-    var self = this;
+  _linkJS(jsResources) {
+    const self = this;
     buildmessage.assertInJob();
 
     var isopackCache = self.processor.isopackCache;
@@ -618,8 +632,9 @@ _.extend(PackageSourceBatch.prototype, {
         diskCached = files.readJSONOrNull(cacheFilename);
       } catch (e) {
         // Ignore JSON parse errors; pretend there was no cache.
-        if (!(e instanceof SyntaxError))
+        if (!(e instanceof SyntaxError)) {
           throw e;
+        }
       }
       if (diskCached && diskCached instanceof Array) {
         // Fix the non-JSON part of our return value.
@@ -677,5 +692,16 @@ _.extend(PackageSourceBatch.prototype, {
     }
 
     return ret;
-  })
+  }
+}
+
+_.each([
+  "getResources",
+  "_linkJS",
+], method => {
+  const proto = PackageSourceBatch.prototype;
+  proto[method] = Profile(
+    "PackageSourceBatch#" + method,
+    proto[method]
+  );
 });

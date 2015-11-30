@@ -3271,7 +3271,7 @@ if (Meteor.isServer) {
         collection.update(selector, {$set: 5});
       });
     });
-    
+
     test.equal(collection.find().count(), 10);
   });
 }
