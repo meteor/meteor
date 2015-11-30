@@ -66,7 +66,7 @@ Finally, enable all of the rules that you would like to use.
     "meteor/audit-argument-checks": 2,
     "meteor/no-session": 2,
     "meteor/no-blaze-lifecycle-assignment": 2,
-    "meteor/no-zero-timeout": 2
+    "meteor/no-zero-timeout": 2,
     "meteor/blaze-consistent-eventmap-params": 2,
   }
 }
