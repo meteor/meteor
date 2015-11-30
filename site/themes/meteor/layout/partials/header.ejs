@@ -20,6 +20,11 @@
 
 <div id="site-nav">
   <a id="logo" href="/">Meteor</a>
-  <span>The Official Guide</span>
-  <!-- we may have more sections here in the future -->
+  <span class="sub-title">The Official Guide</span>
+  <select id="version-select">
+    <% config.versions.forEach(function (v) { %>
+      <option value="v<%- v %>">v<%- v %></option>
+    <% }) %>
+  </select>
+  <input id="search">
 </div>

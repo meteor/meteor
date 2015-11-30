@@ -24,12 +24,17 @@
     text-transform uppercase
 
 #site-nav
+  position relative
   height 70px
   background-color #fff
   border-bottom 1px solid #eee
   padding 14px 30px
   a, span, select
     vertical-align bottom
+  .sub-title
+    margin 0 8px
+    position relative
+    top 1px
 
 #logo
   display inline-block
@@ -38,4 +43,19 @@
   text-indent -9999px
   background url(https://www.meteor.com/assets/meteor-logo.png)
   background-size 100%
-  margin-right 10px
+
+#search
+  position absolute
+  right 30px
+  top 20px
+  outline none
+  font-family 'ProximaNova-Regular'
+  font-size 14px
+  padding 6px 12px 5px 32px
+  border-radius 20px
+  border 1px solid #ddd
+  background url(../images/search.png) 8px 5px no-repeat
+  background-size 20px
+  transition border-color .25s ease
+  &:focus
+    border-color #de4f4f

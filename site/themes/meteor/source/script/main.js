@@ -104,4 +104,25 @@
     }
   }
 
+  // version select
+  var select = document.getElementById('version-select')
+  var currentVersion = location.pathname.match(/^\/(v\d[^\/]+)/)
+  if (currentVersion) {
+    [].some.call(select.options, function (o) {
+      if (o.value === currentVersion[1]) {
+        o.selected = true
+        return true
+      }
+    })
+  }
+  select.addEventListener('change', function () {
+    var targetPath = '/'
+    if (select.selectedIndex !== 0) {
+      targetPath = '/' + select.value + '/'
+    }
+    location.assign(targetPath)
+  })
+
+  // search box
+  // TODO
 })()

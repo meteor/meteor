@@ -27,6 +27,8 @@ The static site theme is in `themes/meteor` and is responsible for the visual re
 
 - Any branch that starts with `version-` will be automatically deployed in a sub-folder on every push. A branch with the name `version-1.2` will be deployed under the `v1.2` folder.
 
+- To make a branch available in the site's version selection dropdown, make sure to add it to the `versions` list in `site/_config.yaml`!
+
 - Any other branch is ignored by default. If you want to enable auto-deploy for a branch, you should edit [the branch field in the deployment section of `circle.yml`](https://github.com/meteor/guide/blob/master/circle.yml#L18) to match the name of the branch. The branch will be then be deployed with the `branch-` prefix automatically. For example, branch `test` will be deployed under the `branch-test` folder.
 
 ### Manual Deployment
