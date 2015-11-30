@@ -8,3 +8,7 @@
 * Nuno Soares Marques, ee11291@fe.up.pt
 
 ## Introdução
+
+## Referências
+
+## FEUP ESOF MIEIC
