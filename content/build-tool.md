@@ -30,8 +30,26 @@ ECMAScript, the language standard on which every browser's JavaScript implementa
 
 The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://github.com/meteor/meteor/tree/master/packages/ecmascript#supported-es2015-features).
 
-All of the code samples in this guide and future Meteor tutorials will use all of the new ES2015 features, so we don't need any specific code samples here. You can also read more about ES2015 on the Meteor Blog:
+All of the code samples in this guide and future Meteor tutorials will use all of the new ES2015 features, so we won't add any new code samples here. You can also read more about ES2015 and how to get started with it on the Meteor Blog:
 
 - [Getting started with ES2015 and Meteor](http://info.meteor.com/blog/es2015-get-started)
 - [Set up Sublime Text for ES2015](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
 - [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
+
+### CoffeeScript
+
+While we recommend using ES2015 with the `ecmascript` package as the best development experience for Meteor, everything in the platform is 100% compatible with [CoffeeScript](http://coffeescript.org/) and many people in the Meteor community prefer it.
+
+All you need to do to use CoffeeScript is add the right package:
+
+```sh
+meteor add coffeescript
+```
+
+All code written in CoffeeScript compiles to JavaScript under the hood, and is completely compatible with any code in other packages that is written in JS or ES2015.
+
+### TypeScript
+
+Meteor does not currently work well with TypeScript. There are some community solutions on Atmosphere and in various materials around the internet, but until Meteor 1.3 introduces a standard JavaScript module system TypeScript is not a great path for Meteor development. XXX this might change shortly after Meteor 1.3? also, talk to Uri
+
+## Templates and HTML
