@@ -1,4 +1,6 @@
-# The Meteor build system
+---
+title: Build system
+---
 
 ## What does it do?
 
