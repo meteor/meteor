@@ -60,25 +60,118 @@ A second approach is to place the CDN completely in front of your site. In this 
 
 XXX: do we actually know anyone that has done this? What domains are typically used?
 
+## Deploying
 
-3. Deployment options
-  1. Deploying to .meteor.com via `meteor deploy`.
-    1. How to do it
-    2. Managing a deployment / deleting
-    3. Accessing mongo
-    4. Performance characteristics => don't use for production
-  2. Deploying with MUP
-    1. Description of what MUP does
-    2. Link to some articles w/ example content
-  3. Deploying with Modulus
-    1. Description of what Modulus is
-    2. Link to some articles w/ example content
-  4. Deploying with Galaxy
-    1. Description of Galaxy
-    2. How to do it
-    3. Management on the commandline
-    4. The Galaxy UI -- link to galaxy docs
-    5. How rolling app updates work, and why they are important
+There are many options on where to deploy your Meteor application but here are some prominent options.
+
+### Meteor's free hosting
+
+If you are still developing your application and want to see how it behaves online, or share in with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`.
+
+Deploying is simple, simply type:
+
+```bash
+meteor deploy your-app.meteor.com
+```
+
+This will bundle your application from the current directory, upload it, and serve it from https://your-app.meteor.com. Along the way it'll provision you with a MongoDB database and mail setup and configure (via the ENV) your app to run. Note that the service is pretty limited however
+
+XXX: insert details on how meteor.com is limited.
+
+#### Managing your meteor.com app
+
+There are few handy tips for managing your deployed application. To deploy with a `settings.json` file, use:
+
+```bash
+meteor deploy your-app.meteor.com --settings settings.json
+```
+
+To delete the app, you can type:
+
+```bash
+meteor deploy --delete your-app.meteor.com
+```
+
+To allow others to deploy the app, you can add them to the authorized user list with:
+
+```bash
+meteor authorized your-app.meteor.com --add <user-or-organization>
+```
+
+You can view the latest logs with
+
+```bash
+meteor logs your-app.meteor.com
+```
+
+Finally, if you want to access the mongo database for your app directly, you can use
+
+```bash
+meteor mongo your-app.meteor.com
+```
+
+### Deploying with Meteor Up
+
+[Meteor Up](https://github.com/kadirahq/meteor-up) (mup) is an open source tool that's used to deploy Meteor application to any online server over SSH. 
+
+To use mup, you need to install the `mup` tool via `npm`.
+
+```bash
+npm install -g mup
+```
+
+Once you've installed the command, you can initialize your project with `mup init`, which will create a `mup.json` file which you can use to configure your setup. You can read the [finer details here](https://github.com/kadirahq/meteor-up#example-file), but essentially you need to list the servers you would like to install to as well as some options on exactly how to set them up.
+
+To list those servers you'll first need to obtain some! A good option is Digital Ocean(https://www.digitalocean.com), which will provide a Virtual Private Server for a very reasonable price. You'll need to ensure that Ubuntu or Debian is installed on the machine and mup can SSH into your server with the keys you provide in the config.
+
+Once you've configured mup, you can get your servers installed with
+
+```bash
+mup setup
+```
+
+Once you've done so, you can redeploy each time with:
+
+```bash
+mup deploy
+```
+
+You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+
+### Deploying to Modulus
+
+[Modulus](https://modulus.io) is a container based hosting service that's an affordable way to host Meteor applications without needing to deal with managing your own servers directly. You can use them to host your MongoDB database and deploy your Meteor application using their commandline tool.
+
+Read more about using Meteor with Modulus [here](http://help.modulus.io/customer/portal/articles/1647770-using-meteor-with-modulus).
+
+Note however that in order use oplog tailing (highly recommended for performance), you'll need to either get a dedicated database hosting service from Modulus or use a different MongoDB provider (see below).
+
+### Deploying to Galaxy
+
+Another option is to deploy to Galaxy, Meteor's paid hosting service. In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing?gclid=CIqstOv3uckCFYKWvAod338FGw), and separately provision a MongoDB database (see below).
+
+Once you've done that, you can [deploy to Galaxy](https://galaxy.meteor.com/help/deploying-to-galaxy) almost as easily as you can to Meteor's free servers. You just need to [add some environment variables to your settings file](https://galaxy.meteor.com/help/setting-environment-variables) to point it at your MongoDB, and you can deploy with:
+
+```bash
+DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
+```
+
+In order for galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](https://galaxy.meteor.com/help/configuring-dns). Once you've done this, you should be able to reach your site from a browser.
+
+You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings. 
+
+[ss]
+
+If you are following our advice, you'll probably want to [setup SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain.
+
+Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
+
+[ss]
+
+#### MongoDB hosting services to use with Galaxy
+
+If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
+
 4. Deployment process
   1. Why it's important to have a deployment process (it's easy to mess up a web application deployment)
   2. The steps in getting a release to production
