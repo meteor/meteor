@@ -35,7 +35,7 @@ The static site theme is in `themes/meteor` and is responsible for the visual re
 
 In the `site` directory:
 
-1. Create `keys.json` (search for "Meteor guide AWS S3 keys" in LastPass):
+1. Create `keys.json` (search for "guide_push" in LastPass):
 
   ``` json
   {
