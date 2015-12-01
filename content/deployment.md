@@ -172,23 +172,35 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
 
-4. Deployment process
-  1. Why it's important to have a deployment process (it's easy to mess up a web application deployment)
-  2. The steps in getting a release to production
-    1. Deploy to staging + migrate data
-    2. QA on staging
-    3. Fix and repeat
-    4. Deploy to production + migrate
-    5. Final QA
-  3. Automating QA via acceptance testing
-  4. Understanding what happens during a (rolling deployment)
-    1. Multiple versions running concurrently
-    2. Therefore you app needs to (temporarily) be resistent to both data formats
-    3. How to do a 2 stage deployment to allow schema changes
+## Deployment Process
+
+Although it's much easier to deploy a web application than release most other types of software, that doesn't mean you should be cavalier with your deployment. It's important to properly QA and test your releases before you push them live, to ensure that users don't have a bad experience, or even worse, data get corrupted.
+
+It's a good idea to have a release process that you follow in releasing your application. Typically that process looks something like:
+
+1. Deploy the new version of the application to your staging server.
+2. QA the application on the staging server.
+3. Fix any bugs found in step 2. and repeat.
+4. Once you are satisfied with the staging release, release the *exact same* version to production.
+5. Run final QA on production.
+
+Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our {% link_to 'testing' 'Testing Article'} for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
+
+### Rolling deployments and data versions
+
+It's important to understand what happens during a deployment, especially if your deployment involves changes in data format (and potentially data migrations, see the {% link_to 'collections' 'Collections Article'}).
+
+Depending on where your app is deployed and the number of application processes you have running, things will be different, but if you are deployed in a scaled way to Galaxy, there'll be a period where a number of containers are running the old version, and a number the new, as users are migrated smoothly across to the new version of your app.
+
+[ss]
+
+If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the collections article.
+
 5. Monitoring users via analytics
-  1. It's useful to understand who is using your application
-  2. Using `okgrow:analytics`
-  3. A sample service -- probably GA
+
+### XXX: we have this in the routing chapter. Where does it want to live?
+
+
 6. Monitoring your application via APM
   1. Understanding the typical performance profile of a Meteor application
     1. observers x mutations ~== total CPU usage
