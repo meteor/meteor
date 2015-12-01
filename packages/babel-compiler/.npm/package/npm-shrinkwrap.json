@@ -48,13 +48,13 @@
         "babel-plugin-eval": {
           "version": "1.0.1"
         },
+        "babel-plugin-inline-environment-variables": {
+          "version": "1.0.1"
+        },
         "babel-plugin-jscript": {
           "version": "1.0.4"
         },
         "babel-plugin-member-expression-literals": {
-          "version": "1.0.1"
-        },
-        "babel-plugin-inline-environment-variables": {
           "version": "1.0.1"
         },
         "babel-plugin-property-literals": {
@@ -63,14 +63,14 @@
         "babel-plugin-proto-to-assign": {
           "version": "1.0.4"
         },
+        "babel-plugin-react-display-name": {
+          "version": "1.0.3"
+        },
         "babel-plugin-react-constant-elements": {
           "version": "1.0.3"
         },
         "babel-plugin-remove-console": {
           "version": "1.0.1"
-        },
-        "babel-plugin-react-display-name": {
-          "version": "1.0.3"
         },
         "babel-plugin-remove-debugger": {
           "version": "1.0.1"
@@ -99,11 +99,11 @@
         "breakable": {
           "version": "1.0.0"
         },
-        "chalk": {
-          "version": "1.1.1"
-        },
         "camelcase": {
           "version": "1.2.1"
+        },
+        "chalk": {
+          "version": "1.1.1"
         },
         "character-parser": {
           "version": "1.2.1"
@@ -132,11 +132,11 @@
         "css-stringify": {
           "version": "1.0.5"
         },
-        "decamelize": {
-          "version": "1.0.0"
-        },
         "debug": {
           "version": "2.2.0"
+        },
+        "decamelize": {
+          "version": "1.0.0"
         },
         "detect-indent": {
           "version": "3.0.1"
@@ -144,11 +144,11 @@
         "diff": {
           "version": "1.4.0"
         },
-        "esprima-fb": {
-          "version": "15001.1.0-dev-harmony-fb"
-        },
         "escape-string-regexp": {
           "version": "1.0.3"
+        },
+        "esprima-fb": {
+          "version": "15001.1.0-dev-harmony-fb"
         },
         "esutils": {
           "version": "2.0.2"
@@ -159,11 +159,11 @@
         "get-stdin": {
           "version": "4.0.1"
         },
-        "graceful-fs": {
-          "version": "3.0.8"
-        },
         "globals": {
           "version": "6.4.1"
+        },
+        "graceful-fs": {
+          "version": "3.0.8"
         },
         "graceful-readlink": {
           "version": "1.0.1"
@@ -174,11 +174,11 @@
         "has-ansi": {
           "version": "2.0.0"
         },
-        "iconv-lite": {
-          "version": "0.4.11"
-        },
         "home-or-tmp": {
           "version": "1.0.0"
+        },
+        "iconv-lite": {
+          "version": "0.4.11"
         },
         "inflight": {
           "version": "1.0.4"
@@ -189,11 +189,11 @@
         "install": {
           "version": "0.1.8"
         },
-        "is-integer": {
-          "version": "1.0.6"
-        },
         "is-finite": {
           "version": "1.0.1"
+        },
+        "is-integer": {
+          "version": "1.0.6"
         },
         "is-promise": {
           "version": "2.1.0"
@@ -201,11 +201,11 @@
         "js-tokens": {
           "version": "1.0.1"
         },
-        "jsesc": {
-          "version": "0.5.0"
-        },
         "json5": {
           "version": "0.4.0"
+        },
+        "jsesc": {
+          "version": "0.5.0"
         },
         "left-pad": {
           "version": "0.0.3"
@@ -228,14 +228,14 @@
         "minimist": {
           "version": "1.2.0"
         },
+        "number-is-nan": {
+          "version": "1.0.0"
+        },
         "ms": {
           "version": "0.7.1"
         },
         "once": {
           "version": "1.3.2"
-        },
-        "number-is-nan": {
-          "version": "1.0.0"
         },
         "optimist": {
           "version": "0.3.7"
@@ -243,26 +243,26 @@
         "os-tmpdir": {
           "version": "1.0.1"
         },
-        "output-file-sync": {
-          "version": "1.1.1"
-        },
         "path-exists": {
           "version": "1.0.0"
         },
-        "path-is-absolute": {
-          "version": "1.0.0"
+        "output-file-sync": {
+          "version": "1.1.1"
         },
         "private": {
           "version": "0.1.6"
         },
+        "path-is-absolute": {
+          "version": "1.0.0"
+        },
         "promise": {
           "version": "7.0.4"
         },
-        "q": {
-          "version": "1.1.2"
-        },
         "recast": {
           "version": "0.10.24"
+        },
+        "q": {
+          "version": "1.1.2"
         },
         "regenerate": {
           "version": "1.2.1"
@@ -270,17 +270,17 @@
         "regenerator": {
           "version": "0.8.35"
         },
-        "regexpu": {
-          "version": "1.2.0"
-        },
         "regjsgen": {
           "version": "0.2.0"
         },
-        "repeating": {
-          "version": "1.1.3"
+        "regexpu": {
+          "version": "1.2.0"
         },
         "regjsparser": {
           "version": "0.1.5"
+        },
+        "repeating": {
+          "version": "1.1.3"
         },
         "resolve": {
           "version": "1.1.6"
@@ -306,14 +306,14 @@
         "stable": {
           "version": "0.1.5"
         },
-        "stringset": {
-          "version": "0.2.1"
-        },
         "stringmap": {
           "version": "0.2.2"
         },
         "strip-ansi": {
           "version": "3.0.0"
+        },
+        "stringset": {
+          "version": "0.2.1"
         },
         "supports-color": {
           "version": "2.0.0"
@@ -357,19 +357,19 @@
         "yargs": {
           "version": "1.3.3"
         },
+        "glob": {
+          "version": "4.2.2",
+          "dependencies": {
+            "minimatch": {
+              "version": "1.0.0"
+            }
+          }
+        },
         "clean-css": {
           "version": "3.4.3",
           "dependencies": {
             "commander": {
               "version": "2.8.1"
-            }
-          }
-        },
-        "defs": {
-          "version": "1.1.0",
-          "dependencies": {
-            "esprima-fb": {
-              "version": "8001.1001.0-dev-harmony-fb"
             }
           }
         },
@@ -381,11 +381,11 @@
             }
           }
         },
-        "glob": {
-          "version": "4.2.2",
+        "defs": {
+          "version": "1.1.0",
           "dependencies": {
-            "minimatch": {
-              "version": "1.0.0"
+            "esprima-fb": {
+              "version": "8001.1001.0-dev-harmony-fb"
             }
           }
         },
