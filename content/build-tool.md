@@ -53,3 +53,41 @@ All code written in CoffeeScript compiles to JavaScript under the hood, and is c
 Meteor does not currently work well with TypeScript. There are some community solutions on Atmosphere and in various materials around the internet, but until Meteor 1.3 introduces a standard JavaScript module system TypeScript is not a great path for Meteor development. XXX this might change shortly after Meteor 1.3? also, talk to Uri
 
 ## Templates and HTML
+
+Since Meteor uses client-side rendering for your app's UI, all of your HTML code, UI components, and templates need to be compiled to JavaScript. There are a few options at your disposal to write your UI code.
+
+### Blaze HTML templates
+
+The aptly named `blaze-html-templates` package that comes with every new Meteor app by default compiles your `.html` files written using [Spacebars](XXX blaze article) into Blaze-compatible JavaScript code. You can also add `blaze-html-templates` to any of your packages to compile template files located in the package.
+
+### Blaze Jade templates
+
+If you don't like the Spacebars syntax Meteor uses by default and want something more concise, you can give Jade a try by using [`mquandalle:jade`](https://atmospherejs.com/mquandalle/jade). This package will compile all files in your app with the `.jade` extension into Blaze-compatible code, and can be used side-by-side with `blaze-html-templates` if you want to have some of your code in Spacebars and some in Jade.
+
+### JSX for React
+
+If you're building your app's UI with React, currently the most popular way to write your UI components involves JSX, an extension to JavaScript that allows you to type HTML tags that are converted to React DOM elements. To enable JSX compilation, simply add the `jsx` package to your app; you can also use the `react` meta-package which will include `jsx` for you.
+
+#### Other options for React
+
+If you want to use React but don't want to deal with JSX and prefer a more HTML-like syntax, there are a few community options available. One that stands out in particular is [Blaze-React](https://github.com/timbrandin/blaze-react), which simulates the entire Blaze API using React as a rendering engine.
+
+### Angular templates
+
+XXX ask Uri
+
+## CSS compilers
+
+XXX
+
+## PostCSS
+
+XXX
+
+## Minification
+
+XXX
+
+## Using NPM in your app
+
+XXX
