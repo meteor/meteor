@@ -1,3 +1,34 @@
+## Standup 1st Dec
+
+With Tom, Zol and Sashko
+
+### Agenda
+
+- Progress?
+- Website QA
+
+### Notes
+
+- We'll all do a round of QA on the website before Evan completely moves onto other things.
+- Merge Security and Data article in the next 24 hours.
+- Sashko to clean up other cruft.
+- Article draft velocity is good, easy articles are done.
+- Should we write a guide on Blaze?
+- Testing and App structure require too many decisions.
+- Taking these 3 out will maybe have the other articles drafted by the end of the week (*Tom optimism*)
+- Demoting publishing a package to an 'article idea' rather than a first class article.
+- Mini-app with forms in it?
+- Split Forms/Methods article into 2, Methods and Forms. Definitely get the Methods done and maybe get the Forms done, note Forms requires a mini example app.
+- Remember we should make some nice diagrams some time.
+
+### Action Items
+
+- Tom+Sashko - UI/UX, what should we do about internationalization?
+- Do we write a Blaze article? - part of discussion with Matt tomorrow.
+- Sit down and resolve tiny decisions in each article to get them to draft stage.
+- Tom to do Mobile (until we know more).
+- Sashko to do Methods.
+
 ## Standup 23rd Nov
 
 With Evan, Tom, Sashko, Zol
