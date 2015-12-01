@@ -8,7 +8,7 @@ var s3Options = {
   key: process.env.AWS_KEY,
   secret: process.env.AWS_SECRET,
   bucket: 'guide.meteor.com',
-  region: 'us-west-1'
+  region: 'us-east-1'
 }
 
 if (!(s3Options.key && s3Options.secret)) {
