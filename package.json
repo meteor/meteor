@@ -47,7 +47,7 @@
     "istanbul": "0.4.1",
     "mocha": "2.3.4",
     "readline-sync": "1.2.21",
-    "rewire": "2.5.0",
+    "rewire": "2.5.1",
     "rimraf": "2.4.4",
     "semantic-release": "4.3.5",
     "validate-commit-msg": "1.0.0"
