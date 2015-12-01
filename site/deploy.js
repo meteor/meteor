@@ -7,7 +7,7 @@ var readdirp = require('readdirp')
 var s3Options = {
   key: process.env.AWS_KEY,
   secret: process.env.AWS_SECRET,
-  bucket: 'meteor-guide',
+  bucket: 'guide.meteor.com',
   region: 'us-west-1'
 }
 
