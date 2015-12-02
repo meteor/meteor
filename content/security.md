@@ -192,6 +192,8 @@ XXX decided to skip method side effects because I can't come up with a good exam
 
 Publications are the primary way clients retrieve data from a Meteor server. While with Methods the primary concern was making sure users can't modify the database in unexpected ways, with publications the main issue is filtering the data being returned so that a malicious user can't get access to data they aren't supposed to see.
 
+#### You can't do security at the rendering layer
+
 In a server-side-rendered framework like Ruby on Rails, it's sufficient to simply not display sensitive data in the returned HTML response. In Meteor, since the rendering is done on the client, an `if` statement in your HTML template is not secure; you need to do security at the data level to make sure that data is never sent in the first place.
 
 ### Rules about methods still apply
