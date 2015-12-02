@@ -28,23 +28,23 @@ describe("Babel", function() {
     assert.strictEqual(0o777, 511);
   });
 
-  it(`es6.templateLiterals`, () => {
-    let second = 2;
+  // it(`es6.templateLiterals`, () => {
+  //   let second = 2;
 
-    function strip(strings, ...values) {
-      values.push("");
-      return strings.map(
-        (s, i) => s.replace(/ /g, "") + values[i]
-      ).join("");
-    }
+  //   function strip(strings, ...values) {
+  //     values.push("");
+  //     return strings.map(
+  //       (s, i) => s.replace(/ /g, "") + values[i]
+  //     ).join("");
+  //   }
 
-    assert.strictEqual(
-      strip`first
-            ${second}
-            third`,
-      "first\n2\nthird"
-    );
-  });
+  //   assert.strictEqual(
+  //     strip`first
+  //           ${second}
+  //           third`,
+  //     "first\n2\nthird"
+  //   );
+  // });
 
   it("es6.classes", () => {
     let Base = class {
