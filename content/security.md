@@ -186,8 +186,6 @@ This will make every method only callable 5 times per second. This is a rate lim
 
 Meteor's built-in rate limiter is useful in many situations; there are also community-built rate limiting packages that include additional features like reCAPTCHA integration, for example [`meteorhacks:sikka`](https://github.com/meteorhacks/sikka). XXX verify this is still a real thing
 
-XXX decided to skip method side effects because I can't come up with a good example, and audit-argument checks because mdg:method handles it
-
 ## Publications
 
 Publications are the primary way clients retrieve data from a Meteor server. While with Methods the primary concern was making sure users can't modify the database in unexpected ways, with publications the main issue is filtering the data being returned so that a malicious user can't get access to data they aren't supposed to see.
@@ -240,6 +238,8 @@ Publications are not reactive, and they only re-run when the currently logged in
 ```js
 // #1: Bad! If the owner of the list changes, the old owner will still see it
 Meteor.publish('list', function (listId) {
+  check(listId, String);
+
   const list = Lists.findOne(listId);
 
   if (! list.userId === this.userId) {
@@ -257,6 +257,8 @@ Meteor.publish('list', function (listId) {
 
 // #2: Good! When the owner of the list changes, the old owner won't see it anymore
 Meteor.publish('list', function (listId) {
+  check(listId, String);
+
   return Lists.find({
     _id: listId,
     userId: this.userId
@@ -407,8 +409,7 @@ You can ensure that any unsecured connection to your app redirects to a secure c
 
 1. Remove the `insecure` package
 1. Remove the `autopublish` package
-1. Validate all method and publication arguments
-  1. Use `audit-argument-checks` to ensure this
+1. Validate all method and publication arguments, and use `audit-argument-checks` to ensure this
 1. Deny writes to the `profile` field on user documents // XXX link to accounts
 1. Use methods instead of client-side insert/update/remove and allow/deny
 1. Use specific selectors and filter fields in publications
