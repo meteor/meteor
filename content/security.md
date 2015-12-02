@@ -18,8 +18,8 @@ Securing a web application is all about understanding security domains and under
 
 In practice, this means that you should do most of your security and validation on the boundary between these two domains. In simple terms:
 
-1. Validate and check all data that comes from the client
-2. Don't leak any secret data to the client
+1. Validate and check all inputs that come from the client
+2. Don't leak any secret information to the client
 
 ## Attack surface area
 
@@ -37,7 +37,7 @@ In this guide, we're going to take a strong position that using [allow](http://d
 
 There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
 
-Given the points above, we're going to recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
+Given the points above, we recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
 
 Here's a code snippet to disable client-side updates on a collection; this will make sure no other part of the code can use `allow`:
 
@@ -143,7 +143,7 @@ const Meteor.users.methods.setUserData = new Method({
 });
 ```
 
-The above method is great because you can have the flexibility of having some optional fields and only passing the ones you want to change. In particular, what makes it possible for this method is that the security considerations of setting one's full name and date of birth are the same - we don't have to do different security checks for different fields being set.
+The above method is great because you can have the flexibility of having some optional fields and only passing the ones you want to change. In particular, what makes it possible for this method is that the security considerations of setting one's full name and date of birth are the same - we don't have to do different security checks for different fields being set. Note that it's very important that the `$set` query on MongoDB is generated on the server - we should never take MongoDB operators as-is from the client, since they are hard to validate and could result in unexpected side effects.
 
 ### Rate limiting: a first line of defense against brute force attacks
 
@@ -183,7 +183,7 @@ In a server-side-rendered framework like Ruby on Rails, it's sufficient to simpl
 All of the stuff about methods listed above applies to publications as well:
 
 1. Validate all arguments using `check` or `aldeed:simple-schema`
-1. Never pass the
+1. Never pass the current user ID as an argument
 1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client
 1. Use rate limiting to stop people from spamming you with subscriptions
 
@@ -264,6 +264,8 @@ For certain applications, for example pagination, you'll want to pass options in
 2. **Passing in a filter**: If you want to pass fields to filter on because you don't want all of the data, for example in the case of a search query, make sure to intersect the fields passed from the client with the fields it is allowed to see. Otherwise, a client could query on secret fields it's not supposed to be able to access.
 3. **Passing in fields**: If you want the client to be able to decide which fields of the collection should be fetched, make sure to intersect that with the fields that client is allowed to see, so that you don't accidentally send secret data to the client.
 
+In summary, you should make sure that any options passed from the client to a publication can only restrict the data being requested, rather than extending it.
+
 ## Served files
 
 Publications are not the only place the client gets data from the server. The set of source code files and static assets that are served by your application server could also potentially contain sensitive data:
@@ -274,9 +276,29 @@ Publications are not the only place the client gets data from the server. The se
 
 While the client-side UI of your application is basically open source, every application will have some secret code on the server that you don't want to share with the world.
 
-Secret business logic in your app should be located in code that only runs on the server. This means it is in the `server/` directory of your app, in a package that is only included on the server, or in a file inside a package that was loaded only on the server.
+Secret business logic in your app should be located in code that only runs on the server. This means it is in the `server/` directory of your app, in a package that is only included on the server, or in a file inside a package that was loaded only on the server. If you have an API method in your app that has secret business logic, you might want to split the method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
 
-Keep in mind that code inside `if (Meteor.isServer)` blocks is still sent to the client, it is just not executed. So don't put any secret code in there.
+```js
+// In a server-only file
+MMR = {
+  updateWithSecretAlgorithm(userId) {
+    // your secret code here
+  }
+}
+```
+
+```js
+// In a file loaded on client and server
+const Meteor.users.methods.updateMMR = new Method({
+  name: 'Meteor.users.methods.updateMMR',
+  validate: null,
+  run() {
+    MMR.updateWithSecretAlgorithm(this.userId);
+  }
+});
+```
+
+Note that while the method is defined on the client, the actual secret logic is only accessible from the server. Keep in mind that code inside `if (Meteor.isServer)` blocks is still sent to the client, it is just not executed. So don't put any secret code in there.
 
 Secret API keys should never be stored in your source code at all, the next section will talk about how to handle them.
 
@@ -287,9 +309,9 @@ Every app will have some secret API keys or passwords:
 1. Your database password
 1. API keys for external APIs
 
-These should never be stored as part of your app's source code in version control; the appropriate place to put secret keys is in a _settings file_ or an _environment variable_.
+These should never be stored as part of your app's source code in version control, because developers might copy code around to unexpected places and forget that it contains secret keys. You can keep your keys separately in Dropbox, LastPass, or another service, and then reference them when you need to deploy the app.
 
-Most of your app settings should be in JSON files that you pass in when starting your app. You can start your app with a settings file by passing the `--settings` flag:
+You can pass settings to your app through a _settings file_ or an _environment variable_. Most of your app settings should be in JSON files that you pass in when starting your app. You can start your app with a settings file by passing the `--settings` flag:
 
 ```sh
 # Pass development settings when running your app locally
