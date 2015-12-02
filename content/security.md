@@ -196,7 +196,7 @@ In a server-side-rendered framework like Ruby on Rails, it's sufficient to simpl
 
 ### Rules about methods still apply
 
-All of the stuff about methods listed above applies to publications as well:
+All of the points above about methods apply to publications as well:
 
 1. Validate all arguments using `check` or `aldeed:simple-schema`
 1. Never pass the current user ID as an argument
