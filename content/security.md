@@ -65,6 +65,22 @@ This is trivial when using the `mdg:method` package, and you can also achieve th
 
 Consider that if you are writing unit tests for your methods, you would need to test all possible kinds of input to the method; validating the arguments restricts the space of inputs you need to unit test, reducing the amount of code you need to write over all. It also has the extra bonus of being self-documenting; someone else can come along and read the code to find out what kinds of parameters a method is looking for.
 
+Just as an example, here's a situation where not checking arguments can be disastrous:
+
+```js
+Meteor.methods({
+  removeWidget(id) {
+    if (! this.userId) {
+      throw new Meteor.Error('removeWidget.unauthorized');
+    }
+
+    Widgets.remove(id);
+  }
+});
+```
+
+If someone comes along and passes a non-ID selector like `{}`, they will end up deleting the entire collection.
+
 ### Never pass the current user's ID as an argument
 
 The `this` context inside every Meteor method has some useful properties, and the most useful is [`this.userId`](http://docs.meteor.com/#/full/method_userId). This property is managed by the DDP login system, and is guaranteed by the framework itself to be secure following widely-used best practices.
