@@ -5,7 +5,7 @@ title: Collections and Models
 After reading this guide, you'll know:
 
 1. What the different flavors of MongoDB Collection in Meteor are, and how to use them.
-2. How to define a schema for a collection to control it's content.
+2. How to define a schema for a collection to control its content.
 3. What considerations you should take when defining your collection's schema
 4. How to modify the content of a collection whilst respecting its schema
 5. How to change the schema of your collection in a careful way.
@@ -28,7 +28,7 @@ When you create a collection on the server:
 Todos = new Mongo.Collection('Todos');
 ```
 
-You are creating a collection within MongoDB itself, and a interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous (fibers-based) API:
+You are creating a collection within MongoDB itself, and an interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous (fibers-based) API:
 
 ```js
 // This line won't complete until the insert is done
@@ -71,13 +71,13 @@ There is a third way to use a collection in Meteor. On the client or server, if 
 ```js
 SelectedTodos = new Mongo.Collection(null);
 ```
-You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a publication on the client). 
+You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a subscription on the client). 
 
-A local collection is simply a convienent way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you'll need to sophisticated queries over your set of data. Or you may want to take advatange of it's *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
+A local collection is simply a convienent way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you'll need to execute sophisticated queries over your set of data. Or you may want to take advatange of its *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
 ## Defining Collections with a Schema
 
-Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
+Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
 
 In Meteor, the pre-eminent schema package is [aldeed:simple-schema](http://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents.
 
@@ -150,7 +150,7 @@ Lists.schema = new SimpleSchema({
 });
 ```
 
-The issue with this schema is that due to the DDP behaviour just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the wire. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to (say) `[{text: 'first'}, {text: 'second'}]`".
+The issue with this schema is that due to the DDP behavior just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the wire. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to (say) `[{text: 'first'}, {text: 'second'}]`".
 
 ### Denormalization and multiple collections
 
@@ -168,7 +168,7 @@ Another denormalization that this architecture sometimes requires can be from th
 
 An application, especially a web application, is rarely finished, and it's useful to consider potential future changes when designing your data schema. As in most things, it's rarely a good idea to add fields before you actually need them (often what you anticipate doesn't actually end up happening, after all).
 
-However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good change that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
+However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good chance that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
 
 As with all things it depends, and can be judgement call on your part.
 
@@ -270,7 +270,7 @@ To find out more about the API of the Migrations package, refer to [its document
 
 ### Running migrations
 
-To run a migration against you development database, it's easiest to use the Meteor shell:
+To run a migration against your development database, it's easiest to use the Meteor shell:
 
 ```js
 // After running `meteor shell` on the command line:
@@ -309,13 +309,13 @@ If you find you need to roll your code version back, you'll need to be careful a
 
 ## Relations between collections
 
-As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested (for instance all the todos that are on a single list).
+As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are on a single list).
 
 To do so, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
 
 ### Collection Helpers
 
-To do, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
+To do this, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
 
 ```js
 Lists.helpers({
@@ -355,7 +355,7 @@ console.log(`The first list has ${list.todos().count()} todos`);
 
 ### Query modification
 
-It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos on the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
+It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos in the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
 
 A great way to do this is to use the `mdg:cursor-utils` package, which allows you to modify a cursor from outside:
 
