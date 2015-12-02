@@ -36,9 +36,6 @@ Flow Router is a community routing package for Meteor. At the time of writing th
 - [Flow Router on GitHub](https://github.com/kadirahq/flow-router)
 - [Kadira Meteor routing guide](https://kadira.io/academy/meteor-routing-guide)
 
-### Other options for routing
-
-Flow Router is one of several popular routing packages for Meteor. Another is iron:router. You can search for router on Atmosphere to find more. Hopefully, the concepts in this routing guide will be relevant no matter which router you use, as long as it provides basic functions for URL management.
 
 ## Defining a simple route
 
@@ -47,7 +44,7 @@ The basic purpose of a router is to match certain URLs and perform actions as a 
 ```js
 FlowRouter.route('/lists/:_id', {
   name: 'listsShow',
-  action: () => {
+  action() {
     console.log("Looking at a list?")
   }
 });
@@ -92,9 +89,7 @@ Like any other global singleton in your application (see the X article for info 
 
 ### The current route
 
-To access the current route, you can use `FlowRouter.current()`. This is a object representing all aspects of the route, and as it changes often it is not reactive. 
-
-Often it's more useful to access just exactly what parts of the route you care about. Here are some useful reactive functions you can call:
+It's useful to access the interesting parts of the current route that you need in your application. Here are some useful reactive functions you can call:
 
 * `FlowRouter.getRouteName()` gets the name of the route
 * `FlowRouter.getParam(paramName)` returns the value of a single URL parameter
@@ -114,7 +109,7 @@ meteor add zimme:active-route
 
 In the Todos example app, we link to each list the user knows about in the `appBody` template:
 
-```blaze
+```html
 {{#each list in lists}}
   <a class="list-todo {{activeListClass list}}">
     ...
@@ -151,7 +146,7 @@ meteor add kadira:blaze-layout
 
 To use this package, we need to render a "layout" component by default. In the Todos example app, that template is called `appBody`:
 
-```blaze
+```html
 <template name="appBody">
   ...
   {{> Template.dynamic template=main}}
@@ -190,7 +185,7 @@ It makes sense for a "page" smart component like `listShowPage` to:
 
 In this case, the `listShowPage` template simply renders as:
 
-```blaze
+```html
 <template name="listsShowPage">
   {{#each list in listArray}}
     {{> listsShow todosReady=Template.subscriptionsReady list=list}}
@@ -208,7 +203,7 @@ There are examples of rendering logic that seems very related to the route, for 
 
 It's best to keep all logic around what to render in the component hierarchy (i.e. the tree of rendered templates). So this authorization should happen inside a template. Suppose we wanted to add this to the `listShowPage` we were looking at above. We could do something like:
 
-```blaze
+```html
 <template name="listsShowPage">
   {{#if currentUser}}
     {{#each list in listArray}}
@@ -224,7 +219,7 @@ Of course, we might start finding that we need to share this functionality betwe
 
 You can create wrapper templates by using the "template as block helper" ability of Blaze (see the {% link_to 'blaze' Blaze Article %}). So we can write an authorization template:
 
-```blaze
+```html
 <template name="forceLoggedIn">
   {{#if currentUser}}
     {{> Template.contentBlock}}
@@ -236,7 +231,7 @@ You can create wrapper templates by using the "template as block helper" ability
 
 Once that template exists, we can simply wrap our `listsShowPage`:
 
-```blaze
+```html
 <template name="listsShowPage">
   {{#forceLoggedIn}}
     {{#each list in listArray}}
@@ -310,7 +305,7 @@ Sometimes, your users will end up on a page that isn't the best place for them t
 
 Usually, we can redirect in response to a user's action by calling `FlowRouter.go()` and friends, like in our list creation example above, but if a user browses directly to a URL that doesn't exist, it's useful to know how to redirect immediately.
 
-If a URL is simply out-of-date (sometimes you can the URL scheme of an application), you can redirect inside the `action` function of the route:
+If a URL is simply out-of-date (sometimes you might change the URL scheme of an application), you can redirect inside the `action` function of the route:
 
 ```js
 FlowRouter.route('/old-list-route/:_id', {
@@ -338,7 +333,7 @@ Because the `rootRedirector` template is rendered inside the `appBody` layout wh
 ```js
 Template.rootRedirector.onCreated(() => {
   // We need to set a timeout here so that we don't redirect from inside a redirection
-  //   which is a no-no in FR.
+  //   which is a limitation of the current version of FR.
   Meteor.setTimeout(() => {
     FlowRouter.go('listsShow', Lists.findOne());
   });
@@ -369,7 +364,7 @@ You will also want to show some kind of status while the method is working so th
 
 ### Missing pages
 
-If a user types an incorrect URL, chances are you want to show them some kind of amusing not found page. There are actually two categories of "not found" pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound()` to handle this:
+If a user types an incorrect URL, chances are you want to show them some kind of amusing not found page. There are actually two categories of "not found" pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
 
 ```js
 // the appNotFound template is used for unknown routes and missing lists
