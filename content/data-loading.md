@@ -94,8 +94,9 @@ What this means in practice is that you should place your subscription calls in 
 Template.listsShowPage.onCreated(function() {
   this.state = new ReactiveDict();
   this.autorun(() => {
-    this.state.set('listId', FlowRouter.getParam('_id'));
-    this.subscribe('list/todos', this.state.get('listId'));
+    const listId = FlowRouter.getParam('_id');
+    this.state.set({listId});
+    this.subscribe('list/todos', listId);
   });
 });
 ```
