@@ -245,7 +245,7 @@ val = "zxcv";`;
     assert.deepEqual(fns, expectedFns);
   });
 
-  it("for-in loop sanitization", function loop() {
+  xit("for-in loop sanitization", function loop() {
     Array.prototype.dummy = () => {};
 
     let sparseArray = [];
