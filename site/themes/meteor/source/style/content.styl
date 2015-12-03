@@ -113,10 +113,28 @@ code-font()
       padding 6px 13px
       code-font()
 
-#bottom-nav
-  margin 30px 0
-  border-top 1px solid #eee
-  padding-top 30px
-  a
-    font-family 'ProximaNova-Semibold'
-    margin 0 5px
+  .bottom-nav
+    height 44px
+    margin 30px 0 25px
+    border-bottom 1px solid #eee
+    padding-bottom 25px
+    a
+      font-family 'ProximaNova-Semibold'
+      margin 0 5px
+  
+  .edit-link
+    text-align center
+    a
+      color #aaa
+      font-family 'ProximaNova-Semibold'
+      &:before
+        content ''
+        display inline-block
+        width 16px
+        height 16px
+        background url(../images/gh.png) center center no-repeat
+        background-size 16px
+        opacity 0.3
+        margin-right 8px
+        position relative
+        top 2px
