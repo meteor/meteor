@@ -6,7 +6,7 @@ We're tracking our progress using Waffle.io; see the board by clicking the badge
 
 - See the example app we're working to embody the principles from the guide at [meteor/todos](https://github.com/meteor/todos)
 - Check out the [outlines and discussions](https://github.com/meteor/guide/labels/article)
-- Checkout the [live site](http://meteor-guide.s3-website-us-west-1.amazonaws.com) [Still in progress!]
+- Checkout the [live site](http://guide.meteor.com/) [Still in progress!]
 
 ### How to contribute
 
