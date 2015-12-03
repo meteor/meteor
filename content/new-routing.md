@@ -162,7 +162,7 @@ We do that by changing the `action` function of our `listShow` route definition:
 ```js
 FlowRouter.route('/lists/:_id', {
   name: 'listsShow',
-  action: () => {
+  action() {
     BlazeLayout.render('appBody', {main: 'listsShowPage'});
   }
 });
@@ -322,7 +322,7 @@ If however, you need some data to redirect, you'll need to render part of the co
 ```js
 FlowRouter.route('/', {
   name: 'home',
-  action: () => {
+  action() {
     BlazeLayout.render('appBody', {main: 'rootRedirector'});
   }
 });
