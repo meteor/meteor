@@ -1145,8 +1145,6 @@ class ClientTarget extends Target {
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
     eachResource((file, type) => {
-      const fileContents = file.contents();
-
       const manifestItem = {
         path: file.targetPath,
         where: "client",
