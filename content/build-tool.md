@@ -78,9 +78,64 @@ If you want to use React but don't want to deal with JSX and prefer a more HTML-
 
 XXX ask Uri
 
-## CSS compilers
+## CSS pre-processors
 
-XXX
+It's no secret that writing raw CSS can often be a hassle - there's no way to share common CSS code between different selectors or have a consistent color scheme between different elements. CSS compilers or pre-processors solve these issues by adding extra features on top of the CSS language like variables, mixins, math, and more, and in some cases also significantly change the syntax of CSS to be easier to read and write.
+
+### Sass, Less, or Stylus?
+
+There are three CSS pre-processors that are particularly popular right now:
+
+1. [Sass](http://sass-lang.com/)
+2. [Less.js](http://lesscss.org/)
+3. [Stylus](https://learnboost.github.io/stylus/)
+
+They all have their pros and cons, and different people have different preferences, just like with JavaScript transpiled languages. The most popular one at the time of writing seems to be Sass with the SCSS syntax. Popular CSS frameworks like Bootstrap 4 and more are switching to Sass, and the C++ LibSass implementation appears to be faster than some of the other compilers available.
+
+CSS framework compatibility should be a primary concern when picking a pre-processor, because a framework written with Less won't be compatible with one written in Sass.
+
+### Source vs. import files
+
+An important feature shared by all of the available CSS pre-processors is the ability to import files. This lets you split your CSS into smaller pieces, and provides a lot of the same benefits that you get from JavaScript modules:
+
+1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters
+2. You can create reusable CSS "modules" that just have variables and mixins, and don't actually generate any CSS
+
+In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "main", or "import".
+
+A "source" file is evaluated eagerly, and adds its compiled form to the CSS of the app immediately.
+
+An "import" file is evaluated only if imported from some other file, and can be used to share common mixins and variables between different CSS files in your app.
+
+Read the documentation for each package listed below to see how to indicate which files are source files vs. imports.
+
+### Importing from a package
+
+In all three Meteor-supported CSS pre-processors, you can import files from packages using a special syntax:
+
+```less
+@import "{my-package:pretty-buttons}/buttons/styles.import.less"
+```
+
+You can also import files with an absolute path in the app by using `{}` instead of a package name:
+
+```less
+@import "{}/client/styles/imports/colors.less"
+```
+
+Read the documentation for your favorite CSS pre-processor package to learn more about the details.
+
+### Sass
+
+The best Sass build plugin for Meteor is [`fourseven:scss`](https://atmospherejs.com/fourseven/scss).
+
+### Less
+
+Less is maintained as a [Meteor core package called `less`](https://atmospherejs.com/meteor/less).
+
+### Stylus
+
+Stylus is maintained as a [Meteor core package called `stylus`](https://atmospherejs.com/meteor/stylus).
 
 ## PostCSS
 
