@@ -148,7 +148,10 @@ CS.Input.prototype.isEqual = function (otherInput) {
   // This equality test is also overly sensitive to order,
   // missing opportunities to declare two inputs equal when only
   // the order has changed.
-  return _.isEqual(a.toJSONable(), b.toJSONable());
+  return _.isEqual(
+      _.omit(a.toJSONable(), "catalogCache"),
+      _.omit(b.toJSONable(), "catalogCache")
+  );
 };
 
 CS.Input.prototype.toJSONable = function () {
