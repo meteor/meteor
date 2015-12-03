@@ -11,17 +11,17 @@ After reading this guide, you'll know:
 5. How to build components that can cope with a variety of different data sources
 6. How to use animation to keep users informed of changes
 
-## Reusable components
+## UI components
 
 Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces of your UI elements very clear, and avoiding using techniques that bypass these known interfaces.
 
 In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more modular like a component which has an API, rather than a template which is usually seen in a looser way.
 
-To begin with, let's consider two categories of components that are useful to think about:
+To begin with, let's consider two categories of components that are useful to think about, "smart" and "pure":
 
 ### Pure Components
 
-A "pure" component is a component which doesn't rely on anything apart from it's inputs (it's *template arguments* in Blaze, or *props* in React) to render. 
+A "pure" component is a component which doesn't rely on anything from the environment it renders in, rather it renders purely based on its inputs (its *template arguments* in Blaze, or *props* in React). 
 
 In Meteor, specifically this means a component which does not access data from any global sources (typically either Collections or Stores). For instance, in the Todos example app, the `todosItem` template takes in the todo that it is rendering and does not ever look directly in the `Todos` collection.
 
@@ -31,11 +31,11 @@ The advantages of pure components are the following:
 
  2. They are easy to test---you don't need to be careful about the environment you render them in, all you need to do is provide the right arguments.
 
- 3. They are easy to styleguide---as we'll see in the next section, when styleguiding components, a clean environment makes things much easier to work with.
+ 3. They are easy to add to component styleguides---as we'll see in the next section, when creating a styleguide, a clean environment makes things much easier to work with.
 
- 4. They are a lot more flexible, and thus can be re-used without requiring re-working.
+ 4. You know exactly what they do and what dependencies you need to provide for them to work in different environments.
 
- ### Global Data stores
+### Global Data stores
 
  So which are the global data stores that you should be avoiding in pure components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in pure ones:
 
@@ -46,7 +46,7 @@ The advantages of pure components are the following:
 
 ### Smart Components
 
-Of course sometimes you do need to access the global data sources to feed data into your application. We call components that need to access data "smart". Such components typically the following things
+While most of the components in your app should be pure and reusable, they need to get their data passed in from somewhere. This is where "smart" components come in. Such components typically the following things:
 
  1. Subscribe to data, using subscriptions.
  2. Fetch data from those subscriptions.
@@ -82,25 +82,15 @@ Such rendering enables very quick development of visual aspects of the component
 
 [ss]
 
-XXX: could say a lot more about this, but I feel like we might just blog about it / do a whole article on it's own once we've had a chance to release some code.
+You can learn more about this technique from [this talk](https://www.youtube.com/watch?v=bTQOvYy_Z3w&app=desktop) by Phil Cockfield from Respondly.
 
 ## User Interface Patterns
 
 There are some patterns for building user interfaces that are useful to keep in mind for a Meteor application.
 
-### Responsive Design
-### Accessibility
-
-XXX: Honestly I'm really not sure there's very much Meteor specific in these two headings. I'm not convinced they belong in the guide
-
-
 ### Internationalization
 
 Internationalization (i18n) is the process of generalizing the UI of your app in such a way that it's easy to render all text in a different language. In Meteor, the excellent `tap:i18n` package provides an API for building translations and using them in your templates and elsewhere.
-
-#### Using `tap:i18n`
-
-XXX: I'm going to leave this section for now as it's kind of dependent on modules (it's more complex than maybe it needs to be in Todos right now due to all-packages).
 
 #### Places to translate
 
@@ -112,9 +102,13 @@ Another place to be aware of is messages that are generated by the server that a
 
 A final place where you may want to translate is the actual data in your database. Of course how you might go about this would be very much a problem unique to your application!
 
+#### Using `tap:i18n`
+
+XXX: I'm going to leave this section for now as it's kind of dependent on modules (it's more complex than maybe it needs to be in Todos right now due to all-packages).
+
 ### Event handling
 
-A large part of your UI involves responding to events initated by the user, and there are some steps that you should take to make sure your application does this well
+A large part of your UI involves responding to events initated by the user, and there are some steps that you should take to make sure your application performs well while this is going on. An application lagging in response to a user's action is one of the most noticable performance problems.
 
 #### Throttling method calls on user action
 
@@ -125,7 +119,7 @@ If you do not, you'll see performance problems across the board; you'll be flood
 To throttle writes, a typical approach is to use underscore's [`.throttle()`](http://underscorejs.org/#throttle) or [`.debounce()`](http://underscorejs.org/#debounce) functions. For instance, in the Todos example app, we throttle writes on user input to 300ms:
 
 ```js
-Template.todosItem.helpers({
+Template.todosItem.events({
   // update the text of the item on keypress but throttle the event to ensure
   // we don't flood the server with updates (handles the event at most once
   // every 300ms)
@@ -140,9 +134,11 @@ Template.todosItem.helpers({
 });
 ```
 
+Typically, you use `.throttle()` if you are OK with the event happening during the user series of actions (i.e. you don't mind the multiple, throttled events happening over time, as in this case), whereas you use `.debounce()` if you want an event to just happen *once* at the end of all the repeated user-generated events.
+
 #### Limiting re-rendering
 
-Even if you aren't saving data over the wire to the database on every user input, sometimes you still may wish to update in-memory data stores on every user change. In theory this is fine, but in practice sometimes if updating that data store triggers a lot of UI changes, you can see poor performance (and missed keystrokes) when you do that. In such cases you can limit re-rendering by throttling such changes in a similar way to the way we throttle the method call above.
+Even if you aren't saving data over the wire to the database on every user input, sometimes you still may wish to update in-memory data stores on every user change. In theory this is fine, but in practice sometimes if updating that data store triggers a lot of UI changes, you can see poor performance (and missed keystrokes) when you do that. In such cases you can limit re-rendering by throttling such changes in a similar way to the way we throttle the method call above (although you might use `.debounce()` to ensure the changes happen only after the user has stopped typing).
 
 #### Scroll events
 
@@ -165,7 +161,7 @@ An important thing to be careful of is that if you are not using a library such 
 
 ## User Experience Patterns
 
-There are some common user experience (UX---as in how your app behaves) patterns that are typical to most Meteor apps that are worth exploring here. These patterns relate heavily to the way the data they are allow the user is interacting with is subscribed to and published, so there are similar sections in the {data loading article} which deal with the data side of them.
+There are some common user experience (UX---as in how your app behaves) patterns that are typical to most Meteor apps that are worth exploring here. These patterns relate heavily to the way the data the user is interacting with is subscribed to and published, so there are similar sections in the {data loading article} talking about the way the publications are set up.
 
 ### Subscription readiness
 
@@ -220,7 +216,9 @@ And then we use that state to determing what to render in the pure component (`l
 
 You can take the above UI a step further by showing placeholders whilst you wait for the data to load. This is a UX pattern that has been pioneered by Facebook (and that we use in Galaxy also!) which gives the user a more solid impression of what data is coming down the wire. 
 
-In the Todos app, rather than simply writing "Loading tasks..." we could place a number of placeholder tasks which give the impression of the tasks which are still yet to come down the wire.
+For instance, in Galaxy, while you wait for your organization's list of applications to load, you see a loading state indicating what you might see.
+
+[SS of Galaxy]
 
 #### Using the styleguide to prototype loading state
 
@@ -394,10 +392,11 @@ Template.appBody.events({
 });
 ```
 
-By placing the `FlowRouter.go('listsShow')` outside of the callback of the Method call (which happens once the server has finished), we ensure that it runs right away. So first we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice), or in the unlikely event that it 
-fails, we show an error and redirect back to the homepage.
+By placing the `FlowRouter.go('listsShow')` outside of the callback of the Method call (which happens once the server has finished), we ensure that it runs right away. So first we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice), or in the unlikely event that it fails, we show an error and redirect back to the homepage.
 
-### Indicating when a write has succeeded
+Note that the `listId` returned by the list method (which is the one generated by the client stub) is guaranteed to be the same as the one generated on the server, due to the way that Meteor generates ids and ensures they are the same between client and server. 
+
+### Indicating when a write is in progress
 
 Sometimes the user may be interested to know when the update has hit the server. For instance, in a chat application, it's a typical pattern to optimistically display the message in the chat log, bit indicate that it is "pending" until the server has acknowledged the write. We can do this easily in Meteor by simply modifying the Method to act differently on the client:
 
