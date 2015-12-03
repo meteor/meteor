@@ -6,10 +6,10 @@ After reading this guide, you'll know:
 
 1. What the different flavors of MongoDB Collection in Meteor are, and how to use them.
 2. How to define a schema for a collection to control its content.
-3. What considerations you should take when defining your collection's schema
-4. How to modify the content of a collection whilst respecting its schema
+3. What considerations you should take when defining your collection's schema.
+4. How to modify the content of a collection whilst respecting its schema.
 5. How to change the schema of your collection in a careful way.
-6. How to deal with relations between records in collections
+6. How to deal with relations between records in collections.
 
 ## MongoDB Collections in Meteor
 
@@ -96,7 +96,7 @@ In this example, from the Todos app, we are doing a few things that are interest
 1. We attach the schema to the namespace of `Lists` directly. This allows us to check things against the schema of a list directly (rather than via inserting into the DB, see below), such as in a form (see the forms article).
 2. We specify that the `name` field of a list must be a string, and must exist.
 3. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
-4. We specify that the `userId`, which is optional, must be a string matching an id regular expression.
+4. We specify that the `userId`, which is optional, must be a string matching an Id regular expression.
 
 You can see from this example, that with relatively little code we've managed to restrict the format of a list significantly. You can read more in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema) about more complex things that can be done with schemas.
 
@@ -127,15 +127,13 @@ const list = {
 Lists.schema.validate(list);
 ```
 
-// XXX: this isn't actually the case yet. We are waiting on https://github.com/meteor/method/issues/4
-
 Then the `validate()` call will throw a `ValidationError` which contains details about what is wrong with the `list` document.
 
 ### The `ValidationError`
 
 What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the "Methods and Forms" article, we'll see more about how this works.
 
-## Designing your data schama
+## Designing your data schema
 
 Now you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any MongoDB data schema, there are some important differences.
 
@@ -158,9 +156,9 @@ The implication of the above is that we need to create more collections to conta
 
 In Meteor, it's often less of a problem doing this than it would be in a typical MongoDB application, as we tend to publish overlapping sets of documents anyway (we might need one set of users to render one screen of our app, and an intersecting set for another), which may stay on the client as we move around the application. So in that scenario there is an advantage to separating the subdocuments from the parent.
 
-However, given that MongoDB doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
+However, given that MongoDB prior to version 3.2 doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
 
-In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
+In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
 
 Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
 
@@ -170,7 +168,7 @@ An application, especially a web application, is rarely finished, and it's usefu
 
 However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good chance that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
 
-As with all things it depends, and can be judgement call on your part.
+As with all things it depends, and can be a judgement call on your part.
 
 ## Using schemas -- writing data to collections
 
@@ -186,7 +184,7 @@ What this means is that now every time we call `Lists.insert()`, `Lists.update()
 
 ### Using `defaultValue` and cleaning
 
-One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) amd removing attributes not in the schema.
+One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) and removing attributes not in the schema.
 
 Another important thing it does is set values to fields that have not been set, and which have `defaultValue` set in the schema definition.
 
@@ -233,8 +231,8 @@ class ListsCollection extends Mongo.Collection {
 
 This technique has a couple of downsides:
 
-  1. Mutators can get very long when you want to hook in multiple times
-  2. Sometimes a single piece of functionality can be spread over multiple mutators
+  1. Mutators can get very long when you want to hook in multiple times.
+  2. Sometimes a single piece of functionality can be spread over multiple mutators.
   3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
 A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We can see in the "Forms and Methods" chapter an example of how we do that in the list and todo denormalizers mentioned above.
@@ -305,7 +303,7 @@ A better approach is a multi-stage deployment. The basic idea is that:
 
 Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migration _back_ to version `x`. 
 
-If you find you need to roll your code version back, you'll need to be careful about the data, and step careful through your deployment steps in reverse.
+If you find you need to roll your code version back, you'll need to be careful about the data, and step carefully through your deployment steps in reverse.
 
 ## Relations between collections
 
