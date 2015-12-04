@@ -13,7 +13,7 @@ After reading this guide, you'll know:
 
 ## MongoDB Collections in Meteor
 
-At its core, a web application offers its users a view into, and a way to modify, a persistent set of data. Whether managing a list of todos, or ordering a car to pick you up, you are, at some level, fundamentally interacting with a permanent (if changing) data layer. 
+At its core, a web application offers its users a view into, and a way to modify, a persistent set of data. Whether managing a list of todos, or ordering a car to pick you up, you are, at some level, fundamentally interacting with a permanent (if changing) data layer.
 
 In Meteor, that data layer is typically stored in the MongoDB engine. A set of data in MongoDB is referred to as a "collection", and in Meteor, it's [collections](http://docs.meteor.com/#/full/mongo_collection) that forms the persistence layer.
 
@@ -64,18 +64,18 @@ The way that you move data from the server (and MongoDB-backed) collection into 
 
 To write data back to the server, you use a *method*, the subject of the "methods and forms" article.
 
-### Local Collections
+### Local collections
 
 There is a third way to use a collection in Meteor. On the client or server, if you create a collection but pass `null` instead of a name:
 
 ```js
 SelectedTodos = new Mongo.Collection(null);
 ```
-You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a subscription on the client). 
+You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a subscription on the client).
 
 A local collection is simply a convienent way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you'll need to execute sophisticated queries over your set of data. Or you may want to take advatange of its *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
-## Defining Collections with a Schema
+## Defining a schema
 
 Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
 
@@ -100,7 +100,7 @@ In this example, from the Todos app, we are doing a few things that are interest
 
 You can see from this example, that with relatively little code we've managed to restrict the format of a list significantly. You can read more in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema) about more complex things that can be done with schemas.
 
-### Checking documents against a schema
+### Validating against a schema
 
 Now we have a schema, how do we use it?
 
@@ -162,7 +162,7 @@ In the case of the Todos application, as we want to display the number of unfini
 
 Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
 
-### Designing schemas for the future
+### Designing for the future
 
 An application, especially a web application, is rarely finished, and it's useful to consider potential future changes when designing your data schema. As in most things, it's rarely a good idea to add fields before you actually need them (often what you anticipate doesn't actually end up happening, after all).
 
@@ -170,7 +170,7 @@ However, it's a good idea to think ahead to how the schema may change over time.
 
 As with all things it depends, and can be a judgement call on your part.
 
-## Using schemas -- writing data to collections
+## Using schemas on write
 
 Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), ultimately, the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to run every mutator (`insert/update/upsert` call) through the schema.
 
@@ -180,9 +180,9 @@ To do so, we use `attachSchema()`:
 Lists.attachSchema(Lists.schema);
 ```
 
-What this means is that now every time we call `Lists.insert()`, `Lists.update()`, `Lists.upsert()`, first our document or modifier will be checked against the schema (in subtly different ways depending on the exact mutator). 
+What this means is that now every time we call `Lists.insert()`, `Lists.update()`, `Lists.upsert()`, first our document or modifier will be checked against the schema (in subtly different ways depending on the exact mutator).
 
-### Using `defaultValue` and cleaning
+### `defaultValue` and data cleaning
 
 One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) and removing attributes not in the schema.
 
@@ -213,7 +213,7 @@ class ListsCollection extends Mongo.Collection {
 Lists = new ListsCollection('Lists');
 ```
 
-### Writing "hooks"
+### Hooks on insert/update/remove
 
 The technique above can also be used to provide a location to "hook" extra functionality into the collection. For instance, when removing a list, we *always* want to remove all of its todos at the same time.
 
@@ -239,7 +239,7 @@ A way to deal with points 1. and 2. is to separate out the set of hooks into the
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
 
-## Changing your schema: using data migrations
+## Migrating to a new schema
 
 As we discussed above, trying to predict all future requirements of your data schema ahead of time is of course impossible. So inevitably as a project matures, there'll come a time when you need to change the schema of its data. To do so safely, you need to be careful about how you make the changes.
 
@@ -286,7 +286,7 @@ MIGRATION=latest meteor --production --settings path/to/production/settings.json
 What this does is run the `up()` function of all outstanding migrations (by default apps are considered at migrations "zero"), against your production database. In our case, it should ensure all lists have a `todoCount` field set.
 
 
-### Making breaking schema changes
+### Breaking schema changes
 
 Sometimes when we change the schema of an application, we do so in a breaking way -- so that the old schema doesn't work properly with the new code base. For instance, if we had some UI code that heavily relied on all lists having a `todoCount` set, there would be a period, before the migration runs, in which the UI of our app would be broken after we deployed.
 
@@ -301,17 +301,17 @@ A better approach is a multi-stage deployment. The basic idea is that:
 3. Finally, you deploy the new code that relies on the new schema and no longer copes with the old schema.
   - Now we are safe to rely on `list.todoCount` in our UI.
 
-Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migration _back_ to version `x`. 
+Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migration _back_ to version `x`.
 
 If you find you need to roll your code version back, you'll need to be careful about the data, and step carefully through your deployment steps in reverse.
 
-## Relations between collections
+## Associations between collections
 
 As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are on a single list).
 
 To do so, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
 
-### Collection Helpers
+### Collection helpers
 
 To do this, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
 
@@ -333,7 +333,7 @@ if (list.isPrivate()) {
 }
 ```
 
-### Relational helpers
+### Association helpers
 
 Now we can attach helpers to documents, it's simple to define a helper that fetches related documents
 

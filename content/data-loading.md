@@ -14,7 +14,7 @@ After reading this guide, you'll know:
 8. How to turn a 3rd-party REST endpoint into a publication.
 9. How to turn a publication into your app into a REST endpoint.
 
-## Publications and Subscriptions
+## Publications and subscriptions
 
 Unlike in Meteor, a traditional web application communicates between client and server in a "request-response" fashion. Typically the client makes RESTful HTTP requests to the server and receives data (either in pre-rendered HTML, or perhaps some on-the-wire data format) in response. However there's no way for the server to "push" data to the client when changes happen at the backend.
 
@@ -71,20 +71,19 @@ When we create a subscription to this piblication on the client, we can provide 
 Meteor.subscribe('list/todos', list._id);
 ```
 
-### Organizing Publications
+### Organizing publications
 
 It makes sense to place a publication in a package alongside the feature that it's targeted. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
 
 Often, however, a publication is more general. For example in the Todos example application, we create a `list/todos` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
-## Using publications: Subscriptions
+## Subscribing to data
 
 To use publications, you need to create a subscription to it on the client. To do so, you call `Meteor.subscribe()` with the name of the publication. When you do this, it opens up a subscription to that publication, and the server starts sending data down the wire to ensure that your client collections contain up to date copies of the data that's pushed by the publication.
 
 Also, `Meteor.subscribe()` returns a "subscription handle", with a property called `.ready()` defined -- a reactive function that returns `true` when the publication becomes ready (either you call `this.ready()` explicitly, or the current contents of a returned cursor are sent over).
 
-
-### Organizing Subscriptions
+### Organizing subscriptions
 
 It is best to place the subscription as close as possible to the place where the data from the subscription is needed. This reduces "action at a distance" and makes it easier to understand the flow of data through your application. If the subscription and fetch are separated, then it's not always clear how and why changes to the subscriptions (such as changing arguments), will affect the contents of the cursor.
 
@@ -107,7 +106,7 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive variable `this.state.get('listId')` changes.
 
-### Fetching subscription data
+### Fetching data
 
 Subscribing to data puts it in your client-side collections. To use the data in your templates, you need to query those collections for that data. There are a few important rules of thumb when doing this.
 
@@ -129,14 +128,13 @@ One place where you might be tempted to not subscribe inside a template is when 
 
 However, it's generally a good idea to use a layout template (which you wrap all your templates in) to subscribe to this subscription anyway. It's better to be consistent about such things, and it makes for a more flexible system if you ever decide you have a screen that *doesn't* need that data.
 
-
 ## Patterns for data loading
 
 Across Meteor applications, there are some common patterns of data loading and and management on the client side that are worth knowing. We'll go into more detail about some of these in the {% post_link ui-ux "UI/UX Article" %}.
 
 ### Subscription readiness
 
-A key thing to keep in mind is that a subscription will not instantly provide it's data. There'll be a latency between subscribing to the data on the client and it arriving from the publication on the server (and keep in that this time may be a lot longer for your users in production that for you locally in development!)
+A key thing to keep in mind is that a subscription will not instantly provide its data. There'll be a latency between subscribing to the data on the client and it arriving from the publication on the server (and keep in that this time may be a lot longer for your users in production that for you locally in development!)
 
 Although the Tracker system means you often don't *need* to think too much about this in building your apps, usually if you want to get the user experience right, you'll need to know when the data is ready.
 
@@ -184,7 +182,7 @@ The important detail in the above is in 4---that they system cleverly knows not 
 
 For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessarily subscribing will happen.
 
-### Publication behaviour when changing arguments
+### Publication behavior when arguments change
 
 It's also worth knowing a little about what happens on the server when the new subscription is started and the old one is stopped.
 
@@ -246,7 +244,7 @@ Meteor.publish('list/todoCount', function(listId) {
 
 Then on the client, after subscribing to that publication, we can access the count with `Counts.get(`list/todoCount${listId}`)`.
 
-## Client-side data management: Stores
+## Client-side data with reactive stores
 
 In Meteor, persistent or shared data comes over the wire on publications. However, there are some types of data which doesn't need to be persistent or shared between users. For instance, the "logged-in-ness" of the current user, or the route they are currently viewing.
 
@@ -308,7 +306,7 @@ WindowSize.simulateMobile = (device) => {
 }
 ```
 
-## Publishing Relational Data
+## Publishing relational data
 
 It's common to need a related sets of data from multiple collections on a given page. For instance, in the Todos app, when we render a todo list, we want the list itself, as well as the set of todos that belong to that list.
 
@@ -368,7 +366,7 @@ Meteor.publishComposite('list/todos', function(listId) {
 
 In this example, we write a complicated query to make sure that we only ever find a list if we are allowed to see it, then, once per list we find (which can be one or zero times depending on access), we publish the todos for that list. Publish Composite takes care of stopping and starting the dependent cursors if the list stops matching the original query or otherwise.
 
-## Complex Authorization in publications
+## Complex authorization
 
 We can also use `publish-composite` to perform complex authorization in publications. For instance, consider if we had a `admin/list/todos` publication that allowed an admin to bypass default publication's security for users with an `admin` flag set.
 
@@ -414,7 +412,7 @@ Meteor.publishComposite('admin/list/todos', function(listId) {
 });
 ```
 
-## Writing custom publications with the low level publish API
+## Custom publications with the low level API
 
 In all of our examples so far (outside of using`Meteor.publishComposite()`) we've returned a cursor from our `Meteor.publish()` handlers. Doing this ensures Meteor takes care of the job of keeping the contents of that cursor in sync between the server and the client. However, there's another API you can use for publish functions which is closer to the way the underlying Distributed Data Protocol (DDP) works.
 
@@ -449,7 +447,7 @@ Data published like this, from the client's perspective doesn't look any differe
 One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication.
 
 
-## Turning a REST endpoint into a publication
+## Loading data from a REST endpoint with a publication
 
 As a concrete example of using the low-level API, consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available to your users?
 
@@ -493,7 +491,7 @@ Meteor.publish('polled-publication', function() {
 Things can get more complicated; for instance you may want to deal with documents being removed, or share the polling between multiple users (in a case where the data being polled isn't private to that user).
 
 
-## Turning a publication into a REST endpoint
+## Accessing a publication as a REST endpoint
 
 The alternate scenario occurs when you want to publish data to be consumed by a 3rd party, typically over REST. If the data we want to publish is the same as what we already publish via a publication, then we can use the [simple:rest](https://atmospherejs.com/simple/rest) package to do this really easily.
 
