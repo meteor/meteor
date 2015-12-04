@@ -153,7 +153,7 @@ When you subscribe to data in Meteor, it does not become instantly available on 
 
 There are a few UX techniques for dealing with this waiting period. The simplest is simply to switch out the page you are rendering with a generic "loading" page while you wait for all the data (typically a page may open several subscriptions) to load. As an example, in the Todos example app, we wait until all the public lists and the user's private lists have loaded before we try to render the actual page:
 
-```blaze
+```html
 {{#if Template.subscriptionsReady}}
   {{> Template.dynamic template=main}}
 {{else}}
@@ -171,13 +171,13 @@ Usually it makes for a better UX to show as much of the screen as possible as qu
 
 We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the reusable component which renders the data:
 
-```blaze
+```html
 {{> listsShow todosReady=Template.subscriptionsReady list=list}}
 ```
 
 And then we use that state to determing what to render in the reusable component (`listShow`):
 
-```blaze
+```html
 {{#if todosReady}}
   {{#with list._id}}
     {{#each todo in (todos this)}}
@@ -212,7 +212,7 @@ This is one reason why being able to achieve any state at will in the component 
 
 ### Pagination
 
-In the {% page_link data-loading 'Data Loading' %} we discuss a pattern of paging through an "infinite scroll" type subscription which increases one page at a time as a user steps through data in your application. It's interesting to consider UX patterns to both consume that data and indicate what's happening to the user.
+In the [Data Loading article](data-loading.md) we discuss a pattern of paging through an "infinite scroll" type subscription which increases one page at a time as a user steps through data in your application. It's interesting to consider UX patterns to both consume that data and indicate what's happening to the user.
 
 #### A list component
 
@@ -425,7 +425,7 @@ Probably the most fundamental type of UI change that requires animation is when 
 
 A good example of this is the editing state of the list from the Todos example app:
 
-```blaze lists-show.js
+```html lists-show.js
 {{#momentum plugin="fade"}}
   {{#if instance.state.get 'editing'}}
     <form class="js-edit-form list-edit-form">...</form>
@@ -460,7 +460,7 @@ Finally, it's common to animate when the user switches between routes of the app
 
 Let's consider the case of the Todos example app. Here we do a similar thing to achieve animation between pages, by using Momentum in the main layout template:
 
-```blaze
+```html
 {{#momentum plugin="fade"}}
   {{#if Template.subscriptionsReady}}
     {{> Template.dynamic template=main}}
@@ -474,7 +474,7 @@ The primary issue is that the rendering system may prefer to simply change an ex
 
 To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{{#each}}` helper treats arrays of documents with an `_id` as keyed on `_id`. So we wrap our template in an `{{}}
 
-```blaze
+```html
 <template name="listsShowPage">
   {{#each list in listArray}}
     {{> listsShow todosReady=Template.subscriptionsReady list=list}}
