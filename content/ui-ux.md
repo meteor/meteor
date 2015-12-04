@@ -78,11 +78,11 @@ A styleguide consists of two parts:
 
 For instance, in Galaxy, we have a component styleguide that renders each reusable component either one specification at a time, or with all specifications at once.
 
-[screenshot needed]
+[XXX screenshot needed]
 
 Such rendering enables very quick development of visual aspects of the component in all possible states. Typically in a complex application, it can be quite difficult to achieve certain states of components purely by "using" the application. For example, in Galaxy, the component screen enters quite a complex state if two deploys to the same application are happening simutaneously. This is a very hard to state to reach for a extended period of time if you are simply using the application!
 
-[screenshot needed]
+[XXX screenshot needed]
 
 You can learn more about this technique from [this talk](https://www.youtube.com/watch?v=bTQOvYy_Z3w&app=desktop) by Phil Cockfield from Respondly.
 
@@ -167,7 +167,7 @@ We do this with Blaze's `Template.subscriptionsReady` which is perfect for this 
 
 Usually it makes for a better UX to show as much of the screen as possible as quickly as possible and to only show loading state for the parts of the screen that are still waiting on data. So a nice pattern to follow is "per component loading". We do this in the Todos app when you visit the list page---we instantly render the list metadata, such as it's title and privacy settings, and render a loading state for the list of todos while we wait for them to appear.
 
-[Screenshot needed]
+[XXX Screenshot needed]
 
 We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the reusable component which renders the data:
 
@@ -243,7 +243,7 @@ We can now distinguish between the 5 states above based on these flags:
 
 You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component styleguide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our styleguide for each of the lists of our app and we can ensure all work as expected and appear correctly:
 
-[screenshot needed]
+[XXX screenshot needed]
 
 #### A pagination "controller" pattern
 
