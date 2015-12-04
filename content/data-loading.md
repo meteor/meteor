@@ -314,7 +314,7 @@ It's common to need a related sets of data from multiple collections on a given 
 
 One way you might do this is to return more than one cursor from your publication function:
 
-```jsbad
+```js
 Meteor.publish('list/todos', function(listId) {
   check(listId, String);
 
