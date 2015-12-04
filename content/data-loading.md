@@ -16,9 +16,9 @@ After reading this guide, you'll know:
 
 ## Publications and subscriptions
 
-Unlike in Meteor, a traditional web application communicates between client and server in a "request-response" fashion. Typically the client makes RESTful HTTP requests to the server and receives data (either in pre-rendered HTML, or perhaps some on-the-wire data format) in response. However there's no way for the server to "push" data to the client when changes happen at the backend.
+In a traditional, HTTP-based web application, the client and server communicate in a "request-response" fashion. Typically the client makes RESTful HTTP requests to the server and receives HTML or JSON data in response. However there's no way for the server to "push" data to the client when changes happen at the backend.
 
-Meteor however is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. So (although you can), building a Meteor app doesn't require fashion REST endpoints to serialize and send data. Instead you create *publication* endpoints to push data from server to client.
+Meteor however is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. Although it's possible to do so, building a Meteor app doesn't require you to set up REST endpoints to serialize and send data. Instead you create *publication* endpoints that can push data from server to client.
 
 In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then,over time a set of updates as that data set changes.
 
