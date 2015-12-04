@@ -465,7 +465,7 @@ Meteor.publish('polled-publication', function() {
     // Let's assume the data comes back as an array of JSON documents, with an _id field, for simplicity
     const data = HTTP.get(REST_URL, REST_OPTIONS);
 
-    _.each(data, (doc) => {
+    data.forEach((doc) => {
       if (publishedKeys(doc._id)) {
         this.updated(COLLECTION_NAME, doc._id, doc);
       } else {
