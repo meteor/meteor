@@ -294,7 +294,7 @@ If you need to query the store, or store many related items, it's probably a goo
 
 ### Accessing stores
 
-You should access stores in the same way you'd access other reactive data in your templates. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback. For React, it's from your `getMeteorData()` function. 
+You should access stores in the same way you'd access other reactive data in your templates. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback. 
 
 This way you get the full reactive power of the store.
 
