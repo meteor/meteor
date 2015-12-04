@@ -2,6 +2,8 @@
 title: User Interfaces and User Experience
 ---
 
+XXX this article doesn't render specifically because of `{{#` block tags. I can't figure out how to escape them, but I moved it into here to ensure it doesn't block the whole website from rendering.
+
 After reading this guide, you'll know:
 
 1. How to build reusable client side components in any templating language
