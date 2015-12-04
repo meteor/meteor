@@ -52,7 +52,8 @@ It's always a good idea to use SSL for Meteor Applications (see the {% link_to '
 
 It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the larger assets in your site (such as JS and CSS files, as well as potentially images) and caches copies of those files in locations that are closer to the location of the user. So for instance, although the actual web server for your application is on the East Coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
 
-There are two ways you can set up your CDN. A simple approach is simply to place the CDN in front of the assets that Meteor knows about. You can use `WebAppInternals.setBundledJsCssPrefix(DNS_HOSTNAME)` to set a prefix that applies to all of the bundled JS and CSS assets that the Meteor app serves. In particular, if you have relative image URLs inside your CSS files, they will also be served from the CDN.
+
+ You want to put your CDN in front of the static assets that Meteor knows about. You can use `WebAppInternals.setBundledJsCssPrefix(DNS_HOSTNAME)` to set a prefix that applies to all of the bundled JS and CSS assets that the Meteor app serves. In particular, this means if you have relative image URLs inside your CSS files, they will also be served from the CDN.
 
 If you are following the above approach, you may also want to manually write out the CDN's hostname whenever you put an image/other asset URL in your application's code, probably via a `image_url()`-style helper.
 
