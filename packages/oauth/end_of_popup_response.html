@@ -1,51 +1,11 @@
 <html>
-<head>
-<script type="text/javascript">
-
-function storeAndClose() {
-
-  var config = JSON.parse(document.getElementById("config").innerHTML);
-
-  if (config.setCredentialToken) {
-    var credentialToken = config.credentialToken;
-    var credentialSecret = config.credentialSecret;
-
-    if (config.isCordova) {
-      var credentialString = JSON.stringify({
-        credentialToken: credentialToken,
-        credentialSecret: credentialSecret
-      });
-
-      window.location.hash = credentialString;
-    }
-
-    if (window.opener && window.opener.Package &&
-          window.opener.Package.oauth) {
-      window.opener.Package.oauth.OAuth._handleCredentialSecret(
-        credentialToken, credentialSecret);
-    } else {
-      try {
-        localStorage[config.storagePrefix + credentialToken] = credentialSecret;
-      } catch (err) {
-        // We can't do much else, but at least close the popup instead
-        // of having it hang around on a blank page.
-      }
-    }
-  }
-
-  if (! config.isCordova) {
-    document.getElementById("completedText").style.display = "block";
-    window.close();
-  }
-}
-</script>
-</head>
-<body onload="storeAndClose()">
+<body>
   <p id="completedText" style="display:none;">
-    Login completed. <a href="#" onclick="window.close()">
+    Login completed. <a href="#" id="loginCompleted">
       Click here</a> to close this window.
   </p>
 
   <div id="config" style="display:none;">##CONFIG##</div>
+  <script type="text/javascript" src="/packages/oauth/end_of_popup_response.js"></script>
 </body>
 </html>

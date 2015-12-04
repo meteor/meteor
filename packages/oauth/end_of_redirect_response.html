@@ -1,23 +1,6 @@
 <html>
-<head>
-<script type="text/javascript">
-
-  function storeAndRedirect () {
-
-    var config = JSON.parse(document.getElementById("config").innerHTML);
-
-    if (config.setCredentialToken) {
-      sessionStorage[config.storagePrefix + config.credentialToken] =
-      config.credentialSecret;
-    }
-
-    window.location = config.redirectUrl;
-
-  };
-
-</script>
-</head>
-<body onload="storeAndRedirect()">
+<body>
   <div id="config" style="display:none;">##CONFIG##</div>
+  <script type="text/javascript" src="/packages/oauth/end_of_redirect_response.js"></script>
 </body>
 </html>
