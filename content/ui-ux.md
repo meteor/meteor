@@ -4,8 +4,8 @@ title: User Interfaces and User Experience
 
 After reading this guide, you'll know:
 
-1. How to build re-usable client side components in any templating language
-2. How to build a styleguide to allow you to visually test such resuable components
+1. How to build reusable client side components in any templating language
+2. How to build a styleguide to allow you to visually test such reusable components
 3. Patterns for building front end components in a performant way in Meteor
 4. How to design responsively across device sizes, accessibly for different users, and universally across languages.
 5. How to build components that can cope with a variety of different data sources
@@ -21,11 +21,11 @@ To begin with, let's consider two categories of components that are useful to th
 
 ### Reusable Components
 
-A "reusuable" component is a component which doesn't rely on anything from the environment it renders in, rather it renders purely based on its inputs (its *template arguments* in Blaze, or *props* in React) and internal state. 
+A "reusable" component is a component which doesn't rely on anything from the environment it renders in, rather it renders purely based on its inputs (its *template arguments* in Blaze, or *props* in React) and internal state.
 
 In Meteor, specifically this means a component which does not access data from any global sources (typically either Collections or Stores). For instance, in the Todos example app, the `listsShow` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
 
-The advantages of reusuable components are the following:
+The advantages of reusable components are the following:
 
  1. They are easy to reason about---you don't need to understand how the data in the global store changes, simply how the arguments to the component change.
 
@@ -39,7 +39,7 @@ The advantages of reusuable components are the following:
 
 ### Global Data stores
 
- So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in reusuable ones:
+ So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in reusable ones:
 
   - Your collections, as well as the `Meteor.users` collection,
   - Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
@@ -54,7 +54,7 @@ While most of the components in your app should be reusable, they need to get th
  2. Fetch data from those subscriptions.
  3. Fetch global client-side state from stores such as the Router, Accounts, and your own stores.
 
-Ideally, once a smart component has assembled such a set of data, it passes it off to a resuable component child to render with. The smart component actually does not render anything apart from one or more resuable children.
+Ideally, once a smart component has assembled such a set of data, it passes it off to a reusable component child to render with. The smart component actually does not render anything apart from one or more reusable children.
 
 A typical use case for a smart component is the "page" component that the router points you to when you access a URL. Such a component typically needs to do the three things above and then can pass the resulting arguments into child components. In the Todos example app, the `listShowPage` does exactly this, with a resultingly simple template:
 
@@ -66,9 +66,9 @@ A typical use case for a smart component is the "page" component that the router
 </template>
 ```
 
-## Visually testing resuable components
+## Visually testing reusable components
 
-A useful property of resuable components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _styleguide_ or harness.
+A useful property of reusable components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _styleguide_ or harness.
 
 A styleguide consists of two parts:
 
@@ -76,7 +76,7 @@ A styleguide consists of two parts:
 
 2. A special route in the development version of the application that renders one or more components with one or more of the specificiations.
 
-For instance, in Galaxy, we have a component styleguide that renders each resuable component either one specification at a time, or with all specifications at once. 
+For instance, in Galaxy, we have a component styleguide that renders each reusable component either one specification at a time, or with all specifications at once.
 
 [ss]
 
@@ -169,13 +169,13 @@ Usually it makes for a better UX to show as much of the screen as possible as qu
 
 [SS]
 
-We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the resuable component which renders the data:
+We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the reusable component which renders the data:
 
 ```blaze
 {{> listsShow todosReady=Template.subscriptionsReady list=list}}
 ```
 
-And then we use that state to determing what to render in the resuable component (`listShow`):
+And then we use that state to determing what to render in the reusable component (`listShow`):
 
 ```blaze
 {{#if todosReady}}
@@ -198,7 +198,7 @@ And then we use that state to determing what to render in the resuable component
 
 #### Showing placeholders
 
-You can take the above UI a step further by showing placeholders whilst you wait for the data to load. This is a UX pattern that has been pioneered by Facebook (and that we use in Galaxy also!) which gives the user a more solid impression of what data is coming down the wire. 
+You can take the above UI a step further by showing placeholders whilst you wait for the data to load. This is a UX pattern that has been pioneered by Facebook (and that we use in Galaxy also!) which gives the user a more solid impression of what data is coming down the wire.
 
 For instance, in Galaxy, while you wait for your organization's list of applications to load, you see a loading state indicating what you might see.
 
@@ -208,7 +208,7 @@ For instance, in Galaxy, while you wait for your organization's list of applicat
 
 Loading states are notoriously difficult to work on visually as they are by definition transient and often are barely noticeable in a development environment where subscriptions load almost instantly.
 
-This is one reason why being able to achieve any state at will in the component styleguide (see above) is so important and useful. As our resuable component `listsShow` simply chooses to render based on it's `todosReady` argument and does not concern itself with a subscription, it is trivial to render it in a styleguide in the loading state.
+This is one reason why being able to achieve any state at will in the component styleguide (see above) is so important and useful. As our reusable component `listsShow` simply chooses to render based on it's `todosReady` argument and does not concern itself with a subscription, it is trivial to render it in a styleguide in the loading state.
 
 ### Pagination
 
@@ -247,7 +247,7 @@ You can see that although the situation is a little complex, it's also completel
 
 #### A pagination "controller" pattern
 
-A list is also a good opportunity to understand the benefits of the smart vs resuable component split. We've seen above that correctly rendering and visualising all the possible states of a list is non-trivial and is made much easier by having a resuable list component that takes all the required information in as arguments.
+A list is also a good opportunity to understand the benefits of the smart vs reusable component split. We've seen above that correctly rendering and visualising all the possible states of a list is non-trivial and is made much easier by having a reusable list component that takes all the required information in as arguments.
 
 However, we still need to subscribe to the list of items and the count, and collect that data somewhere. To do this, it's sensible to use a smart wrapper component (sort of analogous to an MVC "controller") who's job it is to subscribe and fetch the relevant data.
 
@@ -292,9 +292,9 @@ An interesting UX challenge in a realtime system like Meteor involves how to bri
 
 One solution to this problem is to *animate* list changes (which we'll look at below), but this isn't always the best approach. For instance, if a user is reading a list of comments, they may not want to see any changes until they are done with their current reading.
 
-An option in this case is to call out that there are changes to the data the user is looking at without actually making UI updates. Of course with a reactive across the board system like Meteor, it isn't necessarily easy to stop such changes from happening! 
+An option in this case is to call out that there are changes to the data the user is looking at without actually making UI updates. Of course with a reactive across the board system like Meteor, it isn't necessarily easy to stop such changes from happening!
 
-However, it is possible to do this thanks to our split between smart and resuable components. The resuable component simply renders what it's given, so we use our smart component to control that information. We can use a *Local Collection* to store the rendered data, and then push data into it when the user requests:
+However, it is possible to do this thanks to our split between smart and reusable components. The reusable component simply renders what it's given, so we use our smart component to control that information. We can use a *Local Collection* to store the rendered data, and then push data into it when the user requests:
 
 ```js
 Template.listsShowPage.onCreated(function() {
@@ -346,7 +346,7 @@ Template.listsShowPage.helpers({
 });
 ```
 
-The resuable sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
+The reusable sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
 
 ### Optimisitic UI
 
@@ -354,7 +354,7 @@ Another UX pattern which is worth thinking about in Meteor and which isn't neces
 
 However, it's not *always* necessarily a good idea to be optimistic. Sometimes we may actually want to wait for the server's response. For instance, when a user is logging in, you *have* to wait for the server to check the password is correct before you can start allowing them into the site.
 
-So when should you wait for the server and when not? It basically comes down to how optimistic you are; how likely it is something go wrong. In the case of a password, you really can't tell on the client, so you need to be conservative. In other cases, you can be pretty confident that the method call will succeed, and so you can move on. 
+So when should you wait for the server and when not? It basically comes down to how optimistic you are; how likely it is something go wrong. In the case of a password, you really can't tell on the client, so you need to be conservative. In other cases, you can be pretty confident that the method call will succeed, and so you can move on.
 
 For instance, in the Todos example app, when creating a new list, it's hard to imagine what could go wrong on the server, so we write:
 
@@ -378,7 +378,7 @@ Template.appBody.events({
 
 By placing the `FlowRouter.go('listsShow')` outside of the callback of the Method call (which happens once the server has finished), we ensure that it runs right away. So first we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice), or in the unlikely event that it fails, we show an error and redirect back to the homepage.
 
-Note that the `listId` returned by the list method (which is the one generated by the client stub) is guaranteed to be the same as the one generated on the server, due to the way that Meteor generates ids and ensures they are the same between client and server. 
+Note that the `listId` returned by the list method (which is the one generated by the client stub) is guaranteed to be the same as the one generated on the server, due to the way that Meteor generates ids and ensures they are the same between client and server.
 
 ### Indicating when a write is in progress
 
@@ -391,7 +391,7 @@ Messages.methods.insert = new Method({
     text: {type: String}
   }),
   run(message) {
-    // In the simulation (on the client), we add an extra pending field. 
+    // In the simulation (on the client), we add an extra pending field.
     // It will be removed when the server comes back with the "true" data.
     if (this.isSimulation) {
       message.pending = true;
