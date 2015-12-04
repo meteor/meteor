@@ -45,4 +45,4 @@
   
 ## Notes
 
-Using code to de-duplicate permissions and arguments by generating lots of methods at once
+Using code to de-duplicate permissions and arguments by generating lots of methods at once, like: https://github.com/wekan/wekan/blob/8d5d7ee678d9a396a0427329200e5bf0573eb730/models/boards.js#L124
