@@ -1,5 +1,5 @@
 ---
-title: Collections and Models
+title: Collections and Schemas
 ---
 
 After reading this guide, you'll know:
