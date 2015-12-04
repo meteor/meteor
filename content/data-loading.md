@@ -331,6 +331,7 @@ Meteor.publish('list/todos', function(listId) {
     return this.ready();
   }
 });
+```
 
 However, this example will not work as you might expect. The reason is that reactivity doesn't work in the same way on the server as it does on the client. On the client, if *anything* in a reactive function changes, the whole function will re-run, and the results are fairly intuitive.
 
