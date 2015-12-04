@@ -1,3 +1,69 @@
+## Standup 2nd Dec
+
+With Tom, Zol, Sashko and Matt
+
+## Notes
+
+- Outstanding product questions: Blaze, Methods, Linting.
+- Setting up a process to resolve these questions.
+- Matt re: 1.3. We ought to write the Guide for 1.3 . Use it to promote the things that are exciting in 1.3, e.g ES2015 modules, things that come up in a larger app,
+- Dream scenario would be when we release 1.3, there is a guide in place written for it that steers people on the leading edge of what’s in 1.3 . That guide has been floating around for a while and we’ve been iterating on it and getting comments on it as the lead up to 1.3 . Feedback loop between the guide, community and product.
+- Guide to steer polish of modules rather than large efforts.
+- Theme that works for 1.3 - it’s the Meteor release for large apps. Targetted at the things that come up when you have a larger app.
+- How do we systemize the collaboration of the Guide Team.
+- Platform team is to drive the 1.3 release cycle.
+- The platform team (Ben, Avi, Martin) are keen to work with the guide team.
+- Guide team become customers for the platform team.
+- Take plan to existing customers.
+- Should we be writing a Blaze article?
+- Complicated question.
+- Is it a blog post?
+- Bookmark the Blaze conversation - the urgency is high.
+- Make a decision by the end of the week.
+- Linting: Existing linter config. Would be cool to put the config and meteor integration into the Guide.
+- Politics of applying linting config to the entire Meteor codebase?
+- Matt is in favor of advocating for one code style.
+- Leave meteor/meteor unlinted.
+- Maybe style guide, linter chapter.
+
+## Action Items
+
+- Make a decision on Blaze by the end of the week.
+- Maintain Meteor eslint style config in npm.
+- Linting to go into Guide.
+- Move weekly check-in to Wednesdays (this same time works).
+
+## Standup 1st Dec
+
+With Tom, Zol and Sashko
+
+### Agenda
+
+- Progress?
+- Website QA
+
+### Notes
+
+- We'll all do a round of QA on the website before Evan completely moves onto other things.
+- Merge Security and Data article in the next 24 hours.
+- Sashko to clean up other cruft.
+- Article draft velocity is good, easy articles are done.
+- Should we write a guide on Blaze?
+- Testing and App structure require too many decisions.
+- Taking these 3 out will maybe have the other articles drafted by the end of the week (*Tom optimism*)
+- Demoting publishing a package to an 'article idea' rather than a first class article.
+- Mini-app with forms in it?
+- Split Forms/Methods article into 2, Methods and Forms. Definitely get the Methods done and maybe get the Forms done, note Forms requires a mini example app.
+- Remember we should make some nice diagrams some time.
+
+### Action Items
+
+- Tom+Sashko - UI/UX, what should we do about internationalization?
+- Do we write a Blaze article? - part of discussion with Matt tomorrow.
+- Sit down and resolve tiny decisions in each article to get them to draft stage.
+- Tom to do Mobile (until we know more).
+- Sashko to do Methods.
+
 ## Standup 23rd Nov
 
 With Evan, Tom, Sashko, Zol

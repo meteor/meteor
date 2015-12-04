@@ -8,7 +8,7 @@
   <div id="content">
     <h1><%- page.title %></h1>
     <%- page.content %>
-    <div id="bottom-nav">
+    <div class="bottom-nav">
       <%
         function findAdjacent (direction) {
           var pages = site.pages.find({}).map(function (page) { return page })
@@ -30,5 +30,16 @@
         <span style="float:right"><a href="<%- relative_url(page.path, next.path) %>"><%- next.title %></a> →</span>
       <% } %>
     </div>
+    <p class="edit-link">
+      <a href="https://github.com/meteor/guide/tree/master/content/<%- page.path.replace(/\.html$/, '.md') %>" target="_blank">Edit this page on GitHub</a>
+    </p>
   </div>
+
+  <!-- mobile only -->
+  <div id="mobile-header">
+    <a class="menu-button"></a>
+    <a class="logo" href="/"></a>
+  </div>
+  <div id="mobile-shade"></div>
+
 </div>

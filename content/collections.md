@@ -5,11 +5,11 @@ title: Collections and Models
 After reading this guide, you'll know:
 
 1. What the different flavors of MongoDB Collection in Meteor are, and how to use them.
-2. How to define a schema for a collection to control it's content.
-3. What considerations you should take when defining your collection's schema
-4. How to modify the content of a collection whilst respecting its schema
+2. How to define a schema for a collection to control its content.
+3. What considerations you should take when defining your collection's schema.
+4. How to modify the content of a collection whilst respecting its schema.
 5. How to change the schema of your collection in a careful way.
-6. How to deal with relations between records in collections
+6. How to deal with relations between records in collections.
 
 ## MongoDB Collections in Meteor
 
@@ -28,7 +28,7 @@ When you create a collection on the server:
 Todos = new Mongo.Collection('Todos');
 ```
 
-You are creating a collection within MongoDB itself, and a interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous (fibers-based) API:
+You are creating a collection within MongoDB itself, and an interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous (fibers-based) API:
 
 ```js
 // This line won't complete until the insert is done
@@ -71,13 +71,13 @@ There is a third way to use a collection in Meteor. On the client or server, if 
 ```js
 SelectedTodos = new Mongo.Collection(null);
 ```
-You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a publication on the client). 
+You create what's known as a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a subscription on the client). 
 
-A local collection is simply a convienent way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you'll need to sophisticated queries over your set of data. Or you may want to take advatange of it's *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
+A local collection is simply a convienent way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you'll need to execute sophisticated queries over your set of data. Or you may want to take advatange of its *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
 ## Defining Collections with a Schema
 
-Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constraint the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
+Although MongoDB is a schema-less database, which allows maximum flexibility in data structuring, it is generally good practice to use a schema to constrain the contents of your collection to conform to a known format. If you don't, then you tend to end up needing to write defensive code to check and confirm the structure of your data as it *comes out* of the database, instead of when it *goes into* the database. As in most things, you tend to *read things more often than you write them*, and so it's usually easier, and less buggy to use a schema when writing.
 
 In Meteor, the pre-eminent schema package is [aldeed:simple-schema](http://atmospherejs.com/aldeed/simple-schema). It's an expressive, MongoDB based schema that's used to insert and update documents.
 
@@ -96,7 +96,7 @@ In this example, from the Todos app, we are doing a few things that are interest
 1. We attach the schema to the namespace of `Lists` directly. This allows us to check things against the schema of a list directly (rather than via inserting into the DB, see below), such as in a form (see the forms article).
 2. We specify that the `name` field of a list must be a string, and must exist.
 3. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
-4. We specify that the `userId`, which is optional, must be a string matching an id regular expression.
+4. We specify that the `userId`, which is optional, must be a string matching an Id regular expression.
 
 You can see from this example, that with relatively little code we've managed to restrict the format of a list significantly. You can read more in the [Simple Schema docs](http://atmospherejs.com/aldeed/simple-schema) about more complex things that can be done with schemas.
 
@@ -127,15 +127,13 @@ const list = {
 Lists.schema.validate(list);
 ```
 
-// XXX: this isn't actually the case yet. We are waiting on https://github.com/meteor/method/issues/4
-
 Then the `validate()` call will throw a `ValidationError` which contains details about what is wrong with the `list` document.
 
 ### The `ValidationError`
 
 What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the "Methods and Forms" article, we'll see more about how this works.
 
-## Designing your data schama
+## Designing your data schema
 
 Now you are familiar with the basic API of Simple Schema, it's worth considering a few of the constraints of the Meteor system that can influence the design of your data schema. Although generally speaking you can build a Meteor data schema much like any MongoDB data schema, there are some important differences.
 
@@ -150,7 +148,7 @@ Lists.schema = new SimpleSchema({
 });
 ```
 
-The issue with this schema is that due to the DDP behaviour just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the wire. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to (say) `[{text: 'first'}, {text: 'second'}]`".
+The issue with this schema is that due to the DDP behavior just mentioned, each change to *any* todo item in a list will require sending the *entire* set of todos for that list over the wire. This is because DDP has no concept of "change the `text` field of the 3rd item in the field called `todos`", simply "change the field called `todos` to (say) `[{text: 'first'}, {text: 'second'}]`".
 
 ### Denormalization and multiple collections
 
@@ -158,9 +156,9 @@ The implication of the above is that we need to create more collections to conta
 
 In Meteor, it's often less of a problem doing this than it would be in a typical MongoDB application, as we tend to publish overlapping sets of documents anyway (we might need one set of users to render one screen of our app, and an intersecting set for another), which may stay on the client as we move around the application. So in that scenario there is an advantage to separating the subdocuments from the parent.
 
-However, given that MongoDB doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
+However, given that MongoDB prior to version 3.2 doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
 
-In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
+In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
 
 Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
 
@@ -168,9 +166,9 @@ Another denormalization that this architecture sometimes requires can be from th
 
 An application, especially a web application, is rarely finished, and it's useful to consider potential future changes when designing your data schema. As in most things, it's rarely a good idea to add fields before you actually need them (often what you anticipate doesn't actually end up happening, after all).
 
-However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good change that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
+However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good chance that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
 
-As with all things it depends, and can be judgement call on your part.
+As with all things it depends, and can be a judgement call on your part.
 
 ## Using schemas -- writing data to collections
 
@@ -186,7 +184,7 @@ What this means is that now every time we call `Lists.insert()`, `Lists.update()
 
 ### Using `defaultValue` and cleaning
 
-One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) amd removing attributes not in the schema.
+One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) and removing attributes not in the schema.
 
 Another important thing it does is set values to fields that have not been set, and which have `defaultValue` set in the schema definition.
 
@@ -233,8 +231,8 @@ class ListsCollection extends Mongo.Collection {
 
 This technique has a couple of downsides:
 
-  1. Mutators can get very long when you want to hook in multiple times
-  2. Sometimes a single piece of functionality can be spread over multiple mutators
+  1. Mutators can get very long when you want to hook in multiple times.
+  2. Sometimes a single piece of functionality can be spread over multiple mutators.
   3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
 A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We can see in the "Forms and Methods" chapter an example of how we do that in the list and todo denormalizers mentioned above.
@@ -270,7 +268,7 @@ To find out more about the API of the Migrations package, refer to [its document
 
 ### Running migrations
 
-To run a migration against you development database, it's easiest to use the Meteor shell:
+To run a migration against your development database, it's easiest to use the Meteor shell:
 
 ```js
 // After running `meteor shell` on the command line:
@@ -305,17 +303,17 @@ A better approach is a multi-stage deployment. The basic idea is that:
 
 Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migration _back_ to version `x`. 
 
-If you find you need to roll your code version back, you'll need to be careful about the data, and step careful through your deployment steps in reverse.
+If you find you need to roll your code version back, you'll need to be careful about the data, and step carefully through your deployment steps in reverse.
 
 ## Relations between collections
 
-As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested (for instance all the todos that are on a single list).
+As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are on a single list).
 
 To do so, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
 
 ### Collection Helpers
 
-To do, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
+To do this, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
 
 ```js
 Lists.helpers({
@@ -355,7 +353,7 @@ console.log(`The first list has ${list.todos().count()} todos`);
 
 ### Query modification
 
-It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos on the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
+It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos in the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
 
 A great way to do this is to use the `mdg:cursor-utils` package, which allows you to modify a cursor from outside:
 

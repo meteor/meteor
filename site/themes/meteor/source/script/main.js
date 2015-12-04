@@ -1,42 +1,59 @@
 (function () {
 
+  var MAX_HEADER_DEPTH = 3
   var scrolling = false
   var scrollTimeout
   var activeLink = document.querySelector('.sidebar-link.current')
+  var allLinks = []
 
   // create sub links for h2s
   var h2s = document.querySelectorAll('h2')
   if (h2s.length) {
-    var subMenu = document.createElement('ul')
-    subMenu.className = 'sub-menu'
-    activeLink.parentNode.appendChild(subMenu)
-    Array.prototype.forEach.call(h2s, function (h) {
-      createSubMenuLink(subMenu, h)
-      createAnchorLink(h)
-    })
+    createSubMenu(activeLink.parentNode, h2s, 2)
     smoothScroll.init({
       speed: 400,
-      offset: 115,
+      offset: window.innerWidth > 560 ? 115 : 55,
       callback: function () {
         scrolling = false
       }
     })
   }
 
-  // add anchors for all h3s
-  var h3s = document.querySelectorAll('h3')
-  if (h3s.length) {
-    Array.prototype.forEach.call(h3s, createAnchorLink)
+  function createSubMenu (container, headers, depth) {
+    var subMenu = document.createElement('ul')
+    subMenu.className = 'sub-menu'
+    container.appendChild(subMenu)
+    Array.prototype.forEach.call(headers, function (h) {
+      var link = createSubMenuLink(h)
+      subMenu.appendChild(link)
+      if (depth < MAX_HEADER_DEPTH) {
+        var subHeaders = findSubHeaders(h, depth)
+        createSubMenu(link, subHeaders, depth + 1)
+      }
+      makeHeaderLinkable(h)
+    })
   }
 
-  function createSubMenuLink (menu, h) {
+  function createSubMenuLink (h) {
+    allLinks.push(h)
     var headerLink = document.createElement('li')
     headerLink.innerHTML = '<a href="#' + h.id + '" data-scroll>' + h.textContent + '</a>'
     headerLink.firstChild.addEventListener('click', onLinkClick)
-    menu.appendChild(headerLink)
+    return headerLink
   }
 
-  function createAnchorLink (h) {
+  function findSubHeaders (node, depth) {
+    var res = []
+    while (node.nextSibling && node.nextSibling.tagName !== 'H' + depth) {
+      node = node.nextSibling
+      if (node.tagName === 'H' + (depth + 1)) {
+        res.push(node)
+      }
+    }
+    return res
+  }
+
+  function makeHeaderLinkable (h) {
     var anchor = document.createElement('a')
     anchor.className = 'anchor'
     anchor.href = '#' + h.id
@@ -52,6 +69,7 @@
       setActive(e.target)
     }
     scrolling = true
+    document.body.classList.remove('sidebar-open')
   }
 
   // setup active h3 update
@@ -63,8 +81,8 @@
     var doc = document.documentElement
     var top = doc && doc.scrollTop || document.body.scrollTop
     var last
-    for (var i = 0; i < h2s.length; i++) {
-      var link = h2s[i]
+    for (var i = 0; i < allLinks.length; i++) {
+      var link = allLinks[i]
       if (link.offsetTop - 120 > top) {
         if (!last) last = link
         break
@@ -87,4 +105,39 @@
     }
   }
 
+  // version select
+  var currentVersion = location.pathname.match(/^\/(v\d[^\/]+)/)
+  ;[].forEach.call(document.querySelectorAll('.version-select'), function (select) {
+    if (currentVersion) {
+      [].some.call(select.options, function (o) {
+        if (o.value === currentVersion[1]) {
+          o.selected = true
+          return true
+        }
+      })
+    }
+    select.addEventListener('change', function () {
+      var targetPath = '/'
+      if (select.selectedIndex !== 0) {
+        targetPath = '/' + select.value + '/'
+      }
+      location.assign(targetPath)
+    })
+  })
+
+  // search box
+  ;(function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+  _st('install','h1KW95Mz3fNyf4cnqVtr','2.0.0');
+  
+  // mobile
+  document.querySelector('#mobile-header .menu-button')
+    .addEventListener('click', function () {
+      document.body.classList.toggle('sidebar-open')
+    })
+  document.getElementById('mobile-shade').addEventListener('click', function () {
+    document.body.classList.remove('sidebar-open')
+  })
 })()

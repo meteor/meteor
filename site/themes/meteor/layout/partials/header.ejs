@@ -19,7 +19,12 @@
 </div>
 
 <div id="site-nav">
-  <a id="logo" href="/">Meteor</a>
-  <span>The Official Guide</span>
-  <!-- we may have more sections here in the future -->
+  <a class="logo" href="/">Meteor</a>
+  <span class="sub-title">The Official Guide</span>
+  <select class="version-select">
+    <% config.versions.forEach(function (v) { %>
+      <option value="v<%- v %>"><%- v %></option>
+    <% }) %>
+  </select>
+  <input class="search-box st-default-search-input">
 </div>
