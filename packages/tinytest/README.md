@@ -31,7 +31,7 @@ From [martinfowler.com](http://www.martinfowler.com/articles/mocksArentStubs.htm
 
 > Mocks [are] objects pre-programmed with expectations which form a specification of the calls they are expected to receive.
 
-For a comprehensive way of including spies, stubs and other fun stuff, check out [practicalmeteor:munit](https://atmospherejs.com/practicalmeteor/munit) and [smithy:describe](https://atmospherejs.com/smithy/describe), both of which wrap a host of useful functionality around Tinytest, including the more widely used `describe ... it ... expect` syntax.
+For a comprehensive way of including spies, stubs and other fun stuff, check out [practicalmeteor:munit](https://atmospherejs.com/practicalmeteor/munit) and [smithy:describe](https://atmospherejs.com/smithy/describe), both of which wrap a host of useful functionality around Tinytest, including the more widely used `describe ... it ... expect` syntax. This README covers standard Tinytest, so you should refer to the documentation for those if you prefer their syntax and functionality.
 
 ## Adding Tinytest to Your Package
 
@@ -310,4 +310,5 @@ Call this to fail the test with an exception that occurs inside asynchronous cal
 May be used to change a fail to a qualified pass. The test is counted as a pass, but clicking on it reveals that the underlying test failed:
 
     - expected_fail — assert_equal - expected xxx - actual yyy - not
+
 
