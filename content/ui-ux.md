@@ -5,7 +5,7 @@ title: User Interfaces and User Experience
 After reading this guide, you'll know:
 
 1. How to build re-usable client side components in any templating language
-2. How to build a styleguide to allow you to visually test such pure components
+2. How to build a styleguide to allow you to visually test such resuable components
 3. Patterns for building front end components in a performant way in Meteor
 4. How to design responsively across device sizes, accessibly for different users, and universally across languages.
 5. How to build components that can cope with a variety of different data sources
@@ -17,15 +17,15 @@ Regardless of the rendering library that you are using, there are some patterns 
 
 In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more modular like a component which has an API, rather than a template which is usually seen in a looser way.
 
-To begin with, let's consider two categories of components that are useful to think about, "smart" and "pure":
+To begin with, let's consider two categories of components that are useful to think about, "smart" and "reusable":
 
-### Pure Components
+### Reusable Components
 
-A "pure" component is a component which doesn't rely on anything from the environment it renders in, rather it renders purely based on its inputs (its *template arguments* in Blaze, or *props* in React). 
+A "reusuable" component is a component which doesn't rely on anything from the environment it renders in, rather it renders purely based on its inputs (its *template arguments* in Blaze, or *props* in React) and internal state. 
 
-In Meteor, specifically this means a component which does not access data from any global sources (typically either Collections or Stores). For instance, in the Todos example app, the `todosItem` template takes in the todo that it is rendering and does not ever look directly in the `Todos` collection.
+In Meteor, specifically this means a component which does not access data from any global sources (typically either Collections or Stores). For instance, in the Todos example app, the `listsShow` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
 
-The advantages of pure components are the following:
+The advantages of reusuable components are the following:
 
  1. They are easy to reason about---you don't need to understand how the data in the global store changes, simply how the arguments to the component change.
 
@@ -35,9 +35,11 @@ The advantages of pure components are the following:
 
  4. You know exactly what they do and what dependencies you need to provide for them to work in different environments.
 
+ There's also a specific type of reusable component, a "pure" component, which also does not have any internal state. For instance in the Todos app, the `todosItem` template purely decides what to render based on its arguments. Pure components are even better than reusable ones, for all of the same reasons.
+
 ### Global Data stores
 
- So which are the global data stores that you should be avoiding in pure components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in pure ones:
+ So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in reusuable ones:
 
   - Your collections, as well as the `Meteor.users` collection,
   - Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
@@ -46,13 +48,13 @@ The advantages of pure components are the following:
 
 ### Smart Components
 
-While most of the components in your app should be pure and reusable, they need to get their data passed in from somewhere. This is where "smart" components come in. Such components typically the following things:
+While most of the components in your app should be reusable, they need to get their data passed in from somewhere. This is where "smart" components come in. Such components typically the following things:
 
  1. Subscribe to data, using subscriptions.
  2. Fetch data from those subscriptions.
  3. Fetch global client-side state from stores such as the Router, Accounts, and your own stores.
 
-Ideally, once a smart component has assembled such a set of data, it passes it off to a pure component child to render with. The smart component actually does not render anything apart from one or more pure children.
+Ideally, once a smart component has assembled such a set of data, it passes it off to a resuable component child to render with. The smart component actually does not render anything apart from one or more resuable children.
 
 A typical use case for a smart component is the "page" component that the router points you to when you access a URL. Such a component typically needs to do the three things above and then can pass the resulting arguments into child components. In the Todos example app, the `listShowPage` does exactly this, with a resultingly simple template:
 
@@ -64,9 +66,9 @@ A typical use case for a smart component is the "page" component that the router
 </template>
 ```
 
-## Visually testing pure components
+## Visually testing resuable components
 
-A useful property of pure components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _styleguide_ or harness.
+A useful property of resuable components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _styleguide_ or harness.
 
 A styleguide consists of two parts:
 
@@ -74,7 +76,7 @@ A styleguide consists of two parts:
 
 2. A special route in the development version of the application that renders one or more components with one or more of the specificiations.
 
-For instance, in Galaxy, we have a component styleguide that renders each pure component either one specification at a time, or with all specifications at once. 
+For instance, in Galaxy, we have a component styleguide that renders each resuable component either one specification at a time, or with all specifications at once. 
 
 [ss]
 
@@ -167,13 +169,13 @@ Usually it makes for a better UX to show as much of the screen as possible as qu
 
 [SS]
 
-We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the pure component which renders the data:
+We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the resuable component which renders the data:
 
 ```blaze
 {{> listsShow todosReady=Template.subscriptionsReady list=list}}
 ```
 
-And then we use that state to determing what to render in the pure component (`listShow`):
+And then we use that state to determing what to render in the resuable component (`listShow`):
 
 ```blaze
 {{#if todosReady}}
@@ -206,7 +208,7 @@ For instance, in Galaxy, while you wait for your organization's list of applicat
 
 Loading states are notoriously difficult to work on visually as they are by definition transient and often are barely noticeable in a development environment where subscriptions load almost instantly.
 
-This is one reason why being able to achieve any state at will in the component styleguide (see above) is so important and useful. As our pure component `listsShow` simply chooses to render based on it's `todosReady` argument and does not concern itself with a subscription, it is trivial to render it in a styleguide in the loading state.
+This is one reason why being able to achieve any state at will in the component styleguide (see above) is so important and useful. As our resuable component `listsShow` simply chooses to render based on it's `todosReady` argument and does not concern itself with a subscription, it is trivial to render it in a styleguide in the loading state.
 
 ### Pagination
 
@@ -245,7 +247,7 @@ You can see that although the situation is a little complex, it's also completel
 
 #### A pagination "controller" pattern
 
-A list is also a good opportunity to understand the benefits of the smart vs pure component split. We've seen above that correctly rendering and visualising all the possible states of a list is non-trivial and is made much easier by having a pure list component that takes all the required information in as arguments.
+A list is also a good opportunity to understand the benefits of the smart vs resuable component split. We've seen above that correctly rendering and visualising all the possible states of a list is non-trivial and is made much easier by having a resuable list component that takes all the required information in as arguments.
 
 However, we still need to subscribe to the list of items and the count, and collect that data somewhere. To do this, it's sensible to use a smart wrapper component (sort of analogous to an MVC "controller") who's job it is to subscribe and fetch the relevant data.
 
@@ -292,7 +294,7 @@ One solution to this problem is to *animate* list changes (which we'll look at b
 
 An option in this case is to call out that there are changes to the data the user is looking at without actually making UI updates. Of course with a reactive across the board system like Meteor, it isn't necessarily easy to stop such changes from happening! 
 
-However, it is possible to do this thanks to our split between smart and pure components. The pure component simply renders what it's given, so we use our smart component to control that information. We can use a *Local Collection* to store the rendered data, and then push data into it when the user requests:
+However, it is possible to do this thanks to our split between smart and resuable components. The resuable component simply renders what it's given, so we use our smart component to control that information. We can use a *Local Collection* to store the rendered data, and then push data into it when the user requests:
 
 ```js
 Template.listsShowPage.onCreated(function() {
@@ -344,7 +346,7 @@ Template.listsShowPage.helpers({
 });
 ```
 
-The pure sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
+The resuable sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
 
 ### Optimisitic UI
 
