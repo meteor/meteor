@@ -174,7 +174,7 @@ What this means is that whenever a user visits a URL of the form `/lists/X`, the
 
 Notice that we called the template to be rendered `listsShowPage` (rather than `listShow`). This indicates that this template is rendered directly by a Flow Router action and forms the 'top' of the rendering hierarchy for this URL.
 
-The `listShowPage` template will render *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `listShowPage` template is very tied to it's environment (the route it's rendered under), and so it needs to be a smart component (see the article on {% link_to 'ui-ux' 'UI/UX'} for more about smart and pure components).
+The `listShowPage` template will render *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `listShowPage` template is very tied to it's environment (the route it's rendered under), and so it needs to be a smart component (see the article on [UI/UX](ui-ux.html) for more about smart and pure components).
 
 It makes sense for a "page" smart component like `listShowPage` to:
 
@@ -193,7 +193,7 @@ In this case, the `listShowPage` template simply renders as:
 </template>
 ```
 
-(The `{{#each}}` is a animation technique that we also discuss in the {% link_to 'ui-ux' 'UI/UX Article'}).
+(The `{{#each}}` is a animation technique that we also discuss in the [UI/UX](ui-ux.html)).
 
 It's the `listShow` template (a pure component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the pure component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
@@ -217,7 +217,7 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 
 Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between templates---by wrapping them in a wrapper "layout" template which includes the behaviour we want.
 
-You can create wrapper templates by using the "template as block helper" ability of Blaze (see the {% link_to 'blaze' Blaze Article %}). So we can write an authorization template:
+You can create wrapper templates by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html)). So we can write an authorization template:
 
 ```html
 <template name="forceLoggedIn">
@@ -342,7 +342,7 @@ Template.rootRedirector.onCreated(() => {
 
 ### Redirecting after a user's action
 
-Often, you just want to go to a new route programmatically when a user has completed a certain action. Above we saw a case (creating a new list) when we wanted to do it *optimistically*---i.e. before we hear back from the server that the Method succeeded. We can do this because we reasonably expect that the Method will succeed in almost all cases (see the {% link_to 'ui-ux' 'UI/UX article'} for further discussion of this).
+Often, you just want to go to a new route programmatically when a user has completed a certain action. Above we saw a case (creating a new list) when we wanted to do it *optimistically*---i.e. before we hear back from the server that the Method succeeded. We can do this because we reasonably expect that the Method will succeed in almost all cases (see the [UI/UX article](ui-ux.html) for further discussion of this).
 
 However, if we wanted to wait for the method to return for the server, we can put the redirection in the callback of the method:
 
@@ -418,7 +418,7 @@ As we've discussed, Meteor is a framework for client rendered applications, but 
 
 #### Server Routing for API access
 
-Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the {% link_to data-loading 'Data Loading' %} and {% link_to methods 'Methods' %} articles for more information.
+Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html) and [Methods](methods.html) articles for more information.
 
 #### Server Rendering
 
