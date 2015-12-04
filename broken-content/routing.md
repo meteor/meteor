@@ -103,7 +103,7 @@ So in our example of the list page form the Todos app, we access the current lis
 
 One situation where it is sensible to access the global `FlowRouter` singleton to access the current route's information deeper in the component hierarchy is when rendering links via a navigation component. It's often required to highlight the "active" route in some way (this is the route or section of the site that the user is currently looking at).
 
-A convenient package for this is [`zimme:active-route`](https://github.com/zimme/meteor-active-route):
+A convenient package for this is [`zimme:active-route`](https://atmospherejs.com/zimme/active-route):
 
 ```bash
 meteor add zimme:active-route
