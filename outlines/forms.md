@@ -43,6 +43,7 @@
   3. The `updated` message and the `onResultReceived` callback
   4. Method retries when the client disconnects
   
-## Notes
+## Notes from Maxime
 
 Using code to de-duplicate permissions and arguments by generating lots of methods at once, like: https://github.com/wekan/wekan/blob/8d5d7ee678d9a396a0427329200e5bf0573eb730/models/boards.js#L124
+Global security on collections just as an extra layer by overriding update
