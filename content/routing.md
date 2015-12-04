@@ -424,10 +424,7 @@ Although Meteor allows you to [write low-level connect handlers](http://docs.met
 
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you are using it. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
 
-Although Flow Router can be used to render React components more or less exactly as we've described above for Blaze, at of this writing, Flow Router's support for SSR is [still experimental](https://kadira.io/blog/meteor/meteor-ssr-support-using-flow-router-and-react). 
-
-If you want to use SSR and React with Meteor, the best approach probably revolves around using the [React Router package] XXX: fill this out
-
+Although Flow Router can be used to render React components more or less exactly as we've described above for Blaze, at of this writing, Flow Router's support for SSR is [still experimental](https://kadira.io/blog/meteor/meteor-ssr-support-using-flow-router-and-react), however it's probably the best approach right now if you want to use SSR for Meteor.
 
 
 
