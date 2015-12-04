@@ -42,3 +42,7 @@
   2. Calling a method from another method, how it works with simulations + on the server
   3. The `updated` message and the `onResultReceived` callback
   4. Method retries when the client disconnects
+  
+## Notes
+
+Using code to de-duplicate permissions and arguments by generating lots of methods at once
