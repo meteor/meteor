@@ -99,7 +99,10 @@ Migrations.config({
   log: true,
 
   // Use a custom logger function (defaults to Meteor's logging package)
-  logger: null
+  logger: null,
+
+  // Enable/disable logging "Not migrating, already at version {number}"
+  logIfLatest: true
 });
 ```
 

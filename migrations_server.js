@@ -37,6 +37,8 @@ Migrations = {
     log: true,
     // null or a function
     logger: null,
+    // enable/disable info log "already at latest."
+    logIfLatest: true
   },
   config: function(opts) {
     this.options = _.extend({}, this.options, opts);
@@ -171,7 +173,9 @@ Migrations._migrateTo = function(version, rerun) {
   }
 
   if (currentVersion === version) {
-    log.info('Not migrating, already at version ' + version);
+    if (Migrations.options.logIfLatest) {
+      log.info('Not migrating, already at version ' + version);
+    }
     unlock();
     return;
   }
