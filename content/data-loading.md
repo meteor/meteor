@@ -123,8 +123,6 @@ Subscribing to data puts it in your client-side collections. To use the data in 
 
   Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template heirarchy as an argument to each template. Although you could do this if you want to be "pure" about everything, and it's best not to use it in too many places as it makes templates harder to test.
 
-  A second exception is sometimes in Blaze when you want to be more performant by controlling re-renderings. As an example in the Todos example application, although we subscribe to the `lists/todos` publication in the `listShowPage`, we don't actually fetch the todos further down the template heirarchy, in order to avoid the todos rendering too much when properties of the list change.
-
 ### Global subscriptions
 
 One place where you might be tempted to not subscribe inside a template is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the {% post_link accounts "Accounts Article" %}) that you need on every screen of your app.
@@ -200,9 +198,7 @@ A very common pattern of data access is pagination. This refers to the practice 
 
 There are two styles of pagination that are commonly used, a "page-by-page" style---where you show only one page of results at a time, starting at some offset (which the user can control), and "infinite-scroll" style, where you show and increasing number of pages of items, as the user moves through the list (this is the typical "feed" style user interface).
 
-Let's consider a publication/subscription technique for the second (the first technique is quite difficult to do correctly in Meteor as you can't tell at which offset to start on the client-side which only has a subset of the true data).
-
-XXX: Should we deal with the page-to-page pagination scenario better?
+Let's consider a publication/subscription technique for the second (the first technique is a little tricker to handle, due to it being difficult to calculate the offset on the client. If you need to do so, you can follow many of the same techniques that we use here and use the [`percolate:find-from-publication`](https://atmospherejs.com/percolate/find-from-publication) package to keep track of which records have come from your publication).
 
 In an infinite scroll publication, we simply need to add a new argument to our publication controlling how many items to load. Suppose we wanted to paginate the todo items in our Todos example app:
 
@@ -294,7 +290,7 @@ If you need to query the store, or store many related items, it's probably a goo
 
 ### Accessing stores
 
-You should access stores in the same way you'd access other reactive data in your templates. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback. 
+You should access stores in the same way you'd access other reactive data in your templates---that means centralizing your store access, much like you centralize your subscribing and data fetch. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback. 
 
 This way you get the full reactive power of the store.
 
@@ -457,8 +453,6 @@ One point to be aware of is that if you allow the user to *modify* data in the "
 As a concrete example of using the low-level API, consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available to your users?
 
 One option would be to provide a Method that simply proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc etc. Although this is possible (you could use a Local Collection to store the polled data in, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
-
-XXX: is there anything on atmosphere that does this?
 
 A pattern for turning a polled REST endpoint looks something like this:
 
