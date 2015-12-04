@@ -375,10 +375,17 @@ FlowRouter.notFound = {
 };
 ```
 
-The second is when the URL is valid, but doesn't actually match any data. Here we
+The second is when the URL is valid, but doesn't actually match any data. In this case, the URL matches a route, but once the route has successfully subscribed, it discovers there is no data. It usually makes sense in this case for the page component (which subscribes and fetches the data) to render a not found template instead of the usual template for the page:
 
-XXX: we don't actually do this yet for Todos, fix https://github.com/meteor/todos/issues/53
-
+```html
+<template name="listsShowPage">
+  {{#each list in listArray}}
+    {{> listsShow todosReady=Template.subscriptionsReady list=list todos=list.todos}}
+  {{else}}
+    {{> appNotFound}}
+  {{/each}}
+</template>
+```
 
 ### Analytics
 
