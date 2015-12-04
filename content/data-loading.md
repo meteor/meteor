@@ -286,7 +286,7 @@ $window.on('resize', () => {
 
 The advantage of a `ReactiveDict` is you can access each property individually (`WindowSize.get('width')`), and the dict will diff the field and track changes on it individually (so your template will re-render less often for instance).
 
-If you need to query the store, or store many related items, it's probably a good idea to use a Local Collection (see the {% page_link collections "Collections Article" %}.
+If you need to query the store, or store many related items, it's probably a good idea to use a Local Collection (see the [Collections Article](collections.html).
 
 ### Accessing stores
 
