@@ -1,5 +1,5 @@
 ---
-title: "Meteor Guide: Routing"
+title: "URLs and Routing"
 ---
 
 After reading this guide, you'll know:
@@ -154,7 +154,7 @@ To use this package, we need to render a "layout" component by default. In the T
 </template>
 ```
 
-(This is not the entire `appBody` template, but we highlight the most important part here). 
+(This is not the entire `appBody` template, but we highlight the most important part here).
 Here, we are using a Blaze feature called `Template.dynamic` to render a template who is attached to the the `main` argument to the template. Using Blaze Layout, we can change that `main` argument when a route is accessed.
 
 We do that by changing the `action` function of our `listShow` route definition:
@@ -193,7 +193,7 @@ In this case, the `listShowPage` template simply renders as:
 </template>
 ```
 
-(The `{{#each}}` is a animation technique that we also discuss in the {% link_to 'ui-ux' 'UI/UX Article'}). 
+(The `{{#each}}` is a animation technique that we also discuss in the {% link_to 'ui-ux' 'UI/UX Article'}).
 
 It's the `listShow` template (a pure component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the pure component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
@@ -215,7 +215,7 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 </template>
 ```
 
-Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between templates---by wrapping them in a wrapper "layout" template which includes the behaviour we want. 
+Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between templates---by wrapping them in a wrapper "layout" template which includes the behaviour we want.
 
 You can create wrapper templates by using the "template as block helper" ability of Blaze (see the {% link_to 'blaze' Blaze Article %}). So we can write an authorization template:
 
@@ -425,21 +425,3 @@ Although Meteor allows you to [write low-level connect handlers](http://docs.met
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you are using it. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
 
 Although Flow Router can be used to render React components more or less exactly as we've described above for Blaze, at of this writing, Flow Router's support for SSR is [still experimental](https://kadira.io/blog/meteor/meteor-ssr-support-using-flow-router-and-react), however it's probably the best approach right now if you want to use SSR for Meteor.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

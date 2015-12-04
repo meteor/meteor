@@ -1,5 +1,5 @@
 ---
-title: Data Loading and Management
+title: Publications and Data Loading
 ---
 
 After reading this guide, you'll know:
@@ -20,7 +20,7 @@ Unlike in Meteor, a traditional web application communicates between client and 
 
 Meteor however is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. So (although you can), building a Meteor app doesn't require fashion REST endpoints to serialize and send data. Instead you create *publication* endpoints to push data from server to client.
 
-In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then,over time a set of updates as that data set changes. 
+In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then,over time a set of updates as that data set changes.
 
 So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the "Collections" article, corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription a pipe that connects a subset of the true collection with the clients version, but that constantly keeps it up to date with the latest information on the server.
 
@@ -111,7 +111,7 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 Subscribing to data puts it in your client-side collections. To use the data in your templates, you need to query those collections for that data. There are a few important rules of thumb when doing this.
 
-1. Always use the same query to fetch the data from the collection that you use to publish it. 
+1. Always use the same query to fetch the data from the collection that you use to publish it.
 
   If you don't do this, then you open yourself up to problem if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
@@ -138,7 +138,7 @@ Across Meteor applications, there are some common patterns of data loading and a
 
 A key thing to keep in mind is that a subscription will not instantly provide it's data. There'll be a latency between subscribing to the data on the client and it arriving from the publication on the server (and keep in that this time may be a lot longer for your users in production that for you locally in development!)
 
-Although the Tracker system means you often don't *need* to think too much about this in building your apps, usually if you want to get the user experience right, you'll need to know when the data is ready. 
+Although the Tracker system means you often don't *need* to think too much about this in building your apps, usually if you want to get the user experience right, you'll need to know when the data is ready.
 
 To find that out, `Meteor.subscribe()` and (`this.subscribe()` in templates) returns a "subscription handle", which contains a reactive data source called `.ready()`:
 
@@ -239,7 +239,7 @@ Once piece of information that's very useful to know when paginating data is the
 ```js
 Meteor.publish('list/todoCount', function(listId) {
   check(listId, String);
-  
+
   Counts.publish(this, `list/todoCount${listId}`, Todos.find({listId}));
 });
 ```
@@ -248,11 +248,11 @@ Then on the client, after subscribing to that publication, we can access the cou
 
 ## Client-side data management: Stores
 
-In Meteor, persistent or shared data comes over the wire on publications. However, there are some types of data which doesn't need to be persistent or shared between users. For instance, the "logged-in-ness" of the current user, or the route they are currently viewing. 
+In Meteor, persistent or shared data comes over the wire on publications. However, there are some types of data which doesn't need to be persistent or shared between users. For instance, the "logged-in-ness" of the current user, or the route they are currently viewing.
 
 Although client-side state is often best contained as state of an individual template (and passed down the template heirarchy as arguments where necessary), sometimes you have a need for "global" state that is shared between unrelated sections of the template heirarchy.
 
-Usually such state is stored in a *global singleton* object which we can call a store. A singleton is a data structure of which only a single copy logically exists. The current user and the router from above are typical examples of such global singletons. 
+Usually such state is stored in a *global singleton* object which we can call a store. A singleton is a data structure of which only a single copy logically exists. The current user and the router from above are typical examples of such global singletons.
 
 ### Types of stores
 
@@ -290,13 +290,13 @@ If you need to query the store, or store many related items, it's probably a goo
 
 ### Accessing stores
 
-You should access stores in the same way you'd access other reactive data in your templates---that means centralizing your store access, much like you centralize your subscribing and data fetch. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback. 
+You should access stores in the same way you'd access other reactive data in your templates---that means centralizing your store access, much like you centralize your subscribing and data fetch. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback.
 
 This way you get the full reactive power of the store.
 
 ### Updating stores
 
-If you need to update a store from as a result of user action, you'd update the store from an event handler, just like you call Methods. 
+If you need to update a store from as a result of user action, you'd update the store from an event handler, just like you call Methods.
 
 If you need to perform complex logic in the update (i.e. not just call `.set()` etc), it's a good idea to define a mutator on the store. As the store is a singleton, you can just attach a function to the object directly:
 
@@ -338,7 +338,7 @@ On the server however, the reactivity is limited to the behaviour of the cursors
 
 So in the case above, if a user subscribes to a list that is later made private by another user, although the `list.userId` will change to a value that no longer passes the condition, the body of the publication will not re-run, and so the query to the `Todos` collection (`{listId}`) will not change. So the first user will continue to see items they shouldn't.
 
-However, we can write publications that are properly reactive to changes across collections. To do this, we use the [`reywood:publish-composite`](https://atmospherejs.com/reywood/publish-composite) package. 
+However, we can write publications that are properly reactive to changes across collections. To do this, we use the [`reywood:publish-composite`](https://atmospherejs.com/reywood/publish-composite) package.
 
 The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor.
 
@@ -445,7 +445,7 @@ Meteor.publish('custom-publication', function() {
 
 Data published like this, from the client's perspective doesn't look any different -- there's actually no way for the client to know the difference as the DDP messages are the same. So even if you are connecting to, and mirroring, some esoteric data source, on the client it'll appear like any other Mongo collection.
 
-One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication. 
+One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication.
 
 
 ## Turning a REST endpoint into a publication
@@ -489,7 +489,7 @@ Meteor.publish('polled-publication', function() {
 });
 ```
 
-Things can get more complicated; for instance you may want to deal with documents being removed, or share the polling between multiple users (in a case where the data being polled isn't private to that user). 
+Things can get more complicated; for instance you may want to deal with documents being removed, or share the polling between multiple users (in a case where the data being polled isn't private to that user).
 
 
 ## Turning a publication into a REST endpoint
