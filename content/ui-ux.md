@@ -140,24 +140,6 @@ Typically, you use `.throttle()` if you are OK with the event happening during t
 
 Even if you aren't saving data over the wire to the database on every user input, sometimes you still may wish to update in-memory data stores on every user change. In theory this is fine, but in practice sometimes if updating that data store triggers a lot of UI changes, you can see poor performance (and missed keystrokes) when you do that. In such cases you can limit re-rendering by throttling such changes in a similar way to the way we throttle the method call above (although you might use `.debounce()` to ensure the changes happen only after the user has stopped typing).
 
-#### Scroll events
-
-Another type of event that fires very frequently is a scroll event. Such event trigger as a user scrolls up and down a page and are commonly used for "waypoint" behaviour. For example in the Localmarket example app, we use the [jquery-waypoints](https://atmospherejs.com/meteor/jquery-waypoints) library to trigger a class being attached to the nav element when you scroll past a certain point:
-
-```js
-Template.nav.onRendered(function() {
-  var $nav = this.$('nav');
-  $nav.siblings('.content-scrollable:not(.static-nav)').children().first().waypoint(function(direction) {
-    $nav.toggleClass('scrolled', direction === 'down');
-  }, {
-    context: '.content-scrollable',
-    offset: -200
-  });
-});
-```
-
-An important thing to be careful of is that if you are not using a library such as `jquery-waypooints` to do this, then you need to be careful about not causing too much work to happen in each `scroll` event. If you do so, then users will see poor scrolling performance and your app will not feel performant. You can use a throttle or [`requestAnimationFrame`](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame) to make things smooth if you are careful.
-
 
 ## User Experience Patterns
 
