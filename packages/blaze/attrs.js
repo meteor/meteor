@@ -106,7 +106,7 @@ var ClassHandler = DiffingAttributeHandler.extend({
     _.each(attrString.split(' '), function(token, i) {
       if (token) {
         // Duplicate class names (e.g: Semantic UI)
-        if (tokens[token] && i > 0) tokens[Object.keys(tokens)[(i-similarTokens++)-1]] += ' ' + token;
+        if (tokens[token] && i > 0) tokens[Object.keys(tokens)[(i - similarTokens++) - 1]] += ' ' + token;
         else tokens[token] = token;
       }
     });
