@@ -313,7 +313,11 @@ const Meteor.users.methods.updateMMR = new Method({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
-    MMR.updateWithSecretAlgorithm(this.userId);
+    if (this.isSimulation) {
+      // Simulation code for the client (optional)
+    } else {
+      MMR.updateWithSecretAlgorithm(this.userId);
+    }
   }
 });
 ```
