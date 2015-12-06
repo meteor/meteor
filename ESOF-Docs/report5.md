@@ -17,4 +17,10 @@
 
 ## Referências
 
+* http://stackoverflow.com/questions/7381150/how-to-send-an-email-from-javascript
+* http://www.html-form-guide.com/email-form/html-email-form.html
+* http://lukaszkups.net/blog/0005_sending_emails_with_meteor/
+* http://docs.meteor.com/#/full/email
+
+
 ## FEUP ESOF MIEIC
