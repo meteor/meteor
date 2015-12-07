@@ -4,9 +4,9 @@ title: Build system
 
 ## What does it do?
 
-The Meteor build tool is what compiles, runs, deploys, and publishes all of your Meteor apps and packages. It's Meteor's built-in solution to the problems also solved by tools like Grunt, Gulp, Webpack, Browserify, Nodemon, and many others, and uses a lot of these tools, like Babel, internally to enable a seamless experience.
+The Meteor build tool is what compiles, runs, deploys, and publishes all of your Meteor apps and packages. It's Meteor's built-in solution to the problems also solved by tools like Grunt, Gulp, Webpack, Browserify, Nodemon, and many others, and uses many popular Node.js tools like Babel and UglifyJS internally to enable a seamless experience.
 
-### Runs constantly in development
+### Reloads app on file change
 
 When you run `meteor`, the tool starts up, and you should leave it running continuously while developing your app. The tool automatically detects any relevant file changes and recompiles the necessary changes, restarting your client or server environment if needed.
 
@@ -21,6 +21,72 @@ Another important feature of the Meteor build tool is that it automatically conc
 ### Development vs. production
 
 Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to just the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, run `meteor build` and then deploy the resulting app bundle. Read more in the [production deployment article](XXX).
+
+## Using community packages
+
+Building an application completely from scratch is a tall order. This is one of the main reasons you might consider using Meteor in the first place - you can focus on writing the code that is specific to your app, instead of reinventing wheels like user login and data synchronization. To streamline your workflow even further, it makes sense to use community packages from Atmosphere and NPM. Many of these packages are recommended in the guide, and you can find more in the online directories.
+
+#### A note about Bower
+
+Don't use Bower XXX link to some article explaining that people are moving to NPM for client-side JS and original maintainer left?
+
+### Atmosphere
+
+[Atmosphere](https://atmospherejs.com/) is a repository and discovery website for Meteor-specific packages. Packages are published on Atmosphere when they need to take advantage of features specific to Meteor, like the cross-platform build system, isomorphic client/server code, or data system.
+
+#### Adding packages from Atmosphere
+
+You have two options for adding packages from Atmosphere to your app:
+
+1. Use the command line: `meteor add kadira:flow-router`
+2. Edit the file in your app under `.meteor/packages`, and add the package name anywhere in the file
+
+These options will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name, like so: `meteor add kadira:flow-router@2.10.0`.
+
+If your app is running when you add a new package, Meteor will automatically download it and restart your app for you.
+
+#### Searching for packages
+
+There are a few ways to search for Meteor packages published to Atmosphere:
+
+1. Search on the [Atmosphere website](https://atmospherejs.com/)
+2. Use `meteor search` from the command line
+3. Use a community package search website like [Fastosphere](http://fastosphere.meteor.com/)
+
+The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. You can also use `meteor show kadira:flow-router` from the command line to see the description of a package and different available versions.
+
+#### Package naming
+
+You may notice that all packages on Atmosphere have a name of the form `prefix:name`. The prefix is the name of the organization or user that published the package. Meteor uses such a convention of package naming to make sure that it's clear who has published a certain package, and to avoid an ad-hoc namespacing convention.
+
+#### Overriding packages from Atmosphere with a local version
+
+A Meteor app can load packages in one of two ways:
+
+1. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%/.meteor/packages`, and only loaded into your app as it is built.
+2. Loading the package's source code into a `packages/` directory inside your app. This lets you modify the source code of the package for your particular needs.
+
+If you need to patch a package to do something that the published version doesn't do, then (2) is the option for you. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
+
+One difference between pre-published packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package pre-installed.
+
+### NPM
+
+[NPM](http://npmjs.com/) is the most popular package repository for JavaScript packages. Historically, NPM was only used for publishing server-side Node.js packages, but is now used for a much wider variety of packages, including client/server JavaScript utilities, React components, Angular directives, and more.
+
+#### Adding packages from NPM
+
+As of Meteor 1.3, NPM packages work seamlessly with Meteor.
+
+XXX to be filled in by talking with Ben
+
+#### Searching for packages
+
+The best way to find NPM packages is by searching on [npmjs.com](https://www.npmjs.com/). There are also some websites that have special search features specifically for certain kinds of packages, like the aptly named [react-components.com](http://react-components.com/).
+
+#### Handling callbacks in Meteor
+
+XXX link to package building article? Or move that content here. Perhaps it should be here since building packages will be a power user only thing in 1.3?
 
 ## JavaScript transpilation
 
@@ -52,7 +118,9 @@ All code written in CoffeeScript compiles to JavaScript under the hood, and is c
 
 ### TypeScript
 
-Meteor does not currently work well with TypeScript. There are some community solutions on Atmosphere and in various materials around the internet, but until Meteor 1.3 introduces a standard JavaScript module system TypeScript is not a great path for Meteor development. XXX this might change shortly after Meteor 1.3? also, talk to Uri
+Meteor does not currently work well with TypeScript. There are some community solutions on Atmosphere and in various materials around the internet, but until Meteor 1.3 introduces a standard JavaScript module system TypeScript is not a great path for Meteor development.
+
+XXX this might change shortly after Meteor 1.3? also, talk to Uri
 
 ## Templates and HTML
 
@@ -158,7 +226,3 @@ The current best practice for deploying web production applications is to concat
 Every Meteor app comes with production minification by default with the `standard-minifiers` package. This minifier goes to some extra effort to do a good job - for example, Meteor automatically splits up your files if they get too big to maintain support for older versions of Internet Explorer which had a limit on the number of CSS rules per file.
 
 Minification usually happens when you `meteor deploy` or `meteor build` your app. If you have an error in production that you suspect is related to minification, you can run the minified version of your app locally with `meteor --production`.
-
-## Using NPM in your app
-
-XXX
