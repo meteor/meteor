@@ -39,5 +39,7 @@
   2. Consistent ID generation and optimistic UI
   3. The `onResultReceived` callback, and when to use it
   4. Method retries, and figuring out that a method didn't succeed
-7. Advanced code structure
-  1. Generate lots of methods at once, if you have common security needs or boilerplate (from talking to Maxime) https://github.com/wekan/wekan/blob/8d5d7ee678d9a396a0427329200e5bf0573eb730/models/boards.js#L124
+7. Comparison with allow/deny
+  1. Methods are better in every way
+  2. You still get Optimistic UI by default
+  3. How to factor your security into a global place if you really want to, recommend something like Wekan's pattern: https://github.com/wekan/wekan/blob/8d5d7ee678d9a396a0427329200e5bf0573eb730/models/boards.js#L124
