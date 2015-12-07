@@ -242,7 +242,11 @@ Meteor.publish('list/todoCount', function(listId) {
 });
 ```
 
-Then on the client, after subscribing to that publication, we can access the count with `Counts.get(``list/todoCount${listId}``)`.
+Then on the client, after subscribing to that publication, we can access the count with 
+
+```js
+Counts.get(`list/todoCount${listId}`)
+```
 
 ## Client-side data with reactive stores
 
