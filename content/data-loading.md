@@ -4,15 +4,15 @@ title: Publications and Data Loading
 
 After reading this guide, you'll know:
 
-1. What publications and subscriptions are in the Meteor framework
-2. How to define a publication on the server
-3. Where to subscribe on the client and in which template
+1. What publications and subscriptions are in the Meteor framework.
+2. How to define a publication on the server.
+3. Where to subscribe on the client and in which template.
 4. Useful patterns to follow to subscribe sensibly and help users understand the state of subscriptions.
-5. How to create publish sets of related data in a reactive way.
+5. How to publish sets of related data in a reactive way.
 6. How to ensure your publication is properly authorized in a reactive way.
 7. How to use the low-level publish API to publish anything.
 8. How to turn a 3rd-party REST endpoint into a publication.
-9. How to turn a publication into your app into a REST endpoint.
+9. How to turn a publication in your app into a REST endpoint.
 
 ## Publications and subscriptions
 
@@ -20,9 +20,9 @@ In a traditional, HTTP-based web application, the client and server communicate 
 
 Meteor however is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. Although it's possible to do so, building a Meteor app doesn't require you to set up REST endpoints to serialize and send data. Instead you create *publication* endpoints that can push data from server to client.
 
-In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then,over time a set of updates as that data set changes.
+In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then, over time a set of updates as that data set changes.
 
-So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the "Collections" article, corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription a pipe that connects a subset of the true collection with the clients version, but that constantly keeps it up to date with the latest information on the server.
+So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the "Collections" article, corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription as a pipe that connects a subset of the true collection with the client's version, but that constantly keeps it up to date with the latest information on the server.
 
 ## Defining a publication
 
@@ -65,7 +65,7 @@ Meteor.publish('list/todos', function(listId) {
 });
 ```
 
-When we create a subscription to this piblication on the client, we can provide this argument via the `Meteor.subscribe()` call:
+When we create a subscription to this publication on the client, we can provide this argument via the `Meteor.subscribe()` call:
 
 ```js
 Meteor.subscribe('list/todos', list._id);
@@ -73,7 +73,7 @@ Meteor.subscribe('list/todos', list._id);
 
 ### Organizing publications
 
-It makes sense to place a publication in a package alongside the feature that it's targeted. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
+It makes sense to place a publication in a package alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
 
 Often, however, a publication is more general. For example in the Todos example application, we create a `list/todos` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
@@ -112,7 +112,7 @@ Subscribing to data puts it in your client-side collections. To use the data in 
 
 1. Always use the same query to fetch the data from the collection that you use to publish it.
 
-  If you don't do this, then you open yourself up to problem if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
+  If you don't do this, then you open yourself up to problems if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
   Also, when changing subscriptions, there is a brief period where both subscriptions are loaded (see "Publication behaviour when changing arguments" below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
 
@@ -120,7 +120,7 @@ Subscribing to data puts it in your client-side collections. To use the data in 
 
   We do this for the same reason we subscribe in the template in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child template, as we'll see in in the {% post_link ui-ux "UI/UX Article"%}.
 
-  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template heirarchy as an argument to each template. Although you could do this if you want to be "pure" about everything, and it's best not to use it in too many places as it makes templates harder to test.
+  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template hierarchy as an argument to each template. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes templates harder to test.
 
 ### Global subscriptions
 
@@ -134,7 +134,7 @@ Across Meteor applications, there are some common patterns of data loading and a
 
 ### Subscription readiness
 
-A key thing to keep in mind is that a subscription will not instantly provide its data. There'll be a latency between subscribing to the data on the client and it arriving from the publication on the server (and keep in that this time may be a lot longer for your users in production that for you locally in development!)
+A key thing to keep in mind is that a subscription will not instantly provide its data. There'll be a latency between subscribing to the data on the client and it arriving from the publication on the server (and be aware that this time may be a lot longer for your users in production that for you locally in development!)
 
 Although the Tracker system means you often don't *need* to think too much about this in building your apps, usually if you want to get the user experience right, you'll need to know when the data is ready.
 
@@ -165,8 +165,8 @@ Template.listsShowPage.onCreated(function() {
 
 In our example, the `autorun` will re-run whenever `this.state.get('listId')` changes, (ultimately because `FlowRouter.getParam('_id')` changes), although other common reactive data sources are:
 
-1. Template data contexts (which you can access reactively with `Template.currentData()`)
-2. The current user status (`Meteor.user()` and `Meteor.loggingIn()`)
+1. Template data contexts (which you can access reactively with `Template.currentData()`).
+2. The current user status (`Meteor.user()` and `Meteor.loggingIn()`).
 3. The contents of other application specific client data stores.
 
 Technically, what happens when one of these reactive sources changes is the following:
@@ -174,13 +174,13 @@ Technically, what happens when one of these reactive sources changes is the foll
 1. The reactive data source *invalidates* the autorun computation (marks it so that it re-runs in the next Tracker flush cycle).
 2. The subscription detects this, and given that anything is possible in next computation run, marks itself for destruction.
 3. The computation re-runs, with `.subscribe()` being re-called either with new or different arguments.
-4. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that sitting around, with the same data already ready, and simply reuses that.
-5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server
+4. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that's sitting around, with the same data already ready, and simply reuses that.
+5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server.
 6. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
 
-The important detail in the above is in 4---that they system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template heirarchy.
+The important detail in the above is in 4---that they system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template hierarchy.
 
-For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessarily subscribing will happen.
+For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessary subscribing will happen.
 
 ### Publication behavior when arguments change
 
@@ -192,9 +192,9 @@ What this means is in general, when changing subscriptions, there'll be a period
 
 ### Paginating subscriptions
 
-A very common pattern of data access is pagination. This refers to the practice of fetching a ordered list of data one "page" at a time --- typically some number of items, say twenty.
+A very common pattern of data access is pagination. This refers to the practice of fetching an ordered list of data one "page" at a time --- typically some number of items, say twenty.
 
-There are two styles of pagination that are commonly used, a "page-by-page" style---where you show only one page of results at a time, starting at some offset (which the user can control), and "infinite-scroll" style, where you show and increasing number of pages of items, as the user moves through the list (this is the typical "feed" style user interface).
+There are two styles of pagination that are commonly used, a "page-by-page" style---where you show only one page of results at a time, starting at some offset (which the user can control), and "infinite-scroll" style, where you show an increasing number of pages of items, as the user moves through the list (this is the typical "feed" style user interface).
 
 Let's consider a publication/subscription technique for the second (the first technique is a little tricker to handle, due to it being difficult to calculate the offset on the client. If you need to do so, you can follow many of the same techniques that we use here and use the [`percolate:find-from-publication`](https://atmospherejs.com/percolate/find-from-publication) package to keep track of which records have come from your publication).
 
@@ -216,7 +216,7 @@ Meteor.publish('list/todos', function(listId, limit) {
 });
 ```
 
-It's important that we set a `sort` parameter on our query (after, which first `limit` todos do we want?), and that we set an absolute maximum on the number of items a user can request (at least in the case where lists can grow without bound).
+It's important that we set a `sort` parameter on our query (to ensure a repeatable order of list items as more pages are requested), and that we set an absolute maximum on the number of items a user can request (at least in the case where lists can grow without bound).
 
 Then on the client side, we'd some kind of reactive state variable to control how many items to request:
 
@@ -232,7 +232,7 @@ Template.listsShowPage.onCreated(function() {
 
 We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps just when they scroll to the bottom of the page).
 
-Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The `[tmeasday:publish-counts](https://atmospherejs.com/tmeasday/publish-counts)` can be useful to publish this. We could add a `/list/todoCount` publication like so
+Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) can be useful to publish this. We could add a `/list/todoCount` publication like so
 
 ```js
 Meteor.publish('list/todoCount', function(listId) {
@@ -242,13 +242,17 @@ Meteor.publish('list/todoCount', function(listId) {
 });
 ```
 
-Then on the client, after subscribing to that publication, we can access the count with `Counts.get(`list/todoCount${listId}`)`.
+Then on the client, after subscribing to that publication, we can access the count with 
+
+```js
+Counts.get(`list/todoCount${listId}`)
+```
 
 ## Client-side data with reactive stores
 
 In Meteor, persistent or shared data comes over the wire on publications. However, there are some types of data which doesn't need to be persistent or shared between users. For instance, the "logged-in-ness" of the current user, or the route they are currently viewing.
 
-Although client-side state is often best contained as state of an individual template (and passed down the template heirarchy as arguments where necessary), sometimes you have a need for "global" state that is shared between unrelated sections of the template heirarchy.
+Although client-side state is often best contained as state of an individual template (and passed down the template hierarchy as arguments where necessary), sometimes you have a need for "global" state that is shared between unrelated sections of the template hierarchy.
 
 Usually such state is stored in a *global singleton* object which we can call a store. A singleton is a data structure of which only a single copy logically exists. The current user and the router from above are typical examples of such global singletons.
 
@@ -294,9 +298,9 @@ This way you get the full reactive power of the store.
 
 ### Updating stores
 
-If you need to update a store from as a result of user action, you'd update the store from an event handler, just like you call Methods.
+If you need to update a store as a result of user action, you'd update the store from an event handler, just like you call Methods.
 
-If you need to perform complex logic in the update (i.e. not just call `.set()` etc), it's a good idea to define a mutator on the store. As the store is a singleton, you can just attach a function to the object directly:
+If you need to perform complex logic in the update (e.g. not just call `.set()` etc), it's a good idea to define a mutator on the store. As the store is a singleton, you can just attach a function to the object directly:
 
 ```js
 WindowSize.simulateMobile = (device) => {
@@ -308,7 +312,7 @@ WindowSize.simulateMobile = (device) => {
 
 ## Publishing relational data
 
-It's common to need a related sets of data from multiple collections on a given page. For instance, in the Todos app, when we render a todo list, we want the list itself, as well as the set of todos that belong to that list.
+It's common to need related sets of data from multiple collections on a given page. For instance, in the Todos app, when we render a todo list, we want the list itself, as well as the set of todos that belong to that list.
 
 One way you might do this is to return more than one cursor from your publication function:
 
@@ -321,7 +325,7 @@ Meteor.publish('list/todos', function(listId) {
   if (list && (!list.userId || list.userId === this.userId)) {
     return [
       Lists.find(listId),
-      Todos.find({listId});
+      Todos.find({listId})
     ];
   } else {
     // The list doesn't exist, or the user isn't allowed to see it. In either case,
@@ -381,7 +385,7 @@ Meteor.publish('admin/list/todos', function(listId) {
   if (user && user.admin) {
     return [
       Lists.find(listId),
-      Todos.find({listId});
+      Todos.find({listId})
     ];
   } else {
     return this.ready();
@@ -404,7 +408,7 @@ Meteor.publishComposite('admin/list/todos', function(listId) {
       find() {
         return [
           Lists.find(listId),
-          Todos.find({listId});
+          Todos.find({listId})
         ];
       }  
     }]
@@ -442,16 +446,16 @@ Meteor.publish('custom-publication', function() {
 });
 ```
 
-Data published like this, from the client's perspective doesn't look any different -- there's actually no way for the client to know the difference as the DDP messages are the same. So even if you are connecting to, and mirroring, some esoteric data source, on the client it'll appear like any other Mongo collection.
+From the client's perspective, data published like this doesn't look any different -- there's actually no way for the client to know the difference as the DDP messages are the same. So even if you are connecting to, and mirroring, some esoteric data source, on the client it'll appear like any other Mongo collection.
 
 One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication.
 
 
 ## Loading data from a REST endpoint with a publication
 
-As a concrete example of using the low-level API, consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available to your users?
+As a concrete example of using the low-level API, consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available?
 
-One option would be to provide a Method that simply proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc etc. Although this is possible (you could use a Local Collection to store the polled data in, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
+One option would be to provide a Method that simply proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc. Although this is possible (you could use a Local Collection to store the polled data, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
 
 A pattern for turning a polled REST endpoint looks something like this:
 
