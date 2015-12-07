@@ -194,7 +194,26 @@ If the new version involves a different type of data, then you need to be a litt
 
 <h2 id="analytics">Monitoring users via analytics</h2>
 
-### XXX: we have this in the routing chapter. Where does it want to live?
+It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Here's a simple setup that will get you URL tracking using Google Analytics. We'll be using the [`okgrow:analytics`](https://atmospherejs.com/okgrow/analytics) package.
+
+```
+meteor add okgrow:analytics
+```
+Now, we need to configure the package with our Google Analytics key (the package also supports a large variety of other providers, check out the [documentation on Atmosphere](https://atmospherejs.com/okgrow/analytics)). Pass it in as part of [_Meteor settings_](#environment):
+
+```js
+{
+  "public": {
+    "analyticsSettings": {
+      // Add your analytics tracking id's here
+      "Google Analytics" : {"trackingId": "Your tracking ID"}
+    }
+  }
+}
+```
+
+That's it! The analytics package hooks into Flow Router (see the [routing article](routing) for more) and records all of the page events for you.
+
 
 
 6. Monitoring your application via APM
