@@ -30,7 +30,7 @@ Building an application completely from scratch is a tall order. This is one of 
 
 #### A note about Bower
 
-Don't use Bower XXX link to some article explaining that people are moving to NPM for client-side JS and original maintainer left?
+Don't use Bower XXX link to some article explaining that people are moving to NPM for client-side JS and original maintainer left? Uri will find an article and help write justification here
 
 ### Atmosphere
 
