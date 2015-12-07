@@ -224,7 +224,7 @@ You can compile client-side NPM packages into your package by using the [`cosmos
 
 Many NPM packages rely on an asynchronous, callback or promise-based coding style. For several reasons, Meteor is currently built around a synchronous-looking but still non-blocking style using [Fibers](https://github.com/laverdet/node-fibers).
 
-Many Meteor APIs, for example collections, rely on running inside a fiber context; Meteor also keeps track of certain collection state on the server so that code can be associated with a particular client. This means you need to do a little extra work to use asynchronous Node code inside a Meteor app. Let's look at an example of some code that won't work, using the code example from the [node-github repository](https://github.com/mikedeboer/node-github):
+The global Meteor server context and every method and publication initialize a new fiber so that they can run concurrently. Many Meteor APIs, for example collections, rely on running inside a fiber. They also rely on an internal Meteor mechanism that tracks server "environment" state, like the currently executing method. This means you need to initialize your own fiber and environment to use asynchronous Node code inside a Meteor app. Let's look at an example of some code that won't work, using the code example from the [node-github repository](https://github.com/mikedeboer/node-github):
 
 ```js
 // Inside a Meteor method definition
