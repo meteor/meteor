@@ -124,9 +124,7 @@ All code written in CoffeeScript compiles to JavaScript under the hood, and is c
 
 ### TypeScript
 
-Meteor does not currently work well with TypeScript. There are some community solutions on Atmosphere and in various materials around the internet, but until Meteor 1.3 introduces a standard JavaScript module system TypeScript is not a great path for Meteor development.
-
-XXX this might change shortly after Meteor 1.3? also, talk to Uri
+XXX get Uri to write this section
 
 ## Templates and HTML
 
