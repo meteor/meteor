@@ -148,7 +148,7 @@ If you want to use React but don't want to deal with JSX and prefer a more HTML-
 
 ### Angular templates
 
-XXX ask Uri
+XXX Uri will write this
 
 ## CSS pre-processors
 
