@@ -2,7 +2,7 @@
 
 [![Articles complete](https://badge.waffle.io/meteor/guide.svg?label=ready&title=Articles%20Complete)](https://waffle.io/meteor/guide?label=article)
 
-We're tracking our progress using Waffle.io; see the board by clicking the badge above!
+We're tracking [our progress](https://waffle.io/meteor/guide?label=article) using Waffle.io.
 
 - See the example app we're working to embody the principles from the guide at [meteor/todos](https://github.com/meteor/todos)
 - Check out the [outlines and discussions](https://github.com/meteor/guide/labels/article)
