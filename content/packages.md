@@ -87,6 +87,19 @@ Package.onUse(function(api) {
 
 As you can see, the `addFiles` and `addAssets` functions allow you to pass a list of files as the first argument, and an architecture (or array of architectures) as the second argument. For more information about this, see the section about architectures below.
 
+## Exporting JavaScript objects
+
+While some packages exist just to provide side effects to the app, most packages provide a reusable bit of code that can be used in your app. A Meteor package specifies symbols that should be accessible from outside of the package with `api.export`. For example, if you were writing a factory package to generate fake data for your app, you might want to export a symbol for people to use it:
+
+```js
+Package.onUse(function(api) {
+  // ...
+  api.export('Factory');
+});
+```
+
+Now, if an app depends on this package, the JavaScript symbol `Factory` will be "exported" from the package, and available in the app's JavaScript scope.
+
 ## Package dependencies
 
 Another very important feature of Meteor packages is the ability to register dependencies on other packages. This is done via `api.use` and `api.imply`.
@@ -105,7 +118,7 @@ api.use([
 ]);
 ```
 
-`api.imply`, on the other hand, does not include the package as an internal dependency; instead, it makes these packages available to the user of the package. In the example below, we use `api.imply` to include Flow Router in the `todos-lib` package, so that any user of `todos-lib` also gets Flow Router. This can be helpful to avoid keeping long lists of dependencies up to date by creating meta-packages that encapsulate many dependencies of your app at once.
+`api.imply`, on the other hand, does not include the package as an internal dependency; instead, it makes these packages available to the user of the package, as if they were exported from this one. In the example below, we use `api.imply` to include Flow Router in the `todos-lib` package, so that any user of `todos-lib` also gets to use the symbol `FlowRouter`. This can be helpful to avoid keeping long lists of dependencies up to date by creating meta-packages that encapsulate many dependencies of your app at once.
 
 ```js
 // Example of using api.imply to make a meta-package
