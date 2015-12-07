@@ -4,7 +4,7 @@ versions to the local file-system.
 ## Names
 
 - Atmosphere - the packaging server UI, available at <https://atmospherejs.com/>.
-- Troposhere - the actual package server that manages, stores and serves the
+- Troposphere - the actual package server that manages, stores and serves the
   binaries built for different architectures. It exposes an API that can be used
   by other front-ends (meteor tool, fastosphere, etc).
 
