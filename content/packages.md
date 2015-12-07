@@ -265,12 +265,12 @@ Many NPM packages adopt the convention of taking a callback that accepts `(err, 
 
 ```js
 // Setup sync API
-github.user.getFollowingFromUserFiber =
+const getFollowingFromUser =
   Meteor.wrapAsync(github.user.getFollowingFromUser, github.user);
 
 // Inside a Meteor method definition
 updateGitHubFollowers() {
-  const result = github.user.getFollowingFromUserFiber({
+  const result = getFollowingFromUserFiber({
     user: 'stubailo'
   });
 
@@ -280,6 +280,8 @@ updateGitHubFollowers() {
   return res.length;
 }
 ```
+
+If you wanted to refactor this and create a completely fiber-wrapper GitHub client, you could write some logic to loop over all of the methods available and call `Meteor.wrapAsync` on them, creating a new object with the same shape but with a more Meteor-compatible API.
 
 #### Option 3: Promises
 
