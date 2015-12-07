@@ -7,7 +7,7 @@ After reading this guide, you'll know:
 1. What you need to know before you deploy a Meteor application
 2. How to deploy to some common Meteor hosting environments
 3. How to design a deployment process to make sure your application's quality is maintained
-4. How to monitor user behaviour with analytics tools
+4. How to monitor user behavior with analytics tools
 5. How to monitor your application with Kadira
 
 <h2 id="deploying">Deploying Meteor Applications</h2>
@@ -214,21 +214,46 @@ Now, we need to configure the package with our Google Analytics key (the package
 
 That's it! The analytics package hooks into Flow Router (see the [routing article](routing) for more) and records all of the page events for you.
 
+<h2 id="apm">Monitoring your application</h2>
 
+When you are running an app in production, it's vitally important that you keep tabs on the performance of your application and ensure it is running smoothly.
 
-6. Monitoring your application via APM
-  1. Understanding the typical performance profile of a Meteor application
-    1. observers x mutations ~== total CPU usage
-    2. When the CPU is pegged, many other problems can occur that aren't necessarily related to the root problem.
-    3. Finding observer leaks
-    4. Using CPU detective to find out which observers are guilty [is this a thing yet avi?]
-  2. Using Galaxy's APM
-    1. Metrics
-    2. Logging
-  3. Using Kadira
-    1. What Kadira is
-    2. Monitoring resource usage
-    3. Monitoring Method + Publication latency -- and what this means.
-      1. Over time
-      2. Getting traces to help discover bottlenecks
-    4. Monitoring observer re-use
+<h3 id="meteor-performance">Understanding Meteor Performance</h3>
+
+Although a host of tools exist to monitor the performance of HTTP, request-response based applications, the insights they give aren't necessarily useful for a reactive system like a Meteor Application. Although it's true that slow HTTP response times would be a problem for your app, and so using a tool like [Pingdom](https://www.pingdom.com) can serve a purpose, there are many kinds of issues with your app that won't be surfaced by such tools.
+
+<h3 id="galaxy-apm">Monitoring with Galaxy</h3>
+
+[Galaxy](#galaxy) offers turnkey Meteor hosting and provides tools that are useful to debug the current and past state of your application. CPU and Memory load graphs in combination with connected user counts can be vital to determining if your setup is handling the current load (or if you need more containers), or if there's some specific user action that's causing disproportionate load (if they don't seem to be correlated):
+
+[ss]
+
+Galaxy's UI provides a detailed logging system, which can be invaluable to determine which action it is causing that extra load, or to generally debug other application issues:
+
+[ss]
+
+<h3 id="kadira">Kadira</h3>
+
+If you really want to understand the ins and outs of running your Meteor application, you should give [Kadira](https://kadira.io) a try. Kadira is a full featured Application Performance Monitoring (APM) solution that's built from the ground up for Meteor. Kadira operates by taking regular client and server side observations of your application's performance as it conducts various activities and reporting them back to a master server.
+
+When you visit the Kadira application, you can view current and past behavior of your application over various useful metrics. Kadira's [documentation](https://kadira.io/platform/kadira-apm/overview) is extensive and invaluable, but we'll discuss a few key areas here. 
+
+<h4 id="kadira-method-pub">Method and Publication Latency</h4>
+
+Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscription*. Kadira includes tools to help you discover which of your methods and publications are *slow* and *resource intensive*. 
+
+[ss]
+
+In the above SS you can see.. You can also use the "traces" section to discover particular cases of the method call that are particular slow:
+
+[ss]
+
+<h4 id="kadira-livequery">Livequery Monitoring</h4>
+
+A key performance characteristic of Meteor is driven by the behavior of livequery, the key technology that allows your publications to push changing data automatically in realtime. In order to achieve this, livequery needs to monitor your MongoDB instance for changes (by tailing the oplog) and decide if a given change is relevant for the given publication.
+
+If the publication is used by a lot of users, or there are a lot of changes to be compared, then these livequery observers can do a lot of work. So it's immensely useful that Kadira can tell you some statistics about your livequery usage:
+
+[ss]
+
+In this SS we can see...
