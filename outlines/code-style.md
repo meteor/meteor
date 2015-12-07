@@ -1,10 +1,18 @@
 # Code style
 
-1. JavaScript and ES2015
+1. Benefits of consistent code style
+  1. Integration with default linters, checkers, transpilers, etc
+  2. Easy for new people to get started on your code
+  3. All Meteor code samples can follow your style
+2. JavaScript and ES2015
   1. Use JavaScript and compile all of your code with the `ecmascript` package
   1. Follow the Meteor style guide, based on the AirBnB style guide
   2. Use ESLint using the standard config, which is made to work with `ecmascript`
-2. Meteor components
+    1. Running ESLint
+    1. Setting up linting in your editor
+    1. Setting up a linter commit hook
+    1. Adding linting to your CI alongside tests
+3. Meteor components
   1. Collections
     1. Name is plural
     1. Instance variable is capitalized camel case
