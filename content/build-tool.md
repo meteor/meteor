@@ -36,7 +36,7 @@ Don't use Bower XXX link to some article explaining that people are moving to NP
 
 [Atmosphere](https://atmospherejs.com/) is a repository and discovery website for Meteor-specific packages. Packages are published on Atmosphere when they need to take advantage of features specific to Meteor, like the cross-platform build system, isomorphic client/server code, or data system.
 
-#### Adding packages from Atmosphere
+#### Adding packages to your app
 
 You have two options for adding packages from Atmosphere to your app:
 
@@ -78,7 +78,7 @@ One difference between pre-published packages and local app packages is that the
 
 [NPM](http://npmjs.com/) is the most popular package repository for JavaScript packages. Historically, NPM was only used for publishing server-side Node.js packages, but is now used for a much wider variety of packages, including client/server JavaScript utilities, React components, Angular directives, and more.
 
-#### Adding packages from NPM
+#### Adding packages to your app
 
 As of Meteor 1.3, NPM packages work seamlessly with Meteor.
 
