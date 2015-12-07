@@ -73,7 +73,7 @@ Meteor.subscribe('list/todos', list._id);
 
 ### Organizing publications
 
-It makes sense to place a publication in a package alongside the feature that it's targeted to. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
+It makes sense to place a publication in a package alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
 
 Often, however, a publication is more general. For example in the Todos example application, we create a `list/todos` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
