@@ -314,13 +314,11 @@ Using the new `async`/`await` API for the above in the newest versions of JavaSc
 // Mark the method as async
 async sendTextMessage() {
   // Wait for the promise using the await keyword
-  const result = await client.sendMessage({
+  return await client.sendMessage({
     to:'+16515556677',
     from: '+14506667788',
     body: 'Hello world!'
   });
-
-  return result;
 }
 ```
 
