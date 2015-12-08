@@ -87,3 +87,35 @@ We believe Methods provide a much better primitive for building modern applicati
 1. **Methods use synchronous-style APIs, but are non-blocking.** You may notice in the example method above, we didn't need to write any callbacks when interacting with MongoDB, but the Method still has the non-blocking properties that people associate with Node.js and callback-style code. Meteor uses a coroutine library called [Fibers](https://github.com/laverdet/node-fibers) to enable you to write code that uses return values and throws errors, and avoid dealing with lots of nested callbacks.
 2. **Methods always run and return in order.** When accessing a REST API, you will sometimes run into a situation where you make two requests one after the other, but the results arrive out of order. Meteor's underlying machinery makes sure this never happens with Methods. When multiple Method calls are received _from the same client_, Meteor runs each method to completion before starting the next one. If you need to disable this functionality for one particularly long-running Method, you can use [`this.unblock()`](http://docs.meteor.com/#/full/method_unblock) to allow the next Method to run while the current one is still in progress. Also, since Meteor is based on Websockets instead of HTTP, all Method calls and results are guaranteed to arrive in the order they are sent.
 3. **Change tracking for Optimistic UI.** When Method simulations and server-side executions run, Meteor tracks any resulting changes to the database. This is what lets the Meteor data system roll back the changes from the method simulation and replace them with the actual writes from the server. Without this automatic database tracking, it would be very difficult to implement a correct Optimistic UI system.
+
+## Defining a Method
+
+In a basic app, defining a Meteor Method is as simple as defining a function. In a complex app, you want a few extra features to make Methods more powerful and easily testable. First, we're going to go over how to define a Method using the Meteor core API, and then we'll go over how to use a helpful wrapper package we've created to enable a more powerful Method workflow.
+
+### A simple method
+
+Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method:
+
+```js
+Meteor.methods({
+  'Todos.methods.updateText'({ todoId, newText }) {
+    new SimpleSchema({
+      todoId: { type: String },
+      newText: { type: String }
+    }).validate({ todoId, newText }),
+
+    const todo = Todos.findOne(todoId);
+
+    if (!todo.editableBy(this.userId)) {
+      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+        'Cannot edit todos in a private list that is not yours');
+    }
+
+    Todos.update(todoId, {
+      $set: { text: newText }
+    });
+  }
+});
+```
+
+This method is callable from the client and server using [`Meteor.call`](http://docs.meteor.com/#/full/meteor_call). Note that you should only use a Method in the case where some code needs to be callable from the client; if you just want to modularize code that is only going to be called from the server, use a regular JavaScript function, not a Method.
