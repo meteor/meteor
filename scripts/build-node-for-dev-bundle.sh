@@ -6,7 +6,7 @@ set -u
 # When upgrading node versions, also update the values of MIN_NODE_VERSION at
 # the top of tools/main.js and tools/server/boot.js, and the text in
 # docs/client/full-api/concepts.html and the README in tools/bundler.js.
-NODE_VERSION=0.10.40
+NODE_VERSION=0.10.41
 
 source "$(dirname $0)/build-dev-bundle-common.sh"
 echo CHECKOUT DIR IS "$CHECKOUT_DIR"

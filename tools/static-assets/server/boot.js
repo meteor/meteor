@@ -9,7 +9,7 @@ var bootUtils = require('./boot-utils.js');
 var files = require('./mini-files.js');
 
 // This code is duplicated in tools/main.js.
-var MIN_NODE_VERSION = 'v0.10.40';
+var MIN_NODE_VERSION = 'v0.10.41';
 
 if (require('semver').lt(process.version, MIN_NODE_VERSION)) {
   process.stderr.write(
