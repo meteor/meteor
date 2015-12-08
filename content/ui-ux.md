@@ -1,5 +1,5 @@
 ---
-title: User Interfaces and User Experience
+title: User Interfaces
 ---
 
 After reading this guide, you'll know:
