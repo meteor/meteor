@@ -2,7 +2,7 @@
 # use 32bit by default
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "2.6.7"
-$NODE_VERSION = "0.10.40"
+$NODE_VERSION = "0.10.41"
 $NPM_VERSION = "1.4.9"
 
 # take it form the environment if exists
