@@ -407,7 +407,7 @@ XXX this doesn't even work with ValidatedMethod, and I don't know when you would
 
 If you call a Method from the client, and the user's internet connection disconnects before the result is received, Meteor assumes that the Method didn't actually run. When the connection is re-established, the Method call will be sent again. This means that, in certain situations, Methods can be sent more than once. This should only happen very rarely, but in the case where an extra method call could have negative consequences it is worth putting in extra effort to ensure that Methods are idempotent - that is, calling them multiple times doesn't result in additional changes to the database.
 
-XXX this sounds sketchy... I would guess due to consistent ID generation this isn't an issue with inserts, perhaps only with methods that call $inc?
+Many Method operations are idempotent by default. Inserts will throw an error if they happen twice because the generated ID will conflict. Removes on collections won't do anything the second time, and most update operators like `$set` will have the same result if run again. The only places you need to worry about code running twice are MongoDB update operators that stack, like `$inc` and `$push`, and calls to external APIs.
 
 ### Historical comparison to allow/deny
 
