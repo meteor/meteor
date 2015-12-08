@@ -216,20 +216,188 @@ Spacebars starts from a very strict interpretation of HTML. In particular you ne
 <h4 id="escaping">Escaping</h4>
 To insert a literal {{, {{{, or any number of curly braces, put a vertical bar after it. So `{{|` will show up as `{{`, `{{{|` will show up as `{{{`, and so on.
 
+<h2 id="reusable">Creating reusable components in Blaze</h2>
+In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reusable components that are modular and depend and interact with their environment in clear and minimal ways. 
 
-2. Creating reusable "pure" components with Blaze / best practice (a lot of this is repeating @sanjo's boilerplate)
-  1. Validating data context fits a schema
-  2. Always set data contexts to `{name: doc}` rather than just `doc`. Always set a d.c on an inclusion.
-  3. Use `{{#each .. in .. }}` to achieve the above
-  4. Use the template instance as a component -- adding a `{{instance}}` helper to access it
-  5. Use a (named / scoped on `_id` if possible) reactive dict for instance state
-  6. Attach functions to the template instance (in `onCreated`) to sensibly modify state
-  7. Place `const instance = Template.instance()` at the top of all helpers/event handlers that care about state
-  8. Always scope DOM lookups with `this.$`
-  9. Use `.js-X` in event maps
-  10. Pass extra content to components with `Template.contentBlock`, or named template arguments
-  11. Use the `onRendered` callback to integrate w/ 3rd party libraries
-    1. Waiting on subscriptions w/ `autorun` pattern: https://github.com/meteor/guide/pull/75/files#r43545240
+Although Blaze, as a simple template-based runtime, doesn't enforce a lot of these principles (as some other rendering frameworks, such as React, do) you can take steps to write your Blaze components in such a way that you can enjoy most of the same benefits. This section will attempt to outline some "best practice" for writing such Blaze components.
+
+Examples below will reference the `listShow` component from the Todos example app.
+
+<h3 id="validate-data-context">Validate data contexts</h3>
+In order to ensure your component is only used in the way you expect, you should validate the data context provided to it. The data context provides the inputs to the component and so should be checked.
+
+XXX: this does not yet work
+
+You can do this in the components `onCreated()` callback, like so:
+
+```js
+Template.listsShow.onCreated(function() {
+  this.autorun(() => {
+    check(Template.data(), new SimpleSchema({
+     list: {blackbox: true},
+     todosReady: {type: Boolean}
+   }));
+  });
+```
+
+By placing the check in an `autorun()` we ensure that even if the data contexts reactively changes, it always fits the expected schema.
+
+<h3 id="name-data-contexts">Name data contexts to template inclusions</h3>
+It's tempting to provide the data context of a sub-template as a "raw" object (like `{{> todosItem todo}}`), it's a better idea to explicitly give it a name (`{{> todosItem todo=todo}}`). There are two primary reasons for this:
+
+1. When using the data in the sub-template, it's a lot clearer what you are accessing `{{todo.title}}` is clearer than `title`.
+2. It's more flexible, in case in future you need to provide more arguments to the template.
+
+  For instance, in the case of the `todosItem` sub-template, we need to provide two extra arguments to control the editing state of the item, which would have been a hassle to add if the item was used with a raw `todo` argument.
+
+Additionally, for similar reasons of clarity, always explicitly provide a data context to an inclusion, rather than letting it passively "fall-through".
+
+<h3 id="use-each-in">Prefer `{{#each .. in}}`</h3>
+For similar reasons to the above, it's better to use `{{#each todo in todos}}` rather than the older `{{#each todos}}`. The second sets the data context of it's internals to a raw `todo`, and makes it difficult to access the containing template's other data context. 
+
+The only reason not to use `{{#each .. in}}` because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
+
+<h3 id="use-template-instance">Use the template instance</h3>
+Although Blaze doesn't currently have a fully baked component model, you can use the *template instance* as a convenient place to modularize functionality. The template instance is `this` inside template lifecycle callbacks and can be accessed in event handlers and helpers as `Template.instance()`. It's also passed as second argument to event handlers.
+
+We suggest a convention of naming it `instance` in these contexts and assigning it at the top of every relevant helper. For instance:
+
+```js
+Template.listsShow.helpers({
+  todoArgs(todo) {
+    const instance = Template.instance();
+    return {
+      todo,
+      editing: instance.state.equals('editingTodo', todo._id),
+      onEdit(doEdit) {
+        instance.state.set('editingTodo', doEdit ? todo._id : false);
+      }
+    };
+  }
+});
+
+Template.listsShow.events({
+  'click .js-cancel'(event, instance) {
+    instance.state.set('editing', false);
+  }
+});
+```
+
+<h3 id="reactive-dict-state">Use a reactive dict for state</h3>
+The [`reactive-dict`](https://atmospherejs.com/meteor/reactive-dict) package is a simple API to create a reactive key-value store. It's a convenient way to attach internal state to a component. We create the `state` dict in the `onCreated` callback, and attach it to the template instance:
+
+```js
+Template.listsShow.onCreated(function() {
+  this.state = new ReactiveDict();
+  this.state.setDefault({
+    editing: false,
+    editingTodo: false
+  });
+});
+```
+
+Once the state has been created we can access it from helpers and modify it in event handlers (see above).
+
+<h3 id="attach-functions-to-instance">Attach functions to the instance</h3>
+If you have common functionality for a template instance that needs to be abstracted or called from multiple event handlers, it's sensible to attach it as functions directly to the template instance in the `onCreated()` callback:
+
+```js
+Template.listsShow.onCreated(function() {
+  this.saveList = () => {
+    this.state.set('editing', false);
+
+    Lists.methods.updateName.call({
+      listId: this.data.list._id,
+      newName: this.$('[name=name]').val()
+    }, (err) => {
+      err && alert(err.error); // XXX i18n
+    });
+  };
+});
+```
+
+Then you can call that function from within an event handler:
+
+```js
+Template.listsShow.events({
+  'submit .js-edit-form'(event, instance) {
+    event.preventDefault();
+    instance.saveList();
+  }
+});
+```
+
+<h3 id="scope-dom-lookups-to-instance">Scope DOM lookups to the template instance</h3>
+It's a bad idea to look up things directly in the DOM with jQuery's global `$()`. It means you are relying on things rendered outside of your component not interacting with your selector. Also, it limits your options on rendering *outside* of the main document (see testing section below).
+
+Instead, Blaze gives you `instance.$()` which scopes a lookup to within the current template instance. Typically you use this either from a `onRendered()` callback to setup external (e.g. jQuery) plugins, or from event handlers to call direct DOM functions. For instance, when a user adds a new todo, we want to focus it's `<input>` element:
+
+```js
+Template.listsShow.events({
+  'click .js-todo-add'(event, instance) {
+    instance.$('.js-todo-new input').focus();
+  }
+});
+```
+
+<h3 id="js-selectors-for-events">Use `.js-` selectors for event maps</h3>
+When you are setting up event maps in your JS files, you need to 'select' the element in the template that the event attaches to. Rather than using the same CSS classnames that are used to style the elements, it's better practice to use classnames that are specifically added for those event maps. A reasonable convention is a class starting with `js-` to indicate it is used by the JavaScript. For instance `.js-todo-add` above.
+
+<h3 id="passing-template-content">Passing HTML content as template arguments</h3>
+If you need to pass in content to a sub-template (for instance the content of a modal dialog), you can use the [custom block helper](#block-helpers) to provide a block of content. If you need more flexibility, typically just providing a named template a data context is the way to go. The sub-template can then just render that template with
+
+```html
+{{> Template.dynamic templateName dataContext}}
+```
+
+This is more or less the way that the [`kadira:blaze-layout`](https://atmospherejs.com/kadira/blaze-layout) package works in practice.
+
+<h3 id="pass-callbacks">Pass callbacks</h3>
+If you need to communicate *up* the template hierarchy, it's best to pass a *callback* for the subtemplate to call.
+
+For instance, only one todo item can be currently in the editing state at a time, so the `listsShow` template manages the state of which is edited. So when you focus on an item, that item needs to tell the list's template to make it the "edited" one. To do that, we pass a callback into the `todosItem` template, and it calls it:
+
+```html
+{{> todosItem (todoArgs todo)}}
+```
+
+```js
+Template.listsShow.helpers({
+  todoArgs(todo) {
+    const instance = Template.instance();
+    return {
+      todo,
+      editing: instance.state.equals('editingTodo', todo._id),
+      onEdit(doEdit) {
+        instance.state.set('editingTodo', doEdit ? todo._id : false);
+      }
+    };
+  }
+});
+
+Template.todosItem.events({
+  'focus input[type=text]'() {
+    this.onEdit(true);
+  }
+});
+```
+
+<h3 id="onrendered-for-libs">Use `onRendered()` to callout to 3rd party libraries</h3>
+As we mentioned above, the `onRendered()` callback is typically the right spot to call out to third party libraries that expect a pre-rendered DOM (such as jQuery plugins). The `onRendered()` callback is triggered *once* after the template is rendered and attached to the DOM for the first time.
+
+Occasionally, you may need to wait for data to become ready before it's time to attach the plugin (although typically it's a better idea to use a sub-template in this use case). To do so, you can setup an `autorun` in the `onRendered()` callback. For instance, in the `listShowPage` template, we want to wait until the subscription for the list is ready (i.e. the todos have rendered) before we hide the launch screen:
+
+```
+Template.listsShowPage.onRendered(function() {
+  this.autorun(() => {
+    if (this.subscriptionsReady()) {
+      // Handle for launch screen defined in app-body.js
+      AppLaunchScreen.listRender.release();
+    }
+  });
+});
+```
+
 3. Writing "smart" components with Blaze
   1. All of section 2.
   2. Use `this.autorun` and `this.subscribe`, listening to `FlowRouter` and `this.state`
