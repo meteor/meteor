@@ -216,7 +216,7 @@ Spacebars starts from a very strict interpretation of HTML. In particular you ne
 <h4 id="escaping">Escaping</h4>
 To insert a literal {{, {{{, or any number of curly braces, put a vertical bar after it. So `{{|` will show up as `{{`, `{{{|` will show up as `{{{`, and so on.
 
-<h2 id="reusable">Creating reusable components in Blaze</h2>
+<h2 id="reusable-components">Creating reusable components in Blaze</h2>
 In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reusable components that are modular and depend and interact with their environment in clear and minimal ways. 
 
 Although Blaze, as a simple template-based runtime, doesn't enforce a lot of these principles (as some other rendering frameworks, such as React, do) you can take steps to write your Blaze components in such a way that you can enjoy most of the same benefits. This section will attempt to outline some "best practice" for writing such Blaze components.
@@ -398,24 +398,140 @@ Template.listsShowPage.onRendered(function() {
 });
 ```
 
-3. Writing "smart" components with Blaze
-  1. All of section 2.
-  2. Use `this.autorun` and `this.subscribe`, listening to `FlowRouter` and `this.state`
-  3. Set up cursors in helpers to be passed into pure sub-components, and filtered with `cursor-utils`
-    1. Why cursors are preferred to arrays.
-  4. Access stores directly from helpers.
-4. Reusing code between templates
-  1. Prefer utilities/composition to mixins or inheritance
-  2. How to write global helpers
-5. Understanding Blaze
-  1. When does a template re-render (when its data context changes)
-  2. When does a helper-rerun? (when its data context or reactive deps change)
-    1. So be careful, this can happen a lot! If your helper is expensive, consider something like https://github.com/peerlibrary/meteor-computed-field
-  3. How does an each tag re-run / decide when new data should appear?
-    1. How does the `{{attrs}` syntax work, some tricks on how to use it.
-  4. How do name lookups work?
-  5. What does the build system do exactly?
-  6. What is a view?
+<h2 id="smart-components">Writing smart components with Blaze</h2>
+If your component needs to access state outside of its data context---for instance, data from the server via subscriptions or the the contents of client-side store, then you should be careful how you do that accessing. As discussed in the [data loading article](data-loading) you should be careful and considered in how use such smart components.
+
+To begin with, all of the rules of thumb about reusable components apply to smart components. In addition:
+
+<h3 id="subscribing">Subscribe from `onCreated`</h3>
+You should subscribe to publications on the server from an `onCreated` callback (within an `autorun` block if you are reliant on reactively changing arguments). In the Todos example app, in the `listsShowPage` template we subscribe to the `list/todos` publication based on the current `_id` FlowRouter param:
+
+```js
+Template.listsShowPage.onCreated(function() {
+  this.state = new ReactiveDict();
+  this.autorun(() => {
+    const listId = FlowRouter.getParam('_id');
+    this.state.set({listId});
+    this.subscribe('list/todos', listId);
+  });
+});
+```
+
+By using `this.subscribe()` (as opposed to `Meteor.subscribe`), the subscription state automatically gets amalagamated into the template instance's subscription readiness reactive state variable, which can be used both from within templates (via the `subscriptionsReady` helper) or within helpers (via `Template.subscriptionsReady()`).
+
+Notice as well in this case that we access the global client-side state store `FlowRouter` in the `onCreated()` callback also, storing its value locally in a local `state` dictionary.
+
+XXX: should instead we just read from flow router a second time here: https://github.com/meteor/todos/blob/master/packages/lists-show/lists-show-page.js#L28 ??
+
+<h3 id="fetch-in-smart-components">Fetch in helpers</h3>
+Typically, as [outlined in the ui/ux article](ui-ux.md#smart-components) you should fetch data in the same component that you subscribe in. In Blaze, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`: 
+
+```html
+{{> listsShow todosReady=Template.subscriptionsReady
+  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
+```
+
+<h2 id="reusing-code">Reusing code in Blaze</h2>
+It's not uncommon to want to reuse code between two otherwise unrelated components. There are two principal ways to do this in Blaze.
+
+<h3 id="composition">Composition</h3>
+If possible, it's usually best to try and abstract out the reusable part of the two components that need to share functionality. If you are used to following patterns to [create reusable components](#reusable-components), then it should be simple to reuse those components in many places. 
+
+<h3 id="utility-libraries">Utility libraries</h3>
+It's usually best to keep your view layer as "skinny" as possible and contain a component to whatever specific task it specifically needs to do. If there's heavy lifting involved (such as complicated rendering logic), it often makes sense to abstract it out into a utility library that simply deals with the logic alone and doesn't deal with the Blaze system at all. 
+
+For instance, if a component requires a lot of complicated [D3](d3js.org) code for drawing graphs, it's likely that that code itself could live in a utility library that's called by the component. That makes it easier to abstract the code later and share it between various components that need to all draw graphs.
+
+<h3 id="global-helpers">Global Helpers</h3>
+
+One type of library that is useful is a global Spacebars helper. You can define these with the `Template.registerHelper()` function. Typically you register helpers to do simple things (like rendering dates in a given format) which don't justify a separate sub-component. For instance, you could do:
+
+```js
+Template.registerHelper('shortDate', (date) => {
+  return moment(date).format("MMM do YY");
+});
+```
+
+```html
+<template name="myBike">
+  <dl>
+   <dt>Date registered</dt>
+   <dd>{{shortDate bike.registeredAt}}</dd>
+ </dl>
+</template>
+```
+
+<h2 id="understanding-blaze">Understanding Blaze</h2>
+Although Blaze is a very intuitive rendering system, it does have some quirks and complexities that are worth knowing about when you are trying to do complex things.
+
+<h3 id="re-rendering">Re-rendering</h3>
+Blaze is intended to be opaque about re-rendering. Tracker and Blaze are designed as "eventual" systems that end up fully reflecting any data change, but may take a few steps in getting there, depending on how they are used. This can be the subject of frustration if you are trying to control how your template is re-rendered.
+
+The first thing to consider here is if you actually need to care about your template re-rendering. Blaze is optimized so that it typically doesn't matter if a template is re-rendered even if it strictly shouldn't.
+
+The main thing to understand about how Blaze re-renders is that re-rendering happens at the level of helpers and template inclusions. Whenever the *data context* of a template changes, it necessarily must re-run *all* helpers and data accessors (as `this` within the helper is the data context and thus will have changed). 
+
+Additionally, helpers will re-run if any *reactive variable* accessed from within *that specific helper* changes.
+
+You can often work out *why* a helper has re-run by tracing the source of the reactive invalidation:
+
+```js
+Template.myTemplate.helpers({
+  helper() {
+    // When this helper is scheduled to re-run, the `console.trace` will log a stack trace of where
+    // the invalidation has come from (typically a `changed` message from some reactive variable).
+    Tracker.onInvalidate(() => console.trace());
+  }
+});
+```
+
+<h3 id="controlling-re-rendering">Controlling re-rendering</h3>
+If your helper or subtemplate is expensive to run, and often re-runs without any visible effect, you can short circuit unnecessary re-runs by using a more subtle reactive data source. A good candidate is provided by the [`peerlibrary:computed-field`](https://atmospherejs.com/peerlibrary/computed-field) library.
+
+<h3 id="attribute-helpers">Attribute helpers</h3>
+Setting tag attributes via helpers (e.g. `<div {{attributes}}>`) is a neat tool and has some precedence rules that make it more useful. Specifically, when you use it more than once on a given element, the attributes are composed (rather than the second set of attributes simply replacing the first). So you can use one helper to set one set of attributes and a second to set another. For instance:
+
+```html
+<template name="myTemplate">
+  <div id="my-div" {{classes 'foo' 'bar'}} {{backgroundImageStyle 'my-image.jpg'}}>My div</div>
+</template>
+```
+
+```js
+Template.myTemplate.helpers({
+  classes(names) {
+    return {class: names.map(n => `my-template-${n}`)};
+  },
+  backgroundImageStyle(imageUrl) {
+    return {
+      style: {
+        backgroundImage: `url(${imageUrl})`
+      }
+    };
+  }
+})
+```
+<h3 id="lookups">Lookup order</h3>
+Another complicated topic in Blaze is name lookups. In what order does Blaze look when you write `{{something}}`? It runs in the following order:
+
+1. Helper defined on the current template.
+2. Binding (eg. from `{{#let}}` or `{{#each in}}`) in current scope
+3. A named template
+4. Global helpers
+5. The current data context.
+
+<h3 id="build-system">Blaze and the build system</h3>
+As mentioned in the [build system article](build-tool#blaze), the [`blaze-html-templates`](https://atmospherejs.com/meteor/blaze-html-templates) package scans your source code for `.html` files, picks out `<template name="templateName">` tags, and compiles them into a JavaScript file that defines a function that implements the template in code, attached to the `Template.templateName` symbol.
+
+This means when you include another template, you are simply running a function on the client that corresponds to the Spacebars content you defined in the `.html` file.
+
+<h3 id="views">What is a view</h3>
+Blaze has an additional concept called a "view", which is associated with a reactively rendering area of a template. The view is the machinery that works behind the scenes to track reactivity, do lookups, and re-render appropriately when data changes. The view is the unit of re-rendering in Blaze. You can if necessary, use the view to walk the rendered component heirarchy, although, except in advanced cases it's better to not do this, but instead use callbacks and template arguments, or global data stores to communicate between components.
+
+You can read more about views in the [Blaze docs](http://docs.meteor.com/#/full/blaze_view).
+
+
+
 6. Testing Blaze templates
   1. Rendering a template in a unit test
   2. Querying the DOM (general but just a pointer here)
