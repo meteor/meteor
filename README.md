@@ -34,3 +34,27 @@ Read more in the [interview on the Meteor Blog](http://info.meteor.com/blog/mete
 1. See the [standup notes and planning](meeting-notes.md)
 2. See the [code action items](https://github.com/meteor/guide/labels/code)
 3. See the [static site shell readme](site/README.md)
+
+### Writing guide
+
+Things to be aware of:
+
+#### Always use specific IDs on headers so that we can change them later:
+
+```
+// bad
+## Using schemas with collections
+
+// good
+<h2 id="schemas-with-collections">Using schemas with collections</h2>
+```
+
+#### Escape handlebars syntax inside inline code snippets
+
+```
+// will break
+Render multiple items in your template with `{{#each}}`
+
+// good
+Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}}`
+```
