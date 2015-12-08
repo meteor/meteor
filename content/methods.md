@@ -15,13 +15,15 @@ At its core, a Method is an API endpoint for your server; you can define a Metho
 
 We'll referring to Meteor Methods with a capital M to differentiate them from class methods in JavaScript.
 
-## Defining a Method
+## Defining and calling Methods
 
-In a basic app, defining a Meteor Method is as simple as defining a function. In a complex app, you want a few extra features to make Methods more powerful and easily testable. First, we're going to go over how to define a Method using the Meteor core API, and then we'll go over how to use a helpful wrapper package we've created to enable a more powerful Method workflow.
+### Basic Method
 
-### A simple method
+In a basic app, defining a Meteor Method is as simple as defining a function. In a complex app, you want a few extra features to make Methods more powerful and easily testable. First, we're going to go over how to define a Method using the Meteor core API, and in a later section we'll go over how to use a helpful wrapper package we've created to enable a more powerful Method workflow.
 
-Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method:
+#### Defining
+
+Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.md#secret-code) for how to hide it from the client.
 
 ```js
 Meteor.methods({
@@ -45,22 +47,151 @@ Meteor.methods({
 });
 ```
 
+#### Calling
+
 This method is callable from the client and server using [`Meteor.call`](http://docs.meteor.com/#/full/meteor_call). Note that you should only use a Method in the case where some code needs to be callable from the client; if you just want to modularize code that is only going to be called from the server, use a regular JavaScript function, not a Method.
 
-XXX complete this section
+Here's how you can call this Method from the client:
 
-## Calling a method
+```js
+Meteor.call('Todos.methods.updateText', {
+  todoId: '12345',
+  newText: 'This is a todo item.'
+}, (err, res) => {
+  if (err) {
+    alert(err);
+  } else {
+    // success!
+  }
+});
+```
 
-XXX complete this section
+If the Method throws an error, you get that in the first argument of the callback. If the Method succeeds, you get the result in the second argument and the first argument `err` will be `undefined`. For more information about errors, see the section below about error handling.
 
+### Advanced Method boilerplate
 
+Meteor Methods have several features which aren't immediately obvious, but every complex app will need them at some point. These features were added incrementally over several years in a backwards-compatible fashion, so unlocking the full capabilities of Methods requires a good amount of boilerplate. In this article we will first show you all of the code you need to write for each feature, then the next section will talk about a Method wrapper package we have developed to make it easier.
 
+Here are some of the functionality an ideal Method would have:
 
+1. Run validation code without calling the Method
+2. Easily override the Method for testing
+3. Easily call the Method with a custom user ID, especially in tests (as recommended by the [Discover Meteor two-tiered methods pattern](https://www.discovermeteor.com/blog/meteor-pattern-two-tiered-methods/))
+4. Refer to the Method via JS module rather than a magic string
+5. Get the Method simulation return value to get IDs of inserted documents
+6. Avoid calling the server-side Method if the client-side validation failed, so we don't waste server resources
 
+#### Defining
 
+```js
+// Define a namespace for Methods related to the Todos collection
+// Allows overriding for tests by replacing the implementation (2)
+Todos.methods = {};
 
+Todos.methods.updateText = {
+  name: 'Todos.methods.updateText',
 
+  // Factor out validation so that it can be run independently (1)
+  validate(args) {
+    new SimpleSchema({
+      todoId: { type: String },
+      newText: { type: String }
+    }).validate(args)
+  },
 
+  // Factor out method body so that it can be called independently (3)
+  run({ todoId, newText }) {
+    const todo = Todos.findOne(todoId);
+
+    if (!todo.editableBy(this.userId)) {
+      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+        'Cannot edit todos in a private list that is not yours');
+    }
+
+    Todos.update(todoId, {
+      $set: { text: newText }
+    });
+  },
+
+  // Call method by referencing the JS object (4)
+  // Also, this lets us specify Meteor.apply options once in
+  // the Method implementation, rather than requiring the caller
+  // to specify it at the call site.
+  call(args, callback) {
+    const options = {
+      returnStubValue: true,     // (5)
+      throwStubExceptions: true  // (6)
+    }
+
+    Meteor.apply(this.name, [args], options, callback);
+  }
+};
+```
+
+#### Calling
+
+Now calling the method is as simple as calling a JavaScript function:
+
+```js
+// Call the method
+Todos.methods.updateText.call({
+  todoId: '12345',
+  newText: 'This is a todo item.'
+}, (err, res) => {
+  if (err) {
+    alert(err);
+  } else {
+    // success!
+  }
+});
+
+// Call the validation only
+Todos.methods.updateText.validate();
+
+// Call the method with custom userId in a test
+Todos.methods.updateText.run.call({ userId: 'abcd' }, {
+  todoId: '12345',
+  newText: 'This is a todo item.'
+});
+```
+
+As you can see, this approach to calling Methods results in a better development workflow - you can more easily deal with the different parts of the Method separately and test your code more easily without having to deal with Meteor internals. But this approach requires you to write a lot of boilerplate on the Method definition side.
+
+### Advanced Methods with mdg:validated-method
+
+To alleviate some of the boilerplate that's involved in correct Method definitions, we've published a wrapper package called `mdg:validated-method` that does most of this for you. Here's the same method as above, but defined with the package:
+
+```js
+Todos.methods.updateText = new ValidatedMethod({
+  name: 'Todos.methods.updateText',
+  validate: new SimpleSchema({
+    todoId: { type: String },
+    newText: { type: String }
+  }).validator(),
+  run({ todoId, newText }) {
+    const todo = Todos.findOne(todoId);
+
+    if (!todo.editableBy(this.userId)) {
+      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+        'Cannot edit todos in a private list that is not yours');
+    }
+
+    Todos.update(todoId, {
+      $set: { text: newText }
+    });
+  }
+});
+```
+
+You call it the same way you call the advanced method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced.
+
+## Error handling
+
+XXX
+
+## Wiring up a Method to an HTML form
+
+XXX
 
 ## Loading data with Methods
 

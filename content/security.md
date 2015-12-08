@@ -294,6 +294,8 @@ Publications are not the only place the client gets data from the server. The se
 1. Secret algorithms that a competitor could steal
 1. Secret API keys
 
+<h3 id="secret-code">Secret server code</h3>
+
 While the client-side UI of your application is basically open source, every application will have some secret code on the server that you don't want to share with the world.
 
 Secret business logic in your app should be located in code that only runs on the server. This means it is in the `server/` directory of your app, in a package that is only included on the server, or in a file inside a package that was loaded only on the server. If you have an API method in your app that has secret business logic, you might want to split the method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
