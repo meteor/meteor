@@ -37,7 +37,8 @@
   function createSubMenuLink (h) {
     allLinks.push(h)
     var headerLink = document.createElement('li')
-    headerLink.innerHTML = '<a href="#' + h.id + '" data-scroll>' + h.textContent + '</a>'
+    headerLink.innerHTML =
+      '<a href="#' + h.id + '" data-scroll class="' + h.tagName + '">' + h.textContent + '</a>'
     headerLink.firstChild.addEventListener('click', onLinkClick)
     return headerLink
   }
