@@ -35,7 +35,7 @@ Read more in the [interview on the Meteor Blog](http://info.meteor.com/blog/mete
 2. See the [code action items](https://github.com/meteor/guide/labels/code)
 3. See the [static site shell readme](site/README.md)
 
-### Writing guide
+### Writing tips
 
 Things to be aware of:
 
