@@ -2,8 +2,6 @@
 title: User Interfaces and User Experience
 ---
 
-XXX this article doesn't render specifically because of `{{#` block tags. I can't figure out how to escape them, but I moved it into here to ensure it doesn't block the whole website from rendering.
-
 After reading this guide, you'll know:
 
 1. How to build reusable client side components in any templating language
@@ -474,7 +472,7 @@ Let's consider the case of the Todos example app. Here we do a similar thing to 
 
 The primary issue is that the rendering system may prefer to simply change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze would try to simply re-render the `listsShow` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that we want to avoid here! However, we want to make sure this *only* happens when the `listId` changes and not on other reactive changes.
 
-To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{{#each}}` helper treats arrays of documents with an `_id` as keyed on `_id`. So we wrap our template in an `{{}}
+To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{% raw %}{{#each}}{% endraw %}` helper treats arrays of documents with an `_id` as keyed on `_id`. So we wrap our template in an `{% raw %}{{}}{% endraw %}`:
 
 ```html
 <template name="listsShowPage">

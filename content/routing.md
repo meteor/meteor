@@ -2,8 +2,6 @@
 title: "URLs and Routing"
 ---
 
-XXX this article doesn't render specifically because of `{{#` block tags. I can't figure out how to escape them, but I moved it into here to ensure it doesn't block the whole website from rendering.
-
 After reading this guide, you'll know:
 
 1. What role URLs play in a client-rendered app, and how it's different from a traditional server-rendered app
@@ -195,7 +193,7 @@ In this case, the `listShowPage` template simply renders as:
 </template>
 ```
 
-(The `{{#each}}` is a animation technique that we also discuss in the [UI/UX](ui-ux.html)).
+(The `{% raw %}{{#each}}{% endraw %}}` is a animation technique that we also discuss in the [UI/UX](ui-ux.html)).
 
 It's the `listShow` template (a pure component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the pure component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
