@@ -161,6 +161,10 @@ const Meteor.users.methods.setUserData = new Method({
 
 The above method is great because you can have the flexibility of having some optional fields and only passing the ones you want to change. In particular, what makes it possible for this method is that the security considerations of setting one's full name and date of birth are the same - we don't have to do different security checks for different fields being set. Note that it's very important that the `$set` query on MongoDB is generated on the server - we should never take MongoDB operators as-is from the client, since they are hard to validate and could result in unexpected side effects.
 
+#### Refactoring to have global security rules
+
+You might run into a situation where many Methods in your app have the same security checks. This can be simplified by factoring out the security into a separate module, wrapping the Method body, or extending the `Mongo.Collection` class to do security inside the `insert`, `update`, and `remove` implementations on the server. However, implementing your client-server communication via specific Methods is still a good idea rather than sending arbitrary `update` operators from the client, since a malicious client can't send an `update` operator that you didn't test for.
+
 <h3 id="rate-limiting">Rate limiting</h3>
 
 Since Meteor methods can easily be called from anywhere - a malicious program, script in the browser console, etc - it is easy to fire many method calls in a very short amount of time. This means it's easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other methods.
