@@ -25,6 +25,8 @@ In a basic app, defining a Meteor Method is as simple as defining a function. In
 
 Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.md#secret-code) for how to hide it from the client.
 
+This example uses the `aldeed:simple-schema` package, which is recommended in several other articles, to validate the method arguments.
+
 ```js
 Meteor.methods({
   'Todos.methods.updateText'({ todoId, newText }) {
@@ -187,11 +189,169 @@ You call it the same way you call the advanced method above, but the Method defi
 
 ## Error handling
 
-XXX
+In regular JavaScript functions, you indicate errors by throwing an `Error` object. Throwing errors from Meteor Methods works almost the same way, but a bit of complexity is introduced by the fact that in some cases the error object will be sent over a websocket back to the client.
+
+### Throwing errors from a Method
+
+Meteor introduces two new types of JavaScript errors: [`Meteor.Error`](http://docs.meteor.com/#/full/meteor_error) and [`ValidationError`](https://atmospherejs.com/mdg/validation-error). These and the regular JavaScript `Error` type should be used in different situations:
+
+#### Regular `Error` for internal server errors
+
+When you have an error that doesn't need to be reported to the client, but is internal to the server, throw a regular JavaScript error object. This will be reported to the client as a totally opaque internal server error with no details.
+
+#### Meteor.Error for general runtime errors
+
+When the server was not able to complete the user's desired action because of a known condition, you should throw a descriptive `Meteor.Error` object to the client. In the Todos example app, we use these to report situations where the current user is not authorized to complete a certain action, or where the action is not allowed within the app - for example, deleting the last public list.
+
+`Meteor.Error` takes three arguments: `error`, `reason`, and `details`.
+
+1. `error` should be a short, unique, machine-readable error code string that the client can interpret to understand what happened. It's good to prefix this with the name of the Method for easy internationalization, for example: `'Todos.methods.updateText.unauthorized'`.
+2. `reason` should be a short description of the error for the developer. It should give your coworker enough information to be able to debug the error. The `reason` parameter should not be printed to the end user directly, since this means you now have to do internationalization on the server before sending the error message, and the UI developer has to worry about the Method implementation when thinking about what will be displayed in the UI.
+3. `details` is optional, and can be used where extra data will help the client understand what is wrong. In particular, it can be combined with the `error` field to print a more helpful error message to the end user.
+
+#### ValidationError for argument validation errors
+
+When a Method call fails because the arguments are of the wrong type, it's good to throw a `ValidationError`. This works just like `Meteor.Error`, but is a custom constructor that enforces a standard error format that can be read by different form and validation libraries. In particular, if you are calling this Method from a form, throwing a `ValidationError` will make it easy to display nice error messages next to particular fields in the form.
+
+When you use `mdg:validated-method` with `aldeed:simple-schema` as demonstrated above, this type of error is thrown for you.
+
+Read more about the error format in the [`mdg:validation-error` docs](https://atmospherejs.com/mdg/validation-error).
+
+### Handling errors thrown by a Method
+
+When you call a Method, any errors thrown by it will be returned in the callback. At this point, you should identify which error type it is and display the appropriate message to the user. In this case, it is unlikely that the Method will throw a `ValidationError` or an internal server error, so we will only handle the unauthorized error:
+
+```js
+// Call the method
+Todos.methods.updateText.call({
+  todoId: '12345',
+  newText: 'This is a todo item.'
+}, (err, res) => {
+  if (err) {
+    if (err.error === 'Todos.methods.updateText.unauthorized') {
+      // Displaying an alert is probably not what you would do in
+      // a real app; you should have some nice UI to display this
+      // error, and probably use an i18n library to generate the
+      // message from the error code.
+      alert('You aren\'t allowed to edit this todo item');
+    } else {
+      // Unexpected error, handle it in the UI somehow
+    }
+  } else {
+    // success!
+  }
+});
+```
+
+We'll talk about how to handle the `ValidationError` in the section on forms below.
 
 ## Wiring up a Method to an HTML form
 
-XXX
+The main thing enabled by the `ValidationError` convention is simple integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
+
+```js
+// This method encodes the form validation requirements.
+// By defining them in the Method, we do client and server-side
+// validation in one place.
+Invoices.methods.insert = new ValidatedMethod({
+  name: 'Invoices.methods.insert',
+  validate: new SimpleSchema({
+    email: { type: String, regEx: SimpleSchema.RegEx.Email },
+    description: { type: String, min: 5 },
+    amount: { type: String, regEx: /^\d*\.(\d\d)?$/ }
+  }).validator(),
+  run(newInvoice) {
+    // In here, we can be sure that the newInvoice argument is
+    // validated.
+
+    if (!this.userId) {
+      throw new Meteor.Error('Invoices.methods.insert.not-logged-in',
+        'Must be logged in to create an invoice.');
+    }
+
+    Invoices.insert(newInvoice)
+  }
+});
+```
+
+Let's define a simple HTML form:
+
+// XXX we still haven't fixed template namespacing... also, dealing with
+// dots in class names sucks...
+
+```html
+<template name="Invoices.newInvoice">
+  <form class="Invoices-newInvoice">
+    <label for="email">Recipient email</label>
+    <input type="email" name="email" />
+    {{#each error in errors "email"}}
+      <div class="form-error">{{error.message}}</div>
+    {{/each}}
+
+    <label for="description">Item description</label>
+    <input type="text" name="description" />
+    {{#each error in errors "description"}}
+      <div class="form-error">{{error.message}}</div>
+    {{/each}}
+
+    <label for="amount">Amount owed</label>
+    <input type="text" name="amount" />
+    {{#each error in errors "amount"}}
+      <div class="form-error">{{error.message}}</div>
+    {{/each}}
+  </form>
+</template>
+```
+
+Now, let's write some JavaScript to handle this form nicely:
+
+```js
+Template['Invoices.newInvoice'].onCreated(function() {
+  this.errors = new ReactiveDict();
+});
+
+Template['Invoices.newInvoice'].helpers({
+  errors(fieldName) {
+    return this.errors.get(fieldName);
+  }
+});
+
+Template['Invoices.fieldName'].events({
+  'submit .Invoices-newInvoice'(event) {
+    const instance = Template.instance();
+
+    const data = {
+      email: event.target.email.value,
+      description: event.target.description.value,
+      amount: event.target.amount.value
+    };
+
+    Invoices.methods.insert.call(data, (err, res) => {
+      if (err) {
+        if (err.error === 'validation-error') {
+          // Initialize error object
+          const errors = {
+            email: [],
+            description: [],
+            amount: []
+          };
+
+          // Go through validation errors returned from Method
+          err.details.forEach((fieldError) => {
+            // XXX i18n
+            errors[fieldError.name] = fieldError.type;
+          });
+
+          // Update ReactiveDict, errors will show up in the UI
+          instance.errors.set(errors);
+        }
+      }
+    });
+  }
+});
+```
+
+As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be easily abstracted by an off-the-shelf form framework or a simple application-specific wrapper of your own design. For more detail on integrating forms and Methods, check out the [Forms article](XXX forms.html).
 
 ## Loading data with Methods
 
