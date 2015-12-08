@@ -472,7 +472,7 @@ Let's consider the case of the Todos example app. Here we do a similar thing to 
 
 The primary issue is that the rendering system may prefer to simply change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze would try to simply re-render the `listsShow` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that we want to avoid here! However, we want to make sure this *only* happens when the `listId` changes and not on other reactive changes.
 
-To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{% raw %}{{#each}}{% endraw %}` helper treats arrays of documents with an `_id` as keyed on `_id`. So we wrap our template in an `{% raw %}{{}}{% endraw %}`:
+To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{% raw %}{{#each}}{% endraw %}` helper treats arrays of documents with an `_id` as keyed on `_id`.
 
 ```html
 <template name="listsShowPage">
