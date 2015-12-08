@@ -76,7 +76,7 @@ Meteor Methods have several features which aren't immediately obvious, but every
 
 Here are some of the functionality an ideal Method would have:
 
-1. Run validation code without calling the Method
+1. Run validation code by itself without running the Method body
 2. Easily override the Method for testing
 3. Easily call the Method with a custom user ID, especially in tests (as recommended by the [Discover Meteor two-tiered methods pattern](https://www.discovermeteor.com/blog/meteor-pattern-two-tiered-methods/))
 4. Refer to the Method via JS module rather than a magic string
