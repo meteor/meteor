@@ -546,6 +546,8 @@ Blaze has an additional concept called a "view", which is associated with a reac
 
 You can read more about views in the [Blaze docs](http://docs.meteor.com/#/full/blaze_view).
 
+<h2 id="testing">Testing Blaze templates</h2>
+XXX: Going to do this after testing chapter
 
 
 6. Testing Blaze templates
@@ -553,7 +555,3 @@ You can read more about views in the [Blaze docs](http://docs.meteor.com/#/full/
   2. Querying the DOM (general but just a pointer here)
   3. Triggering reactivity and waiting for re-rendering
   4. Simulating events w/ JQ
-7. Useful Blaze utilities / other approaches
-  1. https://github.com/peerlibrary/meteor-blaze-components
-  2. https://github.com/raix/Meteor-handlebar-helpers
-  3. Much, much more...
