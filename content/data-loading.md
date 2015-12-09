@@ -114,7 +114,7 @@ Subscribing to data puts it in your client-side collections. To use the data in 
 
   If you don't do this, then you open yourself up to problems if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
-  Also, when changing subscriptions, there is a brief period where both subscriptions are loaded (see "Publication behaviour when changing arguments" below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
+  Also, when changing subscriptions, there is a brief period where both subscriptions are loaded (see "Publication behavior when changing arguments" below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
 
 2. Fetch the data as close as possible to where you subscribe to it.
 
@@ -182,7 +182,7 @@ The important detail in the above is in 4---that they system cleverly knows not 
 
 For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessary subscribing will happen.
 
-<h3 id="publication-behaviour-with-arguments">Publication behavior when arguments change</h3>
+<h3 id="publication-behavior-with-arguments">Publication behavior when arguments change</h3>
 
 It's also worth knowing a little about what happens on the server when the new subscription is started and the old one is stopped.
 
@@ -337,7 +337,7 @@ Meteor.publish('list/todos', function(listId) {
 
 However, this example will not work as you might expect. The reason is that reactivity doesn't work in the same way on the server as it does on the client. On the client, if *anything* in a reactive function changes, the whole function will re-run, and the results are fairly intuitive.
 
-On the server however, the reactivity is limited to the behaviour of the cursors you return from your publish functions. You'll see any changes to the data that matches their queries, but *their queries will never change*.
+On the server however, the reactivity is limited to the behavior of the cursors you return from your publish functions. You'll see any changes to the data that matches their queries, but *their queries will never change*.
 
 So in the case above, if a user subscribes to a list that is later made private by another user, although the `list.userId` will change to a value that no longer passes the condition, the body of the publication will not re-run, and so the query to the `Todos` collection (`{listId}`) will not change. So the first user will continue to see items they shouldn't.
 

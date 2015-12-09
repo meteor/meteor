@@ -4,18 +4,18 @@ title: "URLs and Routing"
 
 After reading this guide, you'll know:
 
-1. What role URLs play in a client-rendered app, and how it's different from a traditional server-rendered app
-2. How to define client and server routes for your app using Flow Router
-3. How to have your app display different content depending on the URL
-4. How to construct links to routes and go to routes programmatically
+1. What role URLs play in a client-rendered app, and how it's different from a traditional server-rendered app.
+2. How to define client and server routes for your app using Flow Router.
+3. How to have your app display different content depending on the URL.
+4. How to construct links to routes and go to routes programmatically.
 
 <h2 id="client-side">Client-side Routing</h2>
 
 In a web application, _routing_ is the process of using URLs to drive the user interface (UI). URLs are a prominent feature in every single web browser, and have several main functions from the user's point of view:
 
-1. **Bookmarking** - Users can bookmark URLs in their web browser to save content they want to come back to later
-2. **Sharing** - Users can share content with others by sending a link to a certain page
-3. **Navigation** - URLs are used to drive the web browser's back/forward functions
+1. **Bookmarking** - Users can bookmark URLs in their web browser to save content they want to come back to later.
+2. **Sharing** - Users can share content with others by sending a link to a certain page.
+3. **Navigation** - URLs are used to drive the web browser's back/forward functions.
 
 In a traditional web application stack, where the server renders HTML one page at a time, the URL is the fundamental entry point for the user to access the application. Users navigate an application by clicking through URLs, which are sent to the server via HTTP, and the server responds appropriately via a server-side router.
 
@@ -85,7 +85,7 @@ Note that all of the values in `params` and `queryParams` are always strings sin
 
 Flow Router makes a variety of information available via (reactive and otherwise) functions on the global singleton `FlowRouter` (this is the same object that we attached routes to above). As the user navigates around your app, the values of these functions will change (reactively in some cases) correspondingly.
 
-Like any other global singleton in your application (see the [data loading](data-loading.html#stores) for info about stores), it's best to limit your access to `FlowRouter`. That way the parts of your app with remain modular and more independent. In the case of `FlowRouter`, it's best to access it solely from the top of your component hierarchy, either in the "page" component, or the layouts that wrap it (see below).
+Like any other global singleton in your application (see the [data loading](data-loading.html#stores) for info about stores), it's best to limit your access to `FlowRouter`. That way the parts of your app will remain modular and more independent. In the case of `FlowRouter`, it's best to access it solely from the top of your component hierarchy, either in the "page" component, or the layouts that wrap it (see below).
 
 <h3 id="current-route">The current route</h3>
 
@@ -134,7 +134,7 @@ Template.appBody.helpers({
 
 <h2 id="rendering-routes">Rendering based on the route</h2>
 
-Now we understand how to define routes and access information about the current route, we are in a position to do you usually want to do when a user accesses a route---render a user interface to the screen that represents it.
+Now we understand how to define routes and access information about the current route, we are in a position to do what you usually want to do when a user accesses a route---render a user interface to the screen that represents it.
 
 *In this section, we'll discuss how to render routes using Blaze as the UI engine. If you are building your app with React or Angular, you will end up with similar concepts but the code will not be exactly the same.*
 
@@ -181,7 +181,7 @@ It makes sense for a "page" smart component like `listShowPage` to:
 1. Collect route information,
 2. Subscribe to relevant subscriptions,
 3. Fetch the data from those subscriptions, and
-4. Pass that data into a sub-component
+4. Pass that data into a sub-component.
 
 In this case, the `listShowPage` template simply renders as:
 
@@ -193,7 +193,7 @@ In this case, the `listShowPage` template simply renders as:
 </template>
 ```
 
-(The `{% raw %}{{#each}}{% endraw %}}` is a animation technique that we also discuss in the [UI/UX](ui-ux.html)).
+(The `{% raw %}{{#each}}{% endraw %}}` is an animation technique that we also discuss in the [UI/UX](ui-ux.html)).
 
 It's the `listShow` template (a pure component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the pure component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
@@ -215,7 +215,7 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 </template>
 ```
 
-Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between templates---by wrapping them in a wrapper "layout" template which includes the behaviour we want.
+Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between templates---by wrapping them in a wrapper "layout" template which includes the behavior we want.
 
 You can create wrapper templates by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html)). So we can write an authorization template:
 
@@ -241,9 +241,9 @@ Once that template exists, we can simply wrap our `listsShowPage`:
 </template>
 ```
 
-A chief advantage of this approach is that it is immediately clear when viewing the `listShowPage` what behaviour will occur when a user visits the page.
+A chief advantage of this approach is that it is immediately clear when viewing the `listShowPage` what behavior will occur when a user visits the page.
 
-Multiple behaviours of this type can be composed by wrapping a template in multiple wrappers, or wrapping the wrappers themselves.
+Multiple behaviors of this type can be composed by wrapping a template in multiple wrappers, or wrapping the wrappers themselves.
 
 <h2 id="changing-routes">Changing Routes</h2>
 
@@ -293,7 +293,7 @@ In general if you want to store arbitrary serializable data in a URL param, you 
 FlowRouter.setQueryParams({data: encodeURIComponent(EJSON.stringify(data))});
 ```
 
-You can then get the data back out of Flow Router in the opposite way (note that Flow Router unescapes the dat for you automatically):
+You can then get the data back out of Flow Router in the opposite way (note that Flow Router unescapes the data for you automatically):
 
 ```js
 const data = EJSON.parse(FlowRouter.getQueryParam('data'));
@@ -328,7 +328,7 @@ FlowRouter.route('/', {
 });
 ```
 
-Because the `rootRedirector` template is rendered inside the `appBody` layout which takes care of subscribing to the set of lists the user knows about *before* rendering it's sub-template, and we are guaranteed there is at least one such list, we can simply do:
+Because the `rootRedirector` template is rendered inside the `appBody` layout which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-template, and we are guaranteed there is at least one such list, we can simply do:
 
 ```js
 Template.rootRedirector.onCreated(() => {

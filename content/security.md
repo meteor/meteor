@@ -4,22 +4,22 @@ title: "Security"
 
 After reading this guide, you'll know:
 
-1. The security surface area of a Meteor app
-2. How to secure methods, publications, and source code
-3. Where to store secret keys in development and production
-4. How to follow a security checklist when auditing your app
+1. The security surface area of a Meteor app.
+2. How to secure methods, publications, and source code.
+3. Where to store secret keys in development and production.
+4. How to follow a security checklist when auditing your app.
 
 <h1 id="introduction">Introduction</h1>
 
 Securing a web application is all about understanding security domains and understanding the attack surface between these domains. In a Meteor app, things are pretty simple:
 
-1. Code that runs on the server can be trusted
-2. Everything else: code that runs on the client, data sent through method and publication arguments, etc, can't be trusted
+1. Code that runs on the server can be trusted.
+2. Everything else: code that runs on the client, data sent through method and publication arguments, etc, can't be trusted.
 
 In practice, this means that you should do most of your security and validation on the boundary between these two domains. In simple terms:
 
-1. Validate and check all inputs that come from the client
-2. Don't leak any secret information to the client
+1. Validate and check all inputs that come from the client.
+2. Don't leak any secret information to the client.
 
 <h2 id="attack-surface">Concept: Attack surface</h2>
 
@@ -39,7 +39,7 @@ There have been several articles about the potential pitfalls of accepting Mongo
 
 Given the points above, we recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
 
-Here's a code snippet to disable client-side updates on a collection; this will make sure no other part of the code can use `allow`:
+Here's a code snippet to add to your server code, which disables client-side updates on a collection; this will make sure no other part of the code can use `allow`:
 
 ```js
 // Deny all client-side updates on the Lists collection
@@ -140,7 +140,7 @@ Lists.methods.makePrivate = new Method({
 });
 ```
 
-You can see that this method does a _very spefific thing_ - it just makes a single list private. An alternative would have been to have a method called `setPrivacy`, which could set the list to private or public, but it turns out that in this particular app the security considerations for the two related operations - `makePrivate` and `makePublic` - are very different. By splitting our operations into different methods, we make each one much clearer. It's obvious from the above method definition which arguments we accept, what security checks we perform, and what operations we do on the database.
+You can see that this method does a _very specific thing_ - it just makes a single list private. An alternative would have been to have a method called `setPrivacy`, which could set the list to private or public, but it turns out that in this particular app the security considerations for the two related operations - `makePrivate` and `makePublic` - are very different. By splitting our operations into different methods, we make each one much clearer. It's obvious from the above method definition which arguments we accept, what security checks we perform, and what operations we do on the database.
 
 However, this doesn't mean you can't have any flexibility in your methods. Let's look at an example:
 
@@ -202,10 +202,10 @@ In a server-side-rendered framework like Ruby on Rails, it's sufficient to simpl
 
 All of the points above about methods apply to publications as well:
 
-1. Validate all arguments using `check` or `aldeed:simple-schema`
-1. Never pass the current user ID as an argument
-1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client
-1. Use rate limiting to stop people from spamming you with subscriptions
+1. Validate all arguments using `check` or `aldeed:simple-schema`.
+1. Never pass the current user ID as an argument.
+1. Don't take generic arguments; make sure you know exactly what your publication is getting from the client.
+1. Use rate limiting to stop people from spamming you with subscriptions.
 
 <h3 id="fields">Always restrict fields</h3>
 
@@ -294,9 +294,9 @@ In summary, you should make sure that any options passed from the client to a pu
 
 Publications are not the only place the client gets data from the server. The set of source code files and static assets that are served by your application server could also potentially contain sensitive data:
 
-1. Business logic an attacker could analyze to find weak points
-1. Secret algorithms that a competitor could steal
-1. Secret API keys
+1. Business logic an attacker could analyze to find weak points.
+1. Secret algorithms that a competitor could steal.
+1. Secret API keys.
 
 <h3 id="secret-code">Secret server code</h3>
 
@@ -336,8 +336,8 @@ Secret API keys should never be stored in your source code at all, the next sect
 
 Every app will have some secret API keys or passwords:
 
-1. Your database password
-1. API keys for external APIs
+1. Your database password.
+1. API keys for external APIs.
 
 These should never be stored as part of your app's source code in version control, because developers might copy code around to unexpected places and forget that it contains secret keys. You can keep your keys separately in Dropbox, LastPass, or another service, and then reference them when you need to deploy the app.
 
@@ -417,15 +417,15 @@ You can ensure that any unsecured connection to your app redirects to a secure c
 
 // XXX to be finalized later
 
-1. Remove the `insecure` package
-1. Remove the `autopublish` package
-1. Validate all method and publication arguments, and use `audit-argument-checks` to ensure this
-1. Deny writes to the `profile` field on user documents // XXX link to accounts
-1. Use methods instead of client-side insert/update/remove and allow/deny
-1. Use specific selectors and filter fields in publications
-1. Don't use raw string inclusion in Blaze unless you really know what you are doing
-1. Make sure secret API keys and passwords aren't in your source code
-1. Use package scan as a safety net
-1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature
+1. Remove the `insecure` package.
+1. Remove the `autopublish` package.
+1. Validate all method and publication arguments, and use `audit-argument-checks` to ensure this.
+1. Deny writes to the `profile` field on user documents // XXX link to accounts.
+1. Use methods instead of client-side insert/update/remove and allow/deny.
+1. Use specific selectors and filter fields in publications.
+1. Don't use raw string inclusion in Blaze unless you really know what you are doing.
+1. Make sure secret API keys and passwords aren't in your source code.
+1. Use package scan as a safety net.
+1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature.
 1. Don't ever trust user IDs passed from the client. Use `this.userId` inside methods and publications.
 1. Set up browser policy, but know that not all browsers support it so it's mostly a convenience/extra layer thing

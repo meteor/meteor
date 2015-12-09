@@ -4,10 +4,10 @@ title: "Methods"
 
 After reading this article, you'll know:
 
-1. What Methods are in Meteor and how they work in detail
-2. Best practices for defining and calling Methods
-3. How to throw and handle errors with Methods
-4. How to call a method from a form
+1. What Methods are in Meteor and how they work in detail.
+2. Best practices for defining and calling Methods.
+3. How to throw and handle errors with Methods.
+4. How to call a Method from a form.
 
 ## What is a Method?
 
@@ -15,7 +15,7 @@ Methods are Meteor's remote procedure call (RPC) system, used to save user input
 
 At its core, a Method is an API endpoint for your server; you can define a Method on the server and its counterpart on the client, then call it with some data, write to the database, and get the return value in a callback. Meteor Methods are also tightly integrated with the pub/sub and data loading systems of Meteor to allow for [Optimistic UI](http://info.meteor.com/blog/optimistic-ui-with-meteor-latency-compensation) - the ability to simulate server-side actions on the client to make your app feel faster than it actually is.
 
-We'll referring to Meteor Methods with a capital M to differentiate them from class methods in JavaScript.
+We'll be referring to Meteor Methods with a capital M to differentiate them from class methods in JavaScript.
 
 ## Defining and calling Methods
 
@@ -27,7 +27,7 @@ In a basic app, defining a Meteor Method is as simple as defining a function. In
 
 Here's how you can use the built-in [`Meteor.methods` API](http://docs.meteor.com/#/full/meteor_methods) to define a Method. Note that Methods should always be defined in common code loaded on the client and the server to enable Optimistic UI. If you have some secret code in your Method, consult the [Security article](security.md#secret-code) for how to hide it from the client.
 
-This example uses the `aldeed:simple-schema` package, which is recommended in several other articles, to validate the method arguments.
+This example uses the `aldeed:simple-schema` package, which is recommended in several other articles, to validate the Method arguments.
 
 ```js
 Meteor.methods({
@@ -53,7 +53,7 @@ Meteor.methods({
 
 #### Calling
 
-This method is callable from the client and server using [`Meteor.call`](http://docs.meteor.com/#/full/meteor_call). Note that you should only use a Method in the case where some code needs to be callable from the client; if you just want to modularize code that is only going to be called from the server, use a regular JavaScript function, not a Method.
+This Method is callable from the client and server using [`Meteor.call`](http://docs.meteor.com/#/full/meteor_call). Note that you should only use a Method in the case where some code needs to be callable from the client; if you just want to modularize code that is only going to be called from the server, use a regular JavaScript function, not a Method.
 
 Here's how you can call this Method from the client:
 
@@ -76,14 +76,14 @@ If the Method throws an error, you get that in the first argument of the callbac
 
 Meteor Methods have several features which aren't immediately obvious, but every complex app will need them at some point. These features were added incrementally over several years in a backwards-compatible fashion, so unlocking the full capabilities of Methods requires a good amount of boilerplate. In this article we will first show you all of the code you need to write for each feature, then the next section will talk about a Method wrapper package we have developed to make it easier.
 
-Here are some of the functionality an ideal Method would have:
+Here's some of the functionality an ideal Method would have:
 
-1. Run validation code by itself without running the Method body
-2. Easily override the Method for testing
-3. Easily call the Method with a custom user ID, especially in tests (as recommended by the [Discover Meteor two-tiered methods pattern](https://www.discovermeteor.com/blog/meteor-pattern-two-tiered-methods/))
-4. Refer to the Method via JS module rather than a magic string
-5. Get the Method simulation return value to get IDs of inserted documents
-6. Avoid calling the server-side Method if the client-side validation failed, so we don't waste server resources
+1. Run validation code by itself without running the Method body.
+2. Easily override the Method for testing.
+3. Easily call the Method with a custom user ID, especially in tests (as recommended by the [Discover Meteor two-tiered methods pattern](https://www.discovermeteor.com/blog/meteor-pattern-two-tiered-methods/)).
+4. Refer to the Method via JS module rather than a magic string.
+5. Get the Method simulation return value to get IDs of inserted documents.
+6. Avoid calling the server-side Method if the client-side validation failed, so we don't waste server resources.
 
 #### Defining
 
@@ -103,7 +103,7 @@ Todos.methods.updateText = {
     }).validate(args)
   },
 
-  // Factor out method body so that it can be called independently (3)
+  // Factor out Method body so that it can be called independently (3)
   run({ todoId, newText }) {
     const todo = Todos.findOne(todoId);
 
@@ -117,7 +117,7 @@ Todos.methods.updateText = {
     });
   },
 
-  // Call method by referencing the JS object (4)
+  // Call Method by referencing the JS object (4)
   // Also, this lets us specify Meteor.apply options once in
   // the Method implementation, rather than requiring the caller
   // to specify it at the call site.
@@ -134,10 +134,10 @@ Todos.methods.updateText = {
 
 #### Calling
 
-Now calling the method is as simple as calling a JavaScript function:
+Now calling the Method is as simple as calling a JavaScript function:
 
 ```js
-// Call the method
+// Call the Method
 Todos.methods.updateText.call({
   todoId: '12345',
   newText: 'This is a todo item.'
@@ -152,7 +152,7 @@ Todos.methods.updateText.call({
 // Call the validation only
 Todos.methods.updateText.validate();
 
-// Call the method with custom userId in a test
+// Call the Method with custom userId in a test
 Todos.methods.updateText.run.call({ userId: 'abcd' }, {
   todoId: '12345',
   newText: 'This is a todo item.'
@@ -163,7 +163,7 @@ As you can see, this approach to calling Methods results in a better development
 
 ### Advanced Methods with mdg:validated-method
 
-To alleviate some of the boilerplate that's involved in correct Method definitions, we've published a wrapper package called `mdg:validated-method` that does most of this for you. Here's the same method as above, but defined with the package:
+To alleviate some of the boilerplate that's involved in correct Method definitions, we've published a wrapper package called `mdg:validated-method` that does most of this for you. Here's the same Method as above, but defined with the package:
 
 ```js
 Todos.methods.updateText = new ValidatedMethod({
@@ -187,7 +187,7 @@ Todos.methods.updateText = new ValidatedMethod({
 });
 ```
 
-You call it the same way you call the advanced method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced.
+You call it the same way you call the advanced Method above, but the Method definition is significantly simpler. We believe this style of Method lets you clearly see the important parts - the name of the Method sent over the wire, the format of the expected arguments, and the JavaScript namespace by which the Method can be referenced.
 
 ## Error handling
 
@@ -224,7 +224,7 @@ Read more about the error format in the [`mdg:validation-error` docs](https://at
 When you call a Method, any errors thrown by it will be returned in the callback. At this point, you should identify which error type it is and display the appropriate message to the user. In this case, it is unlikely that the Method will throw a `ValidationError` or an internal server error, so we will only handle the unauthorized error:
 
 ```js
-// Call the method
+// Call the Method
 Todos.methods.updateText.call({
   todoId: '12345',
   newText: 'This is a todo item.'
@@ -252,7 +252,7 @@ We'll talk about how to handle the `ValidationError` in the section on forms bel
 The main thing enabled by the `ValidationError` convention is simple integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
 
 ```js
-// This method encodes the form validation requirements.
+// This Method encodes the form validation requirements.
 // By defining them in the Method, we do client and server-side
 // validation in one place.
 Invoices.methods.insert = new ValidatedMethod({
@@ -357,7 +357,7 @@ As you can see, there is a fair amount of boilerplate to handle errors nicely in
 
 ## Loading data with Methods
 
-Since Methods can work as general purpose RPCs, they can also be used to fetch data instead of publications. There are some advantages and some disadvantages to this approach compared to loading data through publications, and at the end of the day we recommend always using publications to load data.
+Since Methods can work as general purpose RPCs, they can also be used to fetch data instead of publications. There are some advantages and some disadvantages to this approach compared with loading data through publications, and at the end of the day we recommend always using publications to load data.
 
 Methods can be useful to fetch the result of a complex computation from the server that doesn't need to update when the server data changes. The biggest disadvantage of fetching data through Methods is that the data won't be automatically loaded into Minimongo, Meteor's client-side data cache, so you'll need to manage the lifecycle of that data manually.
 
@@ -380,7 +380,7 @@ function updateAverages() {
   // Clean out result cache
   ScoreAverages.remove({});
 
-  // Call a method that does an expensive computation
+  // Call a Method that does an expensive computation
   Games.methods.calculateAverages.call((err, res) => {
     res.forEach((item) => {
       ScoreAverages.insert(item);
@@ -397,13 +397,13 @@ While you can easily use Methods in a simple app by following the Meteor introdu
 
 ### Method call lifecycle
 
-Here's exactly what happens, in order, when a method is called:
+Here's exactly what happens, in order, when a Method is called:
 
-1. **Method simulation runs on the client.** If we defined this method in client and server code, as all Methods should be, the first thing Meteor does is it executes the Method code in the client that called it. This is known as a "method simulation" - the client enters a special mode where it tracks all changes made to client-side collections, so that they can be rolled back later. When this step is complete, the user of your app sees their UI update instantly with the new content of the client-side database, but the server hasn't received any data yet. The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method. ValidatedMethod passes this option by default.
+1. **Method simulation runs on the client.** If we defined this Method in client and server code, as all Methods should be, the first thing Meteor does is it executes the Method code in the client that called it. This is known as a "Method simulation" - the client enters a special mode where it tracks all changes made to client-side collections, so that they can be rolled back later. When this step is complete, the user of your app sees their UI update instantly with the new content of the client-side database, but the server hasn't received any data yet. The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method. ValidatedMethod passes this option by default.
 2. **A `method` message is sent to the server.** The Meteor client constructs a DDP message to send to the server. This includes the Method name, arguments, and an automatically generated Method ID that represents this particular Method invocation.
-3. **Method runs on the server.** When the server receives the message, it executes the Method code again. The client side version was a simulation that will be rolled back later, but this time is the real version that is writing to the actual database. Running the actual Method logic on the server is crucial because the server is a trusted environment where we can know that security-critical code will run the way we expect.
+3. **Method runs on the server.** When the server receives the message, it executes the Method code again. The client side version was a simulation that will be rolled back later, but this time it's the real version that is writing to the actual database. Running the actual Method logic on the server is crucial because the server is a trusted environment where we can know that security-critical code will run the way we expect.
 4. **Return value is sent to the client.** Once the Method has finished running on the server, it sends a `result` message to the client with the Method ID generated in step 2, and the return value itself. The client stores this for later use, but _doesn't call the Method callback yet_. If you pass the [`onResultReceived` option to `Meteor.apply`](http://docs.meteor.com/#/full/meteor_apply), that callback is fired.
-5. **Any DDP publications affected by the method are updated.** If we have any publications on the page that have been affected by the database writes from this Method, the server sends the appropriate updates to the client. Note that the client data system does not yet send these updates to the app UI until the next step.
+5. **Any DDP publications affected by the Method are updated.** If we have any publications on the page that have been affected by the database writes from this Method, the server sends the appropriate updates to the client. Note that the client data system does not yet send these updates to the app UI until the next step.
 6. **`updated` message sent to the client, data replaced with server result, Method callback fires.** After the relevant data updates have been sent to the correct client, the server sends back the last message in the Method life cycle - the DDP `updated` message with the relevant Method ID. The client rolls back any changes to client side data made in the Method simulation in step 1, and replaces them with the actual changes sent from the server in step 5. At this point, the callback passed to `Meteor.call` actually fires with the return value from step 4. It's important that the callback waits until the client is up to date, so that your Method callback can assume that the client state reflects any changes done inside the Method.
 
 In the list above, we didn't cover the case when the Method execution on the server throws an error. In that case, there is no return value, and the client gets an error instead. The Method callback is fired instantly with the returned error as the first argument. Read more about error handling in the section about errors below.
@@ -412,16 +412,16 @@ In the list above, we didn't cover the case when the Method execution on the ser
 
 We believe Methods provide a much better primitive for building modern applications than REST endpoints built on HTTP. Let's go over some of the things you get for free with Methods that you would have to worry about if using HTTP. The purpose of this section is not to convince you that REST is bad - it's just to remind you that you don't need to handle these things yourself in a Meteor app.
 
-1. **Methods use synchronous-style APIs, but are non-blocking.** You may notice in the example method above, we didn't need to write any callbacks when interacting with MongoDB, but the Method still has the non-blocking properties that people associate with Node.js and callback-style code. Meteor uses a coroutine library called [Fibers](https://github.com/laverdet/node-fibers) to enable you to write code that uses return values and throws errors, and avoid dealing with lots of nested callbacks.
-2. **Methods always run and return in order.** When accessing a REST API, you will sometimes run into a situation where you make two requests one after the other, but the results arrive out of order. Meteor's underlying machinery makes sure this never happens with Methods. When multiple Method calls are received _from the same client_, Meteor runs each method to completion before starting the next one. If you need to disable this functionality for one particularly long-running Method, you can use [`this.unblock()`](http://docs.meteor.com/#/full/method_unblock) to allow the next Method to run while the current one is still in progress. Also, since Meteor is based on Websockets instead of HTTP, all Method calls and results are guaranteed to arrive in the order they are sent.
-3. **Change tracking for Optimistic UI.** When Method simulations and server-side executions run, Meteor tracks any resulting changes to the database. This is what lets the Meteor data system roll back the changes from the method simulation and replace them with the actual writes from the server. Without this automatic database tracking, it would be very difficult to implement a correct Optimistic UI system.
+1. **Methods use synchronous-style APIs, but are non-blocking.** You may notice in the example Method above, we didn't need to write any callbacks when interacting with MongoDB, but the Method still has the non-blocking properties that people associate with Node.js and callback-style code. Meteor uses a coroutine library called [Fibers](https://github.com/laverdet/node-fibers) to enable you to write code that uses return values and throws errors, and avoid dealing with lots of nested callbacks.
+2. **Methods always run and return in order.** When accessing a REST API, you will sometimes run into a situation where you make two requests one after the other, but the results arrive out of order. Meteor's underlying machinery makes sure this never happens with Methods. When multiple Method calls are received _from the same client_, Meteor runs each Method to completion before starting the next one. If you need to disable this functionality for one particularly long-running Method, you can use [`this.unblock()`](http://docs.meteor.com/#/full/method_unblock) to allow the next Method to run while the current one is still in progress. Also, since Meteor is based on Websockets instead of HTTP, all Method calls and results are guaranteed to arrive in the order they are sent.
+3. **Change tracking for Optimistic UI.** When Method simulations and server-side executions run, Meteor tracks any resulting changes to the database. This is what lets the Meteor data system roll back the changes from the Method simulation and replace them with the actual writes from the server. Without this automatic database tracking, it would be very difficult to implement a correct Optimistic UI system.
 
 ### Calling a Method from another Method
 
 Sometimes, you'll want to call a Method from another Method. Perhaps you already have some functionality implemented and you want to add a wrapper that fills in some of the arguments automatically. This is a totally fine pattern, and Meteor does some nice things for you:
 
 1. Inside a client-side Method simulation, calling another Method doesn't fire off an extra request to the server - the assumption is that the server-side implementation of the Method will do it. However, it does run the _simulation_ of the called Method, so that the simulation on the client closely matches what will happen on the server.
-2. Inside a method execution on the server, calling another Method runs that Method as if it were called by the same client. That means the Method runs as usual, and the context - `userId`, `connection`, etc - are taken from the original Method call.
+2. Inside a Method execution on the server, calling another Method runs that Method as if it were called by the same client. That means the Method runs as usual, and the context - `userId`, `connection`, etc - are taken from the original Method call.
 
 ### Consistent ID generation and optimistic UI
 
@@ -431,12 +431,12 @@ Each Meteor Method invocation shares a random generator seed with the client tha
 
 ### Method retries
 
-If you call a Method from the client, and the user's internet connection disconnects before the result is received, Meteor assumes that the Method didn't actually run. When the connection is re-established, the Method call will be sent again. This means that, in certain situations, Methods can be sent more than once. This should only happen very rarely, but in the case where an extra method call could have negative consequences it is worth putting in extra effort to ensure that Methods are idempotent - that is, calling them multiple times doesn't result in additional changes to the database.
+If you call a Method from the client, and the user's Internet connection disconnects before the result is received, Meteor assumes that the Method didn't actually run. When the connection is re-established, the Method call will be sent again. This means that, in certain situations, Methods can be sent more than once. This should only happen very rarely, but in the case where an extra Method call could have negative consequences it is worth putting in extra effort to ensure that Methods are idempotent - that is, calling them multiple times doesn't result in additional changes to the database.
 
 Many Method operations are idempotent by default. Inserts will throw an error if they happen twice because the generated ID will conflict. Removes on collections won't do anything the second time, and most update operators like `$set` will have the same result if run again. The only places you need to worry about code running twice are MongoDB update operators that stack, like `$inc` and `$push`, and calls to external APIs.
 
-### Historical comparison to allow/deny
+### Historical comparison with allow/deny
 
 The Meteor core API includes an alternative to Methods for manipulating data from the client. Instead of explicitly defining Methods with specific arguments, you can instead call `insert`, `update`, and `remove` directly from the client and specify security rules with [`allow`](http://docs.meteor.com/#/full/allow) and [`deny`](http://docs.meteor.com/#/full/deny). In the Meteor Guide, we are taking a strong position that this feature should be avoided and Methods used instead. Read more about the problems with allow/deny in the [Security article](security.html#allow-deny).
 
-Historically, there have been some misconceptions about the features of Meteor Methods as compared to the allow/deny feature, including that it was more difficult to achieve Optimistic UI when using Methods. However, the client-side `insert`, `update`, and `remove` feature is actually implemented _on top of_ Methods, so Methods are strictly more powerful. You get great default Optimistic UI just by defining your Method code on the client and the server, as described in the Method lifecycle section above.
+Historically, there have been some misconceptions about the features of Meteor Methods as compared with the allow/deny feature, including that it was more difficult to achieve Optimistic UI when using Methods. However, the client-side `insert`, `update`, and `remove` feature is actually implemented _on top of_ Methods, so Methods are strictly more powerful. You get great default Optimistic UI just by defining your Method code on the client and the server, as described in the Method lifecycle section above.
