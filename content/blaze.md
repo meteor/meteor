@@ -237,11 +237,13 @@ You can do this in the components `onCreated()` callback, like so:
 ```js
 Template.listsShow.onCreated(function() {
   this.autorun(() => {
-    check(Template.data(), new SimpleSchema({
-     list: {blackbox: true},
-     todosReady: {type: Boolean}
-   }));
+    new SimpleSchema({
+      list: {type: Lists._helpers},
+      todosReady: {type: Boolean},
+      todos: {type: Mongo.Cursor}
+    }).validate(Template.currentData());
   });
+});
 ```
 
 We use an `autorun()` here to ensure that the data context is validated again whenever it changes.
