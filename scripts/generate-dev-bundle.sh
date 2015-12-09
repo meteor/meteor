@@ -53,10 +53,6 @@ cp -R "$DIR/lib/node_modules/npm" "$DIR/bundled-npm"
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
-# Disable any NPM user configuration so that there are no differences
-# between users when generating dev bundles on their own computers.
-export NPM_CONFIG_USERCONFIG="/nonexistent"
-
 # install npm 3 in a temporary directory
 mkdir "$DIR/bin/npm3"
 cd "$DIR/bin/npm3"

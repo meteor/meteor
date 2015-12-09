@@ -365,6 +365,11 @@ var currentNodeCompatibilityVersion = function () {
   return version + '\n';
 };
 
+const npmUserConfigFile = files.pathJoin(
+  __dirname,
+  "meteor-npm-userconfig"
+);
+
 var runNpmCommand = function (args, cwd) {
   const nodeBinDir = files.getCurrentNodeBinDir();
   var npmPath;
@@ -395,6 +400,9 @@ var runNpmCommand = function (args, cwd) {
   // priority.
   // This hack is confusing as npm is supposed to do it already.
   const env = files.currentEnvWithPathsAdded(nodeBinDir);
+
+  // Make sure we don't honor any user-provided configuration files.
+  env.npm_config_userconfig = npmUserConfigFile;
 
   var opts = { cwd: cwd, env: env, maxBuffer: 10 * 1024 * 1024 };
 
