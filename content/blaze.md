@@ -414,20 +414,31 @@ You should subscribe to publications on the server from an `onCreated` callback 
 
 ```js
 Template.listsShowPage.onCreated(function() {
-  this.state = new ReactiveDict();
+  this.getListId = () => FlowRouter.getParam('_id');
+
   this.autorun(() => {
-    const listId = FlowRouter.getParam('_id');
-    this.state.set({listId});
-    this.subscribe('list/todos', listId);
+    this.subscribe('list/todos', this.getListId());
   });
 });
 ```
 
-By using `this.subscribe()` (as opposed to `Meteor.subscribe`), the subscription state automatically gets amalagamated into the template instance's subscription readiness reactive state variable, which can be used both from within templates (via the `subscriptionsReady` helper) or within helpers (via `Template.subscriptionsReady()`).
+By using `this.subscribe()` (as opposed to `Meteor.subscribe`), the subscription state automatically gets amalagamated into the template instance's subscription readiness reactive state variable, which can be used both from within templates (via the `{{Template.subscriptionsReady}}` helper) or within helpers (via `instance.subscriptionsReady()`).
 
-Notice as well in this case that we access the global client-side state store `FlowRouter` in the `onCreated()` callback also, storing its value locally in a local `state` dictionary.
+Notice as well in this case that we access the global client-side state store `FlowRouter` in this template, which we access via a instance method (`getListId()`), called both from the autorun, and from the `listArray` helper:
 
-XXX: should instead we just read from flow router a second time here: https://github.com/meteor/todos/blob/master/packages/lists-show/lists-show-page.js#L28 ??
+```js
+Template.listsShowPage.helpers({
+  // We use #each on an array of one item so that the "list" template is
+  // removed and a new copy is added when changing lists, which is
+  // important for animation purposes. #each looks at the _id property of it's
+  // items to know when to insert a new item and when to update an old one.
+  listArray() {
+    const instance = Template.instance();
+    const list = Lists.findOne(instance.getListId());
+    return list ? [list] : [];
+  }
+});
+```
 
 <h3 id="fetch-in-smart-components">Fetch in helpers</h3>
 Typically, as [outlined in the ui/ux article](ui-ux.md#smart-components) you should fetch data in the same component that you subscribe in. In Blaze, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`: 
@@ -473,7 +484,7 @@ Although Blaze is a very intuitive rendering system, it does have some quirks an
 <h3 id="re-rendering">Re-rendering</h3>
 Blaze is intended to be opaque about re-rendering. Tracker and Blaze are designed as "eventual" systems that end up fully reflecting any data change, but may take a few steps in getting there, depending on how they are used. This can be the subject of frustration if you are trying to control how your template is re-rendered.
 
-The first thing to consider here is if you actually need to care about your template re-rendering. Blaze is optimized so that it typically doesn't matter if a template is re-rendered even if it strictly shouldn't.
+The first thing to consider here is if you actually need to care about your template re-rendering. Blaze is optimized so that it typically doesn't matter if a template is re-rendered even if it strictly shouldn't. If you make sure that your helpers are cheap to run and consequently rendering is not expensive, then you probably don't need to worry about this.
 
 The main thing to understand about how Blaze re-renders is that re-rendering happens at the level of helpers and template inclusions. Whenever the *data context* of a template changes, it necessarily must re-run *all* helpers and data accessors (as `this` within the helper is the data context and thus will have changed). 
 
