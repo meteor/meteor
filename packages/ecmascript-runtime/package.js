@@ -13,6 +13,7 @@ Npm.depends({
 
 Package.onUse(function(api) {
   api.use("modules");
+  api.use("promise");
 
   // Regenerator, which we use to transpile ES2016 async/await, needs
   // a promise implementation
