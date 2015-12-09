@@ -1,4 +1,6 @@
-# Methods
+---
+title: "Methods"
+---
 
 After reading this article, you'll know:
 
