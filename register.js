@@ -105,10 +105,7 @@ function getBabelResult(filename) {
 
   var result = meteorBabel.compile(source, babelOptions);
 
-  var usedHelpers = result.metadata.usedHelpers;
-  if (usedHelpers && usedHelpers.length > 0) {
-    meteorBabel.installRuntime();
-  }
+  require("./runtime.js");
 
   return result;
 }
