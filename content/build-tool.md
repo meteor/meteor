@@ -18,7 +18,7 @@ The main function of the Meteor build tool is to run "build plugins" - these plu
 
 ### Combines and minifies code
 
-Another important feature of the Meteor build tool is that it automatically concatenates and minifies all of your files in production mode. This is enabled by the `standard-minifiers` pacakge, which is in all Meteor apps by default. If you need different minification behavior, you can replace this package. Below, we'll talk about how to switch out your minifier to add PostCSS to your build process.
+Another important feature of the Meteor build tool is that it automatically concatenates and minifies all of your files in production mode. This is enabled by the `standard-minifiers` package, which is in all Meteor apps by default. If you need different minification behavior, you can replace this package. Below, we'll talk about how to switch out your minifier to add PostCSS to your build process.
 
 ### Development vs. production
 
@@ -40,8 +40,8 @@ Don't use Bower XXX link to some article explaining that people are moving to NP
 
 You have two options for adding packages from Atmosphere to your app:
 
-1. Use the command line: `meteor add kadira:flow-router`
-2. Edit the file in your app under `.meteor/packages`, and add the package name anywhere in the file
+1. Use the command line: `meteor add kadira:flow-router`.
+2. Edit the file in your app under `.meteor/packages`, and add the package name anywhere in the file.
 
 These options will add the newest version of the desired package that is compatible with the other packages in your app. If you want to specify a particular version, you can specify it by adding a suffix to the package name, like so: `meteor add kadira:flow-router@2.10.0`.
 
@@ -53,15 +53,15 @@ If your app is running when you add a new package, Meteor will automatically dow
 
 There are a few ways to search for Meteor packages published to Atmosphere:
 
-1. Search on the [Atmosphere website](https://atmospherejs.com/)
-2. Use `meteor search` from the command line
-3. Use a community package search website like [Fastosphere](http://fastosphere.meteor.com/)
+1. Search on the [Atmosphere website](https://atmospherejs.com/).
+2. Use `meteor search` from the command line.
+3. Use a community package search website like [Fastosphere](http://fastosphere.meteor.com/).
 
-The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. You can also use `meteor show kadira:flow-router` from the command line to see the description of a package and different available versions.
+The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. For example, you can use `meteor show kadira:flow-router` from the command line to see the description of that package and different available versions.
 
 #### Package naming
 
-You may notice that all packages on Atmosphere have a name of the form `prefix:name`. The prefix is the name of the organization or user that published the package. Meteor uses such a convention of package naming to make sure that it's clear who has published a certain package, and to avoid an ad-hoc namespacing convention.
+You may notice that, with the exception of Meteor platform packages, all packages on Atmosphere have a name of the form `prefix:name`. The prefix is the name of the organization or user that published the package. Meteor uses such a convention of package naming to make sure that it's clear who has published a certain package, and to avoid an ad-hoc namespacing convention. Meteor platform packages do not have any `prefix:`.
 
 #### Overriding packages from Atmosphere with a local version
 
@@ -69,7 +69,7 @@ A Meteor app can load packages in one of three ways:
 
 1. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%/.meteor/packages`, and only loaded into your app as it is built.
 2. Loading the package's source code into a `packages/` directory inside your app. This lets you modify the source code of the package for your particular needs.
-3. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:`. Ex: `PACKAGE_DIRS=../first/directory:../second/directory meteor`
+3. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
 
 When `meteor` searches for a package listed in the `~/.meteor/packages` file, it will look inside of the app's `packages/` directory first. Second, it will search inside of any directories defined in `PACKAGE_DIRS` environment variable. Lastly, it will search for the package on Atmosphere.
 
