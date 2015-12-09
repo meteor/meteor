@@ -1,3 +1,13 @@
+## Standup 9th Dec
+
+Agenda:
+
+1. Guide social promotion tasks from Dan
+  1. Fix URLs
+  2. See if we can put up a banner reminding people it’s in progress and we’re looking for contributions
+  3. Make a list of interesting nuggets to tweet about
+  4. Figure out when we should do a big marketing push with the initial release
+
 ## Standup 2nd Dec
 
 With Tom, Zol, Sashko and Matt
