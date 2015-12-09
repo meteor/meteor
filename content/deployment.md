@@ -4,7 +4,7 @@ title: Deployment, Monitoring and Analytics
 
 After reading this guide, you'll know:
 
-1. What you need to know before you deploy a Meteor application
+1. What to consider before you deploy a Meteor application
 2. How to deploy to some common Meteor hosting environments
 3. How to design a deployment process to make sure your application's quality is maintained
 4. How to monitor user behavior with analytics tools
@@ -36,7 +36,7 @@ Environment vars are used to set process specific things, which could conceivabl
 
 A final note on storing these settings: As noted in the {% link_to 'security' 'Security Article' %}, it's not a good idea to store settings in your code repository, instead a more secure place is preferred.
 
-<h2 id="errata">Deployment errata</h2>
+<h2 id="other-considerations">Other considerations</h2>
 
 There are some other considerations that you should make before you deploy your application to a production host. Remember that you should if possible do this step for both your production *and* staging environments.
 
@@ -58,7 +58,12 @@ If you are following the above approach, you may also want to manually write out
 
 <h2 id="deploying">Deploying</h2>
 
-There are many options on where to deploy your Meteor application but here are some prominent options.
+There are many options on where to deploy your Meteor application, and we'll discuss some options here.
+
+<h3 id="custom-deployment">Custom Deployment</h3>
+The Meteor tool has a command `meteor build` that creates a deployment bundle, which is a complete node application which can be run on any host that can run node applications (once pointed at a MongoDB instance). You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
+
+However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch.
 
 <h3 id="free-hosting">Meteor's free hosting</h3>
 
@@ -144,7 +149,7 @@ Note however that in order use oplog tailing (highly recommended for performance
 
 <h3 id="galaxy">Deploying to Galaxy</h3>
 
-Another option is to deploy to Galaxy, Meteor's paid hosting service. In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing?gclid=CIqstOv3uckCFYKWvAod338FGw), and separately provision a MongoDB database (see below).
+Another option is to deploy to Galaxy, Meteor's paid hosting service. In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing), and separately provision a MongoDB database (see below).
 
 Once you've done that, you can [deploy to Galaxy](https://galaxy.meteor.com/help/deploying-to-galaxy) almost as easily as you can to Meteor's free servers. You just need to [add some environment variables to your settings file](https://galaxy.meteor.com/help/setting-environment-variables) to point it at your MongoDB, and you can deploy with:
 
@@ -190,7 +195,7 @@ Depending on where your app is deployed and the number of application processes 
 
 [ss]
 
-If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the collections article.
+If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the [collections article](collections.html#migrating).
 
 <h2 id="analytics">Monitoring users via analytics</h2>
 
