@@ -32,8 +32,9 @@
 6. Adding custom data about users
     1. Adding new top-level fields onto the users collection
     2. How and why to disable profile
-    3. Why top-level fields are better than nested objects in DDP (link to collections/schema article)
-    4. Security concerns - don't accidentally publish secret data to the client
+    3. Publishing custom user data
+    4. Why top-level fields are better than nested objects in DDP (link to collections/schema article)
+    5. Security concerns - don't accidentally publish secret data to the client
 7. Allowing the same user to log in through different methods - “account merging”
     1. Update the existing account using requestCredential
     2. accounts-meld in case you want to do more complicated things, but make sure you understand the risk!
