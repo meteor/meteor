@@ -9,7 +9,7 @@ After reading this guide, you'll know:
 3. How to have your app display different content depending on the URL
 4. How to construct links to routes and go to routes programmatically
 
-## Client-side Routing
+<h2 id="client-side">Client-side Routing</h2>
 
 In a web application, _routing_ is the process of using URLs to drive the user interface (UI). URLs are a prominent feature in every single web browser, and have several main functions from the user's point of view:
 
@@ -23,7 +23,7 @@ In contrast, Meteor operates on the principle of _data on the wire_, where the s
 
 However, most of the user-facing features of URLs listed above are still relevant for typical Meteor applications. Now that the server is not URL-driven, the URL just becomes a useful representation of the client-side state the user is currently looking at. However, unlike in a server-rendered application, it does not need to describe the entirety of the user’s current state; it simply needs to contain the parts that you want to be linkable. For example, the URL should contain any search filters applied on a page, but not necessarily the state of a dropdown menu or popup.
 
-## Using Flow Router
+<h2 id="flow-router">Using Flow Router</h2>
 
 To add routing to your app, install the [`kadira:flow-router`](https://atmospherejs.com/kadira/flow-router) package:
 
@@ -37,7 +37,7 @@ Flow Router is a community routing package for Meteor. At the time of writing th
 - [Kadira Meteor routing guide](https://kadira.io/academy/meteor-routing-guide)
 
 
-## Defining a simple route
+<h2 id="defining-routes">Defining a simple route</h2>
 
 The basic purpose of a router is to match certain URLs and perform actions as a result. This all happens on the client side, in the app user's browser. Let's take an example from the Todos example app:
 
@@ -54,7 +54,7 @@ This route handler will run in two situations: if the page loads initially at a 
 
 When the route is matched, the `action` method executes, and you can perform any actions you need to. The `name` property of the route is optional, but will let us refer to this route more conveniently later on.
 
-### URL pattern matching
+<h3 id="url-pattern-matching">URL pattern matching</h3>
 
 Consider the following URL pattern, used in the code snippet above:
 
@@ -81,13 +81,13 @@ Here are some example URLs and the resulting `params` and `queryParams`:
 
 Note that all of the values in `params` and `queryParams` are always strings since URLs don't have any way of encoding data types. For example, if you wanted a parameter to represent a number, you might need to use `parseInt(value, 10)` to convert it when you access it.
 
-## Accessing Route information
+<h2 id="accessing-route-info">Accessing Route information</h2>
 
 Flow Router makes a variety of information available via (reactive and otherwise) functions on the global singleton `FlowRouter` (this is the same object that we attached routes to above). As the user navigates around your app, the values of these functions will change (reactively in some cases) correspondingly.
 
 Like any other global singleton in your application (see the X article for info about stores), it's best to limit your access to `FlowRouter`. That way the parts of your app with remain modular and more independent. In the case of `FlowRouter`, it's best to access it solely from the top of your component hierarchy, either in the "page" component, or the layouts that wrap it (see below).
 
-### The current route
+<h3 id="current-route">The current route</h3>
 
 It's useful to access the interesting parts of the current route that you need in your application. Here are some useful reactive functions you can call:
 
@@ -97,7 +97,7 @@ It's useful to access the interesting parts of the current route that you need i
 
 So in our example of the list page form the Todos app, we access the current list's id with `FlowRouter.getParam('_id')` (we'll see more on this below).
 
-### Highlighting the active route
+<h3 id="active-route">Highlighting the active route</h3>
 
 One situation where it is sensible to access the global `FlowRouter` singleton to access the current route's information deeper in the component hierarchy is when rendering links via a navigation component. It's often required to highlight the "active" route in some way (this is the route or section of the site that the user is currently looking at).
 
@@ -132,7 +132,7 @@ Template.appBody.helpers({
 });
 ```
 
-## Rendering based on the route
+<h2 id="rendering-routes">Rendering based on the route</h2>
 
 Now we understand how to define routes and access information about the current route, we are in a position to do you usually want to do when a user accesses a route---render a user interface to the screen that represents it.
 
@@ -144,7 +144,7 @@ When using Flow Router, the simplest way to display different views on the page 
 meteor add kadira:blaze-layout
 ```
 
-To use this package, we need to render a "layout" component by default. In the Todos example app, that template is called `appBody`:
+To use this package, we need to render a "layout" component by default. In the Todos example app, that component is called `appBody`:
 
 ```html
 <template name="appBody">
@@ -154,8 +154,8 @@ To use this package, we need to render a "layout" component by default. In the T
 </template>
 ```
 
-(This is not the entire `appBody` template, but we highlight the most important part here).
-Here, we are using a Blaze feature called `Template.dynamic` to render a template who is attached to the the `main` argument to the template. Using Blaze Layout, we can change that `main` argument when a route is accessed.
+(This is not the entire `appBody` component, but we highlight the most important part here).
+Here, we are using a Blaze feature called `Template.dynamic` to render a template which is attached to the the `main` property of the data context. Using Blaze Layout, we can change that `main` property when a route is accessed.
 
 We do that by changing the `action` function of our `listShow` route definition:
 
@@ -168,11 +168,11 @@ FlowRouter.route('/lists/:_id', {
 });
 ```
 
-What this means is that whenever a user visits a URL of the form `/lists/X`, the `listShow` route will kick in, triggering the `BlazeLayout` call to set the `main` property of the `appBody` template.
+What this means is that whenever a user visits a URL of the form `/lists/X`, the `listShow` route will kick in, triggering the `BlazeLayout` call to set the `main` property of the `appBody` component.
 
-### Templates as pages vs. Templates as reusable components
+<h2 id="page-templates">Components as pages</h2>
 
-Notice that we called the template to be rendered `listsShowPage` (rather than `listShow`). This indicates that this template is rendered directly by a Flow Router action and forms the 'top' of the rendering hierarchy for this URL.
+Notice that we called the component to be rendered `listsShowPage` (rather than `listShow`). This indicates that this template is rendered directly by a Flow Router action and forms the 'top' of the rendering hierarchy for this URL.
 
 The `listShowPage` template will render *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `listShowPage` template is very tied to it's environment (the route it's rendered under), and so it needs to be a smart component (see the article on [UI/UX](ui-ux.html) for more about smart and pure components).
 
@@ -197,7 +197,7 @@ In this case, the `listShowPage` template simply renders as:
 
 It's the `listShow` template (a pure component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the pure component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
-### Route related rendering logic
+<h3 id="route-rendering-logic">Route related rendering logic</h3>
 
 There are examples of rendering logic that seems very related to the route, for which it can be difficult to know where to implement. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
 
@@ -245,7 +245,7 @@ A chief advantage of this approach is that it is immediately clear when viewing 
 
 Multiple behaviours of this type can be composed by wrapping a template in multiple wrappers, or wrapping the wrappers themselves.
 
-## Changing Routes
+<h2 id="changing-routes">Changing Routes</h2>
 
 Rendering an updated UI when a user reaches a new route is obviously not that useful without giving the user some way to reach a new route! The simplest way is with the trusty `<a>` tag and a URL. You can generate the URLs yourself using `FlowRouter.pathFor`, but it is more convenient to use the [`arillo:flow-router-helpers`](https://github.com/arillo/meteor-flow-router-helpers/) package that defines some helpers for you:
 
@@ -262,7 +262,7 @@ Now that you have this package, you can use helpers in your templates to display
     class="list-todo {{activeListClass list}}">
 ```
 
-### Routing programmatically
+<h3 id="routing-programmatically">Routing programmatically</h3>
 
 In some cases you want to change routes based on user action outside of them clicking on a link. For instance, in the example app, when a user creates a new list, we want to route them to the list they just created. We do this by calling `FlowRouter.go()` once we know the id of the new list:
 
@@ -283,7 +283,7 @@ FlowRouter.setParams({_id: newList._id});
 
 Of course, it is more general to call `FlowRouter.go()`, so unless you are being very specific in what you are doing it's usually better to use that.
 
-### Storing data in the URL
+<h3 id="storing-data-in-the-url">Storing data in the URL</h3>
 
 As we discussed in the introduction, the URL is really just a serialization of some part of the client-side state the user is looking at. Although parameters can only be strings, it's possible to convert any type of data to a string via serializing it.
 
@@ -299,7 +299,7 @@ You can then get the data back out of Flow Router in the opposite way (note that
 const data = EJSON.parse(FlowRouter.getQueryParam('data'));
 ```
 
-## Redirecting
+<h2 id="redirecting">Redirecting</h2>
 
 Sometimes, your users will end up on a page that isn't the best place for them to be. Maybe the data they were looking for has moved, maybe they were on an admin panel page and logged out, or maybe they just created a new object and you want them to end up on the page for the thing they just created.
 
@@ -315,7 +315,7 @@ FlowRouter.route('/old-list-route/:_id', {
 });
 ```
 
-### Redirecting dynamically
+<h3 id="redirecting-dynamically">Redirecting dynamically</h3>
 
 If however, you need some data to redirect, you'll need to render part of the component hierarchy, as that is the place where data subscribing happens. For example, in the Todos example app, we want to make the root (`/`) route redirect to the first known list. To achieve this, we need to render a special `rootRedirector` route:
 
@@ -340,7 +340,7 @@ Template.rootRedirector.onCreated(() => {
 });
 ```
 
-### Redirecting after a user's action
+<h3 id="redirecting-after-user-action">Redirecting after a user's action</h3>
 
 Often, you just want to go to a new route programmatically when a user has completed a certain action. Above we saw a case (creating a new list) when we wanted to do it *optimistically*---i.e. before we hear back from the server that the Method succeeded. We can do this because we reasonably expect that the Method will succeed in almost all cases (see the [UI/UX article](ui-ux.html) for further discussion of this).
 
@@ -360,9 +360,9 @@ Template.appBody.events({
 
 You will also want to show some kind of status while the method is working so that the user knows there is something going on between them clicking the button and the redirect happening (and show the error some kind of message if the error is there too).
 
-## Advanced Routing
+<h2 id="advanced">Advanced Routing</h2>
 
-### Missing pages
+<h3 id="404s">Missing pages</h3>
 
 If a user types an incorrect URL, chances are you want to show them some kind of amusing not found page. There are actually two categories of "not found" pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
 
@@ -387,7 +387,7 @@ The second is when the URL is valid, but doesn't actually match any data. In thi
 </template>
 ```
 
-### Analytics
+<h3 id="analytics">Analytics</h3>
 
 It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Read more about analytics in general in the _Analytics/Monitoring guide_, but here's a simple setup that will get you URL tracking using Google Analytics. We'll be using the `okgrow:analytics` package.
 
@@ -412,15 +412,15 @@ Now, we need to configure the package with our Google Analytics key (the package
 
 That's it! The analytics package hooks into Flow Router and records all of the page events for you.
 
-### Server Side Routing
+<h3 id="server-side">Server Side Routing</h3>
 
 As we've discussed, Meteor is a framework for client rendered applications, but this doesn't always remove the requirement for server rendered routes. There are two main use cases for server-side routing.
 
-#### Server Routing for API access
+<h4 id="server-side-apis">Server Routing for API access</h4>
 
 Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html) and [Methods](methods.html) articles for more information.
 
-#### Server Rendering
+<h4 id="server-side-rendering">Server Rendering</h4>
 
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you are using it. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
 
