@@ -1,6 +1,6 @@
 var babelOptions = require("../options").getDefaults({
   modules: true,
-  meteorAsyncAwait: true,
+  asyncAwait: true,
   react: true,
   jscript: true
 });

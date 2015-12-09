@@ -31,7 +31,12 @@ exports.getDefaults = function getDefaults(features) {
   };
 
   if (features) {
-    if (features.meteorAsyncAwait) {
+    if (features.asyncAwait) {
+      options.whitelist.push(
+        "es7.asyncFunctions",
+        "regenerator"
+      );
+    } else if (features.meteorAsyncAwait) {
       addPlugin(options, "./plugins/async-await.js");
       options.whitelist.push("es7.asyncFunctions");
     }

@@ -1,5 +1,12 @@
-// Note that requiring this module installs global.babelHelpers.
+var MeteorPromise = require("meteor-promise");
+MeteorPromise.Fiber = require("fibers");
+Promise = MeteorPromise;
+
+// Requiring this module installs global.babelHelpers.
 require("babel-core/external-helpers");
+
+// Requiring this module installs global.regeneratorRuntime.
+require("regenerator/runtime");
 
 var runtime = module.exports = babelHelpers;
 
