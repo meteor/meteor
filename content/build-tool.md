@@ -67,7 +67,7 @@ You may notice that, with the exception of Meteor platform packages, all package
 
 A Meteor app can load packages in one of three ways:
 
-1. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%/.meteor/packages`, and only loaded into your app as it is built.
+1. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 2. Loading the package's source code into a `packages/` directory inside your app. This lets you modify the source code of the package for your particular needs.
 3. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
 
