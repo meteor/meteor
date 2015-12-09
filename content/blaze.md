@@ -246,7 +246,7 @@ Template.listsShow.onCreated(function() {
   });
 ```
 
-By placing the validation in an `autorun()` we ensure that even if the data contexts reactively changes, it always fits the expected schema.
+We use an `autorun()` here to ensure that the data context is validated again whenever it changes.
 
 <h3 id="name-data-contexts">Name data contexts to template inclusions</h3>
 It's tempting to provide the data context of a sub-template as a "raw" object (like `{{> todosItem todo}}`), it's a better idea to explicitly give it a name (`{{> todosItem todo=todo}}`). There are two primary reasons for this:
