@@ -82,7 +82,7 @@ if (process.platform === 'win32') {
 
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
       function (error, stdout, stderr) {
-        if (error) {
+        if (error && stdout.length == 0) {
           var additionalInfo = JSON.stringify(error);
           if (error.code === 'ENOENT') {
             additionalInfo = "tasklist wasn't found on your system, it usually can be found at C:\\Windows\\System32\\.";
@@ -105,7 +105,7 @@ if (process.platform === 'win32') {
             'netstat -ano',
             {maxBuffer: 1024 * 1024 * 10},
             function (error, stdout, stderr) {
-            if (error) {
+            if (error && stdout.length == 0) {
               fut['throw'](new Error("Couldn't run netstat -ano: " +
                 JSON.stringify(error)));
               return;
