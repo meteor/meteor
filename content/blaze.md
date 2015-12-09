@@ -4,7 +4,7 @@ title: Blaze
 
 After reading this guide, you'll know:
 
-1. How to use the Spacebars syntax, used to define Blaze templates.
+1. How to use the Spacebars syntax, used to define templates rendered by the Blaze engine.
 2. Best practice towards creating reusable components in Blaze.
 3. How the Blaze rendering engine works under the hood and some techniques to best use it.
 4. How to test Blaze templates.
@@ -37,7 +37,7 @@ As an example, consider the `todosItem` template from the Todos example app:
 
 In this example, the template is rendered with an object with key `todo` as data context (we'll see below how to enforce that). We access the properties of the `todo`  using the mustache tag, such as `{{todo.text}}`. The default behaviour is to render that property as a string; however in some cases (such as `checked=={{todo.checked}}` it can be resolved as a boolean value).
 
-Note that simple string interpolations like this will never render HTML---so you don't need to perform safety checks for XSS.
+Note that simple string interpolations like this will always escape any HTML for you---so you don't need to perform safety checks for XSS.
 
 Additionally we can see an example of a *template helper*---`{{checkedClass}}` calls out to the `checkedClass` helper defined in a separate JavaScript file on the `todosItem` template:
 
@@ -49,7 +49,7 @@ Template.todosItem.helpers({
 });
 ```
 
-In the context of a template helper, `this` is scoped to the the *data context* of the template.
+In the context of a template helper, `this` is scoped to the current current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument.
 
 Apart from simple interpolation, mustache tags can control flow of the template. For instance, in the `listsShow` template, we render a list of todos via:
 
@@ -119,7 +119,7 @@ In this case, the `listShow` template can expect a data context of the form:
 ```
 
 <h3 id="helpers-in-tags">Helpers in tags</h3>
-We saw above that using a helper (or data context lookup) in the form `checked={{todo.checked}}` will add the checked property to the HTML tag if `todo.checked` evaluates to true. Also, you can directly include an object as part of an HTML to apply multiple properties at once:
+We saw above that using a helper (or data context lookup) in the form `checked={{todo.checked}}` will add the checked property to the HTML tag if `todo.checked` evaluates to true. Also, you can directly include an object in the attribute list of an HTML element to set multiple attributes at once:
 
 ```html
 <a {{attributes}}>My Link</a>
@@ -129,7 +129,7 @@ We saw above that using a helper (or data context lookup) in the form `checked={
 
 ```js
 Template.foo.helpers({
-  attributes: () => {
+  attributes() {
     return {
       class: 'A class',
       style: {background: 'blue'}
@@ -139,7 +139,7 @@ Template.foo.helpers({
 ```
 
 <h3 id="rendering-html">Rendering pure HTML</h3>
-Although by default a mustance tag won't render any HTML, for XSS security reasons, you can render pure HTML with the triple-mustache: `{{{`.
+Although by default a mustache tag won't render any HTML, for XSS security reasons, you can render pure HTML with the triple-mustache: `{{{`.
 
 ```html
 {{{myHtml}}}
@@ -156,7 +156,7 @@ Template.foo.helpers({
 You should be extremely careful about doing this, and always ensure you aren't returning user-generated content (or escape it if you do!) from such a helper.
 
 <h3 id="block-helpers">Block Helpers</h3>
-A block helper, called with `{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{{#each in}}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *template* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.eachBlock`. For instance, you could create your own `{{#if}}` helper with:
+A block helper, called with `{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{{#each in}}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *template* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{{#if}}` helper with:
 
 ```html
 <template name="myIf">
@@ -171,6 +171,7 @@ A block helper, called with `{{#` is a helper that takes (and may render) a bloc
   {{#myIf condition=true}}
     <h1>I'll be rendered!</h1>
   {{/myIf}}
+</template>
 ```
 
 <h3 id="builtin-block-helpers">Builtin Block Helpers</h3>
@@ -197,7 +198,7 @@ The `{{#each in}}` helper is a convenient way to step over a list whilst retaini
 {{/each}}
 ```
 
-In this case `todo` will be added to the data context within the block, but all the existing data context items (`list` and `todosReady` in this case) will remain available.
+In this case `todo` will be added to the template scope within the block, but all the existing data context items (`list` and `todosReady` in this case) will remain available.
 
 <h4 id="let">Let</h4>
 The `{{#let}}` helper is useful to capture the output of a helper or document subproperty within a template:
@@ -208,10 +209,15 @@ The `{{#let}}` helper is useful to capture the output of a helper or document su
 {{/let}}
 ```
 
-XXX: what to do about d.c. changing helpers such as with/each?
+Note that `name` and `color` (and `todo` above) are only added to scope in the template, they *are not* added to the data context. Specifically this means if you call a helper, they will not be on `this`. So if you need to access them in a helper, you should pass them in as an argument (like we do with `(todoArgs todo)` above).
+
+<h4 id="each-and-with">Each and With</h4>
+There are also two Spacebars builtin that are very common for historical reasons but we discourage the use of (see [use each-in](#use-each-in) below) as they change the data context *within* a template, which is difficult to reason about.
+
+Like `{{#each .. in}}`, `{{#each}}` iterates over an array or cursor, changing the data context within its content block to be the item iterated over. `{{#with}}` simply changes the data context inside itself. In most cases it's better to use `{{#each .. in}}` and `{{#let}}` to achieve the purposes that these are commonly used for.
 
 <h4 id="strictness">Strictness</h4>
-Spacebars starts from a very strict interpretation of HTML. In particular you need to careful about self-closing tags and when you are allowed to use them. For instance, you can't self-close a `div` (`<div/>`) in Spacebars.
+Spacebars starts from a very strict interpretation of HTML. In particular you need to careful about self-closing tags and when you are allowed to use them. For instance, you can't self-close a `div` (`<div/>`) in Spacebars, and you need to close some tags that a browser might not require you to (such as a `<p>` tag).
 
 <h4 id="escaping">Escaping</h4>
 To insert a literal {{, {{{, or any number of curly braces, put a vertical bar after it. So `{{|` will show up as `{{`, `{{{|` will show up as `{{{`, and so on.
@@ -240,7 +246,7 @@ Template.listsShow.onCreated(function() {
   });
 ```
 
-By placing the check in an `autorun()` we ensure that even if the data contexts reactively changes, it always fits the expected schema.
+By placing the validation in an `autorun()` we ensure that even if the data contexts reactively changes, it always fits the expected schema.
 
 <h3 id="name-data-contexts">Name data contexts to template inclusions</h3>
 It's tempting to provide the data context of a sub-template as a "raw" object (like `{{> todosItem todo}}`), it's a better idea to explicitly give it a name (`{{> todosItem todo=todo}}`). There are two primary reasons for this:
@@ -258,7 +264,7 @@ For similar reasons to the above, it's better to use `{{#each todo in todos}}` r
 The only reason not to use `{{#each .. in}}` because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
 
 <h3 id="use-template-instance">Use the template instance</h3>
-Although Blaze doesn't currently have a fully baked component model, you can use the *template instance* as a convenient place to modularize functionality. The template instance is `this` inside template lifecycle callbacks and can be accessed in event handlers and helpers as `Template.instance()`. It's also passed as second argument to event handlers.
+Although Blaze's simple API doesn't naturally lead to a componentized approach, you can use the *template instance* as a convenient place to modularize functionality. The template instance is `this` inside template lifecycle callbacks and can be accessed in event handlers and helpers as `Template.instance()`. It's also passed as second argument to event handlers.
 
 We suggest a convention of naming it `instance` in these contexts and assigning it at the top of every relevant helper. For instance:
 
