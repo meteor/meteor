@@ -1,6 +1,6 @@
 ECMAScript = {
   compileForShell(command) {
-    const babelOptions = Babel.getDefaultOptions();
+    const babelOptions = Babel.getDefaultOptions({asyncAwait: true});
     babelOptions.sourceMap = false;
     babelOptions.ast = false;
     babelOptions.externalHelpers = true;

@@ -7,17 +7,20 @@ Package.describe({
 });
 
 Npm.depends({
-  "meteor-ecmascript-runtime": "0.2.6"
+  "meteor-ecmascript-runtime": "0.2.6",
+  "regenerator": "0.8.42"
 });
 
 Package.onUse(function(api) {
   api.use("modules");
+  api.use("promise");
 
   api.mainModule("runtime.js");
 
   api.export("Symbol");
   api.export("Map");
   api.export("Set");
+  api.export("regeneratorRuntime");
 });
 
 Package.onTest(function(api) {
