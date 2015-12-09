@@ -65,12 +65,15 @@ You may notice that all packages on Atmosphere have a name of the form `prefix:n
 
 #### Overriding packages from Atmosphere with a local version
 
-A Meteor app can load packages in one of two ways:
+A Meteor app can load packages in one of three ways:
 
 1. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%/.meteor/packages`, and only loaded into your app as it is built.
 2. Loading the package's source code into a `packages/` directory inside your app. This lets you modify the source code of the package for your particular needs.
+3. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:`. Ex: `PACKAGE_DIRS=../first/directory:../second/directory meteor`
 
-If you need to patch a package to do something that the published version doesn't do, then (2) is the option for you. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
+When `meteor` searches for a package listed in the `~/.meteor/packages` file, it will look inside of the app's `packages/` directory first. Second, it will search inside of any directories defined in `PACKAGE_DIRS` environment variable. Lastly, it will search for the package on Atmosphere.
+
+If you need to patch a package to do something that the published version doesn't do, then (2) or (3) is the option for you. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
 
 One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package pre-installed.
 
