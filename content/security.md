@@ -209,7 +209,7 @@ All of the points above about methods apply to publications as well:
 
 <h3 id="fields">Always restrict fields</h3>
 
-`Mongo.Collection#find` has an option called `fields` which lets you filter the fields on the fetched documents. You should always use this in publications, to make sure you don't accidentally publish secret data.
+[`Mongo.Collection#find` has an option called `fields`](http://docs.meteor.com/#/full/find) which lets you filter the fields on the fetched documents. You should always use this in publications, to make sure you don't accidentally publish secret data.
 
 For example, you could write a publication, then later add a secret field to the published collection. Now, the publication would be sending that secret to the client. If you filter the fields on every publication when you first write it, then adding another field won't automatically publish it.
 
