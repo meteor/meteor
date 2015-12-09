@@ -247,7 +247,7 @@ Todos.methods.updateText.call({
 
 We'll talk about how to handle the `ValidationError` in the section on forms below.
 
-<h2 id="wiring-method-to-form">Wiring up a Method to an HTML form</h2>
+<h2 id="method-form">Calling a Method from a form</h2>
 
 The main thing enabled by the `ValidationError` convention is simple integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
 
