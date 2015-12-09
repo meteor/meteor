@@ -6,6 +6,9 @@ Agenda:
   1. Fix URLs [done]
   2. See if we can put up a banner reminding people it’s in progress and we’re looking for contributions
   3. Make a list of interesting nuggets to tweet about
+    1. Ever wanted to know what happens when a Meteor Method is called? http://guide.meteor.com/methods.html#call-lifecycle
+    2. Read our recommendations about routing in Meteor: http://guide.meteor.com/routing.html
+    3. Learn how to secure your Meteor app: http://guide.meteor.com/security.html
   4. Figure out when we should do a big marketing push with the initial release
 
 ## Standup 2nd Dec
