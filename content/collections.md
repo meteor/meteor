@@ -60,9 +60,9 @@ const todo = Todos.findOne({_id: 'my-todo'});
 console.log(todo);
 ```
 
-The way that you move data from the server (and MongoDB-backed) collection into the client (in-memory) collection is the subject of the "data loading" article. But, generally speaking, you use a *subscription* to a *publication* to push data from the server to the client. Usually, you can assume that the client contains an up-to-date copy of some subset of the full MongoDB collection.
+The way that you move data from the server (and MongoDB-backed) collection into the client (in-memory) collection is the subject of the [data loading article](data-loading.md). But, generally speaking, you use a *subscription* to a *publication* to push data from the server to the client. Usually, you can assume that the client contains an up-to-date copy of some subset of the full MongoDB collection.
 
-To write data back to the server, you use a *method*, the subject of the "methods and forms" article.
+To write data back to the server, you use a *method*, the subject of the [methods article](methods.html).
 
 <h3 id="local-collections">Local collections</h3>
 
@@ -93,7 +93,7 @@ Lists.schema = new SimpleSchema({
 
 In this example, from the Todos app, we are doing a few things that are interesting:
 
-1. We attach the schema to the namespace of `Lists` directly. This allows us to check things against the schema of a list directly (rather than via inserting into the DB, see below), such as in a form (see the forms article).
+1. We attach the schema to the namespace of `Lists` directly. This allows us to check things against the schema of a list directly (rather than via inserting into the DB, see below), such as in a form (see the [methods article](methods.html)).
 2. We specify that the `name` field of a list must be a string, and must exist.
 3. We specify the `incompleteCount` is a number, which on insertion is set to `0` if not otherwise specified.
 4. We specify that the `userId`, which is optional, must be a string matching an Id regular expression.
@@ -131,7 +131,7 @@ Then the `validate()` call will throw a `ValidationError` which contains details
 
 <h3 id="validation-error">The `ValidationError`</h3>
 
-What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the "Methods and Forms" article, we'll see more about how this works.
+What is a [`ValidationError`](https://github.com/meteor/validation-error/)? It's a special error that is used in Meteor to indicate a user-input based error in modifying a collection. Typically, the details on a `ValidationError` are used to mark up a form with information about what inputs don't match the schema. In the [methods article](methods.html), we'll see more about how this works.
 
 <h2 id="schema-design">Designing your data schema</h2>
 
@@ -158,7 +158,7 @@ In Meteor, it's often less of a problem doing this than it would be in a typical
 
 However, given that MongoDB prior to version 3.2 doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
 
-In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do (see the "Forms and Methods" article for a discussion of patterns to do this).
+In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do (see the methods article for a discussion of patterns to do this).
 
 Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
 

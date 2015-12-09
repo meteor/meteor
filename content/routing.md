@@ -85,7 +85,7 @@ Note that all of the values in `params` and `queryParams` are always strings sin
 
 Flow Router makes a variety of information available via (reactive and otherwise) functions on the global singleton `FlowRouter` (this is the same object that we attached routes to above). As the user navigates around your app, the values of these functions will change (reactively in some cases) correspondingly.
 
-Like any other global singleton in your application (see the X article for info about stores), it's best to limit your access to `FlowRouter`. That way the parts of your app with remain modular and more independent. In the case of `FlowRouter`, it's best to access it solely from the top of your component hierarchy, either in the "page" component, or the layouts that wrap it (see below).
+Like any other global singleton in your application (see the [data loading](data-loading.html#stores) for info about stores), it's best to limit your access to `FlowRouter`. That way the parts of your app with remain modular and more independent. In the case of `FlowRouter`, it's best to access it solely from the top of your component hierarchy, either in the "page" component, or the layouts that wrap it (see below).
 
 <h3 id="current-route">The current route</h3>
 
@@ -174,7 +174,7 @@ What this means is that whenever a user visits a URL of the form `/lists/X`, the
 
 Notice that we called the component to be rendered `listsShowPage` (rather than `listShow`). This indicates that this template is rendered directly by a Flow Router action and forms the 'top' of the rendering hierarchy for this URL.
 
-The `listShowPage` template will render *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `listShowPage` template is very tied to it's environment (the route it's rendered under), and so it needs to be a smart component (see the article on [UI/UX](ui-ux.html) for more about smart and pure components).
+The `listShowPage` template will render *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `listShowPage` template is very tied to its environment (the route it's rendered under), and so it needs to be a smart component (see the article on [UI/UX](ui-ux.html) for more about smart and reusuable components).
 
 It makes sense for a "page" smart component like `listShowPage` to:
 

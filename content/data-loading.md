@@ -118,19 +118,19 @@ Subscribing to data puts it in your client-side collections. To use the data in 
 
 2. Fetch the data as close as possible to where you subscribe to it.
 
-  We do this for the same reason we subscribe in the template in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child template, as we'll see in in the {% post_link ui-ux "UI/UX Article"%}.
+  We do this for the same reason we subscribe in the template in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child template, as we'll see in in the [UI Article](ui-ux.html#components).
 
   Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template hierarchy as an argument to each template. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes templates harder to test.
 
 <h3 id="global-subscriptions">Global subscriptions</h3>
 
-One place where you might be tempted to not subscribe inside a template is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the {% post_link accounts "Accounts Article" %}) that you need on every screen of your app.
+One place where you might be tempted to not subscribe inside a template is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the [Accounts Article](accounts.html)) that you need on every screen of your app.
 
 However, it's generally a good idea to use a layout template (which you wrap all your templates in) to subscribe to this subscription anyway. It's better to be consistent about such things, and it makes for a more flexible system if you ever decide you have a screen that *doesn't* need that data.
 
 <h2 id="patterns">Patterns for data loading</h2>
 
-Across Meteor applications, there are some common patterns of data loading and and management on the client side that are worth knowing. We'll go into more detail about some of these in the {% post_link ui-ux "UI/UX Article" %}.
+Across Meteor applications, there are some common patterns of data loading and and management on the client side that are worth knowing. We'll go into more detail about some of these in the [UI/UX Article](ui-ux.html).
 
 <h3 id="readiness">Subscription readiness</h3>
 

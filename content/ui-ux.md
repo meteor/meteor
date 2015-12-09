@@ -44,7 +44,7 @@ The advantages of reusable components are the following:
   - Your collections, as well as the `Meteor.users` collection,
   - Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
   - Current route information
-  - Any other client-side data stores (see XXX not sure which article? maybe this one)
+  - Any other client-side data stores (read more in the [data loading article](data-loading.html#stores))
 
 <h3 id="smart-components">Smart Components</h3>
 
@@ -144,7 +144,7 @@ Even if you aren't saving data over the wire to the database on every user input
 
 <h2 id="ux-patterns">User Experience Patterns</h2>
 
-There are some common user experience (UX---as in how your app behaves) patterns that are typical to most Meteor apps that are worth exploring here. These patterns relate heavily to the way the data the user is interacting with is subscribed to and published, so there are similar sections in the {data loading article} talking about the way the publications are set up.
+There are some common user experience (UX---as in how your app behaves) patterns that are typical to most Meteor apps that are worth exploring here. These patterns relate heavily to the way the data the user is interacting with is subscribed to and published, so there are similar sections in the [data loading article](data-loading.html#patterns) talking about the way the publications are set up.
 
 <h3 id="subscription-readiness">Subscription readiness</h3>
 
@@ -211,7 +211,7 @@ This is one reason why being able to achieve any state at will in the component 
 
 <h3 id="pagination">Pagination</h3>
 
-In the [Data Loading article](data-loading.md) we discuss a pattern of paging through an "infinite scroll" type subscription which increases one page at a time as a user steps through data in your application. It's interesting to consider UX patterns to both consume that data and indicate what's happening to the user.
+In the [Data Loading article](data-loading.html) we discuss a pattern of paging through an "infinite scroll" type subscription which increases one page at a time as a user steps through data in your application. It's interesting to consider UX patterns to both consume that data and indicate what's happening to the user.
 
 <h4 id="list-component">A list component</h4>
 
