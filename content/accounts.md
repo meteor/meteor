@@ -1,4 +1,6 @@
-# Users and Accounts
+---
+title: Users and Accounts
+---
 
 ## Features in core Meteor
 
