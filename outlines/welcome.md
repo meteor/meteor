@@ -9,9 +9,9 @@
   1. Data on the Wire. Meteor doesn't send HTML over the network. The server sends data and lets the client render it.
   1. One Language. Meteor lets you write both the client and the server parts of your application in JavaScript.
   1. Database Everywhere. You can use the same methods to access your database from the client or the server.
-  1. Latency Compensation. On the client, Meteor prefetches data and simulates models to make it look like server method calls return instantly.
+  1. Optimistic UI. On the client, Meteor prefetches data and simulates models to make it look like server method calls return instantly.
   1. Full Stack Reactivity. In Meteor, realtime is the default. All layers, from database to template, update themselves automatically when necessary.
-  1. Embrace the Ecosystem. Meteor is open source and integrates with existing open source tools and frameworks.
+  1. Embrace the Ecosystem. Meteor is open source and integrates with existing open source tools and frameworks, with a strong core of community packages.
   1. Simplicity Equals Productivity. The best way to make something seem simple is to have it actually be simple. Meteor's main functionality has clean, classically beautiful APIs.
 4. Guide concepts
   1. Developed in the open, PRs encouraged
@@ -25,7 +25,5 @@
     The best place to ask (and answer!) technical questions is on Stack Overflow. Be sure to add the meteor tag to your question.
   3. FORUMS
     Visit the Meteor discussion forumsto announce projects, get help, talk about the community, or discuss changes to core.
-  4. GITHUB
-    The core code is on GitHub. If you're able to write code or file issues, we'd love to have your help. Please read Contributing to Meteor for how to get started.
-  5. THE METEOR MANUAL
-    In-depth articles about the core components of Meteor can be found on the Meteor Manual. The first article is about Tracker, our transparent reactivity framework. More articles (covering topics like Blaze, Unibuild, and DDP) are coming soon!
+  4. DOCS
+  5. ATMOSPHERE
