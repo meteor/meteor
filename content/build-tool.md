@@ -4,39 +4,39 @@ title: Build system
 
 The Meteor build system is the actual command line tool that you get when you install Meteor. You run it by typing the `meteor` command in your terminal, possibly followed by a set of arguments. Read the [docs about the command line tool](http://docs.meteor.com/#/full/commandline) or type `meteor help` in your terminal to learn about all of the commands.
 
-## What does it do?
+<h2 id="what-it-does">What does it do?</h2>
 
 The Meteor build tool is what compiles, runs, deploys, and publishes all of your Meteor apps and packages. It's Meteor's built-in solution to the problems also solved by tools like Grunt, Gulp, Webpack, Browserify, Nodemon, and many others, and uses many popular Node.js tools like Babel and UglifyJS internally to enable a seamless experience.
 
-### Reloads app on file change
+<h3 id="reload-on-file-change">Reloads app on file change</h3>
 
 When you run `meteor`, the tool starts up, and you should leave it running continuously while developing your app. The tool automatically detects any relevant file changes and recompiles the necessary changes, restarting your client or server environment if needed.
 
-### Compiles files with build plugins
+<h3 id="compiles-with-build-plugins">Compiles files with build plugins</h3>
 
 The main function of the Meteor build tool is to run "build plugins" - these plugins define different parts of your app build process. Meteor puts heavy emphasis on reducing or removing build configuration files, so you won't see any large build process config files like you would in Gulp or Webpack. The Meteor build process is configured almost entirely through adding and removing packages to your app, and putting files in specially named directories. For example, to get all of the newest stable ES2015 JavaScript features in your app, you just add the `ecmascript` package. As new Meteor releases add new features to this package, you'll get them for free.
 
-### Combines and minifies code
+<h3 id="concatenate-and-minify">Combines and minifies code</h3>
 
 Another important feature of the Meteor build tool is that it automatically concatenates and minifies all of your files in production mode. This is enabled by the `standard-minifiers` package, which is in all Meteor apps by default. If you need different minification behavior, you can replace this package. Below, we'll talk about how to switch out your minifier to add PostCSS to your build process.
 
-### Development vs. production
+<h3 id="dev-vs-prod">Development vs. production</h3>
 
 Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to just the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, run `meteor build` and then deploy the resulting app bundle. Read more in the [production deployment article](XXX).
 
-## Using community packages
+<h2 id="using-packages">Using community packages</h2>
 
 Building an application completely from scratch is a tall order. This is one of the main reasons you might consider using Meteor in the first place - you can focus on writing the code that is specific to your app, instead of reinventing wheels like user login and data synchronization. To streamline your workflow even further, it makes sense to use community packages from Atmosphere and NPM. Many of these packages are recommended in the guide, and you can find more in the online directories.
 
-#### A note about Bower
+<h4 id="bower">A note about Bower<h4>
 
 Don't use Bower XXX link to some article explaining that people are moving to NPM for client-side JS and original maintainer left? Uri will find an article and help write justification here
 
-### Atmosphere
+<h3 id="atmosphere">Atmosphere</h3>
 
 [Atmosphere](https://atmospherejs.com/) is a repository and discovery website for Meteor-specific packages. Packages are published on Atmosphere when they need to take advantage of features specific to Meteor, like the cross-platform build system, isomorphic client/server code, or data system.
 
-#### Adding packages to your app
+<h4 id="atmosphere-adding">Adding packages to your app</h4>
 
 You have two options for adding packages from Atmosphere to your app:
 
@@ -49,7 +49,7 @@ Regardless of how you add the package to your app, its actual version will be tr
 
 If your app is running when you add a new package, Meteor will automatically download it and restart your app for you.
 
-#### Searching for packages
+<h4 id="atmosphere-searching">Searching for packages</h4>
 
 There are a few ways to search for Meteor packages published to Atmosphere:
 
@@ -59,11 +59,11 @@ There are a few ways to search for Meteor packages published to Atmosphere:
 
 The main Atmosphere website provides additional curation features like trending packages, package stars, and flags, but some of the other options can be faster if you're trying to find a specific package. For example, you can use `meteor show kadira:flow-router` from the command line to see the description of that package and different available versions.
 
-#### Package naming
+<h4 id="atmosphere-naming">Package naming</h4>
 
 You may notice that, with the exception of Meteor platform packages, all packages on Atmosphere have a name of the form `prefix:name`. The prefix is the name of the organization or user that published the package. Meteor uses such a convention of package naming to make sure that it's clear who has published a certain package, and to avoid an ad-hoc namespacing convention. Meteor platform packages do not have any `prefix:`.
 
-#### Overriding packages from Atmosphere with a local version
+<h4 id="atmosphere-overriding">Overriding packages from Atmosphere with a local version</h4>
 
 A Meteor app can load packages in one of three ways:
 
@@ -77,29 +77,29 @@ If you need to patch a package to do something that the published version doesn'
 
 One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package pre-installed.
 
-### NPM
+<h3 id="npm">NPM</h3>
 
 [NPM](http://npmjs.com/) is the most popular package repository for JavaScript packages. Historically, NPM was only used for publishing server-side Node.js packages, but is now used for a much wider variety of packages, including client/server JavaScript utilities, React components, Angular directives, and more.
 
-#### Adding packages to your app
+<h4 id="npm-adding">Adding packages to your app</h4>
 
 As of Meteor 1.3, NPM packages work seamlessly with Meteor.
 
 XXX to be filled in by talking with Ben
 
-#### Searching for packages
+<h4 id="npm-searching">Searching for packages</h4>
 
 The best way to find NPM packages is by searching on [npmjs.com](https://www.npmjs.com/). There are also some websites that have special search features specifically for certain kinds of packages, like the aptly named [react-components.com](http://react-components.com/).
 
-#### Handling callbacks in Meteor
+<h4 id="npm-callbacks">Handling callbacks in Meteor</h4>
 
 XXX link to package building article? Or move that content here. Perhaps it should be here since building packages will be a power user only thing in 1.3?
 
-## JavaScript transpilation
+<h2 id="javascript-transpilation">JavaScript transpilation</h2>
 
 These days, the landscape of JavaScript tools and frameworks is constantly shifting, and the language itself is evolving just as rapidly. It's no longer reasonable to wait for web browsers to implement the language features you want to use. Most JavaScript development workflows rely on compiling code to work on the lowest common denominator of environments, while letting you use the newest features in development. Meteor has support for some of the most popular tools out of the box.
 
-### ES2015+
+<h3 id="es2015">ES2015+</h3>
 
 ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. Additionally, as browser support for these features improves, we'll be able to scale back the amount of compilation necessary.
 
@@ -113,7 +113,7 @@ All of the code samples in this guide and future Meteor tutorials will use all o
 - [Set up Sublime Text for ES2015](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
 - [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
 
-### CoffeeScript
+<h3 id="coffeescript">CoffeeScript</h3>
 
 While we recommend using ES2015 with the `ecmascript` package as the best development experience for Meteor, everything in the platform is 100% compatible with [CoffeeScript](http://coffeescript.org/) and many people in the Meteor community prefer it.
 
@@ -125,39 +125,39 @@ meteor add coffeescript
 
 All code written in CoffeeScript compiles to JavaScript under the hood, and is completely compatible with any code in other packages that is written in JS or ES2015.
 
-### TypeScript
+<h3 id="typescript">TypeScript</h3>
 
 XXX get Uri to write this section
 
-## Templates and HTML
+<h2 id="blaze-templates">Templates and HTML</h2>
 
 Since Meteor uses client-side rendering for your app's UI, all of your HTML code, UI components, and templates need to be compiled to JavaScript. There are a few options at your disposal to write your UI code.
 
-### Blaze HTML templates
+<h3 id="blaze-spacebars">Blaze HTML templates</h3>
 
 The aptly named `blaze-html-templates` package that comes with every new Meteor app by default compiles your `.html` files written using [Spacebars](XXX blaze article) into Blaze-compatible JavaScript code. You can also add `blaze-html-templates` to any of your packages to compile template files located in the package.
 
-### Blaze Jade templates
+<h3 id="blaze-jade">Blaze Jade templates</h3>
 
 If you don't like the Spacebars syntax Meteor uses by default and want something more concise, you can give Jade a try by using [`mquandalle:jade`](https://atmospherejs.com/mquandalle/jade). This package will compile all files in your app with the `.jade` extension into Blaze-compatible code, and can be used side-by-side with `blaze-html-templates` if you want to have some of your code in Spacebars and some in Jade.
 
-### JSX for React
+<h3 id="react-jsx">JSX for React</h3>
 
 If you're building your app's UI with React, currently the most popular way to write your UI components involves JSX, an extension to JavaScript that allows you to type HTML tags that are converted to React DOM elements. To enable JSX compilation, simply add the `jsx` package to your app; you can also use the `react` meta-package which will include `jsx` for you.
 
-#### Other options for React
+<h4 id="react-other">Other options for React</h4>
 
 If you want to use React but don't want to deal with JSX and prefer a more HTML-like syntax, there are a few community options available. One that stands out in particular is [Blaze-React](https://github.com/timbrandin/blaze-react), which simulates the entire Blaze API using React as a rendering engine.
 
-### Angular templates
+<h3 id="angular-templates">Angular templates</h3>
 
 XXX Uri will write this
 
-## CSS pre-processors
+<h2 id="css">CSS pre-processors</h2>
 
 It's no secret that writing raw CSS can often be a hassle - there's no way to share common CSS code between different selectors or have a consistent color scheme between different elements. CSS compilers or pre-processors solve these issues by adding extra features on top of the CSS language like variables, mixins, math, and more, and in some cases also significantly change the syntax of CSS to be easier to read and write.
 
-### Sass, Less, or Stylus?
+<h3 id="css-which-preprocessor">Sass, Less, or Stylus?</h3>
 
 There are three CSS pre-processors that are particularly popular right now:
 
@@ -169,7 +169,7 @@ They all have their pros and cons, and different people have different preferenc
 
 CSS framework compatibility should be a primary concern when picking a pre-processor, because a framework written with Less won't be compatible with one written in Sass.
 
-### Source vs. import files
+<h3 id="css-source-vs-import">Source vs. import files</h3>
 
 An important feature shared by all of the available CSS pre-processors is the ability to import files. This lets you split your CSS into smaller pieces, and provides a lot of the same benefits that you get from JavaScript modules:
 
@@ -184,7 +184,7 @@ An "import" file is evaluated only if imported from some other file, and can be 
 
 Read the documentation for each package listed below to see how to indicate which files are source files vs. imports.
 
-### Importing from a package
+<h3 id="css-importing-from-package">Importing from a package</h3>
 
 In all three Meteor-supported CSS pre-processors, you can import files from packages using a special syntax:
 
@@ -200,19 +200,19 @@ You can also import files with an absolute path in the app by using `{}` instead
 
 Read the documentation for your favorite CSS pre-processor package to learn more about the details.
 
-### Sass
+<h3 id="sass">Sass</h3>
 
 The best Sass build plugin for Meteor is [`fourseven:scss`](https://atmospherejs.com/fourseven/scss).
 
-### Less
+<h3 id="less">Less</h3>
 
 Less is maintained as a [Meteor core package called `less`](https://atmospherejs.com/meteor/less).
 
-### Stylus
+<h3 id="stylus">Stylus</h3>
 
 Stylus is maintained as a [Meteor core package called `stylus`](https://atmospherejs.com/meteor/stylus).
 
-## PostCSS and Autoprefixer
+<h2 id="postcss">PostCSS and Autoprefixer</h2>
 
 In addition to CSS pre-processors like Sass, Less, and Stylus, there is now an ecosystem of CSS post-processors. Regardless of which CSS pre-processor you use, a post-processor can give you additional benefits like cross-browser compatibility.
 
@@ -220,11 +220,11 @@ The most popular CSS post-processor right now is [PostCSS](https://github.com/po
 
 Currently, Meteor doesn't have a separate build step for post-processing CSS, so the only way to integrate it is to build it into the minifier. Thankfully, there is a community package that has integrated PostCSS with plugin support into a replacement for Meteor's standard minification package.
 
-### juliancwirko:postcss
+<h3 id="juliancwirko-postcss">juliancwirko:postcss</h3>
 
 Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. It's not completely trivial to set it up, and we hope to make support for PostCSS a more core part of Meteor in the future. Read the documentation for the package to get the steps to add it to your app; we won't reproduce the instructions here since they might change in future versions.
 
-## Minification
+<h2 id="minification">Minification</h2>
 
 The current best practice for deploying web production applications is to concatenate and minify all of your app assets. This lets you add all of the comments and whitespace you want to your source code, and split it into as many files as is necessary without worrying about app performance.
 
