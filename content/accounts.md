@@ -192,7 +192,7 @@ If you've ever needed to deal with sending pretty HTML emails from an app, you k
 
 ## OAuth login
 
-In the past, it was a huge headache to get Facebook or Google login to work with your app. Thankfully, most popular login providers have standardized around some version of [OAuth](https://en.wikipedia.org/wiki/OAuth). Meteor supports some of the most popular login services out of the box, and you can easily add your own using the underlying OAuth packages.
+In the distant past, it could have been a huge headache to get Facebook or Google login to work with your app. Thankfully, most popular login providers have standardized around some version of [OAuth](https://en.wikipedia.org/wiki/OAuth), and Meteor supports some of the most popular login services out of the box.
 
 ### Facebook, Google, and more
 
