@@ -7,6 +7,8 @@ function validateExtraFeatures(extraFeatures) {
       modules: Match.Optional(Boolean),
       // Modify options to enable async/await syntax powered by Fibers.
       meteorAsyncAwait: Match.Optional(Boolean),
+      // Modify options to enable async/await syntax powered by Promises and Regenerator.
+      asyncAwait: Match.Optional(Boolean),
       // Modify options to enable React/JSX syntax.
       react: Match.Optional(Boolean),
       // Improve compatibility in older versions of Internet Explorer.
