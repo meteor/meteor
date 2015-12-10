@@ -113,10 +113,75 @@ Just follow one simple rule: don't query the database by `username` or `email` d
 
 ### Email flows
 
-When you have a login system for your app based on user emails, that opens up the possibility for email-based account flows:
+When you have a login system for your app based on user emails, that opens up the possibility for email-based account flows. The common thing between all of these workflows is that they involve sending a unique link to the user's email address, which does something special when it is clicked. Let's look at some common examples that Meteor's `accounts-password` package supports out of the box:
 
-1. Password reset
-1. User enrollment
-1. Email verification
+1. **Password reset.** When the user clicks the link in their email, they are taken to a page where they can enter a new password for their account.
+1. **User enrollment.** A new user is created by an administrator, but no password is set. When the user clicks the link in their email, they are taken to a page where they can set a new password for their account. Very similar to password reset.
+1. **Email verification.** When the user clicks the link in their email, the application records that this email does indeed belong to the correct user.
 
-The common thing between all of these workflows is that they involve sending a unique link to the user's email address, which does something special when it is clicked.
+Here, we'll talk about how to manage the whole process manually from start to finish.
+
+#### Working email flow out of the box
+
+If you want something that just works out of the box, you can either use `accounts-ui` which does everything for you, or `useraccounts`, which we'll explain in more detail in the next section. Only follow the directions below if you definitely want to build all parts of the email flow yourself.
+
+#### Sending the email
+
+`accounts-password` comes with handy functions that you can call from the server to send an email. They are named for exactly what they do:
+
+1. [`Accounts.sendResetPasswordEmail`](http://docs.meteor.com/#/full/accounts_sendresetpasswordemail)
+2. [`Accounts.sendEnrollmentEmail`](http://docs.meteor.com/#/full/accounts_sendenrollmentemail)
+3. [`Accounts.sendVerificationEmail`](http://docs.meteor.com/#/full/accounts_sendverificationemail)
+
+The email is generated using the email templates from [Accounts.emailTemplates](http://docs.meteor.com/#/full/accounts_emailtemplates), and include links generated with `Accounts.urls`. We'll go into more detail about customizing the email content and URL later.
+
+#### Identifying when the link is clicked
+
+When the user receives the email and clicks the link inside, their web browser will take them to your app. Now, you need to be able to identify these special links and act appropriately. If you haven't customized the link URL, then you can use some built-in callbacks to identify when the app is in the middle of an email flow. When these callbacks are triggered, Meteor's accounts system enters a special state that can only be exited by calling the `done` function that is passed into the registered callback.
+
+1. [`Accounts.onResetPasswordLink`](http://docs.meteor.com/#/full/Accounts-onResetPasswordLink)
+2. [`Accounts.onEnrollmentLink`](http://docs.meteor.com/#/full/Accounts-onEnrollmentLink)
+3. [`Accounts.onEmailVerificationLink`](http://docs.meteor.com/#/full/Accounts-onEmailVerificationLink)
+
+If you have customized the URL, you will need to add a new route to your router that handles the URL you have specified.
+
+#### Displaying an appropriate UI and completing the process
+
+Now that you know that the user is attempting to reset their password, set an initial password, or verify their email, you should display an appropriate UI to allow them to do so. For example, you might want to show a page with a form for the user to enter their new password.
+
+When the user submits the form, you need to call the appropriate function to commit their change to the database. Each of these functions takes the new value and the token you got from the event in the previous step.
+
+1. [`Accounts.resetPassword`](http://docs.meteor.com/#/full/accounts_resetpassword) - this one should be used both for resetting the password, and enrolling a new user; it accepts both kinds of tokens.
+2. [`Accounts.verifyEmail`](http://docs.meteor.com/#/full/accounts_verifyemail)
+
+After you are have called one of the two functions above or the user has cancelled the process, call the `done` function you got in the link callback. This will tell Meteor to get out of the special state it enters when you're doing one of the email account flows.
+
+### Customizing accounts emails
+
+You will probably want to customize the emails `accounts-password` will send on your behalf. This can be easily done through the [`Accounts.emailTemplates` API](http://docs.meteor.com/#/full/accounts_emailtemplates). Below is some example code from the Todos app:
+
+```js
+Accounts.emailTemplates.siteName = "Meteor Guide Todos Example";
+Accounts.emailTemplates.from = "Meteor Todos Accounts <accounts@example.com>";
+
+Accounts.emailTemplates.resetPassword = {
+  subject(user) {
+    return "Reset your password on Meteor Todos";
+  },
+  text(user, url) {
+    return `Hello!
+Click the link below to reset your password on Meteor Todos.
+${url}
+If you didn't request this email, please ignore it.
+Thanks,
+The Meteor Todos team
+`
+  }
+};
+```
+
+As you can see, we can use the ES2015 template string functionality to generate a multi-line string that includes the password reset URL. We can also set a custom `from` address and email subject.
+
+#### HTML emails
+
+If you've ever needed to deal with sending pretty HTML emails from an app, you know that it can quickly become a nightmare. Compatibility of popular email clients with basic HTML features like CSS is notoriously spotty, so it is hard to author something that works at all. Start with a [responsive email template](https://github.com/leemunroe/responsive-html-email-template) or [framework](http://foundation.zurb.com/emails/email-templates.html), and then use a tool to convert your email content into something that is compatible with all email clients. [This blog post by Mailgun covers some of the main issues with HTML email.](http://blog.mailgun.com/transactional-html-email-templates/)
