@@ -1,5 +1,7 @@
 ## v1.3
 
+XXX organize in sections
+
 * Enable ES2015 and CommonJS modules in Meteor apps and packages, on
   both client and server. Also let you install modules in apps and
   package by running `npm install`. XXX link to paper document
@@ -30,6 +32,9 @@
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
+* Don't crash when calling `ReactiveDict.prototype.clear` if a
+  property with a value wasn't previously accessed. #5530 #5602
+
 * Split up `standard-minifiers` in separate CSS
   (`standard-minifiers-css`) and JS minifiers
   (`standard-minifiers-js`). `standard-minifiers` now acts as an
@@ -49,15 +54,42 @@
 * Fix empty object argument check in `this.subscribe` in
   templates. #5620
 
+* Make `HTTP.call` not crash on undefined content. #5565 #5601
+
 * Return observe handle from
   `Mongo.Collection.prototype._publishCursor`. #4983 #5615
 
-XXX stopped at commit 25f4859f54fc5cbc0a7756a4576ab54ad80e0965 when
-running the command `git log release/METEOR@1.2.1...`
+* Add 'Did you mean?' reminders for some CLI commands to help Rails
+  developers. #5593
+
+* Make internal shell scripts compatible with other Unix-like
+  systems. #5585
+
+* Add a `_pollingInterval` option to `coll.find()` that can be used in
+  conjunction with `_disableOplog: true`. #5586
+
+* Don't always download a new version of a Cordova app when it is
+  first run.
+
+* In Cordova apps, `Meteor.startup()` now correctly waits for the
+  device to be ready before firing the callback.
+
+* Expose Tinytest internals which can be used to extend it. #3541
+
+* Report full file paths on compiler errors when using the
+  `ecmascript` package. #5551
+
+* Let users set the CAFILE environment variable to override the SSL
+  root certificate list. #4757 #5523
+
+* Improve error message from `check` when passing in null. #5545
+
+* Detect new Facebook user-agent in the `spiderable` package. #5516
 
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
-bySabi...
+bySabi, mbrookes, TomFreudenberg, TechPlexEngineer, zacharydenton,
+AlexeyMK, gwendall, dandv.
 
 
 ## v.1.2.1, 2015-Oct-26
