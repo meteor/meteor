@@ -25,6 +25,10 @@
     7. Meteor Developer Accounts
     8. Getting extra data from the OAuth services
     8. Building your own OAuth login handler
+3. Accessing user data
+    1. Meteor.userId() and Meteor.user() on the client
+    2. this.userId on the server
+    3. Meteor.users collection
 5. The useraccounts package for a production-grade login UI
     1. Pick the right package based on your CSS framework
     2. Get help from splendido to flesh out this section - just the basics, then link to the docs

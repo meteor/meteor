@@ -74,7 +74,7 @@ meteor add accounts-password
 
 To see what options are available to you, read the complete description of the [`accounts-password` API in the Meteor docs](http://docs.meteor.com/#/full/accounts_passwords).
 
-### Requiring username, email, or both
+### Requiring username or email
 
 Be default, the `Accounts.createUser` function provided by `accounts-password` allows you to create an account with a username, email, or both. Most apps expect a specific combination of the two, so you will certainly want to validate the new user creation:
 
@@ -97,7 +97,7 @@ Accounts.validateNewUser((user) => {
 });
 ```
 
-### Dealing with multiple email addresses
+### Multiple emails
 
 Often, users might want to associate multiple email addresses with the same account. `accounts-password` addresses this case by storing the email addresses as an array in the user collection. There are some handy API methods to deal with [adding](http://docs.meteor.com/#/full/Accounts-addEmail), [removing](http://docs.meteor.com/#/full/Accounts-removeEmail), and [verifying](http://docs.meteor.com/#/full/accounts_verifyemail) emails.
 
@@ -185,3 +185,44 @@ As you can see, we can use the ES2015 template string functionality to generate 
 #### HTML emails
 
 If you've ever needed to deal with sending pretty HTML emails from an app, you know that it can quickly become a nightmare. Compatibility of popular email clients with basic HTML features like CSS is notoriously spotty, so it is hard to author something that works at all. Start with a [responsive email template](https://github.com/leemunroe/responsive-html-email-template) or [framework](http://foundation.zurb.com/emails/email-templates.html), and then use a tool to convert your email content into something that is compatible with all email clients. [This blog post by Mailgun covers some of the main issues with HTML email.](http://blog.mailgun.com/transactional-html-email-templates/)
+
+## OAuth login
+
+In the past, it was a huge headache to get Facebook or Google login to work with your app. Thankfully, most popular login providers have standardized around some version of [OAuth](https://en.wikipedia.org/wiki/OAuth). Meteor supports some of the most popular login services out of the box, and you can easily add your own using the underlying OAuth packages.
+
+### Facebook, Google, and more
+
+Here's a complete list of login providers for which Meteor provides core packages:
+
+1. Facebook with `accounts-facebook`
+2. Google with `accounts-google`
+3. GitHub with `accounts-github`
+4. Twitter with `accounts-twitter`
+5. Meetup with `accounts-meetup`
+6. Meteor Developer Accounts with `accounts-meteor-developer`
+
+There is a core package for logging in with Weibo, but it is no longer being actively maintained.
+
+### Logging in
+
+If you are using an off-the-shelf login UI like `accounts-ui` or `useraccounts`, you don't need to write any code after adding the relevant package from the list above. If you are building a login experience from scratch, you can log in programmatically using the [`Meteor.loginWith<Service>`](http://docs.meteor.com/#/full/meteor_loginwithexternalservice) function. It looks like this:
+
+```js
+Meteor.loginWithFacebook({
+  requestPermissions: ['user_friends', 'public_profile', 'email']
+}, (err) => {
+  if (err) {
+    // handle error
+  } else {
+    // successful login!
+  }
+});
+```
+
+### Configuring OAuth
+
+There are a few points to know about configuring OAuth login:
+
+1. **Client ID and secret.** It's best to keep your OAuth secret keys outside of your source code, and pass them in is through Meteor.settings. Read how in the [Security article](security.html#api-keys-oauth).
+2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using.
+3. **Permissions.** Each login service provider should have documentation about which permissions are available. For example, [here is the page for Facebook](https://developers.facebook.com/docs/facebook-login/permissions). If you want additional permissions to the user's data when they log in, pass some of these strings in the `requestPermissions` option to `Meteor.loginWithFacebook`. In the next section we'll talk about how to retrieve that data.
