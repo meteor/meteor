@@ -4,12 +4,12 @@ title: Code style
 
 After reading this article, you'll know:
 
-1. The benefits of having a consistent code style across your organization and the Meteor community
+1. The benefits of having a style guide for your code, consistent across your organization and the Meteor community
 2. Meteor's recommended JavaScript code style
 3. How to set up JavaScript linting for your code
 4. How to name all of the different parts of a Meteor app
 
-<h2 id="benefits-consistent-style">Benefits of consistent style</h2>
+<h2 id="benefits-style">Benefits of consistent style</h2>
 
 Countless hours have been spent by developers throughout the years arguing over single vs. double quotes, where to put brackets, how many spaces to type, and all kinds of other cosmetic code style questions. These are all questions that have at best a tangential relationship to code quality, but are very easy to have opinions about because they are so visual.
 
@@ -36,17 +36,15 @@ if (condition) {
 secondStatement();
 ```
 
-<h3 id="standard-tools">Use standard tools</h3>
+<h3 id="automatic-error-checking">Automatic error checking</h3>
 
-Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are block-scoped. That means one less thing to thing about when reading code.
+Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are scoped the way you expect. That means you can avoid bugs where variables act in unexpected ways. Also, by enforcing that all variables are declared before use, you can easily catch typos before even running any code!
 
-If your whole organization uses the same tool to check code, you can more easily read code written by anyone else. If we can standardize across the Meteor community, this will also be the case for open source projects and tutorials! In this article, we'll give suggestions for standard linter and transpiler configurations for Meteor.
+<h3 id="deeper-understanding">Deeper understanding</h3>
 
-<h3 id="code-samples">Use code samples directly</h3>
+It's hard to learn everything about a programming language at once. For example, programmers new to JavaScript often struggle with the `var` keyword and function scope. Using a community-recommended coding style with automatic linting can warn you about these pitfalls proactively. This means you can jump right into coding without learning about all of the edge cases of JavaScript ahead of time.
 
-If you're using the standard Meteor style guide, you can more easily understand and copy code samples from the Meteor Guide, documentation, tutorials, example apps, and more, without having to reformat them first.
-
-For the reasons above and more, we believe that the overall benefits of having a consistent style outweigh opinions on the individual decisions. For this reason, we've adopted a very popular JavaScript style guide from AirBnB basically as-is. We think the Meteor version is a bit clearer and removes some unnecessary content, but most things are the same.
+As you write more code and come up against the recommended style rules, you can take that as an opportunity to learn more about your programming language and how different people prefer to use it.
 
 <h2 id="javascript">JavaScript style</h2>
 
