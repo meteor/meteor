@@ -96,19 +96,11 @@ XXX link to package building article? Or move that content here. Perhaps it shou
 
 These days, the landscape of JavaScript tools and frameworks is constantly shifting, and the language itself is evolving just as rapidly. It's no longer reasonable to wait for web browsers to implement the language features you want to use. Most JavaScript development workflows rely on compiling code to work on the lowest common denominator of environments, while letting you use the newest features in development. Meteor has support for some of the most popular tools out of the box.
 
-### ES2015+
+### Recommended: ES2015+
 
-ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. Additionally, as browser support for these features improves, we'll be able to scale back the amount of compilation necessary.
+The recommended JavaScript programming environment in Meteor is to use new ES2015 JavaScript language features for all of your code. This is supported by the `ecmascript` package, which is included in all new apps by default, and transpiles all `.js` files in your app so that you can use new ES2015 features like arrow functions while maintaining complete compatibility with older browsers and environments.
 
-The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://github.com/meteor/meteor/tree/master/packages/ecmascript#supported-es2015-features).
-
-To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array#forEach` without worrying about which browsers support them.
-
-All of the code samples in this guide and future Meteor tutorials will use all of the new ES2015 features, so we won't add any new code samples here. You can also read more about ES2015 and how to get started with it on the Meteor Blog:
-
-- [Getting started with ES2015 and Meteor](http://info.meteor.com/blog/es2015-get-started)
-- [Set up Sublime Text for ES2015](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
-- [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
+Read more about Meteor's recommended JavaScript style in the [Code Style article](code-style.md).
 
 ### CoffeeScript
 

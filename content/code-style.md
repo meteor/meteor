@@ -54,9 +54,17 @@ Here at Meteor, we strongly believe that JavaScript is the best language to buil
 
 <h3 id="ecmascript">Use the `ecmascript` package</h3>
 
-Meteor comes with a core package called `ecmascript` that transpiles all `.js` files in your app to support a stable list of modern JavaScript standards that are reliable for production use. This means that not all cutting-edge features, like function decorators or generators, are supported; we think it's best to only build your app on standards that are good bets for future browser support.
+ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. Additionally, as browser support for these features improves, we'll be able to scale back the amount of compilation necessary.
 
-For a complete list of ES2015 features we support, consult the [`ecmascript` package README](https://atmospherejs.com/meteor/ecmascript).
+The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://github.com/meteor/meteor/tree/master/packages/ecmascript#supported-es2015-features).
+
+To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array#forEach` without worrying about which browsers support them.
+
+All of the code samples in this guide and future Meteor tutorials will use all of the new ES2015 features. You can also read more about ES2015 and how to get started with it on the Meteor Blog:
+
+- [Getting started with ES2015 and Meteor](http://info.meteor.com/blog/es2015-get-started)
+- [Set up Sublime Text for ES2015](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
+- [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
 
 <h3 id="style-guide">Follow the Meteor JavaScript style guide</h3>
 
