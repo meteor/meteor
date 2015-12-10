@@ -176,6 +176,10 @@ If you didn't request this email, please ignore it.
 Thanks,
 The Meteor Todos team
 `
+  },
+  html(user, url) {
+    // This is where HTML email content would go.
+    // See the section about html emails below.
   }
 };
 ```
@@ -226,3 +230,175 @@ There are a few points to know about configuring OAuth login:
 1. **Client ID and secret.** It's best to keep your OAuth secret keys outside of your source code, and pass them in is through Meteor.settings. Read how in the [Security article](security.html#api-keys-oauth).
 2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using.
 3. **Permissions.** Each login service provider should have documentation about which permissions are available. For example, [here is the page for Facebook](https://developers.facebook.com/docs/facebook-login/permissions). If you want additional permissions to the user's data when they log in, pass some of these strings in the `requestPermissions` option to `Meteor.loginWithFacebook`. In the next section we'll talk about how to retrieve that data.
+
+### Calling service API for more data
+
+If your app supports or even requires login with an external service such as Facebook, it's natural to also want to use that service's API to request additional data about that user. For example, you might want to get a list of a Facebook user's photos.
+
+First, you'll need to request the relevant permissions when logging in the user. See the section above for how to pass those options.
+
+Then, you need to get the user's access token. You can find this token in the `Meteor.users` collection under the `services` field. For example, if you wanted to get a particular user's Facebook access token:
+
+```js
+// Given a userId, get the user's Facebook access token
+const user = Meteor.users.findOne(userId);
+const fbAccessToken = user.services.facebook.accessToken;
+```
+
+For more details about the data stored in the user database, read the section below about accessing user data.
+
+Now that you have the access token, you need to actually make a request to the appropriate API. Here you have two options:
+
+1. Use the `http` package to access the service's API directly. You'll probably need to pass the access token from above in a header. For details you'll need to search the API documentation for the service.
+2. Use a package from Atmosphere or NPM that wraps the API into a nice JavaScript interface. For example, if you're trying to load data from Facebook you could use the [fbgraph](https://www.npmjs.com/package/fbgraph) NPM package. Read more about how to use NPM with your app in the [Build System article](build-tool.html#npm).
+
+## Loading and displaying user data
+
+Meteor's accounts system, as implemented in `accounts-base`, also includes a database collection and generic functions for getting data about users.
+
+### Currently logged in user
+
+Once a user is logged into your app with one of the methods described above, it is useful to be able to identify which user is logged in, and get the data provided during the registration process.
+
+#### On the client: Meteor.userId()
+
+For code that runs on the client, the global `Meteor.userId()` reactive function will give you the ID of the currently logged in user.
+
+In addition to that core API, there are some helpful shorthand helpers: `Meteor.user()`, which is exactly equal to calling `Meteor.users.findOne(Meteor.userId())`, and the `{{currentUser}}` Blaze helper that returns the value of `Meteor.user()`.
+
+Note that there is a benefit to restricting the places you access the current user to make your UI more testable and modular. Read more about this in the [UI article](ui-ux.html#global-stores).
+
+#### On the server: this.userId
+
+On the server, each connection has a different logged in user, so there is no global logged-in user state by definition. Since Meteor tracks the environment for each Method call, you can still use the `Meteor.userId()` global, which returns a different value depending on which Method you call it from, but you can run into edge cases when dealing with asynchronous code. Also, `Meteor.userId()` won't work inside publications.
+
+We suggest using the `this.userId` property on the context of Methods and publications instead, and passing that around through function arguments to wherever you need it.
+
+```js
+// Accessing this.userId inside a publication
+Meteor.publish('Lists.private', function() {
+  if (!this.userId) {
+    return this.ready();
+  }
+
+  return Lists.find({
+    userId: this.userId
+  }, {
+    fields: Lists.publicFields
+  });
+});
+```
+
+```js
+// Accessing this.userId inside a Method
+Meteor.methods({
+  'Todos.methods.updateText'({ todoId, newText }) {
+    new SimpleSchema({
+      todoId: { type: String },
+      newText: { type: String }
+    }).validate({ todoId, newText }),
+
+    const todo = Todos.findOne(todoId);
+
+    if (!todo.editableBy(this.userId)) {
+      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+        'Cannot edit todos in a private list that is not yours');
+    }
+
+    Todos.update(todoId, {
+      $set: { text: newText }
+    });
+  }
+});
+```
+
+### The Meteor.users collection
+
+Meteor comes with a default MongoDB collection for user data. It's stored in the database under the name `users`, and is accessible in your code through `Meteor.users`. The schema of a user document in this collection will depend on which login service was used to create the account. Here's an example of a user that created their account with `accounts-password`:
+
+```js
+{
+  "_id": "DQnDpEag2kPevSdJY",
+  "createdAt": "2015-12-10T22:34:17.610Z",
+  "services": {
+    "password": {
+      "bcrypt": "XXX"
+    },
+    "resume": {
+      "loginTokens": [
+        {
+          "when": "2015-12-10T22:34:17.615Z",
+          "hashedToken": "XXX"
+        }
+      ]
+    }
+  },
+  "emails": [
+    {
+      "address": "ada@lovelace.com",
+      "verified": false
+    }
+  ]
+}
+```
+
+Here's what the same user would look like if they instead logged in with Facebook:
+
+```js
+{
+  "_id": "Ap85ac4r6Xe3paeAh",
+  "createdAt": "2015-12-10T22:29:46.854Z",
+  "services": {
+    "facebook": {
+      "accessToken": "XXX",
+      "expiresAt": 1454970581716,
+      "id": "XXX",
+      "email": "ada@lovelace.com",
+      "name": "Ada Lovelace",
+      "first_name": "Ada",
+      "last_name": "Lovelace",
+      "link": "https://www.facebook.com/app_scoped_user_id/XXX/",
+      "gender": "female",
+      "locale": "en_US",
+      "age_range": {
+        "min": 21
+      }
+    },
+    "resume": {
+      "loginTokens": [
+        {
+          "when": "2015-12-10T22:29:46.858Z",
+          "hashedToken": "XXX"
+        }
+      ]
+    }
+  },
+  "profile": {
+    "name": "Sashko Stubailo"
+  }
+}
+```
+
+There are a few things to be aware of when dealing with this collection:
+
+1. User documents in the database have secret data like access keys and hashed passwords. When publishing user data to the client, be extra careful not to include anything that client shouldn't be able to see.
+2. DDP, Meteor's data publication protocol, only knows how to resolve conflicts in top-level fields. This means that you can't have one publication send `services.facebook.first_name` and another send `services.facebook.locale` - one of them will win, and only one of the fields will actually be available on the client. The best way to fix this is to denormalize the data you want onto custom top-level fields, as described in the section about custom user data below.
+3. The OAuth login service packages populate `profile.name`. If you plan on using this, make sure to deny client-side writes to `profile`. See the section about the `profile` field on users below.
+4. When finding users by email or username, make sure to use the case-insensitive functions provided by `accounts-password`. See the section about case-sensitivity above for more details.
+
+## Custom data about users
+
+As your app gets more complex, you will invariably need to store some data about individual users, and the most natural place to put that data is in additional fields on the `Meteor.users` collection described above. In a more normalized data situation it would be a good idea to keep Meteor's user data and yours in two separate tables, but since MongoDB doesn't deal well with data associations it makes sense to just use one collection.
+
+### Add top-level fields onto the user document
+
+
+
+### Don't use profile
+
+
+### Publishing custom data
+
+// avoid publishing secrets
+
+### Avoid nested objects
