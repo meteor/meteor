@@ -1,5 +1,7 @@
 ## Standup 9th Dec
 
+With Zol, Matt, Tom, Sashko.
+
 Agenda:
 
 1. Guide social promotion tasks from Dan
@@ -11,6 +13,30 @@ Agenda:
     3. Learn how to secure your Meteor app: http://guide.meteor.com/security.html
   4. Figure out when we should do a big marketing push with the initial release
 2. Talk about 7 principles with Matt
+3. Mid-dec soft release, what is it?
+4. Blaze?
+
+### Notes
+
+- App Structure and Code Style split.
+- Sashko to work with Tim on code style.
+- Forms not started yet.
+- Tom is working on welcome outline.
+- Split up testing article into Test Runner CI, and how to test methods/other individual components will go into their own section.
+- Definitely in the Guide is for 1.3 mindset.
+- Line up guide preview release roughly with 1.3 preview release.
+- Stick to our goals of initial draft releases by mid Dec.
+- Eventually move to a world where API docs are purely generated from jsdoc
+- We're recommending Blaze, you can use React & Angular, not recommending them as a first choice because of existing packages.
+- Where do we tell people how to use javascript? Don't need to do it in the guide, link to a great resource.
+- Testing: We'll have guidance for end to end tests. Assuming modules get done nicely and have everything we need we'll have testing for the guide.
+- What happens to specs for modules and testing so that guide can sync up with features that are coming.
+
+### Action Items
+
+- Take a crack at 250-400 words at what Meteor is from the point of a Developer. Maybe distill some updated principles.
+- Quietly drop 7 prinicples under a deprecated commit.
+- Matt to get design docs for testing and modules.
 
 ## Standup 2nd Dec
 
