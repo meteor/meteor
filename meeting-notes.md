@@ -10,6 +10,7 @@ Agenda:
     2. Read our recommendations about routing in Meteor: http://guide.meteor.com/routing.html
     3. Learn how to secure your Meteor app: http://guide.meteor.com/security.html
   4. Figure out when we should do a big marketing push with the initial release
+2. Talk about 7 principles with Matt
 
 ## Standup 2nd Dec
 
