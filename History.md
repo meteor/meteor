@@ -1,18 +1,63 @@
-## v.NEXT
+## v1.3
+
+* Enable ES2015 and CommonJS modules in Meteor apps and packages, on
+  both client and server. Also let you install modules in apps and
+  package by running `npm install`. XXX link to paper document
+
+* Enable ES2015 generators and ES2016 async/await in the `ecmascript`
+  package.
+
+* Don't throw in certain cases when calling a template helper with an
+  empty data context. #5411 #5736
+
+* Remove warning in the `simple-todos-react` example app. #5716
+
+* Upgrade to Node v0.10.41.
+
+* Fix interaction bwteen `browser-policy` and `oauth` packages. #5628
+
+* Add README.md to the `tinytest` package. #5750
+
+* Allow all types of URLs that npm supports in `Npm.depends`
+  declarations.
+
+* Make `Accounts.forgotPassword` treat emails as case insensitive, as
+  the rest of the accounts system does.
+
+* Inherit static getters and setters in subclasses, when using the
+  `ecmascript` package. #5624
 
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
-* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS
-  minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these
-  2 minifiers.
+* Split up `standard-minifiers` in separate CSS
+  (`standard-minifiers-css`) and JS minifiers
+  (`standard-minifiers-js`). `standard-minifiers` now acts as an
+  umbrella package for these 2 minifiers.
 
-* Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It
-  will now error if referenced from the client at all.
+* Move `DDPRateLimiter` to the server only, since it won't work if it
+  is called from the client. It will now error if referenced from the
+  client at all.
 
 * Allow `git+` URL schemes for npm dependencies #844
 
-Patches contributed by GitHub users vereed, ...
+* Allow piping commands to `meteor shell` via STDIN. #5575
+
+* Don't call function more than once when passing a `Match.Where`
+  argument to `check`. #5630 #5651
+
+* Fix empty object argument check in `this.subscribe` in
+  templates. #5620
+
+* Return observe handle from
+  `Mongo.Collection.prototype._publishCursor`. #4983 #5615
+
+XXX stopped at commit 25f4859f54fc5cbc0a7756a4576ab54ad80e0965 when
+running the command `git log release/METEOR@1.2.1...`
+
+Patches contributed by GitHub users vereed, mitar, nathan-muir,
+robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
+bySabi...
 
 
 ## v.1.2.1, 2015-Oct-26
