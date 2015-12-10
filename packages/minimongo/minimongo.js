@@ -562,6 +562,9 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
+    // Dirty queries will be recomputed in `resumeObservers`
+    // Theoretically, we can never have a dirty query, unless we're paused.
+    if (query.dirty) continue;
     var matchResult = query.matcher.documentMatches(doc);
     if (matchResult.result) {
       if (query.distances && matchResult.distance !== undefined)
@@ -647,6 +650,8 @@ LocalCollection.prototype.remove = function (selector, callback) {
     var removeId = remove[i];
     var removeDoc = self._docs.get(removeId);
     _.each(self.queries, function (query, qid) {
+      if (query.dirty) return;
+
       if (query.matcher.documentMatches(removeDoc).result) {
         if (query.cursor.skip || query.cursor.limit)
           queriesToRecompute.push(qid);
@@ -824,6 +829,8 @@ LocalCollection.prototype._modifyAndNotify = function (
   var matched_before = {};
   for (var qid in self.queries) {
     var query = self.queries[qid];
+    if (query.dirty) continue;
+
     if (query.ordered) {
       matched_before[qid] = query.matcher.documentMatches(doc).result;
     } else {
@@ -839,6 +846,8 @@ LocalCollection.prototype._modifyAndNotify = function (
 
   for (qid in self.queries) {
     query = self.queries[qid];
+    if (query.dirty) continue;
+
     var before = matched_before[qid];
     var afterMatch = query.matcher.documentMatches(doc);
     var after = afterMatch.result;
