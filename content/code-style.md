@@ -166,13 +166,31 @@ Note that imports use relative paths, and include the file extension at the end 
 
 <h3 id="templates-and-components">Templates and components</h3>
 
+Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores:
+
+```html
+<template name="Lists_show">
+  ...
+</template>
+```
+
+If this template is a "smart" component that loads server data and accesses the router, append `_page` to the name:
+
+```html
+<template name="Lists_show_page">
+  ...
+</template>
+```
+
 Often when you are dealing with templates or UI components, you'll have several closely coupled files to manage. They could be two or more of HTML, CSS, and JavaScript. In this case, we recommend putting the files together in the same directory with the same name:
 
 ```
-# The listShow template from the Todos example app has 3 files:
-listShow.html
-listShow.js
-listShow.less
+# The Lists_show template from the Todos example app has 3 files:
+show.html
+show.js
+show.less
 ```
 
-If you are writing your UI in React, you can do the same with the JSX and CSS for your component.
+The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure in the [Application Structure article](XXX).
+
+If you are writing your UI in React, you don't need to use the underscore-split names because you can import and export your components using the JavaScript module system.
