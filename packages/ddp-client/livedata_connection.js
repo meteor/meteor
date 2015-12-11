@@ -1227,7 +1227,8 @@ _.extend(Connection.prototype, {
 
     // Sometimes we'll need to disable deferred batching
     //  to make the livedata tests readable / synchronous.
-    if (self._updatesBatchingInterval === 0) {
+    // Also, it's more responsive to flush batches when subscriptions start / end
+    if (self._updatesBatchingInterval === 0 || msg.msg === "nosub" || msg.msg === "ready") {
       self._processBatchedUpdates();
       return;
     }
