@@ -654,7 +654,7 @@ class PackageSourceBatch {
       });
     }
 
-    if (false && cacheFilename) {
+    if (cacheFilename) {
       let diskCached = null;
       try {
         diskCached = files.readJSONOrNull(cacheFilename);
