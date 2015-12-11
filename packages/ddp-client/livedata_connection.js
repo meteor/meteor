@@ -178,7 +178,7 @@ var Connection = function (url, options) {
   // if we're blocking a migration, the retry func
   self._retryMigrate = null;
 
-  self.__processBatchedUpdates = _.bind(self._processBatchedUpdates, self);
+  self.__processBatchedUpdates = Meteor.bindEnvironment(self._processBatchedUpdates, "livedata batch", self);
   // Collection name -> array of messages.
   self._batchedUpdates = {};
   // When current batching of a updates started, in ms timestamp.
