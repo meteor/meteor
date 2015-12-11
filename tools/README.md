@@ -125,11 +125,11 @@ In the case that your `self-test` spawns a test app, it is as well possible
 to debug the new `meteor` call. A debugger will be listening to the port after
 the one given in the `TOOL_NODE_FLAGS` environment variable.
 
-For example
+For example,
 ```bash
-TOOL_NODE_FLAGS="--debug-brk=6060" ./meteor self-test 'custom minifier - devel vs prod'
+TOOL_NODE_FLAGS="--debug-brk=5858" ./meteor self-test 'custom minifier - devel vs prod'
 ```
-will break on the first line in the test runner and expose a debugger on the
+will break on the first line of the test runner and expose a debugger on the
 port 5858. After the execution is continued, it will spawn a test application
 that will break in the first line, exposing the debugger in port 5859. The
 way to access the debuggers using `node-inspector` usually is opening the urls
