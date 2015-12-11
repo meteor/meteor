@@ -1225,6 +1225,13 @@ _.extend(Connection.prototype, {
       self._processOneDataMessage(msg, self._batchedUpdates);
     }
 
+    // Sometimes we'll need to disable deferred batching
+    //  to make the livedata tests readable / synchronous.
+    if (self._updatesBatchingInterval === 0) {
+      self._processBatchedUpdates();
+      return;
+    }
+
     if (self._batchedUpdatesStart === null) {
       self._batchedUpdatesStart = new Date().valueOf();
     }
