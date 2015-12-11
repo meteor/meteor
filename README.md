@@ -1,6 +1,6 @@
 # Meteor Guide
 
-[![Articles complete](https://badge.waffle.io/meteor/guide.svg?label=ready&title=Articles%20Complete)](https://waffle.io/meteor/guide?label=article)
+[![Articles drafted](https://badge.waffle.io/meteor/guide.svg?label=status:%20first%20draft&title=Articles%20Drafted)](https://waffle.io/meteor/guide?label=article)
 
 We're tracking [our progress](https://waffle.io/meteor/guide?label=article) using Waffle.io.
 
