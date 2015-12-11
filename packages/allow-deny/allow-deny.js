@@ -70,8 +70,9 @@ CollectionPrototype.deny = function(options) {
   addValidator(this, 'deny', options);
 };
 
-CollectionPrototype._defineMutationMethods = function() {
+CollectionPrototype._defineMutationMethods = function(options) {
   const self = this;
+  options = options || {};
 
   // set to true once we call any allow or deny methods. If true, use
   // allow/deny semantics. If false, use insecure mode semantics.
@@ -99,12 +100,26 @@ CollectionPrototype._defineMutationMethods = function() {
   // "Meteor:Mongo:insert/NAME"?
   self._prefix = '/' + self._name + '/';
 
-  // mutation methods
-  if (self._connection) {
+  // Mutation Methods
+  // Minimongo on the server gets no stubs; instead, by default
+  // it wait()s until its result is ready, yielding.
+  // This matches the behavior of macromongo on the server better.
+  // XXX see #MeteorServerNull
+  if (self._connection && (self._connection === Meteor.server || Meteor.isClient)) {
     const m = {};
 
     _.each(['insert', 'update', 'remove'], function (method) {
-      m[self._prefix + method] = function (/* ... */) {
+      const methodName = self._prefix + method;
+
+      if (options.useExisting) {
+        const handlerPropName = Meteor.isClient ? '_methodHandlers' : 'method_handlers';
+        // Do not try to create additional methods if this has already been called.
+        // (Otherwise the .methods() call below will throw an error.)
+        if (self._connection[handlerPropName] &&
+          typeof self._connection[handlerPropName][methodName] === 'function') return;
+      }
+
+      m[methodName] = function (/* ... */) {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
         const args = _.toArray(arguments);
@@ -183,12 +198,8 @@ CollectionPrototype._defineMutationMethods = function() {
         }
       };
     });
-    // Minimongo on the server gets no stubs; instead, by default
-    // it wait()s until its result is ready, yielding.
-    // This matches the behavior of macromongo on the server better.
-    // XXX see #MeteorServerNull
-    if (Meteor.isClient || self._connection === Meteor.server)
-      self._connection.methods(m);
+
+    self._connection.methods(m);
   }
 };
 
