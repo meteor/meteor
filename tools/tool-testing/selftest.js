@@ -826,6 +826,26 @@ _.extend(Sandbox.prototype, {
     if (!self.warehouse && release.current.isProperRelease()) {
       env.METEOR_TEST_LATEST_RELEASE = release.current.name;
     }
+
+    // When --debug or --debug-brk are set in env variable TOOL_NODE_FLAGS, the
+    // new spawn process will have the port set to port + 1, in order to avoid
+    // collisions trying to bind multiple times the same port.
+    var TOOL_NODE_FLAGS = process.env.TOOL_NODE_FLAGS;
+    if (typeof TOOL_NODE_FLAGS !== 'undefined') {
+      let args = TOOL_NODE_FLAGS.match(/"[^"]+"|'[^']+'|\S+/g).map(arg => {
+        let isIncludedInArg = v => arg.indexOf(v) > -1;
+
+        if (_.any(['--debug', '--debug-brk'], isIncludedInArg)) {
+          let opt = arg.split('=')[0],
+              port = Number(arg.split('=')[1]) || 5858;
+          return opt + '=' + (port + 1);
+        } else { 
+          return arg;
+        }
+      });
+      env.TOOL_NODE_FLAGS = args.join(' ');
+    }
+
     return env;
   },
 
