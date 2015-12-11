@@ -66,7 +66,7 @@ Apart from simple interpolation, mustache tags can control flow of the template.
 
 This snippet illustrates a few things:
 
- - The `{{#each in}}` block helper which renders a block one per element in an array or cursor, or an `{{else}}` block if no items exist.
+ - The `{{#each .. in}}` block helper which renders a block one per element in an array or cursor, or an `{{else}}` block if no items exist.
  - Template inclusion `{{> todosItem (todoArgs todo)}}` which renders the `todosItem` component with a set data context, based on the output of the `todosArg` helper.
 
 You can read about the full Spacebars syntax [here](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md), but in this section we'll attempt to cover some important finer details.
@@ -91,6 +91,8 @@ Template.todosItem.helpers({
   }
 });
 ```
+
+Note that to get the keyword arguments, you need to read them off the `hash` property of the final argument to the helper. This is a little awkward, so in general it's usually easier not to use them.
 
 You can also pass the output of a helper to a template inclusion or other helper. To do so, use brackets to show precedence:
 
@@ -137,7 +139,7 @@ Template.foo.helpers({
 ```
 
 <h3 id="rendering-html">Rendering pure HTML</h3>
-Although by default a mustache tag won't render any HTML, for [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting) security reasons, you can render pure HTML with the triple-mustache: `{{{`.
+Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{{{`.
 
 ```html
 {{{myHtml}}}
@@ -154,7 +156,7 @@ Template.foo.helpers({
 You should be extremely careful about doing this, and always ensure you aren't returning user-generated content (or escape it if you do!) from such a helper.
 
 <h3 id="block-helpers">Block Helpers</h3>
-A block helper, called with `{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{{#each in}}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *component* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{{#if}}` helper with:
+A block helper, called with `{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{{#each .. in}}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *component* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{{#if}}` helper with:
 
 ```html
 <template name="myIf">
@@ -189,14 +191,15 @@ The `{{#if}}` and `{{#unless}}` helpers are fairly straightforward but invaluabl
 
 <h4 id="each-in">Each-in</h4>
 
-The `{{#each in}}` helper is a convenient way to step over a list whilst retaining the outer data context. 
+The `{{#each .. in}}` helper is a convenient way to step over a list whilst retaining the outer data context. 
 
 ```html
 {{#each todo in todos}}
+  {{#each tag in todo.tags}}
+    <!-- in here, both todo and tag are in scope -->
+  {{/each}}
 {{/each}}
 ```
-
-In this case `todo` will be added to the template scope within the block, but all the existing data context items (`list` and `todosReady` in this case) will remain available.
 
 <h4 id="let">Let</h4>
 The `{{#let}}` helper is useful to capture the output of a helper or document subproperty within a template:
@@ -229,8 +232,6 @@ Examples below will reference the `listShow` component from the Todos example ap
 
 <h3 id="validate-data-context">Validate data contexts</h3>
 In order to ensure your component is only used in the way you expect, you should validate the data context provided to it. The data context provides the inputs to the component and so should be checked.
-
-XXX: this does not yet work
 
 You can do this in the components `onCreated()` callback, like so:
 
