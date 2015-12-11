@@ -1,10 +1,6 @@
 Package.describe({
   name: "promise",
-  // This should probably correspond to the NPM package version, but
-  // we already bumped it once.  Let's try to get back on track? But
-  // honestly soon enough this package will probably be replaced by a
-  // direct dependency on the NPM library.
-  version: "0.5.1_1",
+  version: "0.5.2-modules.0",
   summary: "ECMAScript 2015 Promise polyfill with Fiber support",
   git: "https://github.com/meteor/promise",
   documentation: "README.md"

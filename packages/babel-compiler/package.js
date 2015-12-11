@@ -2,8 +2,11 @@ Package.describe({
   name: "babel-compiler",
   summary: "Parser/transpiler for ECMAScript 2015+ syntax",
   // Tracks the npm version below.  Use wrap numbers to increment
-  // without incrementing the npm version.
-  version: '5.8.24_2'
+  // without incrementing the npm version.  Hmm-- Apparently this
+  // isn't possible because you can't publish a non-recommended
+  // release with package versions that don't have a pre-release
+  // identifier at the end (eg, -dev)
+  version: '5.8.25-modules.0'
 });
 
 Npm.depends({
