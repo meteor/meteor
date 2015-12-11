@@ -455,6 +455,32 @@ It's not uncommon to want to reuse code between two otherwise unrelated componen
 <h3 id="composition">Composition</h3>
 If possible, it's usually best to try and abstract out the reusable part of the two components that need to share functionality. If you are used to following patterns to [create reusable components](#reusable-components), then it should be simple to reuse those components in many places. 
 
+For instance, suppose you have many places in your application where you need an input to blur itself when you click the "esc" key. If you were building a autocomplete widget that also wanted this functionality, you could compose a `blurringInput` inside your `autocompleteInput`:
+
+```html
+<template name="autocompleteInput">
+  {{> blurringInput name=name value=currentValue}}
+</template>
+```
+
+XXX: we are violating our own rule here and reading into the sub-component. But there's no real mechanism to pass through generic event handlers in Blaze
+  
+```js
+Template.autocompleteInput.helpers({
+  currentValue() {
+    // perform complex logic to determine the auto-complete's current text value
+  }
+});
+
+Template.autocompleteInput.events({
+  'change input': function(event, instance) {
+    // read the current value out of the input, potentially change the value
+  }
+});
+```
+
+By making the `blurringInput` flexible and resuable, we can avoid re-implementing functionality in the `autocompleteInput`.
+
 <h3 id="utility-libraries">Utility libraries</h3>
 It's usually best to keep your view layer as "skinny" as possible and contain a component to whatever specific task it specifically needs to do. If there's heavy lifting involved (such as complicated rendering logic), it often makes sense to abstract it out into a utility library that simply deals with the logic alone and doesn't deal with the Blaze system at all. 
 
