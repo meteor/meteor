@@ -89,6 +89,7 @@ Uma das ferramentas de teste que é muito usada pelo Meteor no Github e não foi
 * http://webtempest.com/meteor-js-testing
 * http://jasmine.github.io/2.1/introduction.html
 * http://udgwebdev.com/configurando-meteor-e-velocity-no-travis-ci/
+* https://meteorhacks.com/travis-ci-support-for-meteor-packages
 
 
 ## FEUP ESOF MIEIC
