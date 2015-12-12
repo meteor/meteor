@@ -1,6 +1,6 @@
 ## v1.3
 
-XXX organize in sections
+### ES2015/Modules
 
 * Enable ES2015 and CommonJS modules in Meteor apps and packages, on
   both client and server. Also let you install modules in apps and
@@ -9,44 +9,66 @@ XXX organize in sections
 * Enable ES2015 generators and ES2016 async/await in the `ecmascript`
   package.
 
-* Don't throw in certain cases when calling a template helper with an
-  empty data context. #5411 #5736
-
-* Remove warning in the `simple-todos-react` example app. #5716
-
-* Upgrade to Node v0.10.41.
-
-* Fix interaction bwteen `browser-policy` and `oauth` packages. #5628
-
-* Add README.md to the `tinytest` package. #5750
-
-* Allow all types of URLs that npm supports in `Npm.depends`
-  declarations.
-
-* Make `Accounts.forgotPassword` treat emails as case insensitive, as
-  the rest of the accounts system does.
-
 * Inherit static getters and setters in subclasses, when using the
   `ecmascript` package. #5624
+
+* Report full file paths on compiler errors when using the
+  `ecmascript` package. #5551
+
+### Performance
 
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
-* Don't crash when calling `ReactiveDict.prototype.clear` if a
-  property with a value wasn't previously accessed. #5530 #5602
+### Platform
+
+* Upgrade to Node v0.10.41.
+
+* Allow all types of URLs that npm supports in `Npm.depends`
+  declarations.
 
 * Split up `standard-minifiers` in separate CSS
   (`standard-minifiers-css`) and JS minifiers
   (`standard-minifiers-js`). `standard-minifiers` now acts as an
   umbrella package for these 2 minifiers.
 
+* Allow piping commands to `meteor shell` via STDIN. #5575
+
+* Let users set the CAFILE environment variable to override the SSL
+  root certificate list. #4757 #5523
+
+### Cordova
+
+* Don't always download a new version of a Cordova app when it is
+  first run.
+
+* In Cordova apps, `Meteor.startup()` now correctly waits for the
+  device to be ready before firing the callback.
+
+### Accounts
+
+* Make `Accounts.forgotPassword` treat emails as case insensitive, as
+  the rest of the accounts system does.
+
+### Blaze
+
+* Don't throw in certain cases when calling a template helper with an
+  empty data context. #5411 #5736
+
+### Uncategorized
+
+* Remove warning in the `simple-todos-react` example app. #5716
+
+* Fix interaction bwteen `browser-policy` and `oauth` packages. #5628
+
+* Add README.md to the `tinytest` package. #5750
+
+* Don't crash when calling `ReactiveDict.prototype.clear` if a
+  property with a value wasn't previously accessed. #5530 #5602
+
 * Move `DDPRateLimiter` to the server only, since it won't work if it
   is called from the client. It will now error if referenced from the
   client at all.
-
-* Allow `git+` URL schemes for npm dependencies #844
-
-* Allow piping commands to `meteor shell` via STDIN. #5575
 
 * Don't call function more than once when passing a `Match.Where`
   argument to `check`. #5630 #5651
@@ -68,19 +90,7 @@ XXX organize in sections
 * Add a `_pollingInterval` option to `coll.find()` that can be used in
   conjunction with `_disableOplog: true`. #5586
 
-* Don't always download a new version of a Cordova app when it is
-  first run.
-
-* In Cordova apps, `Meteor.startup()` now correctly waits for the
-  device to be ready before firing the callback.
-
 * Expose Tinytest internals which can be used to extend it. #3541
-
-* Report full file paths on compiler errors when using the
-  `ecmascript` package. #5551
-
-* Let users set the CAFILE environment variable to override the SSL
-  root certificate list. #4757 #5523
 
 * Improve error message from `check` when passing in null. #5545
 
