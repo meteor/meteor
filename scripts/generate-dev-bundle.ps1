@@ -3,7 +3,7 @@
 $PLATFORM = "windows_x86"
 $MONGO_VERSION = "2.6.7"
 $NODE_VERSION = "0.10.41"
-$NPM_VERSION = "1.4.9"
+$NPM_VERSION = "3.5.2"
 
 # take it form the environment if exists
 if (Test-Path env:PLATFORM) {
@@ -51,14 +51,6 @@ rm -Recurse -Force $npm_zip
 
 # add bin to the front of the path so we can use our own node for building
 $env:PATH = "${DIR}\bin;${env:PATH}"
-
-mkdir "${DIR}\bin\npm3"
-cd "${DIR}\bin\npm3"
-echo "{}" | Out-File package.json -Encoding ascii # otherwise it doesn't install in local dir
-npm install npm@3.1.2
-
-# add bin\npm3 to the front of the path so we can use npm 3 for building
-$env:PATH = "${DIR}\bin\npm3;${env:PATH}"
 
 # npm depends on a hardcoded file path to node-gyp, so we need this to be
 # un-flattened
@@ -118,9 +110,6 @@ cp "$DIR\mongodb\$mongo_name\bin\mongo.exe" $DIR\mongodb\bin
 
 rm -Recurse -Force $mongo_zip
 rm -Recurse -Force "$DIR\mongodb\$mongo_name"
-
-# Remove npm 3 before we package the dev bundle
-rm -Recurse -Force "${DIR}\bin\npm3"
 
 cd $DIR
 
