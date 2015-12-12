@@ -15,6 +15,12 @@
 
 ## Introdução
 
+## Identificação da Feature
+
+## Identificação dos componentes que implementam a feature
+
+## Submissão de um Pull Request
+
 ## Referências
 
 * http://stackoverflow.com/questions/7381150/how-to-send-an-email-from-javascript
