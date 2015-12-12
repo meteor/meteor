@@ -1,5 +1,8 @@
+sudo: required
 language: node_js
-node_js:
-  - "0.10"
-before_install:
-  - "curl -L http://git.io/ejPSng | /bin/sh"
+node_js: - "0.10"
+install:
+- "curl https://install.meteor.com | /bin/sh"
+- "meteor update"
+script:
+- "meteor --test --once"
