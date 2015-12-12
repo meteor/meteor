@@ -17,7 +17,7 @@
 
 Como objetivo deste relatório, iremos apresentar uma interpretação da evolução do software através do que nos foi proposto pela unidade curricular de ESOF. Começamos por identificar e evoluir uma feature para o **Meteor** sem que as restantes funcionalidades fossem quebradas. Para conclusão do relatório, irá ser submetido um patch onde poderá ser aceite (ou não) pelo **Meteor**.
 
-Na fase inicial da unidade curricular de ESOF, foi nos proposto escolher um projeto do Github, no qual, o grupo não previa que nos iria ser pedido contribuir com uma nova feature para o mesmo. O **Meteor** já contém vários anos de projeto com um vasto número de contribuidores e features, o que significa que contem bastantes ficheiros e packages complexos. Assim, foi nos complicado escolher uma nova feature para este projeto.
+Na fase inicial da unidade curricular de ESOF, foi nos proposto escolher um projeto do [Github](https://github.com/), no qual, o grupo não previa que nos iria ser pedido contribuir com uma nova feature para o mesmo. O **Meteor** já contém vários anos de projeto com um vasto número de contribuidores e features, o que significa que contém bastantes ficheiros e packages complexos. Assim, foi nos complicado escolher uma nova feature para este projeto.
 
 ## Identificação da Feature
 
