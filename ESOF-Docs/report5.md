@@ -15,14 +15,19 @@
 
 ## Introdução
 
+Como objetivo deste relatório, iremos apresentar uma interpretação da evolução do software através do que nos foi proposto pela unidade curricular de ESOF. Começamos por identificar e evoluir uma feature para o **Meteor** sem que as restantes funcionalidades fossem quebradas. Para conclusão do relatório, irá ser submetido um patch onde poderá ser aceite (ou não) pelo **Meteor**.
+
+Na fase inicial da unidade curricular de ESOF, foi nos proposto escolher um projeto do Github, no qual, o grupo não previa que nos iria ser pedido contribuir com uma nova feature para o mesmo. O **Meteor** já contém vários anos de projeto com um vasto número de contribuidores e features, o que significa que contem bastantes ficheiros e packages complexos. Assim, foi nos complicado escolher uma nova feature para este projeto.
+
 ## Identificação da Feature
+
+O repositório do **Meteor** no [Github](https://github.com/meteor/meteor) fornece o projeto open-source, no qual, podemos pesquisar e corrigir possíveis erros que o programa poderá ter. Após analisado, tivemos a ideia de implementar uma nova linha de comando que nos indicava as mudanças de versão para versão do programa **Meteor**. Apesar de o ["log"](https://github.com/meteor/meteor/blob/devel/History.md) ser fornecido no repositório para todos visualizarem, criamos o comando "meteor --about" que nos indicava essas mudanças. Para simplicidade da feature, achamos apenas indicar as mudanças da versão mais recente porque o "log" é extenso para ser visualizado no prompt de comando. 
 
 ## Identificação dos componentes que implementam a feature
 
 ## Submissão de um Pull Request
 
 ## Referências
-
 
 
 ## FEUP ESOF MIEIC
