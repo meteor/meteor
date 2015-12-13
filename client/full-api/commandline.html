@@ -369,6 +369,27 @@ maintainers and setting a homepage for a package. It also includes various
 helpful functions for managing a Meteor release.  Run `meteor help admin` for
 more information.
 
+<h3 id="meteorshell">meteor shell</h3>
+
+When `meteor shell` is executed in an application directory where a server
+is already running, it connects to the server and starts an interactive
+shell for evaluating server-side code.
+
+Multiple shells can be attached to the same server. If no server is
+currently available, `meteor shell` will keep trying to connect until it
+succeeds.
+
+Exiting the shell does not terminate the server. If the server restarts
+because a change was made in server code, or a fatal exception was
+encountered, the shell will restart along with the server. This behavior
+can be simulated by typing `.reload` in the shell.
+
+The shell supports tab completion for global variables like `Meteor`,
+`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+
+The shell maintains a persistent history across sessions. Previously-run
+commands can be accessed by pressing the up arrow.
+
 
 {{/markdown}}
 </div>
