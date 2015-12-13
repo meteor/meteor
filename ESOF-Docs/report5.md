@@ -27,6 +27,8 @@ O repositório do **Meteor** no [Github](https://github.com/meteor/meteor) forne
 
 ## Submissão de um Pull Request
 
+Após a implementação da feature, foi feito o [pull request](https://github.com/meteor/meteor/pull/5793) para o repositório do Github.
+
 ## Referências
 
 
