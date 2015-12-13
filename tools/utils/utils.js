@@ -154,7 +154,9 @@ exports.getHost = function (...args) {
     //   scutil --get ComputerName
     // This can contain spaces. See
     // http://osxdaily.com/2012/10/24/set-the-hostname-computer-name-and-bonjour-name-separately-in-os-x/
-    if (! ret) attempt("scutil", "--get", "ComputerName");
+    if (! ret) {
+      attempt("scutil", "--get", "ComputerName");
+    }
   }
 
   if (archinfo.matches(archinfo.host(), 'os.osx') ||
@@ -162,13 +164,17 @@ exports.getHost = function (...args) {
     // On Unix-like platforms, try passing -s to hostname to strip off
     // the domain name, to reduce the extent to which the output
     // varies with DNS.
-    if (! ret) attempt("hostname", "-s");
+    if (! ret) {
+      attempt("hostname", "-s");
+    }
   }
 
   // Try "hostname" on any platform. It should work on
   // Windows. Unknown platforms that have a command called "hostname"
   // that deletes all of your files deserve what the get.
-  if (! ret) attempt("hostname");
+  if (! ret) {
+    attempt("hostname");
+  }
 
   // Otherwise, see what Node can come up with.
   return ret || os.hostname();
@@ -182,8 +188,9 @@ exports.getAgentInfo = function () {
   var ret = {};
 
   var host = utils.getHost();
-  if (host)
+  if (host) {
     ret.host = host;
+  }
   ret.agent = "Meteor";
   ret.agentVersion =
     files.inCheckout() ? "checkout" : files.getToolsVersion();
@@ -196,8 +203,9 @@ exports.getAgentInfo = function () {
 // called within a fiber, and blocks only the calling fiber, not the
 // whole program.)
 exports.sleepMs = function (ms) {
-  if (ms <= 0)
+  if (ms <= 0) {
     return;
+  }
 
   var fut = new Future;
   setTimeout(function () { fut['return']() }, ms);
@@ -221,8 +229,9 @@ exports.parsePackageConstraint = function (constraintString, options) {
   try {
     return packageVersionParser.parsePackageConstraint(constraintString);
   } catch (e) {
-    if (! (e.versionParserError && options && options.useBuildmessage))
+    if (! (e.versionParserError && options && options.useBuildmessage)) {
       throw e;
+    }
     buildmessage.error(e.message, { file: options.buildmessageFile });
     return null;
   }
@@ -232,8 +241,9 @@ exports.validatePackageName = function (name, options) {
   try {
     return packageVersionParser.validatePackageName(name, options);
   } catch (e) {
-    if (! (e.versionParserError && options && options.useBuildmessage))
+    if (! (e.versionParserError && options && options.useBuildmessage)) {
       throw e;
+    }
     buildmessage.error(e.message, { file: options.buildmessageFile });
     return null;
   }
@@ -297,8 +307,9 @@ exports.isValidPackageName = function (packageName) {
     exports.validatePackageName(packageName);
     return true;
   } catch (e) {
-    if (!e.versionParserError)
+    if (!e.versionParserError) {
       throw e;
+    }
     return false;
   }
 };
@@ -307,8 +318,9 @@ exports.validatePackageNameOrExit = function (packageName, options) {
   try {
     exports.validatePackageName(packageName, options);
   } catch (e) {
-    if (!e.versionParserError)
+    if (!e.versionParserError) {
       throw e;
+    }
     var Console = require('../console/console.js').Console;
     Console.error(e.message, Console.options({ bulletPoint: "Error: " }));
     // lazy-load main: old bundler tests fail if you add a circular require to
@@ -351,8 +363,9 @@ exports.timeoutScaleFactor = timeoutScaleFactor;
 // before '.', this means that 1.2 will sort before 1.2.3.)
 exports.defaultOrderKeyForReleaseVersion = function (v) {
   var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
-  if (!m)
+  if (!m) {
     return null;
+  }
   var numberPart = m[1];
   var prereleaseTag = m[2];
   var prereleaseNumber = m[3];
@@ -361,14 +374,16 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
     return x.length > 1 && x[0] === '0';
   };
   var leftPad = function (chr, len, str) {
-    if (str.length > len)
+    if (str.length > len) {
       throw Error("too long to pad!");
+    }
     var padding = new Array(len - str.length + 1).join(chr);
     return padding + str;
   };
   var rightPad = function (chr, len, str) {
-    if (str.length > len)
+    if (str.length > len) {
       throw Error("too long to pad!");
+    }
     var padding = new Array(len - str.length + 1).join(chr);
     return str + padding;
   };
@@ -376,20 +391,24 @@ exports.defaultOrderKeyForReleaseVersion = function (v) {
   // Versions must have no redundant leading zeroes, or else this encoding would
   // be ambiguous.
   var numbers = numberPart.split('.');
-  if (_.any(numbers, hasRedundantLeadingZero))
+  if (_.any(numbers, hasRedundantLeadingZero)) {
     return null;
-  if (prereleaseNumber && hasRedundantLeadingZero(prereleaseNumber))
+  }
+  if (prereleaseNumber && hasRedundantLeadingZero(prereleaseNumber)) {
     return null;
+  }
 
   // First, put together the non-prerelease part.
   var ret = _.map(numbers, _.partial(leftPad, '0', 4)).join('.');
 
-  if (!prereleaseTag)
+  if (!prereleaseTag) {
     return ret + '$';
+  }
 
   ret += '!' + rightPad('!', 15, prereleaseTag);
-  if (prereleaseNumber)
+  if (prereleaseNumber) {
     ret += leftPad('0', 4, prereleaseNumber);
+  }
 
   return ret + '$';
 };
@@ -447,8 +466,9 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
       generateSubsetsOfFixedSize(goalSize, []);
     }
   } catch (e) {
-    if (!(e instanceof Done))
+    if (!(e instanceof Done)) {
       throw e;
+    }
   }
 };
 
@@ -457,36 +477,43 @@ exports.isUrlWithFileScheme = function (x) {
 };
 
 exports.isUrlWithSha = function (x) {
-  // For now, just support http/https, which is at least less restrictive than
-  // the old "github only" rule.
+  // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
+  // a URL like isNpmUrl(), there are a variety of problems with this, 
+  // see https://github.com/meteor/meteor/pull/5562
   return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
+}
+
+exports.isNpmUrl = function (x) {
+  // These are the various protocols that NPM supports, which we use to download NPM dependencies
+  // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
+  return exports.isUrlWithSha(x) || /^(git|git\+ssh|git\+http|git\+https)?:\/\//.test(x);
 };
 
 exports.isPathRelative = function (x) {
   return x.charAt(0) !== '/';
 };
 
-// If there is a version that isn't exact, throws an Error with a
+// If there is a version that isn't valid, throws an Error with a
 // human-readable message that is suitable for showing to the user.
 // dependencies may be falsey or empty.
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-exports.ensureOnlyExactVersions = function (dependencies) {
+exports.ensureOnlyValidVersions = function (dependencies, {forCordova}) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (! exports.isExactVersion(version)) {
+    if (! exports.isValidVersion(version, {forCordova})) {
       throw new Error(
-        "Must declare exact version of dependency: " + name + '@' + version);
+        "Must declare valid version of dependency: " + name + '@' + version);
     }
   });
 };
-exports.isExactVersion = function (version) {
-  return semver.valid(version) || exports.isUrlWithSha(version)
-    || exports.isUrlWithFileScheme(version);
+exports.isValidVersion = function (version, {forCordova}) {
+  return semver.valid(version) || exports.isUrlWithFileScheme(version)
+    || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
 };
 
 
@@ -544,8 +571,9 @@ exports.execFileAsync = function (file, args, opts) {
   var logOutput = fiberHelpers.bindEnvironment(function (line) {
     if (opts.verbose) {
       line = mapper(line);
-      if (line)
+      if (line) {
         console.log(line);
+      }
     }
   });
 
@@ -627,7 +655,9 @@ _.extend(exports.ThrottledYield.prototype, {
 // date object and returns a long-form human-readable date (ex: December 9th,
 // 2014) or unknown for null.
 exports.longformDate = function (date) {
-  if (! date) return "Unknown";
+  if (! date) {
+    return "Unknown";
+  }
   var moment = require('moment');
   var pubDate = moment(date).format('MMMM Do, YYYY');
   return pubDate;
@@ -647,7 +677,9 @@ exports.sha256 = function (contents) {
 };
 
 exports.sourceMapLength = function (sm) {
-  if (! sm) return 0;
+  if (! sm) {
+    return 0;
+  }
   // sum the length of sources and the mappings, the size of
   // metadata is ignored, but it is not a big deal
   return sm.mappings.length

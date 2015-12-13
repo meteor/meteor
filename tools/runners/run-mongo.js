@@ -21,9 +21,15 @@ var runMongoShell = function (url) {
   var ssl = require('querystring').parse(mongoUrl.query).ssl === "true";
 
   var args = [];
-  if (ssl) args.push('--ssl');
-  if (auth) args.push('-u', auth[0]);
-  if (auth) args.push('-p', auth[1]);
+  if (ssl) {
+    args.push('--ssl');
+  }
+  if (auth) {
+    args.push('-u', auth[0]);
+  }
+  if (auth) {
+    args.push('-p', auth[1]);
+  }
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
   child_process.spawn(files.convertToOSPath(mongoPath),
@@ -288,10 +294,11 @@ var findMongoAndKillItDead = function (port, dbPath) {
     // dead.
     for (var attempts = 1; attempts <= 40; attempts ++) {
       var signal = 0;
-      if (attempts === 1)
+      if (attempts === 1) {
         signal = 'SIGINT';
-      else if (attempts === 20 || attempts === 30)
+      } else if (attempts === 20 || attempts === 30) {
         signal = 'SIGKILL';
+      }
 
       try {
         process.kill(pid, signal);
@@ -347,8 +354,9 @@ var launchMongo = function (options) {
   // start our stub (fake-mongod) which can then be remote-controlled
   // by the test.
   if (process.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT) {
-    if (options.multiple)
+    if (options.multiple) {
       throw Error("Can't specify multiple with fake mongod");
+    }
 
     var fakeMongodCommand =
       process.platform === "win32" ? "fake-mongod.bat" : "fake-mongod";
@@ -378,8 +386,9 @@ var launchMongo = function (options) {
 
   var handle = {
     stop: function () {
-      if (stopped)
+      if (stopped) {
         return;
+      }
       stopped = true;
       _.each(subHandles, function (handle) {
         handle.stop();
@@ -412,8 +421,9 @@ var launchMongo = function (options) {
         matchingPortFileExists = +(files.readFile(portFile)) === port;
         portFileExists = true;
       } catch (e) {
-        if (!e || e.code !== 'ENOENT')
+        if (!e || e.code !== 'ENOENT') {
           throw e;
+        }
       }
 
       // If this is the first time we're using this DB, or we changed port since
@@ -428,14 +438,16 @@ var launchMongo = function (options) {
       if (!matchingPortFileExists) {
         // Delete the port file if it exists, so we don't mistakenly believe
         // that the DB is still configured.
-        if (portFileExists)
+        if (portFileExists) {
           files.unlink(portFile);
+        }
 
         try {
           var dbFiles = files.readdir(dbPath);
         } catch (e) {
-          if (!e || e.code !== 'ENOENT')
+          if (!e || e.code !== 'ENOENT') {
             throw e;
+          }
         }
         _.each(dbFiles, function (dbFile) {
           if (/^local\./.test(dbFile)) {
@@ -448,8 +460,9 @@ var launchMongo = function (options) {
     // Let's not actually start a process if we yielded (eg during
     // findMongoAndKillItDead) and we decided to stop in the middle (eg, because
     // we're in multiple mode and another process exited).
-    if (stopped)
+    if (stopped) {
       return;
+    }
 
     proc = spawnMongod(mongod_path, port, dbPath, replSetName);
 
@@ -484,8 +497,9 @@ var launchMongo = function (options) {
     var readyToTalkFuture = new Future;
 
     var maybeReadyToTalk = function () {
-      if (readyToTalkFuture.isResolved())
+      if (readyToTalkFuture.isResolved()) {
         return;
+      }
       if (listening && (noOplog || replSetReadyToBeInitiated || replSetReady)) {
         proc.stdout.removeListener('data', stdoutOnData);
         readyToTalkFuture.return();
@@ -544,8 +558,9 @@ var launchMongo = function (options) {
         new mongoNpmModule.Server('127.0.0.1', options.port, {poolSize: 1}),
         {safe: true});
       yieldingMethod(db, 'open');
-      if (stopped)
+      if (stopped) {
         return;
+      }
       var configuration = {
         _id: replSetName,
         members: [{_id: 0, host: '127.0.0.1:' + options.port, priority: 100}]
@@ -564,8 +579,9 @@ var launchMongo = function (options) {
 
       var initiateResult = yieldingMethod(
         db.admin(), 'command', {replSetInitiate: configuration});
-      if (stopped)
+      if (stopped) {
         return;
+      }
       // why this isn't in the error is unclear.
       if (initiateResult && initiateResult.documents
           && initiateResult.documents[0]
@@ -580,8 +596,9 @@ var launchMongo = function (options) {
       while (!stopped) {
         var status = yieldingMethod(db.admin(), 'command',
                                     {replSetGetStatus: 1});
-        if (!(status && status.documents && status.documents[0]))
+        if (!(status && status.documents && status.documents[0])) {
           throw status;
+        }
         status = status.documents[0];
         if (!status.ok) {
           if (status.startupStatus === 6) {  // "SOON"
@@ -631,8 +648,9 @@ var launchMongo = function (options) {
     } catch (e) {
       // If the process has exited, we're doing another form of error
       // handling. No need to throw random low-level errors farther.
-      if (!stopped || (e instanceof StoppedDuringLaunch))
+      if (!stopped || (e instanceof StoppedDuringLaunch)) {
         throw e;
+      }
     }
   };
 
@@ -642,8 +660,9 @@ var launchMongo = function (options) {
       _.each(_.range(3), function (i) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
-        if (stopped)
+        if (stopped) {
           return;
+        }
         var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs', ''+i);
         launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
       });
@@ -663,12 +682,14 @@ var launchMongo = function (options) {
       }
     }
   } catch (e) {
-    if (!(e instanceof StoppedDuringLaunch))
+    if (!(e instanceof StoppedDuringLaunch)) {
       throw e;
+    }
   }
 
-  if (stopped)
+  if (stopped) {
     return null;
+  }
 
   return handle;
 };
@@ -708,18 +729,21 @@ _.extend(MRp, {
   start: function () {
     var self = this;
 
-    if (self.handle)
+    if (self.handle) {
       throw new Error("already running?");
+    }
 
     self._startOrRestart();
 
     // Did we properly start up? Great!
-    if (self.handle)
+    if (self.handle) {
       return;
+    }
 
     // Are we shutting down? OK.
-    if (self.shuttingDown)
+    if (self.shuttingDown) {
       return;
+    }
 
     // Otherwise, wait for a successful _startOrRestart, or a failure.
     if (!self.startupFuture) {
@@ -742,8 +766,9 @@ _.extend(MRp, {
   _startOrRestart: function () {
     var self = this;
 
-    if (self.handle)
+    if (self.handle) {
       throw new Error("already running?");
+    }
 
     var allowKilling = self.multiple || self.firstStart;
     self.firstStart = false;
@@ -778,8 +803,9 @@ _.extend(MRp, {
     // If Mongo exited because (or rather, anytime after) we told it
     // to exit, great, nothing to do. Otherwise, we'll print an error
     // and try to restart.
-    if (self.shuttingDown)
+    if (self.shuttingDown) {
       return;
+    }
 
     // Only print an error if we tried to kill Mongo and something went
     // wrong. If we didn't try to kill Mongo, we'll do that on the next
@@ -805,8 +831,9 @@ _.extend(MRp, {
     // timer instead of looking at the current date, we avoid getting
     // confused by time changes.)
     self.errorCount ++;
-    if (self.errorTimer)
+    if (self.errorTimer) {
       clearTimeout(self.errorTimer);
+    }
     self.errorTimer = setTimeout(function () {
       self.errorTimer = null;
       self.errorCount = 0;
@@ -861,8 +888,9 @@ _.extend(MRp, {
   stop: function () {
     var self = this;
 
-    if (self.shuttingDown)
+    if (self.shuttingDown) {
       return;
+    }
 
     self.shuttingDown = true;
 

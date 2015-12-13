@@ -1,3 +1,19 @@
+exports.__esModule = true;
+exports.parseServerOptionsForRunCommand = parseServerOptionsForRunCommand;
+exports.parseRunTargets = parseRunTargets;
+
+var _cordova = require('../cordova');
+
+var cordova = babelHelpers.interopRequireWildcard(_cordova);
+
+var _cordovaProjectJs = require('../cordova/project.js');
+
+var _cordovaRunnerJs = require('../cordova/runner.js');
+
+var _cordovaRunTargetsJs = require('../cordova/run-targets.js');
+
+// The architecture used by MDG's hosted servers; it's the architecture used by
+// 'meteor deploy'.
 var main = require('./main.js');
 var _ = require('underscore');
 var files = require('../fs/files.js');
@@ -17,13 +33,6 @@ var Console = require('../console/console.js').Console;
 var projectContextModule = require('../project-context.js');
 var release = require('../packaging/release.js');
 
-import * as cordova from '../cordova';
-import { CordovaProject } from '../cordova/project.js';
-import { CordovaRunner } from '../cordova/runner.js';
-import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
-
-// The architecture used by MDG's hosted servers; it's the architecture used by
-// 'meteor deploy'.
 var DEPLOY_ARCH = 'os.linux.x86_64';
 
 // The default port that the development server listens on.
@@ -36,7 +45,6 @@ var VALID_ARCHITECTURES = {
   "os.linux.x86_32": true,
   "os.windows.x86_32": true
 };
-
 
 // __dirname - the location of the current executing file
 var __dirnameConverted = files.convertToStandardPath(__dirname);
@@ -52,10 +60,8 @@ var __dirnameConverted = files.convertToStandardPath(__dirname);
 // In the future, you should be able to make this default to some
 // other domain you control, rather than 'meteor.com'.
 var qualifySitename = function (site) {
-  if (site.indexOf(".") === -1)
-    site = site + ".meteor.com";
-  while (site.length && site[site.length - 1] === ".")
-    site = site.substring(0, site.length - 1);
+  if (site.indexOf(".") === -1) site = site + ".meteor.com";
+  while (site.length && site[site.length - 1] === ".") site = site.substring(0, site.length - 1);
   return site;
 };
 
@@ -64,34 +70,32 @@ var showInvalidArchMsg = function (arch) {
   Console.info("Invalid architecture: " + arch);
   Console.info("The following are valid Meteor architectures:");
   _.each(_.keys(VALID_ARCHITECTURES), function (va) {
-    Console.info(
-      Console.command(va),
-      Console.options({ indent: 2 }));
+    Console.info(Console.command(va), Console.options({ indent: 2 }));
   });
 };
 
 // Utility functions to parse options in run/build/test-packages commands
 
-export function parseServerOptionsForRunCommand(options, runTargets) {
-  const parsedServerUrl = parsePortOption(options.port);
+function parseServerOptionsForRunCommand(options, runTargets) {
+  var parsedServerUrl = parsePortOption(options.port);
 
   // XXX COMPAT WITH 0.9.2.2 -- the 'mobile-port' option is deprecated
-  const mobileServerOption = options['mobile-server'] || options['mobile-port'];
-  let parsedMobileServerUrl;
+  var mobileServerOption = options['mobile-server'] || options['mobile-port'];
+  var parsedMobileServerUrl = undefined;
   if (mobileServerOption) {
     parsedMobileServerUrl = parseMobileServerOption(mobileServerOption);
   } else {
-    const isRunOnDeviceRequested = _.any(runTargets,
-      runTarget => runTarget.isDevice);
-    parsedMobileServerUrl = detectMobileServerUrl(parsedServerUrl,
-      isRunOnDeviceRequested);
+    var isRunOnDeviceRequested = _.any(runTargets, function (runTarget) {
+      return runTarget.isDevice;
+    });
+    parsedMobileServerUrl = detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested);
   }
 
-  return { parsedServerUrl, parsedMobileServerUrl };
+  return { parsedServerUrl: parsedServerUrl, parsedMobileServerUrl: parsedMobileServerUrl };
 }
 
 function parsePortOption(portOption) {
-  let parsedServerUrl = utils.parseUrl(portOption);
+  var parsedServerUrl = utils.parseUrl(portOption);
 
   if (!parsedServerUrl.port) {
     Console.error("--port must include a port.");
@@ -101,14 +105,13 @@ function parsePortOption(portOption) {
   return parsedServerUrl;
 }
 
-function parseMobileServerOption(mobileServerOption,
-  optionName = 'mobile-server') {
-  let parsedMobileServerUrl = utils.parseUrl(
-    mobileServerOption,
-    { protocol: 'http://' });
+function parseMobileServerOption(mobileServerOption) {
+  var optionName = arguments.length <= 1 || arguments[1] === undefined ? 'mobile-server' : arguments[1];
+
+  var parsedMobileServerUrl = utils.parseUrl(mobileServerOption, { protocol: 'http://' });
 
   if (!parsedMobileServerUrl.host) {
-    Console.error(`--${optionName} must include a hostname.`);
+    Console.error('--' + optionName + ' must include a hostname.');
     throw new main.ExitWithCode(1);
   }
 
@@ -118,15 +121,11 @@ function parseMobileServerOption(mobileServerOption,
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
   // If we are running on a device, use the auto-detected IP
   if (isRunOnDeviceRequested) {
-    let myIp;
+    var myIp = undefined;
     try {
       myIp = utils.ipAddress();
     } catch (error) {
-      Console.error(
-`Error detecting IP address for mobile app to connect to:
-${error.message}
-Please specify the address that the mobile app should connect
-to with --mobile-server.`);
+      Console.error('Error detecting IP address for mobile app to connect to:\n' + error.message + '\nPlease specify the address that the mobile app should connect\nto with --mobile-server.');
       throw new main.ExitWithCode(1);
     }
     return {
@@ -144,22 +143,24 @@ to with --mobile-server.`);
   }
 }
 
-export function parseRunTargets(targets) {
-  return targets.map((target) => {
-    const targetParts = target.split('-');
-    const platform = targetParts[0];
-    const isDevice = targetParts[1] === 'device';
+function parseRunTargets(targets) {
+  return targets.map(function (target) {
+    var targetParts = target.split('-');
+    var platform = targetParts[0];
+    var isDevice = targetParts[1] === 'device';
 
     if (platform == 'ios') {
-      return new iOSRunTarget(isDevice);
+      return new _cordovaRunTargetsJs.iOSRunTarget(isDevice);
     } else if (platform == 'android') {
-      return new AndroidRunTarget(isDevice);
+      return new _cordovaRunTargetsJs.AndroidRunTarget(isDevice);
     } else {
-      Console.error(`Unknown run target: ${target}`);
+      Console.error('Unknown run target: ' + target);
       throw new main.ExitWithCode(1);
     }
   });
-};
+}
+
+;
 
 ///////////////////////////////////////////////////////////////////////////////
 // options that act like commands
@@ -175,6 +176,30 @@ main.registerCommand({
   Console.rawInfo(archinfo.host() + "\n");
 });
 
+//Prints the Meteor log about the versions
+main.registerCommand({
+	name:'--about',
+	requiresRelease: false,
+	catalogRefresh: new catalog.Refresh.Never()
+}, function (options){
+	if (release.current === null) {
+    if (!options.appDir) throw new Error("missing release, but not in an app?");
+    Console.error("This project was created with a checkout of Meteor, rather than an " + "official release, and doesn't have a release number associated with " + "it. You can set its release with " + Console.command("'meteor update'") + ".");
+    return 1;
+  }
+
+  if (release.current.isCheckout()) {
+    var gitLog = utils.runGitInCheckout('log', '--format=%h%d', '-n 1').trim();
+    Console.error("Unreleased, running from a checkout at " + gitLog);
+    return 1;
+  }
+  
+	var dirname = files.convertToStandardPath(__dirname);
+	var about = files.readFile(files.pathJoin(dirname, 'about.txt'), 'utf8');
+	console.log(about);
+		
+});
+
 // Prints the current release in use. Note that if there is not
 // actually a specific release, we print to stderr and exit non-zero,
 // while if there is a release we print to stdout and exit zero
@@ -187,20 +212,13 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (release.current === null) {
-    if (! options.appDir)
-      throw new Error("missing release, but not in an app?");
-    Console.error(
-      "This project was created with a checkout of Meteor, rather than an " +
-      "official release, and doesn't have a release number associated with " +
-      "it. You can set its release with " +
-      Console.command("'meteor update'") + ".");
+    if (!options.appDir) throw new Error("missing release, but not in an app?");
+    Console.error("This project was created with a checkout of Meteor, rather than an " + "official release, and doesn't have a release number associated with " + "it. You can set its release with " + Console.command("'meteor update'") + ".");
     return 1;
   }
 
   if (release.current.isCheckout()) {
-    var gitLog = utils.runGitInCheckout(
-      'log',
-      '--format=%h%d', '-n 1').trim();
+    var gitLog = utils.runGitInCheckout('log', '--format=%h%d', '-n 1').trim();
     Console.error("Unreleased, running from a checkout at " + gitLog);
     return 1;
   }
@@ -247,7 +265,7 @@ var runCommandOptions = {
   requiresApp: true,
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: DEFAULT_PORT },
+    port: { type: String, short: "p", 'default': DEFAULT_PORT },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
@@ -256,7 +274,7 @@ var runCommandOptions = {
     production: { type: Boolean },
     'raw-logs': { type: Boolean },
     settings: { type: String },
-    test: {type: Boolean, default: false},
+    test: { type: Boolean, 'default': false },
     verbose: { type: Boolean, short: "v" },
     // With --once, meteor does not re-run the project if it crashes
     // and does not monitor for file changes. Intentionally
@@ -272,19 +290,18 @@ var runCommandOptions = {
   catalogRefresh: new catalog.Refresh.Never()
 };
 
-main.registerCommand(_.extend(
-  { name: 'run' },
-  runCommandOptions
-), doRunCommand);
+main.registerCommand(_.extend({ name: 'run' }, runCommandOptions), doRunCommand);
 
 function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
   // Additional args are interpreted as run targets
-  const runTargets = parseRunTargets(options.args);
+  var runTargets = parseRunTargets(options.args);
 
-  const { parsedServerUrl, parsedMobileServerUrl } =
-    parseServerOptionsForRunCommand(options, runTargets);
+  var _parseServerOptionsForRunCommand = parseServerOptionsForRunCommand(options, runTargets);
+
+  var parsedServerUrl = _parseServerOptionsForRunCommand.parsedServerUrl;
+  var parsedMobileServerUrl = _parseServerOptionsForRunCommand.parsedMobileServerUrl;
 
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
@@ -300,21 +317,17 @@ function doRunCommand(options) {
 
   if (release.explicit) {
     if (release.current.name !== projectContext.releaseFile.fullReleaseName) {
-      console.log("=> Using %s as requested (overriding %s)",
-                  release.current.getDisplayName(),
-                  projectContext.releaseFile.displayReleaseName);
+      console.log("=> Using %s as requested (overriding %s)", release.current.getDisplayName(), projectContext.releaseFile.displayReleaseName);
       console.log();
     }
   }
 
-  let appHost, appPort;
+  var appHost = undefined,
+      appPort = undefined;
   if (options['app-port']) {
     var appPortMatch = options['app-port'].match(/^(?:(.+):)?([0-9]+)?$/);
     if (!appPortMatch) {
-      Console.error(
-        "run: --app-port must be a number or be of the form 'host:port' ",
-        "where port is a number. Try",
-        Console.command("'meteor help run'") + " for help.");
+      Console.error("run: --app-port must be a number or be of the form 'host:port' ", "where port is a number. Try", Console.command("'meteor help run'") + " for help.");
       return 1;
     }
     appHost = appPortMatch[1] || null;
@@ -323,30 +336,28 @@ function doRunCommand(options) {
     appPort = appPortMatch[2] ? parseInt(appPortMatch[2]) : null;
   }
 
-  if (options['raw-logs'])
-    runLog.setRawLogs(true);
+  if (options['raw-logs']) runLog.setRawLogs(true);
 
   // Velocity testing. Sets up a DDP connection to the app process and
   // runs phantomjs.
   //
   // NOTE: this calls process.exit() when testing is done.
-  if (options['test']){
+  if (options['test']) {
     options.once = true;
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
-    const velocity = require('../runners/run-velocity.js');
+    var serverUrlForVelocity = 'http://' + (parsedServerUrl.host || "localhost") + ':' + parsedServerUrl.port;
+    var velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrlForVelocity);
   }
 
-  let cordovaRunner;
+  var cordovaRunner = undefined;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext, {
+    main.captureAndExit('', 'preparing Cordova project', function () {
+      var cordovaProject = new _cordovaProjectJs.CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
-      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+      cordovaRunner = new _cordovaRunnerJs.CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
     });
   }
@@ -377,10 +388,7 @@ function doRunCommand(options) {
 // debug
 ///////////////////////////////////////////////////////////////////////////////
 
-main.registerCommand(_.extend(
-  { name: 'debug' },
-  runCommandOptions
-), function (options) {
+main.registerCommand(_.extend({ name: 'debug' }, runCommandOptions), function (options) {
   options['debug-port'] = options['debug-port'] || '5858';
   return doRunCommand(options);
 });
@@ -397,10 +405,7 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   if (!options.appDir) {
-    Console.error(
-      "The " + Console.command("'meteor shell'") + " command must be run",
-      "in a Meteor app directory."
-    );
+    Console.error("The " + Console.command("'meteor shell'") + " command must be run", "in a Meteor app directory.");
   } else {
     var projectContext = new projectContextModule.ProjectContext({
       projectDir: options.appDir
@@ -408,11 +413,9 @@ main.registerCommand({
 
     // Convert to OS path here because shell/server.js doesn't know how to
     // convert paths, since it exists in the app and in the tool.
-    require('../shell-client.js').connect(
-      files.convertToOSPath(projectContext.getMeteorShellDirectory())
-    );
+    require('../shell-client.js').connect(files.convertToOSPath(projectContext.getMeteorShellDirectory()));
 
-    throw new main.WaitForExit;
+    throw new main.WaitForExit();
   }
 });
 
@@ -426,7 +429,7 @@ main.registerCommand({
   options: {
     list: { type: Boolean },
     example: { type: String },
-    package: { type: Boolean }
+    'package': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
@@ -434,23 +437,22 @@ main.registerCommand({
   // Creating a package is much easier than creating an app, so if that's what
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
-  if (options.package) {
+  if (options['package']) {
     var packageName = options.args[0];
 
     // No package examples exist yet.
     if (options.list && options.example) {
       Console.error("No package examples exist at this time.");
       Console.error();
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
 
     if (!packageName) {
       Console.error("Please specify the name of the package.");
-      throw new main.ShowUsage;
+      throw new main.ShowUsage();
     }
 
-    utils.validatePackageNameOrExit(
-      packageName, {detailedColonExplanation: true});
+    utils.validatePackageNameOrExit(packageName, { detailedColonExplanation: true });
 
     // When we create a package, avoid introducing a colon into the file system
     // by naming the directory after the package name without the prefix.
@@ -465,8 +467,7 @@ main.registerCommand({
         // with at least two colons. Therefore we will at least try to
         // discourage people from putting a ton of colons in their package names
         // here.
-        Console.error(packageName +
-          ": Package names may not have more than one colon.");
+        Console.error(packageName + ": Package names may not have more than one colon.");
         return 1;
       }
 
@@ -488,8 +489,7 @@ main.registerCommand({
     }
 
     var transform = function (x) {
-      var xn =
-        x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
+      var xn = x.replace(/~name~/g, packageName).replace(/~fs-name~/g, fsName);
 
       // If we are running from checkout, comment out the line sourcing packages
       // from a release, with the latest release filled in (in case they do want
@@ -503,7 +503,7 @@ main.registerCommand({
         relString = rel ? rel.version : "no-release";
       } else {
         xn = xn.replace(/~cc~/g, "");
-        relString = release.current.getDisplayName({noPrefix: true});
+        relString = release.current.getDisplayName({ noPrefix: true });
       }
 
       // If we are not in checkout, write the current release here.
@@ -516,10 +516,7 @@ main.registerCommand({
           return transform(f);
         },
         transformContents: function (contents, f) {
-          if ((/(\.html|\.js|\.css)/).test(f))
-            return new Buffer(transform(contents.toString()));
-          else
-            return contents;
+          if (/(\.html|\.js|\.css)/.test(f)) return new Buffer(transform(contents.toString()));else return contents;
         },
         ignore: [/^local$/]
       });
@@ -528,16 +525,12 @@ main.registerCommand({
       return 1;
     }
 
-    var displayPackageDir =
-      files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
+    var displayPackageDir = files.convertToOSPath(files.pathRelative(files.cwd(), packageDir));
 
     // Since the directory can't have colons, the directory name will often not
     // match the name of the package exactly, therefore we should tell people
     // where it was created.
-    Console.info(
-      packageName + ": created in",
-      Console.path(displayPackageDir)
-    );
+    Console.info(packageName + ": created in", Console.path(displayPackageDir));
 
     return 0;
   }
@@ -552,43 +545,33 @@ main.registerCommand({
   // (In particular, it's not sufficient to create the new app with
   // this version of the tools, and then stamp on the correct release
   // at the end.)
-  if (! release.current.isCheckout() && !release.forced) {
+  if (!release.current.isCheckout() && !release.forced) {
     if (release.current.name !== release.latestKnown()) {
-      throw new main.SpringboardToLatestRelease;
+      throw new main.SpringboardToLatestRelease();
     }
   }
 
   var exampleDir = files.pathJoin(__dirnameConverted, '..', '..', 'examples');
   var examples = _.reject(files.readdir(exampleDir), function (e) {
-    return (e === 'unfinished' || e === 'other'  || e[0] === '.');
+    return e === 'unfinished' || e === 'other' || e[0] === '.';
   });
 
   if (options.list) {
     Console.info("Available examples:");
     _.each(examples, function (e) {
-      Console.info(
-        Console.command(e),
-        Console.options({ indent: 2 }));
+      Console.info(Console.command(e), Console.options({ indent: 2 }));
     });
     Console.info();
-    Console.info(
-      "Create a project from an example with " +
-      Console.command("'meteor create --example <name>'") + ".");
+    Console.info("Create a project from an example with " + Console.command("'meteor create --example <name>'") + ".");
     return 0;
   };
 
   var appPathAsEntered;
-  if (options.args.length === 1)
-    appPathAsEntered = options.args[0];
-  else if (options.example)
-    appPathAsEntered = options.example;
-  else
-    throw new main.ShowUsage;
+  if (options.args.length === 1) appPathAsEntered = options.args[0];else if (options.example) appPathAsEntered = options.example;else throw new main.ShowUsage();
   var appPath = files.pathResolve(appPathAsEntered);
 
   if (files.findAppDir(appPath)) {
-    Console.error(
-      "You can't create a Meteor project inside another Meteor project.");
+    Console.error("You can't create a Meteor project inside another Meteor project.");
     return 1;
   }
 
@@ -599,7 +582,6 @@ main.registerCommand({
   } else {
     appName = files.pathBasename(appPath);
   }
-
 
   var transform = function (x) {
     return x.replace(/~name~/g, appName);
@@ -613,8 +595,7 @@ main.registerCommand({
   // If the directory doesn't exist, it clearly doesn't have any source code
   // inside itself
   if (files.exists(appPath)) {
-    destinationHasCodeFiles = _.any(files.readdir(appPath),
-        function thisPathCountsAsAFile(filePath) {
+    destinationHasCodeFiles = _.any(files.readdir(appPath), function thisPathCountsAsAFile(filePath) {
       // We don't mind if there are hidden files or directories (this includes
       // .git) and we don't need to check for .meteor here because the command
       // will fail earlier
@@ -646,19 +627,14 @@ main.registerCommand({
 
   if (options.example) {
     if (destinationHasCodeFiles) {
-      Console.error(`When creating an example app, the destination directory \
-can only contain dot-files or files with the following extensions: \
-${nonCodeFileExts.join(', ')}
-`);
+      Console.error('When creating an example app, the destination directory can only contain dot-files or files with the following extensions: ' + nonCodeFileExts.join(', ') + '\n');
       return 1;
     }
 
     if (examples.indexOf(options.example) === -1) {
       Console.error(options.example + ": no such example.");
       Console.error();
-      Console.error(
-        "List available applications with",
-        Console.command("'meteor create --list'") + ".");
+      Console.error("List available applications with", Console.command("'meteor create --list'") + ".");
       return 1;
     } else {
       files.cp_r(files.pathJoin(exampleDir, options.example), appPath, {
@@ -670,11 +646,11 @@ ${nonCodeFileExts.join(', ')}
       });
     }
   } else {
-    var toIgnore = [/^local$/, /^\.id$/]
+    var toIgnore = [/^local$/, /^\.id$/];
     if (destinationHasCodeFiles) {
       // If there is already source code in the directory, don't copy our
       // skeleton app code over it. Just create the .meteor folder and metadata
-      toIgnore.push(/(\.html|\.js|\.css)/)
+      toIgnore.push(/(\.html|\.js|\.css)/);
     }
 
     files.cp_r(files.pathJoin(__dirnameConverted, '..', 'static-assets', 'skel'), appPath, {
@@ -682,10 +658,7 @@ ${nonCodeFileExts.join(', ')}
         return transform(f);
       },
       transformContents: function (contents, f) {
-        if ((/(\.html|\.js|\.css)/).test(f))
-          return new Buffer(transform(contents.toString()));
-        else
-          return contents;
+        if (/(\.html|\.js|\.css)/.test(f)) return new Buffer(transform(contents.toString()));else return contents;
       },
       ignore: toIgnore
     });
@@ -704,13 +677,10 @@ ${nonCodeFileExts.join(', ')}
 
   main.captureAndExit("=> Errors while creating your project", function () {
     projectContext.readProjectMetadata();
-    if (buildmessage.jobHasMessages())
-      return;
+    if (buildmessage.jobHasMessages()) return;
 
-    projectContext.releaseFile.write(
-      release.current.isCheckout() ? "none" : release.current.name);
-    if (buildmessage.jobHasMessages())
-      return;
+    projectContext.releaseFile.write(release.current.isCheckout() ? "none" : release.current.name);
+    if (buildmessage.jobHasMessages()) return;
 
     // Any upgrader that is in this version of Meteor doesn't need to be run on
     // this project.
@@ -723,13 +693,12 @@ ${nonCodeFileExts.join(', ')}
   // the packages (or maybe an unpredictable subset based on what happens to be
   // in the template's versions file).
 
-  var appNameToDisplay = appPathAsEntered === "." ?
-    "current directory" : `'${appPathAsEntered}'`;
+  var appNameToDisplay = appPathAsEntered === "." ? "current directory" : '\'' + appPathAsEntered + '\'';
 
-  var message = `Created a new Meteor app in ${appNameToDisplay}`;
+  var message = 'Created a new Meteor app in ' + appNameToDisplay;
 
   if (options.example && options.example !== appPathAsEntered) {
-    message += ` (from '${options.example}' template)`;
+    message += ' (from \'' + options.example + '\' template)';
   }
 
   message += ".";
@@ -742,24 +711,17 @@ ${nonCodeFileExts.join(', ')}
 
   if (appPathAsEntered !== ".") {
     // Wrap the app path in quotes if it contains spaces
-    const appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ?
-      appPathAsEntered :
-      `'${appPathAsEntered}'`;
+    var appPathWithQuotesIfSpaces = appPathAsEntered.indexOf(' ') === -1 ? appPathAsEntered : '\'' + appPathAsEntered + '\'';
 
     // Don't tell people to 'cd .'
-    Console.info(
-      Console.command("cd " + appPathWithQuotesIfSpaces),
-        Console.options({ indent: 2 }));
+    Console.info(Console.command("cd " + appPathWithQuotesIfSpaces), Console.options({ indent: 2 }));
   }
 
-  Console.info(
-    Console.command("meteor"), Console.options({ indent: 2 }));
+  Console.info(Console.command("meteor"), Console.options({ indent: 2 }));
 
   Console.info("");
   Console.info("If you are new to Meteor, try some of the learning resources here:");
-  Console.info(
-    Console.url("https://www.meteor.com/learn"),
-      Console.options({ indent: 2 }));
+  Console.info(Console.url("https://www.meteor.com/learn"), Console.options({ indent: 2 }));
 
   Console.info("");
 });
@@ -786,9 +748,8 @@ var buildCommands = {
   catalogRefresh: new catalog.Refresh.Never()
 };
 
-main.registerCommand(_.extend({ name: 'build' }, buildCommands),
-  function (options) {
-    return buildCommand(options);
+main.registerCommand(_.extend({ name: 'build' }, buildCommands), function (options) {
+  return buildCommand(options);
 });
 
 // Deprecated -- identical functionality to 'build' with one exception: it
@@ -796,17 +757,11 @@ main.registerCommand(_.extend({ name: 'build' }, buildCommands),
 // server/client programs.
 // XXX COMPAT WITH 0.9.1.1
 main.registerCommand(_.extend({ name: 'bundle', hidden: true
-                              }, buildCommands),
-    function (options) {
+}, buildCommands), function (options) {
 
-      Console.error(
-      "This command has been deprecated in favor of " +
-      Console.command("'meteor build'") + ", which allows you to " +
-      "build for multiple platforms and outputs a directory instead of " +
-      "a single tarball. See " + Console.command("'meteor help build'") + " " +
-      "for more information.");
-      Console.error();
-      return buildCommand(_.extend(options, { _serverOnly: true }));
+  Console.error("This command has been deprecated in favor of " + Console.command("'meteor build'") + ", which allows you to " + "build for multiple platforms and outputs a directory instead of " + "a single tarball. See " + Console.command("'meteor help build'") + " " + "for more information.");
+  Console.error();
+  return buildCommand(_.extend(options, { _serverOnly: true }));
 });
 
 var buildCommand = function (options) {
@@ -821,8 +776,7 @@ var buildCommand = function (options) {
   // Error handling for options.architecture. We must pass in only one of three
   // architectures. See archinfo.js for more information on what the
   // architectures are, what they mean, et cetera.
-  if (options.architecture &&
-      !_.has(VALID_ARCHITECTURES, options.architecture)) {
+  if (options.architecture && !_.has(VALID_ARCHITECTURES, options.architecture)) {
     showInvalidArchMsg(options.architecture);
     return 1;
   }
@@ -846,16 +800,15 @@ var buildCommand = function (options) {
     options.settings = options['mobile-settings'];
   }
 
-  const appName = files.pathBasename(options.appDir);
+  var appName = files.pathBasename(options.appDir);
 
-  let cordovaPlatforms;
-  let parsedMobileServerUrl;
+  var cordovaPlatforms = undefined;
+  var parsedMobileServerUrl = undefined;
   if (!options._serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
     if (process.platform === 'win32' && !_.isEmpty(cordovaPlatforms)) {
-      Console.warn(`Can't build for mobile on Windows. Skipping the following \
-platforms: ${cordovaPlatforms.join(", ")}`);
+      Console.warn('Can\'t build for mobile on Windows. Skipping the following platforms: ' + cordovaPlatforms.join(", "));
       cordovaPlatforms = [];
     } else if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
@@ -865,17 +818,14 @@ on an OS X system.");
 
     if (!_.isEmpty(cordovaPlatforms)) {
       // XXX COMPAT WITH 0.9.2.2 -- the --mobile-port option is deprecated
-      const mobileServerOption = options.server || options["mobile-port"];
+      var mobileServerOption = options.server || options["mobile-port"];
       if (!mobileServerOption) {
         // For Cordova builds, require '--server'.
         // XXX better error message?
-        Console.error(
-          "Supply the server hostname and port in the --server option " +
-            "for mobile app builds.");
+        Console.error("Supply the server hostname and port in the --server option " + "for mobile app builds.");
         return 1;
       }
-      parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
-        'server');
+      parsedMobileServerUrl = parseMobileServerOption(mobileServerOption, 'server');
     }
   } else {
     cordovaPlatforms = [];
@@ -886,26 +836,18 @@ on an OS X system.");
 
   // Unless we're just making a tarball, warn if people try to build inside the
   // app directory.
-  if (options.directory || ! _.isEmpty(cordovaPlatforms)) {
+  if (options.directory || !_.isEmpty(cordovaPlatforms)) {
     var relative = files.pathRelative(options.appDir, outputPath);
     // We would like the output path to be outside the app directory, which
     // means the first step to getting there is going up a level.
-    if (relative.substr(0, 3) !== ('..' + files.pathSep)) {
+    if (relative.substr(0, 3) !== '..' + files.pathSep) {
       Console.warn();
-      Console.labelWarn(
-        "The output directory is under your source tree.",
-        "Your generated files may get interpreted as source code!",
-        "Consider building into a different directory instead (" +
-        Console.command("meteor build ../output") + ")",
-        Console.options({ indent: 2 }));
+      Console.labelWarn("The output directory is under your source tree.", "Your generated files may get interpreted as source code!", "Consider building into a different directory instead (" + Console.command("meteor build ../output") + ")", Console.options({ indent: 2 }));
       Console.warn();
     }
   }
 
-  var bundlePath = options.directory ?
-      (options._serverOnly ? outputPath :
-      files.pathJoin(outputPath, 'bundle')) :
-      files.pathJoin(buildDir, 'bundle');
+  var bundlePath = options.directory ? options._serverOnly ? outputPath : files.pathJoin(outputPath, 'bundle') : files.pathJoin(buildDir, 'bundle');
 
   stats.recordPackages({
     what: "sdk.bundle",
@@ -924,9 +866,9 @@ on an OS X system.");
       //     is then 'meteor bundle' with no args fails if you have any local
       //     packages with binary npm dependencies
       serverArch: bundleArch,
-      buildMode: options.debug ? 'development' : 'production',
+      buildMode: options.debug ? 'development' : 'production'
     },
-    providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
+    providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND
   });
   if (bundleResult.errors) {
     Console.error("Errors prevented bundling:");
@@ -934,14 +876,12 @@ on an OS X system.");
     return 1;
   }
 
-  if (! options._serverOnly)
-    files.mkdir_p(outputPath);
+  if (!options._serverOnly) files.mkdir_p(outputPath);
 
-  if (! options.directory) {
-    main.captureAndExit('', 'creating server tarball', () => {
+  if (!options.directory) {
+    main.captureAndExit('', 'creating server tarball', function () {
       try {
-        var outputTar = options._serverOnly ? outputPath :
-          files.pathJoin(outputPath, appName + '.tar.gz');
+        var outputTar = options._serverOnly ? outputPath : files.pathJoin(outputPath, appName + '.tar.gz');
 
         files.createTarball(files.pathJoin(buildDir, 'bundle'), outputTar);
       } catch (err) {
@@ -952,64 +892,55 @@ on an OS X system.");
   }
 
   if (!_.isEmpty(cordovaPlatforms)) {
-    let cordovaProject;
+    (function () {
+      var cordovaProject = undefined;
 
-    main.captureAndExit('', () => {
-      buildmessage.enterJob({ title: "preparing Cordova project" }, () => {
-        cordovaProject = new CordovaProject(projectContext, {
-          settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+      main.captureAndExit('', function () {
+        buildmessage.enterJob({ title: "preparing Cordova project" }, function () {
+          cordovaProject = new _cordovaProjectJs.CordovaProject(projectContext, {
+            settingsFile: options.settings,
+            mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
-        const plugins = cordova.pluginVersionsFromStarManifest(
-          bundleResult.starManifest);
+          var plugins = cordova.pluginVersionsFromStarManifest(bundleResult.starManifest);
 
-        cordovaProject.prepareFromAppBundle(bundlePath, plugins);
-      });
+          cordovaProject.prepareFromAppBundle(bundlePath, plugins);
+        });
 
-      for (platform of cordovaPlatforms) {
-        buildmessage.enterJob(
-          { title: `building Cordova app for \
-${cordova.displayNameForPlatform(platform)}` }, () => {
-            let buildOptions = [];
+        for (var _iterator = cordovaPlatforms, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+          if (_isArray) {
+            if (_i >= _iterator.length) break;
+            platform = _iterator[_i++];
+          } else {
+            _i = _iterator.next();
+            if (_i.done) break;
+            platform = _i.value;
+          }
+
+          buildmessage.enterJob({ title: 'building Cordova app for ' + cordova.displayNameForPlatform(platform) }, function () {
+            var buildOptions = [];
             if (!options.debug) buildOptions.push('--release');
             cordovaProject.buildForPlatform(platform, buildOptions);
 
-            const buildPath = files.pathJoin(
-              projectContext.getProjectLocalDirectory('cordova-build'),
-              'platforms', platform);
-            const platformOutputPath = files.pathJoin(outputPath, platform);
+            var buildPath = files.pathJoin(projectContext.getProjectLocalDirectory('cordova-build'), 'platforms', platform);
+            var platformOutputPath = files.pathJoin(outputPath, platform);
 
-            files.cp_r(buildPath,
-              files.pathJoin(platformOutputPath, 'project'));
+            files.cp_r(buildPath, files.pathJoin(platformOutputPath, 'project'));
 
             if (platform === 'ios') {
-              files.writeFile(
-                files.pathJoin(platformOutputPath, 'README'),
-`This is an auto-generated XCode project for your iOS application.
-
-Instructions for publishing your iOS app to App Store can be found at:
-https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
-`, "utf8");
+              files.writeFile(files.pathJoin(platformOutputPath, 'README'), 'This is an auto-generated XCode project for your iOS application.\n\nInstructions for publishing your iOS app to App Store can be found at:\nhttps://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store\n', "utf8");
             } else if (platform === 'android') {
-              const apkPath = files.pathJoin(buildPath, 'build/outputs/apk',
-                options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk')
+              var apkPath = files.pathJoin(buildPath, 'build/outputs/apk', options.debug ? 'android-debug.apk' : 'android-release-unsigned.apk');
 
               if (files.exists(apkPath)) {
-              files.copyFile(apkPath, files.pathJoin(platformOutputPath,
-                options.debug ? 'debug.apk' : 'release-unsigned.apk'));
+                files.copyFile(apkPath, files.pathJoin(platformOutputPath, options.debug ? 'debug.apk' : 'release-unsigned.apk'));
               }
 
-              files.writeFile(
-                files.pathJoin(platformOutputPath, 'README'),
-`This is an auto-generated Gradle project for your Android application.
-
-Instructions for publishing your Android app to Play Store can be found at:
-https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store
-`, "utf8");
+              files.writeFile(files.pathJoin(platformOutputPath, 'README'), 'This is an auto-generated Gradle project for your Android application.\n\nInstructions for publishing your Android app to Play Store can be found at:\nhttps://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store\n', "utf8");
             }
-        });
-      }
-    });
+          });
+        }
+      });
+    })();
   }
 
   files.rm_recursive(buildDir);
@@ -1027,14 +958,15 @@ main.registerCommand({
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  const {packageDir, appDir} = options;
+  var packageDir = options.packageDir;
+  var appDir = options.appDir;
 
-  let projectContext = null;
+  var projectContext = null;
 
   // if the goal is to lint the package, don't include the whole app
   if (packageDir) {
     // similar to `meteor publish`, create a fake project
-    const tempProjectDir = files.mkdtemp('meteor-package-build');
+    var tempProjectDir = files.mkdtemp('meteor-package-build');
     projectContext = new projectContextModule.ProjectContext({
       projectDir: tempProjectDir,
       explicitlyAddedLocalPackageDirs: [packageDir],
@@ -1045,23 +977,24 @@ main.registerCommand({
       lintPackageWithSourceRoot: packageDir
     });
 
-    main.captureAndExit("=> Errors while setting up package:", () =>
-      // Read metadata and initialize catalog.
-      projectContext.initializeCatalog()
-    );
-    const versionRecord =
-        projectContext.localCatalog.getVersionBySourceRoot(packageDir);
-    if (! versionRecord) {
+    main.captureAndExit("=> Errors while setting up package:", function () {
+      return(
+        // Read metadata and initialize catalog.
+        projectContext.initializeCatalog()
+      );
+    });
+    var versionRecord = projectContext.localCatalog.getVersionBySourceRoot(packageDir);
+    if (!versionRecord) {
       throw Error("explicitly added local package dir missing?");
     }
-    const packageName = versionRecord.packageName;
-    const constraint = utils.parsePackageConstraint(packageName);
+    var packageName = versionRecord.packageName;
+    var constraint = utils.parsePackageConstraint(packageName);
     projectContext.projectConstraintsFile.removeAllPackages();
     projectContext.projectConstraintsFile.addConstraints([constraint]);
   }
 
   // linting the app
-  if (! projectContext && appDir) {
+  if (!projectContext && appDir) {
     projectContext = new projectContextModule.ProjectContext({
       projectDir: appDir,
       serverArchitectures: [archinfo.host()],
@@ -1070,14 +1003,13 @@ main.registerCommand({
     });
   }
 
-
-  main.captureAndExit("=> Errors prevented the build:", () => {
+  main.captureAndExit("=> Errors prevented the build:", function () {
     projectContext.prepareProjectForBuild();
   });
 
-  const bundlePath = projectContext.getProjectLocalDirectory('build');
-  const bundler = require('../isobuild/bundler.js');
-  const bundle = bundler.bundle({
+  var bundlePath = projectContext.getProjectLocalDirectory('build');
+  var bundler = require('../isobuild/bundler.js');
+  var bundle = bundler.bundle({
     projectContext: projectContext,
     outputPath: null,
     buildOptions: {
@@ -1085,11 +1017,9 @@ main.registerCommand({
     }
   });
 
-  const displayName = options.packageDir ? 'package' : 'app';
+  var displayName = options.packageDir ? 'package' : 'app';
   if (bundle.errors) {
-    Console.error(
-      `=> Errors building your ${displayName}:\n\n${bundle.errors.formatMessages()}`
-    );
+    Console.error('=> Errors building your ' + displayName + ':\n\n' + bundle.errors.formatMessages());
     throw new main.ExitWithCode(2);
   }
 
@@ -1122,30 +1052,21 @@ main.registerCommand({
 
   if (options.args.length === 0) {
     // localhost mode
-    var findMongoPort =
-      require('../runners/run-mongo.js').findMongoPort;
+    var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
     var mongoPort = findMongoPort(options.appDir);
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
     // specified?
 
-    if (! mongoPort) {
+    if (!mongoPort) {
       Console.info("mongo: Meteor isn't running a local MongoDB server.");
       Console.info();
-      Console.info(`\
-This command only works while Meteor is running your application locally. \
-Start your application first with 'meteor' and then run this command in a new \
-terminal. This error will also occur if you asked Meteor to use a different \
-MongoDB server with $MONGO_URL when you ran your application.`);
+      Console.info('This command only works while Meteor is running your application locally. Start your application first with \'meteor\' and then run this command in a new terminal. This error will also occur if you asked Meteor to use a different MongoDB server with $MONGO_URL when you ran your application.');
       Console.info();
-      Console.info(`\
-If you're trying to connect to the database of an app you deployed with \
-${Console.command("'meteor deploy'")}, specify your site's name as an argument \
-to this command.`);
+      Console.info('If you\'re trying to connect to the database of an app you deployed with ' + Console.command("'meteor deploy'") + ', specify your site\'s name as an argument to this command.');
       return 1;
     }
     mongoUrl = "mongodb://127.0.0.1:" + mongoPort + "/meteor";
-
   } else {
     // remote mode
     var site = qualifySitename(options.args[0]);
@@ -1154,19 +1075,18 @@ to this command.`);
     mongoUrl = deploy.temporaryMongoUrl(site);
     usedMeteorAccount = true;
 
-    if (! mongoUrl)
+    if (!mongoUrl)
       // temporaryMongoUrl() will have printed an error message
       return 1;
   }
   if (options.url) {
     console.log(mongoUrl);
   } else {
-    if (usedMeteorAccount)
-      auth.maybePrintRegistrationLink();
+    if (usedMeteorAccount) auth.maybePrintRegistrationLink();
     process.stdin.pause();
     var runMongo = require('../runners/run-mongo.js');
     runMongo.runMongoShell(mongoUrl);
-    throw new main.WaitForExit;
+    throw new main.WaitForExit();
   }
 });
 
@@ -1186,24 +1106,20 @@ main.registerCommand({
     Console.error("meteor reset only affects the locally stored database.");
     Console.error();
     Console.error("To reset a deployed application use");
-    Console.error(
-      Console.command("meteor deploy --delete appname"), Console.options({ indent: 2 }));
+    Console.error(Console.command("meteor deploy --delete appname"), Console.options({ indent: 2 }));
     Console.error("followed by");
-    Console.error(
-      Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
+    Console.error(Console.command("meteor deploy appname"), Console.options({ indent: 2 }));
     return 1;
   }
 
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
   var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! findMongoPort(options.appDir);
+  var isRunning = !!findMongoPort(options.appDir);
   if (isRunning) {
     Console.error("reset: Meteor is running.");
     Console.error();
-    Console.error(
-      "This command does not work while Meteor is running your application.",
-      "Exit the running Meteor development server.");
+    Console.error("This command does not work while Meteor is running your application.", "Exit the running Meteor development server.");
     return 1;
   }
 
@@ -1232,49 +1148,38 @@ main.registerCommand({
     // it contains binary packages that should be incompatible. A hack to allow
     // people to deploy from checkout or do other weird shit. We are not
     // responsible for the consequences.
-    'override-architecture-with-local' : { type: Boolean },
+    'override-architecture-with-local': { type: Boolean },
     'allow-incompatible-update': { type: Boolean }
   },
   requiresApp: function (options) {
-    return ! options.delete;
+    return !options['delete'];
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var site = qualifySitename(options.args[0]);
   config.printUniverseBanner();
 
-  if (options.delete) {
+  if (options['delete']) {
     return deploy.deleteApp(site);
   }
 
   if (options.password) {
-    Console.error(
-      "Setting passwords on apps is no longer supported. Now there are " +
-        "user accounts and your apps are associated with your account so " +
-        "that only you (and people you designate) can access them. See the " +
-        Console.command("'meteor claim'") + " and " +
-        Console.command("'meteor authorized'") + " commands.");
+    Console.error("Setting passwords on apps is no longer supported. Now there are " + "user accounts and your apps are associated with your account so " + "that only you (and people you designate) can access them. See the " + Console.command("'meteor claim'") + " and " + Console.command("'meteor authorized'") + " commands.");
     return 1;
   }
 
   var loggedIn = auth.isLoggedIn();
-  if (! loggedIn) {
-    Console.error(
-      "To instantly deploy your app on a free testing server,",
-      "just enter your email address!");
+  if (!loggedIn) {
+    Console.error("To instantly deploy your app on a free testing server,", "just enter your email address!");
     Console.error();
-    if (! auth.registerOrLogIn())
-      return 1;
+    if (!auth.registerOrLogIn()) return 1;
   }
 
   // Override architecture iff applicable.
   var buildArch = DEPLOY_ARCH;
   if (options['override-architecture-with-local']) {
     Console.warn();
-    Console.labelWarn(
-      "OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.",
-      "If your app contains binary code, it may break in unexpected " +
-      "and terrible ways.");
+    Console.labelWarn("OVERRIDING DEPLOY ARCHITECTURE WITH LOCAL ARCHITECTURE.", "If your app contains binary code, it may break in unexpected " + "and terrible ways.");
     buildArch = archinfo.host();
   }
 
@@ -1308,7 +1213,7 @@ main.registerCommand({
       // If the user was already logged in at the beginning of the
       // deploy, then they've already been prompted to set a password
       // at least once before, so we use a slightly different message.
-      firstTime: ! loggedIn
+      firstTime: !loggedIn
     });
   }
 
@@ -1352,15 +1257,12 @@ main.registerCommand({
 }, function (options) {
 
   if (options.add && options.remove) {
-    Console.error(
-      "Sorry, you can only add or remove one user at a time.");
+    Console.error("Sorry, you can only add or remove one user at a time.");
     return 1;
   }
 
   if ((options.add || options.remove) && options.list) {
-    Console.error(
-      "Sorry, you can't change the users at the same time as",
-      "you're listing them.");
+    Console.error("Sorry, you can't change the users at the same time as", "you're listing them.");
     return 1;
   }
 
@@ -1368,19 +1270,12 @@ main.registerCommand({
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
-  if (! auth.isLoggedIn()) {
-    Console.error(
-      "You must be logged in for that. Try " +
-      Console.command("'meteor login'"));
+  if (!auth.isLoggedIn()) {
+    Console.error("You must be logged in for that. Try " + Console.command("'meteor login'"));
     return 1;
   }
 
-  if (options.add)
-    return deploy.changeAuthorized(site, "add", options.add);
-  else if (options.remove)
-    return deploy.changeAuthorized(site, "remove", options.remove);
-  else
-    return deploy.listAuthorized(site);
+  if (options.add) return deploy.changeAuthorized(site, "add", options.add);else if (options.remove) return deploy.changeAuthorized(site, "remove", options.remove);else return deploy.listAuthorized(site);
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1397,20 +1292,14 @@ main.registerCommand({
   auth.pollForRegistrationCompletion();
   var site = qualifySitename(options.args[0]);
 
-  if (! auth.isLoggedIn()) {
-    Console.error(
-      "You must be logged in to claim sites. Use " +
-      Console.command("'meteor login'") + " to log in. If you don't have a " +
-      "Meteor developer account yet, create one by clicking " +
-      Console.command("'Sign in'") + " and then " +
-      Console.command("'Create account'") + " at www.meteor.com.");
+  if (!auth.isLoggedIn()) {
+    Console.error("You must be logged in to claim sites. Use " + Console.command("'meteor login'") + " to log in. If you don't have a " + "Meteor developer account yet, create one by clicking " + Console.command("'Sign in'") + " and then " + Console.command("'Create account'") + " at www.meteor.com.");
     Console.error();
     return 1;
   }
 
   return deploy.claim(site);
 });
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // test-packages
@@ -1423,7 +1312,7 @@ main.registerCommand({
   name: 'test-packages',
   maxArgs: Infinity,
   options: {
-    port: { type: String, short: "p", default: DEFAULT_PORT },
+    port: { type: String, short: "p", 'default': DEFAULT_PORT },
     'mobile-server': { type: String },
     // XXX COMPAT WITH 0.9.2.2
     'mobile-port': { type: String },
@@ -1442,7 +1331,7 @@ main.registerCommand({
     // doesn't do oplog tailing.)
     'disable-oplog': { type: Boolean },
     // Undocumented flag to use a different test driver.
-    'driver-package': { type: String, default: 'test-in-browser' },
+    'driver-package': { type: String, 'default': 'test-in-browser' },
 
     // Sets the path of where the temp app should be created
     'test-app-path': { type: String },
@@ -1477,11 +1366,12 @@ main.registerCommand({
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
-  const runTargets = parseRunTargets(_.intersection(
-    Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
+  var runTargets = parseRunTargets(_.intersection(Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
 
-  const { parsedServerUrl, parsedMobileServerUrl } =
-    parseServerOptionsForRunCommand(options, runTargets);
+  var _parseServerOptionsForRunCommand2 = parseServerOptionsForRunCommand(options, runTargets);
+
+  var parsedServerUrl = _parseServerOptionsForRunCommand2.parsedServerUrl;
+  var parsedMobileServerUrl = _parseServerOptionsForRunCommand2.parsedMobileServerUrl;
 
   // Find any packages mentioned by a path instead of a package name. We will
   // load them explicitly into the catalog.
@@ -1493,14 +1383,12 @@ main.registerCommand({
   // cleaned up on process exit. Using a temporary app dir means that we can
   // run multiple "test-packages" commands in parallel without them stomping
   // on each other.
-  var testRunnerAppDir =
-        options['test-app-path'] || files.mkdtemp('meteor-test-run');
+  var testRunnerAppDir = options['test-app-path'] || files.mkdtemp('meteor-test-run');
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
   var serverArchitectures = [archinfo.host()];
-  if (options.deploy && DEPLOY_ARCH !== archinfo.host())
-    serverArchitectures.push(DEPLOY_ARCH);
+  if (options.deploy && DEPLOY_ARCH !== archinfo.host()) serverArchitectures.push(DEPLOY_ARCH);
 
   // XXX Because every run uses a new app with its own IsopackCache directory,
   //     this always does a clean build of all packages. Maybe we can speed up
@@ -1523,8 +1411,7 @@ main.registerCommand({
   });
 
   // Overwrite .meteor/release.
-  projectContext.releaseFile.write(
-    release.current.isCheckout() ? "none" : release.current.name);
+  projectContext.releaseFile.write(release.current.isCheckout() ? "none" : release.current.name);
 
   var packagesToAdd = getTestPackageNames(projectContext, options.args);
 
@@ -1532,7 +1419,7 @@ main.registerCommand({
   var excludedPackages = options.exclude && options.exclude.split(',');
   if (excludedPackages) {
     packagesToAdd = _.filter(packagesToAdd, function (p) {
-      return ! _.some(excludedPackages, function (excluded) {
+      return !_.some(excludedPackages, function (excluded) {
         return p.replace(/^local-test:/, '') === excluded;
       });
     });
@@ -1561,15 +1448,15 @@ main.registerCommand({
   // runner, once the proxy is listening. The changes we made were persisted to
   // disk, so projectContext.reset won't make us forget anything.
 
-  let cordovaRunner;
+  var cordovaRunner = undefined;
 
   if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext, {
+    main.captureAndExit('', 'preparing Cordova project', function () {
+      var cordovaProject = new _cordovaProjectJs.CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
 
-      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+      cordovaRunner = new _cordovaRunnerJs.CordovaRunner(cordovaProject, runTargets);
       projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
       cordovaRunner.checkPlatformsForRunTargets();
     });
@@ -1578,21 +1465,18 @@ main.registerCommand({
   options.cordovaRunner = cordovaRunner;
 
   if (options.velocity) {
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
-    const velocity = require('../runners/run-velocity.js');
+    var serverUrlForVelocity = 'http://' + (parsedServerUrl.host || "localhost") + ':' + parsedServerUrl.port;
+    var velocity = require('../runners/run-velocity.js');
     velocity.runVelocity(serverUrlForVelocity);
   }
 
-  return runTestAppForPackages(projectContext, _.extend(
-    options,
-    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
+  return runTestAppForPackages(projectContext, _.extend(options, { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
 });
 
 // Returns the "local-test:*" package names for the given package names (or for
 // all local packages if packageNames is empty/unspecified).
 var getTestPackageNames = function (projectContext, packageNames) {
-  var packageNamesSpecifiedExplicitly = ! _.isEmpty(packageNames);
+  var packageNamesSpecifiedExplicitly = !_.isEmpty(packageNames);
   if (_.isEmpty(packageNames)) {
     // If none specified, test all local packages. (We don't have tests for
     // non-local packages.)
@@ -1605,14 +1489,13 @@ var getTestPackageNames = function (projectContext, packageNames) {
         // If it's a package name, look it up the normal way.
         if (p.indexOf('/') === -1) {
           if (p.indexOf('@') !== -1) {
-            buildmessage.error(
-              "You may not specify versions for local packages: " + p );
-            return;  // recover by ignoring
+            buildmessage.error("You may not specify versions for local packages: " + p);
+            return; // recover by ignoring
           }
           // Check to see if this is a real local package, and if it is a real
           // local package, if it has tests.
           var version = projectContext.localCatalog.getLatestVersion(p);
-          if (! version) {
+          if (!version) {
             buildmessage.error("Not a known local package, cannot test");
           } else if (version.testName) {
             testPackages.push(version.testName);
@@ -1624,9 +1507,8 @@ var getTestPackageNames = function (projectContext, packageNames) {
           }
         } else {
           // Otherwise, it's a directory; find it by source root.
-          version = projectContext.localCatalog.getVersionBySourceRoot(
-            files.pathResolve(p));
-          if (! version) {
+          version = projectContext.localCatalog.getVersionBySourceRoot(files.pathResolve(p));
+          if (!version) {
             throw Error("should have been caught when initializing catalog?");
           }
           if (version.testName) {
@@ -1647,7 +1529,7 @@ var getTestPackageNames = function (projectContext, packageNames) {
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development',
-    buildMode: options.production ? 'production' : 'development',
+    buildMode: options.production ? 'production' : 'development'
   };
 
   if (options.deploy) {
@@ -1736,7 +1618,6 @@ main.registerCommand({
   }, options));
 });
 
-
 ///////////////////////////////////////////////////////////////////////////////
 // logout
 ///////////////////////////////////////////////////////////////////////////////
@@ -1747,7 +1628,6 @@ main.registerCommand({
 }, function (options) {
   return auth.logoutCommand(options);
 });
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // whoami
@@ -1767,7 +1647,7 @@ main.registerCommand({
 
 var loggedInAccountsConnectionOrPrompt = function (action) {
   var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
+  if (!token) {
     Console.error("You must be logged in to " + action + ".");
     auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
@@ -1797,7 +1677,7 @@ main.registerCommand({
 }, function (options) {
 
   var token = auth.getSessionToken(config.getAccountsDomain());
-  if (! token) {
+  if (!token) {
     Console.error("You must be logged in to list your organizations.");
     auth.doUsernamePasswordLogin({ retry: true });
     Console.info();
@@ -1817,16 +1697,14 @@ main.registerCommand({
     return 1;
   }
 
-  if (result.response.statusCode === 401 &&
-      body && body.error === "invalid_credential") {
+  if (result.response.statusCode === 401 && body && body.error === "invalid_credential") {
     Console.error("You must be logged in to list your organizations.");
     // XXX It would be nice to do a username/password prompt here like
     // we do for the other orgs commands.
     return 1;
   }
 
-  if (result.response.statusCode !== 200 ||
-      ! body || ! body.organizations) {
+  if (result.response.statusCode !== 200 || !body || !body.organizations) {
     Console.error("Error listing organizations.");
     return 1;
   }
@@ -1857,34 +1735,26 @@ main.registerCommand({
 }, function (options) {
 
   if (options.add && options.remove) {
-    Console.error(
-      "Sorry, you can only add or remove one member at a time.");
-    throw new main.ShowUsage;
+    Console.error("Sorry, you can only add or remove one member at a time.");
+    throw new main.ShowUsage();
   }
 
   config.printUniverseBanner();
 
   var username = options.add || options.remove;
 
-  var conn = loggedInAccountsConnectionOrPrompt(
-    username ? "edit organizations" : "show an organization's members");
+  var conn = loggedInAccountsConnectionOrPrompt(username ? "edit organizations" : "show an organization's members");
 
-  if (username ) {
+  if (username) {
     // Adding or removing members
     try {
-      conn.call(
-        options.add ? "addOrganizationMember": "removeOrganizationMember",
-        options.args[0], username);
+      conn.call(options.add ? "addOrganizationMember" : "removeOrganizationMember", options.args[0], username);
     } catch (err) {
-      Console.error("Error " +
-                    (options.add ? "adding" : "removing") +
-                    " member: " + err.reason);
+      Console.error("Error " + (options.add ? "adding" : "removing") + " member: " + err.reason);
       return 1;
     }
 
-    Console.info(username + " " +
-                         (options.add ? "added to" : "removed from") +
-                         " organization " + options.args[0] + ".");
+    Console.info(username + " " + (options.add ? "added to" : "removed from") + " organization " + options.args[0] + ".");
   } else {
     // Showing the members of an org
     try {
@@ -1927,7 +1797,7 @@ main.registerCommand({
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
-  if (! files.inCheckout()) {
+  if (!files.inCheckout()) {
     Console.error("self-test is only supported running from a checkout");
     return 1;
   }
@@ -1940,8 +1810,7 @@ main.registerCommand({
     try {
       require('../utils/http-helpers.js').getUrl("http://www.google.com/");
     } catch (e) {
-      if (e instanceof files.OfflineError)
-        offline = true;
+      if (e instanceof files.OfflineError) offline = true;
     }
   }
 
@@ -1949,8 +1818,7 @@ main.registerCommand({
     try {
       return new RegExp(str);
     } catch (e) {
-      if (!(e instanceof SyntaxError))
-        throw e;
+      if (!(e instanceof SyntaxError)) throw e;
       Console.error("Bad regular expression: " + str);
       return null;
     }
@@ -1959,7 +1827,7 @@ main.registerCommand({
   var testRegexp = undefined;
   if (options.args.length) {
     testRegexp = compileRegexp(options.args[0]);
-    if (! testRegexp) {
+    if (!testRegexp) {
       return 1;
     }
   }
@@ -1967,7 +1835,7 @@ main.registerCommand({
   var fileRegexp = undefined;
   if (options.file) {
     fileRegexp = compileRegexp(options.file);
-    if (! fileRegexp) {
+    if (!fileRegexp) {
       return 1;
     }
   }
@@ -1975,7 +1843,7 @@ main.registerCommand({
   var excludeRegexp = undefined;
   if (options.exclude) {
     excludeRegexp = compileRegexp(options.exclude);
-    if (! excludeRegexp) {
+    if (!excludeRegexp) {
       return 1;
     }
   }
@@ -2010,7 +1878,6 @@ main.registerCommand({
     historyLines: options.history,
     clients: clients
   });
-
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2025,16 +1892,13 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   auth.pollForRegistrationCompletion();
-  if (! auth.isLoggedIn()) {
-    Console.error(
-      "You must be logged in for that. Try " +
-      Console.command("'meteor login'") + ".");
+  if (!auth.isLoggedIn()) {
+    Console.error("You must be logged in for that. Try " + Console.command("'meteor login'") + ".");
     return 1;
   }
 
   return deploy.listSites();
 });
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // admin get-machine
@@ -2057,7 +1921,7 @@ main.registerCommand({
 
   // Check that we are asking for a valid architecture.
   var arch = options.args[0];
-  if (!_.has(VALID_ARCHITECTURES, arch)){
+  if (!_.has(VALID_ARCHITECTURES, arch)) {
     showInvalidArchMsg(arch);
     return 1;
   }
@@ -2074,10 +1938,7 @@ main.registerCommand({
 
   try {
     maybeLog("Logging into the get-machines server ...");
-    var conn = authClient.loggedInConnection(
-      config.getBuildFarmUrl(),
-      config.getBuildFarmDomain(),
-      "build-farm");
+    var conn = authClient.loggedInConnection(config.getBuildFarmUrl(), config.getBuildFarmDomain(), "build-farm");
   } catch (err) {
     authClient.handleConnectionError(err, "get-machines server");
     return 1;
@@ -2103,10 +1964,10 @@ main.registerCommand({
   if (options.json) {
     var retJson = {
       'username': ret.username,
-      'host' : ret.host,
-      'port' : ret.port,
-      'key' : ret.sshKey,
-      'hostKey' : ret.hostKey
+      'host': ret.host,
+      'port': ret.port,
+      'key': ret.sshKey,
+      'hostKey': ret.hostKey
     };
     Console.rawInfo(JSON.stringify(retJson, null, 2) + "\n");
     return 0;
@@ -2117,7 +1978,7 @@ main.registerCommand({
   var tmpDir = files.mkdtemp('meteor-ssh-');
   var idpath = tmpDir + '/id';
   maybeLog("Writing ssh key to " + idpath);
-  files.writeFile(idpath, ret.sshKey, {encoding: 'utf8', mode: 0o400});
+  files.writeFile(idpath, ret.sshKey, { encoding: 'utf8', mode: 256 });
 
   // Add the known host key to a custom known hosts file.
   var hostpath = tmpDir + '/host';
@@ -2129,18 +1990,13 @@ main.registerCommand({
   var login = ret.username + "@" + ret.host;
   var maybeVerbose = options.verbose ? "-v" : "-q";
 
-  var connOptions = [
-    login,
-     "-i" + idpath,
-     "-p" + ret.port,
-     "-oUserKnownHostsFile=" + hostpath,
-     maybeVerbose];
+  var connOptions = [login, "-i" + idpath, "-p" + ret.port, "-oUserKnownHostsFile=" + hostpath, maybeVerbose];
 
   var printOptions = connOptions.join(' ');
   maybeLog("Connecting: " + Console.command("ssh " + printOptions));
 
   var child_process = require('child_process');
-  var future = new Future;
+  var future = new Future();
 
   if (arch.match(/win/)) {
     // The ssh output from Windows machines is buggy, it can overlay your
@@ -2149,21 +2005,17 @@ main.registerCommand({
     Console.clear();
   }
 
-  var sshCommand = child_process.spawn(
-    "ssh", connOptions,
-    { stdio: 'inherit' }); // Redirect spawn stdio to process
+  var sshCommand = child_process.spawn("ssh", connOptions, { stdio: 'inherit' }); // Redirect spawn stdio to process
 
   sshCommand.on('error', function (err) {
     if (err.code === "ENOENT") {
       if (process.platform === "win32") {
-        Console.error("Could not find the `ssh` command in your PATH.",
-          "Please read this page about using the get-machine command on Windows:",
-          Console.url("https://github.com/meteor/meteor/wiki/Accessing-Meteor-provided-build-machines-from-Windows"));
+        Console.error("Could not find the `ssh` command in your PATH.", "Please read this page about using the get-machine command on Windows:", Console.url("https://github.com/meteor/meteor/wiki/Accessing-Meteor-provided-build-machines-from-Windows"));
       } else {
         Console.error("Could not find the `ssh` command in your PATH.");
       }
 
-      future.return(1);
+      future['return'](1);
     }
   });
 
@@ -2171,16 +2023,15 @@ main.registerCommand({
     if (signal) {
       // XXX: We should process the signal in some way, but I am not sure we
       // care right now.
-      future.return(1);
+      future['return'](1);
     } else {
-      future.return(code);
+      future['return'](code);
     }
   });
   var sshEnd = future.wait();
 
   return sshEnd;
 });
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // admin progressbar-test
@@ -2190,14 +2041,14 @@ main.registerCommand({
 main.registerCommand({
   name: 'admin progressbar-test',
   options: {
-    secs: { type: Number, default: 20 },
-    spinner: { type: Boolean, default: false }
+    secs: { type: Number, 'default': 20 },
+    spinner: { type: Boolean, 'default': false }
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   buildmessage.enterJob({ title: "A test progressbar" }, function () {
-    var doneFuture = new Future;
+    var doneFuture = new Future();
     var progress = buildmessage.getCurrentProgressTracker();
     var totalProgress = { current: 0, end: options.secs, done: false };
     var i = 0;
@@ -2209,14 +2060,14 @@ main.registerCommand({
 
     var updateProgress = function () {
       i++;
-      if (! options.spinner) {
+      if (!options.spinner) {
         totalProgress.current = i;
       }
 
       if (i === n) {
         totalProgress.done = true;
         progress.reportProgress(totalProgress);
-        doneFuture.return();
+        doneFuture['return']();
       } else {
         progress.reportProgress(totalProgress);
         setTimeout(updateProgress, 1000);
@@ -2226,7 +2077,6 @@ main.registerCommand({
     doneFuture.wait();
   });
 });
-
 
 ///////////////////////////////////////////////////////////////////////////////
 // dummy
@@ -2239,7 +2089,7 @@ main.registerCommand({
   name: 'dummy',
   options: {
     ething: { type: String, short: "e", required: true },
-    port: { type: Number, short: "p", default: DEFAULT_PORT },
+    port: { type: Number, short: "p", 'default': DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
     changed: { type: Boolean }
@@ -2250,17 +2100,13 @@ main.registerCommand({
   catalogRefresh: new catalog.Refresh.Never()
 }, function (options) {
   var p = function (key) {
-    if (_.has(options, key))
-      return JSON.stringify(options[key]);
+    if (_.has(options, key)) return JSON.stringify(options[key]);
     return 'none';
   };
 
-  Console.info(p('ething') + " " + p('port') + " " + p('changed') +
-                       " " + p('args'));
-  if (options.url)
-    Console.info('url');
-  if (options['delete'])
-    Console.info('delete');
+  Console.info(p('ething') + " " + p('port') + " " + p('changed') + " " + p('args'));
+  if (options.url) Console.info('url');
+  if (options['delete']) Console.info('delete');
 });
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2277,3 +2123,4 @@ main.registerCommand({
 }, function () {
   throw new Error("testing stack traces!"); // #StackTraceTest this line is found in tests/source-maps.js
 });
+//# sourceMappingURL=commands.js.map

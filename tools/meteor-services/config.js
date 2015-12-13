@@ -33,8 +33,9 @@ var getUniverse = function () {
 
     if (files.inCheckout()) {
       var p = files.pathJoin(files.getCurrentToolsDir(), 'universe');
-      if (files.exists(p))
+      if (files.exists(p)) {
         universe = files.readFile(p, 'utf8').trim();
+      }
     }
   }
 
@@ -47,15 +48,16 @@ var isLocalUniverse = function () {
 
 var localhostOffset = function (portOffset) {
   var match = getUniverse().match(/^localhost(:([\d]+))?$/);
-  if (! match)
+  if (! match) {
     throw new Error("not a local universe?");
+  }
   return "localhost:" + (parseInt(match[2] || "80") + portOffset);
 };
 
 var getAuthServiceHost = function () {
-  if (! isLocalUniverse())
+  if (! isLocalUniverse()) {
     return universe;
-  else
+  } else {
     // Special case for local development. Point
     // $METEOR_CHECKOUT/universe at the place where you are running
     // frontpage (eg, localhost:3000), and run the accounts server ten
@@ -63,15 +65,17 @@ var getAuthServiceHost = function () {
     //   cd meteor-accounts
     //   ROOT_URL=http://localhost:3010/auth curmeteor -p 3010
     return localhostOffset(10);
+  }
 };
 
 // Given a hostname, add "http://" or "https://" as
 // appropriate. (localhost gets http; anything else is always https.)
 var addScheme = function (host) {
-  if (host.match(/^localhost(:\d+)?$/))
+  if (host.match(/^localhost(:\d+)?$/)) {
     return "http://" + host;
-  else
+  } else {
     return "https://" + host;
+  }
 };
 
 var config = exports;
@@ -112,8 +116,9 @@ _.extend(exports, {
   // URL for the DDP interface to the meteor build farm, typically
   // "https://build.meteor.com".
   getBuildFarmUrl: function () {
-    if (process.env.METEOR_BUILD_FARM_URL)
+    if (process.env.METEOR_BUILD_FARM_URL) {
       return process.env.METEOR_BUILD_FARM_URL;
+    }
     var host = config.getBuildFarmDomain();
 
     return addScheme(host);
@@ -136,8 +141,9 @@ _.extend(exports, {
   // base universe port number (that is, the Meteor Accounts port
   // number) plus 20.
   getPackageServerUrl: function () {
-    if (process.env.METEOR_PACKAGE_SERVER_URL)
+    if (process.env.METEOR_PACKAGE_SERVER_URL) {
       return process.env.METEOR_PACKAGE_SERVER_URL;
+    }
     var host = config.getPackageServerDomain();
 
     return addScheme(host);
@@ -190,7 +196,9 @@ _.extend(exports, {
   // server we actually use.
   getPackageServerFilePrefix: function (serverUrl) {
     var self = this;
-    if (!serverUrl) serverUrl = self.getPackageServerUrl();
+    if (!serverUrl) {
+      serverUrl = self.getPackageServerUrl();
+    }
 
     // Chop off http:// and https:// and trailing slashes.
     serverUrl = serverUrl.replace(/^\https:\/\//, '');
@@ -270,14 +278,17 @@ _.extend(exports, {
     // scheme.
     if (process.env.DEPLOY_HOSTNAME) {
       host = process.env.DEPLOY_HOSTNAME;
-      if (host.match(/^http/))
-        return host; // allow it to contain a URL scheme
+      if (host.match(/^http/)) {
+        // allow it to contain a URL scheme
+        return host;
+      }
     } else {
       // Otherwise, base it on the universe.
-      if (isLocalUniverse())
+      if (isLocalUniverse()) {
         throw new Error("local development of deploy server not supported");
-      else
+      } else {
         host = getUniverse().replace(/^www\./, 'deploy.');
+      }
     }
 
     return addScheme(host);
@@ -286,8 +297,10 @@ _.extend(exports, {
   // URL from which the update manifest may be fetched, eg
   // 'https://update.meteor.com/manifest.json'
   getUpdateManifestUrl: function () {
-    if (isLocalUniverse())
-      u = "www.meteor.com"; // localhost can't run the manifest server
+    if (isLocalUniverse()) {
+      // localhost can't run the manifest server
+      u = "www.meteor.com";
+    }
     var host = getUniverse().replace(/^www\./, 'update.');
 
     return addScheme(host) + "/manifest.json";
@@ -312,10 +325,11 @@ _.extend(exports, {
   // privileged port, so you can set DISCOVERY_PORT to override. (A
   // better solution would probably be to spin up a local VM.)
   getDiscoveryPort: function () {
-    if (process.env.DISCOVERY_PORT)
+    if (process.env.DISCOVERY_PORT) {
       return parseInt(process.env.DISCOVERY_PORT);
-    else
+    } else {
       return 443;
+    }
   },
 
   // It's easy to forget that you're in an alternate universe (and
@@ -323,7 +337,8 @@ _.extend(exports, {
   // in production mode, print a quick hint about the universe you're
   // in.
   printUniverseBanner: function () {
-    if (! config.isProduction())
+    if (! config.isProduction()) {
       process.stderr.write('[Universe: ' + config.getUniverse() + ']\n');
+    }
   }
 });

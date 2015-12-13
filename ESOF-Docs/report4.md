@@ -64,7 +64,7 @@ O Meteor está em continuo crescimento e possui uma documentação detalhada par
 
 Na versão [completa](http://docs.meteor.com/#/full/) da aplicação é fornecido uma informação detalhada sobre os seus componentes e sua funcionalidade. Na descrição de cada método pertencente a um componente é dado uma descrição do que o método executa, os seus argumentos de entrada e o breve explicação dos mesmos, e caso tenha retorno, explica-o. Como os métodos podem ser executados no cliente ou no servidor, ou em ambos, também indica aonde é utilizado. A imagem abaixo ilustra a documentação pertence do método [insert](http://docs.meteor.com/#/full/insert) pertence ao componente Collections:
 
-//imagem
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/metodo-static.png)
 
 Consideramos que o Meteor possui uma documentação que ajuda a explicar os principais componentes da aplicação, fator muito importante para a testabilidade de uma aplicação. 
 
@@ -78,12 +78,18 @@ Apesar do dinamismo e abertura do **Meteor**, as ferramentas de testes são univ
 
 ## Estatísticas de Teste
 
+Este tópico indica a análise às estatísticas obtidas a partir dos testes realizados bem como o código gerado. Para um projeto como o **Meteor**, esta análise é muito importante para perceber se os testes foram bem realizados e para a contribuição de uma aplicação com sucesso. Após uma análise ao projeto, foi recolhida informação de vários tipos de testes usados pelo **Meteor**, como alguns que foram indicados em cima. Apesar de termos encontrado vários, como estatística, nenhum nos permite gerar as percentagens de testes que foram realizadas desde o início do projeto **Meteor**. 
+
+Uma das ferramentas de teste que é muito usada pelo Meteor no Github e não foi referida em cima é o [Travis CI] (https://travis-ci.org/). Esta ferramenta permite fazer testes aos nossos commits e é usada sempre que nós quisermos fazer um futuro pull-request ao repositório do **Meteor**.   
+
 ## Referências
 * http://docs.meteor.com/#/full/
 * http://www.softwaretestingclass.com/why-documentation-is-important-in-software-testing/
 * https://semaphoreci.com/blog/2014/11/19/meteorjs-getting-started.html
 * http://webtempest.com/meteor-js-testing
 * http://jasmine.github.io/2.1/introduction.html
+* http://udgwebdev.com/configurando-meteor-e-velocity-no-travis-ci/
+* https://meteorhacks.com/travis-ci-support-for-meteor-packages
 
 
 ## FEUP ESOF MIEIC

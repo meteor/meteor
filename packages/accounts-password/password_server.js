@@ -500,11 +500,16 @@ Accounts.setPassword = function (userId, newPlaintextPassword, options) {
 Meteor.methods({forgotPassword: function (options) {
   check(options, {email: String});
 
-  var user = Meteor.users.findOne({"emails.address": options.email});
+  var user = Accounts.findUserByEmail(options.email);
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
-  Accounts.sendResetPasswordEmail(user._id, options.email);
+  const emails = _.pluck(user.emails || [], 'address');
+  const caseSensitiveEmail = _.find(emails, email => {
+    return email.toLowerCase() === options.email.toLowerCase();
+  });
+
+  Accounts.sendResetPasswordEmail(user._id, caseSensitiveEmail);
 }});
 
 // send the user an email with a link that when opened allows the user

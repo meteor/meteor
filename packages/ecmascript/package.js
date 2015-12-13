@@ -15,8 +15,8 @@ Package.onUse(function (api) {
   api.use('isobuild:compiler-plugin@1.0.0');
   api.use('babel-compiler');
 
-  api.imply('babel-runtime');
   api.imply('ecmascript-runtime');
+  api.imply('babel-runtime');
   api.imply('promise');
 
   api.addFiles("ecmascript.js", "server");

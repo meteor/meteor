@@ -59,8 +59,9 @@ var deployRpc = function (options) {
 
   options = _.clone(options);
   options.headers = _.clone(options.headers || {});
-  if (options.headers.cookie)
+  if (options.headers.cookie) {
     throw new Error("sorry, can't combine cookie headers yet");
+  }
 
   // XXX: Reintroduce progress for upload
   try {
@@ -172,8 +173,9 @@ var authedRpc = function (options) {
     return preflight ? { } : deployRpc(rpcOptions);
   }
 
-  if (infoResult.errorMessage)
+  if (infoResult.errorMessage) {
     return infoResult;
+  }
   var info = infoResult.payload;
 
   if (! _.has(info, 'protection')) {
@@ -301,8 +303,9 @@ var canonicalizeSite = function (site) {
   }
 
   var url = site;
-  if (!url.match(':\/\/'))
+  if (!url.match(':\/\/')) {
     url = 'http://' + url;
+  }
 
   var parsed = require('url').parse(url);
 
@@ -336,12 +339,14 @@ var canonicalizeSite = function (site) {
 //   stats server.
 // - buildOptions: the 'buildOptions' argument to the bundler
 var bundleAndDeploy = function (options) {
-  if (options.recordPackageUsage === undefined)
+  if (options.recordPackageUsage === undefined) {
     options.recordPackageUsage = true;
+  }
 
   var site = canonicalizeSite(options.site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   // We should give a username/password prompt if the user was logged in
   // but the credentials are expired, unless the user is logged in but
@@ -392,8 +397,9 @@ var bundleAndDeploy = function (options) {
     title: "preparing to deploy",
     rootPath: process.cwd()
   }, function () {
-    if (options.settingsFile)
+    if (options.settingsFile) {
       settings = files.getSettings(options.settingsFile);
+    }
   });
 
   if (! messages.hasMessages()) {
@@ -406,8 +412,9 @@ var bundleAndDeploy = function (options) {
       providePackageJSONForUnavailableBinaryDeps: !!process.env.METEOR_BINARY_DEP_WORKAROUND,
     });
 
-    if (bundleResult.errors)
+    if (bundleResult.errors) {
       messages = bundleResult.errors;
+    }
   }
 
   if (messages.hasMessages()) {
@@ -470,8 +477,9 @@ var bundleAndDeploy = function (options) {
 
 var deleteApp = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   var result = authedRpc({
     method: 'DELETE',
@@ -568,9 +576,10 @@ var checkAuthThenSendRpc = function (site, operation, what) {
 // site's database.
 var temporaryMongoUrl = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     // canonicalizeSite printed an error
     return null;
+  }
 
   var result = checkAuthThenSendRpc(site, 'mongo', 'open a mongo connection');
 
@@ -583,8 +592,9 @@ var temporaryMongoUrl = function (site) {
 
 var logs = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   var result = checkAuthThenSendRpc(site, 'logs', 'view logs');
 
@@ -599,8 +609,9 @@ var logs = function (site) {
 
 var listAuthorized = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     return 1;
+  }
 
   var result = deployRpc({
     operation: 'info',
@@ -632,11 +643,12 @@ var listAuthorized = function (site) {
 
     Console.info((auth.loggedInUsername() || "<you>"));
     _.each(info.authorized, function (username) {
-      if (username)
+      if (username) {
         // Current username rules don't let you register anything that we might
         // want to split over multiple lines (ex: containing a space), but we
         // don't want confusion if we ever change some implementation detail.
         Console.rawInfo(username + "\n");
+      }
     });
     return 0;
   }
@@ -645,9 +657,10 @@ var listAuthorized = function (site) {
 // action is "add" or "remove"
 var changeAuthorized = function (site, action, username) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     // canonicalizeSite will have already printed an error
     return 1;
+  }
 
   var result = authedRpc({
     method: 'POST',
@@ -670,9 +683,10 @@ var changeAuthorized = function (site, action, username) {
 
 var claim = function (site) {
   site = canonicalizeSite(site);
-  if (! site)
+  if (! site) {
     // canonicalizeSite will have already printed an error
     return 1;
+  }
 
   // Check to see if it's even a claimable site, so that we can print
   // a more appropriate message than we'd get if we called authedRpc
@@ -690,10 +704,11 @@ var claim = function (site) {
   }
 
   if (infoResult.payload && infoResult.payload.protection === "account") {
-    if (infoResult.payload.authorized)
+    if (infoResult.payload.authorized) {
       Console.error("That site already belongs to you.\n");
-    else
+    } else {
       Console.error("Sorry, that site belongs to someone else.\n");
+    }
     return 1;
   }
 

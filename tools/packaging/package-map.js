@@ -59,8 +59,9 @@ _.extend(exports.PackageMap.prototype, {
   },
   getInfo: function (packageName) {
     var self = this;
-    if (_.has(self._map, packageName))
+    if (_.has(self._map, packageName)) {
       return self._map[packageName];
+    }
     return null;
   },
   makeSubsetMap: function (packageNames) {
@@ -68,8 +69,9 @@ _.extend(exports.PackageMap.prototype, {
     var subsetVersions = {};
     _.each(packageNames, function (packageName) {
       var info = self.getInfo(packageName);
-      if (!info)
+      if (!info) {
         throw Error("not a subset: " + packageName);
+      }
       subsetVersions[packageName] = info.version;
     });
     return new exports.PackageMap(subsetVersions, {
@@ -112,10 +114,12 @@ _.extend(exports.PackageMap.prototype, {
     var self = this;
     return _.all(mapJSON, function (jsonInfo, packageName) {
       var thisInfo = self.getInfo(packageName);
-      if (! thisInfo)
+      if (! thisInfo) {
         return false;
-      if (jsonInfo.kind !== thisInfo.kind)
+      }
+      if (jsonInfo.kind !== thisInfo.kind) {
         return false;
+      }
       if (thisInfo.kind === 'local') {
         return thisInfo.packageSource.sourceRoot === jsonInfo.sourceRoot;
       } else {
@@ -134,8 +138,9 @@ _.extend(exports.PackageMap.prototype, {
 exports.PackageMap.fromReleaseVersion = function (releaseVersion) {
   var toolPackageVersion = releaseVersion.tool &&
         utils.parsePackageAndVersion(releaseVersion.tool);
-  if (!toolPackageVersion)
+  if (!toolPackageVersion) {
     throw new Error("bad tool in release: " + releaseVersion.tool);
+  }
   var toolPackage = toolPackageVersion.package;
   var toolVersion = toolPackageVersion.version;
 
@@ -177,8 +182,9 @@ _.extend(exports.PackageMapDelta.prototype, {
     var self = this;
 
     // Store nothing if nothing has changed.
-    if (newInfo.version === oldVersion)
+    if (newInfo.version === oldVersion) {
       return;
+    }
 
     var backwardsIncompatible =
           oldVersion !== null &&
@@ -224,8 +230,9 @@ _.extend(exports.PackageMapDelta.prototype, {
     }, options);
 
     // Print nothing at all if nothing changed.
-    if (! self.hasChanges())
+    if (! self.hasChanges()) {
       return;
+    }
 
     var displayItems = [];
     var anyBackwardsIncompatible = false;

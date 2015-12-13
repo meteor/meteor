@@ -1,6 +1,19 @@
 ## v.NEXT
 
-* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these 2 minifiers.
+* Improve minimongo performance on updating documents when there are
+  many active observes. #5627
+
+* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS
+  minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these
+  2 minifiers.
+
+* Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It
+  will now error if referenced from the client at all.
+
+* Allow `git+` URL schemes for npm dependencies #844
+
+Patches contributed by GitHub users vereed, ...
+
 
 ## v.1.2.1, 2015-Oct-26
 
@@ -45,7 +58,7 @@
 * Normally, you can't deploy to free meteor.com hosting or Galaxy from a
   non-Linux machine if you have *local* non-published packages with binary
   dependencies, nor can you run `meteor build --architecture SomeOtherArch`. As
-  a temporary workaround, if you set the `METEOR_DEP_BINARY_WORKAROUND`
+  a temporary workaround, if you set the `METEOR_BINARY_DEP_WORKAROUND`
   variable, you will be able to deploy to Galaxy (but not free meteor.com
   hosting), and tarballs built with `meteor build` will contain a
   `programs/server/setup.sh` shell script which should be run on the server to

@@ -12,7 +12,7 @@ DocsData = {
   "Accounts.addEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 847,
+    "lineno": 852,
     "locus": "Server",
     "longname": "Accounts.addEmail",
     "memberof": "Accounts",
@@ -161,6 +161,17 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Create a new user."
+  },
+  "Accounts.emailTemplates": {
+    "filepath": "accounts-password/email_templates.js",
+    "kind": "member",
+    "lineno": 20,
+    "locus": "Server",
+    "longname": "Accounts.emailTemplates",
+    "memberof": "Accounts",
+    "name": "emailTemplates",
+    "scope": "static",
+    "summary": "Options to customize emails sent from the Accounts system."
   },
   "Accounts.findUserByEmail": {
     "filepath": "accounts-password/password_server.js",
@@ -342,7 +353,7 @@ DocsData = {
   "Accounts.removeEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 930,
+    "lineno": 935,
     "locus": "Server",
     "longname": "Accounts.removeEmail",
     "memberof": "Accounts",
@@ -416,7 +427,7 @@ DocsData = {
   "Accounts.sendEnrollmentEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 584,
+    "lineno": 589,
     "locus": "Server",
     "longname": "Accounts.sendEnrollmentEmail",
     "memberof": "Accounts",
@@ -449,7 +460,7 @@ DocsData = {
   "Accounts.sendResetPasswordEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 519,
+    "lineno": 524,
     "locus": "Server",
     "longname": "Accounts.sendResetPasswordEmail",
     "memberof": "Accounts",
@@ -482,7 +493,7 @@ DocsData = {
   "Accounts.sendVerificationEmail": {
     "filepath": "accounts-password/password_server.js",
     "kind": "function",
-    "lineno": 723,
+    "lineno": 728,
     "locus": "Server",
     "longname": "Accounts.sendVerificationEmail",
     "memberof": "Accounts",
@@ -2898,7 +2909,7 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1641,
+    "lineno": 1643,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -3027,7 +3038,8 @@ DocsData = {
   "DDPRateLimiter.addRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 67,
+    "lineno": 69,
+    "locus": "Server",
     "longname": "DDPRateLimiter.addRule",
     "memberof": "DDPRateLimiter",
     "name": "addRule",
@@ -3067,7 +3079,8 @@ DocsData = {
   "DDPRateLimiter.removeRule": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 81,
+    "lineno": 84,
+    "locus": "Server",
     "longname": "DDPRateLimiter.removeRule",
     "memberof": "DDPRateLimiter",
     "name": "removeRule",
@@ -3099,7 +3112,8 @@ DocsData = {
   "DDPRateLimiter.setErrorMessage": {
     "filepath": "ddp-rate-limiter/ddp-rate-limiter.js",
     "kind": "function",
-    "lineno": 27,
+    "lineno": 28,
+    "locus": "Server",
     "longname": "DDPRateLimiter.setErrorMessage",
     "memberof": "DDPRateLimiter",
     "name": "setErrorMessage",
@@ -4536,7 +4550,7 @@ DocsData = {
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 706,
+    "lineno": 708,
     "locus": "Anywhere",
     "longname": "Meteor.apply",
     "memberof": "Meteor",
@@ -4606,7 +4620,7 @@ DocsData = {
   "Meteor.call": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 665,
+    "lineno": 667,
     "locus": "Anywhere",
     "longname": "Meteor.call",
     "memberof": "Meteor",
@@ -4695,7 +4709,7 @@ DocsData = {
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1018,
+    "lineno": 1020,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
@@ -5026,7 +5040,7 @@ DocsData = {
   "Meteor.reconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1008,
+    "lineno": 1010,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
@@ -5135,7 +5149,7 @@ DocsData = {
   "Meteor.startup": {
     "filepath": "meteor/startup_client.js",
     "kind": "function",
-    "lineno": 57,
+    "lineno": 64,
     "locus": "Anywhere",
     "longname": "Meteor.startup",
     "memberof": "Meteor",
@@ -5158,7 +5172,7 @@ DocsData = {
   "Meteor.status": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 996,
+    "lineno": 998,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
@@ -5171,7 +5185,7 @@ DocsData = {
   "Meteor.subscribe": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 480,
+    "lineno": 482,
     "locus": "Client",
     "longname": "Meteor.subscribe",
     "memberof": "Meteor",
@@ -5193,7 +5207,7 @@ DocsData = {
         "optional": true,
         "type": {
           "names": [
-            "Any"
+            "EJSONable"
           ]
         }
       },
@@ -5358,9 +5372,9 @@ DocsData = {
     "summary": "Constructor for a Collection"
   },
   "Mongo.Collection#allow": {
-    "filepath": "mongo/collection.js",
+    "filepath": "allow-deny/allow-deny.js",
     "kind": "function",
-    "lineno": 791,
+    "lineno": 43,
     "locus": "Server",
     "longname": "Mongo.Collection#allow",
     "memberof": "Mongo.Collection",
@@ -5408,9 +5422,9 @@ DocsData = {
     "summary": "Allow users to write directly to this collection from client code, subject to limitations you define."
   },
   "Mongo.Collection#deny": {
-    "filepath": "mongo/collection.js",
+    "filepath": "allow-deny/allow-deny.js",
     "kind": "function",
-    "lineno": 803,
+    "lineno": 58,
     "locus": "Server",
     "longname": "Mongo.Collection#deny",
     "memberof": "Mongo.Collection",
@@ -5460,7 +5474,7 @@ DocsData = {
   "Mongo.Collection#find": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 261,
+    "lineno": 264,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
@@ -5557,7 +5571,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 287,
+    "lineno": 290,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5645,7 +5659,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 431,
+    "lineno": 429,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5678,7 +5692,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 660,
+    "lineno": 681,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5691,7 +5705,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 672,
+    "lineno": 693,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5704,7 +5718,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 455,
+    "lineno": 571,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5737,7 +5751,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 441,
+    "lineno": 510,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5807,7 +5821,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 617,
+    "lineno": 635,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5869,7 +5883,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 694,
+    "lineno": 715,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -6037,7 +6051,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 687,
+    "lineno": 708,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
@@ -6074,7 +6088,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An object where the keys are package\nnames and the values are version numbers in string form or URLs to a\ngit commit by SHA.  You can only depend on exact versions of NPM\npackages. Example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre>",
+        "description": "<p>An object where the keys are package\nnames and the values are one of:</p>\n<ol>\n<li>Version numbers in string form</li>\n<li>Http(s) URLs to a git commit by SHA.   </li>\n<li>Git URLs in the format described <a href=\"https://docs.npmjs.com/files/package.json#git-urls-as-dependencies\">here</a></li>\n<li>Absolute file:// paths</li>\n</ol>\n<p>Https URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre><p>Git URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;git+https://github.com/caolan/async#master&quot;\n});</code></pre>",
         "name": "dependencies",
         "type": {
           "names": [
@@ -6277,7 +6291,7 @@ DocsData = {
         }
       },
       {
-        "description": "<p>An object where the keys\nare NPM package names, and the keys are the version numbers of\nrequired NPM packages, just like in <a href=\"#Npm-depends\">Npm.depends</a>.</p>",
+        "description": "<p>An object where the keys\nare NPM package names, and the values are the version numbers of\nrequired NPM packages, just like in <a href=\"#Npm-depends\">Npm.depends</a>.</p>",
         "name": "npmDependencies",
         "type": {
           "names": [
@@ -8108,18 +8122,6 @@ DocsData = {
     ],
     "scope": "global",
     "summary": "Returns the extension that matched the compiler plugin.\nThe longest prefix is preferred."
-  },
-  "greet": {
-    "filepath": "accounts-password/email_templates.js",
-    "kind": "function",
-    "lineno": 6,
-    "locus": "Server",
-    "longname": "greet",
-    "name": "greet",
-    "options": [],
-    "params": [],
-    "scope": "global",
-    "summary": "Options to customize emails sent from the Accounts system."
   },
   "loggingIn": {
     "filepath": "accounts-base/accounts_client.js",

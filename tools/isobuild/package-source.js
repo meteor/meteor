@@ -92,15 +92,23 @@ var loadOrderSort = function (sourceProcessorSet, arch) {
     // deeper paths loaded first.
     var len_a = a_parts.length;
     var len_b = b_parts.length;
-    if (len_a < len_b) return 1;
-    if (len_b < len_a) return -1;
+    if (len_a < len_b) {
+      return 1;
+    }
+    if (len_b < len_a) {
+      return -1;
+    }
 
     // Otherwise compare path components lexicographically.
     for (var i = 0; i < len_a; ++i) {
       var a_part = a_parts[i];
       var b_part = b_parts[i];
-      if (a_part < b_part) return -1;
-      if (b_part < a_part) return 1;
+      if (a_part < b_part) {
+        return -1;
+      }
+      if (b_part < a_part) {
+        return 1;
+      }
     }
 
     // Never reached unless there are somehow duplicate paths.
@@ -125,7 +133,9 @@ var splitConstraint = function (c) {
 // for some reason). Skips lines that start with an exclamation point.
 var getExcerptFromReadme = function (text) {
   // Don't waste time parsing if the document is empty.
-  if (! text) return "";
+  if (! text) {
+    return "";
+  }
 
   // Split into lines with Commonmark.
   var commonmark = require('commonmark');
@@ -155,7 +165,9 @@ var getExcerptFromReadme = function (text) {
   });
 
   // If we have not found anything, we are done.
-  if (_.isEmpty(relevantNodes)) return "";
+  if (_.isEmpty(relevantNodes)) {
+    return "";
+  }
 
   // For now, we will do the simple thing of just taking the raw markdown from
   // the start of the excerpt to the end.
@@ -406,9 +418,10 @@ _.extend(PackageSource.prototype, {
     self.name = name;
 
     if (options.sources && ! _.isEmpty(options.sources) &&
-        (! options.sourceRoot || ! options.serveRoot))
+        (! options.sourceRoot || ! options.serveRoot)) {
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
+    }
 
     // sourceRoot is a relative file system path, one slash identifies a root
     // relative to some starting location
@@ -416,11 +429,11 @@ _.extend(PackageSource.prototype, {
     // serveRoot is actually a part of a url path, root here is a forward slash
     self.serveRoot = options.serveRoot || '/';
 
-    utils.ensureOnlyExactVersions(options.npmDependencies);
+    utils.ensureOnlyValidVersions(options.npmDependencies, {forCordova: false});
     self.npmDependencies = options.npmDependencies;
     self.npmCacheDirectory = options.npmDir;
 
-    utils.ensureOnlyExactVersions(options.cordovaDependencies);
+    utils.ensureOnlyValidVersions(options.cordovaDependencies, {forCordova: true});
     self.cordovaDependencies = options.cordovaDependencies;
 
     const sources = options.sources.map((source) => {
@@ -446,8 +459,9 @@ _.extend(PackageSource.prototype, {
 
     self.architectures.push(sourceArch);
 
-    if (! self._checkCrossUnibuildVersionConstraints())
+    if (! self._checkCrossUnibuildVersionConstraints()) {
       throw new Error("only one unibuild, so how can consistency check fail?");
+    }
   },
 
   // Initialize a PackageSource from a package.js-style package directory. Uses
@@ -497,8 +511,9 @@ _.extend(PackageSource.prototype, {
         self.isCore = true;
       }
     }
-    if (! files.exists(self.sourceRoot))
+    if (! files.exists(self.sourceRoot)) {
       throw new Error("putative package directory " + dir + " doesn't exist?");
+    }
 
     var fileAndDepLoader = null;
     var npmDependencies = null;
@@ -581,8 +596,9 @@ _.extend(PackageSource.prototype, {
                 var parsedVersion = packageVersionParser.getValidServerVersion(
                   value);
               } catch (e) {
-                if (!e.versionParserError)
+                if (!e.versionParserError) {
                   throw e;
+                }
                 buildmessage.error(
                   "The package version " + value + " (specified with Package.describe) "
                     + "is not a valid Meteor package version.\n"
@@ -811,14 +827,26 @@ _.extend(PackageSource.prototype, {
        * @summary Specify which [NPM](https://www.npmjs.org/) packages
        * your Meteor package depends on.
        * @param  {Object} dependencies An object where the keys are package
-       * names and the values are version numbers in string form or URLs to a
-       * git commit by SHA.  You can only depend on exact versions of NPM
-       * packages. Example:
+       * names and the values are one of:
+       *   1. Version numbers in string form
+       *   2. Http(s) URLs to a git commit by SHA.   
+       *   3. Git URLs in the format described [here](https://docs.npmjs.com/files/package.json#git-urls-as-dependencies)
+       *
+       * Https URL example:
        *
        * ```js
        * Npm.depends({
        *   moment: "2.8.3",
        *   async: "https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz"
+       * });
+       * ```
+       *
+       * Git URL example:
+       *
+       * ```js
+       * Npm.depends({
+       *   moment: "2.8.3",
+       *   async: "git+https://github.com/caolan/async#master"
        * });
        * ```
        * @locus package.js
@@ -848,7 +876,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          utils.ensureOnlyExactVersions(_npmDependencies);
+          utils.ensureOnlyValidVersions(_npmDependencies, {forCordova: false});
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line
@@ -960,7 +988,7 @@ _.extend(PackageSource.prototype, {
         // XXX use something like seal or lockdown to have *complete*
         // confidence we're running the same code?
         try {
-          utils.ensureOnlyExactVersions(_cordovaDependencies);
+          utils.ensureOnlyValidVersions(_cordovaDependencies, {forCordova: true});
         } catch (e) {
           buildmessage.error(e.message, { useMyCaller: true, downcase: true });
           // recover by ignoring the Npm.depends line
@@ -1006,8 +1034,9 @@ _.extend(PackageSource.prototype, {
     try {
       utils.validatePackageName(self.name);
     } catch (e) {
-      if (!e.versionParserError)
+      if (!e.versionParserError) {
         throw e;
+      }
       buildmessage.error(e.message);
       // recover by ignoring
     }
@@ -1116,7 +1145,9 @@ _.extend(PackageSource.prototype, {
             newConstraint.push(packages[dep.package]);
           }
         });
-        if (_.isEmpty(newConstraint)) return dep;
+        if (_.isEmpty(newConstraint)) {
+          return dep;
+        }
         dep.constraint = _.reduce(newConstraint,
           function(x, y) {
             return x + " || " + y;
@@ -1183,8 +1214,9 @@ _.extend(PackageSource.prototype, {
               !! _.find(api.uses[arch], function (u) {
                 return u.package === "meteor";
               });
-        if (! alreadyDependsOnMeteor)
+        if (! alreadyDependsOnMeteor) {
           api.uses[arch].unshift({ package: "meteor" });
+        }
       }
 
       // Each unibuild has its own separate WatchSet. This is so that, eg, a test
@@ -1297,8 +1329,9 @@ _.extend(PackageSource.prototype, {
           try {
             var realpath = files.realpath(absPath, realpathCache);
           } catch (e) {
-            if (!e || e.code !== 'ELOOP')
+            if (!e || e.code !== 'ELOOP') {
               throw e;
+            }
             // else leave realpath undefined
           }
           if (realpath === undefined || _.has(seenPaths, realpath)) {
@@ -1336,8 +1369,10 @@ _.extend(PackageSource.prototype, {
           // remove trailing slash
           dir = dir.substr(0, dir.length - 1);
 
-          if (checkForInfiniteRecursion(dir))
-            return [];  // pretend we found no files
+          if (checkForInfiniteRecursion(dir)) {
+            // pretend we found no files
+            return [];
+          }
 
           // Find source files in this directory.
           sources.push(...readAndWatchDirectory(dir, sourceReadOptions));
@@ -1365,8 +1400,9 @@ _.extend(PackageSource.prototype, {
               files.pathSep + 'client' +
               files.pathSep + 'compatibility' + files.pathSep;
 
-            if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1)
+            if ((files.pathSep + relPath).indexOf(clientCompatSubstr) !== -1) {
               sourceObj.fileOptions = {bare: true};
+            }
           }
           return sourceObj;
         });
@@ -1378,16 +1414,19 @@ _.extend(PackageSource.prototype, {
         const assets = [];
 
         if (!_.isEmpty(assetDirs)) {
-          if (!_.isEqual(assetDirs, [assetDir]))
+          if (!_.isEqual(assetDirs, [assetDir])) {
             throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
+          }
 
           while (!_.isEmpty(assetDirs)) {
             dir = assetDirs.shift();
             // remove trailing slash
             dir = dir.substr(0, dir.length - 1);
 
-            if (checkForInfiniteRecursion(dir))
-              return [];  // pretend we found no files
+            if (checkForInfiniteRecursion(dir)) {
+              // pretend we found no files
+              return [];
+            }
 
             // Find asset files in this directory.
             var assetsAndSubdirs = readAndWatchDirectory(dir, {
@@ -1446,10 +1485,11 @@ _.extend(PackageSource.prototype, {
     options = options || {};
     var ret = self._computeDependencyMetadata(options);
     if (! ret) {
-      if (options.logError)
+      if (options.logError) {
         return null;
-      else
+      } else {
         throw new Error("inconsistent dependency constraint across unibuilds?");
+      }
     }
     return ret;
   },
@@ -1479,16 +1519,18 @@ _.extend(PackageSource.prototype, {
     var processUse = function (use) {
       // We don't have to build weak or unordered deps first (eg they can't
       // contribute to a plugin).
-      if (use.weak || use.unordered)
+      if (use.weak || use.unordered) {
         return;
+      }
       // Only include real packages, not isobuild:* pseudo-packages.
       if (compiler.isIsobuildFeaturePackage(use.package)) {
         return;
       }
 
       var packageInfo = packageMap.getInfo(use.package);
-      if (! packageInfo)
+      if (! packageInfo) {
         throw Error("Depending on unknown package " + use.package);
+      }
       packages[use.package] = true;
     };
 
@@ -1639,8 +1681,9 @@ _.extend(PackageSource.prototype, {
         // We can't really have a weak implies (what does that even mean?) but
         // we check for that elsewhere.
         if ((use.weak && options.skipWeak) ||
-            (use.unordered && options.skipUnordered))
+            (use.unordered && options.skipUnordered)) {
           return;
+        }
 
         if (!_.has(dependencies, use.package)) {
           dependencies[use.package] = {

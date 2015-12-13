@@ -37,8 +37,9 @@ exports.watch = function watch(absPath, callback) {
       watcher = files.pathwatcherWatch(absPath, pathwatcherWrapper);
     } catch (e) {
       // If it isn't an actual pathwatcher failure, rethrow.
-      if (e.message !== 'Unable to watch path')
+      if (e.message !== 'Unable to watch path') {
         throw e;
+      }
       var constants = require('constants');
       var archinfo = require('../utils/archinfo.js');
       if (! suggestedRaisingWatchLimit &&

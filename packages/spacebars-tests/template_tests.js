@@ -93,6 +93,54 @@ Tinytest.add("spacebars-tests - template_tests - simple helper", function (test)
   }, /No such function/);
 });
 
+Tinytest.add("spacebars-tests - template_tests - member helper", function (test) {
+  var baseTmpl = Template.spacebars_template_test_member_helper;
+
+  // Test that returning function member of a data object can be used as a
+  // a helper within a template, in this case, {{user.prefixName 'Mr.'}}
+  var tmpl1 = copyTemplate(baseTmpl);
+  var name = ReactiveVar('foo');
+  tmpl1.helpers({
+    user: function() {
+      return {
+        prefixName: function(prefix) {
+          return prefix + ' ' + name.get();
+        },
+      };
+    },
+  });
+  var div = renderToDiv(tmpl1);
+  test.equal(canonicalizeHtml(div.innerHTML), 'Mr. foo');
+  name.set('bar');
+  Tracker.flush();
+  test.equal(canonicalizeHtml(div.innerHTML), 'Mr. bar');
+
+  // Test that `{{user.prefixName 'Mr.'}}` returns nothing if `user` is not
+  // not a function or is completely missing from helpers.
+  var tmpl2 = copyTemplate(baseTmpl);
+  tmpl2.helpers({user: 3});
+  div = renderToDiv(tmpl2);
+  test.equal(canonicalizeHtml(div.innerHTML), '');
+
+  var tmpl3 = copyTemplate(baseTmpl);
+  div = renderToDiv(tmpl3);
+  test.equal(canonicalizeHtml(div.innerHTML), '');
+
+  // Test that `{{user.prefixName 'Mr.'}}` returns nothing if the `user`
+  // returns null. Before fixing Meteor issue #5441, this test would throw.
+  var tmpl4 = copyTemplate(baseTmpl);
+  tmpl4.helpers({user: function () {}});
+  div = renderToDiv(tmpl4);
+  test.equal(canonicalizeHtml(div.innerHTML), '');
+
+  // One more test, similar to the above, but where `user` is not null but
+  // `user.prefixName` is. This test was also broken prior to the fix.
+  var tmpl4 = copyTemplate(baseTmpl);
+  tmpl4.helpers({user: function () { return {prefixName: null}; }});
+  div = renderToDiv(tmpl4);
+  test.equal(canonicalizeHtml(div.innerHTML), '');
+});
+
 Tinytest.add("spacebars-tests - template_tests - dynamic template", function (test) {
   var tmpl = Template.spacebars_template_test_dynamic_template;
   var aaa = Template.spacebars_template_test_aaa;
