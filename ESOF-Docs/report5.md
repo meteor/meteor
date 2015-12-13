@@ -7,12 +7,6 @@
 * Rúben Alexandre da Fonseca Marques, ei10117@fe.up.pt 
 * Nuno Soares Marques, ee11291@fe.up.pt
 
-##TÓPICOS:
-* Identificar uma feature que deva ser evoluida
-* Identificar componentes que implementam essa feature
-* Evoluir a feature, verificando que as restantes funcionalidades não são quebradas
-* Submeter um patch
-
 ## Introdução
 
 Como objetivo deste relatório, iremos apresentar uma interpretação da evolução do software através do que nos foi proposto pela unidade curricular de ESOF. Começamos por identificar e evoluir uma feature para o **Meteor** sem que as restantes funcionalidades fossem quebradas. Para conclusão do relatório, irá ser submetido um patch onde poderá ser aceite (ou não) pelo **Meteor**.
@@ -28,8 +22,5 @@ O repositório do **Meteor** no [Github](https://github.com/meteor/meteor) forne
 ## Submissão de um Pull Request
 
 Após a implementação da feature, foi feito o [pull request](https://github.com/meteor/meteor/pull/5793) para o repositório do Github.
-
-## Referências
-
 
 ## FEUP ESOF MIEIC
