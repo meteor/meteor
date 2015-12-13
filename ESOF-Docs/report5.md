@@ -19,7 +19,15 @@ O repositório do **Meteor** no [Github](https://github.com/meteor/meteor) forne
 
 ## Identificação dos componentes que implementam a feature
 
-Para implementarmos a nova feature, era necessário descobrir onde ficava armazenado localmente o ficheiro History.md. Como não conseguimos encontrar a sua localização, foi necessário criarmos um ficheiro [“about.txt”](https://github.com/lpinto93/meteor/blob/devel/tools/cli/about.txt) no qual escrevemos o change log das últimas versões do **Meteor**. Depois disso, descobrimos o ficheiro com o código JavaScript onde foram criados os comandos do terminal e implementámos o comando “--about”.
+Para implementarmos a nova feature, era necessário descobrir onde ficava armazenado localmente o ficheiro History.md. Como não conseguimos encontrar a sua localização, foi necessário criarmos um ficheiro [“about.txt”](https://github.com/lpinto93/meteor/blob/devel/tools/cli/about.txt) no qual escrevemos o change log das últimas versões do **Meteor**. Depois disso, descobrimos o ficheiro com o código JavaScript onde foram criados os comandos do terminal e implementámos o comando “about”.
+
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/prints.png)
+
+Como se pode ver na imagem, a função vai buscar o ficheiro “about.txt” que se encontra no mesmo diretório e imprime o seu conteúdo no terminal. 
+
+Modificámos também o ficheiro “help.txt” para refletir a adição do novo comando.
+
+![alt tag] (https://github.com/lpinto93/meteor/blob/devel/ESOF-Docs/resources/usage.png)
 
 ## Submissão de um Pull Request
 
