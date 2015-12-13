@@ -178,11 +178,11 @@ main.registerCommand({
 
 //Prints the Meteor log about the versions
 main.registerCommand({
-	name:'--about',
-	requiresRelease: false,
-	catalogRefresh: new catalog.Refresh.Never()
+  name:'--about',
+  requiresRelease: false,
+  catalogRefresh: new catalog.Refresh.Never()
 }, function (options){
-	if (release.current === null) {
+  if (release.current === null) {
     if (!options.appDir) throw new Error("missing release, but not in an app?");
     Console.error("This project was created with a checkout of Meteor, rather than an " + "official release, and doesn't have a release number associated with " + "it. You can set its release with " + Console.command("'meteor update'") + ".");
     return 1;
@@ -193,10 +193,13 @@ main.registerCommand({
     Console.error("Unreleased, running from a checkout at " + gitLog);
     return 1;
   }
-	Console.info(release.current.getDisplayName());
-	
-	
-	
+ // Console.info(release.current.getDisplayName());
+  /* File System Object */
+  var dirname = files.convertToStandardPath(__dirname);
+var about = files.readFile(files.pathJoin(dirname, 'about.txt'), 'utf8');
+console.log(about);
+  
+  
 });
 
 // Prints the current release in use. Note that if there is not
