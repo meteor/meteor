@@ -1,3 +1,28 @@
+## Standup 14th Dec
+
+With Zol, Tom, Sashko.
+
+### Agenda
+- Progress, soft launch?
+
+### Notes
+- If Accounts, Deployment finished, we could be done.
+- Forms sticks out.
+- Reasonable to message that certain articles are blocked on 1.3
+- Email to the big mailing list to see what people think. We're pretty sure on all the articles that are drafted.
+- How do we make the example app presentable?
+- Unknowns in forms article?
+- Janky packages in todos right now, mostly around testing.
+- Example app should address the set of articles we'll promote.
+- Sashko can write the content but not maintain the linting config, need a lint config maintainer (Tim).
+
+### Action Items
+
+- 'Soft Launch' becomes promoting content so far for holiday reading, with a disclaimer that more exciting content is in the works aligning with 1.3
+- Clean up todos app wrt to XXX's. Rename packages not part of the app to fork-something.
+- Everything in drafts-in-progress will be drafted and promoted by the end of the week.
+- Order the articles in the website.
+
 ## Standup 9th Dec
 
 With Zol, Matt, Tom, Sashko.
