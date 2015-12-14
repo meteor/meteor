@@ -46,11 +46,23 @@ Template.shareOverlay.events({
     var text = $(event.target).find('[name=text]').val();
     var tweet = Session.get(TWEETING_KEY);
     
+    var geoloc = Geolocation.currentLocation();
+    
+    if(geoloc) {
+      var loc = {
+        coords: {
+          accuracy: geoloc.coords.accuracy,
+          latitude: geoloc.coords.latitude,
+          longitude: geoloc.coords.longitude,
+        }
+      };
+    }
+    
     Meteor.call('createActivity', {
       recipeName: self.name,
       text: text,
       image: Session.get(IMAGE_KEY)
-    }, tweet, Geolocation.currentLocation(), function(error, result) {
+    }, tweet, loc, function(error, result) {
       if (error) {
         alert(error.reason);
       } else {
