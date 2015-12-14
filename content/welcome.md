@@ -23,9 +23,16 @@ Additionally, you see the latest source code for the app, and file issues or mak
 
 <h2 id="what-is-meteor">What is Meteor?</h2>
 
-2. What is Meteor?
-  1. A set of JS client + server code for building web and mobile applications, built and curated by MDG and the Meteor community.
-  2. A build tool for building JS bundles for deployment
+Meteor is a full-stack JavaScript framework for developing modern web and mobile applications. Meteor consists of a key set of technologies for building connected-client reactive user interfaces, and a build tool and curated set of packages from the wider Node and general JavaScript community.
+
+ - Meteor allows you to develop in *one language* in all environments, be it server, web browser or mobile device.
+
+ - Meteor prefers *data on the wire*, letting the server send data, not HTML, and the client render it.
+
+ - Meteor *embraces the ecosystem*, bringing the best parts of the extremely active JavaScript community to you in careful and consistent way.
+
+ - 
+
 3. Meteor principles
   1. Data on the Wire. Meteor doesn't send HTML over the network. The server sends data and lets the client render it.
   1. One Language. Meteor lets you write both the client and the server parts of your application in JavaScript.
