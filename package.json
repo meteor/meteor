@@ -40,7 +40,7 @@
     "babel": "5.8.29",
     "babel-eslint": "4.1.6",
     "colors": "1.1.2",
-    "coveralls": "2.11.4",
+    "coveralls": "2.11.6",
     "cz-conventional-changelog": "1.1.4",
     "eslint": "1.10.3",
     "ghooks": "1.0.1",
