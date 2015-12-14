@@ -10,10 +10,19 @@ Nothing in the Meteor guide is *required* to build a Meteor application (i.e. yo
 
 To learn about "pure" Meteor, you can The APIs of the Meteor platform are available a the [docs site](https://docs.meteor.com), and you can browse community packages on [atmosphere](https://atmospherejs.com).
 
-The guide is intended as an intermediate document, aimed at those with some familiarity with the Meteor platform and web development in general. If you are just getting started with Meteor, we recommend beginning with the official tutorial[https://www.meteor.com/tutorials/blaze/creating-an-app].
+The guide is intended as an intermediate document, aimed at those with some familiarity with the Meteor platform and web development in general. If you are just getting started with Meteor, we recommend beginning with the official [tutorial](https://www.meteor.com/tutorials/blaze/creating-an-app).
 
-  3. Hard APIs can be found at [docs] and community packages at [atmosphere].
-  4. Getting started with Meteor? Use the learning docs below *first*, come back later.
+<h2 id="example-app">Example App</h2>
+Most guides make reference to the Todos example application. You can create your own copy of the example application with
+
+```bash
+meteor create --example todos
+```
+
+Additionally, you see the latest source code for the app, and file issues or make suggestions via pull request at its [GitHub repository](https://github.com/meteor/todos).
+
+<h2 id="what-is-meteor">What is Meteor?</h2>
+
 2. What is Meteor?
   1. A set of JS client + server code for building web and mobile applications, built and curated by MDG and the Meteor community.
   2. A build tool for building JS bundles for deployment
@@ -25,17 +34,25 @@ The guide is intended as an intermediate document, aimed at those with some fami
   1. Full Stack Reactivity. In Meteor, realtime is the default. All layers, from database to template, update themselves automatically when necessary.
   1. Embrace the Ecosystem. Meteor is open source and integrates with existing open source tools and frameworks, with a strong ecosystem of community packages.
   1. Simplicity Equals Productivity. The best way to make something seem simple is to have it actually be simple. Meteor's main functionality has clean, classically beautiful APIs.
-4. Guide concepts
-  1. Developed in the open, PRs encouraged
-  2. Consensus is sought but opinions must be taken; other choices are available!
-  3. The guide "guides" the development of the platform and so is released alongside
-5. Learning more
-  If anything in Meteor catches your interest, we hope you'll get involved with the project!
-  1. TUTORIAL
-    Get started fast with the official Meteor tutorial!
-  2. STACK OVERFLOW
-    The best place to ask (and answer!) technical questions is on Stack Overflow. Be sure to add the meteor tag to your question.
-  3. FORUMS
-    Visit the Meteor discussion forumsto announce projects, get help, talk about the community, or discuss changes to core.
-  4. DOCS
-  5. ATMOSPHERE
+
+
+<h2 id="guide-concepts">Guide concepts</h2>
+The Meteor Guide is developed in the open at the [GitHub repository](https://github.com/meteor/guide) and we encourage pull requests and issues to discuss problems with and changes that could be made to the content. By keeping our process open and honest we hope it's clear what will and will not be in the guide and what changes will be coming to the guide in the next Meteor version.
+
+The decisions made and practices outlined in the guide must necessarily be opinionated; to some degree certain best practices must be highlighted and other valid approaches ignored. In making such decisions we aim to reach community consensus in our choices but there'll always be other ways to solve problems and it's certainly possible to make other choices in developing your application. It's important of course to know what the "official" way to solve a problem is before making another choice. If an alternate approach proves itself superior, there's no reason it could not make its way into a future version of the guide of course.
+
+An important function of the guide is to shape future development in the Meteor platform. By documenting best practice in how to develop Meteor applications, the guide provides a clear demonstration of places in the framework that could be better, easier or more performant, and thus will be used to focus a lot of future platform choices.
+
+Similarly, gaps in the framework highlighted by the guide can often be plugged by community packages; we hope that if you see an opportunity to improve thing by writing a package, that you take the opportunity!
+
+<h2 id="learning-more">Learning more about Meteor</h2>
+
+1. The place to get started with Meteor is the [official tutorial](https://www.meteor.com/tutorials/blaze/creating-an-app).
+
+2. [Stack Overflow](http://stackoverflow.com/questions/tagged/meteor) is the best place to ask (and answer!) technical questions. Be sure to add the meteor tag to your question.
+
+3. Visit the [Meteor discussion forums](https://forums.meteor.com) to announce projects, get help, talk about the community, or discuss changes to core.
+
+4. The [Meteor docs](https://docs.meteor.com) is the best place to find the core API documentation of the platform.
+ 
+5. [Atmopshere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
