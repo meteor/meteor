@@ -63,6 +63,14 @@ There are many options on where to deploy your Meteor application, and we'll dis
 <h3 id="custom-deployment">Custom Deployment</h3>
 The Meteor tool has a command `meteor build` that creates a deployment bundle, which is a complete node application which can be run on any host that can run node applications (once pointed at a MongoDB instance). You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
 
+To run this application, you need to provide Node.js 0.10 and a MongoDB server. (The current release of Meteor has been tested with Node 0.10.40.) You can then run the application by invoking `node`, specifying the HTTP port for the application to listen on, and the MongoDB endpoint.
+
+```bash
+cd my_directory
+(cd programs/server && npm install)
+env PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
+```
+
 However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch.
 
 <h3 id="free-hosting">Meteor's free hosting</h3>
@@ -75,9 +83,15 @@ Deploying is simple, simply type:
 meteor deploy your-app.meteor.com
 ```
 
-This will bundle your application from the current directory, upload it, and serve it from https://your-app.meteor.com. Along the way it'll provision you with a MongoDB database and mail setup and configure (via the ENV) your app to run. Note that the service is pretty limited however
+This will bundle your application from the current directory, upload it, and serve it from https://your-app.meteor.com. Along the way it'll provision you with a MongoDB database and mail setup and configure (via the ENV) your app to run.
 
-XXX: insert details on how meteor.com is limited.
+To enable SSL for your free-hosted app, simply add the `force-ssl` package to your app:
+
+```bash
+meteor add force-ssl
+```
+
+We provide this as a free service so you can try Meteor. It is also helpful for quickly putting up internal betas, demos, and so on. It is not intended to deploy production applications. Also not that if your application does not receive any traffic for six months it will be deleted.
 
 <h4 id="managing-free-hosting">Managing your meteor.com app</h4>
 
@@ -163,7 +177,7 @@ You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you
 
 [ss]
 
-If you are following our advice, you'll probably want to [setup SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain.
+If you are following our advice, you'll probably want to [setup SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain. The key things here are to add the `force-ssl` package and to use the Galaxy UI to add your SSL certificate.
 
 Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
 
