@@ -13,7 +13,7 @@ Blaze is Meteor's built in reactive rendering library. Using templates written i
 
 Blaze is not required to built applications in Meteor---you can equally use [React](http://react-in-meteor.readthedocs.org/en/latest/) or [Angular](http://www.angular-meteor.com), however this guide will take you through best practice in building an application in Blaze.
 
-<a id="spacebars">Spacebars</a>
+<h2 id="spacebars">Spacebars</h2>
 
 Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{{% endraw %}` and `{% raw %}}}{% endraw %}`.
 
