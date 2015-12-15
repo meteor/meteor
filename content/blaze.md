@@ -15,19 +15,19 @@ Blaze is not required to built applications in Meteor---you can equally use [Rea
 
 <a id="spacebars">Spacebars</a>
 
-Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{{` and `}}`.
+Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{` and `}}{% endraw %}`.
 
 As an example, consider the `todosItem` template from the Todos example app:
 
 ```html
 <template name="todosItem">
-  <div class="list-item {{checkedClass}} {{editingClass}}">
+  <div class="list-item {% raw %}{{checkedClass}}{% endraw %} {% raw %}{{editingClass}}{% endraw %}">
     <label class="checkbox">
-      <input type="checkbox" checked={{todo.checked}} name="checked">
+      <input type="checkbox" checked={% raw %}{{todo.checked}}{% endraw %} name="checked">
       <span class="checkbox-custom"></span>
     </label>
 
-    <input type="text" value="{{todo.text}}" placeholder="Task name">
+    <input type="text" value="{% raw %}{{todo.text}}{% endraw %}" placeholder="Task name">
     <a class="js-delete-item delete-item" href="#">
       <span class="icon-trash"></span>
     </a>
@@ -35,11 +35,11 @@ As an example, consider the `todosItem` template from the Todos example app:
 </template>
 ```
 
-In this example, this template is rendered with an object with key `todo` as data context (we'll see below how to enforce that). We access the properties of the `todo`  using the mustache tag, such as `{{todo.text}}`. The default behaviour is to render that property as a string; however in some cases (such as `checked=={{todo.checked}}` it can be resolved as a boolean value).
+In this example, this template is rendered with an object with key `todo` as data context (we'll see below how to enforce that). We access the properties of the `todo`  using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behaviour is to render that property as a string; however in some cases (such as `checked=={% raw %}{{todo.checked}}{% endraw %}` it can be resolved as a boolean value).
 
 Note that simple string interpolations like this will always escape any HTML for you---so you don't need to perform safety checks for XSS.
 
-Additionally we can see an example of a *template helper*---`{{checkedClass}}` calls out to the `checkedClass` helper defined in a separate JavaScript file, which combined with the template defines the `todosItem` component:
+Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass}}{% endraw %}` calls out to the `checkedClass` helper defined in a separate JavaScript file, which combined with the template defines the `todosItem` component:
 
 ```js
 Template.todosItem.helpers({
@@ -54,30 +54,30 @@ In the context of a Blaze helper, `this` is scoped to the current current *data 
 Apart from simple interpolation, mustache tags can control flow of the template. For instance, in the `listsShow` template, we render a list of todos via:
 
 ```html
-  {{#each todo in todos}}
-    {{> todosItem (todoArgs todo)}}
-  {{else}}
+  {% raw %}{{#each todo in todos}}{% endraw %}
+    {% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}
+  {% raw %}{{else}}{% endraw %}
     <div class="wrapper-message">
       <div class="title-message">No tasks here</div>
       <div class="subtitle-message">Add new tasks using the field above</div>
     </div>
-  {{/each}}
+  {% raw %}{{/each}}{% endraw %}
 ```
 
 This snippet illustrates a few things:
 
- - The `{{#each .. in}}` block helper which renders a block one per element in an array or cursor, or an `{{else}}` block if no items exist.
- - Template inclusion `{{> todosItem (todoArgs todo)}}` which renders the `todosItem` component with a set data context, based on the output of the `todosArg` helper.
+ - The `{% raw %}{{#each .. in}}{% endraw %}` block helper which renders a block one per element in an array or cursor, or an `{% raw %}{{else}}{% endraw %}` block if no items exist.
+ - Template inclusion `{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}` which renders the `todosItem` component with a set data context, based on the output of the `todosArg` helper.
 
 You can read about the full Spacebars syntax [here](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md), but in this section we'll attempt to cover some important finer details.
 
 <h3 id="data-contexts">Data contexts and lookup</h3>
-We've seen `{{todo.title}}` accesses the `title` property of the `todo` item on the current data context. Additionaly, `..` access the parent data context (rarely a good idea), `list.todos.[0]` accesses the first element of the `todos` array on `list`.
+We've seen `{% raw %}{{todo.title}}{% endraw %}` accesses the `title` property of the `todo` item on the current data context. Additionaly, `..` access the parent data context (rarely a good idea), `list.todos.[0]` accesses the first element of the `todos` array on `list`.
 
 Also, note that Spacebars is very forgiving of `null` values. It will not complain if you try to access a property on a `null` value (for instance `foo.bar` if `foo` is not defined), but instead simply treat it also as null. However there are exceptions to this---trying to call a `null` function, or doing the same *within* a helper will lead to exceptions.
 
 <h3 id="helpers">Calling helpers with arguments</h3>
-You can provide arguments to a helper like `checkedClass` by simply placing the argument after the helper call, as in: `{{checkedClass todo true 'checked'}}`. You can also provide a list of named keyword arguments to a helper with `{{checkedClass todo noClass=true classname='checked'}}. In this case, you might access those arguments with:
+You can provide arguments to a helper like `checkedClass` by simply placing the argument after the helper call, as in: `{% raw %}{{checkedClass todo true 'checked'}}{% endraw %}`. You can also provide a list of named keyword arguments to a helper with `{% raw %}{{checkedClass todo noClass=true classname='checked'}}{% endraw %}. In this case, you might access those arguments with:
 
 ```js
 Template.todosItem.helpers({
@@ -97,17 +97,17 @@ Note that to get the keyword arguments, you need to read them off the `hash` pro
 You can also pass the output of a helper to a template inclusion or other helper. To do so, use brackets to show precedence:
 
 ```html
-{{> todosItem (todoArgs todo)}}
+{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}
 ```
 
 Here the `todo` is passed as argument to the `todoArgs` helper, then the output is passed into the `todosItem` template.
 
 <h3 id="inclusion">Template inclusion</h3>
-You "include" a sub-component with the `{{>` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object as argument (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments, as the `listShowPage` template does:
+You "include" a sub-component with the `{% raw %}{{>` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object as argument (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments, as the `listShowPage` template does:
 
 ```html
-{{> listsShow todosReady=Template.subscriptionsReady
-  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
+{% raw %}{{> listsShow todosReady=Template.subscriptionsReady
+  list=(getFullList listIdOnly) todos=listIdOnly.todos}}{% endraw %}
 ```
 
 In this case, the `listShow` component can expect a data context of the form:
@@ -121,10 +121,10 @@ In this case, the `listShow` component can expect a data context of the form:
 ```
 
 <h3 id="helpers-in-tags">Helpers in tags</h3>
-We saw above that using a helper (or data context lookup) in the form `checked={{todo.checked}}` will add the checked property to the HTML tag if `todo.checked` evaluates to true. Also, you can directly include an object in the attribute list of an HTML element to set multiple attributes at once:
+We saw above that using a helper (or data context lookup) in the form `checked={% raw %}{{todo.checked}}{% endraw %}` will add the checked property to the HTML tag if `todo.checked` evaluates to true. Also, you can directly include an object in the attribute list of an HTML element to set multiple attributes at once:
 
 ```html
-<a {{attributes}}>My Link</a>
+<a {% raw %}{{attributes}}{% endraw %}>My Link</a>
 ```
 
 ```js
@@ -139,10 +139,10 @@ Template.foo.helpers({
 ```
 
 <h3 id="rendering-html">Rendering pure HTML</h3>
-Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{{{`.
+Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{`.
 
 ```html
-{{{myHtml}}}
+{% raw %}{{{myHtml}}{% endraw %}}
 ```
 
 ```js
@@ -156,21 +156,21 @@ Template.foo.helpers({
 You should be extremely careful about doing this, and always ensure you aren't returning user-generated content (or escape it if you do!) from such a helper.
 
 <h3 id="block-helpers">Block Helpers</h3>
-A block helper, called with `{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{{#each .. in}}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *component* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{{#if}}` helper with:
+A block helper, called with `{% raw %}{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{% raw %}{{#each .. in}}{% endraw %}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *component* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{% raw %}{{#if}}{% endraw %}` helper with:
 
 ```html
 <template name="myIf">
-  {{#if condition}}
-    {{> Template.contentBlock}}
-  {{else}}
-    {{> Template.elseBlock}}
-  {{/if}}
+  {% raw %}{{#if condition}}{% endraw %}
+    {% raw %}{{> Template.contentBlock}}{% endraw %}
+  {% raw %}{{else}}{% endraw %}
+    {% raw %}{{> Template.elseBlock}}{% endraw %}
+  {% raw %}{{/if}}{% endraw %}
 </template>
 
 <template name="caller">
-  {{#myIf condition=true}}
+  {% raw %}{{#myIf condition=true}}{% endraw %}
     <h1>I'll be rendered!</h1>
-  {{/myIf}}
+  {% raw %}{{/myIf}}{% endraw %}
 </template>
 ```
 
@@ -179,35 +179,35 @@ There are a few builtin block helpers that are worth knowing about:
 
 <h4 id="if-unless">If / Unless</h4>
 
-The `{{#if}}` and `{{#unless}}` helpers are fairly straightforward but invaluable for controlling the control flow of a template. Both operate by evaluating and checking their single argument for "falsey"-ness (in JS this means `null`, `undefined`, `0`, `''`, `[]` and of course `false`).
+The `{% raw %}{{#if}}{% endraw %}` and `{% raw %}{{#unless}}{% endraw %}` helpers are fairly straightforward but invaluable for controlling the control flow of a template. Both operate by evaluating and checking their single argument for "falsey"-ness (in JS this means `null`, `undefined`, `0`, `''`, `[]` and of course `false`).
 
 ```html
-{{#if something}}
+{% raw %}{{#if something}}{% endraw %}
   <p>It's true</p>
-{{else}}
+{% raw %}{{else}}{% endraw %}
   <p>It's false</p>
-{{/if}}
+{% raw %}{{/if}}{% endraw %}
 ```
 
 <h4 id="each-in">Each-in</h4>
 
-The `{{#each .. in}}` helper is a convenient way to step over a list whilst retaining the outer data context. 
+The `{% raw %}{{#each .. in}}{% endraw %}` helper is a convenient way to step over a list whilst retaining the outer data context. 
 
 ```html
-{{#each todo in todos}}
-  {{#each tag in todo.tags}}
+{% raw %}{{#each todo in todos}}{% endraw %}
+  {% raw %}{{#each tag in todo.tags}}{% endraw %}
     <!-- in here, both todo and tag are in scope -->
-  {{/each}}
-{{/each}}
+  {% raw %}{{/each}}{% endraw %}
+{% raw %}{{/each}}{% endraw %}
 ```
 
 <h4 id="let">Let</h4>
-The `{{#let}}` helper is useful to capture the output of a helper or document subproperty within a template:
+The `{% raw %}{{#let}}{% endraw %}` helper is useful to capture the output of a helper or document subproperty within a template:
 
 ```html
-{{#let name=person.bio.firstName color=generateColor}}
-  <div>{{name}} gets a {{color}} card!</div>
-{{/let}}
+{% raw %}{{#let name=person.bio.firstName color=generateColor}}{% endraw %}
+  <div>{% raw %}{{name}}{% endraw %} gets a {% raw %}{{color}}{% endraw %} card!</div>
+{% raw %}{{/let}}{% endraw %}
 ```
 
 Note that `name` and `color` (and `todo` above) are only added to scope in the template, they *are not* added to the data context. Specifically this means if you call a helper, they will not be on `this`. So if you need to access them in a helper, you should pass them in as an argument (like we do with `(todoArgs todo)` above).
@@ -215,13 +215,13 @@ Note that `name` and `color` (and `todo` above) are only added to scope in the t
 <h4 id="each-and-with">Each and With</h4>
 There are also two Spacebars builtin that are very common for historical reasons but we discourage the use of (see [use each-in](#use-each-in) below) as they change the data context *within* a template, which is difficult to reason about.
 
-Like `{{#each .. in}}`, `{{#each}}` iterates over an array or cursor, changing the data context within its content block to be the item iterated over. `{{#with}}` simply changes the data context inside itself. In most cases it's better to use `{{#each .. in}}` and `{{#let}}` to achieve the purposes that these are commonly used for.
+Like `{% raw %}{{#each .. in}}{% endraw %}`, `{% raw %}{{#each}}{% endraw %}` iterates over an array or cursor, changing the data context within its content block to be the item iterated over. `{% raw %}{{#with}}{% endraw %}` simply changes the data context inside itself. In most cases it's better to use `{% raw %}{{#each .. in}}{% endraw %}` and `{% raw %}{{#let}}{% endraw %}` to achieve the purposes that these are commonly used for.
 
 <h4 id="strictness">Strictness</h4>
 Spacebars starts from a very strict interpretation of HTML. In particular you need to careful about self-closing tags and when you are allowed to use them. For instance, you can't self-close a `div` (`<div/>`) in Spacebars, and you need to close some tags that a browser might not require you to (such as a `<p>` tag).
 
 <h4 id="escaping">Escaping</h4>
-To insert a literal {{, {{{, or any number of curly braces, put a vertical bar after it. So `{{|` will show up as `{{`, `{{{|` will show up as `{{{`, and so on.
+To insert a literal {% raw %}{{, {% raw %}{{{, or any number of curly braces, put a vertical bar after it. So `{% raw %}{{|` will show up as `{% raw %}{{`, `{% raw %}{{{|` will show up as `{% raw %}{{{`, and so on.
 
 <h2 id="reusable-components">Creating reusable components in Blaze</h2>
 In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reusable components that are modular and depend and interact with their environment in clear and minimal ways. 
@@ -250,19 +250,19 @@ Template.listsShow.onCreated(function() {
 We use an `autorun()` here to ensure that the data context is validated again whenever it changes.
 
 <h3 id="name-data-contexts">Name data contexts to template inclusions</h3>
-It's tempting to provide the data context of a sub-template as a "raw" object (like `{{> todosItem todo}}`), it's a better idea to explicitly give it a name (`{{> todosItem todo=todo}}`). There are two primary reasons for this:
+It's tempting to provide the data context of a sub-template as a "raw" object (like `{% raw %}{{> todosItem todo}}{% endraw %}`), it's a better idea to explicitly give it a name (`{% raw %}{{> todosItem todo=todo}}{% endraw %}`). There are two primary reasons for this:
 
-1. When using the data in the sub-component, it's a lot clearer what you are accessing `{{todo.title}}` is clearer than `title`.
+1. When using the data in the sub-component, it's a lot clearer what you are accessing `{% raw %}{{todo.title}}{% endraw %}` is clearer than `title`.
 2. It's more flexible, in case in future you need to provide more arguments to the template.
 
   For instance, in the case of the `todosItem` sub-component, we need to provide two extra arguments to control the editing state of the item, which would have been a hassle to add if the item was used with a raw `todo` argument.
 
 Additionally, for similar reasons of clarity, always explicitly provide a data context to an inclusion, rather than letting it passively "fall-through".
 
-<h3 id="use-each-in">Prefer `{{#each .. in}}`</h3>
-For similar reasons to the above, it's better to use `{{#each todo in todos}}` rather than the older `{{#each todos}}`. The second sets the data context of it's internals to a raw `todo`, and makes it difficult to access the containing template's other data context. 
+<h3 id="use-each-in">Prefer `{% raw %}{{#each .. in}}{% endraw %}`</h3>
+For similar reasons to the above, it's better to use `{% raw %}{{#each todo in todos}}{% endraw %}` rather than the older `{% raw %}{{#each todos}}{% endraw %}`. The second sets the data context of it's internals to a raw `todo`, and makes it difficult to access the containing template's other data context. 
 
-The only reason not to use `{{#each .. in}}` because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
+The only reason not to use `{% raw %}{{#each .. in}}{% endraw %}` because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
 
 <h3 id="use-template-instance">Use the template instance</h3>
 Although Blaze's simple API doesn't naturally lead to a componentized approach, you can use the *template instance* as a convenient place to modularize functionality. The template instance is `this` inside Blaze's lifecycle callbacks and can be accessed in event handlers and helpers as `Template.instance()`. It's also passed as second argument to event handlers.
@@ -354,7 +354,7 @@ When you are setting up event maps in your JS files, you need to 'select' the el
 If you need to pass in content to a sub-component (for instance the content of a modal dialog), you can use the [custom block helper](#block-helpers) to provide a block of content. If you need more flexibility, typically just providing a named component in the data context is the way to go. The sub-component can then just render that component with:
 
 ```html
-{{> Template.dynamic templateName dataContext}}
+{% raw %}{{> Template.dynamic templateName dataContext}}{% endraw %}
 ```
 
 This is more or less the way that the [`kadira:blaze-layout`](https://atmospherejs.com/kadira/blaze-layout) package works in practice.
@@ -365,7 +365,7 @@ If you need to communicate *up* the component hierarchy, it's best to pass a *ca
 For instance, only one todo item can be currently in the editing state at a time, so the `listsShow` component manages the state of which is edited. So when you focus on an item, that item needs to tell the list's component to make it the "edited" one. To do that, we pass a callback into the `todosItem` component, and it calls it:
 
 ```html
-{{> todosItem (todoArgs todo)}}
+{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}
 ```
 
 ```js
@@ -423,7 +423,7 @@ Template.listsShowPage.onCreated(function() {
 });
 ```
 
-By using `this.subscribe()` (as opposed to `Meteor.subscribe`), the subscription state automatically gets amalagamated into the template instance's subscription readiness reactive state variable, which can be used both from within templates (via the `{{Template.subscriptionsReady}}` helper) or within helpers (via `instance.subscriptionsReady()`).
+By using `this.subscribe()` (as opposed to `Meteor.subscribe`), the subscription state automatically gets amalagamated into the template instance's subscription readiness reactive state variable, which can be used both from within templates (via the `{% raw %}{{Template.subscriptionsReady}}{% endraw %}` helper) or within helpers (via `instance.subscriptionsReady()`).
 
 Notice as well in this case that we access the global client-side state store `FlowRouter` in this component, which we access via a instance method (`getListId()`), called both from the autorun, and from the `listArray` helper:
 
@@ -445,8 +445,8 @@ Template.listsShowPage.helpers({
 Typically, as [outlined in the ui/ux article](ui-ux.md#smart-components) you should fetch data in the same component that you subscribe in. In Blaze, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`: 
 
 ```html
-{{> listsShow todosReady=Template.subscriptionsReady
-  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
+{% raw %}{{> listsShow todosReady=Template.subscriptionsReady
+  list=(getFullList listIdOnly) todos=listIdOnly.todos}}{% endraw %}
 ```
 
 <h2 id="reusing-code">Reusing code in Blaze</h2>
@@ -459,7 +459,7 @@ For instance, suppose you have many places in your application where you need an
 
 ```html
 <template name="autocompleteInput">
-  {{> blurringInput name=name value=currentValue}}
+  {% raw %}{{> blurringInput name=name value=currentValue}}{% endraw %}
 </template>
 ```
 
@@ -499,7 +499,7 @@ Template.registerHelper('shortDate', (date) => {
 <template name="myBike">
   <dl>
    <dt>Date registered</dt>
-   <dd>{{shortDate bike.registeredAt}}</dd>
+   <dd>{% raw %}{{shortDate bike.registeredAt}}{% endraw %}</dd>
  </dl>
 </template>
 ```
@@ -532,11 +532,11 @@ Template.myTemplate.helpers({
 If your helper or sub-component is expensive to run, and often re-runs without any visible effect, you can short circuit unnecessary re-runs by using a more subtle reactive data source. A good candidate is provided by the [`peerlibrary:computed-field`](https://atmospherejs.com/peerlibrary/computed-field) library.
 
 <h3 id="attribute-helpers">Attribute helpers</h3>
-Setting tag attributes via helpers (e.g. `<div {{attributes}}>`) is a neat tool and has some precedence rules that make it more useful. Specifically, when you use it more than once on a given element, the attributes are composed (rather than the second set of attributes simply replacing the first). So you can use one helper to set one set of attributes and a second to set another. For instance:
+Setting tag attributes via helpers (e.g. `<div {% raw %}{{attributes}}{% endraw %}>`) is a neat tool and has some precedence rules that make it more useful. Specifically, when you use it more than once on a given element, the attributes are composed (rather than the second set of attributes simply replacing the first). So you can use one helper to set one set of attributes and a second to set another. For instance:
 
 ```html
 <template name="myTemplate">
-  <div id="my-div" {{classes 'foo' 'bar'}} {{backgroundImageStyle 'my-image.jpg'}}>My div</div>
+  <div id="my-div" {% raw %}{{classes 'foo' 'bar'}}{% endraw %} {% raw %}{{backgroundImageStyle 'my-image.jpg'}}{% endraw %}>My div</div>
 </template>
 ```
 
@@ -555,10 +555,10 @@ Template.myTemplate.helpers({
 })
 ```
 <h3 id="lookups">Lookup order</h3>
-Another complicated topic in Blaze is name lookups. In what order does Blaze look when you write `{{something}}`? It runs in the following order:
+Another complicated topic in Blaze is name lookups. In what order does Blaze look when you write `{% raw %}{{something}}{% endraw %}`? It runs in the following order:
 
 1. Helper defined on the current component.
-2. Binding (eg. from `{{#let}}` or `{{#each in}}`) in current scope
+2. Binding (eg. from `{% raw %}{{#let}}{% endraw %}` or `{% raw %}{{#each in}}{% endraw %}`) in current scope
 3. A named template
 4. Global helpers
 5. The current data context.
