@@ -270,7 +270,7 @@ export default class ImportScanner {
 
     while (resolved && resolved.stat.isDirectory()) {
       resolved = this._resolvePkgJsonMain(resolved.path) ||
-        this._joinAndStat(dirPath, "index.js");
+        this._joinAndStat(resolved.path, "index.js");
     }
 
     return resolved && resolved.path;
