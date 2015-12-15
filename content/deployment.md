@@ -231,7 +231,25 @@ Now, we need to configure the package with our Google Analytics key (the package
 }
 ```
 
-That's it! The analytics package hooks into Flow Router (see the [routing article](routing) for more) and records all of the page events for you.
+The analytics package hooks into Flow Router (see the [routing article](routing) for more) and records all of the page events for you.
+
+You may want to track non-page change related events (for instance publication subscription, or method calls) also. To do so you can use the custom event tracking functionality:
+
+```
+Todos.methods.updateText = new ValidatedMethod({
+  ...
+  run({ todoId, newText }) {
+    // We use `isClient` here because we don't want to run it on server-server method simulation
+    if (Meteor.isClient) {
+      analytics.track('Todos.methods.updateText', {todo, newText});
+    }
+
+    ...
+  }
+});
+```
+
+To achieve a similar abstraction when subscribing, you may want to wrap your calls to `Meteor.subscribe()` in an abstraction layer.
 
 <h2 id="apm">Monitoring your application</h2>
 
