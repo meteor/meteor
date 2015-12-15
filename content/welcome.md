@@ -31,17 +31,7 @@ Meteor is a full-stack JavaScript framework for developing modern web and mobile
 
  - Meteor *embraces the ecosystem*, bringing the best parts of the extremely active JavaScript community to you in careful and consistent way.
 
- - 
-
-3. Meteor principles
-  1. Data on the Wire. Meteor doesn't send HTML over the network. The server sends data and lets the client render it.
-  1. One Language. Meteor lets you write both the client and the server parts of your application in JavaScript.
-  1. Database Everywhere. Query data on the client using the same syntax you use on the server.
-  1. Optimistic UI. On the client, Meteor prefetches data and simulates models to make it look like server method calls return instantly.
-  1. Full Stack Reactivity. In Meteor, realtime is the default. All layers, from database to template, update themselves automatically when necessary.
-  1. Embrace the Ecosystem. Meteor is open source and integrates with existing open source tools and frameworks, with a strong ecosystem of community packages.
-  1. Simplicity Equals Productivity. The best way to make something seem simple is to have it actually be simple. Meteor's main functionality has clean, classically beautiful APIs.
-
+ - Meteor provides *full stack reactivity*, allowing you to write frontends that seamlessly reflect the true state of the world with minimal effort on your behalf.
 
 <h2 id="guide-concepts">Guide concepts</h2>
 The Meteor Guide is developed in the open at the [GitHub repository](https://github.com/meteor/guide) and we encourage pull requests and issues to discuss problems with and changes that could be made to the content. By keeping our process open and honest we hope it's clear what will and will not be in the guide and what changes will be coming to the guide in the next Meteor version.
