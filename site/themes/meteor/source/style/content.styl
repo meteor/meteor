@@ -7,10 +7,16 @@ code-font()
   max-width 760px
   margin 0px auto
 
+  em
+    font-style italic
+
+  strong
+    font-family 'ProximaNova-Bold'
+
   h1, h2, h3, h4, h5, h6, p, ul, ol, figure
     margin 15px 0
     line-height 1.4em
-  
+
   h1
     font-size 2em
     margin-top 0
@@ -21,7 +27,7 @@ code-font()
     margin-top 30px
     padding-bottom 10px
     border-bottom 1px solid #eee
-  
+
   h3
     font-size 1.2em
     margin-top 30px
@@ -39,13 +45,24 @@ code-font()
         opacity 1
 
   ul, ol
-    list-style-type disc
     padding-left 1.5em
     li
-      margin-bottom 15px
+      margin-bottom 5px
+
+  ul
+    list-style-type disc
+
+  ol
+    list-style-type decimal
 
   a
     color #de4f4f
+
+  code
+    code-font()
+    padding 1px 4px
+    background-color #eee
+    margin 0 2px
 
   .highlight
     code-font()
@@ -60,6 +77,7 @@ code-font()
       padding 0
       margin 0
     .gutter
+      user-select none
       width 1.5em
       padding-right 30px
     &.html, &.js, &.bash, &.css
@@ -102,10 +120,28 @@ code-font()
       padding 6px 13px
       code-font()
 
-#bottom-nav
-  margin 30px 0
-  border-top 1px solid #eee
-  padding-top 30px
-  a
-    font-family 'ProximaNova-Semibold'
-    margin 0 5px
+  .bottom-nav
+    height 44px
+    margin 30px 0 25px
+    border-bottom 1px solid #eee
+    padding-bottom 25px
+    a
+      font-family 'ProximaNova-Semibold'
+      margin 0 5px
+
+  .edit-link
+    text-align center
+    a
+      color #aaa
+      font-family 'ProximaNova-Semibold'
+      &:before
+        content ''
+        display inline-block
+        width 16px
+        height 16px
+        background url(../images/gh.png) center center no-repeat
+        background-size 16px
+        opacity 0.3
+        margin-right 8px
+        position relative
+        top 2px

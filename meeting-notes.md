@@ -1,3 +1,134 @@
+## Standup 14th Dec
+
+With Zol, Tom, Sashko.
+
+### Agenda
+- Progress, soft launch?
+
+### Notes
+- If Accounts, Deployment finished, we could be done.
+- Forms sticks out.
+- Reasonable to message that certain articles are blocked on 1.3
+- Email to the big mailing list to see what people think. We're pretty sure on all the articles that are drafted.
+- How do we make the example app presentable?
+- Unknowns in forms article?
+- Janky packages in todos right now, mostly around testing.
+- Example app should address the set of articles we'll promote.
+- Sashko can write the content but not maintain the linting config, need a lint config maintainer (Tim).
+
+### Action Items
+
+- 'Soft Launch' becomes promoting content so far for holiday reading, with a disclaimer that more exciting content is in the works aligning with 1.3
+- Clean up todos app wrt to XXX's. Rename packages not part of the app to fork-something.
+- Everything in drafts-in-progress will be drafted and promoted by the end of the week.
+- Order the articles in the website.
+
+## Standup 9th Dec
+
+With Zol, Matt, Tom, Sashko.
+
+Agenda:
+
+1. Guide social promotion tasks from Dan
+  1. Fix URLs [done]
+  2. See if we can put up a banner reminding people it’s in progress and we’re looking for contributions
+  3. Make a list of interesting nuggets to tweet about
+    1. Ever wanted to know what happens when a Meteor Method is called? http://guide.meteor.com/methods.html#call-lifecycle
+    2. Read our recommendations about routing in Meteor: http://guide.meteor.com/routing.html
+    3. Learn how to secure your Meteor app: http://guide.meteor.com/security.html
+  4. Figure out when we should do a big marketing push with the initial release
+2. Talk about 7 principles with Matt
+3. Mid-dec soft release, what is it?
+4. Blaze?
+
+### Notes
+
+- App Structure and Code Style split.
+- Sashko to work with Tim on code style.
+- Forms not started yet.
+- Tom is working on welcome outline.
+- Split up testing article into Test Runner CI, and how to test methods/other individual components will go into their own section.
+- Definitely in the Guide is for 1.3 mindset.
+- Line up guide preview release roughly with 1.3 preview release.
+- Stick to our goals of initial draft releases by mid Dec.
+- Eventually move to a world where API docs are purely generated from jsdoc
+- We're recommending Blaze, you can use React & Angular, not recommending them as a first choice because of existing packages.
+- Where do we tell people how to use javascript? Don't need to do it in the guide, link to a great resource.
+- Testing: We'll have guidance for end to end tests. Assuming modules get done nicely and have everything we need we'll have testing for the guide.
+- What happens to specs for modules and testing so that guide can sync up with features that are coming.
+
+### Action Items
+
+- Take a crack at 250-400 words at what Meteor is from the point of a Developer. Maybe distill some updated principles.
+- Quietly drop 7 prinicples under a deprecated commit.
+- Matt to get design docs for testing and modules.
+
+## Standup 2nd Dec
+
+With Tom, Zol, Sashko and Matt
+
+## Notes
+
+- Outstanding product questions: Blaze, Methods, Linting.
+- Setting up a process to resolve these questions.
+- Matt re: 1.3. We ought to write the Guide for 1.3 . Use it to promote the things that are exciting in 1.3, e.g ES2015 modules, things that come up in a larger app,
+- Dream scenario would be when we release 1.3, there is a guide in place written for it that steers people on the leading edge of what’s in 1.3 . That guide has been floating around for a while and we’ve been iterating on it and getting comments on it as the lead up to 1.3 . Feedback loop between the guide, community and product.
+- Guide to steer polish of modules rather than large efforts.
+- Theme that works for 1.3 - it’s the Meteor release for large apps. Targetted at the things that come up when you have a larger app.
+- How do we systemize the collaboration of the Guide Team.
+- Platform team is to drive the 1.3 release cycle.
+- The platform team (Ben, Avi, Martin) are keen to work with the guide team.
+- Guide team become customers for the platform team.
+- Take plan to existing customers.
+- Should we be writing a Blaze article?
+- Complicated question.
+- Is it a blog post?
+- Bookmark the Blaze conversation - the urgency is high.
+- Make a decision by the end of the week.
+- Linting: Existing linter config. Would be cool to put the config and meteor integration into the Guide.
+- Politics of applying linting config to the entire Meteor codebase?
+- Matt is in favor of advocating for one code style.
+- Leave meteor/meteor unlinted.
+- Maybe style guide, linter chapter.
+
+## Action Items
+
+- Make a decision on Blaze by the end of the week.
+- Maintain Meteor eslint style config in npm.
+- Linting to go into Guide.
+- Move weekly check-in to Wednesdays (this same time works).
+
+## Standup 1st Dec
+
+With Tom, Zol and Sashko
+
+### Agenda
+
+- Progress?
+- Website QA
+
+### Notes
+
+- We'll all do a round of QA on the website before Evan completely moves onto other things.
+- Merge Security and Data article in the next 24 hours.
+- Sashko to clean up other cruft.
+- Article draft velocity is good, easy articles are done.
+- Should we write a guide on Blaze?
+- Testing and App structure require too many decisions.
+- Taking these 3 out will maybe have the other articles drafted by the end of the week (*Tom optimism*)
+- Demoting publishing a package to an 'article idea' rather than a first class article.
+- Mini-app with forms in it?
+- Split Forms/Methods article into 2, Methods and Forms. Definitely get the Methods done and maybe get the Forms done, note Forms requires a mini example app.
+- Remember we should make some nice diagrams some time.
+
+### Action Items
+
+- Tom+Sashko - UI/UX, what should we do about internationalization?
+- Do we write a Blaze article? - part of discussion with Matt tomorrow.
+- Sit down and resolve tiny decisions in each article to get them to draft stage.
+- Tom to do Mobile (until we know more).
+- Sashko to do Methods.
+
 ## Standup 23rd Nov
 
 With Evan, Tom, Sashko, Zol

@@ -1,12 +1,12 @@
 # Meteor Guide
 
-[![Articles complete](https://badge.waffle.io/meteor/guide.svg?label=ready&title=Articles%20Complete)](https://waffle.io/meteor/guide?label=article)
+[![Articles drafted](https://badge.waffle.io/meteor/guide.svg?label=status:%20first%20draft&title=Articles%20Drafted)](https://waffle.io/meteor/guide?label=article)
 
-We're tracking our progress using Waffle.io; see the board by clicking the badge above!
+We're tracking [our progress](https://waffle.io/meteor/guide?label=article) using Waffle.io.
 
 - See the example app we're working to embody the principles from the guide at [meteor/todos](https://github.com/meteor/todos)
 - Check out the [outlines and discussions](https://github.com/meteor/guide/labels/article)
-- Checkout the [live site](http://meteor-guide.s3-website-us-west-1.amazonaws.com) [Still in progress!]
+- Checkout the [live site](http://guide.meteor.com/) [Still in progress!]
 
 ### How to contribute
 
@@ -34,3 +34,27 @@ Read more in the [interview on the Meteor Blog](http://info.meteor.com/blog/mete
 1. See the [standup notes and planning](meeting-notes.md)
 2. See the [code action items](https://github.com/meteor/guide/labels/code)
 3. See the [static site shell readme](site/README.md)
+
+### Writing tips
+
+Things to be aware of:
+
+#### Always use specific IDs on headers so that we can change them later:
+
+```
+// bad
+## Using schemas with collections
+
+// good
+<h2 id="schemas-with-collections">Using schemas with collections</h2>
+```
+
+#### Escape handlebars syntax inside inline code snippets
+
+```
+// will break
+Render multiple items in your template with `{{#each}}`
+
+// good
+Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}}`
+```
