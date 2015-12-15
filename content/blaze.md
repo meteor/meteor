@@ -15,7 +15,7 @@ Blaze is not required to built applications in Meteor---you can equally use [Rea
 
 <a id="spacebars">Spacebars</a>
 
-Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{` and `}}{% endraw %}`.
+Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{{% endraw %}` and `{% raw %}}}{% endraw %}`.
 
 As an example, consider the `todosItem` template from the Todos example app:
 
@@ -139,10 +139,10 @@ Template.foo.helpers({
 ```
 
 <h3 id="rendering-html">Rendering pure HTML</h3>
-Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{`.
+Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{{% endraw %}`.
 
 ```html
-{% raw %}{{{myHtml}}{% endraw %}}
+{% raw %}{{{myHtml}}}{% endraw %}
 ```
 
 ```js
@@ -221,7 +221,7 @@ Like `{% raw %}{{#each .. in}}{% endraw %}`, `{% raw %}{{#each}}{% endraw %}` it
 Spacebars starts from a very strict interpretation of HTML. In particular you need to careful about self-closing tags and when you are allowed to use them. For instance, you can't self-close a `div` (`<div/>`) in Spacebars, and you need to close some tags that a browser might not require you to (such as a `<p>` tag).
 
 <h4 id="escaping">Escaping</h4>
-To insert a literal {% raw %}{{, {% raw %}{{{, or any number of curly braces, put a vertical bar after it. So `{% raw %}{{|` will show up as `{% raw %}{{`, `{% raw %}{{{|` will show up as `{% raw %}{{{`, and so on.
+To insert a literal `{% raw %}{{{% endraw %}`, `{% raw %}{{{{% endraw %}`, or any number of curly braces, put a vertical bar after it. So `{% raw %}{{|{% endraw %}` will show up as `{% raw %}{{{% endraw %}`, `{% raw %}{{{|{% endraw %}` will show up as `{% raw %}{{{{% endraw %}`, and so on.
 
 <h2 id="reusable-components">Creating reusable components in Blaze</h2>
 In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reusable components that are modular and depend and interact with their environment in clear and minimal ways. 
