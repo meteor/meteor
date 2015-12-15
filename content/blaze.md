@@ -21,13 +21,13 @@ As an example, consider the `todosItem` template from the Todos example app:
 
 ```html
 <template name="todosItem">
-  <div class="list-item {% raw %}{{checkedClass}}{% endraw %} {% raw %}{{editingClass}}{% endraw %}">
+  <div class="list-item {{checkedClass}} {{editingClass}}">
     <label class="checkbox">
-      <input type="checkbox" checked={% raw %}{{todo.checked}}{% endraw %} name="checked">
+      <input type="checkbox" checked={{todo.checked}} name="checked">
       <span class="checkbox-custom"></span>
     </label>
 
-    <input type="text" value="{% raw %}{{todo.text}}{% endraw %}" placeholder="Task name">
+    <input type="text" value="{{todo.text}}" placeholder="Task name">
     <a class="js-delete-item delete-item" href="#">
       <span class="icon-trash"></span>
     </a>
@@ -54,14 +54,14 @@ In the context of a Blaze helper, `this` is scoped to the current current *data 
 Apart from simple interpolation, mustache tags can control flow of the template. For instance, in the `listsShow` template, we render a list of todos via:
 
 ```html
-  {% raw %}{{#each todo in todos}}{% endraw %}
-    {% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}
-  {% raw %}{{else}}{% endraw %}
+  {{#each todo in todos}}
+    {{> todosItem (todoArgs todo)}}
+  {{else}}
     <div class="wrapper-message">
       <div class="title-message">No tasks here</div>
       <div class="subtitle-message">Add new tasks using the field above</div>
     </div>
-  {% raw %}{{/each}}{% endraw %}
+  {{/each}}
 ```
 
 This snippet illustrates a few things:
@@ -97,7 +97,7 @@ Note that to get the keyword arguments, you need to read them off the `hash` pro
 You can also pass the output of a helper to a template inclusion or other helper. To do so, use brackets to show precedence:
 
 ```html
-{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}
+{{> todosItem (todoArgs todo)}}
 ```
 
 Here the `todo` is passed as argument to the `todoArgs` helper, then the output is passed into the `todosItem` template.
@@ -106,8 +106,8 @@ Here the `todo` is passed as argument to the `todoArgs` helper, then the output 
 You "include" a sub-component with the `{% raw %}{{>` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object as argument (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments, as the `listShowPage` template does:
 
 ```html
-{% raw %}{{> listsShow todosReady=Template.subscriptionsReady
-  list=(getFullList listIdOnly) todos=listIdOnly.todos}}{% endraw %}
+{{> listsShow todosReady=Template.subscriptionsReady
+  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
 ```
 
 In this case, the `listShow` component can expect a data context of the form:
@@ -124,7 +124,7 @@ In this case, the `listShow` component can expect a data context of the form:
 We saw above that using a helper (or data context lookup) in the form `checked={% raw %}{{todo.checked}}{% endraw %}` will add the checked property to the HTML tag if `todo.checked` evaluates to true. Also, you can directly include an object in the attribute list of an HTML element to set multiple attributes at once:
 
 ```html
-<a {% raw %}{{attributes}}{% endraw %}>My Link</a>
+<a {{attributes}}>My Link</a>
 ```
 
 ```js
@@ -142,7 +142,7 @@ Template.foo.helpers({
 Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{{% endraw %}`.
 
 ```html
-{% raw %}{{{myHtml}}}{% endraw %}
+{{{myHtml}}}
 ```
 
 ```js
@@ -160,17 +160,17 @@ A block helper, called with `{% raw %}{{#` is a helper that takes (and may rende
 
 ```html
 <template name="myIf">
-  {% raw %}{{#if condition}}{% endraw %}
-    {% raw %}{{> Template.contentBlock}}{% endraw %}
-  {% raw %}{{else}}{% endraw %}
-    {% raw %}{{> Template.elseBlock}}{% endraw %}
-  {% raw %}{{/if}}{% endraw %}
+  {{#if condition}}
+    {{> Template.contentBlock}}
+  {{else}}
+    {{> Template.elseBlock}}
+  {{/if}}
 </template>
 
 <template name="caller">
-  {% raw %}{{#myIf condition=true}}{% endraw %}
+  {{#myIf condition=true}}
     <h1>I'll be rendered!</h1>
-  {% raw %}{{/myIf}}{% endraw %}
+  {{/myIf}}
 </template>
 ```
 
@@ -182,11 +182,11 @@ There are a few builtin block helpers that are worth knowing about:
 The `{% raw %}{{#if}}{% endraw %}` and `{% raw %}{{#unless}}{% endraw %}` helpers are fairly straightforward but invaluable for controlling the control flow of a template. Both operate by evaluating and checking their single argument for "falsey"-ness (in JS this means `null`, `undefined`, `0`, `''`, `[]` and of course `false`).
 
 ```html
-{% raw %}{{#if something}}{% endraw %}
+{{#if something}}
   <p>It's true</p>
-{% raw %}{{else}}{% endraw %}
+{{else}}
   <p>It's false</p>
-{% raw %}{{/if}}{% endraw %}
+{{/if}}
 ```
 
 <h4 id="each-in">Each-in</h4>
@@ -194,20 +194,20 @@ The `{% raw %}{{#if}}{% endraw %}` and `{% raw %}{{#unless}}{% endraw %}` helper
 The `{% raw %}{{#each .. in}}{% endraw %}` helper is a convenient way to step over a list whilst retaining the outer data context. 
 
 ```html
-{% raw %}{{#each todo in todos}}{% endraw %}
-  {% raw %}{{#each tag in todo.tags}}{% endraw %}
+{{#each todo in todos}}
+  {{#each tag in todo.tags}}
     <!-- in here, both todo and tag are in scope -->
-  {% raw %}{{/each}}{% endraw %}
-{% raw %}{{/each}}{% endraw %}
+  {{/each}}
+{{/each}}
 ```
 
 <h4 id="let">Let</h4>
 The `{% raw %}{{#let}}{% endraw %}` helper is useful to capture the output of a helper or document subproperty within a template:
 
 ```html
-{% raw %}{{#let name=person.bio.firstName color=generateColor}}{% endraw %}
-  <div>{% raw %}{{name}}{% endraw %} gets a {% raw %}{{color}}{% endraw %} card!</div>
-{% raw %}{{/let}}{% endraw %}
+{{#let name=person.bio.firstName color=generateColor}}
+  <div>{{name}} gets a {{color}} card!</div>
+{{/let}}
 ```
 
 Note that `name` and `color` (and `todo` above) are only added to scope in the template, they *are not* added to the data context. Specifically this means if you call a helper, they will not be on `this`. So if you need to access them in a helper, you should pass them in as an argument (like we do with `(todoArgs todo)` above).
@@ -354,7 +354,7 @@ When you are setting up event maps in your JS files, you need to 'select' the el
 If you need to pass in content to a sub-component (for instance the content of a modal dialog), you can use the [custom block helper](#block-helpers) to provide a block of content. If you need more flexibility, typically just providing a named component in the data context is the way to go. The sub-component can then just render that component with:
 
 ```html
-{% raw %}{{> Template.dynamic templateName dataContext}}{% endraw %}
+{{> Template.dynamic templateName dataContext}}
 ```
 
 This is more or less the way that the [`kadira:blaze-layout`](https://atmospherejs.com/kadira/blaze-layout) package works in practice.
@@ -365,7 +365,7 @@ If you need to communicate *up* the component hierarchy, it's best to pass a *ca
 For instance, only one todo item can be currently in the editing state at a time, so the `listsShow` component manages the state of which is edited. So when you focus on an item, that item needs to tell the list's component to make it the "edited" one. To do that, we pass a callback into the `todosItem` component, and it calls it:
 
 ```html
-{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}
+{{> todosItem (todoArgs todo)}}{% endraw %}
 ```
 
 ```js
@@ -445,8 +445,8 @@ Template.listsShowPage.helpers({
 Typically, as [outlined in the ui/ux article](ui-ux.md#smart-components) you should fetch data in the same component that you subscribe in. In Blaze, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`: 
 
 ```html
-{% raw %}{{> listsShow todosReady=Template.subscriptionsReady
-  list=(getFullList listIdOnly) todos=listIdOnly.todos}}{% endraw %}
+{{> listsShow todosReady=Template.subscriptionsReady
+  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
 ```
 
 <h2 id="reusing-code">Reusing code in Blaze</h2>
@@ -459,7 +459,7 @@ For instance, suppose you have many places in your application where you need an
 
 ```html
 <template name="autocompleteInput">
-  {% raw %}{{> blurringInput name=name value=currentValue}}{% endraw %}
+  {{> blurringInput name=name value=currentValue}}{% endraw %}
 </template>
 ```
 
@@ -499,7 +499,7 @@ Template.registerHelper('shortDate', (date) => {
 <template name="myBike">
   <dl>
    <dt>Date registered</dt>
-   <dd>{% raw %}{{shortDate bike.registeredAt}}{% endraw %}</dd>
+   <dd>{{shortDate bike.registeredAt}}</dd>
  </dl>
 </template>
 ```
@@ -536,7 +536,7 @@ Setting tag attributes via helpers (e.g. `<div {% raw %}{{attributes}}{% endraw 
 
 ```html
 <template name="myTemplate">
-  <div id="my-div" {% raw %}{{classes 'foo' 'bar'}}{% endraw %} {% raw %}{{backgroundImageStyle 'my-image.jpg'}}{% endraw %}>My div</div>
+  <div id="my-div" {{classes 'foo' 'bar'}} {{backgroundImageStyle 'my-image.jpg'}}>My div</div>
 </template>
 ```
 
