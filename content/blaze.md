@@ -15,7 +15,7 @@ Blaze is not required to built applications in Meteor---you can equally use [Rea
 
 <h2 id="spacebars">Spacebars</h2>
 
-Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{{% endraw %}` and `{% raw %}}}{% endraw %}`.
+Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{ }}{% endraw %}`.
 
 As an example, consider the `todosItem` template from the Todos example app:
 
@@ -103,7 +103,7 @@ You can also pass the output of a helper to a template inclusion or other helper
 Here the `todo` is passed as argument to the `todoArgs` helper, then the output is passed into the `todosItem` template.
 
 <h3 id="inclusion">Template inclusion</h3>
-You "include" a sub-component with the `{% raw %}{{>` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object as argument (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments, as the `listShowPage` template does:
+You "include" a sub-component with the `{% raw %}{{> }}{% endraw %}` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object as argument (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments, as the `listShowPage` template does:
 
 ```html
 {{> listsShow todosReady=Template.subscriptionsReady
@@ -365,7 +365,7 @@ If you need to communicate *up* the component hierarchy, it's best to pass a *ca
 For instance, only one todo item can be currently in the editing state at a time, so the `listsShow` component manages the state of which is edited. So when you focus on an item, that item needs to tell the list's component to make it the "edited" one. To do that, we pass a callback into the `todosItem` component, and it calls it:
 
 ```html
-{{> todosItem (todoArgs todo)}}{% endraw %}
+{{> todosItem (todoArgs todo)}}
 ```
 
 ```js
@@ -459,7 +459,7 @@ For instance, suppose you have many places in your application where you need an
 
 ```html
 <template name="autocompleteInput">
-  {{> blurringInput name=name value=currentValue}}{% endraw %}
+  {{> blurringInput name=name value=currentValue}}
 </template>
 ```
 
