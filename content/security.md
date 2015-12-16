@@ -1,5 +1,6 @@
 ---
 title: "Security"
+order: 8
 ---
 
 After reading this guide, you'll know:

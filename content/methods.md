@@ -1,5 +1,6 @@
 ---
 title: "Methods"
+order: 4
 ---
 
 After reading this article, you'll know:

@@ -1,5 +1,6 @@
 ---
 title: Welcome!
+order: 0
 ---
 
 This is a work in progress deployment of the Meteor Guide. We're tracking our progress writing articles using [Waffle.io](https://waffle.io/meteor/guide?label=article).

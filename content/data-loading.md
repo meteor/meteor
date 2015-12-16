@@ -1,5 +1,6 @@
 ---
 title: Publications and Data Loading
+order: 3
 ---
 
 After reading this guide, you'll know:

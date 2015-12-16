@@ -8,7 +8,7 @@
   </select>
 </div>
 <ul class="menu-root">
-  <% site.pages.find({}).each(function (p) { %>
+  <% site.pages.find({}).sort({order: 1}).each(function (p) { %>
     <li>
       <a href="<%- relative_url(page.path, p.path) %>" class="sidebar-link<%- page.title === p.title ? ' current' : '' %>">
         <%- p.title %>

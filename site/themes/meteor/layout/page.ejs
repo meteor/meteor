@@ -11,7 +11,7 @@
     <div class="bottom-nav">
       <%
         function findAdjacent (direction) {
-          var pages = site.pages.find({}).map(function (page) { return page })
+          var pages = site.pages.find({}).sort({order: 1}).map(function (page) { return page })
           var i = pages.length
           while (i--) {
             if (pages[i].title === page.title) {

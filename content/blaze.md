@@ -1,5 +1,6 @@
 ---
 title: Blaze
+order: 7
 ---
 
 After reading this guide, you'll know:
