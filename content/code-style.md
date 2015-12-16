@@ -88,6 +88,8 @@ To get ESLint up and running on your computer, install the command line tool wit
 
 ```
 npm install -g eslint
+npm install -g babel-eslint
+npm install -g eslint-plugin-react
 ```
 
 Copy the standard Meteor `.eslintrc` and `.eslintignore` files from above into your app directory, and run the linter on your code with:
@@ -102,8 +104,46 @@ For more details, read the [Getting Started](http://eslint.org/docs/user-guide/g
 
 Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to just write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
 
-1. [Sublime Text on the Meteor Blog](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
-2. [Atom and WebStorm on the Meteor Blog](http://info.meteor.com/blog/how-to-set-up-atom-and-webstorm-for-meteor-es6-es2015-and-jsx)
+
+<h4 id="eslint-sublime">Sublime Text</h4>
+
+You can install the Sublime Text packages that integrate them into the text editor. It's generally recommended to use Package Control to add these packages. If you already have that setup, you can just add the these packages by name; if not, click the instructions links:
+
+* Babel (for syntax highlighting – [full instructions](https://github.com/babel/babel-sublime#installation))
+* SublimeLinter ([full instructions](http://sublimelinter.readthedocs.org/en/latest/installation.html))
+* SublimeLinter-contrib-eslint ([full instructions](https://github.com/roadhump/SublimeLinter-eslint#plugin-installation))
+
+To get proper syntax highlighting, go to a .js file, then select the following through the *View* dropdown menu: *Syntax* -> *Open all with current extension as...* -> *Babel* -> *JavaScript (Babel)*. If you are using React .jsx files, do the same from a .jsx file. If it's working, you will see "JavaScript (Babel)" in the lower right hand corner of the window when you are on one of these files. Refer to the [package readme](https://github.com/babel/babel-sublime) for information on compatible color schemes.
+
+A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .jsx files, and it will correctly expand classes to React's "className" property. You can bind to the tab key for this, but [you may not want to](https://github.com/sergeche/emmet-sublime/issues/548).
+
+<h4 id="eslint-sublime">Atom</h4>
+
+Install the following three Atom packages. Here's how to install them from the terminal, but you can also select them from within Atom:
+
+    apm install language-babel
+    apm install linter
+    apm install linter-eslint
+
+Go to *Settings -> Packages.* Under "linter-eslint", click the *Settings* button. To allow atom to see ESLint, you need to set "Global Node Path" to your Node path. As indicated in Atom, you can find this out with the following command in the terminal:
+
+    npm config get prefix
+
+This will return something like `/usr/local`. Add this to the "Global Node Path", and check "Use Global Eslint":
+
+![Set your "Global Node Path" and check "Use Global Eslint"](atom-configuration.png)
+
+Then **restart Atom** to activate linting.
+
+
+<h4 id="eslint-sublime">WebStorm</h4>
+
+WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `.eslintrc` file, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
+
+![Enable ESLint here.](webstorm-configuration.png)
+
+Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
+
 
 <h3 id="eslint-commit-hook">Setting up a commit hook for linting</h3>
 
