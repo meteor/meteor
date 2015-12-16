@@ -494,3 +494,73 @@ Meteor.publish('Meteor.users.initials', function ({ userIds }) {
 ```
 
 This publication will let the client pass an array of user IDs it's interested in, and get the initials for all of those users.
+
+## Roles and permissions
+
+One of the main reasons you might want to add a login system to your app is to have permissions for your data. For example, if you were running a forum, you would want administrators or moderators to be able to delete any post, but normal users can only delete their own. This uncovers two different types of permissions:
+
+1. Role-based permissions
+2. Per-document permissions
+
+### alanning:roles
+
+The most popular package for role-based permissions in Meteor is [`alanning:roles`](https://atmospherejs.com/alanning/roles). For example, here is how you would make a user into an administrator, or a moderator:
+
+```js
+// Give Alice the 'admin' role
+Roles.addUsersToRoles(aliceUserId, 'admin', Roles.GLOBAL_GROUP);
+
+// Give Bob the 'moderator' role for a particular category
+Roles.addUsersToRoles(bobsUserId, 'moderator', categoryId);
+```
+
+Now, let's say you wanted to check if someone was allowed to delete a particular forum post:
+
+```js
+const forumPost = Posts.findOne(postId);
+
+const canDelete = Roles.userIsInRole(userId,
+  ['admin', 'moderator'], forumPost.categoryId);
+
+if (! canDelete) {
+  throw new Meteor.Error('unauthorized',
+    'Only admins and moderators can delete posts.');
+}
+
+Posts.remove(postId);
+```
+
+Note that we can check for multiple roles at once, and if someone has a role in the `GLOBAL_GROUP`, they are considered as having that role in every group. In this case, the groups were by category ID, but you could use any unique identifier to make a group.
+
+Read more in the [`alanning:roles` package documentation](https://atmospherejs.com/alanning/roles).
+
+### Per-document permissions
+
+Sometimes, it doesn't make sense to abstract permissions into "groups" - you just want documents to have owners and that's it. In this case, you can use a simpler strategy using collection helpers.
+
+```js
+Lists.helpers({
+  // ...
+  editableBy(userId) {
+    if (!this.userId) {
+      return true;
+    }
+
+    return this.userId === userId;
+  },
+  // ...
+});
+```
+
+Now, we can call this simple function to determine if a particular user is allowed to edit this list:
+
+```js
+const list = Lists.findOne(listId);
+
+if (! list.editableBy(userId)) {
+  throw new Meteor.Error('unauthorized',
+    'Only list owners can edit private lists.');
+}
+```
+
+Learn more about how to use collection helpers in the [Collections article](collections.html#collection-helpers).
