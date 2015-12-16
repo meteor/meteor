@@ -341,6 +341,21 @@ Template.rootRedirector.onCreated(() => {
 });
 ```
 
+If you need to wait on specific data that you aren't already subscribed to, you can use an `autorun` and `subscriptionsReady()` to wait on that subscription:
+
+```js
+Template.rootRedirector.onCreated(() => {
+  // if we needed to open this subscription here
+  this.subscribe('lists/public');
+  
+  this.autorun(() => {
+    if (this.subscriptionsReady()) {
+      FlowRouter.go('listsShow', Lists.findOne());
+    }
+  });
+});
+```
+
 <h3 id="redirecting-after-user-action">Redirecting after a user's action</h3>
 
 Often, you just want to go to a new route programmatically when a user has completed a certain action. Above we saw a case (creating a new list) when we wanted to do it *optimistically*---i.e. before we hear back from the server that the Method succeeded. We can do this because we reasonably expect that the Method will succeed in almost all cases (see the [UI/UX article](ui-ux.html) for further discussion of this).
