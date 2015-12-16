@@ -346,7 +346,7 @@ Meteor.loginWithFacebook({
 There are a few points to know about configuring OAuth login:
 
 1. **Client ID and secret.** It's best to keep your OAuth secret keys outside of your source code, and pass them in is through Meteor.settings. Read how in the [Security article](security.html#api-keys-oauth).
-2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using.
+2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `https://www.example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using. Note that you will need to configure two URLs - one for your production app, and one for your development environment, where the URL might be something like `http://localhost:3000/_oauth/facebook`.
 3. **Permissions.** Each login service provider should have documentation about which permissions are available. For example, [here is the page for Facebook](https://developers.facebook.com/docs/facebook-login/permissions). If you want additional permissions to the user's data when they log in, pass some of these strings in the `requestPermissions` option to `Meteor.loginWithFacebook`. In the next section we'll talk about how to retrieve that data.
 
 <h3 id="oauth-calling-api">Calling service API for more data</h3>
