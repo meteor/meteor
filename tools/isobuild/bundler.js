@@ -838,13 +838,6 @@ class Target {
                               unibuild.arch);
                 }
                 if (!files.exists(
-                  files.pathJoin(nmd.sourcePath, '.package.json'))) {
-                  buildmessage.error(
-                    "Can't cross-compile package " +
-                      unibuild.pkg.name + ": missing .package.json");
-                  return;
-                }
-                if (!files.exists(
                   files.pathJoin(nmd.sourcePath, '.npm-shrinkwrap.json'))) {
                   buildmessage.error(
                     "Can't cross-compile package " +
@@ -1576,11 +1569,6 @@ class JsImage {
           nmd.preferredBundlePath, {directory: true});
         // We check that these source files exist in _emitResources when
         // writePackageJSON is initially set.
-        builder.write(
-          files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
-                         'package.json'),
-          { file: files.pathJoin(nmd.sourcePath, '.package.json') }
-        );
         builder.write(
           files.pathJoin(files.pathDirname(nmd.preferredBundlePath),
                          'npm-shrinkwrap.json'),
