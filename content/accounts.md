@@ -392,13 +392,105 @@ As your app gets more complex, you will invariably need to store some data about
 
 ### Add top-level fields onto the user document
 
+The best way to store your custom data onto the `Meteor.users` collection is to add a new uniquely-named top-level field on the user document. For example, if you wanted to add a mailing address to a user, you could do it like this:
 
+```js
+// Using address schema from schema.org
+// https://schema.org/PostalAddress
+const newMailingAddress = {
+  addressCountry: 'US',
+  addressLocality: 'Seattle',
+  addressRegion: 'WA',
+  postalCode: '98052',
+  streetAddress: "20341 Whitworth Institute 405 N. Whitworth"
+};
+
+Meteor.users.update(userId, {
+  $set: {
+    mailingAddress: newMailingAddress
+  }
+});
+```
+
+### Adding fields on user registration
+
+The code above is just code that you could run on the server inside a Meteor Method to set someone's mailing address. Sometimes, you want to set a field when the user first creates their account, for example to initialize a default value or compute something from their social data. You can do this using [`Accounts.onCreateUser`](http://docs.meteor.com/#/full/accounts_oncreateuser):
+
+```js
+// Generate user initials after Facebook login
+Accounts.onCreateUser((options, user) => {
+  if (! user.services.facebook) {
+    throw new Error('Expected login with Facebook only.');
+  }
+
+  const { first_name, last_name } = user.services.facebook;
+  user.initials = first_name[0].toUpperCase() + last_name[0].toUpperCase();
+
+  // Don't forget to return the new user object at the end!
+  return user;
+});
+```
+
+Note that the `user` object provided doesn't have an `_id` field yet. If you need to do something with the new user's ID inside this function, a useful trick can be to generate the ID yourself:
+
+```js
+// Generate a todo list for each new user
+Accounts.onCreateUser((options, user) => {
+  // Generate a user ID ourselves
+  user._id = Random.id(); // Need to add the `random` package
+
+  // Use the user ID we generated
+  Lists.createListForUser(user._id);
+
+  // Don't forget to return the new user object at the end!
+  return user;
+});
+```
 
 ### Don't use profile
 
+There's a tempting existing field called `profile` that is added by default when a new user registers. This field was historically intended to be used as a scratch pad for user-specific data - maybe their image avatar, name, intro text, etc. Because of this, **the `profile` field on every user is automatically writeable by that user from the client**. It's also automatically published to the client for that particular user.
+
+It turns out that having a field writeable by default without making that super obvious might not be the best idea. There are many stories of new Meteor developers storing fields such as `isAdmin` on `profile`... and then a malicious user can easily set that to true whenever they want, making themselves an admin.
+
+Rather than dealing with the specifics of this field, it can be helpful to just ignore its existence entirely. You can safely do that as long as you deny all writes from the client:
+
+```js
+// Deny all client-side updates to user documents
+Meteor.users.deny({
+  update() { return true; }
+});
+```
+
+Even ignoring the security implications of `profile` in particular, it isn't a good idea to put all of your app's custom data onto one field. As discussed in the [Collections article](collections.html#schema-design), Meteor's data transfer protocol doesn't do deeply nested diffing of fields, so it's a good idea to flatten out your objects into many top-level fields on the document.
 
 ### Publishing custom data
 
-// avoid publishing secrets
+If you want to access the custom data you've added to the `Meteor.users` collection in your UI, you'll need to publish it to the client. Mostly, you can just follow the advice in the [Data Loading](data-loading.html#publications) and [Security](security.html#publications) articles.
 
-### Avoid nested objects
+The most important thing to keep in mind that user documents are certain to contain secret data about users. In particular, the user document includes hashed password data and access keys for external APIs. This means it's critically important to [filter the fields](http://guide.meteor.com/security.html#fields) of the user document that you send to any client.
+
+Note that in Meteor's publication and subscription system, it's totally fine to publish the same document multiple times with different fields - they will get merged internally and the client will see a consistent document with all of the fields together. So if you just added one custom field, you should just write a publication with that one field. Let's look at an example of how we might publish the `initials` field from above:
+
+```js
+Meteor.publish('Meteor.users.initials', function ({ userIds }) {
+  // Validate the arguments to be what we expect
+  new SimpleSchema({
+    userIds: { type: [String] }
+  }).validate({ userIds });
+
+  // Select only the users that match the array of IDs passed in
+  const selector = {
+    _id: { $in: userIds }
+  };
+
+  // Only return one field, `initials`
+  const options = {
+    fields: { initials: 1 }
+  };
+
+  return Meteor.users.find(selector, options);
+});
+```
+
+This publication will let the client pass an array of user IDs it's interested in, and get the initials for all of those users.
