@@ -50,7 +50,7 @@ As you write more code and come up against the recommended style rules, you can 
 
 Here at Meteor, we strongly believe that JavaScript is the best language to build web applications, for a variety of reasons. JavaScript is constantly improving, and the standards around ES2015 have really brought together the JavaScript community. Here are our recommendations about how to use ES2015 JavaScript in your app today.
 
-[XXX Ben's .gif of ecmascript here]
+![](ben-es2015-demo.gif)
 
 <h3 id="ecmascript">Use the `ecmascript` package</h3>
 
