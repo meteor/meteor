@@ -351,17 +351,3 @@ Now we can find all the todos for a list easily:
 const list = Lists.findOne();
 console.log(`The first list has ${list.todos().count()} todos`);
 ```
-
-<h3 id="query-modification">Query modification</h3>
-
-It's not uncommon to need to find a slightly different set of related documents; for instance you might want to find all the incomplete todos in the list. One way to do that would be to add a second helper `list.incompleteTodos` which re-writes the query in `list.todos()`, but it's better to re-use code if possible.
-
-A great way to do this is to use the `mdg:cursor-utils` package, which allows you to modify a cursor from outside:
-
-```js
-const list = Lists.findOne();
-const incompleteTodos = CursorUtils.find(list.todos(), {checked: false});
-console.log(`The first list has ${incompleteTodos.count()} incomplete todos`);
-```
-
-The `cursor-utils` package gives a simple way to slice cursors, change their ordering or make other such modifications.
