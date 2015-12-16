@@ -116,7 +116,7 @@ const list = {
 Lists.schema.validate(list);
 ```
 
-In this case, as the list is valid according to the schema, the `check()` line will run without problems. If however, we wrote:
+In this case, as the list is valid according to the schema, the `validate()` line will run without problems. If however, we wrote:
 
 ```js
 const list = {
