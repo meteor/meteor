@@ -9,6 +9,7 @@ After reading this guide, you'll know:
 3. How to design a deployment process to make sure your application's quality is maintained
 4. How to monitor user behavior with analytics tools
 5. How to monitor your application with Kadira
+6. How to make sure your site is discoverable by search engines
 
 <h2 id="deploying">Deploying Meteor Applications</h2>
 
@@ -297,3 +298,14 @@ If the publication is used by a lot of users, or there are a lot of changes to b
 [ss]
 
 In this SS we can see...
+
+<h2 id="seo">Enabling SEO</h2>
+If your application contains a lot of publically accessible content, then you probably want it to rank well in Google and other search engines' indexes. As most webcrawlers do not support client-side rendering (or if they do, have spotty support for websockets), it's better to render the site on the server and deliver it as HTML in this special case.
+
+To do so, we can use the [Prerender.io](https://prerender.io) service, thanks to the [`dfischer:prerenderio`](https://atmospherejs.com/dfischer/prerenderio) package. It's a simple as `meteor add`-ing it, and optionally setting your prerender token if you have a paid prerender account and would like to enable more frequent cache changes. 
+
+Chances are you want to set `<title>` tags and other `<head>` content to make your site appear nicer in search results. The best way to do so is to use the [`kadira:dochead`](https://atmospherejs.com/kadira/dochead) package. The sensible place to call out to `DocHead` is from the `onCreated` callbacks of your page-level components.
+
+
+
+
