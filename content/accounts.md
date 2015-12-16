@@ -63,6 +63,125 @@ meteor add accounts-meteor-developer
 
 Now just open your app, follow the configuration steps, and you're good to go - if you've done the [Meteor tutorial](https://www.meteor.com/tutorials/blaze/adding-user-accounts), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
 
+## Production-grade UI with useraccounts
+
+Once you've gotten your initial prototype up and running with `accounts-ui`, you'll want to move to something more powerful and configurable so that you can better integrate your login flow with the rest of your app. The [`useraccounts` family of packages](http://useraccounts.meteor.com/) is the most powerful set of accounts management UI controls available for Meteor today. If you need even more customization, you can also roll your own system, but it's worth trying `useraccounts` first.
+
+### Use any router or UI framework
+
+The first thing to understand about `useraccounts` is that the core accounts management logic is independent of the HTML templates and routing packages. This means you can use [`useraccounts:core`](https://atmospherejs.com/useraccounts/core) to build your own set of login templates. Generally, you'll want to pick one login template package and one login routing package. The options for templates include:
+
+- [`useraccounts:unstyled`](https://atmospherejs.com/useraccounts/unstyled) which lets you bring your own CSS; this one is used in the Todos example app to make the login UI blend seamlessly with the rest of the app.
+- Pre-built templates for [Bootstrap, Semantic UI, Materialize, and more](http://useraccounts.meteor.com/). These templates don't come with the actual CSS framework, so you can pick your favorite Bootstrap package, for example.
+
+While it's optional and the basic functionality will work without it, it's also a good idea to pick a router integration:
+
+- [Flow Router](https://atmospherejs.com/useraccounts/flow-routing), the router [recommended in this guide](routing.html).
+- [Iron Router](https://atmospherejs.com/useraccounts/iron-routing), another popular router in the Meteor community.
+
+In the example app we are using the Flow Router integration with great success. Some of the later sections will cover how to customize the routes and templates to fit your app better.
+
+### Drop-in UI without routing
+
+If you don't want to configure routing for your login flow, you can just drop in a self-managing accounts screen. Wherever you want the accounts UI template to render, just include the `atForm` template, like so:
+
+```html
+{{> atForm}}
+```
+
+Once you configure routing according to the section below, you'll want to remove this inclusion.
+
+### Customizing templates
+
+For some apps, the off-the-shelf login templates provided by the various `useraccounts` UI packages will work as-is, but most apps will want to customize some of the presentation. There's a simple way to do that using the template replacement functionality of the `aldeed:template-extension` package.
+
+First, figure out which template you want to replace by looking at the source code of the package. For example, in the `useraccounts:unstyled` package, the templates are listed [in this directory on GitHub](https://github.com/meteor-useraccounts/unstyled/tree/master/lib). By squinting at the file names and looking for some of the HTML strings, we can figure out that we might be interested in replacing the `atPwdFormBtn` template. Let's take a look at the original template:
+
+```html
+<template name="atPwdFormBtn">
+  <button type="submit" class="at-btn submit {{submitDisabled}}" id="at-btn">
+    {{buttonText}}
+  </button>
+</template>
+```
+
+Once you've identified which template you need to replace, define a new template. In this case, we want to modify the class on the button to work with the CSS for the rest of the app. Make sure that it renders the helpers you need just like the original, for example `buttonText`:
+
+```html
+<template name="override-atPwdFormBtn">
+  <button type="submit" class="btn-primary">
+    {{buttonText}}
+  </button>
+</template>
+```
+
+Then, use the `replaces` function on the template to override the existing template from `useraccounts`:
+
+```js
+Template['override-atPwdFormBtn'].replaces('atPwdFormBtn');
+```
+
+### Customizing routes
+
+In addition to having control over the templates, you'll want to be able to control the routing and URLs for the different views offered by `useraccounts`. Since Flow Router is the officially recommended routing option for Meteor, we'll go over that in particular.
+
+First, we need to configure the layout we want to use when rendering the accounts templates:
+
+```js
+AccountsTemplates.configure({
+  defaultTemplate: 'authPage',
+  defaultLayout: 'appBody',
+  defaultContentRegion: 'main',
+  defaultLayoutRegions: {}
+});
+```
+
+In this case, we want to use the `appBody` layout template for all of the accounts-related pages. This template has a content region called `main`. Now, let's configure some routes:
+
+```js
+AccountsTemplates.configureRoute('signIn', {
+  name: 'signin',
+  path: '/signin'
+});
+
+AccountsTemplates.configureRoute('signUp', {
+  name: 'join',
+  path: '/join'
+});
+
+AccountsTemplates.configureRoute('forgotPwd');
+
+AccountsTemplates.configureRoute('resetPwd', {
+  name: 'resetPwd',
+  path: '/reset-password'
+});
+```
+
+Now, we can easily render links to our login page like so:
+
+```html
+<div class="btns-group">
+  <a href="{{pathFor 'signin'}}" class="btn-secondary">Sign In</a>
+  <a href="{{pathFor 'join'}}" class="btn-secondary">Join</a>
+</div>
+```
+
+Note that we have specified a password reset route. For this URL to be sent in Meteor's password reset email, we need to configure it:
+
+```js
+Accounts.urls.resetPassword = (token) => {
+  return `${Meteor.absoluteUrl()}reset-password/${token}`;
+};
+```
+
+[Read more about configuring email flows below.](#email-flows)
+
+You can find a complete list of different available routes in the [documentation the `useraccounts:flow-routing`](https://github.com/meteor-useraccounts/flow-routing#routes).
+
+### Further customization
+
+`useraccounts` offers many other customization options beyond templates and routing. Read the [`useraccounts` guide](https://github.com/meteor-useraccounts/core/blob/master/Guide.md) to learn about all of the other options.
+
 ## Password login
 
 Meteor comes with a secure and fully-featured password login system out of the box. To use it, add the package:
@@ -110,7 +229,7 @@ Before Meteor 1.2, all email addresses and usernames in the database were consid
 
 Just follow one simple rule: don't query the database by `username` or `email` directly. Instead, use the [`Accounts.findUserByUsername`](http://docs.meteor.com/#/full/Accounts-findUserByUsername) and [`Accounts.findUserByEmail`](http://docs.meteor.com/#/full/Accounts-findUserByEmail) methods provided by Meteor. This will run a query for you that is case-insensitive, so you will always find the user you are looking for.
 
-### Email flows
+<h3 id="email-flows">Email flows</h3>
 
 When you have a login system for your app based on user emails, that opens up the possibility for email-based account flows. The common thing between all of these workflows is that they involve sending a unique link to the user's email address, which does something special when it is clicked. Let's look at some common examples that Meteor's `accounts-password` package supports out of the box:
 
