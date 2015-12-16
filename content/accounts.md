@@ -5,13 +5,12 @@ title: Users and Accounts
 After reading this article, you'll know:
 
 1. What features in core Meteor enable user accounts
-2. How to use accounts-ui for a quick prototype
-3. How to build a fully-featured password login experience
-4. How to enable login through OAuth providers like Facebook
-5. How to use the useraccounts family of packages to build your login UI
-6. How to add custom data to Meteor's users collection
-7. How to enable users to log in to the same account with different providers
-8. How to manage user roles and permissions
+1. How to use accounts-ui for a quick prototype
+1. How to use the useraccounts family of packages to build your login UI
+1. How to build a fully-featured password login experience
+1. How to enable login through OAuth providers like Facebook
+1. How to add custom data to Meteor's users collection
+1. How to manage user roles and permissions
 
 ## Features in core Meteor
 
