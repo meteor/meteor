@@ -12,17 +12,17 @@ After reading this article, you'll know:
 1. How to add custom data to Meteor's users collection
 1. How to manage user roles and permissions
 
-## Features in core Meteor
+<h2 id="core-meteor">Features in core Meteor</h2>
 
 Before we get into all of the different user-facing accounts functionality you can add with Meteor, let's go over some of the features built into the Meteor DDP protocol and `accounts-base` package. These are the parts of Meteor that you'll definitely need to be aware of if you have any user accounts in your app; most of everything else is optional and added/removed via packages.
 
-### userId in DDP
+<h3 id="userid-ddp">userId in DDP</h3>
 
 DDP is Meteor's built-in pub/sub and RPC protocol. You can read about how to use it in the [Data Loading](data-loading.html) and [Methods](methods.html) chapters. In addition to the concepts of data loading and remote method calls, DDP has one more feature built in - the idea of a `userId` field on a connection. This is the place where login state is tracked, regardless of which accounts UI package or login service you are using.
 
 This built-in feature means that you always get `this.userId` inside Methods and Publications, and can access the user ID on the client. This is a great starting point for building your own custom accounts system, but most developers won't need to worry about the mechanics, since you'll mostly be interacting with the `accounts-base` package instead.
 
-### `accounts-base`
+<h3 id="accounts-base">`accounts-base`</h3>
 
 This package is the core of Meteor's developer-facing user accounts functionality. This includes:
 
@@ -32,7 +32,7 @@ This package is the core of Meteor's developer-facing user accounts functionalit
 
 Usually, you don't need to include `accounts-base` yourself since it's added for you if you use `accounts-password` or similar, but it's good to be aware of what is what.
 
-## Fast prototyping with `accounts-ui`
+<h2 id="accounts-ui">Fast prototyping with `accounts-ui`</h2>
 
 Often, a complicated accounts system is not the first thing you want to build when you're starting out with a new app, so it's useful to have something you can just drop in quickly. This is where `accounts-ui` comes in - it's just one line that you drop into your app to get an accounts system. To add it:
 
@@ -63,11 +63,11 @@ meteor add accounts-meteor-developer
 
 Now just open your app, follow the configuration steps, and you're good to go - if you've done the [Meteor tutorial](https://www.meteor.com/tutorials/blaze/adding-user-accounts), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
 
-## Production-grade UI with useraccounts
+<h2 id="useraccounts">Production-grade UI with useraccounts</h2>
 
 Once you've gotten your initial prototype up and running with `accounts-ui`, you'll want to move to something more powerful and configurable so that you can better integrate your login flow with the rest of your app. The [`useraccounts` family of packages](http://useraccounts.meteor.com/) is the most powerful set of accounts management UI controls available for Meteor today. If you need even more customization, you can also roll your own system, but it's worth trying `useraccounts` first.
 
-### Use any router or UI framework
+<h3 id="useraccounts-flexibility">Use any router or UI framework</h3>
 
 The first thing to understand about `useraccounts` is that the core accounts management logic is independent of the HTML templates and routing packages. This means you can use [`useraccounts:core`](https://atmospherejs.com/useraccounts/core) to build your own set of login templates. Generally, you'll want to pick one login template package and one login routing package. The options for templates include:
 
@@ -81,7 +81,7 @@ While it's optional and the basic functionality will work without it, it's also 
 
 In the example app we are using the Flow Router integration with great success. Some of the later sections will cover how to customize the routes and templates to fit your app better.
 
-### Drop-in UI without routing
+<h3 id="useraccounts-drop-in">Drop-in UI without routing</h3>
 
 If you don't want to configure routing for your login flow, you can just drop in a self-managing accounts screen. Wherever you want the accounts UI template to render, just include the `atForm` template, like so:
 
@@ -91,7 +91,7 @@ If you don't want to configure routing for your login flow, you can just drop in
 
 Once you configure routing according to the section below, you'll want to remove this inclusion.
 
-### Customizing templates
+<h3 id="useraccounts-customizing-templates">Customizing templates</h3>
 
 For some apps, the off-the-shelf login templates provided by the various `useraccounts` UI packages will work as-is, but most apps will want to customize some of the presentation. There's a simple way to do that using the template replacement functionality of the `aldeed:template-extension` package.
 
@@ -121,7 +121,7 @@ Then, use the `replaces` function on the template to override the existing templ
 Template['override-atPwdFormBtn'].replaces('atPwdFormBtn');
 ```
 
-### Customizing routes
+<h3 id="useraccounts-customizing-routes">Customizing routes</h3>
 
 In addition to having control over the templates, you'll want to be able to control the routing and URLs for the different views offered by `useraccounts`. Since Flow Router is the officially recommended routing option for Meteor, we'll go over that in particular.
 
@@ -178,11 +178,11 @@ Accounts.urls.resetPassword = (token) => {
 
 You can find a complete list of different available routes in the [documentation the `useraccounts:flow-routing`](https://github.com/meteor-useraccounts/flow-routing#routes).
 
-### Further customization
+<h3 id="useraccounts-further-customization">Further customization</h3>
 
 `useraccounts` offers many other customization options beyond templates and routing. Read the [`useraccounts` guide](https://github.com/meteor-useraccounts/core/blob/master/Guide.md) to learn about all of the other options.
 
-## Password login
+<h2 id="accounts-password">Password login</h2>
 
 Meteor comes with a secure and fully-featured password login system out of the box. To use it, add the package:
 
@@ -192,7 +192,7 @@ meteor add accounts-password
 
 To see what options are available to you, read the complete description of the [`accounts-password` API in the Meteor docs](http://docs.meteor.com/#/full/accounts_passwords).
 
-### Requiring username or email
+<h3 id="requiring-username-email">Requiring username or email</h3>
 
 Be default, the `Accounts.createUser` function provided by `accounts-password` allows you to create an account with a username, email, or both. Most apps expect a specific combination of the two, so you will certainly want to validate the new user creation:
 
@@ -215,17 +215,17 @@ Accounts.validateNewUser((user) => {
 });
 ```
 
-### Multiple emails
+<h3 id="multiple-emails">Multiple emails</h3>
 
 Often, users might want to associate multiple email addresses with the same account. `accounts-password` addresses this case by storing the email addresses as an array in the user collection. There are some handy API methods to deal with [adding](http://docs.meteor.com/#/full/Accounts-addEmail), [removing](http://docs.meteor.com/#/full/Accounts-removeEmail), and [verifying](http://docs.meteor.com/#/full/accounts_verifyemail) emails.
 
 One useful thing to add for your app can be the concept of a "primary" email address. This way, if the user has added multiple emails, you know where to send confirmation emails and similar.
 
-### Case sensitivity
+<h3 id="case-sensitivity">Case sensitivity</h3>
 
 Before Meteor 1.2, all email addresses and usernames in the database were considered to be case-sensitive. This meant that if you registered an account as `AdaLovelace@example.com`, and then tried to log in with `adalovelace@example.com`, you'd see an error indicating that no user with that email exists. Of course, this can be quite confusing, so we decided to improve things in Meteor 1.2. But the situation was not as simple as it seemed; since MongoDB doesn't have a concept of case-insensitive indexes, it was impossible to guarantee unique emails at the database level. For this reason, we have added a bunch of new APIs for querying and updating users which manage the case-sensitivity problem at the application level.
 
-#### What does this mean for my app?
+<h4 id="case-sensitivity-in-my-app">What does this mean for my app?</h4>
 
 Just follow one simple rule: don't query the database by `username` or `email` directly. Instead, use the [`Accounts.findUserByUsername`](http://docs.meteor.com/#/full/Accounts-findUserByUsername) and [`Accounts.findUserByEmail`](http://docs.meteor.com/#/full/Accounts-findUserByEmail) methods provided by Meteor. This will run a query for you that is case-insensitive, so you will always find the user you are looking for.
 
@@ -239,11 +239,11 @@ When you have a login system for your app based on user emails, that opens up th
 
 Here, we'll talk about how to manage the whole process manually from start to finish.
 
-#### Working email flow out of the box
+<h4 id="default-email-flow">Working email flows out of the box</h4>
 
-If you want something that just works out of the box, you can either use `accounts-ui` which does everything for you, or `useraccounts`, which we'll explain in more detail in the next section. Only follow the directions below if you definitely want to build all parts of the email flow yourself.
+If you want something that just works out of the box, you can use `accounts-ui` or `useraccounts` which basically do everything for you. Only follow the directions below if you definitely want to build all parts of the email flow yourself.
 
-#### Sending the email
+<h4 id="sending-email">Sending the email</h4>
 
 `accounts-password` comes with handy functions that you can call from the server to send an email. They are named for exactly what they do:
 
@@ -253,7 +253,7 @@ If you want something that just works out of the box, you can either use `accoun
 
 The email is generated using the email templates from [Accounts.emailTemplates](http://docs.meteor.com/#/full/accounts_emailtemplates), and include links generated with `Accounts.urls`. We'll go into more detail about customizing the email content and URL later.
 
-#### Identifying when the link is clicked
+<h4 id="identifying-link-click">Identifying when the link is clicked</h4>
 
 When the user receives the email and clicks the link inside, their web browser will take them to your app. Now, you need to be able to identify these special links and act appropriately. If you haven't customized the link URL, then you can use some built-in callbacks to identify when the app is in the middle of an email flow. When these callbacks are triggered, Meteor's accounts system enters a special state that can only be exited by calling the `done` function that is passed into the registered callback.
 
@@ -263,7 +263,7 @@ When the user receives the email and clicks the link inside, their web browser w
 
 If you have customized the URL, you will need to add a new route to your router that handles the URL you have specified.
 
-#### Displaying an appropriate UI and completing the process
+<h4 id="completing-email-flow">Displaying an appropriate UI and completing the process</h4>
 
 Now that you know that the user is attempting to reset their password, set an initial password, or verify their email, you should display an appropriate UI to allow them to do so. For example, you might want to show a page with a form for the user to enter their new password.
 
@@ -274,7 +274,7 @@ When the user submits the form, you need to call the appropriate function to com
 
 After you are have called one of the two functions above or the user has cancelled the process, call the `done` function you got in the link callback. This will tell Meteor to get out of the special state it enters when you're doing one of the email account flows.
 
-### Customizing accounts emails
+<h3 id="customizing-emails">Customizing accounts emails</h3>
 
 You will probably want to customize the emails `accounts-password` will send on your behalf. This can be easily done through the [`Accounts.emailTemplates` API](http://docs.meteor.com/#/full/accounts_emailtemplates). Below is some example code from the Todos app:
 
@@ -304,15 +304,15 @@ The Meteor Todos team
 
 As you can see, we can use the ES2015 template string functionality to generate a multi-line string that includes the password reset URL. We can also set a custom `from` address and email subject.
 
-#### HTML emails
+<h4 id="html-emails">HTML emails</h4>
 
 If you've ever needed to deal with sending pretty HTML emails from an app, you know that it can quickly become a nightmare. Compatibility of popular email clients with basic HTML features like CSS is notoriously spotty, so it is hard to author something that works at all. Start with a [responsive email template](https://github.com/leemunroe/responsive-html-email-template) or [framework](http://foundation.zurb.com/emails/email-templates.html), and then use a tool to convert your email content into something that is compatible with all email clients. [This blog post by Mailgun covers some of the main issues with HTML email.](http://blog.mailgun.com/transactional-html-email-templates/)
 
-## OAuth login
+<h2 id="oauth">OAuth login</h2>
 
 In the distant past, it could have been a huge headache to get Facebook or Google login to work with your app. Thankfully, most popular login providers have standardized around some version of [OAuth](https://en.wikipedia.org/wiki/OAuth), and Meteor supports some of the most popular login services out of the box.
 
-### Facebook, Google, and more
+<h3 id="supported-login-services">Facebook, Google, and more</h3>
 
 Here's a complete list of login providers for which Meteor provides core packages:
 
@@ -325,7 +325,7 @@ Here's a complete list of login providers for which Meteor provides core package
 
 There is a core package for logging in with Weibo, but it is no longer being actively maintained.
 
-### Logging in
+<h3 id="oauth-logging-in">Logging in</h3>
 
 If you are using an off-the-shelf login UI like `accounts-ui` or `useraccounts`, you don't need to write any code after adding the relevant package from the list above. If you are building a login experience from scratch, you can log in programmatically using the [`Meteor.loginWith<Service>`](http://docs.meteor.com/#/full/meteor_loginwithexternalservice) function. It looks like this:
 
@@ -341,7 +341,7 @@ Meteor.loginWithFacebook({
 });
 ```
 
-### Configuring OAuth
+<h3 id="oauth-configuration">Configuring OAuth</h3>
 
 There are a few points to know about configuring OAuth login:
 
@@ -349,7 +349,7 @@ There are a few points to know about configuring OAuth login:
 2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using.
 3. **Permissions.** Each login service provider should have documentation about which permissions are available. For example, [here is the page for Facebook](https://developers.facebook.com/docs/facebook-login/permissions). If you want additional permissions to the user's data when they log in, pass some of these strings in the `requestPermissions` option to `Meteor.loginWithFacebook`. In the next section we'll talk about how to retrieve that data.
 
-### Calling service API for more data
+<h3 id="oauth-calling-api">Calling service API for more data</h3>
 
 If your app supports or even requires login with an external service such as Facebook, it's natural to also want to use that service's API to request additional data about that user. For example, you might want to get a list of a Facebook user's photos.
 
@@ -370,15 +370,15 @@ Now that you have the access token, you need to actually make a request to the a
 1. Use the `http` package to access the service's API directly. You'll probably need to pass the access token from above in a header. For details you'll need to search the API documentation for the service.
 2. Use a package from Atmosphere or NPM that wraps the API into a nice JavaScript interface. For example, if you're trying to load data from Facebook you could use the [fbgraph](https://www.npmjs.com/package/fbgraph) NPM package. Read more about how to use NPM with your app in the [Build System article](build-tool.html#npm).
 
-## Loading and displaying user data
+<h2 id="displaying-user-data">Loading and displaying user data</h2>
 
 Meteor's accounts system, as implemented in `accounts-base`, also includes a database collection and generic functions for getting data about users.
 
-### Currently logged in user
+<h3 id="current-user">Currently logged in user</h3>
 
 Once a user is logged into your app with one of the methods described above, it is useful to be able to identify which user is logged in, and get the data provided during the registration process.
 
-#### On the client: Meteor.userId()
+<h4 id="current-user-client">On the client: Meteor.userId()</h4>
 
 For code that runs on the client, the global `Meteor.userId()` reactive function will give you the ID of the currently logged in user.
 
@@ -386,7 +386,7 @@ In addition to that core API, there are some helpful shorthand helpers: `Meteor.
 
 Note that there is a benefit to restricting the places you access the current user to make your UI more testable and modular. Read more about this in the [UI article](ui-ux.html#global-stores).
 
-#### On the server: this.userId
+<h4 id="current-user-server">On the server: this.userId</h4>
 
 On the server, each connection has a different logged in user, so there is no global logged-in user state by definition. Since Meteor tracks the environment for each Method call, you can still use the `Meteor.userId()` global, which returns a different value depending on which Method you call it from, but you can run into edge cases when dealing with asynchronous code. Also, `Meteor.userId()` won't work inside publications.
 
@@ -430,7 +430,7 @@ Meteor.methods({
 });
 ```
 
-### The Meteor.users collection
+<h3 id="meteor-users-collection">The Meteor.users collection</h3>
 
 Meteor comes with a default MongoDB collection for user data. It's stored in the database under the name `users`, and is accessible in your code through `Meteor.users`. The schema of a user document in this collection will depend on which login service was used to create the account. Here's an example of a user that created their account with `accounts-password`:
 
@@ -504,11 +504,11 @@ There are a few things to be aware of when dealing with this collection:
 3. The OAuth login service packages populate `profile.name`. If you plan on using this, make sure to deny client-side writes to `profile`. See the section about the `profile` field on users below.
 4. When finding users by email or username, make sure to use the case-insensitive functions provided by `accounts-password`. See the section about case-sensitivity above for more details.
 
-## Custom data about users
+<h2 id="custom-user-data">Custom data about users</h2>
 
 As your app gets more complex, you will invariably need to store some data about individual users, and the most natural place to put that data is in additional fields on the `Meteor.users` collection described above. In a more normalized data situation it would be a good idea to keep Meteor's user data and yours in two separate tables, but since MongoDB doesn't deal well with data associations it makes sense to just use one collection.
 
-### Add top-level fields onto the user document
+<h3 id="top-level-fields">Add top-level fields onto the user document</h3>
 
 The best way to store your custom data onto the `Meteor.users` collection is to add a new uniquely-named top-level field on the user document. For example, if you wanted to add a mailing address to a user, you could do it like this:
 
@@ -530,7 +530,7 @@ Meteor.users.update(userId, {
 });
 ```
 
-### Adding fields on user registration
+<h3 id="adding-fields-on-registration">Adding fields on user registration</h3>
 
 The code above is just code that you could run on the server inside a Meteor Method to set someone's mailing address. Sometimes, you want to set a field when the user first creates their account, for example to initialize a default value or compute something from their social data. You can do this using [`Accounts.onCreateUser`](http://docs.meteor.com/#/full/accounts_oncreateuser):
 
@@ -565,7 +565,7 @@ Accounts.onCreateUser((options, user) => {
 });
 ```
 
-### Don't use profile
+<h3 id="dont-use-profile">Don't use profile</h3>
 
 There's a tempting existing field called `profile` that is added by default when a new user registers. This field was historically intended to be used as a scratch pad for user-specific data - maybe their image avatar, name, intro text, etc. Because of this, **the `profile` field on every user is automatically writeable by that user from the client**. It's also automatically published to the client for that particular user.
 
@@ -582,7 +582,7 @@ Meteor.users.deny({
 
 Even ignoring the security implications of `profile` in particular, it isn't a good idea to put all of your app's custom data onto one field. As discussed in the [Collections article](collections.html#schema-design), Meteor's data transfer protocol doesn't do deeply nested diffing of fields, so it's a good idea to flatten out your objects into many top-level fields on the document.
 
-### Publishing custom data
+<h3 id="publish-custom-data">Publishing custom data</h3>
 
 If you want to access the custom data you've added to the `Meteor.users` collection in your UI, you'll need to publish it to the client. Mostly, you can just follow the advice in the [Data Loading](data-loading.html#publications) and [Security](security.html#publications) articles.
 
@@ -613,14 +613,14 @@ Meteor.publish('Meteor.users.initials', function ({ userIds }) {
 
 This publication will let the client pass an array of user IDs it's interested in, and get the initials for all of those users.
 
-## Roles and permissions
+<h2 id="roles-and-permissions">Roles and permissions</h2>
 
 One of the main reasons you might want to add a login system to your app is to have permissions for your data. For example, if you were running a forum, you would want administrators or moderators to be able to delete any post, but normal users can only delete their own. This uncovers two different types of permissions:
 
 1. Role-based permissions
 2. Per-document permissions
 
-### alanning:roles
+<h3 id="alanning-roles">alanning:roles</h3>
 
 The most popular package for role-based permissions in Meteor is [`alanning:roles`](https://atmospherejs.com/alanning/roles). For example, here is how you would make a user into an administrator, or a moderator:
 
@@ -652,7 +652,7 @@ Note that we can check for multiple roles at once, and if someone has a role in 
 
 Read more in the [`alanning:roles` package documentation](https://atmospherejs.com/alanning/roles).
 
-### Per-document permissions
+<h3 id="per-document-permissions">Per-document permissions</h3>
 
 Sometimes, it doesn't make sense to abstract permissions into "groups" - you just want documents to have owners and that's it. In this case, you can use a simpler strategy using collection helpers.
 
