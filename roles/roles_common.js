@@ -7,10 +7,20 @@
  */
 
 /**
- * Roles collection documents consist only of an id and a role name.
- *   ex: { _id:<uuid>, name: "admin" }
+ * Roles collection documents consist of:
+ *  - _id
+ *  - name (of the role)
+ *  - children (roles), list of documents:
+ *    - _id
+ *  - descendants (roles), list of documents (recursively flattened children):
+ *    - _id
+ *    - name
+ *
+ * List elements are documents so that they can easier be extended in the future.
+ *
+ * Example: { _id: "123", name: "admin" }
  */
-if (!Meteor.roles) {
+ if (!Meteor.roles) {
   Meteor.roles = new Mongo.Collection("roles")
 }
 
@@ -28,29 +38,9 @@ if ('undefined' === typeof Roles) {
 
 "use strict";
 
-var mixingGroupAndNonGroupErrorMsg = "Roles error: Can't mix grouped and non-grouped roles for same user";
+var getGroupsForUserDeprecationWarning = false;
 
 _.extend(Roles, {
-
-  /**
-   * Constant used to reference the special 'global' group that 
-   * can be used to apply blanket permissions across all groups.
-   *
-   * @example
-   *     Roles.addUsersToRoles(user, 'admin', Roles.GLOBAL_GROUP)
-   *     Roles.userIsInRole(user, 'admin') // => true
-   *
-   *     Roles.setUserRoles(user, 'support-staff', Roles.GLOBAL_GROUP)
-   *     Roles.userIsInRole(user, 'support-staff') // => true
-   *     Roles.userIsInRole(user, 'admin') // => false
-   *
-   * @property GLOBAL_GROUP
-   * @type String
-   * @static
-   * @final
-   */
-  GLOBAL_GROUP: '__global_roles__',
-
 
   /**
    * Create a new role. Whitespace will be trimmed.
@@ -114,9 +104,6 @@ _.extend(Roles, {
 
   /**
    * Add users to roles. Will create roles as needed.
-   *
-   * NOTE: Mixing grouped and non-grouped roles for the same user
-   *       is not supported and will throw an error.
    *
    * Makes 2 calls to database:
    *  1. retrieve list of all existing roles
@@ -258,469 +245,275 @@ _.extend(Roles, {
    * Check if user has specified permissions/roles
    *
    * @example
-   *     // non-group usage
+   *     // global roles
    *     Roles.userIsInRole(user, 'admin')
    *     Roles.userIsInRole(user, ['admin','editor'])
    *     Roles.userIsInRole(userId, 'admin')
    *     Roles.userIsInRole(userId, ['admin','editor'])
    *
-   *     // per-group usage
-   *     Roles.userIsInRole(user,   ['admin','editor'], 'group1')
+   *     // partition roles (global roles are still checked)
+   *     Roles.userIsInRole(user, 'admin', 'group1')
    *     Roles.userIsInRole(userId, ['admin','editor'], 'group1')
-   *     Roles.userIsInRole(userId, ['admin','editor'], Roles.GLOBAL_GROUP)
+   *     Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})
    *
-   *     // this format can also be used as short-hand for Roles.GLOBAL_GROUP
-   *     Roles.userIsInRole(user, 'admin')
-   *    
+   * Options:
+   *   - partition: name of the partition
+   *
    * @method userIsInRole
    * @param {String|Object} user User Id or actual user object
    * @param {String|Array} roles Name of role/permission or Array of 
-   *                            roles/permissions to check against.  If array, 
-   *                            will return true if user is in _any_ role.
-   * @param {String} [group] Optional. Name of group.  If supplied, limits check
-   *                         to just that group.
-   *                         The user's Roles.GLOBAL_GROUP will always be checked
-   *                         whether group is specified or not.  
+   *                             roles/permissions to check against.  If array,
+   *                             will return true if user is in _any_ role.
+   * @param {String|Object} [options] Optional. Name of partition. If supplied, limits check
+   *                                  to just that partition.
+   *                                  The user's global roles will always be checked
+   *                                  whether partition is specified or not.
+   *                                  Alternatively, options.
    * @return {Boolean} true if user is in _any_ of the target roles
    */
-  userIsInRole: function (user, roles, group) {
+  userIsInRole: function (user, roles, options) {
     var id,
-        userRoles,
-        query,
-        groupQuery,
-        found = false
+        query;
 
     // ensure array to simplify code
     if (!_.isArray(roles)) {
-      roles = [roles]
+      roles = [roles];
     }
 
-    if (!user) return false
-    if (group) {
-      if ('string' !== typeof group) return false
-      if ('$' === group[0]) return false
+    if (!roles.length) return false;
 
-      // convert any periods to underscores
-      group = group.replace(/\./g, '_')
+    if (_.isString(options)) {
+      options = {partition: options};
     }
-    
-    if ('object' === typeof user) {
-      userRoles = user.roles
-      if (_.isArray(userRoles)) {
+
+    options.partition = options.partition || null;
+
+    if (!user) return false;
+
+    if (_.isObject(user)) {
+      if (_.has(user, 'roles')) {
         return _.some(roles, function (role) {
-          return _.contains(userRoles, role)
+          return _.some(user.roles || [], Roles._roleAndPartitionMatcher(role, options.partition));
         })
-      } else if ('object' === typeof userRoles) {
-        // roles field is dictionary of groups
-        found = _.isArray(userRoles[group]) && _.some(roles, function (role) {
-          return _.contains(userRoles[group], role)
-        })
-        if (!found) {
-          // not found in regular group or group not specified.  
-          // check Roles.GLOBAL_GROUP, if it exists
-          found = _.isArray(userRoles[Roles.GLOBAL_GROUP]) && _.some(roles, function (role) {
-            return _.contains(userRoles[Roles.GLOBAL_GROUP], role)
-          })
-        }
-        return found
+      } else {
+        // missing roles field, try going direct via id
+        id = user._id;
       }
-
-      // missing roles field, try going direct via id
-      id = user._id
-    } else if ('string' === typeof user) {
-      id = user
-    }
-
-    if (!id) return false
-
-
-    query = {_id: id, $or: []}
-
-    // always check Roles.GLOBAL_GROUP
-    groupQuery = {}
-    groupQuery['roles.'+Roles.GLOBAL_GROUP] = {$in: roles}
-    query.$or.push(groupQuery)
-
-    if (group) {
-      // structure of query, when group specified including Roles.GLOBAL_GROUP 
-      //   {_id: id, 
-      //    $or: [
-      //      {'roles.group1':{$in: ['admin']}},
-      //      {'roles.__global_roles__':{$in: ['admin']}}
-      //    ]}
-      groupQuery = {}
-      groupQuery['roles.'+group] = {$in: roles}
-      query.$or.push(groupQuery)
     } else {
-      // structure of query, where group not specified. includes 
-      // Roles.GLOBAL_GROUP 
-      //   {_id: id, 
-      //    $or: [
-      //      {roles: {$in: ['admin']}},
-      //      {'roles.__global_roles__': {$in: ['admin']}}
-      //    ]}
-      query.$or.push({roles: {$in: roles}})
+      id = user;
     }
 
-    found = Meteor.users.findOne(query, {fields: {_id: 1}})
-    return found ? true : false
+    if (!id) return false;
+
+    query = {
+      _id: id,
+      $or: [{
+        roles: {
+          $elemMatch: {
+            role: {$in: roles},
+            partition: options.partition
+          }
+        }
+      }, {
+        roles: {
+          $elemMatch: {
+            role: {$in: roles},
+            partition: null
+          }
+        }
+      }]
+    };
+
+    return !!Meteor.users.findOne(query, {fields: {_id: 1}});
   },
 
   /**
-   * Retrieve users roles
+   * Retrieve user's roles.
+   *
+   * Options:
+   *   - partition: name of the partition
+   *   - fullObjects: return full roles objects (true) or just names (false) (default false)
+   *   - onlyAssigned: return only assigned roles and not automatically inferred (like subroles)
    *
    * @method getRolesForUser
    * @param {String|Object} user User Id or actual user object
-   * @param {String} [group] Optional name of group to restrict roles to.
-   *                         User's Roles.GLOBAL_GROUP will also be included.
+   * @param {String|Object} [options] Optional. Name of partition to provide roles for.
+   *                                  If not specified, global roles are returned.
+   *                                  Alternatively, options.
    * @return {Array} Array of user's roles, unsorted.
    */
-  getRolesForUser: function (user, group) {
-    if (!user) return []
-    if (group) {
-      if ('string' !== typeof group) return []
-      if ('$' === group[0]) return []
+  getRolesForUser: function (user, options) {
+    var roles;
 
-      // convert any periods to underscores
-      group = group.replace(/\./g, '_')
+    if (_.isString(options)) {
+      options = {partition: options};
     }
 
-    if ('string' === typeof user) {
-      user = Meteor.users.findOne(
-               {_id: user},
-               {fields: {roles: 1}})
+    options.partition = options.partition || null;
 
-    } else if ('object' !== typeof user) {
-      // invalid user object
-      return []
+    options = _.defaults(options, {
+      fullObjects: false,
+      onlyAssigned: false
+    });
+
+    user = Roles._resolveUser(user);
+
+    if (!user) return [];
+
+    roles = _.filter(user.roles || [], Roles._partitionMatcher(options.partition));
+
+    if (options.onlyAssigned) {
+      roles = _.filter(roles, Roles._onlyAssignedMatcher());
     }
 
-    if (!user || !user.roles) return []
-
-    if (group) {
-      return _.union(user.roles[group] || [], user.roles[Roles.GLOBAL_GROUP] || [])
+    if (options.fullObjects) {
+      return roles;
     }
 
-    if (_.isArray(user.roles))
-      return user.roles
-
-    // using groups but group not specified. return global group, if exists
-    return user.roles[Roles.GLOBAL_GROUP] || []
+    return _.pluck(roles, 'role');
   },
 
   /**
-   * Retrieve set of all existing roles
+   * Retrieve set of all existing roles.
    *
    * @method getAllRoles
+   * @param {Object} [queryOptions] Optional. Options which are passed directly
+   *                                through to `Meteor.roles.find(query, options)`
    * @return {Cursor} cursor of existing roles
    */
-  getAllRoles: function () {
-    return Meteor.roles.find({}, {sort: {name: 1}})
+  getAllRoles: function (queryOptions) {
+    queryOptions = queryOptions || {sort: {name: 1}};
+
+    return Meteor.roles.find({}, queryOptions);
   },
 
   /**
-   * Retrieve all users who are in target role.  
+   * Retrieve all users who are in target role.
    *
-   * NOTE: This is an expensive query; it performs a full collection scan
-   * on the users collection since there is no index set on the 'roles' field.  
-   * This is by design as most queries will specify an _id so the _id index is 
-   * used automatically.
+   * Options:
+   *   - partition: name of the partition
+   *   - queryOptions: options which are passed directly
+   *                   through to `Meteor.users.find(query, options)`
    *
    * @method getUsersInRole
-   * @param {Array|String} role Name of role/permission.  If array, users 
-   *                            returned will have at least one of the roles
-   *                            specified but need not have _all_ roles.
-   * @param {String} [group] Optional name of group to restrict roles to.
-   *                         User's Roles.GLOBAL_GROUP will also be checked.
-   * @param {Object} [options] Optional options which are passed directly
-   *                           through to `Meteor.users.find(query, options)`
+   * @param {Array|String} roles Name of role/permission.  If array, users
+   *                             returned will have at least one of the roles
+   *                             specified but need not have _all_ roles.
+   * @param {String|Object} [options] Optional. Name of partition to restrict roles to.
+   *                                  User's global roles will also be checked.
+   *                                  Alternatively, options.
+   * @param {Object} [queryOptions] Optional. Options which are passed directly
+   *                                through to `Meteor.users.find(query, options)`
    * @return {Cursor} cursor of users in role
    */
-  getUsersInRole: function (role, group, options) {
-    var query,
-        roles = role,
-        groupQuery
+  getUsersInRole: function (roles, options, queryOptions) {
+    var query;
 
-    // ensure array to simplify query logic
-    if (!_.isArray(roles)) roles = [roles]
-    
-    if (group) {
-      if ('string' !== typeof group)
-        throw new Error ("Roles error: Invalid parameter 'group'. Expected 'string' type")
-      if ('$' === group[0])
-        throw new Error ("Roles error: groups can not start with '$'")
-
-      // convert any periods to underscores
-      group = group.replace(/\./g, '_')
+    // ensure array to simplify code
+    if (!_.isArray(roles)) {
+      roles = [roles];
     }
 
-    query = {$or: []}
-
-    // always check Roles.GLOBAL_GROUP
-    groupQuery = {}
-    groupQuery['roles.'+Roles.GLOBAL_GROUP] = {$in: roles}
-    query.$or.push(groupQuery)
-
-    if (group) {
-      // structure of query, when group specified including Roles.GLOBAL_GROUP 
-      //   {
-      //    $or: [
-      //      {'roles.group1':{$in: ['admin']}},
-      //      {'roles.__global_roles__':{$in: ['admin']}}
-      //    ]}
-      groupQuery = {}
-      groupQuery['roles.'+group] = {$in: roles}
-      query.$or.push(groupQuery)
-    } else {
-      // structure of query, where group not specified. includes 
-      // Roles.GLOBAL_GROUP 
-      //   {
-      //    $or: [
-      //      {roles: {$in: ['admin']}},
-      //      {'roles.__global_roles__': {$in: ['admin']}}
-      //    ]}
-      query.$or.push({roles: {$in: roles}})
+    if (_.isString(options)) {
+      options = {partition: options};
     }
 
-    return Meteor.users.find(query, options);
-  },  // end getUsersInRole 
-  
+    options.partition = options.partition || null;
+
+    options = _.defaults(options, {
+      queryOptions: queryOptions || {}
+    });
+
+    query = {
+      $or: [{
+        roles: {
+          $elemMatch: {
+            role: {$in: roles},
+            partition: options.partition
+          }
+        }
+      }, {
+        roles: {
+          $elemMatch: {
+            role: {$in: roles},
+            partition: null
+          }
+        }
+      }]
+    };
+
+    return Meteor.users.find(query, options.queryOptions);
+  },
+
+  getGroupsForUser: function (/*args*/) {
+    if (!getGroupsForUserDeprecationWarning) {
+      getGroupsForUserDeprecationWarning = true;
+      console && console.warn("getGroupsForUser has been deprecated. Use getPartitionsForUser instead.");
+    }
+
+    return Roles.getPartitionsForUser.apply(this, arguments);
+  },
+
   /**
-   * Retrieve users groups, if any
+   * Retrieve users partitions, if any.
    *
-   * @method getGroupsForUser
+   * @method getPartitionsForUser
    * @param {String|Object} user User Id or actual user object
-   * @param {String} [role] Optional name of roles to restrict groups to.
+   * @param {String} [roles] Optional name of roles to restrict partitions to.
    *
-   * @return {Array} Array of user's groups, unsorted. Roles.GLOBAL_GROUP will be omitted
+   * @return {Array} Array of user's partitions, unsorted.
    */
-  getGroupsForUser: function (user, role) {
-    var userGroups = [];
-    
-    if (!user) return []
-    if (role) {
-      if ('string' !== typeof role) return []
-      if ('$' === role[0]) return []
-
-      // convert any periods to underscores
-      role = role.replace('.', '_')
+  getPartitionsForUser: function (user, roles) {
+    // ensure array to simplify code
+    if (!_.isArray(roles)) {
+      roles = [roles];
     }
 
-    if ('string' === typeof user) {
+    user = Roles._resolveUser(user);
+
+    if (!user) return [];
+
+    // != used on purpose.
+    return _.uniq(_.filter(_.pluck(user.roles || [], 'partition'), function (partition) {return partition != null}));
+  },
+
+  _resolveUser: function (user) {
+    // TODO: We could use $elemMatch to limit returned fields here.
+    if (!_.isObject(user)) {
       user = Meteor.users.findOne(
                {_id: user},
-               {fields: {roles: 1}})
-    
-    }else if ('object' !== typeof user) {
-      // invalid user object
-      return []
+               {fields: {roles: 1}});
+    } else if (!_.has(user, 'roles')) {
+      user = Meteor.users.findOne(
+               {_id: user._id},
+               {fields: {roles: 1}});
     }
 
-    //User has no roles or is not using groups
-    if (!user || !user.roles || _.isArray(user.roles)) return []
+    return user;
+  },
 
-    if (role) {
-      _.each(user.roles, function(groupRoles, groupName) {
-        if (_.contains(groupRoles, role) && groupName !== Roles.GLOBAL_GROUP) {
-          userGroups.push(groupName);
-        }
-      });
-      return userGroups;
-    }else {
-      return _.without(_.keys(user.roles), Roles.GLOBAL_GROUP);
-    }
+  _roleAndPartitionMatcher: function (roleName, partition) {
+    return function (userRole) {
+      // == used on purpose in "userRole.partition == null"
+      return (userRole.role === roleName && userRole.partition === partition) ||
+        (userRole.role === roleName && (!_.has(userRole, 'partition') || userRole.partition == null));
+    };
+  },
 
-  }, //End getGroupsForUser
+  _partitionMatcher: function (partition) {
+    return function (userRole) {
+      // == used on purpose in "userRole.partition == null"
+      return (userRole.partition === partition) ||
+        (!_.has(userRole, 'partition') || userRole.partition == null);
+    };
+  },
 
+  _onlyAssignedMatcher: function () {
+    return function (userRole) {
+      return !!userRole.assigned;
+    };
+  }
 
-  /**
-   * Private function 'template' that uses $set to construct an update object
-   * for MongoDB.  Passed to _updateUserRoles
-   *
-   * @method _update_$set_fn 
-   * @protected
-   * @param {Array} roles
-   * @param {String} [group]
-   * @return {Object} update object for use in MongoDB update command
-   */
-  _update_$set_fn: function  (roles, group) {
-    var update = {}
-
-    if (group) {
-      // roles is a key/value dict object
-      update.$set = {}
-      update.$set['roles.' + group] = roles
-    } else {
-      // roles is an array of strings
-      update.$set = {roles: roles}
-    }
-
-    return update
-  },  // end _update_$set_fn 
-
-  /**
-   * Private function 'template' that uses $addToSet to construct an update 
-   * object for MongoDB.  Passed to _updateUserRoles
-   *
-   * @method _update_$addToSet_fn  
-   * @protected
-   * @param {Array} roles
-   * @param {String} [group]
-   * @return {Object} update object for use in MongoDB update command
-   */
-  _update_$addToSet_fn: function (roles, group) {
-    var update = {}
-
-    if (group) {
-      // roles is a key/value dict object
-      update.$addToSet = {}
-      update.$addToSet['roles.' + group] = {$each: roles}
-    } else {
-      // roles is an array of strings
-      update.$addToSet = {roles: {$each: roles}}
-    }
-
-    return update
-  },  // end _update_$addToSet_fn 
-
-
-  /**
-   * Internal function that uses the Template pattern to adds or sets roles 
-   * for users.
-   *
-   * @method _updateUserRoles
-   * @protected
-   * @param {Array|String} users user id(s) or object(s) with an _id field
-   * @param {Array|String} roles name(s) of roles/permissions to add users to
-   * @param {String} group Group name. If not null or undefined, roles will be
-   *                         specific to that group.  
-   *                         Group names can not start with '$'.
-   *                         Periods in names '.' are automatically converted
-   *                         to underscores.
-   *                         The special group Roles.GLOBAL_GROUP provides 
-   *                         a convenient way to assign blanket roles/permissions
-   *                         across all groups.  The roles/permissions in the 
-   *                         Roles.GLOBAL_GROUP group will be automatically 
-   *                         included in checks for any group.
-   * @param {Function} updateFactory Func which returns an update object that
-   *                         will be passed to Mongo.
-   *   @param {Array} roles
-   *   @param {String} [group]
-   */
-  _updateUserRoles: function (users, roles, group, updateFactory) {
-    if (!users) throw new Error ("Missing 'users' param")
-    if (!roles) throw new Error ("Missing 'roles' param")
-    if (group) {
-      if ('string' !== typeof group)
-        throw new Error ("Roles error: Invalid parameter 'group'. Expected 'string' type")
-      if ('$' === group[0])
-        throw new Error ("Roles error: groups can not start with '$'")
-
-      // convert any periods to underscores
-      group = group.replace(/\./g, '_')
-    }
-
-    var existingRoles,
-        query,
-        update
-
-    // ensure arrays to simplify code
-    if (!_.isArray(users)) users = [users]
-    if (!_.isArray(roles)) roles = [roles]
-
-    // remove invalid roles
-    roles = _.reduce(roles, function (memo, role) {
-      if (role
-          && 'string' === typeof role
-          && role.trim().length > 0) {
-        memo.push(role.trim())
-      }
-      return memo
-    }, [])
-
-    // empty roles array is ok, since it might be a $set operation to clear roles
-    //if (roles.length === 0) return
-
-    // ensure all roles exist in 'roles' collection
-    if (Meteor.isClient) {
-      existingRoles = _.reduce(Meteor.roles.find({}).fetch(), function (memo, role) {
-        memo[role.name] = true
-        return memo
-      }, {})
-      _.each(roles, function (role) {
-        if (!existingRoles[role]) {
-          Roles.createRole(role)
-        }
-      })
-    }
-    else {
-      _.each(roles, function (role) {
-        Roles.createRole(role, true)
-      })
-    }
-
-    // ensure users is an array of user ids
-    users = _.reduce(users, function (memo, user) {
-      var _id
-      if ('string' === typeof user) {
-        memo.push(user)
-      } else if ('object' === typeof user) {
-        _id = user._id
-        if ('string' === typeof _id) {
-          memo.push(_id)
-        }
-      }
-      return memo
-    }, [])
-    
-    // update all users
-    update = updateFactory(roles, group)
-    
-    try {
-      if (Meteor.isClient) {
-        // On client, iterate over each user to fulfill Meteor's 
-        // 'one update per ID' policy
-        _.each(users, function (user) {
-          Meteor.users.update({_id: user}, update)
-        })
-      } else {
-        // On the server we can use MongoDB's $in operator for 
-        // better performance
-        Meteor.users.update(
-          {_id: {$in: users}},
-          update,
-          {multi: true})
-      }
-    }
-    catch (ex) {
-      if (ex.name === 'MongoError' && isMongoMixError(ex.err)) {
-        throw new Error (mixingGroupAndNonGroupErrorMsg)
-      }
-
-      throw ex
-    }
-  }  // end _updateUserRoles
-
-})  // end _.extend(Roles ...)
-
-
-function isMongoMixError (errorMsg) {
-  var expectedMessages = [
-      'Cannot apply $addToSet modifier to non-array',
-      'Cannot apply $addToSet to a non-array field',
-      'Can only apply $pullAll to an array',
-      'Cannot apply $pull/$pullAll modifier to non-array',
-      "can't append to array using string field name",
-      'to traverse the element'
-      ]
-
-  return _.some(expectedMessages, function (snippet) {
-    return strContains(errorMsg, snippet)
-  })
-}
-
-function strContains (haystack, needle) {
-  return -1 !== haystack.indexOf(needle)
-}
+});  // end _.extend(Roles ...)
 
 }());

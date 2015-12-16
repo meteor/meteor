@@ -20,8 +20,8 @@ Package.onUse(function (api) {
 
   api.export('Roles');
 
-  api.addFiles('roles/roles_server.js', 'server');
   api.addFiles('roles/roles_common.js', both);
+  api.addFiles('roles/roles_server.js', 'server');
   api.addFiles(['roles/client/debug.js',
                 'roles/client/uiHelpers.js',
                 'roles/client/subscriptions.js'], 'client');
