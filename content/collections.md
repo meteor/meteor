@@ -267,6 +267,35 @@ This migration, which is sequenced to be the first migration to run over the dat
 
 To find out more about the API of the Migrations package, refer to [its documentation](https://atmospherejs.com/percolate/migrations).
 
+<h3 id="bulk-data-changes">Bulk changes</h3>
+If your migration needs to change a lot of data, especially if you need to take down your server until it's finished, it may be a good idea to use a [Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
+
+The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that it's a cruder in that it operates on all documents at once, which usually means you need to take your site down until the update is happening (as the potential for "race" conditions is high).
+
+We could write our above migration like so (note that you must be on MongoDB 2.6 for the bulk update operations to exist), using the raw MongoDB API:
+
+```js
+Migrations.add({
+  version: 1,
+  up() {
+    // This is how to get access to the raw MongoDB node collection that the Meteor server collection wraps
+    const batch = Lists._collection.rawCollection().initializeUnorderedBulkOp();
+    Lists.find({todoCount: {$exists: false}}).forEach(list => {
+      const todoCount = Todos.find({listId: list._id}).count();
+      // We have to use pure MongoDB syntax here, thus the `{_id: X}`
+      batch.find({_id: list._id}).updateOne({$set: {todoCount}});
+    });
+
+    // We need to wrap the async function to get a synchronous API that migrations expects
+    const execute = Meteor.wrapAsync(batch.execute, batch);
+    return execute();
+  },
+  down() {
+    Lists.update({}, {$unset: {todoCount: true}});
+  }
+});
+```
+
 <h3 id="running-migrations">Running migrations</h3>
 
 To run a migration against your development database, it's easiest to use the Meteor shell:
