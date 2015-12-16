@@ -49,6 +49,21 @@ Things to be aware of:
 <h2 id="schemas-with-collections">Using schemas with collections</h2>
 ```
 
+#### Always put a blank line after each header
+
+Otherwise, the following paragraph isn't parsed correctly.
+
+```
+// bad
+<h2 id="schemas-with-collections">Using schemas with collections</h2>
+This is some text
+
+// good
+<h2 id="schemas-with-collections">Using schemas with collections</h2>
+
+This is some text
+```
+
 #### Escape handlebars syntax inside inline code snippets
 
 ```
