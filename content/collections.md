@@ -268,6 +268,7 @@ This migration, which is sequenced to be the first migration to run over the dat
 To find out more about the API of the Migrations package, refer to [its documentation](https://atmospherejs.com/percolate/migrations).
 
 <h3 id="bulk-data-changes">Bulk changes</h3>
+
 If your migration needs to change a lot of data, especially if you need to take down your server until it's finished, it may be a good idea to use a [Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
 
 The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that it's a cruder in that it operates on all documents at once, which usually means you need to take your site down until the update is happening (as the potential for "race" conditions is high).
