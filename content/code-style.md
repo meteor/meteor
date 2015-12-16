@@ -78,17 +78,32 @@ We have a JavaScript style guide which is heavily based on the popular AirBnB st
 
 We have a standard ESLint configuration that verifies as much as possible of the Meteor JavaScript style guide.
 
-[Get the Meteor `.eslintrc` here.](XXX)
+- [Get the Meteor ESLint configuration here.](XXX we need both eslintrc and eslintignore)
 
 Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's the fastest and easiest way to identify typos and small errors.
 
 <h3 id="eslint-installing">Installing and running ESLint</h3>
 
-XXX do you need global NPM for this?
+To get ESLint up and running on your computer, install the command line tool with NPM:
+
+```
+npm install -g eslint
+```
+
+Copy the standard Meteor `.eslintrc` and `.eslintignore` files from above into your app directory, and run the linter on your code with:
+
+```
+eslint .
+```
+
+For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
 
 <h3 id="eslint-editor">Integrating ESLint with your editor</h3>
 
-XXX
+Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to just write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
+
+1. [Sublime Text on the Meteor Blog](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
+2. [Atom and WebStorm on the Meteor Blog](http://info.meteor.com/blog/how-to-set-up-atom-and-webstorm-for-meteor-es6-es2015-and-jsx)
 
 <h3 id="eslint-commit-hook">Setting up a commit hook for linting</h3>
 
@@ -166,7 +181,7 @@ Note that imports use relative paths, and include the file extension at the end 
 
 <h3 id="templates-and-components">Templates and components</h3>
 
-Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores:
+Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores. Underscores are a great choice in this case because then you can easily type the name of the template as one symbol in JavaScript.
 
 ```html
 <template name="Lists_show">
