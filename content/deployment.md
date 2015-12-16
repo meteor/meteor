@@ -32,7 +32,7 @@ There are two main ways to configure your application outside of the code of the
 
 Settings should be used to set environment (i.e. staging vs production) specific things, like the access token and secret used to connect to Google. These settings will not change between any given process running your application in the given environment.
 
-Environment vars are used to set process specific things, which could conceivably change for different instances of your application's processes. For instance, you could set a different `MONGO_URL` for each process to preference different secondaries for reads in a highly scaled situation.
+Environment vars are used to set process specific things, which could conceivably change for different instances of your application's processes. For instance, you can set a different `KADIRA_OPTIONS_HOSTNAME` for each process to ensure that [kadira](#kadira) logs timings with useful hostnames.
 
 A final note on storing these settings: As noted in the {% link_to 'security' 'Security Article' %}, it's not a good idea to store settings in your code repository, instead a more secure place is preferred.
 
