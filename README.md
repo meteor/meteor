@@ -66,6 +66,8 @@ This is some text
 
 #### Escape handlebars syntax inside inline code snippets
 
+Note: you don't need to escape things in fenced/multiline code snippets, only in inline ones.
+
 ```
 // will break
 Render multiple items in your template with `{{#each}}`
