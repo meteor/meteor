@@ -25,6 +25,7 @@ The APIs of the Meteor platform are available a the [docs site](https://docs.met
 The guide is targeted towards intermediate developers, aimed at those with some familiarity with the Meteor platform and web development in general. If you are just getting started with Meteor, we recommend beginning with the official [tutorial](https://www.meteor.com/tutorials/blaze/creating-an-app).
 
 <h2 id="example-app">Example App</h2>
+
 Most guides make reference to the Todos example application. This code is actively being developed alongside the guide. You can see the latest source code for the app, and file issues or make suggestions via pull request at its [GitHub repository](https://github.com/meteor/todos).
 
 <h2 id="what-is-meteor">What is Meteor?</h2>
@@ -40,6 +41,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
  - Meteor provides *full stack reactivity*, allowing you to write frontends that seamlessly reflect the true state of the world with minimal effort on your behalf.
 
 <h2 id="guide-concepts">Guide concepts</h2>
+
 The Meteor Guide is developed in the open at the [GitHub repository](https://github.com/meteor/guide) and we encourage pull requests and issues to discuss problems with and changes that could be made to the content. By keeping our process open and honest we hope it's clear what will and will not be in the guide and what changes will be coming to the guide in the next Meteor version.
 
 The decisions made and practices outlined in the guide must necessarily be opinionated; to some degree certain best practices must be highlighted and other valid approaches ignored. In making such decisions we aim to reach community consensus in our choices but there'll always be other ways to solve problems and it's certainly possible to make other choices in developing your application. It's important of course to know what the "official" way to solve a problem is before making another choice. If an alternate approach proves itself superior, there's no reason it could not make its way into a future version of the guide of course.
