@@ -30,24 +30,32 @@ So a subscription is a set of data that changes over time. Typically, the net re
 A publication should be defined in a server-only file. For instance, in the Todos example app, we want to publish the set of public lists to all users:
 
 ```js
-Meteor.publish('lists/public', function() {
-  return Lists.find({userId: {$exists: false}});
+Meteor.publish('Lists.public', function() {
+  return Lists.find({
+    userId: {$exists: false}
+  }, {
+    fields: Lists.publicFields
+  });
 });
 ```
 
-There are a few things to understand about this code block. Firstly, we've named the publication `lists/public`, and that will be how we access it from the client. Secondly, we are simply returning a Mongo *cursor* from the publication function.
+There are a few things to understand about this code block. Firstly, we've named the publication `Lists.public`, and that will be how we access it from the client. Secondly, we are simply returning a Mongo *cursor* from the publication function.
 
 What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `'Lists'` on the client (which we called `Lists` of course) will have all of the public lists that are available in the server collection named `'Lists'` whilst that subscription is open (which is all the time in our example app).
 
 There are two types of parameters of a publish function. Firstly, a publication always has the current user's `id` available at `this.userId` (this is why we use the `function() {}` form for publications rather than the ecmascript `() => {}`. You can disable the linting rule for publication files with `eslint-disable prefer-arrow-callback`).
 
 ```js
-Meteor.publish('lists/private', function() {
+Meteor.publish('Lists.private', function() {
   if (!this.userId) {
     return this.ready();
   }
 
-  return Lists.find({userId: this.userId});
+  return Lists.find({
+    userId: this.userId
+  }, {
+    fields: Lists.publicFields
+  });
 });
 ```
 
@@ -58,9 +66,11 @@ In the case of a non-logged in user, we explicitly call `this.ready()`, which in
 The other type of publication argument is a simple named argument:
 
 ```js
-Meteor.publish('list/todos', function(listId) {
+Meteor.publish('Todos.inList', function({ listId }) {
   // We always need to check the `listId` is the type we expect
-  check(listId, String);
+  new SimpleSchema({
+    listId: {type: String}
+  }).validate({ listId });
 
   ...
 });
@@ -69,14 +79,14 @@ Meteor.publish('list/todos', function(listId) {
 When we create a subscription to this publication on the client, we can provide this argument via the `Meteor.subscribe()` call:
 
 ```js
-Meteor.subscribe('list/todos', list._id);
+Meteor.subscribe('Todos.inList', { listId: list._id });
 ```
 
 <h3 id="organization-publications">Organizing publications</h3>
 
 It makes sense to place a publication in a package alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
 
-Often, however, a publication is more general. For example in the Todos example application, we create a `list/todos` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
+Often, however, a publication is more general. For example in the Todos example application, we create a `Todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
 <h2 id="subscriptions">Subscribing to data</h2>
 
@@ -96,7 +106,7 @@ Template.listsShowPage.onCreated(function() {
   this.autorun(() => {
     const listId = FlowRouter.getParam('_id');
     this.state.set({listId});
-    this.subscribe('list/todos', listId);
+    this.subscribe('Todos.inList', listId);
   });
 });
 ```
@@ -142,7 +152,7 @@ Although the Tracker system means you often don't *need* to think too much about
 To find that out, `Meteor.subscribe()` and (`this.subscribe()` in templates) returns a "subscription handle", which contains a reactive data source called `.ready()`:
 
 ```js
-const handle = Meteor.subscribe('lists/public');
+const handle = Meteor.subscribe('Lists.public');
 Tracker.autorun(() => {
   console.log(`Handle is ${handle.ready() ? 'ready' : 'not ready'}`);  
 });
@@ -159,7 +169,7 @@ Template.listsShowPage.onCreated(function() {
   this.state = new ReactiveDict();
   this.autorun(() => {
     this.state.set('listId', FlowRouter.getParam('_id'));
-    this.subscribe('list/todos', this.state.get('listId'));
+    this.subscribe('Todos.inList', this.state.get('listId'));
   });
 });
 ```
@@ -204,9 +214,11 @@ In an infinite scroll publication, we simply need to add a new argument to our p
 ```js
 const MAX_TODOS = 1000;
 
-Meteor.publish('list/todos', function(listId, limit) {
-  check(listId, String);
-  check(limit, Number);
+Meteor.publish('Todos.inList', function({ listId, limit }) {
+  new SimpleSchema({
+    listId: { type: String },
+    limit: { type: Number }
+  }).validate({ listId, limit });
 
   const options = {
     sort: {createdAt: -1},
@@ -226,27 +238,32 @@ Template.listsShowPage.onCreated(function() {
   this.state = new ReactiveDict();
   this.autorun(() => {
     this.state.set('listId', FlowRouter.getParam('_id'));
-    this.subscribe('list/todos', this.state.get('listId'), this.state.get('requestedTodos'));
+    this.subscribe('Todos.inList', {
+      listId: this.state.get('listId'),
+      limit: this.state.get('requestedTodos')
+    });
   });
 });
 ```
 
 We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps just when they scroll to the bottom of the page).
 
-Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) can be useful to publish this. We could add a `/list/todoCount` publication like so
+Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) can be useful to publish this. We could add a `Lists.todoCount` publication like so
 
 ```js
-Meteor.publish('list/todoCount', function(listId) {
-  check(listId, String);
+Meteor.publish('Lists.todoCount', function({ listId }) {
+  new SimpleSchema({
+    listId: {type: String}
+  }).validate({ listId });
 
-  Counts.publish(this, `list/todoCount${listId}`, Todos.find({listId}));
+  Counts.publish(this, `Lists.todoCount.${listId}`, Todos.find({listId}));
 });
 ```
 
-Then on the client, after subscribing to that publication, we can access the count with 
+Then on the client, after subscribing to that publication, we can access the count with
 
 ```js
-Counts.get(`list/todoCount${listId}`)
+Counts.get(`Lists.todoCount.${listId}`)
 ```
 
 <h2 id="stores">Client-side data with reactive stores</h2>
@@ -318,8 +335,10 @@ It's common to need related sets of data from multiple collections on a given pa
 One way you might do this is to return more than one cursor from your publication function:
 
 ```js
-Meteor.publish('list/todos', function(listId) {
-  check(listId, String);
+Meteor.publish('Todos.inList', function({ listId }) {
+  new SimpleSchema({
+    listId: {type: String}
+  }).validate({ listId });
 
   const list = List.findOne(listId);
 
@@ -347,8 +366,10 @@ However, we can write publications that are properly reactive to changes across 
 The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor.
 
 ```js
-Meteor.publishComposite('list/todos', function(listId) {
-  check(listId, String);
+Meteor.publishComposite('Todos.inList', function({ listId }) {
+  new SimpleSchema({
+    listId: {type: String}
+  }).validate({ listId });
 
   const userId = this.userId;
   return {
@@ -373,13 +394,15 @@ In this example, we write a complicated query to make sure that we only ever fin
 
 <h2 id="complex-auth">Complex authorization</h2>
 
-We can also use `publish-composite` to perform complex authorization in publications. For instance, consider if we had a `admin/list/todos` publication that allowed an admin to bypass default publication's security for users with an `admin` flag set.
+We can also use `publish-composite` to perform complex authorization in publications. For instance, consider if we had a `Todos.admin.inList` publication that allowed an admin to bypass default publication's security for users with an `admin` flag set.
 
 We might want to write:
 
 ```js
-Meteor.publish('admin/list/todos', function(listId) {
-  check(listId, String);
+Meteor.publish('Todos.admin.inList', function({ listId }) {
+  new SimpleSchema({
+    listId: {type: String}
+  }).validate({ listId });
 
   const user = Meteor.users.findOne(this.userId);
 
@@ -397,8 +420,10 @@ Meteor.publish('admin/list/todos', function(listId) {
 However, due to the same reasons discussed above, the publication *will not re-run* if the user's `admin` status changes. If this is something that is likely to happen and reactive changes are needed, then we'll need to make the publication reactive. We can do this via the same technique as above however:
 
 ```js
-Meteor.publishComposite('admin/list/todos', function(listId) {
-  check(listId, String);
+Meteor.publishComposite('Todos.admin.inList', function(listId) {
+  new SimpleSchema({
+    listId: {type: String}
+  }).validate({ listId });
 
   const userId = this.userId;
   return {
@@ -503,7 +528,7 @@ The alternate scenario occurs when you want to publish data to be consumed by a 
 In the Todos example app, we have done this, and you can now access our publications over HTTP:
 
 ```bash
-$ curl localhost:3000/publications/lists/public
+$ curl localhost:3000/publications/Lists.public
 {
   "Lists": [
     {
@@ -525,7 +550,7 @@ $ curl localhost:3000/publications/lists/public
 }
 ```
 
-You can also access authenticated publications (such as `lists/private`). Suppose we've signed up (via the web UI) as `user@example.com`, with the password `password`, and created a private list. Then we can access it as follows:
+You can also access authenticated publications (such as `Lists.private`). Suppose we've signed up (via the web UI) as `user@example.com`, with the password `password`, and created a private list. Then we can access it as follows:
 
 ```bash
 # First, we need to "login" on the commandline to get an access token
@@ -537,7 +562,7 @@ $ curl localhost:3000/users/login  -H "Content-Type: application/json" --data '{
 }
 
 # Then, we can make an authenticated API call
-$ curl localhost:3000/publications/lists/private -H "Authorization: Bearer 6PN4EIlwxuVua9PFoaImEP9qzysY64zM6AfpBJCE6bs"
+$ curl localhost:3000/publications/Lists.private -H "Authorization: Bearer 6PN4EIlwxuVua9PFoaImEP9qzysY64zM6AfpBJCE6bs"
 {
   "Lists": [
     {
