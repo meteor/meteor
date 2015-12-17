@@ -1,12 +1,10 @@
 {
   "dependencies": {
+    "double-ended-queue": {
+      "version": "2.1.0-0"
+    },
     "meteor-deque": {
-      "version": "2.1.0",
-      "dependencies": {
-        "double-ended-queue": {
-          "version": "2.1.0-0"
-        }
-      }
+      "version": "2.1.0"
     }
   }
 }

@@ -1,12 +1,10 @@
 {
   "dependencies": {
+    "core-js": {
+      "version": "1.2.1"
+    },
     "meteor-ecmascript-runtime": {
-      "version": "0.2.6",
-      "dependencies": {
-        "core-js": {
-          "version": "1.2.1"
-        }
-      }
+      "version": "0.2.6"
     }
   }
 }
