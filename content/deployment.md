@@ -35,7 +35,7 @@ Settings should be used to set environment (i.e. staging vs production) specific
 
 Environment vars are used to set process specific things, which could conceivably change for different instances of your application's processes. For instance, you can set a different `KADIRA_OPTIONS_HOSTNAME` for each process to ensure that [kadira](#kadira) logs timings with useful hostnames.
 
-A final note on storing these settings: As noted in the {% link_to 'security' 'Security Article' %}, it's not a good idea to store settings in your code repository, instead a more secure place is preferred.
+A final note on storing these settings: As noted in the [Security Article](security.html#api-keys), it's not a good idea to store settings in your code repository, instead a more secure place is preferred.
 
 <h2 id="other-considerations">Other considerations</h2>
 
@@ -47,7 +47,7 @@ What URL will users use to access your site? You'll probably need to register a 
 
 <h3 id="ssl">SSL Certificate</h3>
 
-It's always a good idea to use SSL for Meteor Applications (see the {% link_to 'security' 'Security Article'} for a discussion of why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain.
+It's always a good idea to use SSL for Meteor Applications (see the [Security Article](security.html#ssl) for a discussion of why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain.
 
 <h3 id="cdn">CDN</h3>
 
@@ -201,7 +201,7 @@ It's a good idea to have a release process that you follow in releasing your app
 4. Once you are satisfied with the staging release, release the *exact same* version to production.
 5. Run final QA on production.
 
-Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our {% link_to 'testing' 'Testing Article'} for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
+Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our [Testing Article](XXX) for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
 
 <h3 id="continuous-deployment">Continuous Deployment</h3>
 
@@ -209,7 +209,7 @@ Continuous deployment refers to the process of deploying an application via a co
 
 <h3 id="rolling-updates-and-data">Rolling deployments and data versions</h3>
 
-It's important to understand what happens during a deployment, especially if your deployment involves changes in data format (and potentially data migrations, see the {% link_to 'collections' 'Collections Article'}).
+It's important to understand what happens during a deployment, especially if your deployment involves changes in data format (and potentially data migrations, see the [Collections Article](collections.html#migrations)).
 
 Depending on where your app is deployed and the number of application processes you have running, things will be different, but if you are deployed in a scaled way to Galaxy, there'll be a period where a number of containers are running the old version, and a number the new, as users are migrated smoothly across to the new version of your app.
 
