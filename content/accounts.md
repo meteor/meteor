@@ -170,7 +170,7 @@ Note that we have specified a password reset route. For this URL to be sent in M
 
 ```js
 Accounts.urls.resetPassword = (token) => {
-  return `${Meteor.absoluteUrl()}reset-password/${token}`;
+  return Meteor.absoluteUrl(`reset-password/${token}`);
 };
 ```
 
