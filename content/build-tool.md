@@ -66,13 +66,11 @@ You may notice that, with the exception of Meteor platform packages, all package
 
 <h4 id="atmosphere-overriding">Overriding packages from Atmosphere with a local version</h4>
 
-A Meteor app can load packages in one of three ways:
+A Meteor app can load packages in one of three ways, and it looks for a matching package name in the following order:
 
-1. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
-2. Loading the package's source code into a `packages/` directory inside your app. This lets you modify the source code of the package for your particular needs.
-3. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
-
-When `meteor` searches for a package listed in the `~/.meteor/packages` file, it will look inside of the app's `packages/` directory first. Second, it will search inside of any directories defined in `PACKAGE_DIRS` environment variable. Lastly, it will search for the package on Atmosphere.
+1. Loading the package's source code into a `packages/` directory inside your app.
+2. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
+3. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 
 If you need to patch a package to do something that the published version doesn't do, then (2) or (3) is the option for you. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
 
