@@ -1,6 +1,6 @@
 ---
 title: Collections and Schemas
-order: 2
+order: 1
 ---
 
 After reading this guide, you'll know:

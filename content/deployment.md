@@ -1,5 +1,6 @@
 ---
 title: Deployment and Monitoring
+order: 9
 ---
 
 After reading this guide, you'll know:
