@@ -49,63 +49,63 @@ var getGroupsForUserDeprecationWarning = false;
 _.extend(Roles, {
 
   /**
-   * Create a new role. Whitespace will be trimmed.
+   * Create a new role.
+   *
+   * Options:
+   *   - unlessExists: if true, existence of a role will not throw an exception
    *
    * @method createRole
-   * @param {String} role Name of role
-   * @param {Boolean} [unlessExists] Optional. If true, existence of a role will not throw an exception.
+   * @param {String} role Name of role.
+   * @param {Object} [options] Optional.
    * @return {String} id of new role
    */
-  createRole: function (role, unlessExists) {
-    var id,
-        match
+  createRole: function (role, options) {
+    var match;
 
-    if (!role
-        || 'string' !== typeof role
-        || role.trim().length === 0) {
-      return
+    if (!role || !_.isString(role) || role.trim() !== role) {
+      throw new Error("Invalid role name.");
     }
 
+    options = _.defaults(options || {}, {
+      unlessExists: false
+    });
+
     try {
-      id = Meteor.roles.insert({'name': role.trim()})
-      return id
+      return Meteor.roles.insert({name: role, children: [], descendants: []});
     } catch (e) {
       // (from Meteor accounts-base package, insertUserDoc func)
       // XXX string parsing sucks, maybe
       // https://jira.mongodb.org/browse/SERVER-3069 will get fixed one day
-      if (e.name !== 'MongoError') throw e
-      match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/)
-      if (!match) throw e
+      if (e.name !== 'MongoError') throw e;
+      match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/);
+      if (!match) throw e;
       if (match[1].indexOf('$name') !== -1) {
-        if (unlessExists) return null
-        throw new Meteor.Error(403, "Role already exists.")
+        if (options.unlessExists) return null;
+        throw new Error("Role already exists.");
       }
-      throw e
+      throw e;
     }
   },
 
   /**
-   * Delete an existing role.  Will throw "Role in use" error if any users
+   * Delete an existing role. Will throw "Role in use." error if any users
    * are currently assigned to the target role.
    *
    * @method deleteRole
    * @param {String} role Name of role
    */
   deleteRole: function (role) {
-    if (!role) return
+    if (!role) return;
 
     var foundExistingUser = Meteor.users.findOne(
-                              {roles: {$in: [role]}},
-                              {fields: {_id: 1}})
+                              {'roles.role': role},
+                              {fields: {_id: 1}});
 
     if (foundExistingUser) {
-      throw new Meteor.Error(403, 'Role in use')
+      throw new Error("Role in use.");
     }
 
-    var thisRole = Meteor.roles.findOne({name: role})
-    if (thisRole) {
-      Meteor.roles.remove({_id: thisRole._id})
-    }
+    Meteor.roles.remove({name: role});
   },
 
   /**
@@ -268,7 +268,7 @@ _.extend(Roles, {
    * @method userIsInRole
    * @param {String|Object} user User Id or actual user object
    * @param {String|Array} roles Name of role/permission or Array of 
-   *                             roles/permissions to check against.  If array,
+   *                             roles/permissions to check against. If array,
    *                             will return true if user is in _any_ role.
    * @param {String|Object} [options] Optional. Name of partition. If supplied, limits check
    *                                  to just that partition.
@@ -342,7 +342,7 @@ _.extend(Roles, {
    *   - onlyAssigned: return only assigned roles and not automatically inferred (like subroles)
    *
    * @method getRolesForUser
-   * @param {String|Object} user User Id or actual user object
+   * @param {String|Object} user User Id or actual user object.
    * @param {String|Object} [options] Optional. Name of partition to provide roles for.
    *                                  If not specified, global roles are returned.
    *                                  Alternatively, options.
@@ -384,7 +384,7 @@ _.extend(Roles, {
    *
    * @method getAllRoles
    * @param {Object} [queryOptions] Optional. Options which are passed directly
-   *                                through to `Meteor.roles.find(query, options)`
+   *                                through to `Meteor.roles.find(query, options)`.
    * @return {Cursor} cursor of existing roles
    */
   getAllRoles: function (queryOptions) {
@@ -402,7 +402,7 @@ _.extend(Roles, {
    *                   through to `Meteor.users.find(query, options)`
    *
    * @method getUsersInRole
-   * @param {Array|String} roles Name of role/permission.  If array, users
+   * @param {Array|String} roles Name of role/permission. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.
    * @param {String|Object} [options] Optional. Name of partition to restrict roles to.
@@ -464,7 +464,7 @@ _.extend(Roles, {
    * Retrieve users partitions, if any.
    *
    * @method getPartitionsForUser
-   * @param {String|Object} user User Id or actual user object
+   * @param {String|Object} user User Id or actual user object.
    * @param {String} [roles] Optional name of roles to restrict partitions to.
    *
    * @return {Array} Array of user's partitions, unsorted.
