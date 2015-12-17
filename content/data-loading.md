@@ -174,7 +174,8 @@ Template.listsShowPage.onCreated(function() {
       listId: this.getListId()
     });
   });
-});```
+});
+```
 
 In our example, the `autorun` will re-run whenever `this.getListId()` changes, (ultimately because `FlowRouter.getParam('_id')` changes), although other common reactive data sources are:
 
