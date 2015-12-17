@@ -7,7 +7,7 @@
  * schema:
  *  - role (role name)
  *  - partition (partition name)
- *  - assigned (boolean, if the rule was manually assigned, or was automatically inferred (like subroles))
+ *  - assigned (boolean, if the role was manually assigned, or was automatically inferred (like subroles))
  *
  * @module Roles
  */
@@ -111,36 +111,43 @@ _.extend(Roles, {
   },
 
   /**
-   * Add users to roles. Will create roles as needed.
-   *
-   * Makes 2 calls to database:
-   *  1. retrieve list of all existing roles
-   *  2. update users' roles
+   * Add users to roles.
    *
    * @example
    *     Roles.addUsersToRoles(userId, 'admin')
    *     Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')
    *     Roles.addUsersToRoles([user1, user2], ['user','editor'])
    *     Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
-   *     Roles.addUsersToRoles(userId, 'admin', Roles.GLOBAL_GROUP)
+   *
+   * Options:
+   *   - partition: name of the partition
    *
    * @method addUsersToRoles
-   * @param {Array|String} users User id(s) or object(s) with an _id field
-   * @param {Array|String} roles Name(s) of roles/permissions to add users to
-   * @param {String} [group] Optional group name. If supplied, roles will be
-   *                         specific to that group.  
-   *                         Group names can not start with a '$' or contain
-   *                         null characters.  Periods in names '.' are
-   *                         automatically converted to underscores.
-   *                         The special group Roles.GLOBAL_GROUP provides 
-   *                         a convenient way to assign blanket roles/permissions
-   *                         across all groups.  The roles/permissions in the 
-   *                         Roles.GLOBAL_GROUP group will be automatically 
-   *                         included in checks for any group.
+   * @param {Array|String} users User id(s) or object(s) with an _id field.
+   * @param {Array|String} roles Name(s) of roles/permissions to add users to.
+   * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
    */
-  addUsersToRoles: function (users, roles, group) {
-    // use Template pattern to update user roles
-    Roles._updateUserRoles(users, roles, group, Roles._update_$addToSet_fn)
+  addUsersToRoles: function (users, roles, options) {
+    if (!users) throw new Error ("Missing 'users' param.");
+    if (!roles) throw new Error ("Missing 'roles' param.");
+
+    options = options || {};
+
+    // ensure arrays
+    if (!_.isArray(users)) users = [users];
+    if (!_.isArray(roles)) roles = [roles];
+
+    if (_.isString(options)) {
+      options = {partition: options};
+    }
+
+    options.partition = options.partition || null;
+
+    _.each(users, function (user) {
+      _.each(roles, function (role) {
+        Roles._addUserToRole(user, role, options);
+      });
+    });
   },
 
   /**
@@ -151,106 +158,93 @@ _.extend(Roles, {
    *     Roles.setUserRoles(userId, ['view-secrets'], 'example.com')
    *     Roles.setUserRoles([user1, user2], ['user','editor'])
    *     Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
-   *     Roles.setUserRoles(userId, 'admin', Roles.GLOBAL_GROUP)
    *
    * @method setUserRoles
-   * @param {Array|String} users User id(s) or object(s) with an _id field
-   * @param {Array|String} roles Name(s) of roles/permissions to add users to
-   * @param {String} [group] Optional group name. If supplied, roles will be
-   *                         specific to that group.  
-   *                         Group names can not start with '$'.
-   *                         Periods in names '.' are automatically converted
-   *                         to underscores.
-   *                         The special group Roles.GLOBAL_GROUP provides 
-   *                         a convenient way to assign blanket roles/permissions
-   *                         across all groups.  The roles/permissions in the 
-   *                         Roles.GLOBAL_GROUP group will be automatically 
-   *                         included in checks for any group.
+   * @param {Array|String} users User id(s) or object(s) with an _id field.
+   * @param {Array|String} roles Name(s) of roles/permissions to add users to.
+   * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
    */
-  setUserRoles: function (users, roles, group) {
-    // use Template pattern to update user roles
-    Roles._updateUserRoles(users, roles, group, Roles._update_$set_fn)
-  },
+  setUserRoles: function (users, roles, options) {
+    var id;
 
-  /**
-   * Remove users from roles
-   *
-   * @example
-   *     Roles.removeUsersFromRoles(users.bob, 'admin')
-   *     Roles.removeUsersFromRoles([users.bob, users.joe], ['editor'])
-   *     Roles.removeUsersFromRoles([users.bob, users.joe], ['editor', 'user'])
-   *     Roles.removeUsersFromRoles(users.eve, ['user'], 'group1')
-   *
-   * @method removeUsersFromRoles
-   * @param {Array|String} users User id(s) or object(s) with an _id field
-   * @param {Array|String} roles Name(s) of roles to add users to
-   * @param {String} [group] Optional. Group name. If supplied, only that
-   *                         group will have roles removed.
-   */
-  removeUsersFromRoles: function (users, roles, group) {
-    var update
+    if (!users) throw new Error ("Missing 'users' param.");
+    if (!roles) throw new Error ("Missing 'roles' param.");
 
-    if (!users) throw new Error ("Missing 'users' param")
-    if (!roles) throw new Error ("Missing 'roles' param")
-    if (group) {
-      if ('string' !== typeof group)
-        throw new Error ("Roles error: Invalid parameter 'group'. Expected 'string' type")
-      if ('$' === group[0])
-        throw new Error ("Roles error: groups can not start with '$'")
-
-      // convert any periods to underscores
-      group = group.replace(/\./g, '_')
-    }
+    options = options || {};
 
     // ensure arrays
-    if (!_.isArray(users)) users = [users]
-    if (!_.isArray(roles)) roles = [roles]
+    if (!_.isArray(users)) users = [users];
+    if (!_.isArray(roles)) roles = [roles];
 
-    // ensure users is an array of user ids
-    users = _.reduce(users, function (memo, user) {
-      var _id
-      if ('string' === typeof user) {
-        memo.push(user)
-      } else if ('object' === typeof user) {
-        _id = user._id
-        if ('string' === typeof _id) {
-          memo.push(_id)
-        }
-      }
-      return memo
-    }, [])
-
-    // update all users, remove from roles set
-    
-    if (group) {
-      update = {$pullAll: {}}
-      update.$pullAll['roles.'+group] = roles
-    } else {
-      update = {$pullAll: {roles: roles}}
+    if (_.isString(options)) {
+      options = {partition: options};
     }
 
-    try {
-      if (Meteor.isClient) {
-        // Iterate over each user to fulfill Meteor's 'one update per ID' policy
-        _.each(users, function (user) {
-          Meteor.users.update({_id:user}, update)
-        })
-      } else {
-        // On the server we can leverage MongoDB's $in operator for performance
-        Meteor.users.update({_id:{$in:users}}, update, {multi: true})
-      }
-    }
-    catch (ex) {
-      if (ex.name === 'MongoError' && isMongoMixError(ex.err)) {
-        throw new Error (mixingGroupAndNonGroupErrorMsg)
-      }
+    options.partition = options.partition || null;
 
-      throw ex
-    }
+    _.each(users, function (user) {
+      if (_.isObject(user)) {
+        id = user._id;
+      }
+      else {
+        id = user;
+      }
+      // we first clear all roles for the user
+      Meteor.users.update(id, {$set: {roles: []}});
+
+      // and then add all
+      _.each(roles, function (role) {
+        Roles._addUserToRole(user, role, options);
+      });
+    });
+  },
+
+  _addUserToRole: function (user, role, options) {
+
   },
 
   /**
-   * Check if user has specified permissions/roles
+   * Remove users from roles.
+   *
+   * @example
+   *     Roles.removeUsersFromRoles(userId, 'admin')
+   *     Roles.removeUsersFromRoles([userId, user2], ['editor'])
+   *     Roles.removeUsersFromRoles(userId, ['user'], 'group1')
+   *
+   * @method removeUsersFromRoles
+   * @param {Array|String} users User id(s) or object(s) with an _id field.
+   * @param {Array|String} roles Name(s) of roles to add users to.
+   * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
+   */
+  removeUsersFromRoles: function (users, roles, options) {
+    if (!users) throw new Error ("Missing 'users' param.");
+    if (!roles) throw new Error ("Missing 'roles' param.");
+
+    options = options || {};
+
+    // ensure arrays
+    if (!_.isArray(users)) users = [users];
+    if (!_.isArray(roles)) roles = [roles];
+
+    if (_.isString(options)) {
+      options = {partition: options};
+    }
+
+    options.partition = options.partition || null;
+
+    _.each(users, function (user) {
+      _.each(roles, function (role) {
+        Roles._removeUserFromRole(user, role, options);
+      });
+    });
+  },
+
+  _removeUserFromRole: function (user, role, options) {
+
+  },
+
+  /**
+   * Check if user has specified permissions/roles.
    *
    * @example
    *     // global roles
