@@ -64,10 +64,10 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   }
 
   Profile.time(
-      "Input#loadFromCatalog (sqlite)",
-      function () {
-        input.loadFromCatalog(self.catalogLoader);
-      });
+    "Input#loadFromCatalog (sqlite)",
+    function () {
+      input.loadFromCatalog(self.catalogLoader);
+    });
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
     Profile.time("check for previous versions in catalog", function () {
