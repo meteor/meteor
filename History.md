@@ -1,5 +1,8 @@
 ## v.NEXT
 
+* Don't reload package catalog from disk on rebuilds unless package
+  depedencies changed. #5747
+
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
@@ -12,7 +15,7 @@
 
 * Allow `git+` URL schemes for npm dependencies #844
 
-Patches contributed by GitHub users vereed, ...
+Patches contributed by GitHub users vereed, devgrok, ...
 
 
 ## v.1.2.1, 2015-Oct-26
