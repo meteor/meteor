@@ -148,7 +148,19 @@ CS.Input.prototype.isEqual = function (otherInput) {
   // This equality test is also overly sensitive to order,
   // missing opportunities to declare two inputs equal when only
   // the order has changed.
-  return _.isEqual(a.toJSONable(), b.toJSONable());
+
+  // Omit `catalogCache` -- it's not actually part of the serialized
+  // input object (it's only in `toJSONable()` for tests).
+  //
+  // Moreover, catalogCache is populated as-needed so their values for
+  // `a` and `b` will very likely be different even if they represent
+  // the same input. So by omitting `catalogCache` we no longer need
+  // to reload the entire relevant part of the catalog from SQLite on
+  // every rebuild!
+  return _.isEqual(
+    _.omit(a.toJSONable(), "catalogCache"),
+    _.omit(b.toJSONable(), "catalogCache")
+  );
 };
 
 CS.Input.prototype.toJSONable = function () {
