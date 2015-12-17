@@ -172,11 +172,11 @@ An application, especially a web application, is rarely finished, and it's usefu
 
 However, it's a good idea to think ahead to how the schema may change over time. For instance, you may have a list of strings on a document (perhaps a set of tags). Although it's tempting to leave them as a subfield on the document (assuming they don't change much), if there's a good chance that they'll end up becoming more complicated in the future (perhaps tags will have a creator, or subtags later on?), then it might be easier in the long run to make a separate collection from the beginning.
 
-As with all things it depends, and can be a judgement call on your part.
+The amount of foresight you bake into your schema design will depend on your app's individual constraints, and will need to be a judgement call on your part.
 
 <h3 id="schemas-on-write">Using schemas on write</h3>
 
-Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), ultimately, the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to run every mutator (`insert/update/upsert` call) through the schema.
+Although there are a variety of ways that you can run data through a Simple Schema before sending it to your collection (for instance you could check a schema in every method call), the simplest and most reliable is to use the [`aldeed:collection2`](https://atmospherejs.com/aldeed/collection2) package to run every mutator (`insert/update/upsert` call) through the schema.
 
 To do so, we use `attachSchema()`:
 
@@ -184,13 +184,15 @@ To do so, we use `attachSchema()`:
 Lists.attachSchema(Lists.schema);
 ```
 
-What this means is that now every time we call `Lists.insert()`, `Lists.update()`, `Lists.upsert()`, first our document or modifier will be checked against the schema (in subtly different ways depending on the exact mutator).
+What this means is that now every time we call `Lists.insert()`, `Lists.update()`, `Lists.upsert()`, first our document or modifier will be automatically checked against the schema (in subtly different ways depending on the exact mutator).
 
 <h3 id="default-value">`defaultValue` and data cleaning</h3>
 
-One thing that Collection2 does is "cleans" data before sending it to the schema. This means, for instance, making an attempt to coerce types (converting strings to numbers for instance) and removing attributes not in the schema.
+One thing that Collection2 does is ["clean" the data](https://github.com/aldeed/meteor-simple-schema#cleaning-data) before sending it to the database. This includes but is not limited to:
 
-Another important thing it does is set values to fields that have not been set, and which have `defaultValue` set in the schema definition.
+1. Coercing types - converting strings to numbers
+2. Removing attributes not in the schema
+3. Assigning default values based on the `defaultValue` in the schema definition
 
 However, sometimes it's useful to do more complex initialization to documents before inserting them into collections. For instance, in the Todos app, we want to set the name of new lists to be `List X` where `X` is the next available unique letter.
 
@@ -210,6 +212,8 @@ class ListsCollection extends Mongo.Collection {
       }
     }
 
+    // Call the original `insert` method, which will validate
+    // against the schema
     return super(list, callback);
   }
 }
@@ -221,11 +225,11 @@ Lists = new ListsCollection('Lists');
 
 The technique above can also be used to provide a location to "hook" extra functionality into the collection. For instance, when removing a list, we *always* want to remove all of its todos at the same time.
 
-To do so in an easy to understand way, we can again subclass, overriding the `remove()` method:
+We can use a subclass for this case as well, overriding the `remove()` method:
 
 ```js
 class ListsCollection extends Mongo.Collection {
-  ...
+  // ...
   remove(selector, callback) {
     Package.todos.Todos.remove({listId: selector});
     return super(selector, callback);
@@ -233,23 +237,23 @@ class ListsCollection extends Mongo.Collection {
 }
 ```
 
-This technique has a couple of downsides:
+This technique has a couple of disadvantages:
 
-  1. Mutators can get very long when you want to hook in multiple times.
-  2. Sometimes a single piece of functionality can be spread over multiple mutators.
-  3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
+1. Mutators can get very long when you want to hook in multiple times.
+2. Sometimes a single piece of functionality can be spread over multiple mutators.
+3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
-A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We can see in the "Forms and Methods" chapter an example of how we do that in the list and todo denormalizers mentioned above.
+A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We can see in the (Methods article)[XXX denormalization] an example of how we do that in the list and todo denormalizers mentioned above.
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
 
 <h2 id="migrations">Migrating to a new schema</h2>
 
-As we discussed above, trying to predict all future requirements of your data schema ahead of time is of course impossible. So inevitably as a project matures, there'll come a time when you need to change the schema of its data. To do so safely, you need to be careful about how you make the changes.
+As we discussed above, trying to predict all future requirements of your data schema ahead of time is impossible. Inevitably, as a project matures, there will come a time when you need to change the schema of the database. You need to be careful about how you make the migration to the new schema to make sure your app works smoothly during and after the migration.
 
 <h3 id="writing-migrations">Writing migrations</h3>
 
-A useful package for writing migrations is the [`percolate:migrations`](https://atmospherejs.com/percolate/migrations) package. Suppose, as an example, that we wanted to add a `list.todoCount` field, and ensure that it was set for all existing lists. Then we might write:
+A useful package for writing migrations is [`percolate:migrations`](https://atmospherejs.com/percolate/migrations), which provides a nice framework for switching between different versions of your schema. Suppose, as an example, that we wanted to add a `list.todoCount` field, and ensure that it was set for all existing lists. Then we might write:
 
 ```js
 Migrations.add({
@@ -272,13 +276,13 @@ To find out more about the API of the Migrations package, refer to [its document
 
 <h3 id="bulk-data-changes">Bulk changes</h3>
 
-If your migration needs to change a lot of data, especially if you need to take down your server until it's finished, it may be a good idea to use a [Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
+If your migration needs to change a lot of data, and especially if you need to stop your app server while it's running, it may be a good idea to use a [MongoDB Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
 
 The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't just do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
 
-What this means is if users are accessing the site whilst the update is being prepared, it will like go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user's experience if it takes a while. For these reason, you often need to take your site down while the update is happening.
+What this means is if users are accessing the site whilst the update is being prepared, it will likely go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user experience if it takes a while. For these reason, you often need to stop your server and let your users know you are performing maintenance while the update is happening.
 
-We could write our above migration like so (note that you must be on MongoDB 2.6 or later for the bulk update operations to exist), using the raw MongoDB API:
+We could write our above migration like so (note that you must be on MongoDB 2.6 or later for the bulk update operations to exist). We can access the native MongoDB API via [`Collection#rawCollection()`](http://docs.meteor.com/#/full/Mongo-Collection-rawCollection):
 
 ```js
 Migrations.add({
@@ -302,7 +306,7 @@ Migrations.add({
 });
 ```
 
-Note as well that to make this migration faster, we could use an [Aggregation](https://docs.mongodb.org/v2.6/aggregation/) to gather the initial set of todo counts.
+Note that we could make this migration faster by using an [Aggregation](https://docs.mongodb.org/v2.6/aggregation/) to gather the initial set of todo counts.
 
 <h3 id="running-migrations">Running migrations</h3>
 
@@ -321,7 +325,7 @@ To run a migration against your production database, run your app locally in pro
 MIGRATE=latest meteor --production --settings path/to/production/settings.json
 ```
 
-What this does is run the `up()` function of all outstanding migrations (by default apps are considered at migrations "zero"), against your production database. In our case, it should ensure all lists have a `todoCount` field set.
+What this does is run the `up()` function of all outstanding migrations, against your production database. In our case, it should ensure all lists have a `todoCount` field set.
 
 
 <h3 id="breaking-changes">Breaking schema changes</h3>
@@ -332,26 +336,23 @@ The simple way to work around the problem is to take the application down for th
 
 A better approach is a multi-stage deployment. The basic idea is that:
 
-1. First you deploy a version of your application that can handle both the old and the new schema.
-  - In our case, it'd be code that doesn't expect the `todoCount` to be there, but which correctly updates it when new todos are created.
-2. Second you run the migration.
-  - At this point you should be confident that all lists have a `todoCount`.
-3. Finally, you deploy the new code that relies on the new schema and no longer copes with the old schema.
-  - Now we are safe to rely on `list.todoCount` in our UI.
+1. Deploy a version of your application that can handle both the old and the new schema. In our case, it'd be code that doesn't expect the `todoCount` to be there, but which correctly updates it when new todos are created.
+2. Run the migration. At this point you should be confident that all lists have a `todoCount`.
+3. Deploy the new code that relies on the new schema and no longer knows how to deal with the old schema. Now we are safe to rely on `list.todoCount` in our UI.
 
-Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migration _back_ to version `x`.
+Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migrate _back_ to version `x`.
 
 If you find you need to roll your code version back, you'll need to be careful about the data, and step carefully through your deployment steps in reverse.
 
 <h2 id="associations">Associations between collections</h2>
 
-As we discussed earlier, it's very common in Meteor applications to relate documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are on a single list).
+As we discussed earlier, it's very common in Meteor applications to have associations between documents in different collections. Consequently, it's also very common to need to write queries fetching related documents once you have a document you are interested in (for instance all the todos that are in a single list).
 
-To do so, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
+To make this easier, we can attach functions to the prototype of the documents that belong to a given collection, to give us "methods" on the documents (in the object oriented sense). We can then use these methods to create new queries to find related documents.
 
 <h3 id="collection-helpers">Collection helpers</h3>
 
-To do this, we can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) to easily attach such methods (or "helpers") to documents. For instance:
+We can use the [`dburles:collection-helpers`](https://atmospherejs.com/dburles/collection-helpers) package to easily attach such methods (or "helpers") to documents. For instance:
 
 ```js
 Lists.helpers({
@@ -362,7 +363,7 @@ Lists.helpers({
 });
 ```
 
-Once we've attached this helper to the `Lists` collection, every time we fetch a list from the database (on the client or server), it will have a `.isPrivate()` helper available:
+Once we've attached this helper to the `Lists` collection, every time we fetch a list from the database (on the client or server), it will have a `.isPrivate()` function available:
 
 ```js
 const list = Lists.findOne();
@@ -383,7 +384,8 @@ Lists.helpers({
 });
 ```
 
-Now we can find all the todos for a list easily:
+Now we can easily find all the todos for a list:
+
 ```js
 const list = Lists.findOne();
 console.log(`The first list has ${list.todos().count()} todos`);
