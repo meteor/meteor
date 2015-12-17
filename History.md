@@ -17,6 +17,9 @@
 
 ### Performance
 
+* Don't reload package catalog from disk on rebuilds unless package
+  depedencies changed. #5747
+
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
@@ -99,7 +102,7 @@
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
 bySabi, mbrookes, TomFreudenberg, TechPlexEngineer, zacharydenton,
-AlexeyMK, gwendall, dandv.
+AlexeyMK, gwendall, dandv, devgrok.
 
 
 ## v.1.2.1, 2015-Oct-26
