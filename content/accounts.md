@@ -106,11 +106,16 @@ First, figure out which template you want to replace by looking at the source co
 </template>
 ```
 
-Once you've identified which template you need to replace, define a new template. In this case, we want to modify the class on the button to work with the CSS for the rest of the app. Make sure that it renders the helpers you need just like the original, for example `buttonText`:
+Once you've identified which template you need to replace, define a new template. In this case, we want to modify the class on the button to work with the CSS for the rest of the app. There are a few things to keep in mind when overriding a template:
+
+1. Render the helpers in the same way the previous template did, in this case we are using `buttonText`
+2. Keep any `id` attributes, like `at-btn`, since those are used for event handling by `useraccounts`
+
+Here's what our new override template looks like:
 
 ```html
 <template name="override-atPwdFormBtn">
-  <button type="submit" class="btn-primary">
+  <button type="submit" class="btn-primary" id="at-btn">
     {{buttonText}}
   </button>
 </template>
