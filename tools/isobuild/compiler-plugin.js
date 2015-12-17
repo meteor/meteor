@@ -68,6 +68,7 @@ export class CompilerPluginProcessor {
   constructor({
     unibuilds,
     arch,
+    sourceRoot,
     isopackCache,
     linkerCacheDir,
   }) {
@@ -75,6 +76,7 @@ export class CompilerPluginProcessor {
 
     self.unibuilds = unibuilds;
     self.arch = arch;
+    self.sourceRoot = sourceRoot;
     self.isopackCache = isopackCache;
 
     self.linkerCacheDir = linkerCacheDir;
@@ -91,7 +93,13 @@ export class CompilerPluginProcessor {
     var sourceProcessorsWithSlots = {};
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
+      const { pkg: { name }, arch } = unibuild;
+      const sourceRoot = name
+        ? self.isopackCache.getSourceRoot(name, arch)
+        : self.sourceRoot;
+
       return new PackageSourceBatch(unibuild, self, {
+        sourceRoot,
         linkerCacheDir: self.linkerCacheDir
       });
     });
@@ -344,7 +352,10 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        self.jsOutputResources.push(self.inputResource);
+        self.jsOutputResources.push({
+          ...self.inputResource,
+          sourcePath: self.inputResource.path,
+        });
       } else {
         self.outputResources.push(self.inputResource);
       }
@@ -357,16 +368,36 @@ class ResourceSlot {
       throw Error("addStylesheet on non-source ResourceSlot?");
     }
 
-    self.outputResources.push({
-      type: "css",
-      refreshable: true,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
-      // XXX do we need to call convertSourceMapPaths here like we did
-      //     in legacy handlers?
-      sourceMap: options.sourceMap
-    });
+    if (self.packageSourceBatch.usesModules()) {
+      const unibuild = self.packageSourceBatch.unibuild;
+      const servePath = unibuild.pkg._getServePath(options.path);
+      const data = new Buffer(
+        'require("modules/css").addStyles(' + JSON.stringify(
+          files.convertToStandardLineEndings(options.data)
+        ) + ");"
+      );
+
+      self.jsOutputResources.push({
+        type: "js",
+        data,
+        sourcePath: self.inputResource.path,
+        servePath,
+        hash: sha1(data),
+        sourceMap: null, // TODO Improve this?
+      });
+
+    } else {
+      self.outputResources.push({
+        type: "css",
+        refreshable: true,
+        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+        servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
+          options.path),
+        // XXX do we need to call convertSourceMapPaths here like we did
+        //     in legacy handlers?
+        sourceMap: options.sourceMap
+      });
+    }
   }
 
   addJavaScript(options) {
@@ -376,12 +407,14 @@ class ResourceSlot {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
-    // By default, use the 'bare' option given to addFiles, but allow the option
-    // passed to addJavaScript to override it.
-    var bare = self.inputResource.fileOptions &&
-      self.inputResource.fileOptions.bare;
-    if (options.hasOwnProperty('bare')) {
-      bare = options.bare;
+    const fileOptions = self.inputResource.fileOptions;
+
+    function getOption(name) {
+      // By default, use fileOptions for these options but also allow
+      // overriding them with the options.
+      return _.has(options, name)
+        ? options.name
+        : fileOptions && fileOptions[name];
     }
 
     var data = new Buffer(
@@ -389,6 +422,9 @@ class ResourceSlot {
     self.jsOutputResources.push({
       type: "js",
       data: data,
+      // The sourcePath should not be alterable by plugins, so it makes
+      // sense to set it unconditionally here.
+      sourcePath: self.inputResource.path,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       // XXX should we allow users to be trusted and specify a hash?
@@ -396,7 +432,9 @@ class ResourceSlot {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      bare: !! bare
+      lazy: !! getOption("lazy"),
+      bare: !! getOption("bare"),
+      mainModule: !! getOption("mainModule"),
     });
   }
 
@@ -447,13 +485,18 @@ class ResourceSlot {
 }
 
 class PackageSourceBatch {
-  constructor(unibuild, processor, {linkerCacheDir}) {
+  constructor(unibuild, processor, {
+    sourceRoot,
+    linkerCacheDir,
+  }) {
     const self = this;
     buildmessage.assertInJob();
 
     self.unibuild = unibuild;
     self.processor = processor;
+    self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
+
     var sourceProcessorSet = self._getSourceProcessorSet();
     self.resourceSlots = [];
     unibuild.resources.forEach(function (resource) {
@@ -487,6 +530,46 @@ class PackageSourceBatch {
       }
       self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
     });
+
+    // Compute imports by merging the exports of all of the packages we
+    // use. Note that in the case of conflicting symbols, later packages get
+    // precedence.
+    //
+    // We don't get imports from unordered dependencies (since they may not be
+    // defined yet) or from weak/debugOnly dependencies (because the meaning of
+    // a name shouldn't be affected by the non-local decision of whether or not
+    // an unrelated package in the target depends on something).
+    self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
+    self.usedPackageNames = {};
+
+    compiler.eachUsedUnibuild({
+      dependencies: self.unibuild.uses,
+      arch: self.processor.arch,
+      isopackCache: self.processor.isopackCache,
+      skipUnordered: true,
+      // don't import symbols from debugOnly and prodOnly packages, because
+      // if the package is not linked it will cause a runtime error.
+      // the code must access them with `Package["my-package"].MySymbol`.
+      skipDebugOnly: true,
+      skipProdOnly: true,
+      // We only care about getting exports here, so it's OK if we get the Mac
+      // version when we're bundling for Linux.
+      allowWrongPlatform: true,
+    }, depUnibuild => {
+      _.each(depUnibuild.declaredExports, function (symbol) {
+        // Slightly hacky implementation of test-only exports.
+        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
+          self.importedSymbolToPackageName[symbol.name] = depUnibuild.pkg.name;
+        }
+      });
+
+      self.usedPackageNames[depUnibuild.pkg.name] = true;
+    });
+  }
+
+  usesModules() {
+    return _.isString(this.sourceRoot) &&
+      _.has(this.usedPackageNames, "modules");
   }
 
   _getSourceProcessorSet() {
@@ -533,57 +616,27 @@ class PackageSourceBatch {
     const self = this;
     buildmessage.assertInJob();
 
-    var isopackCache = self.processor.isopackCache;
     var bundleArch = self.processor.arch;
-
-    // Compute imports by merging the exports of all of the packages we
-    // use. Note that in the case of conflicting symbols, later packages get
-    // precedence.
-    //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak/debugOnly dependencies (because the meaning of
-    // a name shouldn't be affected by the non-local decision of whether or not
-    // an unrelated package in the target depends on something).
-    var imports = {}; // map from symbol to supplying package name
-
-    var addImportsForUnibuild = function (depUnibuild) {
-      _.each(depUnibuild.declaredExports, function (symbol) {
-        // Slightly hacky implementation of test-only exports.
-        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
-          imports[symbol.name] = depUnibuild.pkg.name;
-        }
-      });
-    };
-    compiler.eachUsedUnibuild({
-      dependencies: self.unibuild.uses,
-      arch: bundleArch,
-      isopackCache: isopackCache,
-      skipUnordered: true,
-      // don't import symbols from debugOnly and prodOnly packages, because
-      // if the package is not linked it will cause a runtime error.
-      // the code must access them with `Package["my-package"].MySymbol`.
-      skipDebugOnly: true,
-      skipProdOnly: true,
-      // We only care about getting exports here, so it's OK if we get the Mac
-      // version when we're bundling for Linux.
-      allowWrongPlatform: true,
-    }, addImportsForUnibuild);
 
     // Run the linker.
     const isApp = ! self.unibuild.pkg.name;
     const linkerOptions = {
       useGlobalNamespace: isApp,
+      sourceRoot: self.sourceRoot,
+      nodeModulesPath: self.unibuild.nodeModulesPath,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
-      combinedServePath: isApp ? null :
+      combinedServePath: isApp ? "/app.js" :
         "/packages/" + colonConverter.convert(
           self.unibuild.pkg.name +
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
+      bundleArch,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
-      imports: imports,
+      imports: self.importedSymbolToPackageName,
+      usedPackageNames: self.usedPackageNames,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")
@@ -626,7 +679,7 @@ class PackageSourceBatch {
       });
     }
 
-    if (cacheFilename) {
+    if (false && cacheFilename) {
       let diskCached = null;
       try {
         diskCached = files.readJSONOrNull(cacheFilename);

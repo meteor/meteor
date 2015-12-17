@@ -361,11 +361,14 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
-      // By default, use fileOptions for the `bare` option but also allow
-      // overriding it with the options
-      var bare = fileOptions.bare;
-      if (options.hasOwnProperty("bare")) {
-        bare = options.bare;
+      const fileOptions = self.inputResource.fileOptions;
+
+      function getOption(name) {
+        // By default, use fileOptions for these options but also allow
+        // overriding them with the options.
+        return _.has(options, name)
+          ? options.name
+          : fileOptions && fileOptions[name];
       }
 
       var data = new Buffer(
@@ -373,10 +376,9 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       resources.push({
         type: "js",
         data: data,
-        // XXX Weirdly, we now ignore sourcePath even though we required
-        //     it before. We used to use it as the source path in source map
-        //     generated in linker. We now use the servePath for that, as of
-        //     b556e622. Not sure this is actually correct...
+        // The sourcePath should not be alterable by plugins, so it makes
+        // sense to set it unconditionally here.
+        sourcePath: self.inputResource.path,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
@@ -384,7 +386,9 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        bare: !! bare
+        lazy: !! getOption("lazy"),
+        bare: !! getOption("bare"),
+        mainModule: !! getOption("mainModule"),
       });
     },
 

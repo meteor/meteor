@@ -1,3 +1,5 @@
+import {AccountsCommon} from "./accounts_common.js";
+
 /**
  * @summary Constructor for the `Accounts` object on the client.
  * @locus Client
@@ -8,7 +10,7 @@
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
  */
-AccountsClient = class AccountsClient extends AccountsCommon {
+export class AccountsClient extends AccountsCommon {
   constructor(options) {
     super(options);
 

@@ -420,6 +420,9 @@ class Target {
     packageMap,
     isopackCache,
 
+    // Path to the root source directory for this Target.
+    sourceRoot,
+
     // the architecture to build
     arch,
     // projectContextModule.CordovaPluginsFile object
@@ -435,6 +438,8 @@ class Target {
   }) {
     this.packageMap = packageMap;
     this.isopackCache = isopackCache;
+
+    this.sourceRoot = sourceRoot;
 
     // Something like "web.browser" or "os" or "os.osx.x86_64"
     this.arch = arch;
@@ -711,6 +716,7 @@ class Target {
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
+      sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
       linkerCacheDir:
         (this.bundlerCacheDir && files.pathJoin(this.bundlerCacheDir, 'linker'))
@@ -2174,12 +2180,16 @@ exports.bundle = function ({
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
+    var packageSource = new PackageSource;
+    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+
     var makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", function (app, webArch, options) {
       var client = new ClientTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
+        sourceRoot: packageSource.sourceRoot,
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
@@ -2202,6 +2212,7 @@ exports.bundle = function ({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
+        sourceRoot: packageSource.sourceRoot,
         arch: serverArch,
         releaseName: releaseName,
         buildMode: buildOptions.buildMode,
@@ -2223,8 +2234,6 @@ exports.bundle = function ({
     // Create a Isopack object that represents the app
     // XXX should this be part of prepareProjectForBuild and get cached?
     //     at the very least, would speed up deploy after build.
-    var packageSource = new PackageSource;
-    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,
@@ -2468,6 +2477,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
   var target = new JsImageTarget({
     packageMap: options.packageMap,
     isopackCache: options.isopackCache,
+    sourceRoot: packageSource.sourceRoot,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only
