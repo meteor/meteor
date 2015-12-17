@@ -23,7 +23,7 @@ Meteor however is built from the ground up on the Distributed Data Protocol (DDP
 
 In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then, over time a set of updates as that data set changes.
 
-So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the "Collections" article, corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription as a pipe that connects a subset of the true collection with the client's version, but that constantly keeps it up to date with the latest information on the server.
+So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the [Collections Article](/collections.md#server-collections), corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription as a pipe that connects a subset of the true collection with the client's version, but that constantly keeps it up to date with the latest information on the server.
 
 <h2 id="publications">Defining a publication</h2>
 
@@ -98,7 +98,7 @@ Also, `Meteor.subscribe()` returns a "subscription handle", with a property call
 
 It is best to place the subscription as close as possible to the place where the data from the subscription is needed. This reduces "action at a distance" and makes it easier to understand the flow of data through your application. If the subscription and fetch are separated, then it's not always clear how and why changes to the subscriptions (such as changing arguments), will affect the contents of the cursor.
 
-What this means in practice is that you should place your subscription calls in *templates*. In Blaze, it's best to do this in the `onCreated()` callback:
+What this means in practice is that you should place your subscription calls in *components*. In Blaze, it's best to do this in the `onCreated()` callback:
 
 ```js
 Template.listsShowPage.onCreated(function() {
@@ -116,29 +116,29 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 1. Calling `this.subscribe()` (rather than `Meteor.subscribe`), which attaches a special `this.subscriptionsReady()` function to the template instance, which is true when this and other subscriptions are ready.
 
-2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive variable `this.state.get('listId')` changes.
+2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive data source `this.getListId()` changes.
 
 <h3 id="fetching">Fetching data</h3>
 
-Subscribing to data puts it in your client-side collections. To use the data in your templates, you need to query those collections for that data. There are a few important rules of thumb when doing this.
+Subscribing to data puts it in your client-side collections. To use the data in your user interface, you need to query those collections for that data. There are a few important rules of thumb when doing this.
 
 1. Always use the same query to fetch the data from the collection that you use to publish it.
 
   If you don't do this, then you open yourself up to problems if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
-  Also, when changing subscriptions, there is a brief period where both subscriptions are loaded (see "Publication behavior when changing arguments" below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
+  Also, when changing between subscriptions, there is a brief period where both subscriptions are loaded (see [Publication behavior when changing arguments](#publication-behavior-with-arguments) below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
 
 2. Fetch the data as close as possible to where you subscribe to it.
 
-  We do this for the same reason we subscribe in the template in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child template, as we'll see in in the [UI Article](ui-ux.html#components).
+  We do this for the same reason we subscribe in the component in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child component, as we'll see in in the [UI Article](ui-ux.html#components).
 
-  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the template hierarchy as an argument to each template. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes templates harder to test.
+  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes components harder to test.
 
 <h3 id="global-subscriptions">Global subscriptions</h3>
 
-One place where you might be tempted to not subscribe inside a template is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the [Accounts Article](accounts.html)) that you need on every screen of your app.
+One place where you might be tempted to not subscribe inside a component is when it accesses data that you know you *always* need. For instance, a subscription to extra fields on the user object (see the [Accounts Article](accounts.html)) that you need on every screen of your app.
 
-However, it's generally a good idea to use a layout template (which you wrap all your templates in) to subscribe to this subscription anyway. It's better to be consistent about such things, and it makes for a more flexible system if you ever decide you have a screen that *doesn't* need that data.
+However, it's generally a good idea to use a layout component (which you wrap all your components in) to subscribe to this subscription anyway. It's better to be consistent about such things, and it makes for a more flexible system if you ever decide you have a screen that *doesn't* need that data.
 
 <h2 id="patterns">Patterns for data loading</h2>
 
@@ -150,7 +150,7 @@ A key thing to keep in mind is that a subscription will not instantly provide it
 
 Although the Tracker system means you often don't *need* to think too much about this in building your apps, usually if you want to get the user experience right, you'll need to know when the data is ready.
 
-To find that out, `Meteor.subscribe()` and (`this.subscribe()` in templates) returns a "subscription handle", which contains a reactive data source called `.ready()`:
+To find that out, `Meteor.subscribe()` and (`this.subscribe()` in Blaze components) returns a "subscription handle", which contains a reactive data source called `.ready()`:
 
 ```js
 const handle = Meteor.subscribe('Lists.public');
@@ -187,7 +187,7 @@ Technically, what happens when one of these reactive sources changes is the foll
 
 1. The reactive data source *invalidates* the autorun computation (marks it so that it re-runs in the next Tracker flush cycle).
 2. The subscription detects this, and given that anything is possible in next computation run, marks itself for destruction.
-3. The computation re-runs, with `.subscribe()` being re-called either with new or different arguments.
+3. The computation re-runs, with `.subscribe()` being re-called either with the same or different arguments.
 4. If the subscription is run with the *same arguments* then the "new" subscription discovers the old "marked for destruction" subscription that's sitting around, with the same data already ready, and simply reuses that.
 5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server.
 6. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
