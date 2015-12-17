@@ -262,7 +262,22 @@ When the user receives the email and clicks the link inside, their web browser w
 2. [`Accounts.onEnrollmentLink`](http://docs.meteor.com/#/full/Accounts-onEnrollmentLink)
 3. [`Accounts.onEmailVerificationLink`](http://docs.meteor.com/#/full/Accounts-onEmailVerificationLink)
 
-If you have customized the URL, you will need to add a new route to your router that handles the URL you have specified.
+If you have customized the URL, you will need to add a new route to your router that handles the URL you have specified. Here's how you would use one of these functions:
+
+```js
+Accounts.onResetPasswordLink((token, done) => {
+  // Display the password reset UI, get the new password...
+
+  Accounts.resetPassword(token, newPassword, (err) => {
+    if (err) {
+      // Display error
+    } else {
+      // Resume normal operation
+      done();
+    }
+  });
+})
+```
 
 <h4 id="completing-email-flow">Displaying an appropriate UI and completing the process</h4>
 
