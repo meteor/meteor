@@ -161,7 +161,7 @@ However, given that MongoDB prior to version 3.2 doesn't support queries over mu
 
 In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do (see the methods article for a discussion of patterns to do this).
 
-Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it makes sense to denormalize `todo.listId` also to ensure that we can do so easily.
+Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it might make sense to denormalize `todo.userId` also.
 
 <h3 id="designing-for-future">Designing for the future</h3>
 
