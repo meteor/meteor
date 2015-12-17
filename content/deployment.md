@@ -62,6 +62,7 @@ If you are following the above approach, you may also want to manually write out
 There are many options on where to deploy your Meteor application, and we'll discuss some options here.
 
 <h3 id="custom-deployment">Custom Deployment</h3>
+
 The Meteor tool has a command `meteor build` that creates a deployment bundle, which is a complete node application which can be run on any host that can run node applications (once pointed at a MongoDB instance). You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
 
 To run this application, you need to provide Node.js 0.10 and a MongoDB server. (The current release of Meteor has been tested with Node 0.10.40.) You can then run the application by invoking `node`, specifying the HTTP port for the application to listen on, and the MongoDB endpoint.
@@ -128,7 +129,7 @@ meteor mongo your-app.meteor.com
 
 <h3 id="mup">Deploying with Meteor Up</h3>
 
-[Meteor Up](https://github.com/kadirahq/meteor-up) (mup) is an open source tool that's used to deploy Meteor application to any online server over SSH. 
+[Meteor Up](https://github.com/kadirahq/meteor-up) (mup) is an open source tool that's used to deploy Meteor application to any online server over SSH.
 
 To use mup, you need to install the `mup` tool via `npm`.
 
@@ -174,7 +175,7 @@ DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings producti
 
 In order for galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](https://galaxy.meteor.com/help/configuring-dns). Once you've done this, you should be able to reach your site from a browser.
 
-You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings. 
+You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
 
 [ss]
 
@@ -203,6 +204,7 @@ It's a good idea to have a release process that you follow in releasing your app
 Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our {% link_to 'testing' 'Testing Article'} for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
 
 <h3 id="continuous-deployment">Continuous Deployment</h3>
+
 Continuous deployment refers to the process of deploying an application via a continuous integration tool, usually when some condition is reached (such as a git push to the `master` branch). You can use CD to deploy to Galaxy or Meteor's free hosting, as Nate Strauser explains in a [blog post on the subject](https://medium.com/@natestrauser/migrating-meteor-apps-from-modulus-to-galaxy-with-continuous-deployment-from-codeship-aed2044cabd9#.lvio4sh4a).
 
 <h3 id="rolling-updates-and-data">Rolling deployments and data versions</h3>
@@ -277,11 +279,11 @@ Galaxy's UI provides a detailed logging system, which can be invaluable to deter
 
 If you really want to understand the ins and outs of running your Meteor application, you should give [Kadira](https://kadira.io) a try. Kadira is a full featured Application Performance Monitoring (APM) solution that's built from the ground up for Meteor. Kadira operates by taking regular client and server side observations of your application's performance as it conducts various activities and reporting them back to a master server.
 
-When you visit the Kadira application, you can view current and past behavior of your application over various useful metrics. Kadira's [documentation](https://kadira.io/platform/kadira-apm/overview) is extensive and invaluable, but we'll discuss a few key areas here. 
+When you visit the Kadira application, you can view current and past behavior of your application over various useful metrics. Kadira's [documentation](https://kadira.io/platform/kadira-apm/overview) is extensive and invaluable, but we'll discuss a few key areas here.
 
 <h4 id="kadira-method-pub">Method and Publication Latency</h4>
 
-Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscription*. Kadira includes tools to help you discover which of your methods and publications are *slow* and *resource intensive*. 
+Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscription*. Kadira includes tools to help you discover which of your methods and publications are *slow* and *resource intensive*.
 
 [ss]
 
@@ -300,12 +302,9 @@ If the publication is used by a lot of users, or there are a lot of changes to b
 In this SS we can see...
 
 <h2 id="seo">Enabling SEO</h2>
+
 If your application contains a lot of publically accessible content, then you probably want it to rank well in Google and other search engines' indexes. As most webcrawlers do not support client-side rendering (or if they do, have spotty support for websockets), it's better to render the site on the server and deliver it as HTML in this special case.
 
-To do so, we can use the [Prerender.io](https://prerender.io) service, thanks to the [`dfischer:prerenderio`](https://atmospherejs.com/dfischer/prerenderio) package. It's a simple as `meteor add`-ing it, and optionally setting your prerender token if you have a paid prerender account and would like to enable more frequent cache changes. 
+To do so, we can use the [Prerender.io](https://prerender.io) service, thanks to the [`dfischer:prerenderio`](https://atmospherejs.com/dfischer/prerenderio) package. It's a simple as `meteor add`-ing it, and optionally setting your prerender token if you have a paid prerender account and would like to enable more frequent cache changes.
 
 Chances are you want to set `<title>` tags and other `<head>` content to make your site appear nicer in search results. The best way to do so is to use the [`kadira:dochead`](https://atmospherejs.com/kadira/dochead) package. The sensible place to call out to `DocHead` is from the `onCreated` callbacks of your page-level components.
-
-
-
-
