@@ -271,9 +271,11 @@ To find out more about the API of the Migrations package, refer to [its document
 
 If your migration needs to change a lot of data, especially if you need to take down your server until it's finished, it may be a good idea to use a [Bulk Operation](https://docs.mongodb.org/v3.0/core/bulk-write-operations/).
 
-The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that it's a cruder in that it operates on all documents at once, which usually means you need to take your site down until the update is happening (as the potential for "race" conditions is high).
+The advantage of a bulk operation is that it only requires a single round trip to MongoDB for the write, which usually means it is a *lot* faster. The downside is that if your migration is complex (which it usually is if you can't just do an `.update(.., .., {multi: true})`), it can take a significant amount of time to prepare the bulk update.
 
-We could write our above migration like so (note that you must be on MongoDB 2.6 for the bulk update operations to exist), using the raw MongoDB API:
+What this means is if users are accessing the site whilst the update is being prepared, it will like go out of date! Also, a bulk update will lock the entire collection while it is being applied, which can cause a significant blip in your user's experience if it takes a while. For these reason, you often need to take your site down while the update is happening.
+
+We could write our above migration like so (note that you must be on MongoDB 2.6 or later for the bulk update operations to exist), using the raw MongoDB API:
 
 ```js
 Migrations.add({
@@ -296,6 +298,8 @@ Migrations.add({
   }
 });
 ```
+
+Note as well that to make this migration faster, we could use an [Aggregation](https://docs.mongodb.org/v2.6/aggregation/) to gather the initial set of todo counts.
 
 <h3 id="running-migrations">Running migrations</h3>
 
@@ -321,7 +325,7 @@ What this does is run the `up()` function of all outstanding migrations (by defa
 
 Sometimes when we change the schema of an application, we do so in a breaking way -- so that the old schema doesn't work properly with the new code base. For instance, if we had some UI code that heavily relied on all lists having a `todoCount` set, there would be a period, before the migration runs, in which the UI of our app would be broken after we deployed.
 
-The simple way to work around the problem is to take the application down for the period in between deployment and completing the migration. This is far from ideal, especially considering some migrations can take hours to run!
+The simple way to work around the problem is to take the application down for the period in between deployment and completing the migration. This is far from ideal, especially considering some migrations can take hours to run (although using [Bulk Updates](#bulk-data-changes) probably helps a lot here).
 
 A better approach is a multi-stage deployment. The basic idea is that:
 
