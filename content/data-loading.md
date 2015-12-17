@@ -372,6 +372,7 @@ Meteor.publishComposite('Todos.inList', function({ listId }) {
   }).validate({ listId });
 
   const userId = this.userId;
+
   return {
     find() {
       const query = {
@@ -379,11 +380,18 @@ Meteor.publishComposite('Todos.inList', function({ listId }) {
         $or: [{userId: {$exists: false}}, {userId}]
       };
 
-      return Lists.find(query);
+      // We only need the _id field in this query, since it's only
+      // used to drive the child queries to get the todos
+      const options = {
+        fields: { _id: 1 }
+      };
+
+      return Lists.find(query, options);
     },
+
     children: [{
       find(list) {
-        return Todos.find({listId: list._id});
+        return Todos.find({ listId: list._id }, { fields: Todos.publicFields });
       }
     }]
   };
