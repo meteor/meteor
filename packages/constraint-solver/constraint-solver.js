@@ -56,17 +56,18 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
                                 'upgradeIndirectDepPatchVersions'));
   });
 
-  Profile.time(
-    "Input#loadFromCatalog (sqlite)",
-    function () {
-      input.loadFromCatalog(self.catalogLoader);
-    });
 
   var resultCache = self._options.resultCache;
   if (resultCache && resultCache.lastInput &&
       input.isEqual(resultCache.lastInput)) {
     return resultCache.lastOutput;
   }
+
+  Profile.time(
+    "Input#loadFromCatalog (sqlite)",
+    function () {
+      input.loadFromCatalog(self.catalogLoader);
+    });
 
   if (options.previousSolution && options.missingPreviousVersionIsError) {
     Profile.time("check for previous versions in catalog", function () {
