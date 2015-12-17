@@ -401,7 +401,7 @@ Once a user is logged into your app with one of the methods described above, it 
 
 For code that runs on the client, the global `Meteor.userId()` reactive function will give you the ID of the currently logged in user.
 
-In addition to that core API, there are some helpful shorthand helpers: `Meteor.user()`, which is exactly equal to calling `Meteor.users.findOne(Meteor.userId())`, and the `{{currentUser}}` Blaze helper that returns the value of `Meteor.user()`.
+In addition to that core API, there are some helpful shorthand helpers: `Meteor.user()`, which is exactly equal to calling `Meteor.users.findOne(Meteor.userId())`, and the `{% raw %}{{currentUser}}{% endraw %}` Blaze helper that returns the value of `Meteor.user()`.
 
 Note that there is a benefit to restricting the places you access the current user to make your UI more testable and modular. Read more about this in the [UI article](ui-ux.html#global-stores).
 
