@@ -3,6 +3,12 @@
 /**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
+ * It uses `roles` field to `Meteor.users` documents which is an array of subdocuments with the following
+ * schema:
+ *  - role (role name)
+ *  - partition (partition name)
+ *  - assigned (boolean, if the rule was manually assigned, or was automatically inferred (like subroles))
+ *
  * @module Roles
  */
 
