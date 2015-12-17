@@ -4,6 +4,10 @@
 2. The fastest way to get set up for a prototype: accounts-ui
     1. List of easy to set up login providers, code examples
     2. Read more about accounts user interfaces later
+5. The useraccounts package for a production-grade login UI
+    1. Pick the right package based on your CSS framework
+    2. Get help from splendido to flesh out this section - just the basics, then link to the docs
+    3. Figure out what to do about useraccounts and adding fields to profile
 3. Password login
     1. accounts-password gives you password login with username, email, or both
     2. How to require username, email, or both
@@ -24,16 +28,17 @@
     6. Meetup
     7. Meteor Developer Accounts
     8. Getting extra data from the OAuth services
-    8. Building your own OAuth login handler
-5. The useraccounts package for a production-grade login UI
-    1. Pick the right package based on your CSS framework
-    2. Get help from splendido to flesh out this section - just the basics, then link to the docs
-    3. Figure out what to do about useraccounts and adding fields to profile
+    8. Building your own OAuth login handler [XXX not done, perhaps to be filled in later]
+3. Accessing user data
+    1. Meteor.userId() and Meteor.user() on the client
+    2. this.userId on the server
+    3. Meteor.users collection
 6. Adding custom data about users
     1. Adding new top-level fields onto the users collection
     2. How and why to disable profile
-    3. Why top-level fields are better than nested objects in DDP (link to collections/schema article)
-    4. Security concerns - don't accidentally publish secret data to the client
+    3. Publishing custom user data
+    4. Why top-level fields are better than nested objects in DDP (link to collections/schema article)
+    5. Security concerns - don't accidentally publish secret data to the client
 7. Allowing the same user to log in through different methods - “account merging”
     1. Update the existing account using requestCredential
     2. accounts-meld in case you want to do more complicated things, but make sure you understand the risk!
