@@ -167,15 +167,16 @@ We've seen an example already of using an `autorun` to re-subscribe when the (re
 
 ```js
 Template.listsShowPage.onCreated(function() {
-  this.state = new ReactiveDict();
-  this.autorun(() => {
-    this.state.set('listId', FlowRouter.getParam('_id'));
-    this.subscribe('Todos.inList', this.state.get('listId'));
-  });
-});
-```
+  this.getListId = () => FlowRouter.getParam('_id');
 
-In our example, the `autorun` will re-run whenever `this.state.get('listId')` changes, (ultimately because `FlowRouter.getParam('_id')` changes), although other common reactive data sources are:
+  this.autorun(() => {
+    this.subscribe('Todos.inList', {
+      listId: this.getListId()
+    });
+  });
+});```
+
+In our example, the `autorun` will re-run whenever `this.getListId()` changes, (ultimately because `FlowRouter.getParam('_id')` changes), although other common reactive data sources are:
 
 1. Template data contexts (which you can access reactively with `Template.currentData()`).
 2. The current user status (`Meteor.user()` and `Meteor.loggingIn()`).
@@ -236,16 +237,15 @@ Then on the client side, we'd some kind of reactive state variable to control ho
 
 ```js
 Template.listsShowPage.onCreated(function() {
-  this.state = new ReactiveDict();
+  this.getListId = () => FlowRouter.getParam('_id');
+
   this.autorun(() => {
-    this.state.set('listId', FlowRouter.getParam('_id'));
     this.subscribe('Todos.inList', {
-      listId: this.state.get('listId'),
+      listId: this.getListId()
       limit: this.state.get('requestedTodos')
     });
   });
-});
-```
+});```
 
 We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps just when they scroll to the bottom of the page).
 
