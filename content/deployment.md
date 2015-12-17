@@ -1,5 +1,5 @@
 ---
-title: Deployment, Monitoring and Analytics
+title: Deployment and Monitoring
 ---
 
 After reading this guide, you'll know:
