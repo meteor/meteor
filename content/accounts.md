@@ -63,7 +63,7 @@ meteor add accounts-meteor-developer
 
 Now just open your app, follow the configuration steps, and you're good to go - if you've done the [Meteor tutorial](https://www.meteor.com/tutorials/blaze/adding-user-accounts), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
 
-<h2 id="useraccounts">Production-grade UI with useraccounts</h2>
+<h2 id="useraccounts">Customizable UI: useraccounts</h2>
 
 Once you've gotten your initial prototype up and running with `accounts-ui`, you'll want to move to something more powerful and configurable so that you can better integrate your login flow with the rest of your app. The [`useraccounts` family of packages](http://useraccounts.meteor.com/) is the most powerful set of accounts management UI controls available for Meteor today. If you need even more customization, you can also roll your own system, but it's worth trying `useraccounts` first.
 
