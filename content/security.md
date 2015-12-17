@@ -425,7 +425,7 @@ This is a very short section, but it deserves its own place in the table of cont
 
 For the uninitiated, this means all of your HTTP requests should go over HTTPS, and all websocket data should be sent over WSS.
 
-Yes, Meteor does hash your password on the client before sending it over the wire, but hashing a password in this way provides only minimal security, and someone who intercepts that sent password will be able to, with time, decode it into the actual password. That's why passwords in the database are _salted_ - a random string is appended to the password before hashing. It is not possible to do this on the client, so the passwords sent over the wire are not secure even though they are hashed. The only way to secure that transfer is by using SSL.
+Yes, Meteor does hash your password or login token on the client before sending it over the wire, but that only prevents an attacker from figuring out your password - it doesn't prevent them from logging in as you, since they could just send the hashed password to the server to log in! No matter how you slice it, logging in requires the client to send sensitive data  to the server, and the only way to secure that transfer is by using SSL. Note that the same issue is present when using cookies for authentication in a normal HTTP web application, so any app that needs to reliably identify users should be running on SSL.
 
 You can ensure that any unsecured connection to your app redirects to a secure connection by adding the `force-ssl` package.
 
