@@ -296,7 +296,7 @@ When the user submits the form, you need to call the appropriate function to com
 1. [`Accounts.resetPassword`](http://docs.meteor.com/#/full/accounts_resetpassword) - this one should be used both for resetting the password, and enrolling a new user; it accepts both kinds of tokens.
 2. [`Accounts.verifyEmail`](http://docs.meteor.com/#/full/accounts_verifyemail)
 
-After you are have called one of the two functions above or the user has cancelled the process, call the `done` function you got in the link callback. This will tell Meteor to get out of the special state it enters when you're doing one of the email account flows.
+After you have called one of the two functions above or the user has cancelled the process, call the `done` function you got in the link callback. This will tell Meteor to get out of the special state it enters when you're doing one of the email account flows.
 
 <h3 id="customizing-emails">Customizing accounts emails</h3>
 
