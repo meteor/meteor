@@ -117,7 +117,7 @@ To get proper syntax highlighting, go to a .js file, then select the following t
 
 A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .jsx files, and it will correctly expand classes to React's "className" property. You can bind to the tab key for this, but [you may not want to](https://github.com/sergeche/emmet-sublime/issues/548).
 
-<h4 id="eslint-sublime">Atom</h4>
+<h4 id="eslint-atom">Atom</h4>
 
 Install the following three Atom packages. Here's how to install them from the terminal, but you can also select them from within Atom:
 
@@ -136,7 +136,7 @@ This will return something like `/usr/local`. Add this to the "Global Node Path"
 Then **restart Atom** to activate linting.
 
 
-<h4 id="eslint-sublime">WebStorm</h4>
+<h4 id="eslint-webstorm">WebStorm</h4>
 
 WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `.eslintrc` file, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
 
