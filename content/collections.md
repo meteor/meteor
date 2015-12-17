@@ -311,7 +311,7 @@ If the migration logs anything to the console, you'll see it in the terminal win
 To run a migration against your production database, run your app locally in production mode (with production settings, including database settings), with the `MIGRATION` environment variable set:
 
 ```bash
-MIGRATION=latest meteor --production --settings path/to/production/settings.json
+MIGRATE=latest meteor --production --settings path/to/production/settings.json
 ```
 
 What this does is run the `up()` function of all outstanding migrations (by default apps are considered at migrations "zero"), against your production database. In our case, it should ensure all lists have a `todoCount` field set.
