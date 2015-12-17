@@ -380,7 +380,8 @@ var toc = [
     "meteor publish-for-arch",
     "meteor publish-release",
     "meteor test-packages",
-    "meteor admin"
+    "meteor admin",
+    "meteor shell"
   ] ]
 ];
 
