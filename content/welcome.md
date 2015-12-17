@@ -13,13 +13,7 @@ The APIs of the Meteor platform are available a the [docs site](https://docs.met
 The guide is targeted towards intermediate developers, aimed at those with some familiarity with the Meteor platform and web development in general. If you are just getting started with Meteor, we recommend beginning with the official [tutorial](https://www.meteor.com/tutorials/blaze/creating-an-app).
 
 <h2 id="example-app">Example App</h2>
-Most guides make reference to the Todos example application. You can create your own copy of the example application with
-
-```bash
-meteor create --example todos
-```
-
-Additionally, you see the latest source code for the app, and file issues or make suggestions via pull request at its [GitHub repository](https://github.com/meteor/todos).
+Most guides make reference to the Todos example application. This code is actively being developed alongside the guide. You can see the latest source code for the app, and file issues or make suggestions via pull request at its [GitHub repository](https://github.com/meteor/todos).
 
 <h2 id="what-is-meteor">What is Meteor?</h2>
 
