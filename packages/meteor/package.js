@@ -20,6 +20,9 @@ Package.onUse(function (api) {
   // dependency on the meteor package.
   api.use('es5-shim', { weak: true });
 
+  api.use("meteor-env-dev");
+  api.use("meteor-env-prod");
+
   api.use('underscore', ['client', 'server']);
 
   api.use('isobuild:compiler-plugin@1.0.0');
