@@ -1,75 +1,76 @@
 {
   "dependencies": {
+    "buffer-crc32": {
+      "version": "0.2.1"
+    },
+    "bytes": {
+      "version": "0.2.0"
+    },
     "connect": {
-      "version": "2.9.0",
-      "dependencies": {
-        "qs": {
-          "version": "0.6.5"
-        },
-        "cookie-signature": {
-          "version": "1.0.1"
-        },
-        "buffer-crc32": {
-          "version": "0.2.1"
-        },
-        "cookie": {
-          "version": "0.1.0"
-        },
-        "bytes": {
-          "version": "0.2.0"
-        },
-        "fresh": {
-          "version": "0.2.0"
-        },
-        "pause": {
-          "version": "0.0.1"
-        },
-        "uid2": {
-          "version": "0.0.2"
-        },
-        "debug": {
-          "version": "0.7.2"
-        },
-        "methods": {
-          "version": "0.0.1"
-        },
-        "multiparty": {
-          "version": "2.1.8",
-          "dependencies": {
-            "readable-stream": {
-              "version": "1.0.17"
-            },
-            "stream-counter": {
-              "version": "0.1.0"
-            }
-          }
-        }
-      }
+      "version": "2.9.0"
+    },
+    "cookie": {
+      "version": "0.1.0"
+    },
+    "cookie-signature": {
+      "version": "1.0.1"
+    },
+    "core-util-is": {
+      "version": "1.0.2"
+    },
+    "debug": {
+      "version": "2.2.0"
+    },
+    "fresh": {
+      "version": "0.2.0"
+    },
+    "inherits": {
+      "version": "2.0.1"
+    },
+    "isarray": {
+      "version": "0.0.1"
+    },
+    "lru-cache": {
+      "version": "2.2.4"
+    },
+    "methods": {
+      "version": "0.0.1"
+    },
+    "mime": {
+      "version": "1.2.11"
+    },
+    "ms": {
+      "version": "0.7.1"
+    },
+    "multiparty": {
+      "version": "2.1.8"
+    },
+    "pause": {
+      "version": "0.0.1"
+    },
+    "qs": {
+      "version": "0.6.5"
+    },
+    "range-parser": {
+      "version": "0.0.4"
+    },
+    "readable-stream": {
+      "version": "1.0.33"
     },
     "send": {
-      "version": "0.1.4",
-      "dependencies": {
-        "debug": {
-          "version": "0.7.2"
-        },
-        "mime": {
-          "version": "1.2.11"
-        },
-        "fresh": {
-          "version": "0.2.0"
-        },
-        "range-parser": {
-          "version": "0.0.4"
-        }
-      }
+      "version": "0.1.4"
+    },
+    "stream-counter": {
+      "version": "0.1.0"
+    },
+    "string_decoder": {
+      "version": "0.10.31"
+    },
+    "uid2": {
+      "version": "0.0.2"
     },
     "useragent": {
-      "version": "2.0.7",
-      "dependencies": {
-        "lru-cache": {
-          "version": "2.2.4"
-        }
-      }
+      "version": "2.0.7"
     }
   }
 }

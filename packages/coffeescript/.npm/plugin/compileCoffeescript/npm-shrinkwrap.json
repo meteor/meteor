@@ -1,15 +1,13 @@
 {
   "dependencies": {
+    "amdefine": {
+      "version": "1.0.0"
+    },
     "coffee-script": {
       "version": "1.9.2"
     },
     "source-map": {
-      "version": "0.4.2",
-      "dependencies": {
-        "amdefine": {
-          "version": "0.1.0"
-        }
-      }
+      "version": "0.4.2"
     }
   }
 }
