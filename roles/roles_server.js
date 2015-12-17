@@ -4,9 +4,9 @@
 
 Meteor.roles._ensureIndex({name: 1}, {unique: 1});
 
-Meteor.users._ensureIndex({'roles.role': 1});
-Meteor.users._ensureIndex({'roles.partition': 1});
+// Index only on "roles.role" is not needed because the combined index works for it as well.
 Meteor.users._ensureIndex({'roles.role': 1, 'roles.partition': 1});
+Meteor.users._ensureIndex({'roles.partition': 1});
 
 /**
  * Publish logged-in user's roles so client-side checks can work.
