@@ -102,11 +102,12 @@ What this means in practice is that you should place your subscription calls in 
 
 ```js
 Template.listsShowPage.onCreated(function() {
-  this.state = new ReactiveDict();
+  this.getListId = () => FlowRouter.getParam('_id');
+
   this.autorun(() => {
-    const listId = FlowRouter.getParam('_id');
-    this.state.set({listId});
-    this.subscribe('Todos.inList', listId);
+    this.subscribe('Todos.inList', {
+      listId: this.getListId()
+    });
   });
 });
 ```
