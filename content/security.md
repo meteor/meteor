@@ -234,6 +234,27 @@ Meteor.publish('lists/public', function () {
 });
 ```
 
+If you find yourself repeating the fields often, it makes sense to factor out a dictionary of public fields that you can always filter by, like so:
+
+```js
+// In the file where Lists is defined
+Lists.publicFields = {
+  name: 1,
+  incompleteCount: 1,
+  userId: 1
+};
+```
+
+Now your code becomes a bit simpler:
+
+```js
+Meteor.publish('lists/public', function () {
+  return Lists.find({userId: {$exists: false}}, {
+    fields: Lists.publicFields
+  });
+});
+```
+
 <h3 id="publications-user-id">Publications and userId</h3>
 
 The data publications return will often be dependent on the currently logged in user, and perhaps some properties about that user - whether they are an admin, whether they own a certain document, etc.
