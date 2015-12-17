@@ -198,17 +198,18 @@ Be default, the `Accounts.createUser` function provided by `accounts-password` a
 
 ```js
 // Ensuring every user has an email address, should be in server-side code
-// XXX should we use simple-schema here??
 Accounts.validateNewUser((user) => {
-  if (! user.email) {
-    throw new Meteor.Error('Meteor.users.needEmail',
-      'All users must have an email address.');
-  }
-
-  if (! user.username) {
-    throw new Meteor.Error('Meteor.users.needUsername',
-      'All users must have a username.');
-  }
+  // XXX this doesn't work nicely when there is an error. File a PR against the
+  // useraccounts:flow-routing package to ensure the errors are handled nicely.
+  new SimpleSchema({
+    _id: { type: String },
+    emails: { type: Array },
+    'emails.$': { type: Object },
+    'emails.$.address': { type: String },
+    'emails.$.verified': { type: Boolean },
+    createdAt: { type: Date },
+    services: { type: Object, blackbox: true }
+  }).validate(user);
 
   // Return true to allow user creation to proceed
   return true;
