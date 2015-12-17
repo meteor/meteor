@@ -5,25 +5,25 @@ order: 2
 
 After reading this guide, you'll know:
 
-1. What publications and subscriptions are in the Meteor framework.
+1. What publications and subscriptions are in the Meteor platform.
 2. How to define a publication on the server.
-3. Where to subscribe on the client and in which template.
-4. Useful patterns to follow to subscribe sensibly and help users understand the state of subscriptions.
-5. How to publish sets of related data in a reactive way.
-6. How to ensure your publication is properly authorized in a reactive way.
+3. Where to subscribe on the client and in which templates.
+4. Useful patterns for managing subscriptions.
+5. How to reactively publish related data.
+6. How to ensure your publication is secure in the face of reactive changes.
 7. How to use the low-level publish API to publish anything.
 8. How to turn a 3rd-party REST endpoint into a publication.
 9. How to turn a publication in your app into a REST endpoint.
 
 <h2 id="publications-and-subscriptions">Publications and subscriptions</h2>
 
-In a traditional, HTTP-based web application, the client and server communicate in a "request-response" fashion. Typically the client makes RESTful HTTP requests to the server and receives HTML or JSON data in response. However there's no way for the server to "push" data to the client when changes happen at the backend.
+In a traditional, HTTP-based web application, the client and server communicate in a "request-response" fashion. Typically the client makes RESTful HTTP requests to the server and receives HTML or JSON data in response, and there's no way for the server to "push" data to the client when changes happen at the backend.
 
-Meteor however is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. Although it's possible to do so, building a Meteor app doesn't require you to set up REST endpoints to serialize and send data. Instead you create *publication* endpoints that can push data from server to client.
+Meteor is built from the ground up on the Distributed Data Protocol (DDP) to allow data transfer in both directions. Building a Meteor app doesn't require you to set up REST endpoints to serialize and send data. Instead you create *publication* endpoints that can push data from server to client.
 
-In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client creates a **subscription** which connects to a publication, and receives that data. That set of data consists of an initial stream of data as it stands at subscription-time, and then, over time a set of updates as that data set changes.
+In Meteor a **publication** is a named API on the server that constructs a set of data to send to a client. A client initiates a **subscription** which connects to a publication, and receives that data. That data consists of a first batch sent when the subscription is initialized and then incremental updates as the published data changes.
 
-So a subscription is a set of data that changes over time. Typically, the net result of this is that a subscription "bridges" a server collection (which as described in the [Collections Article](/collections.md#server-collections), corresponds closely with a Mongo collection), and the client side Minimongo cache of that data. You can think of a subscription as a pipe that connects a subset of the true collection with the client's version, but that constantly keeps it up to date with the latest information on the server.
+So a subscription can be thought of as a set of data that changes over time. Typically, the result of this is that a subscription "bridges" a [server-side MongoDB collection](/collections.md#server-collections), and the [client side Minimongo cache](collections.html#client-collections) of that collection. You can think of a subscription as a pipe that connects a subset of the "real" collection with the client's version, and constantly keeps it up to date with the latest information on the server.
 
 <h2 id="publications">Defining a publication</h2>
 
@@ -39,11 +39,18 @@ Meteor.publish('Lists.public', function() {
 });
 ```
 
-There are a few things to understand about this code block. Firstly, we've named the publication `Lists.public`, and that will be how we access it from the client. Secondly, we are simply returning a Mongo *cursor* from the publication function.
+There are a few things to understand about this code block. First, we've named the publication with the unique string `Lists.public`, and that will be how we access it from the client. Second, we are simply returning a Mongo *cursor* from the publication function. Note that the cursor is filtered to only return certain fields from the collection, as detailed in the [Security article](security.html#fields).
 
-What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `'Lists'` on the client (which we called `Lists` of course) will have all of the public lists that are available in the server collection named `'Lists'` whilst that subscription is open (which is all the time in our example app).
+What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `'Lists'` on the client will have all of the public lists that are available in the server collection named `'Lists'` while that subscription is open. In this particular example, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
 
-There are two types of parameters of a publish function. Firstly, a publication always has the current user's `id` available at `this.userId` (this is why we use the `function() {}` form for publications rather than the ecmascript `() => {}`. You can disable the linting rule for publication files with `eslint-disable prefer-arrow-callback`).
+There are two types of parameters of a publish function.
+
+1. The `this` context, which has information about the current DDP connection. For example, you can access the current user's `id` with `this.userId`.
+2. The arguments to the publication, which can be passed in when calling `Meteor.subscribe`.
+
+> Note: Since we need to access context on `this` we need to use the `function() {}` form for publications rather than the ES2015 `() => {}`. You can disable the arrow function linting rule for publication files with `eslint-disable prefer-arrow-callback`. A future version of the publication API will work more nicely with ES2015.
+
+In this publication, which loads private lists, we need to use `this.userId` to get only the todo lists that belong to a specific user.
 
 ```js
 Meteor.publish('Lists.private', function() {
@@ -59,15 +66,15 @@ Meteor.publish('Lists.private', function() {
 });
 ```
 
-What this means is that the above publication can be confident (thanks to Meteor's accounts system) that it will only ever publish private lists to the user that they belong to. Note also that the publication will re-run if the user logs out (or back in again), which means that the published set of private lists will reflect this.
+Thanks to the guarantees provided by DDP and Meteor's accounts system, the above publication can be confident that it will only ever publish private lists to the user that they belong to. Note that the publication will re-run if the user logs out (or back in again), which means that the published set of private lists will change as the active user changes.
 
-In the case of a non-logged in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
+In the case of a logged-out in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
 
-The other type of publication argument is a simple named argument:
+Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network. In this guide, we recommend always using ES2015 keyword arguments rather than positional arguments. This has many benefits - you can easily add more arguments in the future, and it's easier to see what arguments you're passing in since they have names.
 
 ```js
 Meteor.publish('Todos.inList', function({ listId }) {
-  // We always need to check the `listId` is the type we expect
+  // We need to check the `listId` is the type we expect
   new SimpleSchema({
     listId: {type: String}
   }).validate({ listId });
@@ -76,7 +83,7 @@ Meteor.publish('Todos.inList', function({ listId }) {
 });
 ```
 
-When we create a subscription to this publication on the client, we can provide this argument via the `Meteor.subscribe()` call:
+When we subscribe to this publication on the client, we can provide this argument via the `Meteor.subscribe()` call:
 
 ```js
 Meteor.subscribe('Todos.inList', { listId: list._id });
@@ -84,15 +91,15 @@ Meteor.subscribe('Todos.inList', { listId: list._id });
 
 <h3 id="organization-publications">Organizing publications</h3>
 
-It makes sense to place a publication in a package alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same package as the view code makes perfect sense.
+It makes sense to place a publication alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same module or directory as the view code makes perfect sense.
 
 Often, however, a publication is more general. For example in the Todos example application, we create a `Todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
 <h2 id="subscriptions">Subscribing to data</h2>
 
-To use publications, you need to create a subscription to it on the client. To do so, you call `Meteor.subscribe()` with the name of the publication. When you do this, it opens up a subscription to that publication, and the server starts sending data down the wire to ensure that your client collections contain up to date copies of the data that's pushed by the publication.
+To use publications, you need to create a subscription to it on the client. To do so, you call `Meteor.subscribe()` with the name of the publication. When you do this, it opens up a subscription to that publication, and the server starts sending data down the wire to ensure that your client collections contain up to date copies of the data specified by the publication.
 
-Also, `Meteor.subscribe()` returns a "subscription handle", with a property called `.ready()` defined -- a reactive function that returns `true` when the publication becomes ready (either you call `this.ready()` explicitly, or the current contents of a returned cursor are sent over).
+`Meteor.subscribe()` also returns a "subscription handle" with a property called `.ready()`. This is a reactive function that returns `true` when the publication is marked ready (either you call `this.ready()` explicitly, or the initial contents of a returned cursor are sent over).
 
 <h3 id="organizing-subscriptions">Organizing subscriptions</h3>
 
@@ -114,13 +121,13 @@ Template.listsShowPage.onCreated(function() {
 
 In this code snippet we can see two important techniques for subscribing in Blaze templates:
 
-1. Calling `this.subscribe()` (rather than `Meteor.subscribe`), which attaches a special `this.subscriptionsReady()` function to the template instance, which is true when this and other subscriptions are ready.
+1. Calling `this.subscribe()` (rather than `Meteor.subscribe`), which attaches a special `subscriptionsReady()` function to the template instance, which is true when all subscriptions made inside this template are ready.
 
-2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive data source `this.getListId()` changes.
+2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive function `this.getListId()` changes.
 
 <h3 id="fetching">Fetching data</h3>
 
-Subscribing to data puts it in your client-side collections. To use the data in your user interface, you need to query those collections for that data. There are a few important rules of thumb when doing this.
+Subscribing to data puts it in your client-side collection. To use the data in your user interface, you need to query your client-side collection. There are a few important rules of thumb when doing this.
 
 1. Always use the same query to fetch the data from the collection that you use to publish it.
 
