@@ -62,11 +62,13 @@ _.extend(Roles, {
   createRole: function (role, options) {
     var match;
 
+    options = options || {};
+
     if (!role || !_.isString(role) || role.trim() !== role) {
       throw new Error("Invalid role name.");
     }
 
-    options = _.defaults(options || {}, {
+    options = _.defaults(options, {
       unlessExists: false
     });
 
@@ -266,8 +268,8 @@ _.extend(Roles, {
    *   - partition: name of the partition
    *
    * @method userIsInRole
-   * @param {String|Object} user User Id or actual user object
-   * @param {String|Array} roles Name of role/permission or Array of 
+   * @param {String|Object} user User Id or actual user object.
+   * @param {String|Array} roles Name of role/permission or Array of
    *                             roles/permissions to check against. If array,
    *                             will return true if user is in _any_ role.
    * @param {String|Object} [options] Optional. Name of partition. If supplied, limits check
@@ -281,10 +283,10 @@ _.extend(Roles, {
     var id,
         query;
 
+    options = options || {};
+
     // ensure array to simplify code
-    if (!_.isArray(roles)) {
-      roles = [roles];
-    }
+    if (!_.isArray(roles)) roles = [roles];
 
     if (!roles.length) return false;
 
@@ -351,6 +353,8 @@ _.extend(Roles, {
   getRolesForUser: function (user, options) {
     var roles;
 
+    options = options || {};
+
     if (_.isString(options)) {
       options = {partition: options};
     }
@@ -415,10 +419,10 @@ _.extend(Roles, {
   getUsersInRole: function (roles, options, queryOptions) {
     var query;
 
+    options = options || {};
+
     // ensure array to simplify code
-    if (!_.isArray(roles)) {
-      roles = [roles];
-    }
+    if (!_.isArray(roles)) roles = [roles];
 
     if (_.isString(options)) {
       options = {partition: options};
@@ -470,17 +474,25 @@ _.extend(Roles, {
    * @return {Array} Array of user's partitions, unsorted.
    */
   getPartitionsForUser: function (user, roles) {
+    var partitions;
+
     // ensure array to simplify code
-    if (!_.isArray(roles)) {
-      roles = [roles];
-    }
+    if (roles && !_.isArray(roles)) roles = [roles];
 
     user = Roles._resolveUser(user);
 
     if (!user) return [];
 
-    // != used on purpose.
-    return _.uniq(_.filter(_.pluck(user.roles || [], 'partition'), function (partition) {return partition != null}));
+    partitions = [];
+    _.each(user.roles || [], function (userRole) {
+      // == used on purpose.
+      if (userRole.partition == null) return;
+      if (roles && !_.contains(roles, userRole.role)) return;
+
+      partitions.push(userRole.partition);
+    });
+
+    return _.uniq(partitions);
   },
 
   _resolveUser: function (user) {
