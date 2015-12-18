@@ -26,10 +26,119 @@ Meteor.publish('_roles', function () {
                            {fields: fields});
 });
 
-Roles._forwardMigrate = function () {
+_.extend(Roles, {
+  _isNewField: function (roles) {
+    return _.isArray(roles) && _.isObject(roles[0]);
+  },
 
-};
+  _isOldField: function (roles) {
+    return (_.isArray(roles) && _.isString(roles[0])) || _.isObject(roles);
+  },
 
-Roles._backwardMigrate = function () {
+  _convertToNewField: function (oldRoles) {
+    var roles = [];
+    if (_.isArray(oldRoles)) {
+      _.each(oldRoles, function (role, index) {
+        if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
 
-};
+        roles.push({
+          role: role,
+          partition: null,
+          assigned: true
+        })
+      });
+    }
+    else if (_.isObject(oldRoles)) {
+      _.each(oldRoles, function (rolesArray, group) {
+        // unescape
+        group = group.replace(/_/g, '.');
+
+        _.each(rolesArray, function (role, index) {
+          if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
+
+          roles.push({
+            role: role,
+            partition: group,
+            assigned: true
+          })
+        });
+      })
+    }
+    return roles;
+  },
+
+  _convertToOldField: function (newRoles, usingGroups) {
+    var roles;
+
+    if (usingGroups) {
+      roles = {};
+    }
+    else {
+      roles = [];
+    }
+
+    _.each(newRoles, function (userRole, index) {
+      if (!_.isObject(userRole)) throw new Error("Role '" + userRole + "' is not an object.");
+
+      // We assume that we are converting back a failed migration, so values can only be
+      // what were valid values in 1.0. So no group names starting with $ and no subroles.
+      // We always convert to the global roles syntax.
+
+      if (userRole.partition) {
+        if (!usingGroups) throw new Error("Role '" + userRole.role + "' with partition '" + userRole.partition + "' without enabled groups.");
+
+        // escape
+        userRole.partition = group.replace(/./g, '_');
+
+        if (userRole.partition[0] === '$') throw new Error("Group name '" + userRole.partition + "' start with $.");
+
+        roles[userRole.partition] = roles[userRole.partition] || [];
+        roles[userRole.partition].push(userRole.role);
+      }
+      else {
+        if (usingGroups) {
+          roles.__global_roles__ = roles.__global_roles__ || [];
+          roles.__global_roles__.push(userRole.role);
+        }
+        else {
+          roles.push(userRole.role);
+        }
+      }
+    });
+    return roles;
+  },
+
+  _defaultUpdateUser: function (user, roles) {
+    Meteor.users.update({
+      _id: user._id,
+      // making sure nothing changed in meantime
+      roles: user.roles
+    }, {
+      $set: {roles: roles}
+    });
+  },
+
+  _forwardMigrate: function (updateUser) {
+    updateUser = updateUser || Roles._defaultUpdateUser;
+
+    // TODO: Migrate rules collection.
+
+    Meteor.users.find().forEach(function (user, index, cursor) {
+      if (!Roles._isNewField(user.roles)) {
+        updateUser(user, Roles._convertToNewField(user.roles));
+      }
+    });
+  },
+
+  _backwardMigrate: function (updateUser, usingGroups) {
+    updateUser = updateUser || Roles._defaultUpdateUser;
+
+    // TODO: Migrate rules collection.
+
+    Meteor.users.find().forEach(function (user, index, cursor) {
+      if (!Roles._isOldField(user.roles)) {
+        updateUser(user, Roles._convertToOldField(user.roles, usingGroups));
+      }
+    });
+  }
+});
