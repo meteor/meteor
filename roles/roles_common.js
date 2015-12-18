@@ -335,16 +335,14 @@ _.extend(Roles, {
     update = {
       $pull: {
         roles: {
-          $elemMatch: {
-            role: roleName,
-            partition: options.partition
-          }
+          role: roleName,
+          partition: options.partition
         }
       }
     };
 
     if (options._onlyAssigned) {
-      update.$pull.roles.$elemMatch.assigned = true;
+      update.$pull.roles.assigned = true;
     }
 
     // we try to remove the role in every case, whether the role really exists or not
