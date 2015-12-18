@@ -54,5 +54,5 @@ Note: you don't need to escape things in fenced/multiline code snippets, only in
 Render multiple items in your template with `{{#each}}`
 
 // good
-Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}}`
+Render multiple items in your template with `{% raw %}{{#each}}{% endraw %}`
 ```
