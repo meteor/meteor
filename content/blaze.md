@@ -144,7 +144,7 @@ Template.foo.helpers({
 
 <h3 id="rendering-html">Rendering pure HTML</h3>
 
-Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{{% endraw %}`.
+Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{ }}}{% endraw %}`.
 
 ```html
 {{{myHtml}}}
@@ -162,7 +162,7 @@ You should be extremely careful about doing this, and always ensure you aren't r
 
 <h3 id="block-helpers">Block Helpers</h3>
 
-A block helper, called with `{% raw %}{{#` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{% raw %}{{#each .. in}}{% endraw %}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *component* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{% raw %}{{#if}}{% endraw %}` helper with:
+A block helper, called with `{% raw %}{{# }}{% endraw %}` is a helper that takes (and may render) a block of Spacebars. For instance, we saw the `{% raw %}{{#each .. in}}{% endraw %}` helper above which repeats a given block of Spacebars once per item in a list. You can also render a *component* as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{% raw %}{{#if}}{% endraw %}` helper with:
 
 ```html
 <template name="myIf">
@@ -232,7 +232,15 @@ Spacebars starts from a very strict interpretation of HTML. In particular you ne
 
 <h4 id="escaping">Escaping</h4>
 
-To insert a literal `{% raw %}{{{% endraw %}`, `{% raw %}{{{{% endraw %}`, or any number of curly braces, put a vertical bar after it. So `{% raw %}{{|{% endraw %}` will show up as `{% raw %}{{{% endraw %}`, `{% raw %}{{{|{% endraw %}` will show up as `{% raw %}{{{{% endraw %}`, and so on.
+To insert literal `{% raw %}{{ }}{% endraw %}` and the like, suffix with `|`:
+
+```
+<!-- will render as <h1>All about {{</h1> -->
+<h1>All about {{|</h1>
+
+<!-- will render as <h1>All about {{{</h1> -->
+<h1>All about {{{|</h1>
+```
 
 <h2 id="reusable-components">Creating reusable components in Blaze</h2>
 
