@@ -18,11 +18,9 @@
  *  - name (of the role)
  *  - children (roles), list of documents:
  *    - _id
- *  - descendants (roles), list of documents (recursively flattened children):
- *    - _id
  *    - name
  *
- * List elements are documents so that they can easier be extended in the future.
+ * Children list elements are subdocuments so that they can easier be extended in the future.
  *
  * Example: { _id: "123", name: "admin" }
  */
@@ -48,6 +46,11 @@ var getGroupsForUserDeprecationWarning = false;
 
 _.extend(Roles, {
 
+  /*
+   * Deprecated. Not used anymore.
+   */
+  GLOBAL_GROUP: null,
+
   /**
    * Create a new role.
    *
@@ -65,7 +68,7 @@ _.extend(Roles, {
     options = options || {};
 
     if (!role || !_.isString(role) || role.trim() !== role) {
-      throw new Error("Invalid role name.");
+      throw new Error("Invalid role name '" + role + "'.");
     }
 
     options = _.defaults(options, {
@@ -73,7 +76,7 @@ _.extend(Roles, {
     });
 
     try {
-      return Meteor.roles.insert({name: role, children: [], descendants: []});
+      return Meteor.roles.insert({name: role, children: []});
     } catch (e) {
       // (from Meteor accounts-base package, insertUserDoc func)
       // XXX string parsing sucks, maybe
@@ -83,7 +86,7 @@ _.extend(Roles, {
       if (!match) throw e;
       if (match[1].indexOf('$name') !== -1) {
         if (options.unlessExists) return null;
-        throw new Error("Role already exists.");
+        throw new Error("Role '" + role + "' already exists.");
       }
       throw e;
     }
@@ -104,7 +107,7 @@ _.extend(Roles, {
                               {fields: {_id: 1}});
 
     if (foundExistingUser) {
-      throw new Error("Role in use.");
+      throw new Error("Role '" + role + "' in use.");
     }
 
     Meteor.roles.remove({name: role});
@@ -142,6 +145,10 @@ _.extend(Roles, {
     }
 
     options.partition = options.partition || null;
+
+    options = _.defaults(options, {
+      _assigned: true
+    });
 
     _.each(users, function (user) {
       _.each(roles, function (role) {
@@ -182,6 +189,10 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    options = _.defaults(options, {
+      _assigned: true
+    });
+
     _.each(users, function (user) {
       if (_.isObject(user)) {
         id = user._id;
@@ -199,8 +210,70 @@ _.extend(Roles, {
     });
   },
 
-  _addUserToRole: function (user, role, options) {
+  _addUserToRole: function (user, roleName, options) {
+    var id,
+        role,
+        count;
 
+    if (_.isObject(user)) {
+      id = user._id;
+    }
+    else {
+      id = user;
+    }
+
+    if (!id) return;
+
+    role = Meteor.roles.findOne({name: roleName}, {fields: {children: 1}});
+
+    if (!role) {
+      throw new Error("Role '" + roleName + "' does not exist.");
+    }
+
+    // add new role if it is not already added
+    count = Meteor.users.update({
+      _id: id,
+      roles: {
+        $not: {
+          $elemMatch: {
+            role: roleName,
+            partition: options.partition
+          }
+        }
+      }
+
+    }, {
+      $addToSet: {
+        roles: {
+          role: roleName,
+          partition: options.partition,
+          assigned: options._assigned
+        }
+      }
+    });
+
+    if (options._assigned && !count) {
+      // a role has not been added, it maybe already exists,
+      // let's make sure it is set as assigned
+      Meteor.users.update({
+        _id: id,
+        roles: {
+          $elemMatch: {
+            role: roleName,
+            partition: options.partition
+          }
+        }
+
+      }, {
+        $set: {
+          'roles.$.assigned': true
+        }
+      });
+    }
+
+    _.each(role.children, function (child) {
+      Roles._addUserToRole(user, child.name, _.extend({}, options, {_assigned: false}));
+    });
   },
 
   /**
