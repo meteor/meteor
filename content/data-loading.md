@@ -70,10 +70,10 @@ Thanks to the guarantees provided by DDP and Meteor's accounts system, the above
 
 In the case of a logged-out in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
 
-Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network. In this guide, we recommend always using ES2015 keyword arguments rather than positional arguments. This has many benefits - you can easily add more arguments in the future, and it's easier to see what arguments you're passing in since they have names.
+Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network. 
 
 ```js
-Meteor.publish('Todos.inList', function({ listId }) {
+Meteor.publish('Todos.inList', function(listId) {
   // We need to check the `listId` is the type we expect
   new SimpleSchema({
     listId: {type: String}
@@ -86,7 +86,7 @@ Meteor.publish('Todos.inList', function({ listId }) {
 When we subscribe to this publication on the client, we can provide this argument via the `Meteor.subscribe()` call:
 
 ```js
-Meteor.subscribe('Todos.inList', { listId: list._id });
+Meteor.subscribe('Todos.inList', list._id);
 ```
 
 <h3 id="organization-publications">Organizing publications</h3>
@@ -112,9 +112,7 @@ Template.listsShowPage.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', {
-      listId: this.getListId()
-    });
+    this.subscribe('Todos.inList', this.getListId());
   });
 });
 ```
@@ -179,9 +177,7 @@ Template.listsShowPage.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', {
-      listId: this.getListId()
-    });
+    this.subscribe('Todos.inList', this.getListId());
   });
 });
 ```
@@ -226,7 +222,7 @@ In an infinite scroll publication, we simply need to add a new argument to our p
 ```js
 const MAX_TODOS = 1000;
 
-Meteor.publish('Todos.inList', function({ listId, limit }) {
+Meteor.publish('Todos.inList', function(listId, limit) {
   new SimpleSchema({
     listId: { type: String },
     limit: { type: Number }
@@ -250,10 +246,7 @@ Template.listsShowPage.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', {
-      listId: this.getListId()
-      limit: this.state.get('requestedTodos')
-    });
+    this.subscribe('Todos.inList', this.getListId(), this.state.get('requestedTodos'));
   });
 });```
 
@@ -346,7 +339,7 @@ It's common to need related sets of data from multiple collections on a given pa
 One way you might do this is to return more than one cursor from your publication function:
 
 ```js
-Meteor.publish('Todos.inList', function({ listId }) {
+Meteor.publish('Todos.inList', function(listId) {
   new SimpleSchema({
     listId: {type: String}
   }).validate({ listId });
@@ -377,7 +370,7 @@ However, we can write publications that are properly reactive to changes across 
 The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor.
 
 ```js
-Meteor.publishComposite('Todos.inList', function({ listId }) {
+Meteor.publishComposite('Todos.inList', function(listId) {
   new SimpleSchema({
     listId: {type: String}
   }).validate({ listId });
