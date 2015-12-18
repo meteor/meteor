@@ -121,23 +121,14 @@ run `inspector.js`.
 This will tell you the URL of the node inspector. If used with `--
 debug-brk`, the script will pause on the first line.
 
-In the case that your `self-test` spawns a test app, it is as well possible
-to debug the new `meteor` call. A debugger will be listening to the port after
-the one given in the `TOOL_NODE_FLAGS` environment variable.
-
-For example,
-```bash
-TOOL_NODE_FLAGS="--debug-brk=5858" ./meteor self-test 'custom minifier - devel vs prod'
-```
-will break on the first line of the test runner and expose a debugger on the
-port 5858. After the execution is continued, it will spawn a test application
-that will break in the first line, exposing the debugger in port 5859. The
-way to access the debuggers using `node-inspector` usually is opening the urls
-http://127.0.0.1:8080/debug?port=5858 and http://127.0.0.1:8080/debug?port=5858.
-
-Finally, if you want to set some break points, you could use the statement
-`debugger` in the place where you want to break the execution. Also, the
-`node-inspector` interface allows the set up of some breakpoints.
+In order to debug the test apps that `self-test` will spawn, the env
+variable `SELF_TEST_TOOL_NODE_FLAGS` could be used the same way
+`TOOL_NODE_FLAGS` is used. If you are setting the env variable
+`SELF_TEST_TOOL_NODE_FLAGS` with `TOOL_NODE_FLAGS`, consider specifying a
+custom port, as they could collide trying to listen to the same port.
+To set a custom port, you could set the variable in the followind manner
+`SELF_TEST_TOOL_NODE_FLAGS="--debug-brk=5859"` and the debugger will
+listen to the port 5859 and not the default 5858.
 
 
 ## Development
