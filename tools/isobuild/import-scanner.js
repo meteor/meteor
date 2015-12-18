@@ -15,12 +15,24 @@ import {
   convertToPosixPath,
 } from "../fs/files.js";
 
+// Default handlers for well-known file extensions.
+const extensions = {
+  ".js"(data) {
+    return data;
+  },
+
+  ".json"(data) {
+    return "module.exports = " +
+      JSON.stringify(JSON.parse(data), null, 2) +
+      ";\n";
+  }
+};
+
 export default class ImportScanner {
   constructor({
     name,
     bundleArch,
     sourceRoot,
-    extensions = [".js", ".json"],
     usedPackageNames = {},
     nodeModulesPath,
   }) {
@@ -33,7 +45,6 @@ export default class ImportScanner {
     this.nodeModulesPath = nodeModulesPath;
     this.absPathToOutputIndex = {};
     this.outputFiles = [];
-    this.extensions = extensions;
   }
 
   addInputFiles(files) {
@@ -48,7 +59,7 @@ export default class ImportScanner {
       // entry points.
       file.imported = ! file.lazy;
 
-      file.installPath = this._getInstallInfo(absPath).path;
+      file.installPath = this._getInstallPath(absPath);
 
       if (has(this.absPathToOutputIndex, absPath)) {
         const index = this.absPathToOutputIndex[absPath];
@@ -74,6 +85,12 @@ export default class ImportScanner {
   _isFileLazy(file) {
     if (has(file, "lazy")) {
       return !! file.lazy;
+    }
+
+    if (file.sourcePath.endsWith(".json")) {
+      // JSON files have no side effects, so there is no reason for them
+      // ever to be evaluated eagerly.
+      return true;
     }
 
     // If file.lazy was not previously defined, mark the file lazy if it
@@ -107,29 +124,30 @@ export default class ImportScanner {
         return;
       }
 
-      const installInfo = this._getInstallInfo(absImportedPath);
-      if (! installInfo) {
-        // The given path cannot be installed on this architecture.
+      if (! this._hasKnownExtension(absImportedPath)) {
+        // The _readModule method provides hardcoded support for files
+        // with known extensions, but any other type of file must be
+        // ignored at this point, because it was not in the set of input
+        // files and therefore must not have been processed by a compiler
+        // plugin for the current architecture (this.bundleArch).
         return;
       }
 
-      if (! installInfo.inNodeModules) {
-        // At this point, if the file is not in a node_modules directory,
-        // and it was not part of the set of input files, then we can
-        // conclude there was no JS output for it on this architecture, so
-        // we should not try to add it to the bundle.
+      const installPath = this._getInstallPath(absImportedPath);
+      if (! installPath) {
+        // The given path cannot be installed on this architecture.
         return;
       }
 
       var relImportedPath = pathRelative(this.sourceRoot, absImportedPath);
 
-      const depData = readFile(absImportedPath);
+      const depData = this._readModule(absImportedPath);
       const depFile = {
         type: "js", // TODO Is this correct?
         data: depData,
         sourcePath: relImportedPath,
-        installPath: installInfo.path,
-        servePath: installInfo.path,
+        installPath,
+        servePath: installPath,
         hash: sha1(depData),
         lazy: true,
         imported: true,
@@ -145,34 +163,45 @@ export default class ImportScanner {
     return deps;
   }
 
-  // Returns a { installPath, inNodeModules } record indicating where to
-  // install the given file via meteorInstall, and whether it resides in a
-  // node_modules directory. May return undefined if the file should not
-  // be installed on the current architecture.
-  _getInstallInfo(absPath) {
-    const info =
-      this._getNodeModulesInstallInfo(absPath) ||
-      this._getSourceRootInstallInfo(absPath);
+  _readModule(absPath) {
+    let data = readFile(absPath, "utf8");
 
-    if (! info) {
+    // Same logic/comment as stripBOM in node/lib/module.js:
+    // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
+    // because the buffer-to-string conversion in `fs.readFileSync()`
+    // translates it to FEFF, the UTF-16 BOM.
+    if (data.charCodeAt(0) === 0xfeff) {
+      data = data.slice(1);
+    }
+
+    return extensions[pathExtname(absPath).toLowerCase()](data);
+  }
+
+  // Returns a relative path indicating where to install the given file
+  // via meteorInstall. May return undefined if the file should not be
+  // installed on the current architecture.
+  _getInstallPath(absPath) {
+    let path =
+      this._getNodeModulesInstallPath(absPath) ||
+      this._getSourceRootInstallPath(absPath);
+
+    if (! path) {
       return;
     }
 
     if (this.name) {
-      // If we're bundling a package, prefix info.path with
+      // If we're bundling a package, prefix path with
       // node_modules/<package name>/.
-      info.path = pathJoin("node_modules", this.name, info.path);
+      path = pathJoin("node_modules", this.name, path);
     } else {
-      // If we're bundling an app, prefix info.path with app/.
-      info.path = pathJoin("app", info.path);
+      // If we're bundling an app, prefix path with app/.
+      path = pathJoin("app", path);
     }
 
-    // Note that info.inNodeModules may be false even if info.path now
-    // contains a node_modules directory.
-    return info;
+    return path;
   }
 
-  _getNodeModulesInstallInfo(absPath) {
+  _getNodeModulesInstallPath(absPath) {
     if (this.nodeModulesPath) {
       const relPathWithinNodeModules =
         pathRelative(this.nodeModulesPath, absPath);
@@ -188,17 +217,13 @@ export default class ImportScanner {
         return;
       }
 
-      return {
-        // Install the module into the local node_modules directory within
-        // this app or package.
-        path: pathJoin("node_modules", relPathWithinNodeModules),
-        // The original path was contained by a node_modules directory.
-        inNodeModules: true,
-      };
+      // Install the module into the local node_modules directory within
+      // this app or package.
+      return pathJoin("node_modules", relPathWithinNodeModules);
     }
   }
 
-  _getSourceRootInstallInfo(absPath) {
+  _getSourceRootInstallPath(absPath) {
     const installPath = pathRelative(this.sourceRoot, absPath);
 
     if (installPath.startsWith("..")) {
@@ -237,21 +262,15 @@ export default class ImportScanner {
 
         // Accept any file within a node_modules directory if it has a
         // known file extension.
-        return {
-          path: installPath,
-          inNodeModules: true,
-        };
+        return installPath;
       }
     }
 
-    return {
-      path: installPath,
-      inNodeModules: false,
-    };
+    return installPath;
   }
 
   _hasKnownExtension(path) {
-    return this.extensions.indexOf(pathExtname(path)) >= 0;
+    return has(extensions, pathExtname(path).toLowerCase());
   }
 
   _splitPath(path) {
@@ -284,11 +303,13 @@ export default class ImportScanner {
       return exactResult;
     }
 
-    for (let ext of this.extensions) {
-      const pathWithExt = path + ext;
-      const stat = statOrNull(pathWithExt);
-      if (stat) {
-        return { path: pathWithExt, stat };
+    for (let ext in extensions) {
+      if (has(extensions, ext)) {
+        const pathWithExt = path + ext;
+        const stat = statOrNull(pathWithExt);
+        if (stat) {
+          return { path: pathWithExt, stat };
+        }
       }
     }
 
@@ -378,7 +399,7 @@ export default class ImportScanner {
         data,
         deps: [], // Avoid accidentally re-scanning this file.
         sourcePath: relPkgJsonPath,
-        installPath: this._getInstallInfo(pkgJsonPath).path,
+        installPath: this._getInstallPath(pkgJsonPath),
         servePath: relPkgJsonPath,
         hash: sha1(data),
         lazy: true,
