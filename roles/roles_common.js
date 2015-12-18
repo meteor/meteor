@@ -67,9 +67,7 @@ _.extend(Roles, {
 
     options = options || {};
 
-    if (!role || !_.isString(role) || role.trim() !== role) {
-      throw new Error("Invalid role name '" + role + "'.");
-    }
+    Roles._checkRoleName(role);
 
     options = _.defaults(options, {
       unlessExists: false
@@ -100,7 +98,7 @@ _.extend(Roles, {
    * @param {String} role Name of role
    */
   deleteRole: function (role) {
-    if (!role) return;
+    Roles._checkRoleName(role);
 
     var foundExistingUser = Meteor.users.findOne(
                               {'roles.role': role},
@@ -215,6 +213,8 @@ _.extend(Roles, {
         role,
         count;
 
+    Roles._checkRoleName(roleName);
+
     if (_.isObject(user)) {
       id = user._id;
     }
@@ -320,6 +320,8 @@ _.extend(Roles, {
     var id,
         role,
         update;
+
+    Roles._checkRoleName(roleName);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -642,6 +644,12 @@ _.extend(Roles, {
     return function (userRole) {
       return !!userRole.assigned;
     };
+  },
+
+  _checkRoleName: function (roleName) {
+    if (!roleName || !_.isString(roleName) || roleName.trim() !== roleName) {
+      throw new Error("Invalid role name '" + roleName + "'.");
+    }
   }
 
 });  // end _.extend(Roles ...)
