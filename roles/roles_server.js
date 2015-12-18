@@ -121,7 +121,7 @@ _.extend(Roles, {
   _forwardMigrate: function (updateUser) {
     updateUser = updateUser || Roles._defaultUpdateUser;
 
-    // TODO: Migrate rules collection.
+    Meteor.roles.update({children: {$exists: false}}, {$set: {children: []}}, {multi: true});
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isNewField(user.roles)) {
@@ -133,7 +133,7 @@ _.extend(Roles, {
   _backwardMigrate: function (updateUser, usingGroups) {
     updateUser = updateUser || Roles._defaultUpdateUser;
 
-    // TODO: Migrate rules collection.
+    Meteor.roles.update({}, {$unset: {children: ''}}, {multi: true});
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isOldField(user.roles)) {
