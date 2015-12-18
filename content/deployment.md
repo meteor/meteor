@@ -178,13 +178,13 @@ In order for galaxy to work with your custom domain (`your-app.com` in this case
 
 You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
 
-[ss]
+<img src="images/galaxy-org-dashboard.png">
 
 If you are following our advice, you'll probably want to [setup SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain. The key things here are to add the `force-ssl` package and to use the Galaxy UI to add your SSL certificate.
 
 Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
 
-[ss]
+<img src="images/galaxy-scaling.png">
 
 <h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
 
@@ -214,7 +214,7 @@ It's important to understand what happens during a deployment, especially if you
 
 Depending on where your app is deployed and the number of application processes you have running, things will be different, but if you are deployed in a scaled way to Galaxy, there'll be a period where a number of containers are running the old version, and a number the new, as users are migrated smoothly across to the new version of your app.
 
-[ss]
+<img src="images/galaxy-deploying.png">
 
 If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the [collections article](collections.html#migrating).
 
@@ -270,11 +270,11 @@ Although a host of tools exist to monitor the performance of HTTP, request-respo
 
 [Galaxy](#galaxy) offers turnkey Meteor hosting and provides tools that are useful to debug the current and past state of your application. CPU and Memory load graphs in combination with connected user counts can be vital to determining if your setup is handling the current load (or if you need more containers), or if there's some specific user action that's causing disproportionate load (if they don't seem to be correlated):
 
-[ss]
+<img src="images/galaxy-metrics.png">
 
 Galaxy's UI provides a detailed logging system, which can be invaluable to determine which action it is causing that extra load, or to generally debug other application issues:
 
-[ss]
+<img src="images/galaxy-logs.png">
 
 <h3 id="kadira">Kadira</h3>
 

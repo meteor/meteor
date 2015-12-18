@@ -79,11 +79,9 @@ A styleguide consists of two parts:
 
 For instance, in Galaxy, we have a component styleguide that renders each reusable component either one specification at a time, or with all specifications at once.
 
-[XXX screenshot needed]
+<img src="images/galaxy-styleguide.png">
 
 Such rendering enables very quick development of visual aspects of the component in all possible states. Typically in a complex application, it can be quite difficult to achieve certain states of components purely by "using" the application. For example, in Galaxy, the component screen enters quite a complex state if two deploys to the same application are happening simutaneously. This is a very hard to state to reach for a extended period of time if you are simply using the application!
-
-[XXX screenshot needed]
 
 You can learn more about this technique from [this talk](https://www.youtube.com/watch?v=bTQOvYy_Z3w&app=desktop) by Phil Cockfield from Respondly.
 
@@ -202,7 +200,7 @@ You can take the above UI a step further by showing placeholders whilst you wait
 
 For instance, in Galaxy, while you wait for your organization's list of applications to load, you see a loading state indicating what you might see.
 
-[SS of Galaxy]
+<img src="images/galaxy-placeholders.png">
 
 <h4 id="styleguide-and-loading">Using the styleguide to prototype loading state</h4>
 
@@ -243,7 +241,7 @@ We can now distinguish between the 5 states above based on these flags:
 
 You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component styleguide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our styleguide for each of the lists of our app and we can ensure all work as expected and appear correctly:
 
-[XXX screenshot needed]
+<image src="images/galaxy-styleguide-list.png">
 
 <h4 id="pagination-controller">A pagination "controller" pattern</h4>
 
@@ -412,8 +410,7 @@ Thanks to Meteor's automatic handling of optimistic UI, usually if a method unex
 
 However, it's a terrible UX to simply jump the user to an unexpected state without explaining what's happened. We used a `alert()` above, which is a pretty poor option, but gets the job done. One better approach is to indicate changes via a "flash notification", which is a UI element that's displayed "out-of-band", typically in the top right of the screen, given the user *some* indication of what's happened.
 
-[ss of galaxy]
-
+<img src="images/galaxy-flash-notification.png">
 
 <h2 id="animation">Animation</h2>
 
