@@ -162,67 +162,9 @@ In Meteor, it's often less of a problem doing this than it would be in a typical
 
 However, given that MongoDB prior to version 3.2 doesn't support queries over multiple collections ("joins"), we typically end up having to denormalize some data back onto the parent collection. Denormalization is the practice of storing the same piece of information in the database multiple times (as opposed to a non-redundant "normal" form). MongoDB is a database where denormalizing is encouraged, and thus optimized for this practice.
 
-In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do as we'll see.
+In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do as we'll see in the section on [abstracting denormalizers](#abstracting-denormalizers) below.
 
 Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it might make sense to denormalize `todo.userId` also.
-
-<h3 id="abstracting-denormalizers">Abstracting denormalizers</h3>
-
-To properly abstract the logic of a denormalizer (which may need to happen on various mutators of more than one collection), it's sensible to define the logic of the denormalizer in one place, and "hook" it into the mutator with a single line of code (with the technique detailed in the [hooks](#hooks) section below). The advantage of this approach is that although the logic is in a single spot rather than spread over many files, you can still examine the code for one of the collections and fully understand what happens on each update.
-
-In the Todos example app, we build a `incompleteCountDenormalizer` to abstract the counting of incomplete todos on the lists. This code needs to run whenever a todo item is inserted, updated (it could be checked or unchecked), or removed. The code looks like:
-
-```js
-Todos.incompleteCountDenormalizer = {
-  _updateList(listId) {
-    const incompleteCount = Todos.find({
-      listId,
-      checked: false
-    }).count();
-
-    Lists.update(listId, {$set: {incompleteCount}});
-  },
-  _updateListFromTodos(selector) {
-    Todos.find(selector, {fields: {listId: 1}}).forEach(todo => {
-      this._updateList(todo.listId);
-    });
-  },
-  afterInsertTodo(todo) {
-    this._updateList(todo.listId);
-  },
-  afterUpdateTodo(selector, modifier) {
-    // We only support very limited operations on todos
-    check(modifier, {$set: Object});
-
-    // We can only deal with $set modifiers, but that's all we do in this app
-    if (_.has(modifier.$set, 'checked')) {
-      this._updateListFromTodos(selector);
-    }
-  },
-  afterRemoveTodos(todos) {
-    todos.forEach(todo => this._updateList(todo.listId));
-  }
-};
-```
-
-We are then able to wire in the denormalizer into the mutations of the `Todos` collection with code like:
-
-```js
-class TodosCollection extends Mongo.Collection {
-  insert(doc, callback) {
-    doc.createdAt = doc.createdAt || new Date();
-    const result = super(doc, callback);
-    Todos.incompleteCountDenormalizer.afterInsertTodo(doc);
-    return result;
-  }
-}
-```
-
-Note that we've just built the code we actually use in the application---we don't deal with all conceptual potential ways the todo count on a list could change (for instance, when you update a todo, if you changed the `listId`, it would need to change the `incompleteCount` of *two* lists---however this doesn't actually happen in the application).
-
-Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on just dealing with the modifiers we know we'll see in our app. If even this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
-
-It could make sense for packages to exist to completely abstract some common denormalization techniques and actually attempt to deal with all possible modifications. If you write such a package, please let us know!
 
 <h3 id="designing-for-future">Designing for the future</h3>
 
@@ -301,9 +243,67 @@ This technique has a couple of disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
-A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We can [saw above](#abstracting-denormalizers) an example of how we do that in the `list.incompleteCount` denormalizer.
+A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We'll see an example of that below.
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
+
+<h3 id="abstracting-denormalizers">Abstracting denormalizers</h3>
+
+To properly abstract the logic of a denormalizer (which may need to happen on various mutators of more than one collection), it's sensible to define the logic of the denormalizer in one place, and "hook" it into the mutator with a single line of code. The advantage of this approach is that although the logic is in a single spot rather than spread over many files, you can still examine the code for one of the collections and fully understand what happens on each update.
+
+In the Todos example app, we build a `incompleteCountDenormalizer` to abstract the counting of incomplete todos on the lists. This code needs to run whenever a todo item is inserted, updated (it could be checked or unchecked), or removed. The code looks like:
+
+```js
+Todos.incompleteCountDenormalizer = {
+  _updateList(listId) {
+    // Recalculate the correct incomplete count direct from MongoDB
+    const incompleteCount = Todos.find({
+      listId,
+      checked: false
+    }).count();
+
+    Lists.update(listId, {$set: {incompleteCount}});
+  },
+  afterInsertTodo(todo) {
+    this._updateList(todo.listId);
+  },
+  afterUpdateTodo(selector, modifier) {
+    // We only support very limited operations on todos
+    check(modifier, {$set: Object});
+
+    // We can only deal with $set modifiers, but that's all we do in this app
+    if (_.has(modifier.$set, 'checked')) {
+      Todos.find(selector, {fields: {listId: 1}}).forEach(todo => {
+        this._updateList(todo.listId);
+      });
+    }
+  },
+  // Here we need to take the list of todos being removed, selected *before* the update
+  // because otherwise we can't figure out the relevant list id(s) (if the todo has been deleted)
+  afterRemoveTodos(todos) {
+    todos.forEach(todo => this._updateList(todo.listId));
+  }
+};
+```
+
+We are then able to wire in the denormalizer into the mutations of the `Todos` collection with code like:
+
+```js
+class TodosCollection extends Mongo.Collection {
+  insert(doc, callback) {
+    doc.createdAt = doc.createdAt || new Date();
+    const result = super(doc, callback);
+    Todos.incompleteCountDenormalizer.afterInsertTodo(doc);
+    return result;
+  }
+}
+```
+
+Note that we've just built the code we actually use in the application---we don't deal with all conceptual potential ways the todo count on a list could change (for instance, when you update a todo, if you changed the `listId`, it would need to change the `incompleteCount` of *two* lists---however this doesn't actually happen in the application).
+
+Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on just dealing with the modifiers we know we'll see in our app. If even this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
+
+It could make sense for packages to exist to completely abstract some common denormalization techniques and actually attempt to deal with all possible modifications. If you write such a package, please let us know!
 
 <h2 id="migrations">Migrating to a new schema</h2>
 
