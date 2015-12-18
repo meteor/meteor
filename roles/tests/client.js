@@ -8,21 +8,39 @@
   users = {
     'eve': {
       _id: 'eve',
-      roles: ['admin', 'editor']
+      roles: [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'editor',
+        partition: null,
+        assigned: true
+      }]
     },
     'bob': {
       _id: 'bob',
-      roles: {
-        'group1': ['user'],
-        'group2': ['editor']
-      }
+      roles: [{
+        role: 'user',
+        partition: 'group1',
+        assigned: true
+      }, {
+        role: 'editor',
+        partition: 'group2',
+        assigned: true
+      }]
     },
     'joe': {
       _id: 'joe',
-      roles: {
-        '__global_roles__': ['admin'],
-        'group1': ['editor']
-      }
+      roles: [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'editor',
+        partition: 'group1',
+        assigned: true
+      }]
     }
   };
 
@@ -97,13 +115,6 @@
       testUser(test, 'joe', ['admin']);
       testUser(test, 'joe', ['admin'], Roles.GLOBAL_GROUP);
       testUser(test, 'joe', ['admin', 'editor'], 'group1');
-    });
-
-  Tinytest.add(
-    'roles - can get all roles for user by group with periods in name', 
-    function (test) {
-      Roles.addUsersToRoles(users.joe, ['admin'], 'example.k12.va.us');
-      test.equal(Roles.getRolesForUser(users.joe, 'example.k12.va.us'), ['admin']);
     });
 
 }());
