@@ -127,7 +127,7 @@ _.extend(Roles, {
    *
    * @method addUsersToRoles
    * @param {Array|String} users User id(s) or object(s) with an _id field.
-   * @param {Array|String} roles Name(s) of roles/permissions to add users to.
+   * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
    */
   addUsersToRoles: function (users, roles, options) {
@@ -158,7 +158,7 @@ _.extend(Roles, {
   },
 
   /**
-   * Set a users roles/permissions.
+   * Set users' roles.
    *
    * @example
    *     Roles.setUserRoles(userId, 'admin')
@@ -168,7 +168,7 @@ _.extend(Roles, {
    *
    * @method setUserRoles
    * @param {Array|String} users User id(s) or object(s) with an _id field.
-   * @param {Array|String} roles Name(s) of roles/permissions to add users to.
+   * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
    * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
    */
   setUserRoles: function (users, roles, options) {
@@ -286,7 +286,7 @@ _.extend(Roles, {
    *
    * @method removeUsersFromRoles
    * @param {Array|String} users User id(s) or object(s) with an _id field.
-   * @param {Array|String} roles Name(s) of roles to add users to.
+   * @param {Array|String} roles Name(s) of roles to add users to. Roles do not have to exist.
    * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
    */
   removeUsersFromRoles: function (users, roles, options) {
@@ -330,12 +330,6 @@ _.extend(Roles, {
 
     if (!id) return;
 
-    role = Meteor.roles.findOne({name: roleName}, {fields: {children: 1}});
-
-    if (!role) {
-      throw new Error("Role '" + roleName + "' does not exist.");
-    }
-
     update = {
       $pull: {
         roles: {
@@ -351,7 +345,13 @@ _.extend(Roles, {
       update.$pull.roles.$elemMatch.assigned = true;
     }
 
+    // we try to remove the role in every case, whether the role really exists or not
     Meteor.users.update(id, update);
+
+    role = Meteor.roles.findOne({name: roleName}, {fields: {children: 1}});
+
+    // role does not exist, we do not anything more
+    if (!role) return;
 
     _.each(role.children, function (child) {
       // if a child role has been assigned explicitly, we do not remove it
@@ -360,7 +360,7 @@ _.extend(Roles, {
   },
 
   /**
-   * Check if user has specified permissions/roles.
+   * Check if user has specified roles.
    *
    * @example
    *     // global roles
@@ -380,8 +380,9 @@ _.extend(Roles, {
    * @method userIsInRole
    * @param {String|Object} user User Id or actual user object.
    * @param {String|Array} roles Name of role/permission or Array of
-   *                             roles/permissions to check against. If array,
+   *                             roles to check against. If array,
    *                             will return true if user is in _any_ role.
+   *                             Roles do not have to exist.
    * @param {String|Object} [options] Optional. Name of partition. If supplied, limits check
    *                                  to just that partition.
    *                                  The user's global roles will always be checked
@@ -519,6 +520,7 @@ _.extend(Roles, {
    * @param {Array|String} roles Name of role/permission. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.
+   *                             Roles do not have to exist.
    * @param {String|Object} [options] Optional. Name of partition to restrict roles to.
    *                                  User's global roles will also be checked.
    *                                  Alternatively, options.
