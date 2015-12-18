@@ -286,11 +286,16 @@ When you visit the Kadira application, you can view current and past behavior of
 
 Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscription*. Kadira includes tools to help you discover which of your methods and publications are *slow* and *resource intensive*.
 
-[ss]
+<img src="images/kadira-method-latency">
 
-In the above SS you can see.. You can also use the "traces" section to discover particular cases of the method call that are particular slow:
+In the above screenshot you can see the response time breakdown of the various methods commonly called by the Atmosphere application. The median time of 56ms and 99th percentile time of 200ms seems pretty reasonable, and doesn't seem like too much of a concern
 
-[ss]
+You can also use the "traces" section to discover particular cases of the method call that are particular slow:
+
+<img src="images/kadira-method-trace">
+
+In the above screenshot we're looking at a slower example of a method call (which takes 214ms), which, when we drill in further we see is mostly taken up waiting on other actions on the user's connection (principly waiting on the `searches/top` and `counts` publications). So we could consider looking to speed up the initial time of those subscriptions as they are slowing down searches a little in some cases.
+
 
 <h4 id="kadira-livequery">Livequery Monitoring</h4>
 
@@ -298,9 +303,9 @@ A key performance characteristic of Meteor is driven by the behavior of livequer
 
 If the publication is used by a lot of users, or there are a lot of changes to be compared, then these livequery observers can do a lot of work. So it's immensely useful that Kadira can tell you some statistics about your livequery usage:
 
-[ss]
+<img src="images/kadira-observer-usage">
 
-In this SS we can see...
+In this screenshot we can see that observers are fairly steadily created and destroyed, with a pretty low amount of reuse over time, although in general they don't survive for all that long. This would be consistent with the fact that we are looking at the `package` publication of Atmosphere which is started everytime a user visits a particular package's page. The behaviour is more or less what we would expect so we probably wouldn't be too concerned by this information.
 
 <h2 id="seo">Enabling SEO</h2>
 
