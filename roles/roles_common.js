@@ -305,6 +305,10 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    options = _.defaults(options, {
+      _onlyAssigned: true
+    });
+
     _.each(users, function (user) {
       _.each(roles, function (role) {
         Roles._removeUserFromRole(user, role, options);
@@ -312,8 +316,47 @@ _.extend(Roles, {
     });
   },
 
-  _removeUserFromRole: function (user, role, options) {
+  _removeUserFromRole: function (user, roleName, options) {
+    var id,
+        role,
+        update;
 
+    if (_.isObject(user)) {
+      id = user._id;
+    }
+    else {
+      id = user;
+    }
+
+    if (!id) return;
+
+    role = Meteor.roles.findOne({name: roleName}, {fields: {children: 1}});
+
+    if (!role) {
+      throw new Error("Role '" + roleName + "' does not exist.");
+    }
+
+    update = {
+      $pull: {
+        roles: {
+          $elemMatch: {
+            role: roleName,
+            partition: options.partition
+          }
+        }
+      }
+    };
+
+    if (options._onlyAssigned) {
+      update.$pull.roles.$elemMatch.assigned = true;
+    }
+
+    Meteor.users.update(id, update);
+
+    _.each(role.children, function (child) {
+      // if a child role has been assigned explicitly, we do not remove it
+      Roles._removeUserFromRole(user, child.name, _.extend({}, options, {_onlyAssigned: true}));
+    });
   },
 
   /**
