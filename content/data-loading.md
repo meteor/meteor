@@ -129,9 +129,11 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 Subscribing to data puts it in your client-side collection. To use the data in your user interface, you need to query your client-side collection. There are a few important rules of thumb when doing this.
 
-1. Always use the same query to fetch the data from the collection that you use to publish it.
+1. Always use specific queries to fetch data.
 
-  If you don't do this, then you open yourself up to problems if another subscription pushes data into the same collection. Although you may be confident that this is not the case, in an actively developed application, it's impossible to anticipate what may change in the future and this can be a source of hard to understand bugs.
+If you're publishing a subset of your data, it might be tempting to simply query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
+
+But if you do this, then you open yourself up to problems if another subscription pushes data into the same collection, since the data returned by `Lists.find()` might not be what you expected anymore. In an actively developed application, it's often hard to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
   Also, when changing between subscriptions, there is a brief period where both subscriptions are loaded (see [Publication behavior when changing arguments](#publication-behavior-with-arguments) below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
 
