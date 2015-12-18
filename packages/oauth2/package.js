@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth2-based login services",
-  version: "1.1.6-modules.0"
+  version: "1.1.6-modules.1"
 });
 
 Package.onUse(function (api) {
