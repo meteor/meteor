@@ -319,14 +319,9 @@ Migrations.migrateTo('latest');
 
 If the migration logs anything to the console, you'll see it in the terminal window that is running the Meteor server.
 
-To run a migration against your production database, run your app locally in production mode (with production settings, including database settings), with the `MIGRATION` environment variable set:
+To run a migration against your production database, run your app locally in production mode (with production settings and environment variables, including database settings), and use the Meteor shell in the same way. What this does is run the `up()` function of all outstanding migrations, against your production database. In our case, it should ensure all lists have a `todoCount` field set.
 
-```bash
-MIGRATE=latest meteor --production --settings path/to/production/settings.json
-```
-
-What this does is run the `up()` function of all outstanding migrations, against your production database. In our case, it should ensure all lists have a `todoCount` field set.
-
+**Note that you should always take a database backup before running any migration!**
 
 <h3 id="breaking-changes">Breaking schema changes</h3>
 
@@ -340,9 +335,26 @@ A better approach is a multi-stage deployment. The basic idea is that:
 2. Run the migration. At this point you should be confident that all lists have a `todoCount`.
 3. Deploy the new code that relies on the new schema and no longer knows how to deal with the old schema. Now we are safe to rely on `list.todoCount` in our UI.
 
-Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and set `MIGRATION=x` to migrate _back_ to version `x`.
+Another thing to be aware of, especially with such multi-stage deploys, is that being prepared to rollback is important! For this reason, the migrations package allows you to specify a `down()` function and call `Migrations.migrateTo(x)` to migrate _back_ to version `x`. 
+
+So if we wanted to reverse our migration above, we'd run
+```js
+// The "0" migration is the unmigrated (before the first migration) state
+Migrations.migrateTo(0);
+```
 
 If you find you need to roll your code version back, you'll need to be careful about the data, and step carefully through your deployment steps in reverse.
+
+<h3 id="migration-caveats">Caveats</h3>
+Some aspects of the migration strategy outlined above are possibly not the most ideal way to do things (although perhaps appropriate in many situations). Here are some other things to be aware of:
+
+1. Usually it is better to not rely on your application code in migrations (because the application will change over time, and the migrations should not). For instance, having your migrations pass through your Collection2 collections (and thus check schemas, set autovalues etc) is likely to break them over time as your schemas change over time.
+
+  One way to avoid this problem is simply to not run old migrations on your database. This is a little bit limiting but can be made to work.
+
+2. Running the migration on your local machine will probably make it take a lot longer as your machine isn't as close to the production database as it could be. 
+
+Deploying a special "migration application" to the same hardware as your real application is probably the best way to solve the above issues. It'd be amazing if such an application kept track of which migrations ran when, with logs and provided a UI to examine and run them. Perhaps a boilerplate application to do so could be built (if you do so, please let us know and we'll link to it here!).
 
 <h2 id="associations">Associations between collections</h2>
 
