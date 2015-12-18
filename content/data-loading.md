@@ -282,7 +282,7 @@ Usually such state is stored in a *global singleton* object which we can call a 
 
 In Meteor, it's best to make stores *reactive data* sources, as that way they tie most naturally into the rest of the ecosystem. There are a few different packages you can use for stores.
 
-If the store is single-dimensional, you can probably use a `ReactiveVar` to store it (provided by the `reactive-var` package). A `ReactiveVar` has two properties, `get()` and `set()`:
+If the store is single-dimensional, you can probably use a `ReactiveVar` to store it (provided by the [`reactive-var`](https://atmopsherejs.com/meteor/reactive-var) package). A `ReactiveVar` has two properties, `get()` and `set()`:
 
 ```js
 DocumentHidden = new ReactiveVar(document.hidden);
@@ -291,7 +291,7 @@ $(window).on('visibilitychange', (event) => {
 });
 ```
 
-If the store is multi-dimensional, you may want to use a `ReactiveDict` (from the `reactive-dict` package):
+If the store is multi-dimensional, you may want to use a `ReactiveDict` (from the [`reactive-dict`](https://atmopsherejs.com/meteor/reactive-dict) package):
 
 ```js
 const $window = $(window);
@@ -302,7 +302,8 @@ function getDimensions() {
   };
 };
 
-WindowSize = new ReactiveDict(getDimensions());
+WindowSize = new ReactiveDict();
+WindowSize.set(getDimensions());
 $window.on('resize', () => {
   WindowSize.set(getDimensions());
 });
@@ -310,7 +311,7 @@ $window.on('resize', () => {
 
 The advantage of a `ReactiveDict` is you can access each property individually (`WindowSize.get('width')`), and the dict will diff the field and track changes on it individually (so your template will re-render less often for instance).
 
-If you need to query the store, or store many related items, it's probably a good idea to use a Local Collection (see the [Collections Article](collections.html).
+If you need to query the store, or store many related items, it's probably a good idea to use a Local Collection (see the [Collections Article](collections.html#local-collections)).
 
 <h3 id="accessing-stores">Accessing stores</h3>
 
@@ -352,8 +353,8 @@ Meteor.publish('Todos.inList', function(listId) {
       Todos.find({listId})
     ];
   } else {
-    // The list doesn't exist, or the user isn't allowed to see it. In either case,
-    //   make it appear like there is no list.
+    // The list doesn't exist, or the user isn't allowed to see it.
+    // In either case, make it appear like there is no list.
     return this.ready();
   }
 });
@@ -367,7 +368,7 @@ So in the case above, if a user subscribes to a list that is later made private 
 
 However, we can write publications that are properly reactive to changes across collections. To do this, we use the [`reywood:publish-composite`](https://atmospherejs.com/reywood/publish-composite) package.
 
-The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor.
+The way this package works is to first establish a cursor on one collection, and then explicitly set up a second level of cursors on a second collection with the results of the first cursor. The package uses a query observer behind the scenes to trigger the subscription to change and queries to re-run whenever the source data changes.
 
 ```js
 Meteor.publishComposite('Todos.inList', function(listId) {
@@ -419,6 +420,7 @@ Meteor.publish('Todos.admin.inList', function({ listId }) {
   const user = Meteor.users.findOne(this.userId);
 
   if (user && user.admin) {
+    // We don't need to worry about the list.userId changing this time
     return [
       Lists.find(listId),
       Todos.find({listId})
@@ -444,6 +446,7 @@ Meteor.publishComposite('Todos.admin.inList', function(listId) {
     },
     children: [{
       find() {
+        // We don't need to worry about the list.userId changing this time
         return [
           Lists.find(listId),
           Todos.find({listId})
@@ -486,7 +489,7 @@ Meteor.publish('custom-publication', function() {
 
 From the client's perspective, data published like this doesn't look any different -- there's actually no way for the client to know the difference as the DDP messages are the same. So even if you are connecting to, and mirroring, some esoteric data source, on the client it'll appear like any other Mongo collection.
 
-One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication.
+One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication, to achieve an optimistic user experience.
 
 
 <h2 id="loading-from-rest">Loading data from a REST endpoint with a publication</h2>
@@ -530,7 +533,7 @@ Meteor.publish('polled-publication', function() {
 });
 ```
 
-Things can get more complicated; for instance you may want to deal with documents being removed, or share the polling between multiple users (in a case where the data being polled isn't private to that user).
+Things can get more complicated; for instance you may want to deal with documents being removed, or share the work of polling between multiple users (in a case where the data being polled isn't private to that user), rather than doing the exact same poll for each interested user.
 
 
 <h2 id="publications-as-rest">Accessing a publication as a REST endpoint</h2>
