@@ -199,7 +199,7 @@ _.extend(Roles, {
         id = user;
       }
       // we first clear all roles for the user
-      Meteor.users.update(id, {$set: {roles: []}});
+      Meteor.users.update(id, {$pull: {roles: {partition: options.partition}}});
 
       // and then add all
       _.each(roles, function (role) {
