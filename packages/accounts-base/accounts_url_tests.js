@@ -1,4 +1,4 @@
-import {AccountsTest} from "accounts-base";
+import {AccountsTest} from "meteor/accounts-base";
 
 Tinytest.add("accounts - parse urls for accounts-password",
   function (test) {

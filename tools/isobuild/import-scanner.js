@@ -203,10 +203,7 @@ export default class ImportScanner {
     if (this.name) {
       // If we're bundling a package, prefix path with
       // node_modules/<package name>/.
-      path = pathJoin("node_modules", this.name, path);
-    } else {
-      // If we're bundling an app, prefix path with app/.
-      path = pathJoin("app", path);
+      path = pathJoin("node_modules", "meteor", this.name, path);
     }
 
     return path;
@@ -372,9 +369,10 @@ export default class ImportScanner {
   }
 
   _getMeteorPackageNameFromId(id) {
-    const possiblePackageName = id.split("/", 1)[0];
-    if (has(this.usedPackageNames, possiblePackageName)) {
-      return possiblePackageName;
+    const [meteor, packageName] = id.split("/", 2);
+    if (meteor === "meteor" &&
+        has(this.usedPackageNames, packageName)) {
+      return packageName;
     }
   }
 
@@ -436,7 +434,7 @@ export default class ImportScanner {
   // directories, npm never takes advantage of this possibility, which
   // conveniently allows Meteor to install files there without conflict.
   _addMeteorPackageStubToOutput(packageName) {
-    const relPkgPath = pathJoin("node_modules", packageName + ".js");
+    const relPkgPath = pathJoin("node_modules", "meteor", packageName + ".js");
     const absPkgPath = pathJoin(this.sourceRoot, relPkgPath);
 
     // Note that this absPkgPath need not actually exist on disk!
