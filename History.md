@@ -15,6 +15,13 @@
 * Report full file paths on compiler errors when using the
   `ecmascript` package. #5551
 
+* Now possible to `import` or `require` files with a `.json` file
+  extension. #5810
+
+* `process.env.NODE_ENV` is now defined on both client and server as
+  either `development` or `production`, which also determines the boolean
+  flags `Meteor.isDevelopment` and `Meteor.isProduction`.
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
