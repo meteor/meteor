@@ -81,7 +81,8 @@ CssTools = {
   // For performance reasons this function acts by side effect by modifying the
   // given AST without doing a deep copy.
   rewriteCssUrls: function (ast) {
-    rewriteRules(ast.stylesheet.rules);
+    var mergedCssPath = "/";
+    rewriteRules(ast.stylesheet.rules, mergedCssPath);
   }
 };
 
@@ -94,7 +95,7 @@ if (typeof Profile !== 'undefined') {
          });
 }
 
-var rewriteRules = function (rules) {
+var rewriteRules = function (rules, mergedCssPath) {
   _.each(rules, function(rule, ruleIndex) {
 
     // Recurse if there are sub-rules. An example:
@@ -102,10 +103,10 @@ var rewriteRules = function (rules) {
     //         .rule { url(...); }
     //     }
     if (_.has(rule, 'rules')) {
-      rewriteRules(rule.rules);
+      rewriteRules(rule.rules, mergedCssPath);
     }
 
-    var basePath = pathDirname(rule.position.source);
+    var basePath = pathJoin("/", pathDirname(rule.position.source));
 
     // Set the correct basePath based on how the linked asset will be served.
     // XXX This is wrong. We are coupling the information about how files will
@@ -119,7 +120,7 @@ var rewriteRules = function (rules) {
         basePath = "/";
 
     _.each(rule.declarations, function(declaration, declarationIndex) {
-      var parts, resource, absolutePath, quotes, oldCssUrl, newCssUrl;
+      var parts, resource, absolutePath, relativeToMergedCss, quote, oldCssUrl, newCssUrl;
       var value = declaration.value;
 
       // Match css values containing some functional calls to `url(URI)` where
@@ -130,17 +131,39 @@ var rewriteRules = function (rules) {
       var cssUrlRegex = /url\s*\(\s*(['"]?)(.+?)\1\s*\)/gi;
       while (parts = cssUrlRegex.exec(value)) {
         oldCssUrl = parts[0];
-        quotes = parts[1];
+        quote = parts[1];
         resource = url.parse(parts[2]);
 
-        // Rewrite relative paths to absolute paths.
-        // We don't rewrite urls starting with a protocol definition such as
+
+        // We don't rewrite URLs starting with a protocol definition such as
         // http, https, or data.
-        if (isRelative(resource.path) && resource.protocol === null) {
-          absolutePath = pathJoin(basePath, resource.path);
-          newCssUrl = "url(" + quotes + absolutePath + quotes + ")";
-          value = value.replace(oldCssUrl, newCssUrl);
+        if (resource.protocol !== null) {
+          continue;
         }
+
+        // Rewrite relative paths (that refers to the internal application tree)
+        // to absolute paths (addressable from the public build).
+        if (isRelative(resource.path)) {
+          absolutePath = pathJoin(basePath, resource.path);
+        } else {
+          absolutePath = resource.path;
+        }
+
+        // We used to finish the rewriting process at the absolute path step
+        // above. But it didn't work in case the Meteor application was deployed
+        // under a sub-path (eg `ROOT_URL=http://localhost:3000/myapp meteor`)
+        // in which case the resources linked in the merged CSS file would miss
+        // the `myapp/` prefix. Since this path prefix is only known at launch
+        // time (rather than build time) we can't use absolute paths to link
+        // resources in the generated CSS.
+        //
+        // Instead we transform absolute paths to make them relative to the
+        // merged CSS, leaving to the browser the responsibility to calculate
+        // the final resource links (by adding the application deployment
+        // prefix, here `myapp/`, if applicable).
+        relativeToMergedCss = path.relative(mergedCssPath, absolutePath);
+        newCssUrl = "url(" + quote + relativeToMergedCss + quote + ")";
+        value = value.replace(oldCssUrl, newCssUrl);
       }
 
       declaration.value = value;
@@ -154,7 +177,7 @@ var isRelative = function(path) {
 
 // These are duplicates of functions in tools/files.js, because we don't have
 // a good way of exporting them into packages.
-// XXX deduplicate files.js into a package at somepoint so that we can use it
+// XXX deduplicate files.js into a package at some point so that we can use it
 // in core
 var toOSPath = function (p) {
   if (process.platform === 'win32')
@@ -177,3 +200,4 @@ var pathJoin = function (a, b) {
 var pathDirname = function (p) {
   return toStandardPath(path.dirname(toOSPath(p)));
 };
+

@@ -22,9 +22,9 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   t('./image.png', 'packages/nameOfPackage/image.png', 'current directory');
   t('./child/image.png', 'packages/nameOfPackage/child/image.png', 'child directory');
   t('child/image.png', 'packages/nameOfPackage/child/image.png', 'child directory');
-  t('/image.png', '/image.png', 'absolute url');
-  t('"/image.png"', '"/image.png"', 'double quoted url');
-  t("'/image.png'", "'/image.png'", 'single quoted url');
+  t('/image.png', 'image.png', 'absolute url');
+  t('"/image.png"', '"image.png"', 'double quoted url');
+  t("'/image.png'", "'image.png'", 'single quoted url');
   t('"./../image.png"', '"packages/image.png"', 'quoted parent directory');
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
@@ -32,12 +32,12 @@ Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   t('http://', 'http://', 'malformed URL');
 
   parseOptions.source = 'application/client/dir/other-style.css';
-  t('./image.png', '/image.png', 'base path is root');
-  t('./child/image.png', '/child/image.png', 'child directory from root');
-  t('child/image.png', '/child/image.png', 'child directory from root');
-  t('/image.png', '/image.png', 'absolute url');
-  t('"/image.png"', '"/image.png"', 'double quoted url');
-  t("'/image.png'", "'/image.png'", 'single quoted url');
+  t('./image.png', 'image.png', 'base path is root');
+  t('./child/image.png', 'child/image.png', 'child directory from root');
+  t('child/image.png', 'child/image.png', 'child directory from root');
+  t('/image.png', 'image.png', 'absolute url');
+  t('"/image.png"', '"image.png"', 'double quoted url');
+  t("'/image.png'", "'image.png'", 'single quoted url');
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
@@ -73,9 +73,9 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
   t('./image.png', 'packages/nameOfPackage/image.png', 'current directory');
   t('./child/image.png', 'packages/nameOfPackage/child/image.png', 'child directory');
   t('child/image.png', 'packages/nameOfPackage/child/image.png', 'child directory');
-  t('/image.png', '/image.png', 'absolute url');
-  t('"/image.png"', '"/image.png"', 'double quoted url');
-  t("'/image.png'", "'/image.png'", 'single quoted url');
+  t('/image.png', 'image.png', 'absolute url');
+  t('"/image.png"', '"image.png"', 'double quoted url');
+  t("'/image.png'", "'image.png'", 'single quoted url');
   t('"./../image.png"', '"packages/image.png"', 'quoted parent directory');
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
@@ -83,12 +83,12 @@ Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursio
   t('http://', 'http://', 'malformed URL');
 
   parseOptions.source = 'application/client/dir/other-style.css';
-  t('./image.png', '/image.png', 'base path is root');
-  t('./child/image.png', '/child/image.png', 'child directory from root');
-  t('child/image.png', '/child/image.png', 'child directory from root');
-  t('/image.png', '/image.png', 'absolute url');
-  t('"/image.png"', '"/image.png"', 'double quoted url');
-  t("'/image.png'", "'/image.png'", 'single quoted url');
+  t('./image.png', 'image.png', 'base path is root');
+  t('./child/image.png', 'child/image.png', 'child directory from root');
+  t('child/image.png', 'child/image.png', 'child directory from root');
+  t('/image.png', 'image.png', 'absolute url');
+  t('"/image.png"', '"image.png"', 'double quoted url');
+  t("'/image.png'", "'image.png'", 'single quoted url');
   t('http://i.imgur.com/fBcdJIh.gif', 'http://i.imgur.com/fBcdJIh.gif', 'complete URL');
   t('"http://i.imgur.com/fBcdJIh.gif"', '"http://i.imgur.com/fBcdJIh.gif"', 'complete quoted URL');
   t('data:image/png;base64,iVBORw0K=', 'data:image/png;base64,iVBORw0K=', 'data URI');
