@@ -361,7 +361,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
-      const fileOptions = this.inputResource.fileOptions;
+      const fileOptions = this.fileOptions;
 
       function getOption(name) {
         // By default, use fileOptions for these options but also allow
@@ -378,7 +378,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         data: data,
         // The sourcePath should not be alterable by plugins, so it makes
         // sense to set it unconditionally here.
-        sourcePath: this.inputResource.path,
+        sourcePath: this.inputPath,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
