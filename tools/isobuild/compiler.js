@@ -323,7 +323,11 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 // options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = function (options) {
+var compileUnibuild = Profile(
+  function (options) {
+    return `compileUnibuild (${options.isopack.name || 'the app'})`;
+  },
+  function (options) {
   buildmessage.assertInCapture();
 
   const isopk = options.isopack;
@@ -566,7 +570,9 @@ api.addAssets('${relPath}', 'client').`);
       });
 
     try {
-      (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
+      Profile(`legacyHandler ${classification.extension}`, function () {
+        (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
+      })();
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
       buildmessage.exception(e);
@@ -609,7 +615,7 @@ api.addAssets('${relPath}', 'client').`);
   return {
     pluginProviderPackageNames: pluginProviderPackageNames
   };
-};
+});
 
 function runLinters({inputSourceArch, isopackCache, sources,
                      sourceProcessorSet, watchSet}) {
