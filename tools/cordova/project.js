@@ -18,8 +18,8 @@ import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-lib/src/cordova/superspawn.js';
-import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
+import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.js';
+import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl,
