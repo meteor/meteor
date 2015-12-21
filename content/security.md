@@ -45,9 +45,9 @@ Here's a code snippet to add to your server code, which disables client-side upd
 ```js
 // Deny all client-side updates on the Lists collection
 Lists.deny({
-  insert() { return true },
-  update() { return true },
-  remove() { return true },
+  insert() { return true; },
+  update() { return true; },
+  remove() { return true; },
 });
 ```
 
@@ -60,7 +60,7 @@ Methods are the way your Meteor server accepts inputs and data from the outside 
 
 This is trivial when using the `mdg:validated-method` package, and you can also achieve the same effect by using [`check`](http://docs.meteor.com/#/full/check) inside a vanilla method. The idea is that you don't want someone to pass a data type you aren't expecting, which could mess up some of your logic.
 
-Consider that if you are writing unit tests for your methods, you would need to test all possible kinds of input to the method; validating the arguments restricts the space of inputs you need to unit test, reducing the amount of code you need to write over all. It also has the extra bonus of being self-documenting; someone else can come along and read the code to find out what kinds of parameters a method is looking for.
+Consider that if you are writing unit tests for your methods, you would need to test all possible kinds of input to the method; validating the arguments restricts the space of inputs you need to unit test, reducing the amount of code you need to write overall. It also has the extra bonus of being self-documenting; someone else can come along and read the code to find out what kinds of parameters a method is looking for.
 
 Just as an example, here's a situation where not checking arguments can be disastrous:
 
@@ -300,7 +300,7 @@ Meteor.publish('list', function (listId) {
 
 In the first example, if the `userId` property on the selected list changes, the query in the publication will still return the data, since the security check in the beginning will not re-run. In the second example, we have fixed this by putting the security check in the returned query itself.
 
-Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the data loading article.
+Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](data-loading.html#complex-auth).
 
 <h3 id="publication-options">Passing options</h3>
 
@@ -361,7 +361,7 @@ Every app will have some secret API keys or passwords:
 1. Your database password.
 1. API keys for external APIs.
 
-These should never be stored as part of your app's source code in version control, because developers might copy code around to unexpected places and forget that it contains secret keys. You can keep your keys separately in Dropbox, LastPass, or another service, and then reference them when you need to deploy the app.
+These should never be stored as part of your app's source code in version control, because developers might copy code around to unexpected places and forget that it contains secret keys. You can keep your keys separately in [Dropbox](https://www.dropbox.com/), [LastPass](https://lastpass.com), or another service, and then reference them when you need to deploy the app.
 
 You can pass settings to your app through a _settings file_ or an _environment variable_. Most of your app settings should be in JSON files that you pass in when starting your app. You can start your app with a settings file by passing the `--settings` flag:
 
@@ -432,7 +432,7 @@ You can ensure that any unsecured connection to your app redirects to a secure c
 #### Setting up SSL
 
 1. On `meteor deploy` free hosting, [just add `force-ssl`](deployment.html#free-hosting) and you're good to go
-2. On [Galaxy](deployment.html#galaxy], most things are set up for you, but you need to add a certificate. [See the help article about SSL on Galaxy](https://galaxy.meteor.com/help/using-ssl).
+2. On [Galaxy](deployment.html#galaxy), most things are set up for you, but you need to add a certificate. [See the help article about SSL on Galaxy](https://galaxy.meteor.com/help/using-ssl).
 3. If you are running on your own [infrastructure](deployment.html#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
 
 <h2 id="checklist">Security checklist</h2>
