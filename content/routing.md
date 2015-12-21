@@ -196,13 +196,13 @@ In this case, the `listShowPage` template simply renders as:
 
 (The `{% raw %}{{#each}}{% endraw %}}` is an animation technique for [page to page transitions](ui-ux.html#animating-page-changes)).
 
-It's the `listShow` template (a reusuable component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the reusuable component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
+It's the `listShow` component (a reusuable component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the reusuable component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
 <h3 id="route-rendering-logic">Route related rendering logic</h3>
 
-There are examples of rendering logic that seems very related to the route, for which it can be difficult to know where to implement. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
+There are types of rendering logic that appear related to the route for which but which also seem related to user interface rendering. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
 
-It's best to keep all logic around what to render in the component hierarchy (i.e. the tree of rendered templates). So this authorization should happen inside a template. Suppose we wanted to add this to the `listShowPage` we were looking at above. We could do something like:
+It's best to keep all logic around what to render in the component hierarchy (i.e. the tree of rendered components). So this authorization should happen inside a component. Suppose we wanted to add this to the `listShowPage` we were looking at above. We could do something like:
 
 ```html
 <template name="listsShowPage">
@@ -216,9 +216,9 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 </template>
 ```
 
-Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between templates---by wrapping them in a wrapper "layout" template which includes the behavior we want.
+Of course, we might start finding that we need to share this functionality between the multiple pages of our app that have access control required. However, we can share functionality between components---by wrapping them in a wrapper "layout" component which includes the behavior we want.
 
-You can create wrapper templates by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html)). So we can write an authorization template:
+You can create wrapper components in Blaze by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html#block-helpers)). So we can write an authorization template:
 
 ```html
 <template name="forceLoggedIn">
@@ -318,7 +318,7 @@ FlowRouter.route('/old-list-route/:_id', {
 
 <h3 id="redirecting-dynamically">Redirecting dynamically</h3>
 
-If however, you need some data to redirect, you'll need to render part of the component hierarchy, as that is the place where data subscribing happens. For example, in the Todos example app, we want to make the root (`/`) route redirect to the first known list. To achieve this, we need to render a special `rootRedirector` route:
+If however, you need to wait for the server to supply some data to know where to redirect to, you'll need to render part of the component hierarchy, as that is the place where data subscribing happens. For example, in the Todos example app, we want to make the root (`/`) route redirect to the first known list. To achieve this, we need to render a special `rootRedirector` route:
 
 ```js
 FlowRouter.route('/', {
@@ -329,7 +329,7 @@ FlowRouter.route('/', {
 });
 ```
 
-Because the `rootRedirector` template is rendered inside the `appBody` layout which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-template, and we are guaranteed there is at least one such list, we can simply do:
+The `rootRedirector` component is rendered inside the `appBody` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `rootRedirector` ends up being created, there'll be a list loaded, so we can simply do:
 
 ```js
 Template.rootRedirector.onCreated(() => {
@@ -341,13 +341,15 @@ Template.rootRedirector.onCreated(() => {
 });
 ```
 
-If you need to wait on specific data that you aren't already subscribed to, you can use an `autorun` and `subscriptionsReady()` to wait on that subscription:
+If you need to wait on specific data that you aren't already subscribed to at creation time, you can use an `autorun` and `subscriptionsReady()` to wait on that subscription:
 
 ```js
 Template.rootRedirector.onCreated(() => {
-  // if we needed to open this subscription here
+  // If we needed to open this subscription here
   this.subscribe('lists/public');
   
+  // Now we need to wait for the above subscription. We'll need the template to 
+  // render some kind of loading state while we wait, too.
   this.autorun(() => {
     if (this.subscriptionsReady()) {
       FlowRouter.go('listsShow', Lists.findOne());
@@ -358,9 +360,9 @@ Template.rootRedirector.onCreated(() => {
 
 <h3 id="redirecting-after-user-action">Redirecting after a user's action</h3>
 
-Often, you just want to go to a new route programmatically when a user has completed a certain action. Above we saw a case (creating a new list) when we wanted to do it *optimistically*---i.e. before we hear back from the server that the Method succeeded. We can do this because we reasonably expect that the Method will succeed in almost all cases (see the [UI/UX article](ui-ux.html) for further discussion of this).
+Often, you just want to go to a new route programmatically when a user has completed a certain action. Above we saw a case (creating a new list) when we wanted to do it *optimistically*---i.e. before we hear back from the server that the Method succeeded. We can do this because we reasonably expect that the Method will succeed in almost all cases (see the [UI/UX article](ui-ux.html#optimistic-ui) for further discussion of this).
 
-However, if we wanted to wait for the method to return for the server, we can put the redirection in the callback of the method:
+However, if we wanted to wait for the method to return from the server, we can put the redirection in the callback of the method:
 
 ```js
 Template.appBody.events({
@@ -374,7 +376,7 @@ Template.appBody.events({
 });
 ```
 
-You will also want to show some kind of status while the method is working so that the user knows there is something going on between them clicking the button and the redirect happening (and show the error some kind of message if the error is there too).
+You will also want to show some kind of status while the method is working so that the user knows there is something going on between them clicking the button and the redirect happening (and show the error some kind of message if the method is returning an error too).
 
 <h2 id="advanced">Advanced Routing</h2>
 
@@ -405,28 +407,7 @@ The second is when the URL is valid, but doesn't actually match any data. In thi
 
 <h3 id="analytics">Analytics</h3>
 
-It's common to want to know which pages of your app are most commonly visited, and where users are coming from. Read more about analytics in general in the _Analytics/Monitoring guide_, but here's a simple setup that will get you URL tracking using Google Analytics. We'll be using the `okgrow:analytics` package.
-
-```
-meteor add okgrow:analytics
-```
-
-- [okgrow/analytics on GitHub](https://github.com/okgrow/analytics)
-
-Now, we need to configure the package with our Google Analytics key (the package also supports a large variety of other providers, check out the documentation [on Atmosphere](https://atmospherejs.com/okgrow/analytics)). Pass it in as part of _Meteor settings_:
-
-```js
-{
-  "public": {
-    "analyticsSettings": {
-      // Add your analytics tracking id's here
-      "Google Analytics" : {"trackingId": "Your tracking ID"}
-    }
-  }
-}
-```
-
-That's it! The analytics package hooks into Flow Router and records all of the page events for you.
+It's common to want to know which pages of your app are most commonly visited, and where users are coming from. You can read about how to set up Flow Router based analytics in the [Deployment Guide](deployment.html#analytics).
 
 <h3 id="server-side">Server Side Routing</h3>
 
@@ -434,10 +415,10 @@ As we've discussed, Meteor is a framework for client rendered applications, but 
 
 <h4 id="server-side-apis">Server Routing for API access</h4>
 
-Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html) and [Methods](methods.html) articles for more information.
+Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
 
 <h4 id="server-side-rendering">Server Rendering</h4>
 
-The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you are using it. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
+The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you use Blaze. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
 
 Although Flow Router can be used to render React components more or less exactly as we've described above for Blaze, at of this writing, Flow Router's support for SSR is [still experimental](https://kadira.io/blog/meteor/meteor-ssr-support-using-flow-router-and-react), however it's probably the best approach right now if you want to use SSR for Meteor.
