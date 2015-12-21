@@ -194,7 +194,7 @@ In this case, the `listShowPage` template simply renders as:
 </template>
 ```
 
-(The `{% raw %}{{#each}}{% endraw %}}` is an animation technique that we also discuss in the [UI/UX](ui-ux.html)).
+(The `{% raw %}{{#each}}{% endraw %}}` is an animation technique for [page to page transitions](ui-ux.html#animating-page-changes)).
 
 It's the `listShow` template (a reusuable component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the reusuable component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
