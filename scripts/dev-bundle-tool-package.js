@@ -59,23 +59,9 @@ var packageJson = {
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     pathwatcher: "4.1.0",
     'lru-cache': '2.6.4',
-    // We use our own fork because cordova-lib does not respect a silent
-    // option and by defaults outputs all command output to stdout/stderr.
-    // We can't download the tarball from GitHub because the package.json is
-    // in a subdirectory. See tools/cordova/README.md for instructions on how
-    // to build and upload our own tarball.
-    // https://github.com/meteor/cordova-lib/tree/respect-silent/cordova-lib
-    "cordova-lib": "http://com.meteor.static.s3.amazonaws.com/cordova-lib-1512fc069c7ea51c7a112cf14a8d93d69726a6f7.tar.gz",
-    // Also include the Cordova CLI because it is used in tests
-    "cordova": "5.2.0",
-    "ios-sim": "4.1.1",
+    'cordova-lib': "5.4.1"
   }
 };
-
-if (process.platform !== 'darwin') {
-  // Remove dependencies that require darwin on non-darwin platforms.
-  delete packageJson.dependencies['ios-sim'];
-}
 
 if (process.platform === 'win32') {
   // Remove dependencies that do not work on Windows
