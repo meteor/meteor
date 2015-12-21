@@ -52,7 +52,7 @@ It's always a good idea to use SSL for Meteor Applications (see the [Security Ar
 
 <h3 id="cdn">CDN</h3>
 
-It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the larger assets in your site (such as JS and CSS files, as well as potentially images) and caches copies of those files in locations that are closer to the location of the user. So for instance, although the actual web server for your application is on the East Coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
+It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the larger assets in your site (such as JS and CSS files, as well as potentially images) and caches copies of those files in locations that are closer to the location of the user. So for instance, although the actual web server for your application is on the east coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
 
 You want to put your CDN in front of the static assets that Meteor knows about. You can use `WebAppInternals.setBundledJsCssPrefix(DNS_HOSTNAME)` to set a prefix that applies to all of the bundled JS and CSS assets that the Meteor app serves. In particular, this means if you have relative image URLs inside your CSS files, they will also be served from the CDN.
 
@@ -80,7 +80,7 @@ However, unless you have a specific need to roll your own hosting environment, t
 
 If you are still developing your application and want to see how it behaves online, or share in with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`.
 
-Deploying is simple, simply type:
+Deploying is simple, just type:
 
 ```bash
 meteor deploy your-app.meteor.com
@@ -94,7 +94,7 @@ To enable SSL for your free-hosted app, simply add the `force-ssl` package to yo
 meteor add force-ssl
 ```
 
-We provide this as a free service so you can try Meteor. It is also helpful for quickly putting up internal betas, demos, and so on. It is not intended to deploy production applications. Also not that if your application does not receive any traffic for six months it will be deleted.
+We provide this as a free service so you can try Meteor. It is also helpful for quickly putting up internal betas, demos, and so on. It is not intended to deploy production applications. Also note that if your application does not receive any traffic for six months it will be deleted.
 
 <h4 id="managing-free-hosting">Managing your meteor.com app</h4>
 
@@ -140,7 +140,7 @@ npm install -g mup
 
 Once you've installed the command, you can initialize your project with `mup init`, which will create a `mup.json` file which you can use to configure your setup. You can read the [finer details here](https://github.com/kadirahq/meteor-up#example-file), but essentially you need to list the servers you would like to install to as well as some options on exactly how to set them up.
 
-To list those servers you'll first need to obtain some! A good option is Digital Ocean(https://www.digitalocean.com), which will provide a Virtual Private Server for a very reasonable price. You'll need to ensure that Ubuntu or Debian is installed on the machine and mup can SSH into your server with the keys you provide in the config.
+To list those servers you'll first need to obtain some! A good option is [Digital Ocean](https://www.digitalocean.com), which will provide a Virtual Private Server for a very reasonable price. You'll need to ensure that Ubuntu or Debian is installed on the machine and mup can SSH into your server with the keys you provide in the config.
 
 Once you've configured mup, you can get your servers installed with
 
@@ -188,7 +188,7 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 <h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
 
-If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
+If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](https://compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
 
 <h2 id="process">Deployment Process</h2>
 
@@ -216,7 +216,7 @@ Depending on where your app is deployed and the number of application processes 
 
 <img src="images/galaxy-deploying.png">
 
-If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the [collections article](collections.html#migrating).
+If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the [collections article](collections.html#migrations).
 
 <h2 id="analytics">Monitoring users via analytics</h2>
 
@@ -238,11 +238,11 @@ Now, we need to configure the package with our Google Analytics key (the package
 }
 ```
 
-The analytics package hooks into Flow Router (see the [routing article](routing) for more) and records all of the page events for you.
+The analytics package hooks into Flow Router (see the [routing article](routing.html) for more) and records all of the page events for you.
 
 You may want to track non-page change related events (for instance publication subscription, or method calls) also. To do so you can use the custom event tracking functionality:
 
-```
+```js
 Todos.methods.updateText = new ValidatedMethod({
   ...
   run({ todoId, newText }) {
