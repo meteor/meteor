@@ -36,7 +36,7 @@ As an example, consider the `todosItem` template from the Todos example app:
 </template>
 ```
 
-In this example, this template is rendered with an object with key `todo` as data context (we'll see below how to enforce that). We access the properties of the `todo`  using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behaviour is to render that property as a string; however in some cases (such as `checked=={% raw %}{{todo.checked}}{% endraw %}` it can be resolved as a boolean value).
+In this example, this template is rendered with an object with key `todo` as data context (we'll see below how to enforce that). We access the properties of the `todo`  using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behaviour is to render that property as a string; however in some cases (such as `checked=={% raw %}{{todo.checked}}{% endraw %}` ) it can be resolved as a boolean value.
 
 Note that simple string interpolations like this will always escape any HTML for you---so you don't need to perform safety checks for XSS.
 
@@ -144,7 +144,7 @@ Template.foo.helpers({
 
 <h3 id="rendering-html">Rendering pure HTML</h3>
 
-Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting),, you can render raw HTML with the triple-mustache: `{% raw %}{{{ }}}{% endraw %}`.
+Although by default a mustache tag will escape HTML tags to avoid [XSS](https://en.wikipedia.org/wiki/Cross-site_scripting), you can render raw HTML with the triple-mustache: `{% raw %}{{{ }}}{% endraw %}`.
 
 ```html
 {{{myHtml}}}
@@ -274,7 +274,7 @@ We use an `autorun()` here to ensure that the data context is validated again wh
 
 It's tempting to provide the data context of a sub-template as a "raw" object (like `{% raw %}{{> todosItem todo}}{% endraw %}`), it's a better idea to explicitly give it a name (`{% raw %}{{> todosItem todo=todo}}{% endraw %}`). There are two primary reasons for this:
 
-1. When using the data in the sub-component, it's a lot clearer what you are accessing `{% raw %}{{todo.title}}{% endraw %}` is clearer than `title`.
+1. When using the data in the sub-component, it's a lot clearer what you are accessing; `{% raw %}{{todo.title}}{% endraw %}` is clearer than `{% raw %}{{title}}{% endraw %}`.
 2. It's more flexible, in case in future you need to provide more arguments to the template.
 
   For instance, in the case of the `todosItem` sub-component, we need to provide two extra arguments to control the editing state of the item, which would have been a hassle to add if the item was used with a raw `todo` argument.
@@ -438,7 +438,7 @@ Template.listsShowPage.onRendered(function() {
 
 <h2 id="smart-components">Writing smart components with Blaze</h2>
 
-If your component needs to access state outside of its data context---for instance, data from the server via subscriptions or the the contents of client-side store, then you should be careful how you do that accessing. As discussed in the [data loading](data-loading) and [UI](ui-ux#smart-components) articles, you should be careful and considered in how use such smart components.
+If your component needs to access state outside of its data context---for instance, data from the server via subscriptions or the the contents of client-side store, then you should be careful how you do that accessing. As discussed in the [data loading](data-loading.hmtl) and [UI](ui-ux.html#smart-components) articles, you should be careful and considered in how use such smart components.
 
 To begin with, all of the rules of thumb about reusable components apply to smart components. In addition:
 
@@ -476,7 +476,7 @@ Template.listsShowPage.helpers({
 
 <h3 id="fetch-in-smart-components">Fetch in helpers</h3>
 
-Typically, as [outlined in the ui/ux article](ui-ux.md#smart-components) you should fetch data in the same component that you subscribe in. In Blaze, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`:
+Typically, as [outlined in the ui/ux article](ui-ux.html#smart-components) you should fetch data in the same component that you subscribe in. In Blaze, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`:
 
 ```html
 {{> listsShow todosReady=Template.subscriptionsReady
@@ -554,7 +554,7 @@ The first thing to consider here is if you actually need to care about your comp
 
 The main thing to understand about how Blaze re-renders is that re-rendering happens at the level of helpers and template inclusions. Whenever the *data context* of a component changes, it necessarily must re-run *all* helpers and data accessors (as `this` within the helper is the data context and thus will have changed).
 
-Additionally, helpers will re-run if any *reactive variable* accessed from within *that specific helper* changes.
+Additionally, a helper will re-run if any *reactive variable* accessed from within *that specific helper* changes.
 
 You can often work out *why* a helper has re-run by tracing the source of the reactive invalidation:
 
@@ -582,6 +582,7 @@ Setting tag attributes via helpers (e.g. `<div {% raw %}{{attributes}}{% endraw 
 </template>
 ```
 
+
 ```js
 Template.myTemplate.helpers({
   classes(names) {
@@ -594,8 +595,9 @@ Template.myTemplate.helpers({
       }
     };
   }
-})
+});
 ```
+
 <h3 id="lookups">Lookup order</h3>
 
 Another complicated topic in Blaze is name lookups. In what order does Blaze look when you write `{% raw %}{{something}}{% endraw %}`? It runs in the following order:
@@ -608,23 +610,13 @@ Another complicated topic in Blaze is name lookups. In what order does Blaze loo
 
 <h3 id="build-system">Blaze and the build system</h3>
 
-As mentioned in the [build system article](build-tool#blaze), the [`blaze-html-templates`](https://atmospherejs.com/meteor/blaze-html-templates) package scans your source code for `.html` files, picks out `<template name="templateName">` tags, and compiles them into a JavaScript file that defines a function that implements the component in code, attached to the `Template.templateName` symbol.
+As mentioned in the [build system article](build-tool.html#blaze), the [`blaze-html-templates`](https://atmospherejs.com/meteor/blaze-html-templates) package scans your source code for `.html` files, picks out `<template name="templateName">` tags, and compiles them into a JavaScript file that defines a function that implements the component in code, attached to the `Template.templateName` symbol.
 
 This means when you include another component, you are simply running a function on the client that corresponds to the Spacebars content you defined in the `.html` file.
 
-<h3 id="views">What is a view</h3>
+<h3 id="views">What is a view?</h3>
 
 Blaze has an additional concept called a "view", which is associated with a reactively rendering area of a template. The view is the machinery that works behind the scenes to track reactivity, do lookups, and re-render appropriately when data changes. The view is the unit of re-rendering in Blaze. You can if necessary, use the view to walk the rendered component heirarchy, although, except in advanced cases it's better to not do this, but instead use callbacks and template arguments, or global data stores to communicate between components.
 
 You can read more about views in the [Blaze docs](http://docs.meteor.com/#/full/blaze_view).
 
-<h2 id="testing">Testing Blaze templates</h2>
-
-XXX: Going to do this after testing chapter
-
-
-6. Testing Blaze templates
-  1. Rendering a template in a unit test
-  2. Querying the DOM (general but just a pointer here)
-  3. Triggering reactivity and waiting for re-rendering
-  4. Simulating events w/ JQ
