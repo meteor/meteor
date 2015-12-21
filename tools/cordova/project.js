@@ -40,6 +40,11 @@ function log(...args) {
   Console.rawInfo(`%% ${util.format.apply(null, args)}\n`);
 }
 
+const pinnedPlatformVersions = {
+  'android': '5.0.0',
+  'ios': '4.0.1'
+}
+
 export class CordovaProject {
   constructor(projectContext, options = {}) {
     if (process.platform === 'win32') {
@@ -66,15 +71,7 @@ yet supported.`);
     if (files.exists(this.projectRoot)) {
       const installedPlatforms = this.listInstalledPlatforms();
 
-      // XXX Decide whether to update these if we update cordova-lib.
-      // If we can guarantee there are no issues going forward, we may want to
-      // use updatePlatforms instead of removing the whole directory.
-      const minPlatformVersions = {
-        'android': '4.1.0',
-        'ios': '3.9.0'
-      }
-
-      const outdated = _.some(minPlatformVersions, (minVersion, platform) => {
+      const outdated = _.some(pinnedPlatformVersions, (pinnedVersion, platform) => {
         // If the platform is not installed, it cannot be outdated
         if (!_.contains(installedPlatforms, platform)) {
           return false;
@@ -86,7 +83,7 @@ yet supported.`);
           return true;
         }
 
-        return semver.lt(installedVersion, minVersion);
+        return semver.lt(installedVersion, pinnedVersion);
       });
 
       if (outdated) {
@@ -331,7 +328,9 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
   addPlatform(platform) {
     this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
 to Cordova project`, async () => {
-      await cordova_lib.raw.platform('add', platform, this.defaultOptions);
+      const version = pinnedPlatformVersions[platform];
+      const platformSpec = version ? `${platform}@${version}` : platform;
+      await cordova_lib.raw.platform('add', platformSpec, this.defaultOptions);
     });
   }
 
