@@ -5,16 +5,16 @@ order: 6
 
 After reading this guide, you'll know:
 
-1. How to build reusable client side components in any templating language
+1. How to build reusable client side components in any user interface framework
 2. How to build a styleguide to allow you to visually test such reusable components
 3. Patterns for building front end components in a performant way in Meteor
-4. How to design responsively across device sizes, accessibly for different users, and universally across languages.
+4. How to build user interfaces in a maintainable and extensible way
 5. How to build components that can cope with a variety of different data sources
 6. How to use animation to keep users informed of changes
 
 <h2 id="components">UI components</h2>
 
-Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces of your UI elements very clear, and avoiding using techniques that bypass these known interfaces.
+Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces to your UI elements very clear, and avoiding using techniques that bypass these known interfaces.
 
 In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more modular like a component which has an API, rather than a template which is usually seen in a looser way.
 
@@ -36,11 +36,11 @@ The advantages of reusable components are the following:
 
  4. You know exactly what they do and what dependencies you need to provide for them to work in different environments.
 
- There's also a specific type of reusable component, a "pure" component, which also does not have any internal state. For instance in the Todos app, the `todosItem` template purely decides what to render based on its arguments. Pure components are even better than reusable ones, for all of the same reasons.
+ There's also a specific type of reusable component, a "pure" component, which also does not have any internal state. For instance in the Todos app, the `todosItem` template purely decides what to render based on its arguments. Pure components are even easier to reason about and test than reusuable ones and so should be used wherever possible!
 
 <h3 id="global-stores">Global Data stores</h3>
 
- So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), it's a good idea to avoid it in reusable ones:
+ So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), you'll need to avoid them in reusable ones:
 
   - Your collections, as well as the `Meteor.users` collection,
   - Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
@@ -49,7 +49,7 @@ The advantages of reusable components are the following:
 
 <h3 id="smart-components">Smart Components</h3>
 
-While most of the components in your app should be reusable, they need to get their data passed in from somewhere. This is where "smart" components come in. Such components typically the following things:
+While most of the components in your app should be reusable, they need to get their data passed in from somewhere. This is where "smart" components come in. Such components typically do the following things:
 
  1. Subscribe to data, using subscriptions.
  2. Fetch data from those subscriptions.
@@ -61,8 +61,10 @@ A typical use case for a smart component is the "page" component that the router
 
 ```
 <template name="listsShowPage">
-  {{#each listIdArray}}
-    {{> listsShow todosReady=Template.subscriptionsReady list=list}}
+  {{#each list in listArray}}
+    {{> listsShow todosReady=Template.subscriptionsReady list=list todos=list.todos}}
+  {{else}}
+    {{> appNotFound}}
   {{/each}}
 </template>
 ```
@@ -143,7 +145,7 @@ Even if you aren't saving data over the wire to the database on every user input
 
 <h2 id="ux-patterns">User Experience Patterns</h2>
 
-There are some common user experience (UX---as in how your app behaves) patterns that are typical to most Meteor apps that are worth exploring here. These patterns relate heavily to the way the data the user is interacting with is subscribed to and published, so there are similar sections in the [data loading article](data-loading.html#patterns) talking about the way the publications are set up.
+There are some common user experience (UX---as in how your app behaves) patterns that are typical to most Meteor apps which are worth exploring here. These patterns relate heavily to the way the data the user is interacting with is subscribed to and published, so there are similar sections in the [data loading article](data-loading.html#patterns) talking about the way the publications are set up.
 
 <h3 id="subscription-readiness">Subscription readiness</h3>
 
@@ -165,7 +167,7 @@ We do this with Blaze's `Template.subscriptionsReady` which is perfect for this 
 
 Usually it makes for a better UX to show as much of the screen as possible as quickly as possible and to only show loading state for the parts of the screen that are still waiting on data. So a nice pattern to follow is "per component loading". We do this in the Todos app when you visit the list page---we instantly render the list metadata, such as it's title and privacy settings, and render a loading state for the list of todos while we wait for them to appear.
 
-[XXX Screenshot needed]
+<img src="images/todos-loading.png">
 
 We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the reusable component which renders the data:
 
@@ -196,9 +198,9 @@ And then we use that state to determing what to render in the reusable component
 
 <h4 id="loading-placeholders">Showing placeholders</h4>
 
-You can take the above UI a step further by showing placeholders whilst you wait for the data to load. This is a UX pattern that has been pioneered by Facebook (and that we use in Galaxy also!) which gives the user a more solid impression of what data is coming down the wire.
+You can take the above UI a step further by showing placeholders whilst you wait for the data to load. This is a UX pattern that has been pioneered by Facebook which gives the user a more solid impression of what data is coming down the wire.
 
-For instance, in Galaxy, while you wait for your organization's list of applications to load, you see a loading state indicating what you might see.
+For instance, in Galaxy, while you wait for your app's log to load, you see a loading state indicating what you might see:
 
 <img src="images/galaxy-placeholders.png">
 
@@ -247,7 +249,7 @@ You can see that although the situation is a little complex, it's also completel
 
 A list is also a good opportunity to understand the benefits of the smart vs reusable component split. We've seen above that correctly rendering and visualising all the possible states of a list is non-trivial and is made much easier by having a reusable list component that takes all the required information in as arguments.
 
-However, we still need to subscribe to the list of items and the count, and collect that data somewhere. To do this, it's sensible to use a smart wrapper component (sort of analogous to an MVC "controller") who's job it is to subscribe and fetch the relevant data.
+However, we still need to subscribe to the list of items and the count, and collect that data somewhere. To do this, it's sensible to use a smart wrapper component (analogous to an MVC "controller") whose job it is to subscribe and fetch the relevant data.
 
 In the Todos example app, we already have a wrapping component for the list that talks to the router and sets up subscriptions. This component could easily be extended to understand pagination:
 
@@ -256,10 +258,12 @@ const PER_PAGE = 10;
 
 Template.listsShowPage.onCreated(function() {
   this.state = new ReactiveDict();
+
+  this.getListId = () => FlowRouter.getParam('_id');
+
   this.autorun(() => {
-    this.state.set('listId', FlowRouter.getParam('_id'));
-    this.subscribe('list/todos', this.state.get('listId'), this.state.get('requested'));
-    this.countSub = this.subscribe('list/todoCount', this.state.get('listId'));
+    this.subscribe('list/todos', this.getListId(), this.state.get('requested'));
+    this.countSub = this.subscribe('list/todoCount', this.getListId());
   });
   this.onNextPage = () => {
     this.state.set('requested', this.state.get('requested') + PER_PAGE);
@@ -269,7 +273,7 @@ Template.listsShowPage.onCreated(function() {
 Template.listsShowPage.helpers({
   listShowArguments() {
     const instance = Template.instance();
-    const listId = instance.state.get('listId');
+    const listId = instance.getListId();
     const list = Lists.findOne(listId);
     const requested = instance.state.get('requested');
     return {
@@ -286,9 +290,9 @@ Template.listsShowPage.helpers({
 
 <h4 id="patterns-for-new-data">UX patterns for displaying new data</h4>
 
-An interesting UX challenge in a realtime system like Meteor involves how to bring new information (like changing data in a list) to the user's attention. As [Dominic](http://blog.percolatestudio.com/design/design-for-realtime/) points out, it's not always a good idea to simply update the contents of a list as quickly as possible as it's easy to miss changes or get confused about what's happened.
+An interesting UX challenge in a realtime system like Meteor involves how to bring new information (like changing data in a list) to the user's attention. As [Dominic](http://blog.percolatestudio.com/design/design-for-realtime/) points out, it's not always a good idea to simply update the contents of a list as quickly as possible, as it's easy to miss changes or get confused about what's happened.
 
-One solution to this problem is to *animate* list changes (which we'll look at below), but this isn't always the best approach. For instance, if a user is reading a list of comments, they may not want to see any changes until they are done with their current reading.
+One solution to this problem is to *animate* list changes (which we'll look at below), but this isn't always the best approach. For instance, if a user is reading a list of comments, they may not want to see any changes until they are done with the current comment thread.
 
 An option in this case is to call out that there are changes to the data the user is looking at without actually making UI updates. Of course with a reactive across the board system like Meteor, it isn't necessarily easy to stop such changes from happening!
 
@@ -301,7 +305,7 @@ Template.listsShowPage.onCreated(function() {
   this.visibleTodos = new Mongo.Collection();
 
   this.getTodos = () => {
-    const list = Lists.findOne(this.state.get('listId'));
+    const list = Lists.findOne(this.this.getListId());
     return list.todos({}, {limit: instance.state.get('requested')});
   };
   this.syncTodos = (todos) => {
@@ -315,7 +319,7 @@ Template.listsShowPage.onCreated(function() {
   this.autorun((computation) => {
     const todos = this.getTodos();
 
-    // if this autorun re-runs, the list or set of todos much have changed
+    // if this autorun re-runs, the list id or set of todos much have changed
     if (!computation.firstRun) {
       this.state.set('hasChanges', true);
     } else {
@@ -327,11 +331,12 @@ Template.listsShowPage.onCreated(function() {
 Template.listsShowPage.helpers({
   listShowArguments() {
     const instance = Template.instance();
-    const listId = instance.state.get('listId');
+    const listId = instance.getListId();
     const list = Lists.findOne(listId);
     const requested = instance.state.get('requested');
     return {
       list,
+      // we pass the *visible* todos through here
       todos: instance.visibleTodos.find({}, {limit: requested}),
       requested,
       countReady: instance.countSub.ready(),
@@ -348,7 +353,7 @@ The reusable sub-component can then use the `hasChanges` argument to determine i
 
 <h3 id="optimistic-ui">Optimisitic UI</h3>
 
-Another UX pattern which is worth thinking about in Meteor and which isn't necessarily something that comes up in other frameworks is how to approach optimistic UI. Optimistic UI is the process of showing user-generated changes in the UI without waiting for the server to acknowledge that the change has succeeded (thus the "optimism"). It is a cruicial feature of Meteor to allow you to build your UIs in this kind of way.
+Another UX pattern which is worth thinking about in Meteor and which doesn't necessarily come up in other frameworks is how to approach optimistic UI. Optimistic UI is the process of showing user-generated changes in the UI without waiting for the server to acknowledge that the change has succeeded (thus the "optimism"). Meteor's livedata system allows you to build your UIs in this kind of way in a simple fashion.
 
 However, it's not *always* necessarily a good idea to be optimistic. Sometimes we may actually want to wait for the server's response. For instance, when a user is logging in, you *have* to wait for the server to check the password is correct before you can start allowing them into the site.
 
@@ -376,7 +381,7 @@ Template.appBody.events({
 
 By placing the `FlowRouter.go('listsShow')` outside of the callback of the Method call (which happens once the server has finished), we ensure that it runs right away. So first we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice), or in the unlikely event that it fails, we show an error and redirect back to the homepage.
 
-Note that the `listId` returned by the list method (which is the one generated by the client stub) is guaranteed to be the same as the one generated on the server, due to the way that Meteor generates ids and ensures they are the same between client and server.
+Note that the `listId` returned by the list method (which is the one generated by the client stub) is guaranteed to be the same as the one generated on the server, due to [the way that Meteor generates ids](methods.html#consistent-id-generation) and ensures they are the same between client and server.
 
 <h3 id="writes-in-progress">Indicating when a write is in progress</h3>
 
@@ -432,7 +437,7 @@ A good example of this is the editing state of the list from the Todos example a
 {{/momentum}}
 ```
 
-Momentum acts by defining the way that child HTML elements appear an disappear. In this case, when the list component goes into the `editing` state, the `.nav-group` disappears, and the `form` appears. Momentum takes care of the job of making sure that both items fade an the change is made a lot clearer.
+Momentum acts by defining the way that child HTML elements appear and disappear. In this case, when the list component goes into the `editing` state, the `.nav-group` disappears, and the `form` appears. Momentum takes care of the job of making sure that both items fade and the change is made a lot clearer.
 
 <h3 id="animating-attributes">Animating changes to attributes</h3>
 
@@ -453,7 +458,7 @@ a {
 
 <h3 id="animating-page-changes">Animating page changes</h3>
 
-Finally, it's common to animate when the user switches between routes of the application. Especially in mobile, this adds a sense of navigation to the app via positioning pages relative to each other. This can be done in a similar way to animating things appearing and disappearing (after all one page is appearing and other is disappearing), but there are some tricks that are worth being aware of.
+Finally, it's common to animate when the user switches between routes of the application. Especially on mobile, this adds a sense of navigation to the app via positioning pages relative to each other. This can be done in a similar way to animating things appearing and disappearing (after all one page is appearing and other is disappearing), but there are some tricks that are worth being aware of.
 
 Let's consider the case of the Todos example app. Here we do a similar thing to achieve animation between pages, by using Momentum in the main layout template:
 
