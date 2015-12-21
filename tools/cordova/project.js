@@ -26,9 +26,13 @@ import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
   installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
-cordova_events.on('results', logIfVerbose);
+cordova_events.on('verbose', logIfVerbose);
 cordova_events.on('log', logIfVerbose);
+cordova_events.on('info', logIfVerbose);
 cordova_events.on('warn', log);
+cordova_events.on('error', log);
+
+cordova_events.on('results', logIfVerbose);
 
 function logIfVerbose(...args) {
   if (Console.verbose) {
