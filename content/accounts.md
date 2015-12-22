@@ -19,7 +19,7 @@ Before we get into all of the different user-facing accounts functionality you c
 
 <h3 id="userid-ddp">userId in DDP</h3>
 
-DDP is Meteor's built-in pub/sub and RPC protocol. You can read about how to use it in the [Data Loading](data-loading.html) and [Methods](methods.html) chapters. In addition to the concepts of data loading and remote method calls, DDP has one more feature built in - the idea of a `userId` field on a connection. This is the place where login state is tracked, regardless of which accounts UI package or login service you are using.
+DDP is Meteor's built-in pub/sub and RPC protocol. You can read about how to use it in the [Data Loading](data-loading.html) and [Methods](methods.html) articles. In addition to the concepts of data loading and method calls, DDP has one more feature built in - the idea of a `userId` field on a connection. This is the place where login state is tracked, regardless of which accounts UI package or login service you are using.
 
 This built-in feature means that you always get `this.userId` inside Methods and Publications, and can access the user ID on the client. This is a great starting point for building your own custom accounts system, but most developers won't need to worry about the mechanics, since you'll mostly be interacting with the `accounts-base` package instead.
 
@@ -60,9 +60,11 @@ meteor add accounts-meetup
 meteor add accounts-meteor-developer
 ```
 
-[XXX screenshot of accounts ui in action]
-
 Now just open your app, follow the configuration steps, and you're good to go - if you've done the [Meteor tutorial](https://www.meteor.com/tutorials/blaze/adding-user-accounts), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
+
+Here are a couple of screenshots of `accounts-ui` so you know what to expect:
+
+<img src="images/accounts-ui.png">
 
 <h2 id="useraccounts">Customizable UI: useraccounts</h2>
 
