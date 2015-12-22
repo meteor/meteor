@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Binary Heap datastructure implementation",
-  version: '1.0.5-modules.1'
+  version: '1.0.5-modules.2'
 });
 
 Package.onUse(function (api) {

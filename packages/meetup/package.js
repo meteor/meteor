@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meetup OAuth flow",
-  version: "1.6.1-modules.1"
+  version: "1.6.1-modules.2"
 });
 
 Package.onUse(function(api) {
