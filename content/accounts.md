@@ -145,6 +145,7 @@ AccountsTemplates.configure({
 In this case, we want to use the `appBody` layout template for all of the accounts-related pages. This template has a content region called `main`. Now, let's configure some routes:
 
 ```js
+// Define these routes in a file loaded on both client and server
 AccountsTemplates.configureRoute('signIn', {
   name: 'signin',
   path: '/signin'
@@ -172,13 +173,7 @@ Now, we can easily render links to our login page like so:
 </div>
 ```
 
-Note that we have specified a password reset route. For this URL to be sent in Meteor's password reset email, we need to configure it:
-
-```js
-Accounts.urls.resetPassword = (token) => {
-  return Meteor.absoluteUrl(`reset-password/${token}`);
-};
-```
+Note that we have specified a password reset route. Normally, we would have to configure Meteor's accounts system to send this route in password reset emails, but the `useraccounts:flow-routing` package does it for us.
 
 [Read more about configuring email flows below.](#email-flows)
 
@@ -327,6 +322,14 @@ The Meteor Todos team
 ```
 
 As you can see, we can use the ES2015 template string functionality to generate a multi-line string that includes the password reset URL. We can also set a custom `from` address and email subject.
+
+You can see that the URL is passed in through an argument. If you want a different URL for your reset password page, you need to customize it using the `Accounts.urls` option:
+
+```js
+Accounts.urls.resetPassword = (token) => {
+  return Meteor.absoluteUrl(`reset-password/${token}`);
+};
+```
 
 <h4 id="html-emails">HTML emails</h4>
 
