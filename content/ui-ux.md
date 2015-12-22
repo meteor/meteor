@@ -5,47 +5,47 @@ order: 6
 
 After reading this guide, you'll know:
 
-1. How to build reusable client side components in any user interface framework
-2. How to build a styleguide to allow you to visually test such reusable components
-3. Patterns for building front end components in a performant way in Meteor
-4. How to build user interfaces in a maintainable and extensible way
-5. How to build components that can cope with a variety of different data sources
-6. How to use animation to keep users informed of changes
+1. How to build reusable client side components in any user interface framework.
+2. How to build a styleguide to allow you to visually test such reusable components.
+3. Patterns for building front end components in a performant way in Meteor.
+4. How to build user interfaces in a maintainable and extensible way.
+5. How to build components that can cope with a variety of different data sources.
+6. How to use animation to keep users informed of changes.
 
 <h2 id="components">UI components</h2>
 
 Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces to your UI elements very clear, and avoiding using techniques that bypass these known interfaces.
 
-In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more modular like a component which has an API, rather than a template which is usually seen in a looser way.
+In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more like a component which has an API and internal logic, rather than a template which is just a bit of HTML.
 
-To begin with, let's consider two categories of components that are useful to think about, "smart" and "reusable":
+To begin with, let's consider two categories of UI components that are useful to think about, "smart" and "reusable":
 
 <h3 id="reusable-components">Reusable Components</h3>
 
-A "reusable" component is a component which doesn't rely on anything from the environment it renders in, rather it renders purely based on its inputs (its *template arguments* in Blaze, or *props* in React) and internal state.
+A "reusable" component is a component which doesn't rely on anything from the environment it renders in. It renders purely based on its direct inputs (its *template arguments* in Blaze, or *props* in React) and internal state.
 
-In Meteor, specifically this means a component which does not access data from any global sources (typically either Collections or Stores). For instance, in the Todos example app, the `listsShow` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
+In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `listsShow` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
 
-The advantages of reusable components are the following:
+Reusable components have many advantages:
 
  1. They are easy to reason about---you don't need to understand how the data in the global store changes, simply how the arguments to the component change.
 
  2. They are easy to test---you don't need to be careful about the environment you render them in, all you need to do is provide the right arguments.
 
- 3. They are easy to add to component styleguides---as we'll see in the next section, when creating a styleguide, a clean environment makes things much easier to work with.
+ 3. They are easy to add to component style guides---as we'll see in the section about [component style guides](#styleguides), when creating a style guide, a clean environment makes things much easier to work with.
 
- 4. You know exactly what they do and what dependencies you need to provide for them to work in different environments.
+ 4. You know exactly what dependencies you need to provide for them to work in different environments.
 
- There's also a specific type of reusable component, a "pure" component, which also does not have any internal state. For instance in the Todos app, the `todosItem` template purely decides what to render based on its arguments. Pure components are even easier to reason about and test than reusuable ones and so should be used wherever possible!
+ There's also an even more restricted type of reusable component, a "pure" component, which does not have any internal state. For instance in the Todos app, the `todosItem` template decides what to render solely based on its arguments. Pure components are even easier to reason about and test than reusable ones and so should be preferred wherever possible.
 
 <h3 id="global-stores">Global Data stores</h3>
 
- So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built with ease of development in mind, which typically means you can access a lot of things globally. Although this is very useful when building "smart" components (see below), you'll need to avoid them in reusable ones:
+So which are the global data stores that you should be avoiding in reusable components? There are a few. Meteor as a framework is built to optimize speed of development, which means you can access a lot of things globally. Although this is convenient when building "smart" components (see below), you'll need to avoid these data sources in reusable components:
 
-  - Your collections, as well as the `Meteor.users` collection,
-  - Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
-  - Current route information
-  - Any other client-side data stores (read more in the [data loading article](data-loading.html#stores))
+- Your collections, as well as the `Meteor.users` collection,
+- Accounts information, like `Meteor.user()` and `Meteor.loggingIn()`
+- Current route information
+- Any other client-side data stores (read more in the [data loading article](data-loading.html#stores))
 
 <h3 id="smart-components">Smart Components</h3>
 

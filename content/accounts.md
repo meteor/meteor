@@ -92,7 +92,7 @@ If you don't want to configure routing for your login flow, you can just drop in
 {{> atForm}}
 ```
 
-Once you configure routing according to [the section below](useraccounts-customizing-routes), you'll want to remove this inclusion.
+Once you configure routing according to [the section below](#useraccounts-customizing-routes), you'll want to remove this inclusion.
 
 <h3 id="useraccounts-customizing-templates">Customizing templates</h3>
 
