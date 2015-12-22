@@ -5,18 +5,18 @@ order: 7
 
 After reading this guide, you'll know:
 
-1. How to use the Spacebars syntax, used to define templates rendered by the Blaze engine.
-2. Best practice towards creating reusable components in Blaze.
-3. How the Blaze rendering engine works under the hood and some techniques to best use it.
+1. How to use the Spacebars language to define templates rendered by the Blaze engine.
+2. Best practices for writing reusable components in Blaze.
+3. How the Blaze rendering engine works under the hood and some advanced techniques for using it.
 4. How to test Blaze templates.
 
-Blaze is Meteor's built in reactive rendering library. Using templates written in [Spacebars](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md), a variant of [Handlebars](http://handlebarsjs.com) designed to take advantage of [Tracker](https://github.com/meteor/meteor/tree/devel/packages/tracker), Meteor's reactivity system, you can build components that are rendered by the Blaze library.
+Blaze is Meteor's built in reactive rendering library. Usually, templates are written in [Spacebars](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md), a variant of [Handlebars](http://handlebarsjs.com) designed to take advantage of [Tracker](https://github.com/meteor/meteor/tree/devel/packages/tracker), Meteor's reactivity system. These templates are compiled into JavaScript UI components that are rendered by the Blaze library.
 
-Blaze is not required to built applications in Meteor---you can equally use [React](http://react-in-meteor.readthedocs.org/en/latest/) or [Angular](http://www.angular-meteor.com), however this guide will take you through best practice in building an application in Blaze.
+Blaze is not required to build applications in Meteor---you can also easily use [React](http://react-in-meteor.readthedocs.org/en/latest/) or [Angular](http://www.angular-meteor.com) to develop your UI. However, this particular article will take you through best practices in building an application in Blaze, which is used as the UI engine in all of the other articles.
 
 <h2 id="spacebars">Spacebars</h2>
 
-Spacebars is a handlebars-like templating language, built off the concept of rendering a reactivily changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by `{% raw %}{{ }}{% endraw %}`.
+Spacebars is a handlebars-like templating language, built on the concept of rendering a reactively changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by curly braces: `{% raw %}{{ }}{% endraw %}`.
 
 As an example, consider the `todosItem` template from the Todos example app:
 
@@ -36,11 +36,11 @@ As an example, consider the `todosItem` template from the Todos example app:
 </template>
 ```
 
-In this example, this template is rendered with an object with key `todo` as data context (we'll see below how to enforce that). We access the properties of the `todo`  using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behaviour is to render that property as a string; however in some cases (such as `checked=={% raw %}{{todo.checked}}{% endraw %}` ) it can be resolved as a boolean value.
+This template expectes to be rendered with an object with key `todo` as data context (we'll see [below](#validate-data-context) how to enforce that). We access the properties of the `todo` using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behavior is to render that property as a string; however for some attributes (such as `checked={% raw %}{{todo.checked}}{% endraw %}`) it can be resolved as a boolean value.
 
-Note that simple string interpolations like this will always escape any HTML for you---so you don't need to perform safety checks for XSS.
+Note that simple string interpolations like this will always escape any HTML for you, so you don't need to perform safety checks for XSS.
 
-Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass}}{% endraw %}` calls out to the `checkedClass` helper defined in a separate JavaScript file, which combined with the template defines the `todosItem` component:
+Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass}}{% endraw %}` calls out to a `checkedClass` helper defined in a separate JavaScript file. The HTML template and JavaScript file together define the `todosItem` component:
 
 ```js
 Template.todosItem.helpers({
@@ -52,7 +52,7 @@ Template.todosItem.helpers({
 
 In the context of a Blaze helper, `this` is scoped to the current current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument.
 
-Apart from simple interpolation, mustache tags can control flow of the template. For instance, in the `listsShow` template, we render a list of todos via:
+Apart from simple interpolation, mustache tags can be used for control flow in the template. For instance, in the `listsShow` template, we render a list of todos like this:
 
 ```html
   {{#each todo in todos}}
@@ -70,7 +70,7 @@ This snippet illustrates a few things:
  - The `{% raw %}{{#each .. in}}{% endraw %}` block helper which renders a block one per element in an array or cursor, or an `{% raw %}{{else}}{% endraw %}` block if no items exist.
  - Template inclusion `{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}` which renders the `todosItem` component with a set data context, based on the output of the `todosArg` helper.
 
-You can read about the full Spacebars syntax [here](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md), but in this section we'll attempt to cover some important finer details.
+You can read about the full syntax [in the Spacebars README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md). In this section we'll attempt to cover some of the important details beyond just the syntax.
 
 <h3 id="data-contexts">Data contexts and lookup</h3>
 
@@ -619,4 +619,3 @@ This means when you include another component, you are simply running a function
 Blaze has an additional concept called a "view", which is associated with a reactively rendering area of a template. The view is the machinery that works behind the scenes to track reactivity, do lookups, and re-render appropriately when data changes. The view is the unit of re-rendering in Blaze. You can if necessary, use the view to walk the rendered component heirarchy, although, except in advanced cases it's better to not do this, but instead use callbacks and template arguments, or global data stores to communicate between components.
 
 You can read more about views in the [Blaze docs](http://docs.meteor.com/#/full/blaze_view).
-
