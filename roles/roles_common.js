@@ -394,6 +394,7 @@ _.extend(Roles, {
    *
    * Options:
    *   - partition: name of the partition
+   *   - anyPartition: if set, role can be in any partition (partition option is ignored)
    *
    * @method userIsInRole
    * @param {String|Object} user User Id or actual user object.
@@ -425,12 +426,21 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    options = _.defaults(options, {
+      anyPartition: false
+    });
+
     if (!user) return false;
 
     if (_.isObject(user)) {
       if (_.has(user, 'roles')) {
         return _.some(roles, function (role) {
-          return _.some(user.roles || [], Roles._roleAndPartitionMatcher(role, options.partition));
+          if (options.anyPartition) {
+            return _.some(user.roles || [], Roles._roleMatcher(role));
+          }
+          else {
+            return _.some(user.roles || [], Roles._roleAndPartitionMatcher(role, options.partition));
+          }
         })
       } else {
         // missing roles field, try going direct via id
@@ -442,24 +452,32 @@ _.extend(Roles, {
 
     if (!id) return false;
 
-    query = {
-      _id: id,
-      $or: [{
-        roles: {
-          $elemMatch: {
-            role: {$in: roles},
-            partition: options.partition
+    if (options.anyPartition) {
+      query = {
+        _id: id,
+        'roles.role': {$in: roles}
+      };
+    }
+    else {
+      query = {
+        _id: id,
+        $or: [{
+          roles: {
+            $elemMatch: {
+              role: {$in: roles},
+              partition: options.partition
+            }
           }
-        }
-      }, {
-        roles: {
-          $elemMatch: {
-            role: {$in: roles},
-            partition: null
+        }, {
+          roles: {
+            $elemMatch: {
+              role: {$in: roles},
+              partition: null
+            }
           }
-        }
-      }]
-    };
+        }]
+      };
+    }
 
     return !!Meteor.users.findOne(query, {fields: {_id: 1}});
   },
@@ -469,6 +487,7 @@ _.extend(Roles, {
    *
    * Options:
    *   - partition: name of the partition
+   *   - anyPartition: if set, role can be in any partition (partition option is ignored)
    *   - fullObjects: return full roles objects (true) or just names (false) (default false)
    *   - onlyAssigned: return only assigned roles and not automatically inferred (like subroles)
    *
@@ -492,14 +511,20 @@ _.extend(Roles, {
 
     options = _.defaults(options, {
       fullObjects: false,
-      onlyAssigned: false
+      onlyAssigned: false,
+      anyPartition: false
     });
 
     user = Roles._resolveUser(user);
 
     if (!user) return [];
 
-    roles = _.filter(user.roles || [], Roles._partitionMatcher(options.partition));
+    if (options.anyPartition) {
+      roles = user.roles || [];
+    }
+    else {
+      roles = _.filter(user.roles || [], Roles._partitionMatcher(options.partition));
+    }
 
     if (options.onlyAssigned) {
       roles = _.filter(roles, Roles._onlyAssignedMatcher());
@@ -531,6 +556,7 @@ _.extend(Roles, {
    *
    * Options:
    *   - partition: name of the partition
+   *   - anyPartition: if set, role can be in any partition (partition option is ignored)
    *   - queryOptions: options which are passed directly
    *                   through to `Meteor.users.find(query, options)`
    *
@@ -561,26 +587,34 @@ _.extend(Roles, {
     options.partition = options.partition || null;
 
     options = _.defaults(options, {
-      queryOptions: queryOptions || {}
+      queryOptions: queryOptions || {},
+      anyPartition: false
     });
 
-    query = {
-      $or: [{
-        roles: {
-          $elemMatch: {
-            role: {$in: roles},
-            partition: options.partition
+    if (options.anyPartition) {
+      query = {
+        'roles.role': {$in: roles}
+      };
+    }
+    else {
+      query = {
+        $or: [{
+          roles: {
+            $elemMatch: {
+              role: {$in: roles},
+              partition: options.partition
+            }
           }
-        }
-      }, {
-        roles: {
-          $elemMatch: {
-            role: {$in: roles},
-            partition: null
+        }, {
+          roles: {
+            $elemMatch: {
+              role: {$in: roles},
+              partition: null
+            }
           }
-        }
-      }]
-    };
+        }]
+      };
+    }
 
     return Meteor.users.find(query, options.queryOptions);
   },
@@ -638,6 +672,12 @@ _.extend(Roles, {
     }
 
     return user;
+  },
+
+  _roleMatcher: function (roleName) {
+    return function (userRole) {
+      return userRole.role === roleName;
+    };
   },
 
   _roleAndPartitionMatcher: function (roleName, partition) {
