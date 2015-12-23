@@ -196,7 +196,7 @@ It's the `listShow` component (a reusuable component) that actually handles the 
 
 <h3 id="route-rendering-logic">Route related rendering logic</h3>
 
-There are types of rendering logic that appear related to the route for which but which also seem related to user interface rendering. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
+There are types of rendering logic that appear related to the route but which also seem related to user interface rendering. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
 
 It's best to keep all logic around what to render in the component hierarchy (i.e. the tree of rendered components). So this authorization should happen inside a component. Suppose we wanted to add this to the `listsShowPage` we were looking at above. We could do something like:
 
@@ -214,7 +214,7 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 
 Of course, we might find that we need to share this functionality between multiple pages of our app that require access control. We can easily share functionality between templates by wrapping them in a wrapper "layout" component which includes the behavior we want.
 
-You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html#XXX)). Here's how we could write an authorization template:
+You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html#block-helpers)). Here's how we could write an authorization template:
 
 ```html
 <template name="forceLoggedIn">
@@ -284,7 +284,7 @@ Of course, calling `FlowRouter.go()`, will always work, so unless you are trying
 
 As we discussed in the introduction, the URL is really just a serialization of some part of the client-side state the user is looking at. Although parameters can only be strings, it's possible to convert any type of data to a string by serializing it.
 
-In general if you want to store arbitrary serializable data in a URL param, you can use [`EJSON.stringify()`](http://docs.meteor.com/#/full/ejson_stringify) to turn it onto a string. You'll need to URL-encode the string using [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) to remove any characters that have meaning in a URL:
+In general if you want to store arbitrary serializable data in a URL param, you can use [`EJSON.stringify()`](http://docs.meteor.com/#/full/ejson_stringify) to turn it into a string. You'll need to URL-encode the string using [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) to remove any characters that have meaning in a URL:
 
 ```js
 FlowRouter.setQueryParams({data: encodeURIComponent(EJSON.stringify(data))});
