@@ -403,6 +403,10 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     }
   }
 
+  if (info.hash) {
+    res.setHeader('ETag', info.hash);
+  }
+
   if (info.content) {
     res.write(info.content);
     res.end();
@@ -475,6 +479,7 @@ var runWebAppServer = function () {
             staticFiles[urlPrefix + getItemPathname(item.url)] = {
               absolutePath: path.join(clientDir, item.path),
               cacheable: item.cacheable,
+              hash: item.hash,
               // Link from source to its map
               sourceMapUrl: item.sourceMapUrl,
               type: item.type
