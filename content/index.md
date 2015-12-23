@@ -39,7 +39,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 <h2 id="guide-concepts">Guide concepts</h2>
 
-The Meteor Guide is **developed in the open** at the [GitHub repository](https://github.com/meteor/guide). We encourage pull requests and issues to discuss problems with and changes that could be made to the content. We hope that keeping out process open and honest will make it clear what we plan to include in the guide and what changes will be coming in future Meteor versions.
+The Meteor Guide is **developed in the open** at the [GitHub repository](https://github.com/meteor/guide). We encourage pull requests and issues to discuss problems with and changes that could be made to the content. We hope that keeping our process open and honest will make it clear what we plan to include in the guide and what changes will be coming in future Meteor versions.
 
 The decisions made and practices outlined in the guide must necessarily be **opinionated**. Certain best practices will be highlighted and other valid approaches ignored. We aim to reach community consensus around major decisions but there will always be other ways to solve problems when developing your application. We believe it's important to know what the "standard" way to solve a problem is before branching out to other options. If an alternate approach proves itself superior, then it should make its way into a future version of the guide.
 
