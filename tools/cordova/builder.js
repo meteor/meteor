@@ -359,31 +359,44 @@ export class CordovaBuilder {
     const programPath = files.pathJoin(bundlePath, 'programs', CORDOVA_ARCH);
     files.cp_r(programPath, applicationPath);
 
-
-  generateBootstrapPage(applicationPath) {
+    // Load program.json
     const programJsonPath = files.convertToOSPath(
       files.pathJoin(applicationPath, 'program.json'));
-    const programJson = JSON.parse(files.readFile(programJsonPath, 'utf8'));
-    const manifest = programJson.manifest;
+    const program = JSON.parse(files.readFile(programJsonPath, 'utf8'));
 
+    // Load settings
     const settingsFile = this.options.settingsFile;
     const settings = settingsFile ?
       JSON.parse(files.readFile(settingsFile, 'utf8')) : {};
     const publicSettings = settings['public'];
 
-    const meteorRelease =
-      release.current.isCheckout() ? "none" : release.current.name;
+    // Calculate client hash and append to program
+    this.appendVersion(program, publicSettings);
 
+    // Write program.json
+    files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
+
+    const bootstrapPage = this.generateBootstrapPage(applicationPath, program, publicSettings);
+    files.writeFile(files.pathJoin(applicationPath, 'index.html'),
+      bootstrapPage, 'utf8');
+  }
+
+  appendVersion(program, publicSettings) {
     let configDummy = {};
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
     const { WebAppHashing } =
       isopackets.load('cordova-support')['webapp-hashing'];
-    const calculatedHash =
-      WebAppHashing.calculateClientHash(manifest, null, configDummy);
+    program.version =
+      WebAppHashing.calculateClientHash(program.manifest, null, configDummy);
+  }
 
-    // XXX partially copied from autoupdate package
-    const version = process.env.AUTOUPDATE_VERSION || calculatedHash;
+  generateBootstrapPage(applicationPath, program, publicSettings) {
+    const meteorRelease =
+      release.current.isCheckout() ? "none" : release.current.name;
+
+    const manifest = program.manifest;
+    const autoupdateVersion = process.env.AUTOUPDATE_VERSION || program.version;
 
     const mobileServerUrl = this.options.mobileServerUrl;
 
@@ -393,7 +406,7 @@ export class CordovaBuilder {
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',
       DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
-      autoupdateVersionCordova: version,
+      autoupdateVersionCordova: autoupdateVersion,
       appId: this.projectContext.appIdentifier
     };
 
