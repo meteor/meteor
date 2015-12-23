@@ -91,8 +91,7 @@ _.extend(Roles, {
   },
 
   /**
-   * Delete an existing role. Will throw "Role in use." error if any users
-   * are currently assigned to the target role.
+   * Delete an existing role.
    *
    * @method deleteRole
    * @param {String} role Name of role
@@ -100,6 +99,25 @@ _.extend(Roles, {
   deleteRole: function (role) {
     Roles._checkRoleName(role);
 
+    Meteor.users.update({}, {
+      $pull: {
+        roles: {
+          role: role
+        }
+      }
+    }, {multi: true});
+
+    Meteor.roles.remove({name: role});
+
+    // try once more just to be sure if role was assigned
+    // just before the role itself was removed
+    Meteor.users.update({}, {
+      $pull: {
+        roles: {
+          role: role
+        }
+      }
+    }, {multi: true});
     var foundExistingUser = Meteor.users.findOne(
                               {'roles.role': role},
                               {fields: {_id: 1}});
