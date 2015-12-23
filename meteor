@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Note: 0.5.17 used on branch origin/npm3
+# Note: 0.5.19 used on branch origin/cordova-improvements
 BUNDLE_VERSION=0.5.18
 
 # OS Check. Put here because here is where we download the precompiled
