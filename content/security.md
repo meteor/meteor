@@ -6,7 +6,7 @@ order: 8
 After reading this guide, you'll know:
 
 1. The security surface area of a Meteor app.
-2. How to secure Methods, publications, and source code.
+2. How to secure Meteor Methods, publications, and source code.
 3. Where to store secret keys in development and production.
 4. How to follow a security checklist when auditing your app.
 
@@ -34,13 +34,13 @@ Each of these points will have their own section below.
 
 <h3 id="allow-deny">Avoid allow/deny</h3>
 
-In this guide, we're going to take a strong position that using [allow](http://docs.meteor.com/#/full/allow) or [deny](http://docs.meteor.com/#/full/deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is very hard to follow the principles outlined above. It's extremely hard to validate the complete space of possible MongoDB operators, which could potentially grow over time.
+In this guide, we're going to take a strong position that using [allow](http://docs.meteor.com/#/full/allow) or [deny](http://docs.meteor.com/#/full/deny) to run MongoDB queries directly from the client is not a good idea. The main reason is that it is hard to follow the principles outlined above. It's extremely difficult to validate the complete space of possible MongoDB operators, which could potentially grow over time with new versions of MongoDB.
 
 There have been several articles about the potential pitfalls of accepting MongoDB update operators from the client, in particular the [Allow & Deny Security Challenge](https://www.discovermeteor.com/blog/allow-deny-security-challenge/) and its [results](https://www.discovermeteor.com/blog/allow-deny-challenge-results/), both on the Discover Meteor blog.
 
 Given the points above, we recommend that all Meteor apps should use Methods to accept data input from the client, and restrict the arguments accepted by each Method as tightly as possible.
 
-Here's a code snippet to add to your server code, which disables client-side updates on a collection; this will make sure no other part of the code can use `allow`:
+Here's a code snippet to add to your server code which disables client-side updates on a collection. This will make sure no other part of your app can use `allow`:
 
 ```js
 // Deny all client-side updates on the Lists collection
@@ -54,11 +54,11 @@ Lists.deny({
 
 <h2 id="methods">Methods</h2>
 
-Methods are the way your Meteor server accepts inputs and data from the outside world, so it's natural that they are the most important topic for security. If you don't properly secure your Methods, you could result in users modifying your database in unexpected ways - editing other people's documents, deleting data, or messing up your database schema causing your app to crash.
+Methods are the way your Meteor server accepts inputs and data from the outside world, so it's natural that they are the most important topic for security. If you don't properly secure your Methods, users can end up modifying your database in unexpected ways - editing other people's documents, deleting data, or messing up your database schema causing the app to crash.
 
 <h3 id="validate-arguments">Validate all arguments</h3>
 
-This is trivial when using the `mdg:validated-method` package, and you can also achieve the same effect by using [`check`](http://docs.meteor.com/#/full/check) inside a vanilla Method. The idea is that you don't want someone to pass a data type you aren't expecting, which could mess up some of your logic.
+It's much easier to write clean code if you can assume your inputs are correct, so it's valuable to validate all Method arguments before running any actual business logic. You don't want someone to pass a data type you aren't expecting and cause unexpected behavior.
 
 Consider that if you are writing unit tests for your Methods, you would need to test all possible kinds of input to the Method; validating the arguments restricts the space of inputs you need to unit test, reducing the amount of code you need to write overall. It also has the extra bonus of being self-documenting; someone else can come along and read the code to find out what kinds of parameters a Method is looking for.
 
@@ -80,11 +80,11 @@ If someone comes along and passes a non-ID selector like `{}`, they will end up 
 
 <h3 id="validated-method">mdg:validated-method</h3>
 
-To help you write good Methods, we've written a simple wrapper package for Methods that enforces argument validation using `aldeed:simple-schema`. XXX elaborate here
+To help you write good Methods that exhaustively validate their arguments, we've written a simple wrapper package for Methods that enforces argument validation. Read more about how to use it in the [Methods article](methods.html#validated-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
 
 <h3 id="user-id-client">Don't pass userId from the client</h3>
 
-The `this` context inside every Meteor Method has some useful properties, and the most useful is [`this.userId`](http://docs.meteor.com/#/full/method_userId). This property is managed by the DDP login system, and is guaranteed by the framework itself to be secure following widely-used best practices.
+The `this` context inside every Meteor Method has some useful information about the current connection, and the most useful is [`this.userId`](http://docs.meteor.com/#/full/method_userId). This property is managed by the DDP login system, and is guaranteed by the framework itself to be secure following widely-used best practices.
 
 Given that the user ID of the current user is available through this context, you should never pass the ID of the current user as an argument to a Method. This would allow any client of your app to pass any user ID they want. Let's look at an example:
 
@@ -106,12 +106,12 @@ setName({ newName }) {
 
 The _only_ times you should be passing any user ID as an argument are the following:
 
-1. This is a Method only accessible by admin users, who are allowed to edit other users. See the section about user roles below.
+1. This is a Method only accessible by admin users, who are allowed to edit other users. See the section about [user roles](accounts.html##roles-and-permissions) to learn how to check that a user is in a certain role.
 2. This Method doesn't modify the other user, but uses it as a target; for example, it could be a Method for sending a private message, or adding a user as a friend.
 
 <h3 id="specific-action">One Method per action</h3>
 
-The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs could come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can easily look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
+The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can easily look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
 Lists.methods.makePrivate = new Method({
@@ -162,13 +162,13 @@ const Meteor.users.methods.setUserData = new Method({
 
 The above Method is great because you can have the flexibility of having some optional fields and only passing the ones you want to change. In particular, what makes it possible for this Method is that the security considerations of setting one's full name and date of birth are the same - we don't have to do different security checks for different fields being set. Note that it's very important that the `$set` query on MongoDB is generated on the server - we should never take MongoDB operators as-is from the client, since they are hard to validate and could result in unexpected side effects.
 
-#### Refactoring to have global security rules
+<h4 id="reusing-security-rules">Refactoring to reuse security rules</h4>
 
 You might run into a situation where many Methods in your app have the same security checks. This can be simplified by factoring out the security into a separate module, wrapping the Method body, or extending the `Mongo.Collection` class to do security inside the `insert`, `update`, and `remove` implementations on the server. However, implementing your client-server communication via specific Methods is still a good idea rather than sending arbitrary `update` operators from the client, since a malicious client can't send an `update` operator that you didn't test for.
 
 <h3 id="rate-limiting">Rate limiting</h3>
 
-Since Meteor Methods can easily be called from anywhere - a malicious program, script in the browser console, etc - it is easy to fire many Method calls in a very short amount of time. This means it's easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other Methods.
+Just like REST endpoints, Meteor Methods can easily be called from anywhere - a malicious program, script in the browser console, etc. It is easy to fire many Method calls in a very short amount of time. This means it can be easy for an attacker to test lots of different inputs to find one that works. Meteor has built-in rate limiting for password login to stop password brute-forcing, but it's up to you to define rate limits for your other Methods.
 
 In the Todos example app, we use the following code to set a basic rate limit on all Methods:
 
@@ -187,13 +187,11 @@ DDPRateLimiter.addRule({
 }, 5, 1000);
 ```
 
-This will make every Method only callable 5 times per second. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the database with requests. You will need to tune the limit parameters to match your app's needs.
-
-Meteor's built-in rate limiter is useful in many situations; there are also community-built rate limiting packages that include additional features like reCAPTCHA integration, for example [`meteorhacks:sikka`](https://github.com/meteorhacks/sikka). XXX verify this is still a real thing
+This will make every Method only callable 5 times per second per connection. This is a rate limit that shouldn't be noticeable by the user at all, but will prevent a malicious script from totally flooding the server with requests. You will need to tune the limit parameters to match your app's needs.
 
 <h2 id="publications">Publications</h2>
 
-Publications are the primary way clients retrieve data from a Meteor server. While with Methods the primary concern was making sure users can't modify the database in unexpected ways, with publications the main issue is filtering the data being returned so that a malicious user can't get access to data they aren't supposed to see.
+Publications are the primary way a Meteor server can make data available to a client. While with Methods the primary concern was making sure users can't modify the database in unexpected ways, with publications the main issue is filtering the data being returned so that a malicious user can't get access to data they aren't supposed to see.
 
 #### You can't do security at the rendering layer
 
@@ -210,20 +208,20 @@ All of the points above about Methods apply to publications as well:
 
 <h3 id="fields">Always restrict fields</h3>
 
-[`Mongo.Collection#find` has an option called `fields`](http://docs.meteor.com/#/full/find) which lets you filter the fields on the fetched documents. You should always use this in publications, to make sure you don't accidentally publish secret data.
+[`Mongo.Collection#find` has an option called `fields`](http://docs.meteor.com/#/full/find) which lets you filter the fields on the fetched documents. You should always use this in publications to make sure you don't accidentally publish secret fields.
 
 For example, you could write a publication, then later add a secret field to the published collection. Now, the publication would be sending that secret to the client. If you filter the fields on every publication when you first write it, then adding another field won't automatically publish it.
 
 ```js
 // #1: Bad! If we add a secret field to Lists later, the client
 // will see it
-Meteor.publish('lists/public', function () {
+Meteor.publish('Lists.public', function () {
   return Lists.find({userId: {$exists: false}});
 });
 
 // #2: Good, if we add a secret field to Lists later, the client
 // will only publish it if we add it to the list of fields
-Meteor.publish('lists/public', function () {
+Meteor.publish('Lists.public', function () {
   return Lists.find({userId: {$exists: false}}, {
     fields: {
       name: 1,
@@ -248,7 +246,7 @@ Lists.publicFields = {
 Now your code becomes a bit simpler:
 
 ```js
-Meteor.publish('lists/public', function () {
+Meteor.publish('Lists.public', function () {
   return Lists.find({userId: {$exists: false}}, {
     fields: Lists.publicFields
   });
@@ -257,7 +255,7 @@ Meteor.publish('lists/public', function () {
 
 <h3 id="publications-user-id">Publications and userId</h3>
 
-The data publications return will often be dependent on the currently logged in user, and perhaps some properties about that user - whether they are an admin, whether they own a certain document, etc.
+The data returned from publications will often be dependent on the currently logged in user, and perhaps some properties about that user - whether they are an admin, whether they own a certain document, etc.
 
 Publications are not reactive, and they only re-run when the currently logged in `userId` changes, which can be accessed through `this.userId`. Because of this, it's easy to accidentally write a publication that is secure when it first runs, but doesn't respond to changes in the app environment. Let's look at an example:
 
@@ -269,7 +267,8 @@ Meteor.publish('list', function (listId) {
   const list = Lists.findOne(listId);
 
   if (! list.userId === this.userId) {
-    throw new Meteor.Error('list.unauthorized', 'This list doesn\'t belong to you.');
+    throw new Meteor.Error('list.unauthorized',
+      'This list doesn\'t belong to you.');
   }
 
   return Lists.find(listId, {
@@ -307,7 +306,7 @@ Unfortunately, not all publications are as simple to secure as the example above
 For certain applications, for example pagination, you'll want to pass options into the publication to control things like how many documents should be sent to the client. There are some extra considerations to keep in mind for this particular case.
 
 1. **Passing a limit**: In the case where you are passing the `limit` option of the query from the client, make sure to set a maximum limit. Otherwise, a malicious client could request too many documents at once, which could raise performance issues.
-2. **Passing in a filter**: If you want to pass fields to filter on because you don't want all of the data, for example in the case of a search query, make sure to intersect the fields passed from the client with the fields it is allowed to see. Otherwise, a client could query on secret fields it's not supposed to be able to access.
+2. **Passing in a filter**: If you want to pass fields to filter on because you don't want all of the data, for example in the case of a search query, make sure to use MongoDB `$and` to intersect the filter coming from the client with the documents that client should be allowed to see, and remove any fields from the filter that the client shouldn't know about. Otherwise, a client could query on secret fields it's not supposed to be able to access.
 3. **Passing in fields**: If you want the client to be able to decide which fields of the collection should be fetched, make sure to intersect that with the fields that client is allowed to see, so that you don't accidentally send secret data to the client.
 
 In summary, you should make sure that any options passed from the client to a publication can only restrict the data being requested, rather than extending it.
@@ -322,9 +321,11 @@ Publications are not the only place the client gets data from the server. The se
 
 <h3 id="secret-code">Secret server code</h3>
 
-While the client-side UI of your application is basically open source, every application will have some secret code on the server that you don't want to share with the world.
+While the client-side code of your application is necessarily accessible by the browser, every application will have some secret code on the server that you don't want to share with the world.
 
-Secret business logic in your app should be located in code that only runs on the server. This means it is in a `server/` directory of your app, in a package that is only included on the server, or in a file inside a package that was loaded only on the server. If you have an API Method in your app that has secret business logic, you might want to split the Method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire Method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
+Secret business logic in your app should be located in code that is only loaded on the server. This means it is in a `server/` directory of your app, in a package that is only included on the server, or in a file inside a package that was loaded only on the server.
+
+If you have a Meteor Method in your app that has secret business logic, you might want to split the Method into two functions - the optimistic UI part that will run on the client, and the secret part that runs on the server. Most of the time, putting the entire Method on the server doesn't result in the best user experience. Let's look at an example, where you have a secret algorithm for calculating someone's MMR (ranking) in a game:
 
 ```js
 // In a server-only file
@@ -386,9 +387,11 @@ Here's what a settings file with some API keys might look like:
 
 In your app's JavaScript code, these settings can be accessed from the variable `Meteor.settings`.
 
+[Read more about managing keys and settings in the Deployment article.](#environment)
+
 <h3 id="client-settings">Settings on the client</h3>
 
-In most normal situations, API keys from your settings file will only be used by the server, and by default the data passed in through `--settings` is only available on the server. However, if you put data under a special key called `public`, it will be available on the client. You might want to do this if, for example, you need to make an API call from the client. Public settings will be available on the client under `Meteor.settings.public`.
+In most normal situations, API keys from your settings file will only be used by the server, and by default the data passed in through `--settings` is only available on the server. However, if you put data under a special key called `public`, it will be available on the client. You might want to do this if, for example, you need to make an API call from the client and are OK with users knowing that key. Public settings will be available on the client under `Meteor.settings.public`.
 
 <h3 id="api-keys-oauth">API keys for OAuth</h3>
 
@@ -400,19 +403,18 @@ First, add the `service-configuration` package:
 meteor add service-configuration
 ```
 
-Then, upsert into the exported collection:
+Then, upsert into the `ServiceConfiguration` collection:
 
 ```js
-ServiceConfiguration.configurations.upsert(
-  { service: "facebook" },
-  {
-    $set: {
-      clientId: Meteor.settings.facebook.clientId,
-      loginStyle: "popup",
-      secret: Meteor.settings.facebook.secret
-    }
+ServiceConfiguration.configurations.upsert({
+  service: "facebook"
+}, {
+  $set: {
+    clientId: Meteor.settings.facebook.clientId,
+    loginStyle: "popup",
+    secret: Meteor.settings.facebook.secret
   }
-);
+});
 ```
 
 Now, `accounts-facebook` will be able to find that API key and Facebook login will work properly.
