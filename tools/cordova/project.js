@@ -467,7 +467,7 @@ from Cordova project`, async () => {
     const target = this.targetForPlugin(id, version);
     if (target) {
       const commandOptions = _.extend(this.defaultOptions,
-        { cli_variables: config });
+        { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
 
       this.runCommands(`adding plugin ${target} \
 to Cordova project`, async () => {
