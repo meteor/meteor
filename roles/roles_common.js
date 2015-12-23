@@ -22,6 +22,8 @@
  *
  * Children list elements are subdocuments so that they can easier be extended in the future.
  *
+ * Roles can have multiple parents and can be children (subroles) of multiple roles.
+ *
  * Example: { _id: "123", name: "admin" }
  */
  if (!Meteor.roles) {
@@ -118,6 +120,57 @@ _.extend(Roles, {
         }
       }
     }, {multi: true});
+  },
+
+  addRoleParent: function (roleName, parentName) {
+    var role,
+        changes,
+        parentRoles;
+
+    Roles._checkRoleName(roleName);
+    Roles._checkRoleName(parentName);
+
+    // query to get role's _id
+    role = Meteor.roles.findOne({name: roleName});
+
+    if (!role) {
+      throw new Error("Role '" + roleName + "' does not exist.");
+    }
+
+    changes = Meteor.roles.update({
+      name: parentName,
+      'children._id': {
+        $ne: role._id
+      }
+    }, {
+      $addToSet: {
+        children: {
+          _id: role._id,
+          name: role.name
+        }
+      }
+    });
+
+    // if there was no change, parent role might not exist, or role is
+    // already a subrole; in any case we do not have anything more to do
+    if (!changes) return;
+
+    Roles.getUsersInRole(parentName, {
+      anyPartition: true,
+      queryOptions: {
+        fields: {
+          _id: 1,
+          roles: 1
+        }
+      }
+    }).forEach(function (user, index, cursor) {
+      // parent role can be assigned multiple times to the user, for multiple partitions
+      // we have to assign a new subrole for each of those partitions
+      parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
+      _.each(parentRoles, function (parentRole) {
+        Roles._addUserToRole(user, roleName, {partition: parentRole.partition, _assigned: false})
+      });
+    });
   },
 
   /**
