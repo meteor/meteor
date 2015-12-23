@@ -243,7 +243,7 @@ To insert literal curly braces: `{% raw %}{{ }}{% endraw %}` and the like, add a
 <h1>All about {{{|</h1>
 ```
 
-<h2 id="reusable-components">Creating reusable components in Blaze</h2>
+<h2 id="reusable-components">Reusable components in Blaze</h2>
 
 In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reusable components that interact with their environment in clear and minimal ways.
 
