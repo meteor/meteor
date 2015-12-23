@@ -27,7 +27,7 @@
  * Example: { _id: "123", name: "admin" }
  */
  if (!Meteor.roles) {
-  Meteor.roles = new Mongo.Collection("roles")
+  Meteor.roles = new Mongo.Collection("roles");
 }
 
 /**
@@ -39,7 +39,7 @@
  * @constructor
  */
 if ('undefined' === typeof Roles) {
-  Roles = {}
+  Roles = {};
 }
 
 "use strict";
