@@ -139,7 +139,7 @@ Subscribing to data puts it in your client-side collection. To use the data in y
 
   We do this for the same reason we subscribe in the component in the first place---to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child component, as we'll see in in the [UI Article](ui-ux.html#components).
 
-  Note that there are some exceptions to this second rule. A common one is `Meteor.user()` --- although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes components harder to test.
+  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes components harder to test.
 
 <h3 id="global-subscriptions">Global subscriptions</h3>
 
