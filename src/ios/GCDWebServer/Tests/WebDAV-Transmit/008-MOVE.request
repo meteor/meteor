@@ -1,0 +1,8 @@
+MOVE /PDF%20Reports/Apple%20Economic%20Impact%20on%20Cupertino.pdf HTTP/1.1
+User-Agent: Transmit/4.4.6 neon/0.29.3
+Connection: TE
+TE: trailers
+Host: localhost:8080
+Destination: http://localhost:8080/PDF%20Reports/Apple%20Economic%20Impact.pdf
+Overwrite: T
+

@@ -1,0 +1,7 @@
+OPTIONS / HTTP/1.1
+User-Agent: Transmit/4.4.6 neon/0.29.3
+Keep-Alive: 
+Connection: TE, Keep-Alive
+TE: trailers
+Host: localhost:8080
+
