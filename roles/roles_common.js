@@ -124,20 +124,20 @@ _.extend(Roles, {
 
   addRoleParent: function (roleName, parentName) {
     var role,
-        changes,
+        count,
         parentRoles;
 
     Roles._checkRoleName(roleName);
     Roles._checkRoleName(parentName);
 
     // query to get role's _id
-    role = Meteor.roles.findOne({name: roleName});
+    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1}});
 
     if (!role) {
       throw new Error("Role '" + roleName + "' does not exist.");
     }
 
-    changes = Meteor.roles.update({
+    count = Meteor.roles.update({
       name: parentName,
       'children._id': {
         $ne: role._id
@@ -153,7 +153,7 @@ _.extend(Roles, {
 
     // if there was no change, parent role might not exist, or role is
     // already a subrole; in any case we do not have anything more to do
-    if (!changes) return;
+    if (!count) return;
 
     Roles.getUsersInRole(parentName, {
       anyPartition: true,
@@ -169,6 +169,77 @@ _.extend(Roles, {
       parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
       _.each(parentRoles, function (parentRole) {
         Roles._addUserToRole(user, roleName, {partition: parentRole.partition, _assigned: false})
+      });
+    });
+  },
+
+  removeRoleParent: function (roleName, parentName) {
+    var role,
+        count,
+        parentRoles;
+
+    Roles._checkRoleName(roleName);
+    Roles._checkRoleName(parentName);
+
+    // to check for role existence
+    // (_id would not really be needed, but we are trying to match addRoleParent)
+    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1}});
+
+    if (!role) {
+      throw new Error("Role '" + roleName + "' does not exist.");
+    }
+
+    count = Meteor.roles.update({
+      name: parentName
+    }, {
+      $pull: {
+        children: {
+          _id: role._id
+        }
+      }
+    });
+
+    // if there was no change, parent role might not exist, or role was
+    // already not a subrole; in any case we do not have anything more to do
+    if (!count) return;
+
+    Roles.getUsersInRole(parentName, {
+      anyPartition: true,
+      queryOptions: {
+        fields: {
+          _id: 1,
+          roles: 1
+        }
+      }
+    }).forEach(function (user, index, cursor) {
+      // parent role can be assigned multiple times to the user, for multiple partitions
+      // we have to remove the subrole for each of those partitions
+      parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
+      _.each(parentRoles, function (parentRole) {
+        // but we want to remove it only if it was not also explicitly assigned
+        Roles._removeUserFromRole(user, roleName, {partition: parentRole.partition, _onlyAssigned: true})
+      });
+    });
+
+    // now we have an edge case we have to handle
+    // because we allow the same role to be a child of multiple roles it might happen
+    // that we just removed some subroles which we should not because they are
+    // in effect also through some other parent role
+    // so we simply reassign to all users the parent role again
+    Roles.getUsersInRole(parentName, {
+      anyPartition: true,
+      queryOptions: {
+        fields: {
+          _id: 1,
+          roles: 1
+        }
+      }
+    }).forEach(function (user, index, cursor) {
+      // parent role can be assigned multiple times to the user, for multiple partitions
+      // we have to reassign the parent role for each of those partitions
+      parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
+      _.each(parentRoles, function (parentRole) {
+        Roles._addUserToRole(user, parentRole.role, {partition: parentRole.partition, _assigned: parentRole.assigned});
       });
     });
   },
