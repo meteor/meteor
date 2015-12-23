@@ -5,42 +5,49 @@ order: 9
 
 After reading this guide, you'll know:
 
-1. What to consider before you deploy a Meteor application
-2. How to deploy to some common Meteor hosting environments
-3. How to design a deployment process to make sure your application's quality is maintained
-4. How to monitor user behavior with analytics tools
-5. How to monitor your application with Kadira
-6. How to make sure your site is discoverable by search engines
+1. What to consider before you deploy a Meteor application.
+2. How to deploy to some common Meteor hosting environments.
+3. How to design a deployment process to make sure your application's quality is maintained.
+4. How to monitor user behavior with analytics tools.
+5. How to monitor your application with Kadira.
+6. How to make sure your site is discoverable by search engines.
 
 <h2 id="deploying">Deploying Meteor Applications</h2>
 
-Once you've built and tested your Meteor application, you need to put it online to show it to the world. In some ways, deploying a Meteor application is not so different to deploying any other web applications, whilst in others it can be.
+Once you've built and tested your Meteor application, you need to put it online to show it to the world. Deploying a Meteor application is similar to deploying any other websocket-based Node.js app, but is different in some of the specifics.
 
-Deploying a web application is fundamentally different to releasing most other kinds of software, in that you can deploy as often as you'd like to---you don't need to wait for users to do something to get the new version of your software---the server will push it right at them.
+Deploying a web application is fundamentally different to releasing most other kinds of software, in that you can deploy as often as you'd like to. You don't need to wait for users to do something to get the new version of your software because the server will push it right at them.
 
 However, it's still important to test your changes throughly with a good process of Quality Assurance (QA). Although it's easy to push out fixes to bugs, those bugs can still cause major problems to users and even potentially data corruption!
 
 <h3 id="environments">Deployment environments</h3>
 
-In web deployment it's common to refer to the different environments that you may deploy to. After building your app in the "development" environment, you typically first deploy it to a "staging" environment ("stage" the app), then after testing, deploy it for real to "production".
+In web application deployment it's common to refer to three runtime environments:
 
-The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that just don't occur in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
+1. **Development.** This refers to your machine where you develop new features and run local tests.
+2. **Staging.** An intermediate environment that is similar to production, but not visible to users of the application. Can be used for testing and QA.
+3. **Production.** The real deployment of your app that your customers are currently using.
 
-For this reason, developers tend to try and get staging as close as possible to production; so all the steps we outline below should, if possible, be followed for staging also.
+The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that just don't happen in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
+
+For this reason, developers tend to try and get staging as close as possible to production. This means that all the steps we outline below about production deployment, should, if possible, also be followed for your staging server.
 
 <h3 id="environment">Environment variables and settings</h3>
 
-There are two main ways to configure your application outside of the code of the app itself. They are the **environment variables** (the set of `ENV_VARS` that are set on the running process), and the **settings**, which is a JSON object set via either the `--settings` command-line flag or stringified in the `METEOR_SETTINGS` environment var.
+There are two main ways to configure your application outside of the code of the app itself:
+
+1. **Environment variables.** This is the set of `ENV_VARS` that are set on the running process.
+2. **Settings.** These are in a JSON object set via either the `--settings` Meteor command-line flag or stringified into the `METEOR_SETTINGS` environment variable.
 
 Settings should be used to set environment (i.e. staging vs production) specific things, like the access token and secret used to connect to Google. These settings will not change between any given process running your application in the given environment.
 
-Environment vars are used to set process specific things, which could conceivably change for different instances of your application's processes. For instance, you can set a different `KADIRA_OPTIONS_HOSTNAME` for each process to ensure that [kadira](#kadira) logs timings with useful hostnames.
+Environment variables are used to set process specific things, which could conceivably change for different instances of your application's processes. For instance, you can set a different `KADIRA_OPTIONS_HOSTNAME` for each process to ensure that [kadira](#kadira) logs timings with useful hostnames.
 
-A final note on storing these settings: As noted in the [Security Article](security.html#api-keys), it's not a good idea to store settings in your code repository, instead a more secure place is preferred.
+A final note on storing these settings: It's not a good idea to store settings the same repository where you keep your app code. Read about good places to put your settings in the [Security article](security.html#api-keys).
 
 <h2 id="other-considerations">Other considerations</h2>
 
-There are some other considerations that you should make before you deploy your application to a production host. Remember that you should if possible do this step for both your production *and* staging environments.
+There are some other considerations that you should make before you deploy your application to a production host. Remember that you should if possible do these steps for both your production *and* staging environments.
 
 <h3 id="domain-name">Domain name</h3>
 
@@ -48,25 +55,25 @@ What URL will users use to access your site? You'll probably need to register a 
 
 <h3 id="ssl">SSL Certificate</h3>
 
-It's always a good idea to use SSL for Meteor Applications (see the [Security Article](security.html#ssl) for a discussion of why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain.
+It's always a good idea to use SSL for Meteor applications (see the [Security Article](security.html#ssl) to find out why). Once you have a registered domain name, you'll need to generate an SSL certificate with a certificate authority for your domain.
 
 <h3 id="cdn">CDN</h3>
 
-It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the larger assets in your site (such as JS and CSS files, as well as potentially images) and caches copies of those files in locations that are closer to the location of the user. So for instance, although the actual web server for your application is on the east coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
+It's not strictly required, but often a good idea to setup a Content Delivery Network (CDN) for your site. A CDN is a proxy that sits in front of the static assets of your site (such as JavaScript, CSS files, and some images) and caches copies of those files in locations that are closer to the location of the user. For example, if the actual web server for your application is on the east coast of the USA, if a user is in Australia, a CDN could host a copy of the JavaScript of the site within Australia or even in the city the user is in. This has huge benefits for the initial loading time for your site.
 
 You want to put your CDN in front of the static assets that Meteor knows about. You can use `WebAppInternals.setBundledJsCssPrefix(DNS_HOSTNAME)` to set a prefix that applies to all of the bundled JS and CSS assets that the Meteor app serves. In particular, this means if you have relative image URLs inside your CSS files, they will also be served from the CDN.
 
-If you are following the above approach, you may also want to manually write out the CDN's hostname whenever you put an image/other asset URL in your application's code, probably via a `image_url()`-style helper.
+If you are following the above approach, you may also want to manually add the CDN's hostname whenever you put an image/other asset URL in your application's code. To do this throughout your app, you can write a generic helper like `imageUrl()`.
 
 <h2 id="deploying">Deploying</h2>
 
-There are many options on where to deploy your Meteor application, and we'll discuss some options here.
+There are many options on where to deploy your Meteor application. We'll discuss some of the most popular ones here.
 
-<h3 id="custom-deployment">Custom Deployment</h3>
+<h3 id="custom-deployment">Custom deployment</h3>
 
 The Meteor tool has a command `meteor build` that creates a deployment bundle, which is a complete node application which can be run on any host that can run node applications (once pointed at a MongoDB instance). You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
 
-To run this application, you need to provide Node.js 0.10 and a MongoDB server. (The current release of Meteor has been tested with Node 0.10.40.) You can then run the application by invoking `node`, specifying the HTTP port for the application to listen on, and the MongoDB endpoint.
+To run this application, you need to provide Node.js 0.10.x and a MongoDB server. The current release of Meteor has been tested with Node 0.10.41. You can then run the application by invoking `node`, specifying the HTTP port for the application to listen on, and the MongoDB endpoint.
 
 ```bash
 cd my_directory
@@ -128,9 +135,15 @@ Finally, if you want to access the mongo database for your app directly, you can
 meteor mongo your-app.meteor.com
 ```
 
+You can read more details about how to use these commands by using the help command:
+
+```bash
+meteor help deploy
+```
+
 <h3 id="mup">Deploying with Meteor Up</h3>
 
-[Meteor Up](https://github.com/kadirahq/meteor-up) (mup) is an open source tool that's used to deploy Meteor application to any online server over SSH.
+[Meteor Up](https://github.com/kadirahq/meteor-up), often referred to as "mup", is an open source tool that's used to deploy Meteor application to any online server over SSH.
 
 To use mup, you need to install the `mup` tool via `npm`.
 
@@ -180,7 +193,7 @@ You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you
 
 <img src="images/galaxy-org-dashboard.png">
 
-If you are following our advice, you'll probably want to [setup SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain. The key things here are to add the `force-ssl` package and to use the Galaxy UI to add your SSL certificate.
+If you are following [our advice](security.html#ssl), you'll probably want to [set up SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain. The key things here are to add the `force-ssl` package and to use the Galaxy UI to add your SSL certificate.
 
 Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
 
@@ -212,11 +225,11 @@ Continuous deployment refers to the process of deploying an application via a co
 
 It's important to understand what happens during a deployment, especially if your deployment involves changes in data format (and potentially data migrations, see the [Collections Article](collections.html#migrations)).
 
-Depending on where your app is deployed and the number of application processes you have running, things will be different, but if you are deployed in a scaled way to Galaxy, there'll be a period where a number of containers are running the old version, and a number the new, as users are migrated smoothly across to the new version of your app.
+When you are running your app on multiple servers or containers, it's not a good idea to shut down all of the servers at once and then start them all back up again. This will result in more downtime than necessary, and will cause a huge spike in CPU usage when all of your clients reconnect again at the same time. To alleviate this, Galaxy stops and re-starts containers one by one during deployment. There will be a time period during which some containers are running the old version and some the new version, as users are migrated incrementally to the new version of your app.
 
 <img src="images/galaxy-deploying.png">
 
-If the new version involves a different type of data, then you need to be a little more careful about how you step through versions to ensure that all the versions that are deployed simultaneously at all times. You can read more about how to do this in the [collections article](collections.html#migrations).
+If the new version involves different data formats in the database, then you need to be a little more careful about how you step through versions to ensure that all the versions that are running simultaneously can work together. You can read more about how to do this in the [collections article](collections.html#migrations).
 
 <h2 id="analytics">Monitoring users via analytics</h2>
 
@@ -246,17 +259,19 @@ You may want to track non-page change related events (for instance publication s
 Todos.methods.updateText = new ValidatedMethod({
   ...
   run({ todoId, newText }) {
-    // We use `isClient` here because we don't want to run it on server-server method simulation
+    // We use `isClient` here because we only want to track
+    // attempted method calls from the client, not server to
+    // server method calls
     if (Meteor.isClient) {
-      analytics.track('Todos.methods.updateText', {todo, newText});
+      analytics.track('Todos.methods.updateText', { todoId, newText });
     }
 
-    ...
+    // ...
   }
 });
 ```
 
-To achieve a similar abstraction when subscribing, you may want to wrap your calls to `Meteor.subscribe()` in an abstraction layer.
+To achieve a similar abstraction for subscriptions/publications, you may want to write a simple wrapper for `Meteor.subscribe()`.
 
 <h2 id="apm">Monitoring your application</h2>
 
@@ -264,7 +279,7 @@ When you are running an app in production, it's vitally important that you keep 
 
 <h3 id="meteor-performance">Understanding Meteor Performance</h3>
 
-Although a host of tools exist to monitor the performance of HTTP, request-response based applications, the insights they give aren't necessarily useful for a reactive system like a Meteor Application. Although it's true that slow HTTP response times would be a problem for your app, and so using a tool like [Pingdom](https://www.pingdom.com) can serve a purpose, there are many kinds of issues with your app that won't be surfaced by such tools.
+Although a host of tools exist to monitor the performance of HTTP, request-response based applications, the insights they give aren't necessarily useful for a connected client system like a Meteor application. Although it's true that slow HTTP response times would be a problem for your app, and so using a tool like [Pingdom](https://www.pingdom.com) can serve a purpose, there are many kinds of issues with your app that won't be surfaced by such tools.
 
 <h3 id="galaxy-apm">Monitoring with Galaxy</h3>
 
@@ -284,7 +299,7 @@ When you visit the Kadira application, you can view current and past behavior of
 
 <h4 id="kadira-method-pub">Method and Publication Latency</h4>
 
-Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscription*. Kadira includes tools to help you discover which of your methods and publications are *slow* and *resource intensive*.
+Rather than monitoring HTTP response times, in a Meteor app it makes far more sense to consider DDP response times. The two actions your client will wait for in terms of DDP are *method calls* and *publication subscriptions*. Kadira includes tools to help you discover which of your methods and publications are slow and resource intensive.
 
 <img src="images/kadira-method-latency.png">
 
