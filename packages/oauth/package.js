@@ -57,5 +57,5 @@ Package.onTest(function (api) {
 });
 
 Cordova.depends({
-  'cordova-plugin-inappbrowser': '1.0.1'
+  'cordova-plugin-inappbrowser': '1.1.1'
 });

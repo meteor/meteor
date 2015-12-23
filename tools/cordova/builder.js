@@ -74,15 +74,15 @@ export class CordovaBuilder {
       description: 'New Meteor Mobile App',
       author: 'A Meteor Developer',
       email: 'n/a',
-      website: 'n/a'
+      website: 'n/a',
+      contentUrl: 'http://localhost:0/'
     };
 
     // Set some defaults different from the Cordova defaults
     this.additionalConfiguration = {
       global: {
         'webviewbounce': false,
-        'DisallowOverscroll': true,
-        'deployment-target': '7.0'
+        'DisallowOverscroll': true
       },
       platform: {
           ios: {},
@@ -116,15 +116,8 @@ export class CordovaBuilder {
       'sms:*': 'external',
       'market:*': 'external',
 
-      // phonegap/cordova related protocols
-      // "file:" protocol is used to access first files from disk
-      'file:*': true,
-      'cdv:*': true,
-      'gap:*': true,
-
-      // allow Meteor's local emulated server url - this is the url from which the
-      // application loads its assets
-      'http://meteor.local/*': true
+      // Allow navigation to localhost, which is needed for the local server
+      'http://localhost/*': 'navigation'
     };
 
     const mobileServerUrl = this.options.mobileServerUrl;
@@ -236,8 +229,7 @@ export class CordovaBuilder {
       });
     });
 
-    // Load from index.html by default
-    config.element('content', { src: 'index.html' });
+    config.element('content', { src: this.metadata.contentUrl });
 
     // Copy all the access rules
     _.each(this.accessRules, (rule, pattern) => {
@@ -367,17 +359,6 @@ export class CordovaBuilder {
     const programPath = files.pathJoin(bundlePath, 'programs', CORDOVA_ARCH);
     files.cp_r(programPath, applicationPath);
 
-    const bootstrapPage = this.generateBootstrapPage(applicationPath);
-    files.writeFile(files.pathJoin(applicationPath, 'index.html'),
-      bootstrapPage, 'utf8');
-
-    files.copyFile(
-      files.pathJoin(__dirname, 'client', 'meteor_cordova_loader.js'),
-      files.pathJoin(wwwPath, 'meteor_cordova_loader.js'));
-    files.copyFile(
-      files.pathJoin(__dirname, 'client', 'cordova_index.html'),
-      files.pathJoin(wwwPath, 'index.html'));
-  }
 
   generateBootstrapPage(applicationPath) {
     const programJsonPath = files.convertToOSPath(

@@ -14,11 +14,9 @@ Npm.strip({
 });
 
 Cordova.depends({
-  'cordova-plugin-device': '1.0.1',
-  'cordova-plugin-legacy-whitelist': '1.1.0',
-  // the cordova plugin built by Meteor Core team that "emulates a server" on
-  // the mobile device. Serving the files and checking for the HCP updates.
-  'com.meteor.cordova-update': 'https://github.com/meteor/com.meteor.cordova-update.git#16c53f53e438fc8b1b9c768de36f0a8974e38b49'
+  'cordova-plugin-whitelist': '1.2.0',
+  'cordova-plugin-wkwebview-engine': '1.0.1',
+  'cordova-plugin-meteor-webapp': 'https://github.com/meteor/cordova-plugin-meteor-webapp.git#76dd071fc05532e2b507518538255661499ab838'
 });
 
 Package.onUse(function (api) {
