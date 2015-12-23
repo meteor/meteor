@@ -131,15 +131,23 @@ export class CordovaBuilder {
     const serverDomain = mobileServerUrl ?
       utils.parseUrl(mobileServerUrl).host : null;
 
-    // If the remote server domain is known, allow access to it for xhr and DDP
+    // If the remote server domain is known, allow access to it for XHR and DDP
     // connections.
     if (serverDomain) {
-      this.accessRules['*://' + serverDomain + '/*'] = true;
-      // Android talks to localhost over 10.0.2.2. This config file is used for
-      // multiple platforms, so any time that we say the server is on localhost we
-      // should also say it is on 10.0.2.2.
-      if (serverDomain === 'localhost') {
-        this.accessRules['*://10.0.2.2/*'] = true;
+      // Application Transport Security (new in iOS 9) doesn't allow you
+      // to give access to IP addresses (just domains). So we allow access to
+      // everything if we don't have a domain, which sets NSAllowsArbitraryLoads.
+      if (utils.isIPv4Address(serverDomain)) {
+        this.accessRules['*'] = true;
+      } else {
+        this.accessRules['*://' + serverDomain + '/*'] = true;
+
+        // Android talks to localhost over 10.0.2.2. This config file is used for
+        // multiple platforms, so any time that we say the server is on localhost we
+        // should also say it is on 10.0.2.2.
+        if (serverDomain === 'localhost') {
+          this.accessRules['*://10.0.2.2/*'] = true;
+        }
       }
     }
 
@@ -233,12 +241,13 @@ export class CordovaBuilder {
 
     // Copy all the access rules
     _.each(this.accessRules, (rule, pattern) => {
-      var opts = { origin: pattern };
       if (rule === 'external') {
-        opts['launch-external'] = true;
+        config.element('allow-intent', { href: pattern });
+      } else if (rule === 'navigation') {
+        config.element('allow-navigation', { href: pattern });
+      } else {
+        config.element('access', { origin: pattern });
       }
-
-      config.element('access', opts);
     });
 
     const platformElement = {
