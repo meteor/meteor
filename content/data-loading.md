@@ -41,11 +41,11 @@ Meteor.publish('Lists.public', function() {
 
 There are a few things to understand about this code block. First, we've named the publication with the unique string `Lists.public`, and that will be how we access it from the client. Second, we are simply returning a Mongo *cursor* from the publication function. Note that the cursor is filtered to only return certain fields from the collection, as detailed in the [Security article](security.html#fields).
 
-What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `'Lists'` on the client will have all of the public lists that are available in the server collection named `'Lists'` while that subscription is open. In this particular example, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
+What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `Lists` on the client will have all of the public lists that are available in the server collection named `Lists` while that subscription is open. In this particular example, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
 
-There are two types of parameters of a publish function.
+Every publication takes two types of parameters:
 
-1. The `this` context, which has information about the current DDP connection. For example, you can access the current user's `id` with `this.userId`.
+1. The `this` context, which has information about the current DDP connection. For example, you can access the current user's `_id` with `this.userId`.
 2. The arguments to the publication, which can be passed in when calling `Meteor.subscribe`.
 
 > Note: Since we need to access context on `this` we need to use the `function() {}` form for publications rather than the ES2015 `() => {}`. You can disable the arrow function linting rule for publication files with `eslint-disable prefer-arrow-callback`. A future version of the publication API will work more nicely with ES2015.
@@ -70,7 +70,7 @@ Thanks to the guarantees provided by DDP and Meteor's accounts system, the above
 
 In the case of a logged-out in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
 
-Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network. 
+Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network.
 
 ```js
 Meteor.publish('Todos.inList', function(listId) {
@@ -79,7 +79,7 @@ Meteor.publish('Todos.inList', function(listId) {
     listId: {type: String}
   }).validate({ listId });
 
-  ...
+  // ...
 });
 ```
 
@@ -91,7 +91,7 @@ Meteor.subscribe('Todos.inList', list._id);
 
 <h3 id="organization-publications">Organizing publications</h3>
 
-It makes sense to place a publication alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view that they are developed for. In that case, placing the publication in the same module or directory as the view code makes perfect sense.
+It makes sense to place a publication alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view for which they were developed. In that case, placing the publication in the same module or directory as the view code makes perfect sense.
 
 Often, however, a publication is more general. For example in the Todos example application, we create a `Todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
@@ -123,23 +123,25 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 2. Calling `this.autorun` sets up a reactive context which will re-initialize the subscription whenever the reactive function `this.getListId()` changes.
 
+Read more about Blaze subscriptions in the [Blaze article](blaze.html#subscribing), and about tracking loading state inside UI components in the [UI article](ui-ux.html#subscription-readiness).
+
 <h3 id="fetching">Fetching data</h3>
 
-Subscribing to data puts it in your client-side collection. To use the data in your user interface, you need to query your client-side collection. There are a couple of important rules of thumb when doing this.
+Subscribing to data puts it in your client-side collection. To use the data in your user interface, you need to query your client-side collection. There are a couple of important rules to follow when doing this.
 
-1. Always use specific queries to fetch data.
+<h4 id="specific-queries">Always use specific queries to fetch data</h4>
 
-  If you're publishing a subset of your data, it might be tempting to simply query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
+If you're publishing a subset of your data, it might be tempting to simply query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
 
-  But if you do this, then you open yourself up to problems if another subscription pushes data into the same collection, since the data returned by `Lists.find()` might not be what you expected anymore. In an actively developed application, it's often hard to anticipate what may change in the future and this can be a source of hard to understand bugs.
+But if you do this, then you open yourself up to problems if another subscription pushes data into the same collection, since the data returned by `Lists.find()` might not be what you expected anymore. In an actively developed application, it's often hard to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
-  Also, when changing between subscriptions, there is a brief period where both subscriptions are loaded (see [Publication behavior when changing arguments](#publication-behavior-with-arguments) below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
+Also, when changing between subscriptions, there is a brief period where both subscriptions are loaded (see [Publication behavior when changing arguments](#publication-behavior-with-arguments) below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
 
-2. Fetch the data as close as possible to where you subscribe to it.
+<h4 id="fetch-near-subscribe">Fetch the data nearby where you subscribed to it</h4>
 
-  We do this for the same reason we subscribe in the component in the first place---to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child component, as we'll see in in the [UI Article](ui-ux.html#components).
+We do this for the same reason we subscribe in the component in the first place---to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child component, as we'll see in in the [UI Article](ui-ux.html#components).
 
-  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes components harder to test.
+Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. However keep in mind it's best not to use it in too many places as it makes components harder to test.
 
 <h3 id="global-subscriptions">Global subscriptions</h3>
 
@@ -153,7 +155,7 @@ Across Meteor applications, there are some common patterns of data loading and a
 
 <h3 id="readiness">Subscription readiness</h3>
 
-A key thing to keep in mind is that a subscription will not instantly provide its data. There'll be a latency between subscribing to the data on the client and it arriving from the publication on the server (and be aware that this time may be a lot longer for your users in production that for you locally in development!)
+It is key to understand that a subscription will not instantly provide its data. There will be a latency between subscribing to the data on the client and it arriving from the publication on the server. You should also be aware that this delay may be a lot longer for your users in production that for you locally in development!
 
 Although the Tracker system means you often don't *need* to think too much about this in building your apps, usually if you want to get the user experience right, you'll need to know when the data is ready.
 
@@ -162,7 +164,8 @@ To find that out, `Meteor.subscribe()` and (`this.subscribe()` in Blaze componen
 ```js
 const handle = Meteor.subscribe('Lists.public');
 Tracker.autorun(() => {
-  console.log(`Handle is ${handle.ready() ? 'ready' : 'not ready'}`);  
+  const isReady = handle.ready();
+  console.log(`Handle is ${isReady ? 'ready' : 'not ready'}`);  
 });
 ```
 
@@ -197,9 +200,7 @@ Technically, what happens when one of these reactive sources changes is the foll
 5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server.
 6. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
 
-The important detail in the above is in 4---that the system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template hierarchy.
-
-For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessary subscribing will happen.
+Step 4 above is an important detail---that the system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template hierarchy. For example, if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessary subscribing will happen.
 
 <h3 id="publication-behavior-with-arguments">Publication behavior when arguments change</h3>
 
@@ -215,7 +216,7 @@ A very common pattern of data access is pagination. This refers to the practice 
 
 There are two styles of pagination that are commonly used, a "page-by-page" style---where you show only one page of results at a time, starting at some offset (which the user can control), and "infinite-scroll" style, where you show an increasing number of pages of items, as the user moves through the list (this is the typical "feed" style user interface).
 
-Let's consider a publication/subscription technique for the second (the first technique is a little tricker to handle, due to it being difficult to calculate the offset on the client. If you need to do so, you can follow many of the same techniques that we use here and use the [`percolate:find-from-publication`](https://atmospherejs.com/percolate/find-from-publication) package to keep track of which records have come from your publication).
+In this section, we'll consider a publication/subscription technique for the second, infinite-scroll style pagination. The page-by-page technique is a little tricker to handle in Meteor, due to it being difficult to calculate the offset on the client. If you need to do so, you can follow many of the same techniques that we use here and use the [`percolate:find-from-publication`](https://atmospherejs.com/percolate/find-from-publication) package to keep track of which records have come from your publication.
 
 In an infinite scroll publication, we simply need to add a new argument to our publication controlling how many items to load. Suppose we wanted to paginate the todo items in our Todos example app:
 
@@ -233,7 +234,7 @@ Meteor.publish('Todos.inList', function(listId, limit) {
     limit: Math.min(limit, MAX_TODOS)
   };
 
-  ...
+  // ...
 });
 ```
 
@@ -246,13 +247,15 @@ Template.listsShowPage.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', this.getListId(), this.state.get('requestedTodos'));
+    this.subscribe('Todos.inList',
+      this.getListId(), this.state.get('requestedTodos'));
   });
-});```
+});
+```
 
 We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps just when they scroll to the bottom of the page).
 
-Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) can be useful to publish this. We could add a `Lists.todoCount` publication like so
+Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) package can be useful to publish this. We could add a `Lists.todoCount` publication like so
 
 ```js
 Meteor.publish('Lists.todoCount', function({ listId }) {
@@ -333,7 +336,11 @@ WindowSize.simulateMobile = (device) => {
 }
 ```
 
-<h2 id="publishing-relations">Publishing relational data</h2>
+<h2 id="advanced-publications">Advanced publications</h2>
+
+Sometimes, the simple mechanism of returning a query from a publication function won't cover your needs. In those situations, there are some more powerful publication patterns that you can use.
+
+<h3 id="publishing-relations">Publishing relational data</h3>
 
 It's common to need related sets of data from multiple collections on a given page. For instance, in the Todos app, when we render a todo list, we want the list itself, as well as the set of todos that belong to that list.
 
@@ -405,7 +412,7 @@ Meteor.publishComposite('Todos.inList', function(listId) {
 
 In this example, we write a complicated query to make sure that we only ever find a list if we are allowed to see it, then, once per list we find (which can be one or zero times depending on access), we publish the todos for that list. Publish Composite takes care of stopping and starting the dependent cursors if the list stops matching the original query or otherwise.
 
-<h2 id="complex-auth">Complex authorization</h2>
+<h3 id="complex-auth">Complex authorization</h3>
 
 We can also use `publish-composite` to perform complex authorization in publications. For instance, consider if we had a `Todos.admin.inList` publication that allowed an admin to bypass default publication's security for users with an `admin` flag set.
 
@@ -457,7 +464,7 @@ Meteor.publishComposite('Todos.admin.inList', function(listId) {
 });
 ```
 
-<h2 id="custom-publication">Custom publications with the low level API</h2>
+<h3 id="custom-publication">Custom publications with the low level API</h3>
 
 In all of our examples so far (outside of using`Meteor.publishComposite()`) we've returned a cursor from our `Meteor.publish()` handlers. Doing this ensures Meteor takes care of the job of keeping the contents of that cursor in sync between the server and the client. However, there's another API you can use for publish functions which is closer to the way the underlying Distributed Data Protocol (DDP) works.
 
@@ -491,10 +498,13 @@ From the client's perspective, data published like this doesn't look any differe
 
 One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication, to achieve an optimistic user experience.
 
+<h2 id="rest-interop">Working with REST APIs</h2>
 
-<h2 id="loading-from-rest">Loading data from a REST endpoint with a publication</h2>
+Publications and subscriptions are the primary way of dealing with data in Meteor's DDP protocol, but lots of data sources use the popular REST protocol for their API. It's useful to be able to convert between the two.
 
-As a concrete example of using the low-level API, consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available?
+<h3 id="loading-from-rest">Loading data from a REST endpoint with a publication</h3>
+
+As a concrete example of using the [low-level API](#custom-publication), consider the situation where you have some 3rd party REST endpoint which provides a changing set of data that's valuable to your users. How do you make that data available?
 
 One option would be to provide a Method that simply proxies through to the endpoint, for which it's the client's responsibility to poll and deal with the changing data as it comes in. So then it's the clients problem to deal with keeping a local data cache of the data, updating the UI when changes happen, etc. Although this is possible (you could use a Local Collection to store the polled data, for instance), it's simpler, and more natural to create a publication that does this polling for the client.
 
@@ -535,10 +545,9 @@ Meteor.publish('polled-publication', function() {
 
 Things can get more complicated; for instance you may want to deal with documents being removed, or share the work of polling between multiple users (in a case where the data being polled isn't private to that user), rather than doing the exact same poll for each interested user.
 
+<h3 id="publications-as-rest">Accessing a publication as a REST endpoint</h3>
 
-<h2 id="publications-as-rest">Accessing a publication as a REST endpoint</h2>
-
-The alternate scenario occurs when you want to publish data to be consumed by a 3rd party, typically over REST. If the data we want to publish is the same as what we already publish via a publication, then we can use the [simple:rest](https://atmospherejs.com/simple/rest) package to do this really easily.
+The opposite scenario occurs when you want to publish data to be consumed by a 3rd party, typically over REST. If the data we want to publish is the same as what we already publish via a publication, then we can use the [simple:rest](https://atmospherejs.com/simple/rest) package to do this really easily.
 
 In the Todos example app, we have done this, and you can now access our publications over HTTP:
 
