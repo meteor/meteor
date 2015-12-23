@@ -1,0 +1,9 @@
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Length: 293
+Content-Type: text/html; charset=utf-8
+Connection: Close
+Server: GCDWebServer
+Date: Fri, 25 Apr 2014 14:12:09 GMT
+
+             <html><body>               <form name="input" action="/" method="post" enctype="application/x-www-form-urlencoded">               Value: <input type="text" name="value">               <input type="submit" value="Submit">               </form>             </body></html>           

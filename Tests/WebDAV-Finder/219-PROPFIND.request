@@ -1,0 +1,18 @@
+PROPFIND /Apple%20Reports/._Test%20File.txt HTTP/1.1
+Host: localhost:8080
+Content-Type: text/xml
+Depth: 0
+Accept: */*
+User-Agent: WebDAVFS/3.0.1 (03018000) Darwin/13.1.0 (x86_64)
+Content-Length: 179
+Connection: keep-alive
+
+<?xml version="1.0" encoding="utf-8"?>
+<D:propfind xmlns:D="DAV:">
+<D:prop>
+<D:getlastmodified/>
+<D:getcontentlength/>
+<D:creationdate/>
+<D:resourcetype/>
+</D:prop>
+</D:propfind>

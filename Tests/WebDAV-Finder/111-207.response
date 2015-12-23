@@ -1,0 +1,11 @@
+HTTP/1.1 207 Multi-Status
+Cache-Control: no-cache
+Content-Length: 328
+Content-Type: application/xml; charset="utf-8"
+Connection: Close
+Server: GCDWebDAVServer
+Date: Sat, 12 Apr 2014 05:11:26 GMT
+
+<?xml version="1.0" encoding="utf-8" ?><D:multistatus xmlns:D="DAV:">
+<D:response><D:href>/PDF%20Reports/</D:href><D:propstat><D:prop><D:resourcetype><D:collection/></D:resourcetype><D:creationdate>2014-01-01T00:00:00+00:00</D:creationdate></D:prop><D:status>HTTP/1.1 200 OK</D:status></D:propstat></D:response>
+</D:multistatus>

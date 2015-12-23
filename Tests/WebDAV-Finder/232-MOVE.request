@@ -1,0 +1,8 @@
+MOVE /Copy.txt HTTP/1.1
+Host: localhost:8080
+Destination: http://localhost:8080/Backup/Copy.txt
+Accept: */*
+Content-Length: 0
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.1 (03018000) Darwin/13.1.0 (x86_64)
+

@@ -1,0 +1,7 @@
+PUT /images/.fde3d915-75dd-4368-a060-890a3c537750-67a2f-0-Spotlight HTTP/1.1
+Host: localhost:8080
+Accept: */*
+Content-Length: 0
+Connection: keep-alive
+User-Agent: WebDAVFS/3.0.1 (03018000) Darwin/13.1.0 (x86_64)
+

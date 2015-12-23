@@ -1,0 +1,3 @@
+language: objective-c
+script: ./Run-Tests.sh
+osx_image: xcode7.1

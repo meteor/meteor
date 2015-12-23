@@ -1,0 +1,16 @@
+PROPFIND /PDF%20Reports/ HTTP/1.1
+User-Agent: Transmit/4.4.6 neon/0.29.3
+Connection: TE
+TE: trailers
+Host: localhost:8080
+Depth: 1
+Content-Length: 211
+Content-Type: application/xml
+
+<?xml version="1.0" encoding="utf-8"?>
+<propfind xmlns="DAV:"><prop>
+<creationdate xmlns="DAV:"/>
+<getcontentlength xmlns="DAV:"/>
+<getlastmodified xmlns="DAV:"/>
+<resourcetype xmlns="DAV:"/>
+</prop></propfind>

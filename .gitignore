@@ -1,0 +1,6 @@
+.DS_Store
+xcuserdata
+project.xcworkspace
+
+Tests/Payload
+Carthage/Build
