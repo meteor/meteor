@@ -24,6 +24,12 @@ var maybeReady = function () {
   // Run startup callbacks
   while (callbackQueue.length)
     (callbackQueue.shift())();
+
+  if (Meteor.isCordova) {
+    // Notify the WebAppCordova plugin startup was completed successfully, so we can
+    // roll back faulty versions if this doesn't occur
+    WebAppCordova.startupDidComplete();
+  }
 };
 
 var loadingCompleted = function () {
