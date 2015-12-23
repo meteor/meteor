@@ -44,6 +44,9 @@ function log(...args) {
   Console.rawInfo(`%% ${util.format.apply(null, args)}\n`);
 }
 
+// We pin platform versions ourselves instead of relying on cordova-lib
+// so we we can update them independently (e.g. use Cordova iOS 4.0.1
+// with Cordova 5.4.1)
 const pinnedPlatformVersions = {
   'android': '5.0.0',
   'ios': '4.0.1'
