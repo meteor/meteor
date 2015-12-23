@@ -24,7 +24,7 @@ However, it's still important to test your changes throughly with a good process
 
 In web deployment it's common to refer to the different environments that you may deploy to. After building your app in the "development" environment, you typically first deploy it to a "staging" environment ("stage" the app), then after testing, deploy it for real to "production".
 
-The idea of the staging environment is to provide a non-user visibile test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that just don't occur in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
+The idea of the staging environment is to provide a non-user-visible test environment that is as close as possible to production in terms of infrastructure. It's common for issues to appear with new code on the production infrastructure that just don't occur in a development environment. A very simple example is issues that involve latency between the client and server---connecting to a local development server with tiny latencies, you just may never see such an issue.
 
 For this reason, developers tend to try and get staging as close as possible to production; so all the steps we outline below should, if possible, be followed for staging also.
 
@@ -78,7 +78,7 @@ However, unless you have a specific need to roll your own hosting environment, t
 
 <h3 id="free-hosting">Meteor's free hosting</h3>
 
-If you are still developing your application and want to see how it behaves online, or share in with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`.
+If you are still developing your application and want to see how it behaves online, or share it with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`.
 
 Deploying is simple, just type:
 
@@ -294,7 +294,7 @@ You can also use the "traces" section to discover particular cases of the method
 
 <img src="images/kadira-method-trace.png">
 
-In the above screenshot we're looking at a slower example of a method call (which takes 214ms), which, when we drill in further we see is mostly taken up waiting on other actions on the user's connection (principly waiting on the `searches/top` and `counts` publications). So we could consider looking to speed up the initial time of those subscriptions as they are slowing down searches a little in some cases.
+In the above screenshot we're looking at a slower example of a method call (which takes 214ms), which, when we drill in further we see is mostly taken up waiting on other actions on the user's connection (principally waiting on the `searches/top` and `counts` publications). So we could consider looking to speed up the initial time of those subscriptions as they are slowing down searches a little in some cases.
 
 
 <h4 id="kadira-livequery">Livequery Monitoring</h4>
@@ -305,12 +305,12 @@ If the publication is used by a lot of users, or there are a lot of changes to b
 
 <img src="images/kadira-observer-usage.png">
 
-In this screenshot we can see that observers are fairly steadily created and destroyed, with a pretty low amount of reuse over time, although in general they don't survive for all that long. This would be consistent with the fact that we are looking at the `package` publication of Atmosphere which is started everytime a user visits a particular package's page. The behaviour is more or less what we would expect so we probably wouldn't be too concerned by this information.
+In this screenshot we can see that observers are fairly steadily created and destroyed, with a pretty low amount of reuse over time, although in general they don't survive for all that long. This would be consistent with the fact that we are looking at the `package` publication of Atmosphere which is started everytime a user visits a particular package's page. The behavior is more or less what we would expect so we probably wouldn't be too concerned by this information.
 
 <h2 id="seo">Enabling SEO</h2>
 
-If your application contains a lot of publically accessible content, then you probably want it to rank well in Google and other search engines' indexes. As most webcrawlers do not support client-side rendering (or if they do, have spotty support for websockets), it's better to render the site on the server and deliver it as HTML in this special case.
+If your application contains a lot of publicly accessible content, then you probably want it to rank well in Google and other search engines' indexes. As most webcrawlers do not support client-side rendering (or if they do, have spotty support for websockets), it's better to render the site on the server and deliver it as HTML in this special case.
 
-To do so, we can use the [Prerender.io](https://prerender.io) service, thanks to the [`dfischer:prerenderio`](https://atmospherejs.com/dfischer/prerenderio) package. It's a simple as `meteor add`-ing it, and optionally setting your prerender token if you have a paid prerender account and would like to enable more frequent cache changes.
+To do so, we can use the [Prerender.io](https://prerender.io) service, thanks to the [`dfischer:prerenderio`](https://atmospherejs.com/dfischer/prerenderio) package. It's as simple as `meteor add`-ing it, and optionally setting your prerender token if you have a paid prerender account and would like to enable more frequent cache changes.
 
 Chances are you want to set `<title>` tags and other `<head>` content to make your site appear nicer in search results. The best way to do so is to use the [`kadira:dochead`](https://atmospherejs.com/kadira/dochead) package. The sensible place to call out to `DocHead` is from the `onCreated` callbacks of your page-level components.

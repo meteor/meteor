@@ -23,7 +23,7 @@ Another important feature of the Meteor build tool is that it automatically conc
 
 <h3 id="dev-vs-prod">Development vs. production</h3>
 
-Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to just the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, run `meteor build` and then deploy the resulting app bundle. Read more in the [production deployment article](XXX).
+Running an app in development is all about fast iteration time. All kinds of different parts of your app are handled differently and instrumented to enable better reloads and debugging. In production, the app is reduced to just the necessary code, and functions like a regular Node.js app. Therefore, you shouldn't run your app in production by running the `meteor` command. Instead, run `meteor build` and then deploy the resulting app bundle. Read more in the [production deployment article](deployment.html).
 
 <h2 id="using-packages">Using community packages</h2>
 
@@ -72,7 +72,7 @@ A Meteor app can load packages in one of three ways, and it looks for a matching
 2. Defining a `PACKAGE_DIRS` environment variable before running any `meteor` command. You can add multiple directories by separating the paths with a `:` on OSX or Linux, or a `;` on Windows. For example: `PACKAGE_DIRS=../first/directory:../second/directory`, or on Windows: `set PACKAGE_DIRS=..\first\directory;..\second\directory`.
 3. Downloading a pre-built package from Atmosphere. The package is cached in `~/.meteor/packages` on Mac/Linux or `%LOCALAPPDATA%\.meteor\packages` on Windows, and only loaded into your app as it is built.
 
-If you need to patch a package to do something that the published version doesn't do, then (2) or (3) is the option for you. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
+If you need to patch a package to do something that the published version doesn't do, then (1) or (2) is the option for you. You can even do this to load patched versions of Meteor core packages - just copy the code of the package from [Meteor's GitHub repository](https://github.com/meteor/meteor/tree/devel/packages), and edit away.
 
 One difference between pre-published packages and local app packages is that the published packages have any binary dependencies pre-built. This should only affect a small subset of packages. If you clone the source code into your app, you need to make sure you have any compilers required by that package pre-installed.
 
@@ -172,8 +172,8 @@ CSS framework compatibility should be a primary concern when picking a pre-proce
 
 An important feature shared by all of the available CSS pre-processors is the ability to import files. This lets you split your CSS into smaller pieces, and provides a lot of the same benefits that you get from JavaScript modules:
 
-1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters
-2. You can create reusable CSS "modules" that just have variables and mixins, and don't actually generate any CSS
+1. You can control the load order of files by encoding dependencies through imports, since the load order of CSS matters.
+2. You can create reusable CSS "modules" that just have variables and mixins, and don't actually generate any CSS.
 
 In Meteor, each of your `.scss`, `.less`, or `.styl` source files will be one of two types: "main", or "import".
 

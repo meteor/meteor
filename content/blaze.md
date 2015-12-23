@@ -36,7 +36,7 @@ As an example, consider the `todosItem` template from the Todos example app:
 </template>
 ```
 
-This template expectes to be rendered with an object with key `todo` as data context (we'll see [below](#validate-data-context) how to enforce that). We access the properties of the `todo` using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behavior is to render that property as a string; however for some attributes (such as `checked={% raw %}{{todo.checked}}{% endraw %}`) it can be resolved as a boolean value.
+This template expects to be rendered with an object with key `todo` as data context (we'll see [below](#validate-data-context) how to enforce that). We access the properties of the `todo` using the mustache tag, such as `{% raw %}{{todo.text}}{% endraw %}`. The default behavior is to render that property as a string; however for some attributes (such as `checked={% raw %}{{todo.checked}}{% endraw %}`) it can be resolved as a boolean value.
 
 Note that simple string interpolations like this will always escape any HTML for you, so you don't need to perform safety checks for XSS.
 
@@ -50,7 +50,7 @@ Template.todosItem.helpers({
 });
 ```
 
-In the context of a Blaze helper, `this` is scoped to the current current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument.
+In the context of a Blaze helper, `this` is scoped to the current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument.
 
 Apart from simple interpolation, mustache tags can be used for control flow in the template. For instance, in the `listsShow` template, we render a list of todos like this:
 
@@ -76,7 +76,7 @@ You can read about the full syntax [in the Spacebars README](https://github.com/
 
 We've seen that `{% raw %}{{todo.title}}{% endraw %}` accesses the `title` property of the `todo` item on the current data context. Additionally, `..` accesses the parent data context (rarely a good idea), `list.todos.[0]` accesses the first element of the `todos` array on `list`.
 
-Note that Spacebars is very forgiving of `null` values. It will not complain if you try to access a property on a `null` value (for instance `foo.bar` if `foo` is not defined), but instead simply treat it also as null. However there are exceptions to this---trying to call a `null` function, or doing the same *within* a helper will lead to exceptions.
+Note that Spacebars is very forgiving of `null` values. It will not complain if you try to access a property on a `null` value (for instance `foo.bar` if `foo` is not defined), but instead simply treats it also as null. However there are exceptions to this---trying to call a `null` function, or doing the same *within* a helper will lead to exceptions.
 
 <h3 id="helpers">Calling helpers with arguments</h3>
 
@@ -163,7 +163,7 @@ You should be extremely careful about doing this, and always ensure you aren't r
 
 <h3 id="block-helpers">Block Helpers</h3>
 
-A block helper, called with `{% raw %}{{# }}{% endraw %}` is a helper that takes (and may render) a block of HTML. For instance, we saw the `{% raw %}{{#each .. in}}{% endraw %}` helper above which repeats a given block of HTML once per item in a list. You can also use a template as a block helper, rendering it's content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{% raw %}{{#if}}{% endraw %}` helper with:
+A block helper, called with `{% raw %}{{# }}{% endraw %}` is a helper that takes (and may render) a block of HTML. For instance, we saw the `{% raw %}{{#each .. in}}{% endraw %}` helper above which repeats a given block of HTML once per item in a list. You can also use a template as a block helper, rendering its content via the `Template.contentBlock` and `Template.elseBlock`. For instance, you could create your own `{% raw %}{{#if}}{% endraw %}` helper with:
 
 ```html
 <template name="myIf">
@@ -514,7 +514,7 @@ Template.autocompleteInput.helpers({
 });
 
 Template.autocompleteInput.events({
-  'change input': function(event, instance) {
+  'change input'(event, instance) {
     // read the current value out of the input, potentially change the value
   }
 });
@@ -526,7 +526,7 @@ By making the `blurringInput` flexible and reusable, we can avoid re-implementin
 
 It's usually best to keep your view layer as thin as possible and contain a component to whatever specific task it specifically needs to do. If there's heavy lifting involved (such as complicated data loading logic), it often makes sense to abstract it out into a utility library that simply deals with the logic alone and doesn't deal with the Blaze system at all.
 
-For example, if a component requires a lot of complicated [D3](d3js.org) code for drawing graphs, it's likely that that code itself could live in a separate module that's called by the component. That makes it easier to abstract the code later and share it between various components that need to all draw graphs.
+For example, if a component requires a lot of complicated [D3](http://d3js.org) code for drawing graphs, it's likely that that code itself could live in a separate module that's called by the component. That makes it easier to abstract the code later and share it between various components that need to all draw graphs.
 
 <h3 id="global-helpers">Global Helpers</h3>
 
@@ -621,6 +621,6 @@ This means when you render a Blaze template, you are simply running a function o
 
 <h3 id="views">What is a view?</h3>
 
-One of the most core contepts in Blaze is the "view", which a building block that represents a reactively rendering area of a template. The view is the machinery that works behind the scenes to track reactivity, do lookups, and re-render appropriately when data changes. The view is the unit of re-rendering in Blaze. You can even use the view tree to walk the rendered component hierarchy, but it's better to avoid this in favor of communicating between components using callbacks, template arguments, or global data stores.
+One of the most core concepts in Blaze is the "view", which a building block that represents a reactively rendering area of a template. The view is the machinery that works behind the scenes to track reactivity, do lookups, and re-render appropriately when data changes. The view is the unit of re-rendering in Blaze. You can even use the view tree to walk the rendered component hierarchy, but it's better to avoid this in favor of communicating between components using callbacks, template arguments, or global data stores.
 
 You can read more about views in the [Blaze docs](http://docs.meteor.com/#/full/blaze_view).

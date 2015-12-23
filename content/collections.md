@@ -62,7 +62,7 @@ const todo = Todos.findOne({_id: 'my-todo'});
 console.log(todo);
 ```
 
-The way that you move data from the server (and MongoDB-backed) collection into the client (in-memory) collection is the subject of the [data loading article](data-loading.md). Generally speaking, you *subscribe* to a *publication*, which pushes data from the server to the client. Usually, you can assume that the client contains an up-to-date copy of some subset of the full MongoDB collection.
+The way that you move data from the server (and MongoDB-backed) collection into the client (in-memory) collection is the subject of the [data loading article](data-loading.html). Generally speaking, you *subscribe* to a *publication*, which pushes data from the server to the client. Usually, you can assume that the client contains an up-to-date copy of some subset of the full MongoDB collection.
 
 To write data back to the server, you use a *Method*, the subject of the [methods article](methods.html).
 
@@ -74,7 +74,7 @@ There is a third way to use a collection in Meteor. On the client or server, if 
 SelectedTodos = new Mongo.Collection(null);
 ```
 
-This creates a *local collection*. This is a Minimongo collection that has no database connection (ordinarly a named collection would either be directly connected to the database on the server, or via a subscription on the client).
+This creates a *local collection*. This is a Minimongo collection that has no database connection (ordinarily a named collection would either be directly connected to the database on the server, or via a subscription on the client).
 
 A local collection is a convenient way to use the full power of the Minimongo library for in-memory storage. For instance, you might use it instead of a simple array if you need to execute complex queries over your data. Or you may want to take advantage of its *reactivity* on the client to drive some UI in a way that feels natural in Meteor.
 
@@ -237,7 +237,7 @@ class ListsCollection extends Mongo.Collection {
 }
 ```
 
-This technique has a couple of disadvantages:
+This technique has a few disadvantages:
 
 1. Mutators can get very long when you want to hook in multiple times.
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
