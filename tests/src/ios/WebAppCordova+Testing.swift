@@ -30,7 +30,7 @@ extension WebAppCordova {
 
   func simulateAppRestart(command: CDVInvokedUrlCommand) {
     self.stopLocalServer()
-    try! pluginInitialize()
+    pluginInitialize()
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
