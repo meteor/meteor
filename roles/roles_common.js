@@ -168,7 +168,10 @@ _.extend(Roles, {
       // we have to assign a new subrole for each of those partitions
       parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
       _.each(parentRoles, function (parentRole) {
-        Roles._addUserToRole(user, roleName, {partition: parentRole.partition, _assigned: false})
+        Roles._addUserToRole(user, roleName, {
+          partition: parentRole.partition,
+          _assigned: false
+        });
       });
     });
   },
@@ -217,7 +220,10 @@ _.extend(Roles, {
       parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
       _.each(parentRoles, function (parentRole) {
         // but we want to remove it only if it was not also explicitly assigned
-        Roles._removeUserFromRole(user, roleName, {partition: parentRole.partition, _onlyAssigned: true})
+        Roles._removeUserFromRole(user, roleName, {
+          partition: parentRole.partition,
+          _onlyAssigned: true
+        });
       });
     });
 
@@ -239,7 +245,10 @@ _.extend(Roles, {
       // we have to reassign the parent role for each of those partitions
       parentRoles = _.filter(user.roles, Roles._roleMatcher(parentName));
       _.each(parentRoles, function (parentRole) {
-        Roles._addUserToRole(user, parentRole.role, {partition: parentRole.partition, _assigned: parentRole.assigned});
+        Roles._addUserToRole(user, parentRole.role, {
+          partition: parentRole.partition,
+          _assigned: parentRole.assigned}
+        );
       });
     });
   },
