@@ -60,23 +60,23 @@ _.extend(Roles, {
    *   - unlessExists: if true, existence of a role will not throw an exception
    *
    * @method createRole
-   * @param {String} role Name of role.
+   * @param {String} roleName Name of role.
    * @param {Object} [options] Optional.
    * @return {String} id of new role
    */
-  createRole: function (role, options) {
+  createRole: function (roleName, options) {
     var match;
 
     options = options || {};
 
-    Roles._checkRoleName(role);
+    Roles._checkRoleName(roleName);
 
     options = _.defaults(options, {
       unlessExists: false
     });
 
     try {
-      return Meteor.roles.insert({name: role, children: []});
+      return Meteor.roles.insert({name: roleName, children: []});
     } catch (e) {
       // (from Meteor accounts-base package, insertUserDoc func)
       // XXX string parsing sucks, maybe
@@ -86,7 +86,7 @@ _.extend(Roles, {
       if (!match) throw e;
       if (match[1].indexOf('$name') !== -1) {
         if (options.unlessExists) return null;
-        throw new Error("Role '" + role + "' already exists.");
+        throw new Error("Role '" + roleName + "' already exists.");
       }
       throw e;
     }
@@ -95,31 +95,57 @@ _.extend(Roles, {
   /**
    * Delete an existing role.
    *
+   * If the role is assigned, it is automatically unassigned from users.
+   *
    * @method deleteRole
-   * @param {String} role Name of role
+   * @param {String} roleName Name of role
    */
-  deleteRole: function (role) {
-    Roles._checkRoleName(role);
+  deleteRole: function (roleName) {
+    var roles,
+        users;
 
-    Meteor.users.update({}, {
-      $pull: {
-        roles: {
-          role: role
+    Roles._checkRoleName(roleName);
+
+    users = [];
+    Roles.getUsersInRole(roleName, {
+      anyPartition: true,
+      queryOptions: {
+        fields: {
+          _id: 1,
+          roles: 1
         }
       }
-    }, {multi: true});
+    }).forEach(function (user, index, cursor) {
+      // role can be assigned multiple times to the user, for multiple partitions
+      // we have to remove the role for each of those partitions
+      roles = _.filter(user.roles, Roles._roleMatcher(roleName));
+      _.each(roles, function (role) {
+        Roles._removeUserFromRole(user, roleName, {
+          partition: role.partition
+        });
+      });
 
-    Meteor.roles.remove({name: role});
+      // store users for later
+      users.push(user);
+    });
 
-    // try once more just to be sure if role was assigned
-    // just before the role itself was removed
-    Meteor.users.update({}, {
-      $pull: {
-        roles: {
-          role: role
-        }
-      }
-    }, {multi: true});
+    Meteor.roles.remove({name: roleName});
+
+    // now we have an edge case we have to handle
+    // because we allow the same role to be a child of multiple roles it might happen
+    // that we just removed some subroles which we should not because they are
+    // in effect also through some other parent role
+    // so we simply reassign to all users their assigned roles again
+    _.each(users, function (user) {
+      // only assigned roles
+      roles = _.filter(user.roles, Roles._onlyAssignedMatcher());
+      _.each(roles, function (role) {
+        Roles._addUserToRole(user, role.role, {
+          partition: role.partition,
+          _assigned: role.assigned
+        });
+      });
+    });
   },
 
   addRoleParent: function (roleName, parentName) {
@@ -247,8 +273,8 @@ _.extend(Roles, {
       _.each(parentRoles, function (parentRole) {
         Roles._addUserToRole(user, parentRole.role, {
           partition: parentRole.partition,
-          _assigned: parentRole.assigned}
-        );
+          _assigned: parentRole.assigned
+        });
       });
     });
   },
