@@ -118,15 +118,6 @@ _.extend(Roles, {
         }
       }
     }, {multi: true});
-    var foundExistingUser = Meteor.users.findOne(
-                              {'roles.role': role},
-                              {fields: {_id: 1}});
-
-    if (foundExistingUser) {
-      throw new Error("Role '" + role + "' in use.");
-    }
-
-    Meteor.roles.remove({name: role});
   },
 
   /**
