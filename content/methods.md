@@ -131,6 +131,14 @@ Todos.methods.updateText = {
     Meteor.apply(this.name, [args], options, callback);
   }
 };
+
+// Actually register the method with Meteor's DDP system
+Meteor.methods({
+  [Todos.methods.updateText.name]: function (args) {
+    Todos.methods.updateText.validate.call(this, args);
+    Todos.methods.updateText.run.call(this, args);
+  }
+})
 ```
 
 <h4 id="advanced-boilerplate-calling">Calling</h4>
@@ -151,7 +159,7 @@ Todos.methods.updateText.call({
 });
 
 // Call the validation only
-Todos.methods.updateText.validate();
+Todos.methods.updateText.validate({ wrong: 'args'});
 
 // Call the Method with custom userId in a test
 Todos.methods.updateText.run.call({ userId: 'abcd' }, {
@@ -220,7 +228,7 @@ When you use `mdg:validated-method` with `aldeed:simple-schema` as demonstrated 
 
 Read more about the error format in the [`mdg:validation-error` docs](https://atmospherejs.com/mdg/validation-error).
 
-<h3 id="handling-errors">Handling errors thrown by a Method</h3>
+<h3 id="handling-errors">Handling errors</h3>
 
 When you call a Method, any errors thrown by it will be returned in the callback. At this point, you should identify which error type it is and display the appropriate message to the user. In this case, it is unlikely that the Method will throw a `ValidationError` or an internal server error, so we will only handle the unauthorized error:
 
@@ -279,28 +287,25 @@ Invoices.methods.insert = new ValidatedMethod({
 
 Let's define a simple HTML form:
 
-// XXX we still haven't fixed template namespacing... also, dealing with
-// dots in class names sucks...
-
 ```html
-<template name="Invoices.newInvoice">
-  <form class="Invoices-newInvoice">
+<template name="Invoices_newInvoice">
+  <form class="Invoices_newInvoice">
     <label for="email">Recipient email</label>
     <input type="email" name="email" />
     {{#each error in errors "email"}}
-      <div class="form-error">{{error.message}}</div>
+      <div class="form-error">{{error}}</div>
     {{/each}}
 
     <label for="description">Item description</label>
     <input type="text" name="description" />
     {{#each error in errors "description"}}
-      <div class="form-error">{{error.message}}</div>
+      <div class="form-error">{{error}}</div>
     {{/each}}
 
     <label for="amount">Amount owed</label>
     <input type="text" name="amount" />
     {{#each error in errors "amount"}}
-      <div class="form-error">{{error.message}}</div>
+      <div class="form-error">{{error}}</div>
     {{/each}}
   </form>
 </template>
@@ -309,18 +314,18 @@ Let's define a simple HTML form:
 Now, let's write some JavaScript to handle this form nicely:
 
 ```js
-Template['Invoices.newInvoice'].onCreated(function() {
+Template.Invoices_newInvoice.onCreated(function() {
   this.errors = new ReactiveDict();
 });
 
-Template['Invoices.newInvoice'].helpers({
+Template.Invoices_newInvoice.helpers({
   errors(fieldName) {
     return this.errors.get(fieldName);
   }
 });
 
-Template['Invoices.fieldName'].events({
-  'submit .Invoices-newInvoice'(event) {
+Template.Invoices_newInvoice.events({
+  'submit .Invoices_newInvoice'(event) {
     const instance = Template.instance();
 
     const data = {
@@ -342,7 +347,7 @@ Template['Invoices.fieldName'].events({
           // Go through validation errors returned from Method
           err.details.forEach((fieldError) => {
             // XXX i18n
-            errors[fieldError.name] = fieldError.type;
+            errors[fieldError.name].push(fieldError.type);
           });
 
           // Update ReactiveDict, errors will show up in the UI
@@ -354,7 +359,7 @@ Template['Invoices.fieldName'].events({
 });
 ```
 
-As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be easily abstracted by an off-the-shelf form framework or a simple application-specific wrapper of your own design. For more detail on integrating forms and Methods, check out the [Forms article](XXX forms.html).
+As you can see, there is a fair amount of boilerplate to handle errors nicely in a form, but most of it can be easily abstracted by an off-the-shelf form framework or a simple application-specific wrapper of your own design. The final released version of the Meteor guide will have a new article about forms.
 
 <h2 id="loading-data">Loading data with Methods</h2>
 
@@ -400,12 +405,37 @@ While you can easily use Methods in a simple app by following the Meteor introdu
 
 Here's exactly what happens, in order, when a Method is called:
 
-1. **Method simulation runs on the client.** If we defined this Method in client and server code, as all Methods should be, the first thing Meteor does is it executes the Method code in the client that called it. This is known as a "Method simulation" - the client enters a special mode where it tracks all changes made to client-side collections, so that they can be rolled back later. When this step is complete, the user of your app sees their UI update instantly with the new content of the client-side database, but the server hasn't received any data yet. The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method, in which case it is returned to the Method caller. ValidatedMethod passes this option by default.
-2. **A `method` message is sent to the server.** The Meteor client constructs a DDP message to send to the server. This includes the Method name, arguments, and an automatically generated Method ID that represents this particular Method invocation.
-3. **Method runs on the server.** When the server receives the message, it executes the Method code again. The client side version was a simulation that will be rolled back later, but this time it's the real version that is writing to the actual database. Running the actual Method logic on the server is crucial because the server is a trusted environment where we can know that security-critical code will run the way we expect.
-4. **Return value is sent to the client.** Once the Method has finished running on the server, it sends a `result` message to the client with the Method ID generated in step 2, and the return value itself. The client stores this for later use, but _doesn't call the Method callback yet_. If you pass the [`onResultReceived` option to `Meteor.apply`](http://docs.meteor.com/#/full/meteor_apply), that callback is fired.
-5. **Any DDP publications affected by the Method are updated.** If we have any publications on the page that have been affected by the database writes from this Method, the server sends the appropriate updates to the client. Note that the client data system does not yet send these updates to the app UI until the next step.
-6. **`updated` message sent to the client, data replaced with server result, Method callback fires.** After the relevant data updates have been sent to the correct client, the server sends back the last message in the Method life cycle - the DDP `updated` message with the relevant Method ID. The client rolls back any changes to client side data made in the Method simulation in step 1, and replaces them with the actual changes sent from the server in step 5. At this point, the callback passed to `Meteor.call` actually fires with the return value from step 4. It's important that the callback waits until the client is up to date, so that your Method callback can assume that the client state reflects any changes done inside the Method.
+<h4 id="lifecycle-simulation">1. Method simulation runs on the client</h4>
+
+If we defined this Method in client and server code, as all Methods should be, a Method simulation is executed in the client that called it.
+
+The client enters a special mode where it tracks all changes made to client-side collections, so that they can be rolled back later. When this step is complete, the user of your app sees their UI update instantly with the new content of the client-side database, but the server hasn't received any data yet.
+
+The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method, in which case it is returned to the Method caller. ValidatedMethod passes this option by default.
+
+<h4 id="lifecycle-ddp-message">2. A `method` DDP message is sent to the server</h4>
+
+The Meteor client constructs a DDP message to send to the server. This includes the Method name, arguments, and an automatically generated Method ID that represents this particular Method invocation.
+
+<h4 id="lifecycle-server">3. Method runs on the server</h4>
+
+When the server receives the message, it executes the Method code again on the server. The client side version was a simulation that will be rolled back later, but this time it's the real version that is writing to the actual database. Running the actual Method logic on the server is crucial because the server is a trusted environment where we know that security-critical code will run the way we expect.
+
+<h4 id="lifecycle-result">4. Return value is sent to the client</h4>
+
+Once the Method has finished running on the server, it sends a `result` message to the client with the Method ID generated in step 2, and the return value itself. The client stores this for later use, but _doesn't call the Method callback yet_. If you pass the [`onResultReceived` option to `Meteor.apply`](http://docs.meteor.com/#/full/meteor_apply), that callback is fired.
+
+<h4 id="lifecycle-publications">5. Any DDP publications affected by the Method are updated</h4>
+
+If we have any publications on the page that have been affected by the database writes from this Method, the server sends the appropriate updates to the client. Note that the client data system does reveal these updates to the app UI until the next step.
+
+<h4 id="lifecycle-updated">6. `updated` message sent to the client, data replaced with server result, Method callback fires</h4>
+
+After the relevant data updates have been sent to the correct client, the server sends back the last message in the Method life cycle - the DDP `updated` message with the relevant Method ID. The client rolls back any changes to client side data made in the Method simulation in step 1, and replaces them with the actual changes sent from the server in step 5.
+
+Lastly, the callback passed to `Meteor.call` actually fires with the return value from step 4. It's important that the callback waits until the client is up to date, so that your Method callback can assume that the client state reflects any changes done inside the Method.
+
+<h4 id="lifecycle-error">Error case</h4>
 
 In the list above, we didn't cover the case when the Method execution on the server throws an error. In that case, there is no return value, and the client gets an error instead. The Method callback is fired instantly with the returned error as the first argument. Read more about error handling in the section about errors below.
 
@@ -413,9 +443,17 @@ In the list above, we didn't cover the case when the Method execution on the ser
 
 We believe Methods provide a much better primitive for building modern applications than REST endpoints built on HTTP. Let's go over some of the things you get for free with Methods that you would have to worry about if using HTTP. The purpose of this section is not to convince you that REST is bad - it's just to remind you that you don't need to handle these things yourself in a Meteor app.
 
-1. **Methods use synchronous-style APIs, but are non-blocking.** You may notice in the example Method above, we didn't need to write any callbacks when interacting with MongoDB, but the Method still has the non-blocking properties that people associate with Node.js and callback-style code. Meteor uses a coroutine library called [Fibers](https://github.com/laverdet/node-fibers) to enable you to write code that uses return values and throws errors, and avoid dealing with lots of nested callbacks.
-2. **Methods always run and return in order.** When accessing a REST API, you will sometimes run into a situation where you make two requests one after the other, but the results arrive out of order. Meteor's underlying machinery makes sure this never happens with Methods. When multiple Method calls are received _from the same client_, Meteor runs each Method to completion before starting the next one. If you need to disable this functionality for one particularly long-running Method, you can use [`this.unblock()`](http://docs.meteor.com/#/full/method_unblock) to allow the next Method to run while the current one is still in progress. Also, since Meteor is based on Websockets instead of HTTP, all Method calls and results are guaranteed to arrive in the order they are sent. You can also pass a special option `wait: true` to `Meteor.apply` to wait to send a particular Method until all others have returned, and not send any other Methods until this one returns.
-3. **Change tracking for Optimistic UI.** When Method simulations and server-side executions run, Meteor tracks any resulting changes to the database. This is what lets the Meteor data system roll back the changes from the Method simulation and replace them with the actual writes from the server. Without this automatic database tracking, it would be very difficult to implement a correct Optimistic UI system.
+<h4 id="non-blocking">Methods use synchronous-style APIs, but are non-blocking</h4>
+
+You may notice in the example Method above, we didn't need to write any callbacks when interacting with MongoDB, but the Method still has the non-blocking properties that people associate with Node.js and callback-style code. Meteor uses a coroutine library called [Fibers](https://github.com/laverdet/node-fibers) to enable you to write code that uses return values and throws errors, and avoid dealing with lots of nested callbacks.
+
+<h4 id="ordered">Methods always run and return in order</h4>
+
+When accessing a REST API, you will sometimes run into a situation where you make two requests one after the other, but the results arrive out of order. Meteor's underlying machinery makes sure this never happens with Methods. When multiple Method calls are received _from the same client_, Meteor runs each Method to completion before starting the next one. If you need to disable this functionality for one particularly long-running Method, you can use [`this.unblock()`](http://docs.meteor.com/#/full/method_unblock) to allow the next Method to run while the current one is still in progress. Also, since Meteor is based on Websockets instead of HTTP, all Method calls and results are guaranteed to arrive in the order they are sent. You can also pass a special option `wait: true` to `Meteor.apply` to wait to send a particular Method until all others have returned, and not send any other Methods until this one returns.
+
+<h4 id="change-tracking">Change tracking for Optimistic UI</h4>
+
+When Method simulations and server-side executions run, Meteor tracks any resulting changes to the database. This is what lets the Meteor data system roll back the changes from the Method simulation and replace them with the actual writes from the server. Without this automatic database tracking, it would be very difficult to implement a correct Optimistic UI system.
 
 <h3 id="calling-method-from-method">Calling a Method from another Method</h3>
 
