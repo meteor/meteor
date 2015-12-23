@@ -125,13 +125,13 @@ In this code snippet we can see two important techniques for subscribing in Blaz
 
 <h3 id="fetching">Fetching data</h3>
 
-Subscribing to data puts it in your client-side collection. To use the data in your user interface, you need to query your client-side collection. There are a few important rules of thumb when doing this.
+Subscribing to data puts it in your client-side collection. To use the data in your user interface, you need to query your client-side collection. There are a couple of important rules of thumb when doing this.
 
 1. Always use specific queries to fetch data.
 
-If you're publishing a subset of your data, it might be tempting to simply query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
+  If you're publishing a subset of your data, it might be tempting to simply query for all data available in a collection (i.e. `Lists.find()`) in order to get that subset on the client, without re-specifying the Mongo selector you used to publish that data in the first place.
 
-But if you do this, then you open yourself up to problems if another subscription pushes data into the same collection, since the data returned by `Lists.find()` might not be what you expected anymore. In an actively developed application, it's often hard to anticipate what may change in the future and this can be a source of hard to understand bugs.
+  But if you do this, then you open yourself up to problems if another subscription pushes data into the same collection, since the data returned by `Lists.find()` might not be what you expected anymore. In an actively developed application, it's often hard to anticipate what may change in the future and this can be a source of hard to understand bugs.
 
   Also, when changing between subscriptions, there is a brief period where both subscriptions are loaded (see [Publication behavior when changing arguments](#publication-behavior-with-arguments) below), so when doing thing like pagination, it's exceedingly likely that this will be the case.
 
@@ -139,7 +139,7 @@ But if you do this, then you open yourself up to problems if another subscriptio
 
   We do this for the same reason we subscribe in the component in the first place -- to avoid action at a distance and to make it easier to understand where data comes from. A common pattern is to fetch the data in a parent template, and then pass it into a "pure" child component, as we'll see in in the [UI Article](ui-ux.html#components).
 
-  Note that there are some exceptions to this second rule. A common one is `Meteor.user()`---although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes components harder to test.
+  Note that there are some exceptions to this second rule. A common one is `Meteor.user()` --- although this is strictly speaking subscribed to (automatically usually), it's typically over-complicated to pass it through the component hierarchy as an argument to each component. Although you could do this if you want to be "pure" about everything, it's best not to use it in too many places as it makes components harder to test.
 
 <h3 id="global-subscriptions">Global subscriptions</h3>
 
@@ -170,7 +170,7 @@ We can use this information to be more subtle about when we try and show data to
 
 <h3 id="changing-arguments">Reactively changing subscription arguments</h3>
 
-We've seen an example already of using an `autorun` to re-subscribe when the (reactive) arguments to a subscription change. It's worth digging in a little more detail to understand what happens in this scenario.
+We've already seen an example of using an `autorun` to re-subscribe when the (reactive) arguments to a subscription change. It's worth digging in a little more detail to understand what happens in this scenario.
 
 ```js
 Template.listsShowPage.onCreated(function() {
@@ -197,7 +197,7 @@ Technically, what happens when one of these reactive sources changes is the foll
 5. If the subscription is run with *different arguments*, then a new subscription is created, which connects to the publication on the server.
 6. At the end of the flush cycle (i.e. after the computation is done re-running), the old subscription checks to see if it was re-used, and if not, sends a message to the server to tell the server to shut it down.
 
-The important detail in the above is in 4---that they system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template hierarchy.
+The important detail in the above is in 4 -- that the system cleverly knows not to re-subscribe if the autorun re-runs and subscribes with the exact same arguments. This holds true even if the new subscription is set up somewhere else in the template hierarchy.
 
 For instance if a user navigates between two pages that both subscribe to the exact same subscription, the same mechanism will kick in and no unnecessary subscribing will happen.
 
@@ -211,9 +211,9 @@ What this means is in general, when changing subscriptions, there'll be a period
 
 <h3 id="pagination">Paginating subscriptions</h3>
 
-A very common pattern of data access is pagination. This refers to the practice of fetching an ordered list of data one "page" at a time --- typically some number of items, say twenty.
+A very common pattern of data access is pagination. This refers to the practice of fetching an ordered list of data one "page" at a time -- typically some number of items, say twenty.
 
-There are two styles of pagination that are commonly used, a "page-by-page" style---where you show only one page of results at a time, starting at some offset (which the user can control), and "infinite-scroll" style, where you show an increasing number of pages of items, as the user moves through the list (this is the typical "feed" style user interface).
+There are two styles of pagination that are commonly used, a "page-by-page" style -- where you show only one page of results at a time, starting at some offset (which the user can control), and "infinite-scroll" style, where you show an increasing number of pages of items, as the user moves through the list (this is the typical "feed" style user interface).
 
 Let's consider a publication/subscription technique for the second (the first technique is a little tricker to handle, due to it being difficult to calculate the offset on the client. If you need to do so, you can follow many of the same techniques that we use here and use the [`percolate:find-from-publication`](https://atmospherejs.com/percolate/find-from-publication) package to keep track of which records have come from your publication).
 
@@ -315,7 +315,7 @@ If you need to query the store, or store many related items, it's probably a goo
 
 <h3 id="accessing-stores">Accessing stores</h3>
 
-You should access stores in the same way you'd access other reactive data in your templates---that means centralizing your store access, much like you centralize your subscribing and data fetch. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback.
+You should access stores in the same way you'd access other reactive data in your templates -- that means centralizing your store access, much like you centralize your subscribing and data fetch. For a Blaze template, that's either in a helper, or from within a `this.autorun()` inside an `onCreated()` callback.
 
 This way you get the full reactive power of the store.
 
@@ -461,7 +461,7 @@ Meteor.publishComposite('Todos.admin.inList', function(listId) {
 
 In all of our examples so far (outside of using`Meteor.publishComposite()`) we've returned a cursor from our `Meteor.publish()` handlers. Doing this ensures Meteor takes care of the job of keeping the contents of that cursor in sync between the server and the client. However, there's another API you can use for publish functions which is closer to the way the underlying Distributed Data Protocol (DDP) works.
 
-DDP uses three main messages to communicate changes in the data for a publication: the `added`, `updated` and `removed` messages. So, we can simiarly do the same for a publication:
+DDP uses three main messages to communicate changes in the data for a publication: the `added`, `updated` and `removed` messages. So, we can similarly do the same for a publication:
 
 ```js
 Meteor.publish('custom-publication', function() {
