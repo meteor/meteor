@@ -1613,6 +1613,58 @@
       }]);
     });
 
+  Tinytest.add(
+    'roles - _addUserToRole',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+
+      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: false});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles.setUserRoles(users.eve, []);
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+
+      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }]);
+    });
+
   function printException (ex) {
     var tmp = {};
     for (var key in ex) {
