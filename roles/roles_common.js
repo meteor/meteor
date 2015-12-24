@@ -666,7 +666,7 @@ _.extend(Roles, {
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $nor: _.pick(roles, 'role', 'partition')
+            $nor: _.map(roles, function (role) {return _.pick(role, 'role', 'partition')})
           }
         }
       });
