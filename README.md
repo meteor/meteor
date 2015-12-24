@@ -73,7 +73,18 @@ combining multiple low-level permissions. For example, you could name your top-l
 and then you could use your second-level roles as permissions and name them `USERS_VIEW`, `POST_EDIT`, and similar.
 Then you could set `admin` role as parent role for `USERS_VIEW` and `POST_EDIT`, while `user` would be parent
 only of the `POST_EDIT` role. You can then assign `user` and `admin` roles to your users. And if you need to
-change permissions later for the whole role, just add or remove children roles.
+change permissions later for the whole role, just add or remove children roles. You can create roles from this example
+with:
+
+```javascript
+Roles.createRole('user');
+Roles.createRole('admin');
+Roles.createRole('USERS_VIEW');
+Roles.createRole('POST_EDIT');
+Roles.addRoleParent('USERS_VIEW', 'admin');
+Roles.addRoleParent('POST_EDIT', 'admin');
+Roles.addRoleParent('POST_EDIT', 'user');
+```
 
 <br />
 
@@ -105,7 +116,7 @@ assign roles independently and make sure that they don't get mixed up between pa
 Now, let's take a look at how to use the global roles. Say we want to give Joe permission to do something across
 all of our partitions. That is what the global roles are for:
 
-```
+```javascript
 Roles.addUsersToRoles(joesUserId, 'super-admin', null); // Or you could just omit the last argument.
 
 if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.com')) {
