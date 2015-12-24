@@ -180,8 +180,7 @@ _.each(users, function (user) {
     _.each(user.roles, function (role) {
       Roles.createRole(role, {unlessExists: true});
     });
-    // Need _id of existing user record so this call must come 
-    // after `Accounts.createUser` or `Accounts.onCreate`
+    // Need _id of existing user record so this call must come after `Accounts.createUser`.
     Roles.addUsersToRoles(id, user.roles);
   }
 
@@ -189,8 +188,10 @@ _.each(users, function (user) {
 ```
 
 <br />
-Note that the `Roles.addUsersToRoles` call needs to come _after_ `Accounts.createUser` or `Accounts.onCreate` or else
+Note that the `Roles.addUsersToRoles` call needs to come _after_ `Accounts.createUser` or else
 the roles package won't be able to find the user record (since it hasn't been created yet).
+You can use `postSignUpHook` to assign roles when using
+[user accounts package](https://github.com/meteor-useraccounts/core).
 This SO answer gives more detail: http://stackoverflow.com/a/22650399/219238
 
 <br />
