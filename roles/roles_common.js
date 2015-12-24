@@ -661,20 +661,12 @@ _.extend(Roles, {
       }));
     });
 
-    // transform into the query
-    roles = _.map(roles, function (role) {
-      return {
-        role: {$ne: role.role},
-        partition: {$ne: role.partition}
-      }
-    });
-
     if (roles.length) {
       // remove all extra entries which should not be there
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $and: roles
+            $nor: _.pick(roles, 'role', 'partition')
           }
         }
       });
