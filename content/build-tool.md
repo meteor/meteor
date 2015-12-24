@@ -138,10 +138,10 @@ updateGitHubFollowers() {
     user: 'stubailo'
   });
 
-  Followers.insert(res);
+  Followers.insert(result);
 
   // Return how many followers we have
-  return res.length;
+  return result.length;
 }
 ```
 
