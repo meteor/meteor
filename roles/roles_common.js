@@ -406,7 +406,7 @@ _.extend(Roles, {
    *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
    *   - `_assigned`: internal option, should not be used publicly because it will break assumptions
    *     in te code; publicly, you can only add users to an assigned role
-   *     should the role be set as assigned, default is `true`; `null` is the same as `false`,
+   *     should the role be set as assigned (`true`), `null` is the same as `false`,
    *     only that it does not force the value to `false` if the role is already assigned
    * @return {Array} Roles set during the call (even those already set).
    * @private
@@ -583,9 +583,9 @@ _.extend(Roles, {
    * @param {Object} options Options:
    *   - `partition`: name of the partition, or `null` for the global role
    *   - `_assigned`: internal option, should not be used publicly because it will break assumptions
-   *     in te code; publicly, you can only add users to an assigned role
-   *     should the role be set as assigned, default is `true`; `null` is the same as `false`,
-   *     only that it does not force the value to `false` if the role is already assigned
+   *     in te code; publicly, you can only remove users from an assigned role
+   *     if `true`, only manually assigned roles are removed, if `false`, only automatically
+   *     assigned roles are removed, if `null`, any role is removed
    * @private
    * @static
    */
