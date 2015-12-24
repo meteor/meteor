@@ -746,20 +746,12 @@ _.extend(Roles, {
       }));
     });
 
-    // transform into the query
-    roles = _.map(roles, function (role) {
-      return {
-        role: {$ne: role.role},
-        partition: {$ne: role.partition}
-      }
-    });
-
     if (roles.length) {
       // remove all extra entries which should not be there
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $and: roles
+            $nor: _.pick(roles, &#x27;role&#x27;, &#x27;partition&#x27;)
           }
         }
       });
@@ -1153,8 +1145,23 @@ _.extend(Roles, {
    * @static
    */
   _checkRoleName: function (roleName) {
-    if (!roleName || !_.isString(roleName) || roleName.trim() !== roleName) {
+    if (!roleName || !_.isString(roleName) || Roles._trim(roleName) !== roleName) {
       throw new Error(&quot;Invalid role name &#x27;&quot; + roleName + &quot;&#x27;.&quot;);
+    }
+  },
+
+  /**
+   * @param {String} string Input string.
+   * @return {String} Trimmed string.
+   * @private
+   * @static
+   */
+  _trim: function (string) {
+    if (string.trim) {
+      return string.trim();
+    }
+    else {
+      return string.replace(/^\s+|\s+$/g, &#x27;&#x27;);
     }
   }
 

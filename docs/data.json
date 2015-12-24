@@ -425,7 +425,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 687,
+            "line": 679,
             "description": "Check if user has specified roles.",
             "example": [
                 "\n    // global roles\n    Roles.userIsInRole(user, 'admin')\n    Roles.userIsInRole(user, ['admin','editor'])\n    Roles.userIsInRole(userId, 'admin')\n    Roles.userIsInRole(userId, ['admin','editor'])\n\n    // partition roles (global roles are still checked)\n    Roles.userIsInRole(user, 'admin', 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})"
@@ -460,7 +460,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 789,
+            "line": 781,
             "description": "Retrieve user's roles.",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -487,7 +487,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 843,
+            "line": 835,
             "description": "Retrieve cursor of all existing roles.",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -509,7 +509,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 858,
+            "line": 850,
             "description": "Retrieve all users who are in target role.\n\nOptions:",
             "itemtype": "method",
             "name": "getUsersInRole",
@@ -542,7 +542,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 928,
+            "line": 920,
             "description": "Deprecated. Use `getPartitionsForUser` instead.",
             "itemtype": "method",
             "name": "getGroupsForUser",
@@ -553,7 +553,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 944,
+            "line": 936,
             "description": "Retrieve users partitions, if any.",
             "itemtype": "method",
             "name": "getPartitionsForUser",
@@ -580,7 +580,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 976,
+            "line": 968,
             "description": "Resolves the user ID into an actual user object with `roles` field,\nif it is not already.",
             "itemtype": "method",
             "name": "_resolveUser",
@@ -608,7 +608,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1002,
+            "line": 994,
             "itemtype": "method",
             "name": "_roleMatcher",
             "params": [
@@ -630,7 +630,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1016,
+            "line": 1008,
             "itemtype": "method",
             "name": "_roleAndPartitionMatcher",
             "params": [
@@ -657,7 +657,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1033,
+            "line": 1025,
             "itemtype": "method",
             "name": "_partitionMatcher",
             "params": [
@@ -679,7 +679,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1049,
+            "line": 1041,
             "itemtype": "method",
             "name": "_onlyAssignedMatcher",
             "return": {
@@ -694,7 +694,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1062,
+            "line": 1054,
             "description": "Throw an exception if `roleName` is an invalid role name.",
             "itemtype": "method",
             "name": "_checkRoleName",
@@ -705,6 +705,26 @@
                     "type": "String"
                 }
             ],
+            "access": "private",
+            "tagname": "",
+            "static": 1,
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 1068,
+            "params": [
+                {
+                    "name": "string",
+                    "description": "Input string.",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "Trimmed string.",
+                "type": "String"
+            },
             "access": "private",
             "tagname": "",
             "static": 1,
@@ -865,5 +885,10 @@
             "module": "Roles"
         }
     ],
-    "warnings": []
+    "warnings": [
+        {
+            "message": "Missing item type",
+            "line": " roles/roles_common.js:1068"
+        }
+    ]
 }
