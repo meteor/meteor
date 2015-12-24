@@ -509,7 +509,7 @@ _.extend(Roles, {
 
     _.each(role.children, function (child) {
       // subroles are set as unassigned, but only if they do not already exist
-      setRoles.concat(Roles._addUserToRole(user, child.name, _.extend({}, options, {_assigned: null})));
+      setRoles = setRoles.concat(Roles._addUserToRole(user, child.name, _.extend({}, options, {_assigned: null})));
     });
 
     return setRoles;
@@ -662,19 +662,19 @@ _.extend(Roles, {
 
     setRoles = [];
     _.each(roles, function (role) {
-      setRoles.concat(Roles._addUserToRole(user, role.role, {
+      setRoles = setRoles.concat(Roles._addUserToRole(user, role.role, {
         partition: role.partition,
         _assigned: role.assigned, // this is true
         ifExists: true
       }));
     });
 
-    if (roles.length) {
+    if (setRoles.length) {
       // remove all extra entries which should not be there
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $nor: _.map(roles, function (role) {return _.pick(role, 'role', 'partition')})
+            $nor: _.map(setRoles, function (role) {return _.pick(role, 'role', 'partition')})
           }
         }
       });
