@@ -1050,6 +1050,166 @@
       testUser(test, 'joe', ['admin'], 'example.k12.va.us');
     });
 
+  Tinytest.add(
+    'roles - migration without global groups',
+    function (test) {
+      reset();
+
+      test.isTrue(Meteor.roles.insert({name: 'admin'}));
+      test.isTrue(Meteor.roles.insert({name: 'editor'}));
+      test.isTrue(Meteor.roles.insert({name: 'user'}));
+
+      test.isTrue(Meteor.users.update(users.eve, {$set: {roles: ['admin', 'editor']}}));
+      test.isTrue(Meteor.users.update(users.bob, {$set: {roles: []}}));
+      test.isTrue(Meteor.users.update(users.joe, {$set: {roles: ['user']}}));
+
+      Roles._forwardMigrate();
+
+      test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
+        roles: [{
+          role: 'admin',
+          partition: null,
+          assigned: true
+        }, {
+          role: 'editor',
+          partition: null,
+          assigned: true
+        }]
+      });
+      test.equal(Meteor.users.findOne(users.bob, {fields: {roles: 1, _id: 0}}), {
+        roles: []
+      });
+      test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
+        roles: [{
+          role: 'user',
+          partition: null,
+          assigned: true
+        }]
+      });
+
+      test.equal(Meteor.roles.findOne({name: 'admin'}, {fields: {_id: 0}}), {
+        name: 'admin',
+        children: []
+      });
+      test.equal(Meteor.roles.findOne({name: 'editor'}, {fields: {_id: 0}}), {
+        name: 'editor',
+        children: []
+      });
+      test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
+        name: 'user',
+        children: []
+      });
+
+      Roles._backwardMigrate(null, false);
+
+      test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
+        roles: ['admin', 'editor']
+      });
+      test.equal(Meteor.users.findOne(users.bob, {fields: {roles: 1, _id: 0}}), {
+        roles: []
+      });
+      test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
+        roles: ['user']
+      });
+
+      test.equal(Meteor.roles.findOne({name: 'admin'}, {fields: {_id: 0}}), {
+        name: 'admin'
+      });
+      test.equal(Meteor.roles.findOne({name: 'editor'}, {fields: {_id: 0}}), {
+        name: 'editor'
+      });
+      test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
+        name: 'user'
+      });
+    });
+
+  Tinytest.add(
+    'roles - migration with global groups',
+    function (test) {
+      reset();
+
+      test.isTrue(Meteor.roles.insert({name: 'admin'}));
+      test.isTrue(Meteor.roles.insert({name: 'editor'}));
+      test.isTrue(Meteor.roles.insert({name: 'user'}));
+
+      test.isTrue(Meteor.users.update(users.eve, {$set: {roles: {__global_roles__: ['admin', 'editor'], foo: ['user']}}}));
+      test.isTrue(Meteor.users.update(users.bob, {$set: {roles: {}}}));
+      test.isTrue(Meteor.users.update(users.joe, {$set: {roles: {__global_roles__: ['user'], foo: ['user']}}}));
+
+      Roles._forwardMigrate();
+
+      test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
+        roles: [{
+          role: 'admin',
+          partition: null,
+          assigned: true
+        }, {
+          role: 'editor',
+          partition: null,
+          assigned: true
+        }, {
+          role: 'user',
+          partition: 'foo',
+          assigned: true
+        }]
+      });
+      test.equal(Meteor.users.findOne(users.bob, {fields: {roles: 1, _id: 0}}), {
+        roles: []
+      });
+      test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
+        roles: [{
+          role: 'user',
+          partition: null,
+          assigned: true
+        }, {
+          role: 'user',
+          partition: 'foo',
+          assigned: true
+        }]
+      });
+
+      test.equal(Meteor.roles.findOne({name: 'admin'}, {fields: {_id: 0}}), {
+        name: 'admin',
+        children: []
+      });
+      test.equal(Meteor.roles.findOne({name: 'editor'}, {fields: {_id: 0}}), {
+        name: 'editor',
+        children: []
+      });
+      test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
+        name: 'user',
+        children: []
+      });
+
+      Roles._backwardMigrate(null, true);
+
+      test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
+        roles: {
+          __global_roles__: ['admin', 'editor'],
+          foo: ['user']
+        }
+      });
+      test.equal(Meteor.users.findOne(users.bob, {fields: {roles: 1, _id: 0}}), {
+        roles: {}
+      });
+      test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
+        roles: {
+          __global_roles__: ['user'],
+          foo: ['user']
+        }
+      });
+
+      test.equal(Meteor.roles.findOne({name: 'admin'}, {fields: {_id: 0}}), {
+        name: 'admin'
+      });
+      test.equal(Meteor.roles.findOne({name: 'editor'}, {fields: {_id: 0}}), {
+        name: 'editor'
+      });
+      test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
+        name: 'user'
+      });
+    });
+
   function printException (ex) {
     var tmp = {};
     for (var key in ex) {
