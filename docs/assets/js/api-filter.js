@@ -14,6 +14,10 @@ Y.APIFilter = Y.Base.create('apiFilter', Y.Base, [Y.AutoCompleteBase], {
             }
         });
 
+        if (this.get('queryType') === 'elements') {
+            name = '&lt;' + name + '&gt;';
+        }
+
         return name;
     }
 
@@ -24,7 +28,7 @@ Y.APIFilter = Y.Base.create('apiFilter', Y.Base, [Y.AutoCompleteBase], {
             value: 'phraseMatch'
         },
 
-        // May be set to "classes" or "modules".
+        // May be set to "classes", "elements" or "modules".
         queryType: {
             value: 'classes'
         },

@@ -98,7 +98,7 @@ code, kbd, pre, samp {
     line-height: 1.35;
 }
 
-p code, p kbd, p samp {
+p code, p kbd, p samp, li code {
     background: #FCFBFA;
     border: 1px solid #EFEEED;
     padding: 0 3px;
