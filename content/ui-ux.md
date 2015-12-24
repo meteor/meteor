@@ -164,7 +164,7 @@ We do this with Blaze's `Template.subscriptionsReady` which is perfect for this 
 
 <h4 id="per-component-loading">Per-component loading state</h4>
 
-Usually it makes for a better UX to show as much of the screen as possible as quickly as possible and to only show loading state for the parts of the screen that are still waiting on data. So a nice pattern to follow is "per-component loading". We do this in the Todos app when you visit the list page---we instantly render the list metadata, such as it's title and privacy settings, and render a loading state for the list of todos while we wait for them to appear.
+Usually it makes for a better UX to show as much of the screen as possible as quickly as possible and to only show loading state for the parts of the screen that are still waiting on data. So a nice pattern to follow is "per-component loading". We do this in the Todos app when you visit the list page---we instantly render the list metadata, such as its title and privacy settings, and render a loading state for the list of todos while we wait for them to appear.
 
 <img src="images/todos-loading.png">
 
@@ -207,7 +207,7 @@ For example, in Galaxy, while you wait for your app's log to load, you see a loa
 
 Loading states are notoriously difficult to work on visually as they are by definition transient and often are barely noticeable in a development environment where subscriptions load almost instantly.
 
-This is one reason why being able to achieve any state at will in the [component styleguide](#styleguides) is so useful. As our reusable component `listsShow` simply chooses to render based on it's `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a styleguide.
+This is one reason why being able to achieve any state at will in the [component styleguide](#styleguides) is so useful. As our reusable component `listsShow` simply chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a styleguide.
 
 <h3 id="pagination">Pagination</h3>
 
@@ -234,7 +234,7 @@ It's instructive to think about what arguments such a component would need to di
 
 We can now distinguish between the 5 states above based on these conditions:
 
-1. `countReady` is false, or `count > 0` and `items` is still empty. (These are actually two different states, but doesn't seem important to visually separate them).
+1. `countReady` is false, or `count > 0` and `items` is still empty. (These are actually two different states, but it doesn't seem important to visually separate them).
 2. `items.length === requested && requested < count`
 3. `0 < items.length < requested`
 4. `items.length === requested && count > 0`
@@ -419,7 +419,7 @@ However, it's terrible UX to simply jump the user to an unexpected state without
 
 <h2 id="animation">Animation</h2>
 
-Animation is the process indicating changes in the UI smoothly *over time* rather than *instantly*. Although animation is often seen as "window dressing" or purely aesthetic, in fact it serves a very important purpose, highlighted by the example of the changing list above. In a connected-client world where changes in the UI aren't always initiated by user action (i.e. sometimes they happen as a result of the server pushing changes made by other users), instant changes can result in a user experience where it's difficult to understand what is happening.
+Animation is the process of indicating changes in the UI smoothly *over time* rather than *instantly*. Although animation is often seen as "window dressing" or purely aesthetic, in fact it serves a very important purpose, highlighted by the example of the changing list above. In a connected-client world where changes in the UI aren't always initiated by user action (i.e. sometimes they happen as a result of the server pushing changes made by other users), instant changes can result in a user experience where it's difficult to understand what is happening.
 
 <h3 id="animating-visiblity">Animating changes in visiblity</h3>
 
