@@ -404,7 +404,7 @@ _.extend(Roles, {
    *     in te code; publicly, you can only add users to an assigned role
    *     should the role be set as assigned, default is `true`; `null` is the same as `false`,
    *     only that it does not force the value to `false` if the role is already assigned
-   * @returns {Array} Roles set during the call (even those already set).
+   * @return {Array} Roles set during the call (even those already set).
    * @private
    * @static
    */
@@ -980,7 +980,7 @@ _.extend(Roles, {
    * @method _resolveUser
    * @param {String|Object} user User ID or an actual user object.
    * @param {Boolean} force Load a new user object even if it is already one.
-   * @returns {Object} User object.
+   * @return {Object} User object.
    * @private
    * @static
    */
@@ -1002,7 +1002,7 @@ _.extend(Roles, {
   /**
    * @method _roleMatcher
    * @param {String} roleName A role name to match against.
-   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   * @return {Function} A matcher function which accepts a role object and returns `true`
    *                     if its name matches `roleName`.
    * @private
    * @static
@@ -1017,7 +1017,7 @@ _.extend(Roles, {
    * @method _roleAndPartitionMatcher
    * @param {String} roleName A role name to match against.
    * @param {String} partition A partition to match against.
-   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   * @return {Function} A matcher function which accepts a role object and returns `true`
    *                     if its name matches `roleName`, and partition matches `partition`.
    * @private
    * @static
@@ -1033,7 +1033,7 @@ _.extend(Roles, {
   /**
    * @method _partitionMatcher
    * @param {String} partition A partition to match against.
-   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   * @return {Function} A matcher function which accepts a role object and returns `true`
    *                     if its partition matches `partition`.
    * @private
    * @static
@@ -1048,7 +1048,7 @@ _.extend(Roles, {
 
   /**
    * @method _onlyAssignedMatcher
-   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   * @return {Function} A matcher function which accepts a role object and returns `true`
    *                     if the role is an assigned role.
    * @private
    * @static

@@ -30,7 +30,7 @@ _.extend(Roles, {
   /**
    * @method _isNewField
    * @param {Array} roles `Meteor.users` document `roles` field.
-   * @returns {Boolean} Returns `true` if the `roles` field is in the new format.
+   * @return {Boolean} Returns `true` if the `roles` field is in the new format.
    *                    If it is ambiguous or it is not, returns `false`.
    * @for Roles
    * @private
@@ -43,7 +43,7 @@ _.extend(Roles, {
   /**
    * @method _isOldField
    * @param {Array} roles `Meteor.users` document `roles` field.
-   * @returns {Boolean} Returns `true` if the `roles` field is in the old format.
+   * @return {Boolean} Returns `true` if the `roles` field is in the old format.
    *                    If it is ambiguous or it is not, returns `false`.
    * @for Roles
    * @private
@@ -56,7 +56,7 @@ _.extend(Roles, {
   /**
    * @method _convertToNewField
    * @param {Array} roles `Meteor.users` document `roles` field in the old format.
-   * @returns {Array} Converted `roles` to the new format.
+   * @return {Array} Converted `roles` to the new format.
    * @for Roles
    * @private
    * @static
@@ -96,7 +96,7 @@ _.extend(Roles, {
   /**
    * @method _convertToOldField
    * @param {Array} roles `Meteor.users` document `roles` field in the new format.
-   * @returns {Array} Converted `roles` to the old format.
+   * @return {Array} Converted `roles` to the old format.
    * @for Roles
    * @private
    * @static
@@ -144,7 +144,7 @@ _.extend(Roles, {
   /**
    * @method _defaultUpdateUser
    * @param {Object} user `Meteor.users` document.
-   * @returns {Array|Object} roles Value to which user's `roles` field should be set.
+   * @return {Array|Object} roles Value to which user's `roles` field should be set.
    * @for Roles
    * @private
    * @static
