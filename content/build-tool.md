@@ -134,7 +134,7 @@ const getFollowingFromUser =
 
 // Inside a Meteor method definition
 updateGitHubFollowers() {
-  const result = getFollowingFromUserFiber({
+  const result = getFollowingFromUser({
     user: 'stubailo'
   });
 
