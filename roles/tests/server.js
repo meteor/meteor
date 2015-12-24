@@ -55,11 +55,13 @@
     function (test) {
       reset();
 
-      Roles.createRole('test1');
+      var role1Id = Roles.createRole('test1');
       test.equal(Meteor.roles.findOne().name, 'test1');
+      test.equal(Meteor.roles.findOne(role1Id).name, 'test1');
 
-      Roles.createRole('test2');
+      var role2Id = Roles.createRole('test2');
       test.equal(Meteor.roles.findOne({'name':'test2'}).name, 'test2');
+      test.equal(Meteor.roles.findOne(role2Id).name, 'test2');
 
       test.equal(Meteor.roles.find().count(), 2);
 
@@ -77,6 +79,7 @@
 
       Roles.createRole('test1');
       test.throws(function () {Roles.createRole('test1')});
+      test.isNull(Roles.createRole('test1', {unlessExists: true}));
     });
 
   Tinytest.add(
@@ -92,6 +95,12 @@
       }, /Invalid role name/);
       test.throws(function () {
         Roles.createRole(' ');
+      }, /Invalid role name/);
+      test.throws(function () {
+        Roles.createRole(' foobar');
+      }, /Invalid role name/);
+      test.throws(function () {
+        Roles.createRole(' foobar ');
       }, /Invalid role name/);
     });
 
@@ -119,7 +128,54 @@
       Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
 
       testUser(test, 'eve', ['admin', 'user'], 'partition1');
-      testUser(test, 'eve', ['editor'], 'partition2')
+      testUser(test, 'eve', ['editor'], 'partition2');
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'partition1'));
+
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin', 'user'], {anyPartition: true}));
+      test.isTrue(Roles.userIsInRole(users.eve, ['editor'], {anyPartition: true}));
+    });
+
+  Tinytest.add(
+    'roles - can check if user is in role by partition through options',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], {partition: 'partition1'});
+      Roles.addUsersToRoles(users.eve, ['editor'], {partition: 'partition2'});
+
+      testUser(test, 'eve', ['admin', 'user'], {partition: 'partition1'});
+      testUser(test, 'eve', ['editor'], {partition: 'partition2'});
+    });
+
+  Tinytest.add(
+    'roles - can check if user is in role by partition with global role',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+      Roles.addUsersToRoles(users.eve, ['admin']);
+
+      test.isTrue(Roles.userIsInRole(users.eve, ['user'], 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['editor'], 'partition2'));
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['user']));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['user'], 'partition2'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor'], 'partition1'));
+
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin'], 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin']));
     });
 
   Tinytest.add(
@@ -152,7 +208,7 @@
       user = Meteor.users.findOne({_id:users.eve});
 
       // we can check the non-existing role
-      test.isTrue(Roles.userIsInRole(user, ['editor','admin']));
+      test.isTrue(Roles.userIsInRole(user, ['editor', 'admin']));
     });
 
   Tinytest.add(
@@ -164,6 +220,39 @@
 
       Roles.addUsersToRoles(['1'], ['admin']);
       test.equal(Meteor.users.findOne({_id:'1'}), undefined);
+    });
+
+  Tinytest.add(
+    'roles - can\'t add user to non-existent role',
+    function (test) {
+      reset();
+
+      test.throws(function () {
+        Roles.addUsersToRoles(users.eve, ['admin']);
+      }, /Role 'admin' does not exist/);
+      Roles.addUsersToRoles(users.eve, ['admin'], {ifExists: true});
+    });
+
+  Tinytest.add(
+    'roles - can\'t set non-existent user to role',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+
+      Roles.setUserRoles(['1'], ['admin']);
+      test.equal(Meteor.users.findOne({_id:'1'}), undefined);
+    });
+
+  Tinytest.add(
+    'roles - can\'t set user to non-existent role',
+    function (test) {
+      reset();
+
+      test.throws(function () {
+        Roles.setUserRoles(users.eve, ['admin']);
+      }, /Role 'admin' does not exist/);
+      Roles.setUserRoles(users.eve, ['admin'], {ifExists: true});
     });
 
   Tinytest.add(
@@ -361,6 +450,7 @@
       testUser(test, 'eve', ['editor']);
       testUser(test, 'bob', ['editor', 'user']);
     });
+
   Tinytest.add(
     'roles - can remove user from roles multiple times',
     function (test) {
@@ -402,7 +492,6 @@
       testUser(test, 'bob', ['editor', 'user']);
     });
 
-
   Tinytest.add(
     'roles - can remove individual users from roles by partition', 
     function (test) {
@@ -423,6 +512,34 @@
       testUser(test, 'joe', ['admin'], 'partition2');
 
       Roles.removeUsersFromRoles(users.eve, ['user'], 'partition1');
+      testUser(test, 'eve', ['editor'], 'partition1');
+      testUser(test, 'bob', ['editor', 'user'], 'partition1');
+      testUser(test, 'joe', [], 'partition1');
+      testUser(test, 'eve', [], 'partition2');
+      testUser(test, 'bob', ['admin'], 'partition2');
+      testUser(test, 'joe', ['admin'], 'partition2');
+    });
+
+  Tinytest.add(
+    'roles - can remove individual users from roles by partition through options',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+
+      // remove user role - one user
+      Roles.addUsersToRoles([users.eve, users.bob], ['editor', 'user'], {partition: 'partition1'});
+      Roles.addUsersToRoles([users.joe, users.bob], ['admin'], {partition: 'partition2'});
+      testUser(test, 'eve', ['editor', 'user'], 'partition1');
+      testUser(test, 'bob', ['editor', 'user'], 'partition1');
+      testUser(test, 'joe', [], 'partition1');
+      testUser(test, 'eve', [], 'partition2');
+      testUser(test, 'bob', ['admin'], 'partition2');
+      testUser(test, 'joe', ['admin'], 'partition2');
+
+      Roles.removeUsersFromRoles(users.eve, ['user'], {partition: 'partition1'});
       testUser(test, 'eve', ['editor'], 'partition1');
       testUser(test, 'bob', ['editor', 'user'], 'partition1');
       testUser(test, 'joe', [], 'partition1');
@@ -619,7 +736,9 @@
       var expected = roles,
           actual = _.pluck(Roles.getAllRoles().fetch(), 'name');
 
-      test.equal(actual, expected)
+      test.equal(actual, expected);
+
+      test.equal(_.pluck(Roles.getAllRoles({sort: {name: -1}}).fetch(), 'name'), expected.reverse());
     });
 
   Tinytest.add(
@@ -657,6 +776,16 @@
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
       test.equal(Roles.getRolesForUser(userObj), ['admin', 'user']);
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'user',
+        partition: null,
+        assigned: true
+      }]);
     });
 
   Tinytest.add(
@@ -680,15 +809,122 @@
 
       // add roles
       Roles.addUsersToRoles(userId, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(userId, ['admin'], 'partition2');
 
       // by userId
       test.equal(Roles.getRolesForUser(userId, 'partition1'), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userId, 'partition2'), ['admin']);
       test.equal(Roles.getRolesForUser(userId), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
       test.equal(Roles.getRolesForUser(userObj, 'partition1'), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userObj, 'partition2'), ['admin']);
       test.equal(Roles.getRolesForUser(userObj), []);
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
+        role: 'admin',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2'}), [{
+        role: 'admin',
+        partition: 'partition2',
+        assigned: true
+      }]);
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true}), [{
+        role: 'admin',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'admin',
+        partition: 'partition2',
+        assigned: true
+      }]);
+
+      Roles.createRole('PERMISSION');
+      Roles.addRoleParent('PERMISSION', 'user');
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
+        role: 'admin',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'PERMISSION',
+        partition: 'partition1',
+        assigned: false
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2'}), [{
+        role: 'admin',
+        partition: 'partition2',
+        assigned: true
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {partition: 'partition1'}), ['admin', 'user', 'PERMISSION']);
+      test.equal(Roles.getRolesForUser(userId, {partition: 'partition2'}), ['admin']);
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true}), [{
+        role: 'admin',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'admin',
+        partition: 'partition2',
+        assigned: true
+      }, {
+        role: 'PERMISSION',
+        partition: 'partition1',
+        assigned: false
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {anyPartition: true}), ['admin', 'user', 'PERMISSION']);
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1', onlyAssigned: true}), [{
+        role: 'admin',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2', onlyAssigned: true}), [{
+        role: 'admin',
+        partition: 'partition2',
+        assigned: true
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {partition: 'partition1', onlyAssigned: true}), ['admin', 'user']);
+      test.equal(Roles.getRolesForUser(userId, {partition: 'partition2', onlyAssigned: true}), ['admin']);
+
+      test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true, onlyAssigned: true}), [{
+        role: 'admin',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'admin',
+        partition: 'partition2',
+        assigned: true
+      }]);
+      test.equal(Roles.getRolesForUser(userId, {anyPartition: true, onlyAssigned: true}), ['admin', 'user']);
     });
 
   Tinytest.add(
@@ -897,12 +1133,25 @@
       Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'partition2');
 
       var expected = [users.eve, users.joe],
-          actual = _.pluck(Roles.getUsersInRole('admin','partition1').fetch(), '_id');
+          actual = _.pluck(Roles.getUsersInRole('admin', 'partition1').fetch(), '_id');
 
       // order may be different so check difference instead of equality
       // difference uses first array as base so have to check both ways
       test.equal(_.difference(actual, expected), []);
       test.equal(_.difference(expected, actual), []);
+
+      expected = [users.eve, users.joe];
+      actual = _.pluck(Roles.getUsersInRole('admin', {partition: 'partition1'}).fetch(), '_id');
+      test.equal(_.difference(actual, expected), []);
+      test.equal(_.difference(expected, actual), []);
+
+      expected = [users.eve, users.bob, users.joe];
+      actual = _.pluck(Roles.getUsersInRole('admin', {anyPartition: true}).fetch(), '_id');
+      test.equal(_.difference(actual, expected), []);
+      test.equal(_.difference(expected, actual), []);
+
+      actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
+      test.equal(actual, []);
     });
   
   Tinytest.add(
@@ -917,7 +1166,7 @@
       Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'partition2');
 
       var expected = [users.eve],
-          actual = _.pluck(Roles.getUsersInRole('admin','partition1').fetch(), '_id');
+          actual = _.pluck(Roles.getUsersInRole('admin', 'partition1').fetch(), '_id');
 
       // order may be different so check difference instead of equality
       // difference uses first array as base so have to check both ways
@@ -925,15 +1174,21 @@
       test.equal(_.difference(expected, actual), []);
 
       expected = [users.eve, users.bob, users.joe];
-      actual = _.pluck(Roles.getUsersInRole('admin','partition2').fetch(), '_id');
+      actual = _.pluck(Roles.getUsersInRole('admin', 'partition2').fetch(), '_id');
 
       // order may be different so check difference instead of equality
       test.equal(_.difference(actual, expected), []);
       test.equal(_.difference(expected, actual), []);
 
-
       expected = [users.eve];
       actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
+
+      // order may be different so check difference instead of equality
+      test.equal(_.difference(actual, expected), []);
+      test.equal(_.difference(expected, actual), []);
+
+      expected = [users.eve, users.bob, users.joe];
+      actual = _.pluck(Roles.getUsersInRole('admin', {anyPartition: true}).fetch(), '_id');
 
       // order may be different so check difference instead of equality
       test.equal(_.difference(actual, expected), []);
