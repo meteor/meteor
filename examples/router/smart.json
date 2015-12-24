@@ -1,8 +1,0 @@
-{
-  "packages": {
-    "roles": {},
-    "router": {
-      "version": "0.5.4"
-    }
-  }
-}

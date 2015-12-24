@@ -1,3 +1,8 @@
+## v2.0.0
+
+* Rewrite with new schema for `roles` field.
+* Support for roles hierarchies.
+
 ## v1.2.14
 
 * Compatibility with Meteor 1.2. #133
