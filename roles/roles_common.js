@@ -310,6 +310,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       ifExists: false,
       // internal option, should not be used publicly because it will break assumptions
@@ -365,6 +367,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       ifExists: false,
       // internal option, should not be used publicly because it will break assumptions
@@ -415,6 +419,7 @@ _.extend(Roles, {
         setRoles;
 
     Roles._checkRoleName(roleName);
+    Roles._checkPartitionName(options.partition);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -543,6 +548,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       // internal option, should not be used publicly because it will break assumptions
       // in te code; publicly, you can only remove users from an assigned role
@@ -588,6 +595,7 @@ _.extend(Roles, {
         update;
 
     Roles._checkRoleName(roleName);
+    Roles._checkPartitionName(options.partition);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -722,6 +730,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       anyPartition: false
     });
@@ -804,6 +814,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       fullObjects: false,
       onlyAssigned: false,
@@ -883,6 +895,8 @@ _.extend(Roles, {
     }
 
     options.partition = options.partition || null;
+
+    Roles._checkPartitionName(options.partition);
 
     options = _.defaults(options, {
       queryOptions: queryOptions || {},
@@ -1062,6 +1076,22 @@ _.extend(Roles, {
   _checkRoleName: function (roleName) {
     if (!roleName || !_.isString(roleName) || Roles._trim(roleName) !== roleName) {
       throw new Error("Invalid role name '" + roleName + "'.");
+    }
+  },
+
+  /**
+   * Throw an exception if `partitionName` is an invalid partition name.
+   *
+   * @method _checkRoleName
+   * @param {String} partitionName A partition name to match against.
+   * @private
+   * @static
+   */
+  _checkPartitionName: function (partitionName) {
+    if (partitionName === null) return;
+
+    if (!partitionName || !_.isString(partitionName) || Roles._trim(partitionName) !== partitionName) {
+      throw new Error("Invalid partition name '" + partitionName + "'.");
     }
   },
 
