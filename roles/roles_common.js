@@ -829,7 +829,7 @@ _.extend(Roles, {
       return roles;
     }
 
-    return _.pluck(roles, 'role');
+    return _.uniq(_.pluck(roles, 'role'));
   },
 
   /**
