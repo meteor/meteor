@@ -10,10 +10,12 @@ Template.userList.helpers({
     return this.emails[0].address
   },
   roles: function () {
-    if (!this.roles) {
+    var roles = Roles.getRolesForUser(this)
+
+    if (!roles.length) {
       return '<none>'
     }
 
-    return this.roles.join(',')
+    return roles.join(',')
   }
 })
