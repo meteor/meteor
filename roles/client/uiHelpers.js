@@ -36,9 +36,9 @@ Roles._uiHelpers = {
    *     {{/if}}
    *
    * @method isInRole
-   * @param {String} role Name of role or comma-seperated list of roles
-   * @param {String} [partition] Optional, name of partition to check
-   * @return {Boolean} true if current user is in at least one of the target roles
+   * @param {String} role Name of role or comma-seperated list of roles.
+   * @param {String} [partition] Optional, name of partition to check.
+   * @return {Boolean} `true` if current user is in at least one of the target roles.
    * @static
    * @for UIHelpers 
    */

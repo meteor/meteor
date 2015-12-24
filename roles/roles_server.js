@@ -8,7 +8,7 @@ Meteor.roles._ensureIndex({name: 1}, {unique: 1});
 Meteor.users._ensureIndex({'roles.role': 1, 'roles.partition': 1});
 Meteor.users._ensureIndex({'roles.partition': 1});
 
-/**
+/*
  * Publish logged-in user's roles so client-side checks can work.
  * 
  * Use a named publish function so clients can check `ready()` state.
@@ -27,14 +27,40 @@ Meteor.publish('_roles', function () {
 });
 
 _.extend(Roles, {
+  /**
+   * @method _isNewField
+   * @param {Array} roles `Meteor.users` document `roles` field.
+   * @returns {Boolean} Returns `true` if the `roles` field is in the new format.
+   *                    If it is ambiguous or it is not, returns `false`.
+   * @for Roles
+   * @private
+   * @static
+   */
   _isNewField: function (roles) {
     return _.isArray(roles) && _.isObject(roles[0]);
   },
 
+  /**
+   * @method _isOldField
+   * @param {Array} roles `Meteor.users` document `roles` field.
+   * @returns {Boolean} Returns `true` if the `roles` field is in the old format.
+   *                    If it is ambiguous or it is not, returns `false`.
+   * @for Roles
+   * @private
+   * @static
+   */
   _isOldField: function (roles) {
     return (_.isArray(roles) && _.isString(roles[0])) || _.isObject(roles);
   },
 
+  /**
+   * @method _convertToNewField
+   * @param {Array} roles `Meteor.users` document `roles` field in the old format.
+   * @returns {Array} Converted `roles` to the new format.
+   * @for Roles
+   * @private
+   * @static
+   */
   _convertToNewField: function (oldRoles) {
     var roles = [];
     if (_.isArray(oldRoles)) {
@@ -67,6 +93,14 @@ _.extend(Roles, {
     return roles;
   },
 
+  /**
+   * @method _convertToOldField
+   * @param {Array} roles `Meteor.users` document `roles` field in the new format.
+   * @returns {Array} Converted `roles` to the old format.
+   * @for Roles
+   * @private
+   * @static
+   */
   _convertToOldField: function (newRoles, usingGroups) {
     var roles;
 
@@ -82,7 +116,6 @@ _.extend(Roles, {
 
       // We assume that we are converting back a failed migration, so values can only be
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
-      // We always convert to the global roles syntax.
 
       if (userRole.partition) {
         if (!usingGroups) throw new Error("Role '" + userRole.role + "' with partition '" + userRole.partition + "' without enabled groups.");
@@ -108,6 +141,14 @@ _.extend(Roles, {
     return roles;
   },
 
+  /**
+   * @method _defaultUpdateUser
+   * @param {Object} user `Meteor.users` document.
+   * @returns {Array|Object} roles Value to which user's `roles` field should be set.
+   * @for Roles
+   * @private
+   * @static
+   */
   _defaultUpdateUser: function (user, roles) {
     Meteor.users.update({
       _id: user._id,
@@ -118,6 +159,15 @@ _.extend(Roles, {
     });
   },
 
+  /**
+   * Migrates `Meteor.users` and `Meteor.roles` to the new format.
+   *
+   * @method _forwardMigrate
+   * @param {Function} updateUser Function which updates the user object. Default `_defaultUpdateUser`.
+   * @for Roles
+   * @private
+   * @static
+   */
   _forwardMigrate: function (updateUser) {
     updateUser = updateUser || Roles._defaultUpdateUser;
 
@@ -130,6 +180,20 @@ _.extend(Roles, {
     });
   },
 
+  /**
+   * Migrates `Meteor.users` and `Meteor.roles` to the old format.
+   *
+   * We assume that we are converting back a failed migration, so values can only be
+   * what were valid values in the old format. So no group names starting with `$` and
+   * no subroles.
+   *
+   * @method _backwardMigrate
+   * @param {Function} updateUser Function which updates the user object. Default `_defaultUpdateUser`.
+   * @param {Boolean} usingGroups Should we use groups or not.
+   * @for Roles
+   * @private
+   * @static
+   */
   _backwardMigrate: function (updateUser, usingGroups) {
     updateUser = updateUser || Roles._defaultUpdateUser;
 

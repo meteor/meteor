@@ -5,38 +5,31 @@
  *
  * It uses `roles` field to `Meteor.users` documents which is an array of subdocuments with the following
  * schema:
- *  - role (role name)
- *  - partition (partition name)
- *  - assigned (boolean, if the role was manually assigned, or was automatically inferred (like subroles))
+ *  - `role`: role name
+ *  - `partition`: partition name
+ *  - `assigned`: boolean, if the role was manually assigned (set), or was automatically inferred (eg., subroles)
  *
- * @module Roles
- */
-
-/**
- * Roles collection documents consist of:
- *  - _id
- *  - name (of the role)
- *  - children (roles), list of documents:
- *    - _id
- *    - name
+ * Roles themselves are accessible throgh `Meteor.roles` collection and documents consist of:
+ *  - `_id`
+ *  - `name`: role name
+ *  - `children`: list of subdocuments:
+ *    - `_id`
+ *    - `name`
  *
- * Children list elements are subdocuments so that they can easier be extended in the future.
+ * Children list elements are subdocuments so that they can be easier extended in the future.
  *
  * Roles can have multiple parents and can be children (subroles) of multiple roles.
  *
- * Example: { _id: "123", name: "admin" }
+ * Example: `{_id: "123", name: "admin"}`
+ *
+ * @module Roles
  */
  if (!Meteor.roles) {
   Meteor.roles = new Mongo.Collection("roles");
 }
 
 /**
- * Authorization package compatible with built-in Meteor accounts system.
- *
- * Stores user's current roles in a 'roles' field on the user object.
- *
  * @class Roles
- * @constructor
  */
 if ('undefined' === typeof Roles) {
   Roles = {};
@@ -48,21 +41,24 @@ var getGroupsForUserDeprecationWarning = false;
 
 _.extend(Roles, {
 
-  /*
-   * Deprecated. Not used anymore.
+  /**
+   * Used as a global group (now partition) name. Not used anymore.
+   *
+   * @property GLOBAL_GROUP
+   * @static
+   * @deprecated
    */
   GLOBAL_GROUP: null,
 
   /**
    * Create a new role.
    *
-   * Options:
-   *   - unlessExists: if true, existence of a role will not throw an exception
-   *
    * @method createRole
    * @param {String} roleName Name of role.
-   * @param {Object} [options] Optional.
-   * @return {String} id of new role
+   * @param {Object} [options] Options:
+   *   - `unlessExists`: if `true`, exception will not be thrown in the role already exists
+   * @return {String} ID of the new role.
+   * @static
    */
   createRole: function (roleName, options) {
     var match;
@@ -95,10 +91,11 @@ _.extend(Roles, {
   /**
    * Delete an existing role.
    *
-   * If the role is assigned, it is automatically unassigned from users.
+   * If the role is set for any user, it is automatically unset.
    *
    * @method deleteRole
-   * @param {String} roleName Name of role
+   * @param {String} roleName Name of role.
+   * @static
    */
   deleteRole: function (roleName) {
     var roles;
@@ -143,6 +140,17 @@ _.extend(Roles, {
     Meteor.roles.remove({name: roleName});
   },
 
+  /**
+   * Add role parent to the role.
+   *
+   * Previous parents are kept (role can have multiple parents). For users which have the
+   * parent role set, new subroles are added automatically.
+   *
+   * @method addRoleParent
+   * @param {String} roleName Name of role.
+   * @param {String} parentName Name of parent role.
+   * @static
+   */
   addRoleParent: function (roleName, parentName) {
     var role,
         count,
@@ -199,6 +207,17 @@ _.extend(Roles, {
     });
   },
 
+  /**
+   * Remove role parent from the role.
+   *
+   * Other parents are kept (role can have multiple parents). For users which have the
+   * parent role set, removed subrole is removed automatically.
+   *
+   * @method removeRoleParent
+   * @param {String} roleName Name of role.
+   * @param {String} parentName Name of parent role.
+   * @static
+   */
   removeRoleParent: function (roleName, parentName) {
     var role,
         count,
@@ -257,20 +276,23 @@ _.extend(Roles, {
   /**
    * Add users to roles.
    *
+   * Adds roles to existing roles for each user.
+   *
    * @example
    *     Roles.addUsersToRoles(userId, 'admin')
    *     Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')
    *     Roles.addUsersToRoles([user1, user2], ['user','editor'])
    *     Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
    *
-   * Options:
-   *   - partition: name of the partition
-   *   - ifExists: if true, do not throw an exception if the role does not exist
-   *
    * @method addUsersToRoles
-   * @param {Array|String} users User id(s) or object(s) with an _id field.
+   * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
-   * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
+   * @param {Object|String} [options] Options:
+   *   - `partition`: name of the partition, or `null` for the global role
+   *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
+   *
+   * Alternatively, it can be a partition name string.
+   * @static
    */
   addUsersToRoles: function (users, roles, options) {
     if (!users) throw new Error ("Missing 'users' param.");
@@ -307,20 +329,23 @@ _.extend(Roles, {
   /**
    * Set users' roles.
    *
+   * Replaces all existing roles with a new set of roles.
+   *
    * @example
    *     Roles.setUserRoles(userId, 'admin')
    *     Roles.setUserRoles(userId, ['view-secrets'], 'example.com')
    *     Roles.setUserRoles([user1, user2], ['user','editor'])
    *     Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')
    *
-   * Options:
-   *   - partition: name of the partition
-   *   - ifExists: if true, do not throw an exception if the role does not exist
-   *
    * @method setUserRoles
-   * @param {Array|String} users User id(s) or object(s) with an _id field.
+   * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
    * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
-   * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
+   * @param {Object|String} [options] Options:
+   *   - `partition`: name of the partition, or `null` for the global role
+   *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
+   *
+   * Alternatively, it can be a partition name string.
+   * @static
    */
   setUserRoles: function (users, roles, options) {
     var id;
@@ -366,6 +391,23 @@ _.extend(Roles, {
     });
   },
 
+  /**
+   * Add one user to one role.
+   *
+   * @method _addUserToRole
+   * @param {String|Object} user User ID or object with an `_id` field.
+   * @param {String} roleName Name of the role to add the user to. The role have to exist.
+   * @param {Object} options Options:
+   *   - `partition`: name of the partition, or `null` for the global role
+   *   - `ifExists`: if `true`, do not throw an exception if the role does not exist
+   *   - `_assigned`: internal option, should not be used publicly because it will break assumptions
+   *     in te code; publicly, you can only add users to an assigned role
+   *     should the role be set as assigned, default is `true`; `null` is the same as `false`,
+   *     only that it does not force the value to `false` if the role is already assigned
+   * @returns {Array} Roles set during the call (even those already set).
+   * @private
+   * @static
+   */
   _addUserToRole: function (user, roleName, options) {
     var id,
         role,
@@ -477,9 +519,13 @@ _.extend(Roles, {
    *     Roles.removeUsersFromRoles(userId, ['user'], 'group1')
    *
    * @method removeUsersFromRoles
-   * @param {Array|String} users User id(s) or object(s) with an _id field.
-   * @param {Array|String} roles Name(s) of roles to add users to. Roles do not have to exist.
-   * @param {String|Object} [options] Optional. Name of partition. Alternatively, options.
+   * @param {Array|String} users User ID(s) or object(s) with an `_id` field.
+   * @param {Array|String} roles Name(s) of roles to add users to. Roles have to exist.
+   * @param {Object|String} [options] Options:
+   *   - `partition`: name of the partition, or `null` for the global role
+   *
+   * Alternatively, it can be a partition name string.
+   * @static
    */
   removeUsersFromRoles: function (users, roles, options) {
     if (!users) throw new Error ("Missing 'users' param.");
@@ -516,16 +562,25 @@ _.extend(Roles, {
   },
 
   /**
-   * Warning: It leaves user's roles in a possibly inconsistent state. Because we allow the same
+   * Remove one user from one role.
+   *
+   * WARNING: It leaves user's roles in a possibly inconsistent state. Because we allow the same
    * role to be a child of multiple roles it might happen that it removes some subroles which
    * it should not because they are in effect also through some other parent role. You should always
    * call `_assureConsistency` after you are finished with calls to `_removeUserFromRole` for a
    * particular user.
    *
-   * @param user
-   * @param roleName
-   * @param options
+   * @method _removeUserFromRole
+   * @param {String|Object} user User ID or object with an `_id` field.
+   * @param {String} roleName Name of the role to add the user to. The role have to exist.
+   * @param {Object} options Options:
+   *   - `partition`: name of the partition, or `null` for the global role
+   *   - `_assigned`: internal option, should not be used publicly because it will break assumptions
+   *     in te code; publicly, you can only add users to an assigned role
+   *     should the role be set as assigned, default is `true`; `null` is the same as `false`,
+   *     only that it does not force the value to `false` if the role is already assigned
    * @private
+   * @static
    */
   _removeUserFromRole: function (user, roleName, options) {
     var id,
@@ -582,8 +637,10 @@ _.extend(Roles, {
    * We simply re-set to the user their assigned roles again and remove any roles which
    * are marked as not explicitly assigned, and have not been part of what we currently set.
    *
-   * @param {String|Object} user User ID or actual user object.
+   * @method _assureConsistency
+   * @param {String|Object} user User ID or an actual user object.
    * @private
+   * @static
    */
   _assureConsistency: function (user) {
     var roles,
@@ -642,22 +699,19 @@ _.extend(Roles, {
    *     Roles.userIsInRole(userId, ['admin','editor'], 'group1')
    *     Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})
    *
-   * Options:
-   *   - partition: name of the partition
-   *   - anyPartition: if set, role can be in any partition (partition option is ignored)
-   *
    * @method userIsInRole
-   * @param {String|Object} user User Id or actual user object.
-   * @param {String|Array} roles Name of role/permission or Array of
-   *                             roles to check against. If array,
-   *                             will return true if user is in _any_ role.
+   * @param {String|Object} user User ID or an actual user object.
+   * @param {String|Array} roles Name of role or an array of roles to check against. If array,
+   *                             will return `true` if user is in _any_ role.
    *                             Roles do not have to exist.
-   * @param {String|Object} [options] Optional. Name of partition. If supplied, limits check
-   *                                  to just that partition.
-   *                                  The user's global roles will always be checked
-   *                                  whether partition is specified or not.
-   *                                  Alternatively, options.
-   * @return {Boolean} true if user is in _any_ of the target roles
+   * @param {Object|String} [options] Options:
+   *   - `partition`: name of the partition; if supplied, limits check to just that partition;
+   *     the user's global roles will always be checked whether partition is specified or not
+   *   - `anyPartition`: if set, role can be in any partition (`partition` option is ignored)
+   *
+   * Alternatively, it can be a partition name string.
+   * @return {Boolean} `true` if user is in _any_ of the target roles
+   * @static
    */
   userIsInRole: function (user, roles, options) {
     var id,
@@ -735,18 +789,17 @@ _.extend(Roles, {
   /**
    * Retrieve user's roles.
    *
-   * Options:
-   *   - partition: name of the partition
-   *   - anyPartition: if set, role can be in any partition (partition option is ignored)
-   *   - fullObjects: return full roles objects (true) or just names (false) (default false)
-   *   - onlyAssigned: return only assigned roles and not automatically inferred (like subroles)
-   *
    * @method getRolesForUser
-   * @param {String|Object} user User Id or actual user object.
-   * @param {String|Object} [options] Optional. Name of partition to provide roles for.
-   *                                  If not specified, global roles are returned.
-   *                                  Alternatively, options.
+   * @param {String|Object} user User ID or an actual user object.
+   * @param {Object|String} [options] Options:
+   *   - `partition`: name of partition to provide roles for; if not specified, global roles are returned
+   *   - `anyPartition`: if set, role can be in any partition (`partition` option is ignored)
+   *   - `fullObjects`: return full roles objects (`true`) or just names (`false`) (default `false`)
+   *   - `onlyAssigned`: return only assigned roles and not automatically inferred (like subroles)
+   *
+   * Alternatively, it can be a partition name string.
    * @return {Array} Array of user's roles, unsorted.
+   * @static
    */
   getRolesForUser: function (user, options) {
     var roles;
@@ -788,12 +841,13 @@ _.extend(Roles, {
   },
 
   /**
-   * Retrieve set of all existing roles.
+   * Retrieve cursor of all existing roles.
    *
    * @method getAllRoles
-   * @param {Object} [queryOptions] Optional. Options which are passed directly
+   * @param {Object} [queryOptions] Options which are passed directly
    *                                through to `Meteor.roles.find(query, options)`.
-   * @return {Cursor} cursor of existing roles
+   * @return {Cursor} Cursor of existing roles.
+   * @static
    */
   getAllRoles: function (queryOptions) {
     queryOptions = queryOptions || {sort: {name: 1}};
@@ -805,22 +859,24 @@ _.extend(Roles, {
    * Retrieve all users who are in target role.
    *
    * Options:
-   *   - partition: name of the partition
-   *   - anyPartition: if set, role can be in any partition (partition option is ignored)
-   *   - queryOptions: options which are passed directly
-   *                   through to `Meteor.users.find(query, options)`
    *
    * @method getUsersInRole
-   * @param {Array|String} roles Name of role/permission. If array, users
+   * @param {String|Array} roles Name of role or an array of roles. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.
    *                             Roles do not have to exist.
-   * @param {String|Object} [options] Optional. Name of partition to restrict roles to.
-   *                                  User's global roles will also be checked.
-   *                                  Alternatively, options.
-   * @param {Object} [queryOptions] Optional. Options which are passed directly
+   * @param {Object|String} [options] Options:
+   *   - `partition`: name of the partition to restrict roles to; user's global
+   *     roles will also be checked
+   *   - `anyPartition`: if set, role can be in any partition (`partition` option is ignored)
+   *   - `queryOptions`: options which are passed directly
+   *     through to `Meteor.users.find(query, options)`
+   *
+   * Alternatively, it can be a partition name string.
+   * @param {Object} [queryOptions] Options which are passed directly
    *                                through to `Meteor.users.find(query, options)`
-   * @return {Cursor} cursor of users in role
+   * @return {Cursor} Cursor of users in roles.
+   * @static
    */
   getUsersInRole: function (roles, options, queryOptions) {
     var query;
@@ -869,6 +925,13 @@ _.extend(Roles, {
     return Meteor.users.find(query, options.queryOptions);
   },
 
+  /**
+   * Deprecated. Use `getPartitionsForUser` instead.
+   *
+   * @method getGroupsForUser
+   * @static
+   * @deprecated
+   */
   getGroupsForUser: function (/*args*/) {
     if (!getGroupsForUserDeprecationWarning) {
       getGroupsForUserDeprecationWarning = true;
@@ -882,10 +945,11 @@ _.extend(Roles, {
    * Retrieve users partitions, if any.
    *
    * @method getPartitionsForUser
-   * @param {String|Object} user User Id or actual user object.
-   * @param {String} [roles] Optional name of roles to restrict partitions to.
+   * @param {String|Object} user User ID or an actual user object.
+   * @param {String} [roles] Name of roles to restrict partitions to.
    *
    * @return {Array} Array of user's partitions, unsorted.
+   * @static
    */
   getPartitionsForUser: function (user, roles) {
     var partitions;
@@ -909,6 +973,17 @@ _.extend(Roles, {
     return _.uniq(partitions);
   },
 
+  /**
+   * Resolves the user ID into an actual user object with `roles` field,
+   * if it is not already.
+   *
+   * @method _resolveUser
+   * @param {String|Object} user User ID or an actual user object.
+   * @param {Boolean} force Load a new user object even if it is already one.
+   * @returns {Object} User object.
+   * @private
+   * @static
+   */
   _resolveUser: function (user, force) {
     // TODO: We could use $elemMatch to limit returned fields here.
     if (!_.isObject(user)) {
@@ -924,12 +999,29 @@ _.extend(Roles, {
     return user;
   },
 
+  /**
+   * @method _roleMatcher
+   * @param {String} roleName A role name to match against.
+   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   *                     if its name matches `roleName`.
+   * @private
+   * @static
+   */
   _roleMatcher: function (roleName) {
     return function (userRole) {
       return userRole.role === roleName;
     };
   },
 
+  /**
+   * @method _roleAndPartitionMatcher
+   * @param {String} roleName A role name to match against.
+   * @param {String} partition A partition to match against.
+   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   *                     if its name matches `roleName`, and partition matches `partition`.
+   * @private
+   * @static
+   */
   _roleAndPartitionMatcher: function (roleName, partition) {
     return function (userRole) {
       // == used on purpose in "userRole.partition == null"
@@ -938,6 +1030,14 @@ _.extend(Roles, {
     };
   },
 
+  /**
+   * @method _partitionMatcher
+   * @param {String} partition A partition to match against.
+   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   *                     if its partition matches `partition`.
+   * @private
+   * @static
+   */
   _partitionMatcher: function (partition) {
     return function (userRole) {
       // == used on purpose in "userRole.partition == null"
@@ -946,12 +1046,27 @@ _.extend(Roles, {
     };
   },
 
+  /**
+   * @method _onlyAssignedMatcher
+   * @returns {Function} A matcher function which accepts a role object and returns `true`
+   *                     if the role is an assigned role.
+   * @private
+   * @static
+   */
   _onlyAssignedMatcher: function () {
     return function (userRole) {
       return !!userRole.assigned;
     };
   },
 
+  /**
+   * Throw an exception if `roleName` is an invalid role name.
+   *
+   * @method _checkRoleName
+   * @param {String} roleName A role name to match against.
+   * @private
+   * @static
+   */
   _checkRoleName: function (roleName) {
     if (!roleName || !_.isString(roleName) || roleName.trim() !== roleName) {
       throw new Error("Invalid role name '" + roleName + "'.");
