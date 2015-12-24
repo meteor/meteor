@@ -244,8 +244,8 @@ _.extend(Roles, {
     Roles._checkRoleName(roleName);
     Roles._checkRoleName(parentName);
 
-    // query to get role&#x27;s _id
-    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1}});
+    // query to get role&#x27;s _id and name
+    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1, name: 1}});
 
     if (!role) {
       throw new Error(&quot;Role &#x27;&quot; + roleName + &quot;&#x27; does not exist.&quot;);
@@ -491,7 +491,7 @@ _.extend(Roles, {
    *   - &#x60;ifExists&#x60;: if &#x60;true&#x60;, do not throw an exception if the role does not exist
    *   - &#x60;_assigned&#x60;: internal option, should not be used publicly because it will break assumptions
    *     in te code; publicly, you can only add users to an assigned role
-   *     should the role be set as assigned, default is &#x60;true&#x60;; &#x60;null&#x60; is the same as &#x60;false&#x60;,
+   *     should the role be set as assigned (&#x60;true&#x60;), &#x60;null&#x60; is the same as &#x60;false&#x60;,
    *     only that it does not force the value to &#x60;false&#x60; if the role is already assigned
    * @return {Array} Roles set during the call (even those already set).
    * @private
@@ -594,7 +594,7 @@ _.extend(Roles, {
 
     _.each(role.children, function (child) {
       // subroles are set as unassigned, but only if they do not already exist
-      setRoles.concat(Roles._addUserToRole(user, child.name, _.extend({}, options, {_assigned: null})));
+      setRoles = setRoles.concat(Roles._addUserToRole(user, child.name, _.extend({}, options, {_assigned: null})));
     });
 
     return setRoles;
@@ -668,9 +668,9 @@ _.extend(Roles, {
    * @param {Object} options Options:
    *   - &#x60;partition&#x60;: name of the partition, or &#x60;null&#x60; for the global role
    *   - &#x60;_assigned&#x60;: internal option, should not be used publicly because it will break assumptions
-   *     in te code; publicly, you can only add users to an assigned role
-   *     should the role be set as assigned, default is &#x60;true&#x60;; &#x60;null&#x60; is the same as &#x60;false&#x60;,
-   *     only that it does not force the value to &#x60;false&#x60; if the role is already assigned
+   *     in te code; publicly, you can only remove users from an assigned role
+   *     if &#x60;true&#x60;, only manually assigned roles are removed, if &#x60;false&#x60;, only automatically
+   *     assigned roles are removed, if &#x60;null&#x60;, any role is removed
    * @private
    * @static
    */
@@ -747,19 +747,19 @@ _.extend(Roles, {
 
     setRoles = [];
     _.each(roles, function (role) {
-      setRoles.concat(Roles._addUserToRole(user, role.role, {
+      setRoles = setRoles.concat(Roles._addUserToRole(user, role.role, {
         partition: role.partition,
         _assigned: role.assigned, // this is true
         ifExists: true
       }));
     });
 
-    if (roles.length) {
+    if (setRoles.length) {
       // remove all extra entries which should not be there
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $nor: _.map(roles, function (role) {return _.pick(role, &#x27;role&#x27;, &#x27;partition&#x27;)})
+            $nor: _.map(setRoles, function (role) {return _.pick(role, &#x27;role&#x27;, &#x27;partition&#x27;)})
           }
         }
       });

@@ -330,7 +330,7 @@
                 },
                 {
                     "name": "options",
-                    "description": "Options:\n  - `partition`: name of the partition, or `null` for the global role\n  - `ifExists`: if `true`, do not throw an exception if the role does not exist\n  - `_assigned`: internal option, should not be used publicly because it will break assumptions\n    in te code; publicly, you can only add users to an assigned role\n    should the role be set as assigned, default is `true`; `null` is the same as `false`,\n    only that it does not force the value to `false` if the role is already assigned",
+                    "description": "Options:\n  - `partition`: name of the partition, or `null` for the global role\n  - `ifExists`: if `true`, do not throw an exception if the role does not exist\n  - `_assigned`: internal option, should not be used publicly because it will break assumptions\n    in te code; publicly, you can only add users to an assigned role\n    should the role be set as assigned (`true`), `null` is the same as `false`,\n    only that it does not force the value to `false` if the role is already assigned",
                     "type": "Object"
                 }
             ],
@@ -394,7 +394,7 @@
                 },
                 {
                     "name": "options",
-                    "description": "Options:\n  - `partition`: name of the partition, or `null` for the global role\n  - `_assigned`: internal option, should not be used publicly because it will break assumptions\n    in te code; publicly, you can only add users to an assigned role\n    should the role be set as assigned, default is `true`; `null` is the same as `false`,\n    only that it does not force the value to `false` if the role is already assigned",
+                    "description": "Options:\n  - `partition`: name of the partition, or `null` for the global role\n  - `_assigned`: internal option, should not be used publicly because it will break assumptions\n    in te code; publicly, you can only remove users from an assigned role\n    if `true`, only manually assigned roles are removed, if `false`, only automatically\n    assigned roles are removed, if `null`, any role is removed",
                     "type": "Object"
                 }
             ],

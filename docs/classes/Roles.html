@@ -373,7 +373,7 @@
 <li><code>ifExists</code>: if <code>true</code>, do not throw an exception if the role does not exist</li>
 <li><code>_assigned</code>: internal option, should not be used publicly because it will break assumptions
 in te code; publicly, you can only add users to an assigned role
-should the role be set as assigned, default is <code>true</code>; <code>null</code> is the same as <code>false</code>,
+should the role be set as assigned (<code>true</code>), <code>null</code> is the same as <code>false</code>,
 only that it does not force the value to <code>false</code> if the role is already assigned</li>
 </ul>
 
@@ -1228,9 +1228,9 @@ particular user.</p>
 <ul>
 <li><code>partition</code>: name of the partition, or <code>null</code> for the global role</li>
 <li><code>_assigned</code>: internal option, should not be used publicly because it will break assumptions
-in te code; publicly, you can only add users to an assigned role
-should the role be set as assigned, default is <code>true</code>; <code>null</code> is the same as <code>false</code>,
-only that it does not force the value to <code>false</code> if the role is already assigned</li>
+in te code; publicly, you can only remove users from an assigned role
+if <code>true</code>, only manually assigned roles are removed, if <code>false</code>, only automatically
+assigned roles are removed, if <code>null</code>, any role is removed</li>
 </ul>
 
                     </div>
