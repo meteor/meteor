@@ -1,6 +1,8 @@
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
+var _lockedVersionCache = {};
+
 var pvkey = function (pkg, version) {
   return pkg + " " + version;
 };
@@ -64,6 +66,9 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
 // Returns an array of version strings, sorted, possibly empty.
 // (Don't mutate the result.)
 CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
+  var resultCache = (_.has(_lockedVersionCache, pkg) ? _lockedVersionCache[pkg] : []);
+  if(resultCache.length)
+    return resultCache;
   var result = (_.has(this._versions, pkg) ?
                 this._versions[pkg] : []);
   if ((!result.length) || result.sorted) {
@@ -73,6 +78,7 @@ CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
     // (we'll sort again if more versions are pushed onto the array)
     result.sort(PV.compare);
     result.sorted = true;
+    _lockedVersionCache[pkg] = result;
     return result;
   }
 };
