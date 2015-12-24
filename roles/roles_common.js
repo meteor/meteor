@@ -1060,8 +1060,17 @@ _.extend(Roles, {
    * @static
    */
   _checkRoleName: function (roleName) {
-    if (!roleName || !_.isString(roleName) || roleName.trim() !== roleName) {
+    if (!roleName || !_.isString(roleName) || Roles._trim(roleName) !== roleName) {
       throw new Error("Invalid role name '" + roleName + "'.");
+    }
+  },
+
+  _trim: function (string) {
+    if (string.trim) {
+      return string.trim();
+    }
+    else {
+      return string.replace(/^\s+|\s+$/g, '');
     }
   }
 

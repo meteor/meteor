@@ -52,10 +52,10 @@ Roles._uiHelpers = {
 
     if (comma !== -1) {
       roles = _.reduce(role.split(','), function (memo, r) {
-        if (!r || !r.trim()) {
+        if (!r || !Roles._trim(r)) {
           return memo
         }
-        memo.push(r.trim())
+        memo.push(Roles._trim(r))
         return memo
       }, [])
     } else {
