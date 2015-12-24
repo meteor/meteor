@@ -1620,6 +1620,7 @@
 
       Roles.createRole('admin');
 
+      // add role with assigned set to true
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
@@ -1628,6 +1629,7 @@
         assigned: true
       }]);
 
+      // change assigned to false
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: false});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
@@ -1640,6 +1642,7 @@
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
 
+      // add role with assigned set to false
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
@@ -1648,6 +1651,7 @@
         assigned: false
       }]);
 
+      // change assigned to true
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
@@ -1656,6 +1660,7 @@
         assigned: true
       }]);
 
+      // do not change assigned
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
@@ -1663,6 +1668,71 @@
         partition: null,
         assigned: true
       }]);
+    });
+
+  Tinytest.add(
+    'roles - _removeUserFromRole',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+
+      Roles.addUsersToRoles(users.eve, 'admin');
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }]);
+
+      // remove only roles with assigned set to false, thus do not remove anything
+      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: false});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }]);
+
+      // remove only roles with assigned set to true
+      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: true});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+
+      Roles.addUsersToRoles(users.eve, 'admin');
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }]);
+
+      // remove roles no matter the assignment
+      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: null});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+
+      Roles.addUsersToRoles(users.eve, 'admin', {_assigned: false});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: false
+      }]);
+
+      // remove only roles with assigned set to true, thus do not remove anything
+      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: true});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'admin',
+        partition: null,
+        assigned: false
+      }]);
+
+      // remove only roles with assigned set to false
+      Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: false});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
     });
 
   function printException (ex) {
