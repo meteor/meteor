@@ -134,6 +134,11 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
+                                <a href="#method__checkRoleName">_checkRoleName</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
                                 <a href="#method__convertToNewField">_convertToNewField</a>
 
                                     <span class="flag static">static</span>
@@ -318,7 +323,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l394"><code>roles&#x2F;roles_common.js:394</code></a>
+        <a href="../files/roles_roles_common.js.html#l398"><code>roles&#x2F;roles_common.js:398</code></a>
         </p>
 
 
@@ -413,7 +418,7 @@ only that it does not force the value to <code>false</code> if the role is alrea
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l631"><code>roles&#x2F;roles_common.js:631</code></a>
+        <a href="../files/roles_roles_common.js.html#l639"><code>roles&#x2F;roles_common.js:639</code></a>
         </p>
 
 
@@ -476,7 +481,7 @@ are marked as not explicitly assigned, and have not been part of what we current
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l183"><code>roles&#x2F;roles_server.js:183</code></a>
+        <a href="../files/roles_roles_server.js.html#l188"><code>roles&#x2F;roles_server.js:188</code></a>
         </p>
 
 
@@ -546,7 +551,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1054"><code>roles&#x2F;roles_common.js:1054</code></a>
+        <a href="../files/roles_roles_common.js.html#l1068"><code>roles&#x2F;roles_common.js:1068</code></a>
         </p>
 
 
@@ -569,6 +574,62 @@ no subroles.</p>
 
                     <div class="param-description">
                         <p>A role name to match against.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__checkRoleName" class="method item private">
+    <h3 class="name"><code>_checkRoleName</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>partitionName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1082"><code>roles&#x2F;roles_common.js:1082</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Throw an exception if <code>partitionName</code> is an invalid partition name.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">partitionName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>A partition name to match against.</p>
 
                     </div>
 
@@ -672,7 +733,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l96"><code>roles&#x2F;roles_server.js:96</code></a>
+        <a href="../files/roles_roles_server.js.html#l101"><code>roles&#x2F;roles_server.js:101</code></a>
         </p>
 
 
@@ -739,7 +800,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l144"><code>roles&#x2F;roles_server.js:144</code></a>
+        <a href="../files/roles_roles_server.js.html#l149"><code>roles&#x2F;roles_server.js:149</code></a>
         </p>
 
 
@@ -803,7 +864,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l162"><code>roles&#x2F;roles_server.js:162</code></a>
+        <a href="../files/roles_roles_server.js.html#l167"><code>roles&#x2F;roles_server.js:167</code></a>
         </p>
 
 
@@ -992,7 +1053,7 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1041"><code>roles&#x2F;roles_common.js:1041</code></a>
+        <a href="../files/roles_roles_common.js.html#l1055"><code>roles&#x2F;roles_common.js:1055</code></a>
         </p>
 
 
@@ -1043,7 +1104,7 @@ if the role is an assigned role.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1025"><code>roles&#x2F;roles_common.js:1025</code></a>
+        <a href="../files/roles_roles_common.js.html#l1039"><code>roles&#x2F;roles_common.js:1039</code></a>
         </p>
 
 
@@ -1114,7 +1175,7 @@ if its partition matches <code>partition</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l564"><code>roles&#x2F;roles_common.js:564</code></a>
+        <a href="../files/roles_roles_common.js.html#l571"><code>roles&#x2F;roles_common.js:571</code></a>
         </p>
 
 
@@ -1210,7 +1271,7 @@ only that it does not force the value to <code>false</code> if the role is alrea
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l968"><code>roles&#x2F;roles_common.js:968</code></a>
+        <a href="../files/roles_roles_common.js.html#l982"><code>roles&#x2F;roles_common.js:982</code></a>
         </p>
 
 
@@ -1293,7 +1354,7 @@ if it is not already.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1008"><code>roles&#x2F;roles_common.js:1008</code></a>
+        <a href="../files/roles_roles_common.js.html#l1022"><code>roles&#x2F;roles_common.js:1022</code></a>
         </p>
 
 
@@ -1372,7 +1433,7 @@ if its name matches <code>roleName</code>, and partition matches <code>partition
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l994"><code>roles&#x2F;roles_common.js:994</code></a>
+        <a href="../files/roles_roles_common.js.html#l1008"><code>roles&#x2F;roles_common.js:1008</code></a>
         </p>
 
 
@@ -1752,7 +1813,7 @@ Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exa
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l835"><code>roles&#x2F;roles_common.js:835</code></a>
+        <a href="../files/roles_roles_common.js.html#l847"><code>roles&#x2F;roles_common.js:847</code></a>
         </p>
 
 
@@ -1813,7 +1874,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l920"><code>roles&#x2F;roles_common.js:920</code></a>
+        <a href="../files/roles_roles_common.js.html#l934"><code>roles&#x2F;roles_common.js:934</code></a>
         </p>
 
 
@@ -1857,7 +1918,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l936"><code>roles&#x2F;roles_common.js:936</code></a>
+        <a href="../files/roles_roles_common.js.html#l950"><code>roles&#x2F;roles_common.js:950</code></a>
         </p>
 
 
@@ -1939,7 +2000,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l781"><code>roles&#x2F;roles_common.js:781</code></a>
+        <a href="../files/roles_roles_common.js.html#l791"><code>roles&#x2F;roles_common.js:791</code></a>
         </p>
 
 
@@ -2031,7 +2092,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l850"><code>roles&#x2F;roles_common.js:850</code></a>
+        <a href="../files/roles_roles_common.js.html#l862"><code>roles&#x2F;roles_common.js:862</code></a>
         </p>
 
 
@@ -2209,7 +2270,7 @@ parent role set, removed subrole is removed automatically.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l513"><code>roles&#x2F;roles_common.js:513</code></a>
+        <a href="../files/roles_roles_common.js.html#l518"><code>roles&#x2F;roles_common.js:518</code></a>
         </p>
 
 
@@ -2307,7 +2368,7 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l329"><code>roles&#x2F;roles_common.js:329</code></a>
+        <a href="../files/roles_roles_common.js.html#l331"><code>roles&#x2F;roles_common.js:331</code></a>
         </p>
 
 
@@ -2411,7 +2472,7 @@ Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exampl
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l679"><code>roles&#x2F;roles_common.js:679</code></a>
+        <a href="../files/roles_roles_common.js.html#l687"><code>roles&#x2F;roles_common.js:687</code></a>
         </p>
 
 

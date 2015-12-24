@@ -395,6 +395,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       ifExists: false,
       // internal option, should not be used publicly because it will break assumptions
@@ -450,6 +452,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       ifExists: false,
       // internal option, should not be used publicly because it will break assumptions
@@ -500,6 +504,7 @@ _.extend(Roles, {
         setRoles;
 
     Roles._checkRoleName(roleName);
+    Roles._checkPartitionName(options.partition);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -628,6 +633,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       // internal option, should not be used publicly because it will break assumptions
       // in te code; publicly, you can only remove users from an assigned role
@@ -673,6 +680,7 @@ _.extend(Roles, {
         update;
 
     Roles._checkRoleName(roleName);
+    Roles._checkPartitionName(options.partition);
 
     if (_.isObject(user)) {
       id = user._id;
@@ -751,7 +759,7 @@ _.extend(Roles, {
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $nor: _.pick(roles, &#x27;role&#x27;, &#x27;partition&#x27;)
+            $nor: _.map(roles, function (role) {return _.pick(role, &#x27;role&#x27;, &#x27;partition&#x27;)})
           }
         }
       });
@@ -806,6 +814,8 @@ _.extend(Roles, {
     }
 
     options.partition = options.partition || null;
+
+    Roles._checkPartitionName(options.partition);
 
     options = _.defaults(options, {
       anyPartition: false
@@ -889,6 +899,8 @@ _.extend(Roles, {
 
     options.partition = options.partition || null;
 
+    Roles._checkPartitionName(options.partition);
+
     options = _.defaults(options, {
       fullObjects: false,
       onlyAssigned: false,
@@ -914,7 +926,7 @@ _.extend(Roles, {
       return roles;
     }
 
-    return _.pluck(roles, &#x27;role&#x27;);
+    return _.uniq(_.pluck(roles, &#x27;role&#x27;));
   },
 
   /**
@@ -968,6 +980,8 @@ _.extend(Roles, {
     }
 
     options.partition = options.partition || null;
+
+    Roles._checkPartitionName(options.partition);
 
     options = _.defaults(options, {
       queryOptions: queryOptions || {},
@@ -1147,6 +1161,22 @@ _.extend(Roles, {
   _checkRoleName: function (roleName) {
     if (!roleName || !_.isString(roleName) || Roles._trim(roleName) !== roleName) {
       throw new Error(&quot;Invalid role name &#x27;&quot; + roleName + &quot;&#x27;.&quot;);
+    }
+  },
+
+  /**
+   * Throw an exception if &#x60;partitionName&#x60; is an invalid partition name.
+   *
+   * @method _checkRoleName
+   * @param {String} partitionName A partition name to match against.
+   * @private
+   * @static
+   */
+  _checkPartitionName: function (partitionName) {
+    if (partitionName === null) return;
+
+    if (!partitionName || !_.isString(partitionName) || Roles._trim(partitionName) !== partitionName) {
+      throw new Error(&quot;Invalid partition name &#x27;&quot; + partitionName + &quot;&#x27;.&quot;);
     }
   },
 

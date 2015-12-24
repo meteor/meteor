@@ -135,7 +135,7 @@ _.extend(Roles, {
    * @static
    */
   _isOldField: function (roles) {
-    return (_.isArray(roles) &amp;&amp; _.isString(roles[0])) || _.isObject(roles);
+    return (_.isArray(roles) &amp;&amp; _.isString(roles[0])) || (_.isObject(roles) &amp;&amp; !_.isArray(roles));
   },
 
   /**
@@ -161,8 +161,13 @@ _.extend(Roles, {
     }
     else if (_.isObject(oldRoles)) {
       _.each(oldRoles, function (rolesArray, group) {
-        // unescape
-        group = group.replace(/_/g, &#x27;.&#x27;);
+        if (group === &#x27;__global_roles__&#x27;) {
+          group = null;
+        }
+        else {
+          // unescape
+          group = group.replace(/_/g, &#x27;.&#x27;);
+        }
 
         _.each(rolesArray, function (role, index) {
           if (!_.isString(role)) throw new Error(&quot;Role &#x27;&quot; + role + &quot;&#x27; is not a string.&quot;);
@@ -206,12 +211,12 @@ _.extend(Roles, {
         if (!usingGroups) throw new Error(&quot;Role &#x27;&quot; + userRole.role + &quot;&#x27; with partition &#x27;&quot; + userRole.partition + &quot;&#x27; without enabled groups.&quot;);
 
         // escape
-        userRole.partition = group.replace(/./g, &#x27;_&#x27;);
+        var partition = userRole.partition.replace(/\./g, &#x27;_&#x27;);
 
-        if (userRole.partition[0] === &#x27;$&#x27;) throw new Error(&quot;Group name &#x27;&quot; + userRole.partition + &quot;&#x27; start with $.&quot;);
+        if (partition[0] === &#x27;$&#x27;) throw new Error(&quot;Group name &#x27;&quot; + partition + &quot;&#x27; start with $.&quot;);
 
-        roles[userRole.partition] = roles[userRole.partition] || [];
-        roles[userRole.partition].push(userRole.role);
+        roles[partition] = roles[partition] || [];
+        roles[partition].push(userRole.role);
       }
       else {
         if (usingGroups) {

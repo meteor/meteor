@@ -282,7 +282,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 329,
+            "line": 331,
             "description": "Set users' roles.\n\nReplaces all existing roles with a new set of roles.",
             "example": [
                 "\n    Roles.setUserRoles(userId, 'admin')\n    Roles.setUserRoles(userId, ['view-secrets'], 'example.com')\n    Roles.setUserRoles([user1, user2], ['user','editor'])\n    Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')"
@@ -313,7 +313,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 394,
+            "line": 398,
             "description": "Add one user to one role.",
             "itemtype": "method",
             "name": "_addUserToRole",
@@ -346,7 +346,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 513,
+            "line": 518,
             "description": "Remove users from assigned roles.",
             "example": [
                 "\n    Roles.removeUsersFromRoles(userId, 'admin')\n    Roles.removeUsersFromRoles([userId, user2], ['editor'])\n    Roles.removeUsersFromRoles(userId, ['user'], 'group1')"
@@ -377,7 +377,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 564,
+            "line": 571,
             "description": "Remove one user from one role.\n\nWARNING: It leaves user's roles in a possibly inconsistent state. Because we allow the same\nrole to be a child of multiple roles it might happen that it removes some subroles which\nit should not because they are in effect also through some other parent role. You should always\ncall `_assureConsistency` after you are finished with calls to `_removeUserFromRole` for a\nparticular user.",
             "itemtype": "method",
             "name": "_removeUserFromRole",
@@ -406,7 +406,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 631,
+            "line": 639,
             "description": "Makes sure all subroles are correctly set, and no extra subroles are set which should not be.\n\nUsed internally after complicated changes, but it can also be used whenever one feels that\nthere might be inconsistencies (eg., after a crash).\n\nWe simply re-set to the user their assigned roles again and remove any roles which\nare marked as not explicitly assigned, and have not been part of what we currently set.",
             "itemtype": "method",
             "name": "_assureConsistency",
@@ -425,7 +425,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 679,
+            "line": 687,
             "description": "Check if user has specified roles.",
             "example": [
                 "\n    // global roles\n    Roles.userIsInRole(user, 'admin')\n    Roles.userIsInRole(user, ['admin','editor'])\n    Roles.userIsInRole(userId, 'admin')\n    Roles.userIsInRole(userId, ['admin','editor'])\n\n    // partition roles (global roles are still checked)\n    Roles.userIsInRole(user, 'admin', 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})"
@@ -460,7 +460,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 781,
+            "line": 791,
             "description": "Retrieve user's roles.",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -487,7 +487,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 835,
+            "line": 847,
             "description": "Retrieve cursor of all existing roles.",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -509,7 +509,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 850,
+            "line": 862,
             "description": "Retrieve all users who are in target role.\n\nOptions:",
             "itemtype": "method",
             "name": "getUsersInRole",
@@ -542,7 +542,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 920,
+            "line": 934,
             "description": "Deprecated. Use `getPartitionsForUser` instead.",
             "itemtype": "method",
             "name": "getGroupsForUser",
@@ -553,7 +553,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 936,
+            "line": 950,
             "description": "Retrieve users partitions, if any.",
             "itemtype": "method",
             "name": "getPartitionsForUser",
@@ -580,7 +580,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 968,
+            "line": 982,
             "description": "Resolves the user ID into an actual user object with `roles` field,\nif it is not already.",
             "itemtype": "method",
             "name": "_resolveUser",
@@ -608,7 +608,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 994,
+            "line": 1008,
             "itemtype": "method",
             "name": "_roleMatcher",
             "params": [
@@ -630,7 +630,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1008,
+            "line": 1022,
             "itemtype": "method",
             "name": "_roleAndPartitionMatcher",
             "params": [
@@ -657,7 +657,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1025,
+            "line": 1039,
             "itemtype": "method",
             "name": "_partitionMatcher",
             "params": [
@@ -679,7 +679,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1041,
+            "line": 1055,
             "itemtype": "method",
             "name": "_onlyAssignedMatcher",
             "return": {
@@ -694,7 +694,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1054,
+            "line": 1068,
             "description": "Throw an exception if `roleName` is an invalid role name.",
             "itemtype": "method",
             "name": "_checkRoleName",
@@ -713,7 +713,26 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1068,
+            "line": 1082,
+            "description": "Throw an exception if `partitionName` is an invalid partition name.",
+            "itemtype": "method",
+            "name": "_checkRoleName",
+            "params": [
+                {
+                    "name": "partitionName",
+                    "description": "A partition name to match against.",
+                    "type": "String"
+                }
+            ],
+            "access": "private",
+            "tagname": "",
+            "static": 1,
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 1098,
             "params": [
                 {
                     "name": "string",
@@ -799,7 +818,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 96,
+            "line": 101,
             "itemtype": "method",
             "name": "_convertToOldField",
             "params": [
@@ -821,7 +840,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 144,
+            "line": 149,
             "itemtype": "method",
             "name": "_defaultUpdateUser",
             "params": [
@@ -843,7 +862,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 162,
+            "line": 167,
             "description": "Migrates `Meteor.users` and `Meteor.roles` to the new format.",
             "itemtype": "method",
             "name": "_forwardMigrate",
@@ -862,7 +881,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 183,
+            "line": 188,
             "description": "Migrates `Meteor.users` and `Meteor.roles` to the old format.\n\nWe assume that we are converting back a failed migration, so values can only be\nwhat were valid values in the old format. So no group names starting with `$` and\nno subroles.",
             "itemtype": "method",
             "name": "_backwardMigrate",
@@ -888,7 +907,7 @@
     "warnings": [
         {
             "message": "Missing item type",
-            "line": " roles/roles_common.js:1068"
+            "line": " roles/roles_common.js:1098"
         }
     ]
 }
