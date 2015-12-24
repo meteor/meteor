@@ -49,6 +49,34 @@
     })
   }
 
+  function itemsEqual (test, actual, expected) {
+    actual = actual || [];
+    expected = expected || [];
+
+    function intersectionObjects(/*args*/) {
+      var array, rest;
+      array = arguments[0];
+      rest = 2 <= arguments.length ? _.toArray(arguments).slice(1) : [];
+      return _.filter(_.uniq(array), function (item) {
+        return _.every(rest, function (other) {
+          return _.any(other, function (element) {
+            return _.isEqual(element, item);
+          });
+        });
+      });
+    }
+
+    if (actual.length === expected.length && intersectionObjects(actual, expected).length === actual.length) {
+      test.ok();
+    }
+    else {
+      test.fail({
+        type: 'itemsEqual',
+        actual: JSON.stringify(actual),
+        expected: JSON.stringify(expected)
+      });
+    }
+  }
 
   Tinytest.add(
     'roles - can create and delete roles', 
@@ -831,7 +859,6 @@
       userObj = Meteor.users.findOne({_id: userId});
       test.equal(Roles.getRolesForUser(userObj, 'partition1'), []);
 
-
       // add roles
       Roles.addUsersToRoles(userId, ['admin', 'user'], 'partition1');
       Roles.addUsersToRoles(userId, ['admin'], 'partition2');
@@ -1140,10 +1167,7 @@
       var expected = [users.eve, users.joe],
           actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
 
-      // order may be different so check difference instead of equality
-      // difference uses first array as base so have to check both ways
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
     });
 
   Tinytest.add(
@@ -1160,20 +1184,15 @@
       var expected = [users.eve, users.joe],
           actual = _.pluck(Roles.getUsersInRole('admin', 'partition1').fetch(), '_id');
 
-      // order may be different so check difference instead of equality
-      // difference uses first array as base so have to check both ways
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.joe];
       actual = _.pluck(Roles.getUsersInRole('admin', {partition: 'partition1'}).fetch(), '_id');
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
       actual = _.pluck(Roles.getUsersInRole('admin', {anyPartition: true}).fetch(), '_id');
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
 
       actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
       test.equal(actual, []);
@@ -1193,31 +1212,22 @@
       var expected = [users.eve],
           actual = _.pluck(Roles.getUsersInRole('admin', 'partition1').fetch(), '_id');
 
-      // order may be different so check difference instead of equality
-      // difference uses first array as base so have to check both ways
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
       actual = _.pluck(Roles.getUsersInRole('admin', 'partition2').fetch(), '_id');
 
-      // order may be different so check difference instead of equality
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
 
       expected = [users.eve];
       actual = _.pluck(Roles.getUsersInRole('admin').fetch(), '_id');
 
-      // order may be different so check difference instead of equality
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
 
       expected = [users.eve, users.bob, users.joe];
       actual = _.pluck(Roles.getUsersInRole('admin', {anyPartition: true}).fetch(), '_id');
 
-      // order may be different so check difference instead of equality
-      test.equal(_.difference(actual, expected), []);
-      test.equal(_.difference(expected, actual), []);
+      itemsEqual(test, actual, expected);
     });
 
   Tinytest.add(
@@ -1488,6 +1498,119 @@
       test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
         name: 'user'
       });
+    });
+
+  Tinytest.add(
+    'roles - _assureConsistency',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('ALL_PERMISSIONS');
+      Roles.createRole('VIEW_PERMISSION');
+      Roles.createRole('EDIT_PERMISSION');
+      Roles.createRole('DELETE_PERMISSION');
+      Roles.addRoleParent('ALL_PERMISSIONS', 'user');
+      Roles.addRoleParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRoleParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRoleParent('DELETE_PERMISSION', 'admin');
+
+      Roles.addUsersToRoles(users.eve, ['user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['user'], 'partition2');
+
+      var correctRoles = [{
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition1',
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition1',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition1',
+        assigned: false
+      }, {
+        role: 'user',
+        partition: 'partition2',
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition2',
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition2',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition2',
+        assigned: false
+      }];
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
+
+      // let's remove all automatically assigned roles
+      // _assureConsistency should recreate those roles
+      Meteor.users.update(users.eve, {$pull: {roles: {assigned: false}}});
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'user',
+        partition: 'partition2',
+        assigned: true
+      }]);
+
+      Roles._assureConsistency(users.eve);
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
+
+      // add an extra role, faking that it is automatically assigned
+      // _assureConsistency should remove this extra role
+      Meteor.users.update(users.eve, {$push: {roles: {role: 'DELETE_PERMISSION', partition: null, assigned: false}}});
+
+      Roles._assureConsistency(users.eve);
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
+
+      // remove a role, _assureConsistency should remove it from the user
+      Meteor.roles.remove({name: 'VIEW_PERMISSION'});
+
+      Roles._assureConsistency(users.eve);
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: 'partition1',
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition1',
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition1',
+        assigned: false
+      }, {
+        role: 'user',
+        partition: 'partition2',
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition2',
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition2',
+        assigned: false
+      }]);
     });
 
   function printException (ex) {
