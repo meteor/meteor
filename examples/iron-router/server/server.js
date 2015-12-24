@@ -49,6 +49,10 @@ Meteor.startup(function () {
       // email verification
       Meteor.users.update({_id: id}, {$set:{'emails.0.verified': true}});
 
+      _.each(userData.roles, function (role) {
+        Roles.createRole(role, {unlessExists: true});
+      });
+
       Roles.addUsersToRoles(id, userData.roles);
     
     });
@@ -67,7 +71,7 @@ Meteor.startup(function () {
       return true;
     }
 
-    throw new Meteor.Error(403, "Not authorized to create new users");
+    throw new Meteor.Error('unauthorized', "Not authorized to create new users");
   });
 
 });
@@ -83,7 +87,7 @@ Meteor.publish("secrets", function () {
   var user = Meteor.users.findOne({_id:this.userId});
 
   if (Roles.userIsInRole(user, ["admin","view-secrets"])) {
-    console.log('publishing secrets', this.userId)
+    console.log('publishing secrets', this.userId);
     return Meteor.secrets.find();
   }
 
@@ -96,7 +100,7 @@ Meteor.publish("users", function () {
   var user = Meteor.users.findOne({_id:this.userId});
 
   if (Roles.userIsInRole(user, ["admin","manage-users"])) {
-    console.log('publishing users', this.userId)
+    console.log('publishing users', this.userId);
     return Meteor.users.find({}, {fields: {emails: 1, profile: 1, roles: 1}});
   } 
 
