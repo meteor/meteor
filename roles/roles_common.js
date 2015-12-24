@@ -612,14 +612,19 @@ _.extend(Roles, {
       }
     });
 
-    // remove all extra entries which should not be there
-    Meteor.users.update(user._id, {
-      $pull: {
-        roles: {
-          $and: roles
+    if (roles.length) {
+      // remove all extra entries which should not be there
+      Meteor.users.update(user._id, {
+        $pull: {
+          roles: {
+            $and: roles
+          }
         }
-      }
-    });
+      });
+    }
+    else {
+      Meteor.users.update(user._id, {$set: {roles: []}});
+    }
   },
 
   /**
