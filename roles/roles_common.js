@@ -159,8 +159,8 @@ _.extend(Roles, {
     Roles._checkRoleName(roleName);
     Roles._checkRoleName(parentName);
 
-    // query to get role's _id
-    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1}});
+    // query to get role's _id and name
+    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1, name: 1}});
 
     if (!role) {
       throw new Error("Role '" + roleName + "' does not exist.");
