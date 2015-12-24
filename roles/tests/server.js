@@ -105,6 +105,31 @@
     });
 
   Tinytest.add(
+    'roles - can\'t use invalid partition names',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+
+      test.throws(function () {
+        Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' ');
+      }, /Invalid partition name/);
+      test.throws(function () {
+        Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' foobar');
+      }, /Invalid partition name/);
+      test.throws(function () {
+        Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' foobar ');
+      }, /Invalid partition name/);
+      test.throws(function () {
+        Roles.addUsersToRoles(users.eve, ['admin', 'user'], 42);
+      }, /Invalid partition name/);
+    });
+
+  Tinytest.add(
     'roles - can check if user is in role', 
     function (test) {
       reset();
