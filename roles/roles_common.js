@@ -1065,6 +1065,12 @@ _.extend(Roles, {
     }
   },
 
+  /**
+   * @param {String} string Input string.
+   * @return {String} Trimmed string.
+   * @private
+   * @static
+   */
   _trim: function (string) {
     if (string.trim) {
       return string.trim();
