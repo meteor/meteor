@@ -13,6 +13,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 * [What are "partitions"?](#user-content-partitions)
 * [Changes to default Meteor](#user-content-changes)
 * [Installation](#user-content-installing)
+* [Migration to 2.0](#user-content-migration)
 * [Usage examples](#user-content-usage)
 * [Online API docs](#user-content-docs)
 * [Example apps](#user-content-example-apps)
@@ -142,6 +143,35 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
     ```bash
     meteor
     ```
+
+<br />
+
+<a name="migration">
+### Migration to 2.0
+
+In meteor-roles 2.0, functions are mostly backwards compatible with 1.0, but roles are stored differently
+in the database. To migrate the database to new schema, run `Meteor._forwardMigrate()` on the server:
+
+```bash
+meteor shell
+> Package['alanning:roles'].Roles._forwardMigrate()
+```
+
+#### Changes between 1.0 and 2.0
+
+Here is the list of important changes between meteor-roles 1.0 and 2.0 to consider when migrating
+to 2.0:
+
+* Groups were renamed to partitions.
+* Groups/partitions are always available, if you do not specify a partition, role is seen as a global role.
+* `GLOBAL_GROUP` is deprecated and should not be used anymore (just do not specify a partition, or use `null`).
+* `getGroupsForUser` is deprecated, `getPartitionsForUser` should be used instead.
+* Functions which modify roles are available both on the client and server side, but should be called on the
+  client side only from inside Meteor methods.
+* `deleteRole` can now delete role even when in use, it is automatically unset from all users.
+* Functions `addRoleParent` and `removeRoleParent` were added.
+* `addUsersToRoles` and `setUserRoles` now require that roles exist and will not create missing roles automatically.
+* All functions work with 1.0 arguments, but in 2.0 accept extra arguments and/or options.
 
 <br />
 
