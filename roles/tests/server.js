@@ -1736,6 +1736,614 @@
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
     });
 
+  Tinytest.add(
+    'roles - keep assigned roles',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('ALL_PERMISSIONS');
+      Roles.createRole('VIEW_PERMISSION');
+      Roles.createRole('EDIT_PERMISSION');
+      Roles.createRole('DELETE_PERMISSION');
+      Roles.addRoleParent('ALL_PERMISSIONS', 'user');
+      Roles.addRoleParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRoleParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRoleParent('DELETE_PERMISSION', 'admin');
+
+      Roles.addUsersToRoles(users.eve, ['user']);
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles.addUsersToRoles(users.eve, 'VIEW_PERMISSION');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles.removeUsersFromRoles(users.eve, 'user');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles.removeUsersFromRoles(users.eve, 'VIEW_PERMISSION');
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), []);
+    });
+
+  Tinytest.add(
+    'roles - modify assigned hierarchical roles',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('ALL_PERMISSIONS');
+      Roles.createRole('VIEW_PERMISSION');
+      Roles.createRole('EDIT_PERMISSION');
+      Roles.createRole('DELETE_PERMISSION');
+      Roles.addRoleParent('ALL_PERMISSIONS', 'user');
+      Roles.addRoleParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRoleParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRoleParent('DELETE_PERMISSION', 'admin');
+
+      Roles.addUsersToRoles(users.eve, ['user']);
+      Roles.addUsersToRoles(users.eve, ['ALL_PERMISSIONS'], 'partition');
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition',
+        assigned: true
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }]);
+
+      Roles.createRole('MODERATE_PERMISSION');
+
+      Roles.addRoleParent('MODERATE_PERMISSION', 'ALL_PERMISSIONS');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition',
+        assigned: true
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }]);
+
+      Roles.addUsersToRoles(users.eve, ['admin']);
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition',
+        assigned: true
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'DELETE_PERMISSION',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles.addRoleParent('DELETE_PERMISSION', 'ALL_PERMISSIONS');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition',
+        assigned: true
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'admin',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'DELETE_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'DELETE_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }]);
+
+      Roles.removeUsersFromRoles(users.eve, ['admin']);
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'ALL_PERMISSIONS',
+        partition: 'partition',
+        assigned: true
+      }, {
+        role: 'EDIT_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'VIEW_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'MODERATE_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }, {
+        role: 'DELETE_PERMISSION',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'DELETE_PERMISSION',
+        partition: 'partition',
+        assigned: false
+      }]);
+
+      Roles.deleteRole('ALL_PERMISSIONS');
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'user',
+        partition: null,
+        assigned: true
+      }]);
+    });
+
+  Tinytest.add(
+    'roles - delete role with overlapping hierarchical roles',
+    function (test) {
+      reset();
+
+      Roles.createRole('role1');
+      Roles.createRole('role2');
+      Roles.createRole('COMMON_PERMISSION_1');
+      Roles.createRole('COMMON_PERMISSION_2');
+      Roles.createRole('COMMON_PERMISSION_3');
+      Roles.createRole('EXTRA_PERMISSION_ROLE_1');
+      Roles.createRole('EXTRA_PERMISSION_ROLE_2');
+
+      Roles.addRoleParent('COMMON_PERMISSION_1', 'role1');
+      Roles.addRoleParent('COMMON_PERMISSION_2', 'role1');
+      Roles.addRoleParent('COMMON_PERMISSION_3', 'role1');
+      Roles.addRoleParent('EXTRA_PERMISSION_ROLE_1', 'role1');
+
+      Roles.addRoleParent('COMMON_PERMISSION_1', 'role2');
+      Roles.addRoleParent('COMMON_PERMISSION_2', 'role2');
+      Roles.addRoleParent('COMMON_PERMISSION_3', 'role2');
+      Roles.addRoleParent('EXTRA_PERMISSION_ROLE_2', 'role2');
+
+      Roles.addUsersToRoles(users.eve, 'role1');
+      Roles.addUsersToRoles(users.eve, 'role2');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'COMMON_PERMISSION_1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'role1',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'role2',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'COMMON_PERMISSION_1',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_2',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_3',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EXTRA_PERMISSION_ROLE_1',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EXTRA_PERMISSION_ROLE_2',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles.removeUsersFromRoles(users.eve, 'role2');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'COMMON_PERMISSION_1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'role1',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'COMMON_PERMISSION_1',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_2',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_3',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EXTRA_PERMISSION_ROLE_1',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles.addUsersToRoles(users.eve, 'role2');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'COMMON_PERMISSION_1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'role1',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'role2',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'COMMON_PERMISSION_1',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_2',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_3',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EXTRA_PERMISSION_ROLE_1',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EXTRA_PERMISSION_ROLE_2',
+        partition: null,
+        assigned: false
+      }]);
+
+      Roles.deleteRole('role2');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'COMMON_PERMISSION_1'));
+      test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'role1',
+        partition: null,
+        assigned: true
+      }, {
+        role: 'COMMON_PERMISSION_1',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_2',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'COMMON_PERMISSION_3',
+        partition: null,
+        assigned: false
+      }, {
+        role: 'EXTRA_PERMISSION_ROLE_1',
+        partition: null,
+        assigned: false
+      }]);
+    });
+
+  Tinytest.add(
+    'roles - set parent on assigned role',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('EDIT_PERMISSION');
+
+      Roles.addUsersToRoles(users.eve, 'EDIT_PERMISSION');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles.addRoleParent('EDIT_PERMISSION', 'admin');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+    });
+
+  Tinytest.add(
+    'roles - remove parent on assigned role',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('EDIT_PERMISSION');
+
+      Roles.addRoleParent('EDIT_PERMISSION', 'admin');
+
+      Roles.addUsersToRoles(users.eve, 'EDIT_PERMISSION');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles.removeRoleParent('EDIT_PERMISSION', 'admin');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+    });
+
+  Tinytest.add(
+    'roles - adding and removing extra role parents',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('EDIT_PERMISSION');
+
+      Roles.addRoleParent('EDIT_PERMISSION', 'admin');
+
+      Roles.addUsersToRoles(users.eve, 'EDIT_PERMISSION');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles.addRoleParent('EDIT_PERMISSION', 'user');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+
+      Roles.removeRoleParent('EDIT_PERMISSION', 'user');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
+
+      itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
+        role: 'EDIT_PERMISSION',
+        partition: null,
+        assigned: true
+      }]);
+    });
+
   function printException (ex) {
     var tmp = {};
     for (var key in ex) {
