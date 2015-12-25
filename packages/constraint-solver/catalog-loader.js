@@ -14,7 +14,7 @@ var CS = ConstraintSolver;
 // making the right catalog calls and doing the right caching.
 // Calling a catalog method generally means running a SQLite query,
 // which could be time-consuming.
-var _lockedSortedVersionRecordsCache = undefined;
+var _preSortedVersionRecordsCache = undefined;
 
 CS.CatalogLoader = function (fromCatalog, toCatalogCache) {
   var self = this;
@@ -22,13 +22,13 @@ CS.CatalogLoader = function (fromCatalog, toCatalogCache) {
   self.catalog = fromCatalog;
   self.catalogCache = toCatalogCache;
 
-  if(_.isUndefined(_lockedSortedVersionRecordsCache))
+  if(_.isUndefined(_preSortedVersionRecordsCache))
   {
-    _lockedSortedVersionRecordsCache = {};
+    _preSortedVersionRecordsCache = {};
     self._sortedVersionRecordsCache = {};
   }else{
     //keep the same sortedVersionRecordsCache data after CatalogLoader is reloaded that will improve solver performance.
-    self._sortedVersionRecordsCache = _lockedSortedVersionRecordsCache; 
+    self._sortedVersionRecordsCache = _preSortedVersionRecordsCache;
   }
 };
 
@@ -62,6 +62,7 @@ CS.CatalogLoader.prototype._getSortedVersionRecords = function (pkg) {
   if (! _.has(this._sortedVersionRecordsCache, pkg)) {
     this._sortedVersionRecordsCache[pkg] =
       this.catalog.getSortedVersionRecords(pkg);
+    _preSortedVersionRecordsCache[pkg] = this._sortedVersionRecordsCache[pkg];
   }
 
   return this._sortedVersionRecordsCache[pkg];
