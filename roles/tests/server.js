@@ -781,12 +781,13 @@
     'roles - can get all roles', 
     function (test) {
       reset();
+
       _.each(roles, function (role) {
         Roles.createRole(role);
       });
 
       // compare roles, sorted alphabetically
-      var expected = roles,
+      var expected = _.clone(roles),
           actual = _.pluck(Roles.getAllRoles().fetch(), 'name');
 
       test.equal(actual, expected);
