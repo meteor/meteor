@@ -85,12 +85,9 @@
     <pre class="code prettyprint linenums">
 &quot;use strict&quot;;
 
-// Create default indexes for roles and users collection.
-
-Meteor.roles._ensureIndex({name: 1}, {unique: 1});
-
-// Index only on &quot;roles.role&quot; is not needed because the combined index works for it as well.
-Meteor.users._ensureIndex({&#x27;roles.role&#x27;: 1, &#x27;roles.partition&#x27;: 1});
+// Create default indexes on users collection.
+// Index only on &quot;roles._id&quot; is not needed because the combined index works for it as well.
+Meteor.users._ensureIndex({&#x27;roles._id&#x27;: 1, &#x27;roles.partition&#x27;: 1});
 Meteor.users._ensureIndex({&#x27;roles.partition&#x27;: 1});
 
 /*
@@ -113,10 +110,36 @@ Meteor.publish(&#x27;_roles&#x27;, function () {
 
 _.extend(Roles, {
   /**
+   * @method _isNewRole
+   * @param {Object} role &#x60;Meteor.roles&#x60; document.
+   * @return {Boolean} Returns &#x60;true&#x60; if the &#x60;role&#x60; is in the new format.
+   *                   If it is ambiguous or it is not, returns &#x60;false&#x60;.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _isNewRole: function (role) {
+    return !_.has(role, &#x27;name&#x27;) &amp;&amp; _.has(role, &#x27;children&#x27;);
+  },
+
+  /**
+   * @method _isOldRole
+   * @param {Object} role &#x60;Meteor.roles&#x60; document.
+   * @return {Boolean} Returns &#x60;true&#x60; if the &#x60;role&#x60; is in the old format.
+   *                   If it is ambiguous or it is not, returns &#x60;false&#x60;.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _isOldRole: function (role) {
+    return _.has(role, &#x27;name&#x27;) &amp;&amp; !_.has(role, &#x27;children&#x27;);
+  },
+
+  /**
    * @method _isNewField
    * @param {Array} roles &#x60;Meteor.users&#x60; document &#x60;roles&#x60; field.
    * @return {Boolean} Returns &#x60;true&#x60; if the &#x60;roles&#x60; field is in the new format.
-   *                    If it is ambiguous or it is not, returns &#x60;false&#x60;.
+   *                   If it is ambiguous or it is not, returns &#x60;false&#x60;.
    * @for Roles
    * @private
    * @static
@@ -129,7 +152,7 @@ _.extend(Roles, {
    * @method _isOldField
    * @param {Array} roles &#x60;Meteor.users&#x60; document &#x60;roles&#x60; field.
    * @return {Boolean} Returns &#x60;true&#x60; if the &#x60;roles&#x60; field is in the old format.
-   *                    If it is ambiguous or it is not, returns &#x60;false&#x60;.
+   *                   If it is ambiguous or it is not, returns &#x60;false&#x60;.
    * @for Roles
    * @private
    * @static
@@ -139,8 +162,41 @@ _.extend(Roles, {
   },
 
   /**
+   * @method _convertToNewRole
+   * @param {Object} oldRole &#x60;Meteor.roles&#x60; document.
+   * @return {Object} Converted &#x60;role&#x60; to the new format.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _convertToNewRole: function (oldRole) {
+    if (!_.isString(oldRole.name)) throw new Error(&quot;Role name &#x27;&quot; + oldRole.name + &quot;&#x27; is not a string.&quot;);
+
+    return {
+      _id: oldRole.name,
+      children: []
+    };
+  },
+
+  /**
+   * @method _convertToOldRole
+   * @param {Object} newRole &#x60;Meteor.roles&#x60; document.
+   * @return {Object} Converted &#x60;role&#x60; to the old format.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _convertToOldRole: function (newRole) {
+    if (!_.isString(newRole._id)) throw new Error(&quot;Role name &#x27;&quot; + newRole._id + &quot;&#x27; is not a string.&quot;);
+
+    return {
+      name: newRole._id
+    };
+  },
+
+  /**
    * @method _convertToNewField
-   * @param {Array} roles &#x60;Meteor.users&#x60; document &#x60;roles&#x60; field in the old format.
+   * @param {Array} oldRoles &#x60;Meteor.users&#x60; document &#x60;roles&#x60; field in the old format.
    * @return {Array} Converted &#x60;roles&#x60; to the new format.
    * @for Roles
    * @private
@@ -153,7 +209,7 @@ _.extend(Roles, {
         if (!_.isString(role)) throw new Error(&quot;Role &#x27;&quot; + role + &quot;&#x27; is not a string.&quot;);
 
         roles.push({
-          role: role,
+          _id: role,
           partition: null,
           assigned: true
         })
@@ -173,7 +229,7 @@ _.extend(Roles, {
           if (!_.isString(role)) throw new Error(&quot;Role &#x27;&quot; + role + &quot;&#x27; is not a string.&quot;);
 
           roles.push({
-            role: role,
+            _id: role,
             partition: group,
             assigned: true
           })
@@ -185,7 +241,8 @@ _.extend(Roles, {
 
   /**
    * @method _convertToOldField
-   * @param {Array} roles &#x60;Meteor.users&#x60; document &#x60;roles&#x60; field in the new format.
+   * @param {Array} newRoles &#x60;Meteor.users&#x60; document &#x60;roles&#x60; field in the new format.
+   * @param {Boolean} usingGroups Should we use groups or not.
    * @return {Array} Converted &#x60;roles&#x60; to the old format.
    * @for Roles
    * @private
@@ -208,7 +265,7 @@ _.extend(Roles, {
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
 
       if (userRole.partition) {
-        if (!usingGroups) throw new Error(&quot;Role &#x27;&quot; + userRole.role + &quot;&#x27; with partition &#x27;&quot; + userRole.partition + &quot;&#x27; without enabled groups.&quot;);
+        if (!usingGroups) throw new Error(&quot;Role &#x27;&quot; + userRole._id + &quot;&#x27; with partition &#x27;&quot; + userRole.partition + &quot;&#x27; without enabled groups.&quot;);
 
         // escape
         var partition = userRole.partition.replace(/\./g, &#x27;_&#x27;);
@@ -216,15 +273,15 @@ _.extend(Roles, {
         if (partition[0] === &#x27;$&#x27;) throw new Error(&quot;Group name &#x27;&quot; + partition + &quot;&#x27; start with $.&quot;);
 
         roles[partition] = roles[partition] || [];
-        roles[partition].push(userRole.role);
+        roles[partition].push(userRole._id);
       }
       else {
         if (usingGroups) {
           roles.__global_roles__ = roles.__global_roles__ || [];
-          roles.__global_roles__.push(userRole.role);
+          roles.__global_roles__.push(userRole._id);
         }
         else {
-          roles.push(userRole.role);
+          roles.push(userRole._id);
         }
       }
     });
@@ -234,7 +291,7 @@ _.extend(Roles, {
   /**
    * @method _defaultUpdateUser
    * @param {Object} user &#x60;Meteor.users&#x60; document.
-   * @return {Array|Object} roles Value to which user&#x27;s &#x60;roles&#x60; field should be set.
+   * @param {Array|Object} roles Value to which user&#x27;s &#x60;roles&#x60; field should be set.
    * @for Roles
    * @private
    * @static
@@ -250,18 +307,37 @@ _.extend(Roles, {
   },
 
   /**
-   * Migrates &#x60;Meteor.users&#x60; and &#x60;Meteor.roles&#x60; to the new format.
-   *
-   * @method _forwardMigrate
-   * @param {Function} updateUser Function which updates the user object. Default &#x60;_defaultUpdateUser&#x60;.
+   * @method _defaultUpdateRole
+   * @param {Object} oldRole Old &#x60;Meteor.roles&#x60; document.
+   * @param {Object} newRole New &#x60;Meteor.roles&#x60; document.
    * @for Roles
    * @private
    * @static
    */
-  _forwardMigrate: function (updateUser) {
-    updateUser = updateUser || Roles._defaultUpdateUser;
+  _defaultUpdateRole: function (oldRole, newRole) {
+    Meteor.roles.remove(oldRole._id);
+    Meteor.roles.insert(newRole);
+  },
 
-    Meteor.roles.update({children: {$exists: false}}, {$set: {children: []}}, {multi: true});
+  /**
+   * Migrates &#x60;Meteor.users&#x60; and &#x60;Meteor.roles&#x60; to the new format.
+   *
+   * @method _forwardMigrate
+   * @param {Function} updateUser Function which updates the user object. Default &#x60;_defaultUpdateUser&#x60;.
+   * @param {Function} updateRole Function which updates the role object. Default &#x60;_defaultUpdateRole&#x60;.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _forwardMigrate: function (updateUser, updateRole) {
+    updateUser = updateUser || Roles._defaultUpdateUser;
+    updateRole = updateRole || Roles._defaultUpdateRole;
+
+    Meteor.roles.find().forEach(function (role, index, cursor) {
+      if (!Roles._isNewRole(role)) {
+        updateRole(role, Roles._convertToNewRole(role));
+      }
+    });
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isNewField(user.roles)) {
@@ -279,15 +355,21 @@ _.extend(Roles, {
    *
    * @method _backwardMigrate
    * @param {Function} updateUser Function which updates the user object. Default &#x60;_defaultUpdateUser&#x60;.
+   * @param {Function} updateRole Function which updates the role object. Default &#x60;_defaultUpdateRole&#x60;.
    * @param {Boolean} usingGroups Should we use groups or not.
    * @for Roles
    * @private
    * @static
    */
-  _backwardMigrate: function (updateUser, usingGroups) {
+  _backwardMigrate: function (updateUser, updateRole, usingGroups) {
     updateUser = updateUser || Roles._defaultUpdateUser;
+    updateRole = updateRole || Roles._defaultUpdateRole;
 
-    Meteor.roles.update({}, {$unset: {children: &#x27;&#x27;}}, {multi: true});
+    Meteor.roles.find().forEach(function (role, index, cursor) {
+      if (!Roles._isOldRole(role)) {
+        updateRole(role, Roles._convertToOldRole(role));
+      }
+    });
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isOldField(user.roles)) {

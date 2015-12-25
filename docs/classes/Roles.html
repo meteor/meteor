@@ -84,7 +84,7 @@
 
 
         <div class="foundat">
-            Defined in: <a href="../files/roles_roles_common.js.html#l31"><code>roles&#x2F;roles_common.js:31</code></a>
+            Defined in: <a href="../files/roles_roles_common.js.html#l29"><code>roles&#x2F;roles_common.js:29</code></a>
         </div>
 
             Module: <a href="../modules/Roles.html">Roles</a>
@@ -144,7 +144,22 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
+                                <a href="#method__convertToNewRole">_convertToNewRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
                                 <a href="#method__convertToOldField">_convertToOldField</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__convertToOldRole">_convertToOldRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__defaultUpdateRole">_defaultUpdateRole</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -164,7 +179,17 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
+                                <a href="#method__isNewRole">_isNewRole</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
                                 <a href="#method__isOldField">_isOldField</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method private">
+                                <a href="#method__isOldRole">_isOldRole</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -323,7 +348,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l398"><code>roles&#x2F;roles_common.js:398</code></a>
+        <a href="../files/roles_roles_common.js.html#l417"><code>roles&#x2F;roles_common.js:417</code></a>
         </p>
 
 
@@ -418,7 +443,7 @@ only that it does not force the value to <code>false</code> if the role is alrea
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l639"><code>roles&#x2F;roles_common.js:639</code></a>
+        <a href="../files/roles_roles_common.js.html#l658"><code>roles&#x2F;roles_common.js:658</code></a>
         </p>
 
 
@@ -464,6 +489,9 @@ are marked as not explicitly assigned, and have not been part of what we current
                         <code>updateUser</code>
                 </li>
                 <li class="arg">
+                        <code>updateRole</code>
+                </li>
+                <li class="arg">
                         <code>usingGroups</code>
                 </li>
             </ul><span class="paren">)</span>
@@ -481,7 +509,7 @@ are marked as not explicitly assigned, and have not been part of what we current
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l188"><code>roles&#x2F;roles_server.js:188</code></a>
+        <a href="../files/roles_roles_server.js.html#l264"><code>roles&#x2F;roles_server.js:264</code></a>
         </p>
 
 
@@ -507,6 +535,17 @@ no subroles.</p>
 
                     <div class="param-description">
                         <p>Function which updates the user object. Default <code>_defaultUpdateUser</code>.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">updateRole</code>
+                        <span class="type">Function</span>
+
+
+                    <div class="param-description">
+                        <p>Function which updates the role object. Default <code>_defaultUpdateRole</code>.</p>
 
                     </div>
 
@@ -551,7 +590,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1068"><code>roles&#x2F;roles_common.js:1068</code></a>
+        <a href="../files/roles_roles_common.js.html#l1087"><code>roles&#x2F;roles_common.js:1087</code></a>
         </p>
 
 
@@ -607,7 +646,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1082"><code>roles&#x2F;roles_common.js:1082</code></a>
+        <a href="../files/roles_roles_common.js.html#l1101"><code>roles&#x2F;roles_common.js:1101</code></a>
         </p>
 
 
@@ -646,7 +685,7 @@ no subroles.</p>
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
                 <li class="arg">
-                        <code>roles</code>
+                        <code>oldRoles</code>
                 </li>
             </ul><span class="paren">)</span>
         </div>
@@ -666,7 +705,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l56"><code>roles&#x2F;roles_server.js:56</code></a>
+        <a href="../files/roles_roles_server.js.html#l112"><code>roles&#x2F;roles_server.js:112</code></a>
         </p>
 
 
@@ -682,7 +721,7 @@ no subroles.</p>
 
             <ul class="params-list">
                 <li class="param">
-                        <code class="param-name">roles</code>
+                        <code class="param-name">oldRoles</code>
                         <span class="type">Array</span>
 
 
@@ -707,13 +746,83 @@ no subroles.</p>
 
 
 </div>
+<div id="method__convertToNewRole" class="method item private">
+    <h3 class="name"><code>_convertToNewRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldRole</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_server.js.html#l79"><code>roles&#x2F;roles_server.js:79</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldRole</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p><code>Meteor.roles</code> document.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Converted <code>role</code> to the new format.</p>
+
+            </div>
+        </div>
+
+
+</div>
 <div id="method__convertToOldField" class="method item private">
     <h3 class="name"><code>_convertToOldField</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
                 <li class="arg">
-                        <code>roles</code>
+                        <code>newRoles</code>
+                </li>
+                <li class="arg">
+                        <code>usingGroups</code>
                 </li>
             </ul><span class="paren">)</span>
         </div>
@@ -733,7 +842,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l101"><code>roles&#x2F;roles_server.js:101</code></a>
+        <a href="../files/roles_roles_server.js.html#l157"><code>roles&#x2F;roles_server.js:157</code></a>
         </p>
 
 
@@ -749,12 +858,23 @@ no subroles.</p>
 
             <ul class="params-list">
                 <li class="param">
-                        <code class="param-name">roles</code>
+                        <code class="param-name">newRoles</code>
                         <span class="type">Array</span>
 
 
                     <div class="param-description">
                         <p><code>Meteor.users</code> document <code>roles</code> field in the new format.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">usingGroups</code>
+                        <span class="type">Boolean</span>
+
+
+                    <div class="param-description">
+                        <p>Should we use groups or not.</p>
 
                     </div>
 
@@ -774,19 +894,19 @@ no subroles.</p>
 
 
 </div>
-<div id="method__defaultUpdateUser" class="method item private">
-    <h3 class="name"><code>_defaultUpdateUser</code></h3>
+<div id="method__convertToOldRole" class="method item private">
+    <h3 class="name"><code>_convertToOldRole</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
                 <li class="arg">
-                        <code>user</code>
+                        <code>newRole</code>
                 </li>
             </ul><span class="paren">)</span>
         </div>
 
         <span class="returns-inline">
-            <span class="type">Array | Object</span>
+            <span class="type">Object</span>
         </span>
 
 
@@ -800,7 +920,143 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l149"><code>roles&#x2F;roles_server.js:149</code></a>
+        <a href="../files/roles_roles_server.js.html#l96"><code>roles&#x2F;roles_server.js:96</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">newRole</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p><code>Meteor.roles</code> document.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Converted <code>role</code> to the old format.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__defaultUpdateRole" class="method item private">
+    <h3 class="name"><code>_defaultUpdateRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldRole</code>
+                </li>
+                <li class="arg">
+                        <code>newRole</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_server.js.html#l224"><code>roles&#x2F;roles_server.js:224</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldRole</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>Old <code>Meteor.roles</code> document.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newRole</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p>New <code>Meteor.roles</code> document.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method__defaultUpdateUser" class="method item private">
+    <h3 class="name"><code>_defaultUpdateUser</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>user</code>
+                </li>
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_server.js.html#l206"><code>roles&#x2F;roles_server.js:206</code></a>
         </p>
 
 
@@ -826,18 +1082,20 @@ no subroles.</p>
                     </div>
 
                 </li>
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">Array | Object</span>
+
+
+                    <div class="param-description">
+                        <p>Value to which user's <code>roles</code> field should be set.</p>
+
+                    </div>
+
+                </li>
             </ul>
         </div>
 
-        <div class="returns">
-            <h4>Returns:</h4>
-
-            <div class="returns-description">
-                        <span class="type">Array | Object</span>:
-                    <p>roles Value to which user's <code>roles</code> field should be set.</p>
-
-            </div>
-        </div>
 
 
 </div>
@@ -848,6 +1106,9 @@ no subroles.</p>
             <span class="paren">(</span><ul class="args-list inline commas">
                 <li class="arg">
                         <code>updateUser</code>
+                </li>
+                <li class="arg">
+                        <code>updateRole</code>
                 </li>
             </ul><span class="paren">)</span>
         </div>
@@ -864,7 +1125,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l167"><code>roles&#x2F;roles_server.js:167</code></a>
+        <a href="../files/roles_roles_server.js.html#l237"><code>roles&#x2F;roles_server.js:237</code></a>
         </p>
 
 
@@ -887,6 +1148,17 @@ no subroles.</p>
 
                     <div class="param-description">
                         <p>Function which updates the user object. Default <code>_defaultUpdateUser</code>.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">updateRole</code>
+                        <span class="type">Function</span>
+
+
+                    <div class="param-description">
+                        <p>Function which updates the role object. Default <code>_defaultUpdateRole</code>.</p>
 
                     </div>
 
@@ -923,7 +1195,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l30"><code>roles&#x2F;roles_server.js:30</code></a>
+        <a href="../files/roles_roles_server.js.html#l53"><code>roles&#x2F;roles_server.js:53</code></a>
         </p>
 
 
@@ -965,6 +1237,74 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
 
 
 </div>
+<div id="method__isNewRole" class="method item private">
+    <h3 class="name"><code>_isNewRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>role</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_server.js.html#l27"><code>roles&#x2F;roles_server.js:27</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">role</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p><code>Meteor.roles</code> document.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Boolean</span>:
+                    <p>Returns <code>true</code> if the <code>role</code> is in the new format.
+If it is ambiguous or it is not, returns <code>false</code>.</p>
+
+            </div>
+        </div>
+
+
+</div>
 <div id="method__isOldField" class="method item private">
     <h3 class="name"><code>_isOldField</code></h3>
 
@@ -991,7 +1331,7 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l43"><code>roles&#x2F;roles_server.js:43</code></a>
+        <a href="../files/roles_roles_server.js.html#l66"><code>roles&#x2F;roles_server.js:66</code></a>
         </p>
 
 
@@ -1033,6 +1373,74 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
 
 
 </div>
+<div id="method__isOldRole" class="method item private">
+    <h3 class="name"><code>_isOldRole</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>role</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Boolean</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_server.js.html#l40"><code>roles&#x2F;roles_server.js:40</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">role</code>
+                        <span class="type">Object</span>
+
+
+                    <div class="param-description">
+                        <p><code>Meteor.roles</code> document.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Boolean</span>:
+                    <p>Returns <code>true</code> if the <code>role</code> is in the old format.
+If it is ambiguous or it is not, returns <code>false</code>.</p>
+
+            </div>
+        </div>
+
+
+</div>
 <div id="method__onlyAssignedMatcher" class="method item private">
     <h3 class="name"><code>_onlyAssignedMatcher</code></h3>
 
@@ -1053,7 +1461,7 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1055"><code>roles&#x2F;roles_common.js:1055</code></a>
+        <a href="../files/roles_roles_common.js.html#l1074"><code>roles&#x2F;roles_common.js:1074</code></a>
         </p>
 
 
@@ -1104,7 +1512,7 @@ if the role is an assigned role.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1039"><code>roles&#x2F;roles_common.js:1039</code></a>
+        <a href="../files/roles_roles_common.js.html#l1058"><code>roles&#x2F;roles_common.js:1058</code></a>
         </p>
 
 
@@ -1175,7 +1583,7 @@ if its partition matches <code>partition</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l571"><code>roles&#x2F;roles_common.js:571</code></a>
+        <a href="../files/roles_roles_common.js.html#l590"><code>roles&#x2F;roles_common.js:590</code></a>
         </p>
 
 
@@ -1271,7 +1679,7 @@ assigned roles are removed, if <code>null</code>, any role is removed</li>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l982"><code>roles&#x2F;roles_common.js:982</code></a>
+        <a href="../files/roles_roles_common.js.html#l1001"><code>roles&#x2F;roles_common.js:1001</code></a>
         </p>
 
 
@@ -1354,7 +1762,7 @@ if it is not already.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1022"><code>roles&#x2F;roles_common.js:1022</code></a>
+        <a href="../files/roles_roles_common.js.html#l1041"><code>roles&#x2F;roles_common.js:1041</code></a>
         </p>
 
 
@@ -1433,7 +1841,7 @@ if its name matches <code>roleName</code>, and partition matches <code>partition
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1008"><code>roles&#x2F;roles_common.js:1008</code></a>
+        <a href="../files/roles_roles_common.js.html#l1027"><code>roles&#x2F;roles_common.js:1027</code></a>
         </p>
 
 
@@ -1500,7 +1908,7 @@ if its name matches <code>roleName</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l143"><code>roles&#x2F;roles_common.js:143</code></a>
+        <a href="../files/roles_roles_common.js.html#l141"><code>roles&#x2F;roles_common.js:141</code></a>
         </p>
 
 
@@ -1574,7 +1982,7 @@ parent role set, new subroles are added automatically.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l276"><code>roles&#x2F;roles_common.js:276</code></a>
+        <a href="../files/roles_roles_common.js.html#l295"><code>roles&#x2F;roles_common.js:295</code></a>
         </p>
 
 
@@ -1675,7 +2083,7 @@ Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exa
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l53"><code>roles&#x2F;roles_common.js:53</code></a>
+        <a href="../files/roles_roles_common.js.html#l51"><code>roles&#x2F;roles_common.js:51</code></a>
         </p>
 
 
@@ -1754,7 +2162,7 @@ Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exa
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l91"><code>roles&#x2F;roles_common.js:91</code></a>
+        <a href="../files/roles_roles_common.js.html#l89"><code>roles&#x2F;roles_common.js:89</code></a>
         </p>
 
 
@@ -1813,7 +2221,7 @@ Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exa
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l847"><code>roles&#x2F;roles_common.js:847</code></a>
+        <a href="../files/roles_roles_common.js.html#l866"><code>roles&#x2F;roles_common.js:866</code></a>
         </p>
 
 
@@ -1874,7 +2282,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l934"><code>roles&#x2F;roles_common.js:934</code></a>
+        <a href="../files/roles_roles_common.js.html#l953"><code>roles&#x2F;roles_common.js:953</code></a>
         </p>
 
 
@@ -1918,7 +2326,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l950"><code>roles&#x2F;roles_common.js:950</code></a>
+        <a href="../files/roles_roles_common.js.html#l969"><code>roles&#x2F;roles_common.js:969</code></a>
         </p>
 
 
@@ -2000,7 +2408,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l791"><code>roles&#x2F;roles_common.js:791</code></a>
+        <a href="../files/roles_roles_common.js.html#l810"><code>roles&#x2F;roles_common.js:810</code></a>
         </p>
 
 
@@ -2092,7 +2500,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l862"><code>roles&#x2F;roles_common.js:862</code></a>
+        <a href="../files/roles_roles_common.js.html#l881"><code>roles&#x2F;roles_common.js:881</code></a>
         </p>
 
 
@@ -2196,7 +2604,7 @@ through to <code>Meteor.users.find(query, options)</code></p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l210"><code>roles&#x2F;roles_common.js:210</code></a>
+        <a href="../files/roles_roles_common.js.html#l229"><code>roles&#x2F;roles_common.js:229</code></a>
         </p>
 
 
@@ -2270,7 +2678,7 @@ parent role set, removed subrole is removed automatically.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l518"><code>roles&#x2F;roles_common.js:518</code></a>
+        <a href="../files/roles_roles_common.js.html#l537"><code>roles&#x2F;roles_common.js:537</code></a>
         </p>
 
 
@@ -2368,7 +2776,7 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l331"><code>roles&#x2F;roles_common.js:331</code></a>
+        <a href="../files/roles_roles_common.js.html#l350"><code>roles&#x2F;roles_common.js:350</code></a>
         </p>
 
 
@@ -2472,7 +2880,7 @@ Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'exampl
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l687"><code>roles&#x2F;roles_common.js:687</code></a>
+        <a href="../files/roles_roles_common.js.html#l706"><code>roles&#x2F;roles_common.js:706</code></a>
         </p>
 
 
@@ -2580,7 +2988,7 @@ Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})</code></pr
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l44"><code>roles&#x2F;roles_common.js:44</code></a>
+        <a href="../files/roles_roles_common.js.html#l42"><code>roles&#x2F;roles_common.js:42</code></a>
         </p>
 
 
