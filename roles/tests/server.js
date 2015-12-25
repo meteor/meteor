@@ -2344,6 +2344,23 @@
       }]);
     });
 
+  Tinytest.add(
+    'roles - cyclic roles',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('editor');
+      Roles.createRole('user');
+
+      Roles.addRoleParent('editor', 'admin');
+      Roles.addRoleParent('user', 'editor');
+
+      test.throws(function () {
+        Roles.addRoleParent('admin', 'user');
+      }, /form a cycle/);
+    });
+
   function printException (ex) {
     var tmp = {};
     for (var key in ex) {

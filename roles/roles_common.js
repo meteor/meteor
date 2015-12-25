@@ -154,16 +154,38 @@ _.extend(Roles, {
   addRoleParent: function (roleName, parentName) {
     var role,
         count,
-        parentRoles;
+        parentRoles,
+        rolesToCheck,
+        alreadyCheckedRoles,
+        checkRoleName,
+        checkRole;
 
     Roles._checkRoleName(roleName);
     Roles._checkRoleName(parentName);
 
-    // query to get role's _id and name
-    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1, name: 1}});
+    // query to get role's _id, name, and children
+    role = Meteor.roles.findOne({name: roleName});
 
     if (!role) {
       throw new Error("Role '" + roleName + "' does not exist.");
+    }
+
+    // detect cycles
+    alreadyCheckedRoles = [];
+    rolesToCheck = _.pluck(role.children, 'name');
+    while (rolesToCheck.length) {
+      checkRoleName = rolesToCheck.pop();
+      if (checkRoleName === parentName) {
+        throw new Error("Roles '" + roleName + "' and '" + parentName + "' would form a cycle.");
+      }
+      alreadyCheckedRoles.push(checkRoleName);
+
+      checkRole = Meteor.roles.findOne({name: checkRoleName});
+
+      // This should not happen, but this is a problem to address at some other time.
+      if (!checkRole) continue;
+
+      rolesToCheck = _.union(rolesToCheck, _.difference(_.pluck(checkRole.children, 'name'), alreadyCheckedRoles));
     }
 
     count = Meteor.roles.update({
