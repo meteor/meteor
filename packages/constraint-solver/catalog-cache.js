@@ -2,6 +2,7 @@ var CS = ConstraintSolver;
 var PV = PackageVersion;
 
 var _lockedVersionCache = {};
+var __lockDependenices = {};
 
 var pvkey = function (pkg, version) {
   return pkg + " " + version;
@@ -11,7 +12,13 @@ var pvkey = function (pkg, version) {
 CS.CatalogCache = function () {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  this._dependencies = {};
+  if(_.isUndefined(__lockDependenices))
+  {
+    __lockDependenices = {};
+    this._dependencies = {};
+  }else{
+    this._dependencies = __lockDependenices;
+  }
   // A map derived from the keys of _dependencies, for ease of iteration.
   // "foo" -> ["1.0.0", ...]
   // Versions in the array are unique but not sorted, unless the `.sorted`
@@ -42,6 +49,7 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
 
   var depsByPackage = {};
   this._dependencies[key] = depsByPackage;
+  __lockDependenices[key] = depsByPackage;
   _.each(deps, function (d) {
     var p2 = d.packageConstraint.package;
     if (_.has(depsByPackage, p2)) {
