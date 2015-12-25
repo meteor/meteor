@@ -1,6 +1,6 @@
 ## v2.0.0
 
-* Rewrite with new schema for `roles` field.
+* Rewrite with the new schema for `roles` field and `Meteor.roles` collection.
 * Support for roles hierarchies.
 * Groups were renamed to partitions.
 * Groups/partitions are always available, if you do not specify a partition, role is seen as a global role.

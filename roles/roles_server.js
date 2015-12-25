@@ -1,11 +1,8 @@
 "use strict";
 
-// Create default indexes for roles and users collection.
-
-Meteor.roles._ensureIndex({name: 1}, {unique: 1});
-
-// Index only on "roles.role" is not needed because the combined index works for it as well.
-Meteor.users._ensureIndex({'roles.role': 1, 'roles.partition': 1});
+// Create default indexes on users collection.
+// Index only on "roles._id" is not needed because the combined index works for it as well.
+Meteor.users._ensureIndex({'roles._id': 1, 'roles.partition': 1});
 Meteor.users._ensureIndex({'roles.partition': 1});
 
 /*
@@ -28,10 +25,36 @@ Meteor.publish('_roles', function () {
 
 _.extend(Roles, {
   /**
+   * @method _isNewRole
+   * @param {Object} role `Meteor.roles` document.
+   * @return {Boolean} Returns `true` if the `role` is in the new format.
+   *                   If it is ambiguous or it is not, returns `false`.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _isNewRole: function (role) {
+    return !_.has(role, 'name') && _.has(role, 'children');
+  },
+
+  /**
+   * @method _isOldRole
+   * @param {Object} role `Meteor.roles` document.
+   * @return {Boolean} Returns `true` if the `role` is in the old format.
+   *                   If it is ambiguous or it is not, returns `false`.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _isOldRole: function (role) {
+    return _.has(role, 'name') && !_.has(role, 'children');
+  },
+
+  /**
    * @method _isNewField
    * @param {Array} roles `Meteor.users` document `roles` field.
    * @return {Boolean} Returns `true` if the `roles` field is in the new format.
-   *                    If it is ambiguous or it is not, returns `false`.
+   *                   If it is ambiguous or it is not, returns `false`.
    * @for Roles
    * @private
    * @static
@@ -44,13 +67,46 @@ _.extend(Roles, {
    * @method _isOldField
    * @param {Array} roles `Meteor.users` document `roles` field.
    * @return {Boolean} Returns `true` if the `roles` field is in the old format.
-   *                    If it is ambiguous or it is not, returns `false`.
+   *                   If it is ambiguous or it is not, returns `false`.
    * @for Roles
    * @private
    * @static
    */
   _isOldField: function (roles) {
     return (_.isArray(roles) && _.isString(roles[0])) || (_.isObject(roles) && !_.isArray(roles));
+  },
+
+  /**
+   * @method _convertToNewRole
+   * @param {Object} oldRole `Meteor.roles` document.
+   * @return {Object} Converted `role` to the new format.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _convertToNewRole: function (oldRole) {
+    if (!_.isString(oldRole.name)) throw new Error("Role name '" + oldRole.name + "' is not a string.");
+
+    return {
+      _id: oldRole.name,
+      children: []
+    };
+  },
+
+  /**
+   * @method _convertToOldRole
+   * @param {Object} newRole `Meteor.roles` document.
+   * @return {Object} Converted `role` to the old format.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _convertToOldRole: function (newRole) {
+    if (!_.isString(newRole._id)) throw new Error("Role name '" + newRole._id + "' is not a string.");
+
+    return {
+      name: newRole._id
+    };
   },
 
   /**
@@ -68,7 +124,7 @@ _.extend(Roles, {
         if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
 
         roles.push({
-          role: role,
+          _id: role,
           partition: null,
           assigned: true
         })
@@ -88,7 +144,7 @@ _.extend(Roles, {
           if (!_.isString(role)) throw new Error("Role '" + role + "' is not a string.");
 
           roles.push({
-            role: role,
+            _id: role,
             partition: group,
             assigned: true
           })
@@ -124,7 +180,7 @@ _.extend(Roles, {
       // what were valid values in 1.0. So no group names starting with $ and no subroles.
 
       if (userRole.partition) {
-        if (!usingGroups) throw new Error("Role '" + userRole.role + "' with partition '" + userRole.partition + "' without enabled groups.");
+        if (!usingGroups) throw new Error("Role '" + userRole._id + "' with partition '" + userRole.partition + "' without enabled groups.");
 
         // escape
         var partition = userRole.partition.replace(/\./g, '_');
@@ -132,15 +188,15 @@ _.extend(Roles, {
         if (partition[0] === '$') throw new Error("Group name '" + partition + "' start with $.");
 
         roles[partition] = roles[partition] || [];
-        roles[partition].push(userRole.role);
+        roles[partition].push(userRole._id);
       }
       else {
         if (usingGroups) {
           roles.__global_roles__ = roles.__global_roles__ || [];
-          roles.__global_roles__.push(userRole.role);
+          roles.__global_roles__.push(userRole._id);
         }
         else {
-          roles.push(userRole.role);
+          roles.push(userRole._id);
         }
       }
     });
@@ -166,18 +222,37 @@ _.extend(Roles, {
   },
 
   /**
-   * Migrates `Meteor.users` and `Meteor.roles` to the new format.
-   *
-   * @method _forwardMigrate
-   * @param {Function} updateUser Function which updates the user object. Default `_defaultUpdateUser`.
+   * @method _defaultUpdateRole
+   * @param {Object} oldRole Old `Meteor.roles` document.
+   * @param {Object} newRole New `Meteor.roles` document.
    * @for Roles
    * @private
    * @static
    */
-  _forwardMigrate: function (updateUser) {
-    updateUser = updateUser || Roles._defaultUpdateUser;
+  _defaultUpdateRole: function (oldRole, newRole) {
+    Meteor.roles.remove(oldRole._id);
+    Meteor.roles.insert(newRole);
+  },
 
-    Meteor.roles.update({children: {$exists: false}}, {$set: {children: []}}, {multi: true});
+  /**
+   * Migrates `Meteor.users` and `Meteor.roles` to the new format.
+   *
+   * @method _forwardMigrate
+   * @param {Function} updateUser Function which updates the user object. Default `_defaultUpdateUser`.
+   * @param {Function} updateRole Function which updates the role object. Default `_defaultUpdateRole`.
+   * @for Roles
+   * @private
+   * @static
+   */
+  _forwardMigrate: function (updateUser, updateRole) {
+    updateUser = updateUser || Roles._defaultUpdateUser;
+    updateRole = updateRole || Roles._defaultUpdateRole;
+
+    Meteor.roles.find().forEach(function (role, index, cursor) {
+      if (!Roles._isNewRole(role)) {
+        updateRole(role, Roles._convertToNewRole(role));
+      }
+    });
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isNewField(user.roles)) {
@@ -195,15 +270,21 @@ _.extend(Roles, {
    *
    * @method _backwardMigrate
    * @param {Function} updateUser Function which updates the user object. Default `_defaultUpdateUser`.
+   * @param {Function} updateRole Function which updates the role object. Default `_defaultUpdateRole`.
    * @param {Boolean} usingGroups Should we use groups or not.
    * @for Roles
    * @private
    * @static
    */
-  _backwardMigrate: function (updateUser, usingGroups) {
+  _backwardMigrate: function (updateUser, updateRole, usingGroups) {
     updateUser = updateUser || Roles._defaultUpdateUser;
+    updateRole = updateRole || Roles._defaultUpdateRole;
 
-    Meteor.roles.update({}, {$unset: {children: ''}}, {multi: true});
+    Meteor.roles.find().forEach(function (role, index, cursor) {
+      if (!Roles._isOldRole(role)) {
+        updateRole(role, Roles._convertToOldRole(role));
+      }
+    });
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isOldField(user.roles)) {

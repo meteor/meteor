@@ -9,11 +9,11 @@
     'eve': {
       _id: 'eve',
       roles: [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }, {
-        role: 'editor',
+        _id: 'editor',
         partition: null,
         assigned: true
       }]
@@ -21,11 +21,11 @@
     'bob': {
       _id: 'bob',
       roles: [{
-        role: 'user',
+        _id: 'user',
         partition: 'group1',
         assigned: true
       }, {
-        role: 'editor',
+        _id: 'editor',
         partition: 'group2',
         assigned: true
       }]
@@ -33,11 +33,11 @@
     'joe': {
       _id: 'joe',
       roles: [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }, {
-        role: 'editor',
+        _id: 'editor',
         partition: 'group1',
         assigned: true
       }]

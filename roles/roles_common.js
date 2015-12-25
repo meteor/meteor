@@ -5,22 +5,20 @@
  *
  * It uses `roles` field to `Meteor.users` documents which is an array of subdocuments with the following
  * schema:
- *  - `role`: role name
+ *  - `_id`: role name
  *  - `partition`: partition name
  *  - `assigned`: boolean, if the role was manually assigned (set), or was automatically inferred (eg., subroles)
  *
  * Roles themselves are accessible throgh `Meteor.roles` collection and documents consist of:
- *  - `_id`
- *  - `name`: role name
+ *  - `_id`: role name
  *  - `children`: list of subdocuments:
  *    - `_id`
- *    - `name`
  *
- * Children list elements are subdocuments so that they can be easier extended in the future.
+ * Children list elements are subdocuments so that they can be easier extended in the future or by plugins.
  *
  * Roles can have multiple parents and can be children (subroles) of multiple roles.
  *
- * Example: `{_id: "123", name: "admin"}`
+ * Example: `{_id: "admin", children: [{_id: "editor"}]}`
  *
  * @module Roles
  */
@@ -72,7 +70,7 @@ _.extend(Roles, {
     });
 
     try {
-      return Meteor.roles.insert({name: roleName, children: []});
+      return Meteor.roles.insert({_id: roleName, children: []});
     } catch (e) {
       // (from Meteor accounts-base package, insertUserDoc func)
       // XXX string parsing sucks, maybe
@@ -80,7 +78,7 @@ _.extend(Roles, {
       if (e.name !== 'MongoError') throw e;
       match = e.err.match(/E11000 duplicate key error index: ([^ ]+)/);
       if (!match) throw e;
-      if (match[1].indexOf('$name') !== -1) {
+      if (match[1].indexOf('$_id') !== -1) {
         if (options.unlessExists) return null;
         throw new Error("Role '" + roleName + "' already exists.");
       }
@@ -107,7 +105,7 @@ _.extend(Roles, {
     Meteor.roles.update({}, {
       $pull: {
         children: {
-          name: roleName
+          _id: roleName
         }
       }
     }, {multi: true});
@@ -137,7 +135,7 @@ _.extend(Roles, {
     });
 
     // remove the role itself
-    Meteor.roles.remove({name: roleName});
+    Meteor.roles.remove({_id: roleName});
   },
 
   /**
@@ -163,8 +161,8 @@ _.extend(Roles, {
     Roles._checkRoleName(roleName);
     Roles._checkRoleName(parentName);
 
-    // query to get role's _id, name, and children
-    role = Meteor.roles.findOne({name: roleName});
+    // query to get role's children
+    role = Meteor.roles.findOne({_id: roleName});
 
     if (!role) {
       throw new Error("Role '" + roleName + "' does not exist.");
@@ -172,7 +170,7 @@ _.extend(Roles, {
 
     // detect cycles
     alreadyCheckedRoles = [];
-    rolesToCheck = _.pluck(role.children, 'name');
+    rolesToCheck = _.pluck(role.children, '_id');
     while (rolesToCheck.length) {
       checkRoleName = rolesToCheck.pop();
       if (checkRoleName === parentName) {
@@ -180,24 +178,23 @@ _.extend(Roles, {
       }
       alreadyCheckedRoles.push(checkRoleName);
 
-      checkRole = Meteor.roles.findOne({name: checkRoleName});
+      checkRole = Meteor.roles.findOne({_id: checkRoleName});
 
       // This should not happen, but this is a problem to address at some other time.
       if (!checkRole) continue;
 
-      rolesToCheck = _.union(rolesToCheck, _.difference(_.pluck(checkRole.children, 'name'), alreadyCheckedRoles));
+      rolesToCheck = _.union(rolesToCheck, _.difference(_.pluck(checkRole.children, '_id'), alreadyCheckedRoles));
     }
 
     count = Meteor.roles.update({
-      name: parentName,
+      _id: parentName,
       'children._id': {
         $ne: role._id
       }
     }, {
       $addToSet: {
         children: {
-          _id: role._id,
-          name: role.name
+          _id: role._id
         }
       }
     });
@@ -248,16 +245,16 @@ _.extend(Roles, {
     Roles._checkRoleName(roleName);
     Roles._checkRoleName(parentName);
 
-    // to check for role existence
-    // (_id would not really be needed, but we are trying to match addRoleParent)
-    role = Meteor.roles.findOne({name: roleName}, {fields: {_id: 1}});
+    // check for role existence
+    // this would not really be needed, but we are trying to match addRoleParent
+    role = Meteor.roles.findOne({_id: roleName}, {fields: {_id: 1}});
 
     if (!role) {
       throw new Error("Role '" + roleName + "' does not exist.");
     }
 
     count = Meteor.roles.update({
-      name: parentName
+      _id: parentName
     }, {
       $pull: {
         children: {
@@ -452,7 +449,7 @@ _.extend(Roles, {
 
     if (!id) return [];
 
-    role = Meteor.roles.findOne({name: roleName}, {fields: {children: 1}});
+    role = Meteor.roles.findOne({_id: roleName}, {fields: {children: 1}});
 
     if (!role) {
       if (options.ifExists) {
@@ -469,7 +466,7 @@ _.extend(Roles, {
       roles: {
         $not: {
           $elemMatch: {
-            role: roleName,
+            _id: roleName,
             partition: options.partition
           }
         }
@@ -478,7 +475,7 @@ _.extend(Roles, {
     }, {
       $addToSet: {
         roles: {
-          role: roleName,
+          _id: roleName,
           partition: options.partition,
           // we want to make sure it is a boolean value
           assigned: !!options._assigned
@@ -494,7 +491,7 @@ _.extend(Roles, {
           _id: id,
           roles: {
             $elemMatch: {
-              role: roleName,
+              _id: roleName,
               partition: options.partition
             }
           }
@@ -511,7 +508,7 @@ _.extend(Roles, {
           _id: id,
           roles: {
             $elemMatch: {
-              role: roleName,
+              _id: roleName,
               partition: options.partition
             }
           }
@@ -525,13 +522,13 @@ _.extend(Roles, {
     }
 
     setRoles = [{
-      role: roleName,
+      _id: roleName,
       partition: options.partition
     }];
 
     _.each(role.children, function (child) {
       // subroles are set as unassigned, but only if they do not already exist
-      setRoles = setRoles.concat(Roles._addUserToRole(user, child.name, _.extend({}, options, {_assigned: null})));
+      setRoles = setRoles.concat(Roles._addUserToRole(user, child._id, _.extend({}, options, {_assigned: null})));
     });
 
     return setRoles;
@@ -631,7 +628,7 @@ _.extend(Roles, {
     update = {
       $pull: {
         roles: {
-          role: roleName,
+          _id: roleName,
           partition: options.partition
         }
       }
@@ -647,14 +644,14 @@ _.extend(Roles, {
     // we try to remove the role in every case, whether the role really exists or not
     Meteor.users.update(id, update);
 
-    role = Meteor.roles.findOne({name: roleName}, {fields: {children: 1}});
+    role = Meteor.roles.findOne({_id: roleName}, {fields: {children: 1}});
 
     // role does not exist, we do not anything more
     if (!role) return;
 
     _.each(role.children, function (child) {
       // if a child role has been assigned explicitly, we do not remove it
-      Roles._removeUserFromRole(user, child.name, _.extend({}, options, {_assigned: false}));
+      Roles._removeUserFromRole(user, child._id, _.extend({}, options, {_assigned: false}));
     });
   },
 
@@ -684,7 +681,7 @@ _.extend(Roles, {
 
     setRoles = [];
     _.each(roles, function (role) {
-      setRoles = setRoles.concat(Roles._addUserToRole(user, role.role, {
+      setRoles = setRoles.concat(Roles._addUserToRole(user, role._id, {
         partition: role.partition,
         _assigned: role.assigned, // this is true
         ifExists: true
@@ -696,7 +693,7 @@ _.extend(Roles, {
       Meteor.users.update(user._id, {
         $pull: {
           roles: {
-            $nor: _.map(setRoles, function (role) {return _.pick(role, 'role', 'partition')})
+            $nor: _.map(setRoles, function (role) {return _.pick(role, '_id', 'partition')})
           }
         }
       });
@@ -783,7 +780,7 @@ _.extend(Roles, {
     if (options.anyPartition) {
       query = {
         _id: id,
-        'roles.role': {$in: roles}
+        'roles._id': {$in: roles}
       };
     }
     else {
@@ -792,14 +789,14 @@ _.extend(Roles, {
         $or: [{
           roles: {
             $elemMatch: {
-              role: {$in: roles},
+              _id: {$in: roles},
               partition: options.partition
             }
           }
         }, {
           roles: {
             $elemMatch: {
-              role: {$in: roles},
+              _id: {$in: roles},
               partition: null
             }
           }
@@ -863,7 +860,7 @@ _.extend(Roles, {
       return roles;
     }
 
-    return _.uniq(_.pluck(roles, 'role'));
+    return _.uniq(_.pluck(roles, '_id'));
   },
 
   /**
@@ -876,7 +873,7 @@ _.extend(Roles, {
    * @static
    */
   getAllRoles: function (queryOptions) {
-    queryOptions = queryOptions || {sort: {name: 1}};
+    queryOptions = queryOptions || {sort: {_id: 1}};
 
     return Meteor.roles.find({}, queryOptions);
   },
@@ -927,7 +924,7 @@ _.extend(Roles, {
 
     if (options.anyPartition) {
       query = {
-        'roles.role': {$in: roles}
+        'roles._id': {$in: roles}
       };
     }
     else {
@@ -935,14 +932,14 @@ _.extend(Roles, {
         $or: [{
           roles: {
             $elemMatch: {
-              role: {$in: roles},
+              _id: {$in: roles},
               partition: options.partition
             }
           }
         }, {
           roles: {
             $elemMatch: {
-              role: {$in: roles},
+              _id: {$in: roles},
               partition: null
             }
           }
@@ -993,7 +990,7 @@ _.extend(Roles, {
     _.each(user.roles || [], function (userRole) {
       // == used on purpose.
       if (userRole.partition == null) return;
-      if (roles && !_.contains(roles, userRole.role)) return;
+      if (roles && !_.contains(roles, userRole._id)) return;
 
       partitions.push(userRole.partition);
     });
@@ -1037,7 +1034,7 @@ _.extend(Roles, {
    */
   _roleMatcher: function (roleName) {
     return function (userRole) {
-      return userRole.role === roleName;
+      return userRole._id === roleName;
     };
   },
 
@@ -1053,8 +1050,8 @@ _.extend(Roles, {
   _roleAndPartitionMatcher: function (roleName, partition) {
     return function (userRole) {
       // == used on purpose in "userRole.partition == null"
-      return (userRole.role === roleName && userRole.partition === partition) ||
-        (userRole.role === roleName && (!_.has(userRole, 'partition') || userRole.partition == null));
+      return (userRole._id === roleName && userRole.partition === partition) ||
+        (userRole._id === roleName && (!_.has(userRole, 'partition') || userRole.partition == null));
     };
   },
 

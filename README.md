@@ -173,6 +173,7 @@ meteor shell
 Here is the list of important changes between meteor-roles 1.0 and 2.0 to consider when migrating
 to 2.0:
 
+* New schema for `roles` field and `Meteor.roles` collection.
 * Groups were renamed to partitions.
 * Groups/partitions are always available, if you do not specify a partition, role is seen as a global role.
 * `GLOBAL_GROUP` is deprecated and should not be used anymore (just do not specify a partition, or use `null`).

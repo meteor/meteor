@@ -84,17 +84,17 @@
       reset();
 
       var role1Id = Roles.createRole('test1');
-      test.equal(Meteor.roles.findOne().name, 'test1');
-      test.equal(Meteor.roles.findOne(role1Id).name, 'test1');
+      test.equal(Meteor.roles.findOne()._id, 'test1');
+      test.equal(Meteor.roles.findOne(role1Id)._id, 'test1');
 
       var role2Id = Roles.createRole('test2');
-      test.equal(Meteor.roles.findOne({'name':'test2'}).name, 'test2');
-      test.equal(Meteor.roles.findOne(role2Id).name, 'test2');
+      test.equal(Meteor.roles.findOne({_id: 'test2'})._id, 'test2');
+      test.equal(Meteor.roles.findOne(role2Id)._id, 'test2');
 
       test.equal(Meteor.roles.find().count(), 2);
 
       Roles.deleteRole('test1');
-      test.equal(typeof Meteor.roles.findOne({'name':'test1'}), 'undefined');
+      test.equal(typeof Meteor.roles.findOne({_id: 'test1'}), 'undefined');
 
       Roles.deleteRole('test2');
       test.equal(typeof Meteor.roles.findOne(), 'undefined');
@@ -788,11 +788,11 @@
 
       // compare roles, sorted alphabetically
       var expected = _.clone(roles),
-          actual = _.pluck(Roles.getAllRoles().fetch(), 'name');
+          actual = _.pluck(Roles.getAllRoles().fetch(), '_id');
 
       test.equal(actual, expected);
 
-      test.equal(_.pluck(Roles.getAllRoles({sort: {name: -1}}).fetch(), 'name'), expected.reverse());
+      test.equal(_.pluck(Roles.getAllRoles({sort: {_id: -1}}).fetch(), '_id'), expected.reverse());
     });
 
   Tinytest.add(
@@ -832,11 +832,11 @@
       test.equal(Roles.getRolesForUser(userObj), ['admin', 'user']);
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }]);
@@ -876,30 +876,30 @@
       test.equal(Roles.getRolesForUser(userObj), []);
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }]);
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2'}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition2',
         assigned: true
       }]);
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition2',
         assigned: true
       }]);
@@ -908,20 +908,20 @@
       Roles.addRoleParent('PERMISSION', 'user');
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'PERMISSION',
+        _id: 'PERMISSION',
         partition: 'partition1',
         assigned: false
       }]);
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2'}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition2',
         assigned: true
       }]);
@@ -929,35 +929,35 @@
       test.equal(Roles.getRolesForUser(userId, {partition: 'partition2'}), ['admin']);
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition2',
         assigned: true
       }, {
-        role: 'PERMISSION',
+        _id: 'PERMISSION',
         partition: 'partition1',
         assigned: false
       }]);
       test.equal(Roles.getRolesForUser(userId, {anyPartition: true}), ['admin', 'user', 'PERMISSION']);
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1', onlyAssigned: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }]);
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition2', onlyAssigned: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition2',
         assigned: true
       }]);
@@ -965,15 +965,15 @@
       test.equal(Roles.getRolesForUser(userId, {partition: 'partition2', onlyAssigned: true}), ['admin']);
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, anyPartition: true, onlyAssigned: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'admin',
+        _id: 'admin',
         partition: 'partition2',
         assigned: true
       }]);
@@ -1358,11 +1358,11 @@
 
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: [{
-          role: 'admin',
+          _id: 'admin',
           partition: null,
           assigned: true
         }, {
-          role: 'editor',
+          _id: 'editor',
           partition: null,
           assigned: true
         }]
@@ -1372,26 +1372,26 @@
       });
       test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
         roles: [{
-          role: 'user',
+          _id: 'user',
           partition: null,
           assigned: true
         }]
       });
 
-      test.equal(Meteor.roles.findOne({name: 'admin'}, {fields: {_id: 0}}), {
-        name: 'admin',
+      test.equal(Meteor.roles.findOne({_id: 'admin'}), {
+        _id: 'admin',
         children: []
       });
-      test.equal(Meteor.roles.findOne({name: 'editor'}, {fields: {_id: 0}}), {
-        name: 'editor',
+      test.equal(Meteor.roles.findOne({_id: 'editor'}), {
+        _id: 'editor',
         children: []
       });
-      test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
-        name: 'user',
+      test.equal(Meteor.roles.findOne({_id: 'user'}), {
+        _id: 'user',
         children: []
       });
 
-      Roles._backwardMigrate(null, false);
+      Roles._backwardMigrate(null, null, false);
 
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: ['admin', 'editor']
@@ -1431,15 +1431,15 @@
 
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: [{
-          role: 'admin',
+          _id: 'admin',
           partition: null,
           assigned: true
         }, {
-          role: 'editor',
+          _id: 'editor',
           partition: null,
           assigned: true
         }, {
-          role: 'user',
+          _id: 'user',
           partition: 'foo',
           assigned: true
         }]
@@ -1449,30 +1449,30 @@
       });
       test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
         roles: [{
-          role: 'user',
+          _id: 'user',
           partition: null,
           assigned: true
         }, {
-          role: 'user',
+          _id: 'user',
           partition: 'foo',
           assigned: true
         }]
       });
 
-      test.equal(Meteor.roles.findOne({name: 'admin'}, {fields: {_id: 0}}), {
-        name: 'admin',
+      test.equal(Meteor.roles.findOne({_id: 'admin'}), {
+        _id: 'admin',
         children: []
       });
-      test.equal(Meteor.roles.findOne({name: 'editor'}, {fields: {_id: 0}}), {
-        name: 'editor',
+      test.equal(Meteor.roles.findOne({_id: 'editor'}), {
+        _id: 'editor',
         children: []
       });
-      test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
-        name: 'user',
+      test.equal(Meteor.roles.findOne({_id: 'user'}), {
+        _id: 'user',
         children: []
       });
 
-      Roles._backwardMigrate(null, true);
+      Roles._backwardMigrate(null, null, true);
 
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: {
@@ -1521,35 +1521,35 @@
       Roles.addUsersToRoles(users.eve, ['user'], 'partition2');
 
       var correctRoles = [{
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition1',
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition1',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition1',
         assigned: false
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition2',
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition2',
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition2',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition2',
         assigned: false
       }];
@@ -1561,11 +1561,11 @@
       Meteor.users.update(users.eve, {$pull: {roles: {assigned: false}}});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition2',
         assigned: true
       }]);
@@ -1576,39 +1576,39 @@
 
       // add an extra role, faking that it is automatically assigned
       // _assureConsistency should remove this extra role
-      Meteor.users.update(users.eve, {$push: {roles: {role: 'DELETE_PERMISSION', partition: null, assigned: false}}});
+      Meteor.users.update(users.eve, {$push: {roles: {_id: 'DELETE_PERMISSION', partition: null, assigned: false}}});
 
       Roles._assureConsistency(users.eve);
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), correctRoles);
 
       // remove a role, _assureConsistency should remove it from the user
-      Meteor.roles.remove({name: 'VIEW_PERMISSION'});
+      Meteor.roles.remove({_id: 'VIEW_PERMISSION'});
 
       Roles._assureConsistency(users.eve);
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: 'partition1',
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition1',
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition1',
         assigned: false
       }, {
-        role: 'user',
+        _id: 'user',
         partition: 'partition2',
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition2',
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition2',
         assigned: false
       }]);
@@ -1625,7 +1625,7 @@
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }]);
@@ -1634,7 +1634,7 @@
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: false});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: false
       }]);
@@ -1647,7 +1647,7 @@
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: false
       }]);
@@ -1656,7 +1656,7 @@
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: true});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }]);
@@ -1665,7 +1665,7 @@
       Roles._addUserToRole(users.eve, 'admin', {partition: null, ifExists: false, _assigned: null});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }]);
@@ -1681,7 +1681,7 @@
       Roles.addUsersToRoles(users.eve, 'admin');
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }]);
@@ -1690,7 +1690,7 @@
       Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: false});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }]);
@@ -1703,7 +1703,7 @@
       Roles.addUsersToRoles(users.eve, 'admin');
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }]);
@@ -1716,7 +1716,7 @@
       Roles.addUsersToRoles(users.eve, 'admin', {_assigned: false});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: false
       }]);
@@ -1725,7 +1725,7 @@
       Roles._removeUserFromRole(users.eve, 'admin', {partition: null, _assigned: true});
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: false
       }]);
@@ -1757,19 +1757,19 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: false
       }]);
@@ -1779,19 +1779,19 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -1801,7 +1801,7 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'VIEW_PERMISSION'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -1836,31 +1836,31 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition',
         assigned: true
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition',
         assigned: false
       }]);
@@ -1873,39 +1873,39 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition',
         assigned: true
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: 'partition',
         assigned: false
       }]);
@@ -1916,47 +1916,47 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition',
         assigned: true
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }, {
-        role: 'DELETE_PERMISSION',
+        _id: 'DELETE_PERMISSION',
         partition: null,
         assigned: false
       }]);
@@ -1967,51 +1967,51 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition',
         assigned: true
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'admin',
+        _id: 'admin',
         partition: null,
         assigned: true
       }, {
-        role: 'DELETE_PERMISSION',
+        _id: 'DELETE_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'DELETE_PERMISSION',
+        _id: 'DELETE_PERMISSION',
         partition: 'partition',
         assigned: false
       }]);
@@ -2022,47 +2022,47 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: null,
         assigned: false
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'ALL_PERMISSIONS',
+        _id: 'ALL_PERMISSIONS',
         partition: 'partition',
         assigned: true
       }, {
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'VIEW_PERMISSION',
+        _id: 'VIEW_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'MODERATE_PERMISSION',
+        _id: 'MODERATE_PERMISSION',
         partition: 'partition',
         assigned: false
       }, {
-        role: 'DELETE_PERMISSION',
+        _id: 'DELETE_PERMISSION',
         partition: null,
         assigned: false
       }, {
-        role: 'DELETE_PERMISSION',
+        _id: 'DELETE_PERMISSION',
         partition: 'partition',
         assigned: false
       }]);
@@ -2076,7 +2076,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'user',
+        _id: 'user',
         partition: null,
         assigned: true
       }]);
@@ -2113,31 +2113,31 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'role1',
+        _id: 'role1',
         partition: null,
         assigned: true
       }, {
-        role: 'role2',
+        _id: 'role2',
         partition: null,
         assigned: true
       }, {
-        role: 'COMMON_PERMISSION_1',
+        _id: 'COMMON_PERMISSION_1',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_2',
+        _id: 'COMMON_PERMISSION_2',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_3',
+        _id: 'COMMON_PERMISSION_3',
         partition: null,
         assigned: false
       }, {
-        role: 'EXTRA_PERMISSION_ROLE_1',
+        _id: 'EXTRA_PERMISSION_ROLE_1',
         partition: null,
         assigned: false
       }, {
-        role: 'EXTRA_PERMISSION_ROLE_2',
+        _id: 'EXTRA_PERMISSION_ROLE_2',
         partition: null,
         assigned: false
       }]);
@@ -2149,23 +2149,23 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'role1',
+        _id: 'role1',
         partition: null,
         assigned: true
       }, {
-        role: 'COMMON_PERMISSION_1',
+        _id: 'COMMON_PERMISSION_1',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_2',
+        _id: 'COMMON_PERMISSION_2',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_3',
+        _id: 'COMMON_PERMISSION_3',
         partition: null,
         assigned: false
       }, {
-        role: 'EXTRA_PERMISSION_ROLE_1',
+        _id: 'EXTRA_PERMISSION_ROLE_1',
         partition: null,
         assigned: false
       }]);
@@ -2177,31 +2177,31 @@
       test.isTrue(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'role1',
+        _id: 'role1',
         partition: null,
         assigned: true
       }, {
-        role: 'role2',
+        _id: 'role2',
         partition: null,
         assigned: true
       }, {
-        role: 'COMMON_PERMISSION_1',
+        _id: 'COMMON_PERMISSION_1',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_2',
+        _id: 'COMMON_PERMISSION_2',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_3',
+        _id: 'COMMON_PERMISSION_3',
         partition: null,
         assigned: false
       }, {
-        role: 'EXTRA_PERMISSION_ROLE_1',
+        _id: 'EXTRA_PERMISSION_ROLE_1',
         partition: null,
         assigned: false
       }, {
-        role: 'EXTRA_PERMISSION_ROLE_2',
+        _id: 'EXTRA_PERMISSION_ROLE_2',
         partition: null,
         assigned: false
       }]);
@@ -2213,23 +2213,23 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'EXTRA_PERMISSION_ROLE_2'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'role1',
+        _id: 'role1',
         partition: null,
         assigned: true
       }, {
-        role: 'COMMON_PERMISSION_1',
+        _id: 'COMMON_PERMISSION_1',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_2',
+        _id: 'COMMON_PERMISSION_2',
         partition: null,
         assigned: false
       }, {
-        role: 'COMMON_PERMISSION_3',
+        _id: 'COMMON_PERMISSION_3',
         partition: null,
         assigned: false
       }, {
-        role: 'EXTRA_PERMISSION_ROLE_1',
+        _id: 'EXTRA_PERMISSION_ROLE_1',
         partition: null,
         assigned: false
       }]);
@@ -2249,7 +2249,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -2260,7 +2260,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -2282,7 +2282,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -2293,7 +2293,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -2316,7 +2316,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -2327,7 +2327,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
@@ -2338,7 +2338,7 @@
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
 
       itemsEqual(test, Roles.getRolesForUser(users.eve, {anyPartition: true, fullObjects: true}), [{
-        role: 'EDIT_PERMISSION',
+        _id: 'EDIT_PERMISSION',
         partition: null,
         assigned: true
       }]);
