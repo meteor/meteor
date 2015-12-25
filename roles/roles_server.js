@@ -55,7 +55,7 @@ _.extend(Roles, {
 
   /**
    * @method _convertToNewField
-   * @param {Array} roles `Meteor.users` document `roles` field in the old format.
+   * @param {Array} oldRoles `Meteor.users` document `roles` field in the old format.
    * @return {Array} Converted `roles` to the new format.
    * @for Roles
    * @private
@@ -100,7 +100,8 @@ _.extend(Roles, {
 
   /**
    * @method _convertToOldField
-   * @param {Array} roles `Meteor.users` document `roles` field in the new format.
+   * @param {Array} newRoles `Meteor.users` document `roles` field in the new format.
+   * @param {Boolean} usingGroups Should we use groups or not.
    * @return {Array} Converted `roles` to the old format.
    * @for Roles
    * @private
@@ -149,7 +150,7 @@ _.extend(Roles, {
   /**
    * @method _defaultUpdateUser
    * @param {Object} user `Meteor.users` document.
-   * @return {Array|Object} roles Value to which user's `roles` field should be set.
+   * @param {Array|Object} roles Value to which user's `roles` field should be set.
    * @for Roles
    * @private
    * @static
