@@ -2,7 +2,7 @@ var CS = ConstraintSolver;
 var PV = PackageVersion;
 
 var _lockedVersionCache = {};
-var __lockDependenices = {};
+var _dependenicesCache = {};
 
 var pvkey = function (pkg, version) {
   return pkg + " " + version;
@@ -12,12 +12,15 @@ var pvkey = function (pkg, version) {
 CS.CatalogCache = function () {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  if(_.isUndefined(__lockDependenices))
+  var enabledFastSolver = process.env['METEOR_FAST_SOLVER'] == true;
+  if(enabledFastSolver)
+    console.log("METEOR FAST SOLVER IS ENABLED. THIS IS DESIGNED FOR ONLY DEVELOPMENT MODE. IF YOU CHANGE PACKAGES THEN YOU WILL NEED TO RESTART METEOR MANUALLY.");
+  if(_.isUndefined(_dependenicesCache) || enabledFastSolver) //fix this if change package
   {
-    __lockDependenices = {};
+    _dependenicesCache = {};
     this._dependencies = {};
   }else{
-    this._dependencies = __lockDependenices;
+    this._dependencies = _dependenicesCache;
   }
   // A map derived from the keys of _dependencies, for ease of iteration.
   // "foo" -> ["1.0.0", ...]
@@ -49,7 +52,7 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
 
   var depsByPackage = {};
   this._dependencies[key] = depsByPackage;
-  __lockDependenices[key] = depsByPackage;
+  _dependenicesCache[key] = depsByPackage;
   _.each(deps, function (d) {
     var p2 = d.packageConstraint.package;
     if (_.has(depsByPackage, p2)) {
