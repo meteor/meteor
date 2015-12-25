@@ -3,21 +3,27 @@ var PV = PackageVersion;
 
 var _versionCache = {};
 var _dependenicesCache = {};
+var _previousDepsCache = [];
+var _depCacheCount = [];
 
 var pvkey = function (pkg, version) {
   return pkg + " " + version;
 };
 
 // Stores the Dependencies for each known PackageAndVersion.
-CS.CatalogCache = function () {
+CS.CatalogCache = function (deps) {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  var enabledFastSolver = process.env['METEOR_FAST_SOLVER'] == true;
-  if(enabledFastSolver)
-    console.log("METEOR FAST SOLVER IS ENABLED. THIS IS DESIGNED FOR ONLY DEVELOPMENT MODE. IF YOU CHANGE PACKAGES THEN YOU WILL NEED TO RESTART METEOR MANUALLY.");
-  if(_.isUndefined(_dependenicesCache) || enabledFastSolver) //fix this if change package
+  if(_.isUndefined(_dependenicesCache) || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0 || _previousDepsCache.length === 0 || _depCacheCount < 1)
   {
+    if(_previousDepsCache.length === 0 || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0)
+    {
+      _depCacheCount = 0;
+    }else{
+      _depCacheCount++;
+    }
     _dependenicesCache = {};
+    _previousDepsCache = deps;
     this._dependencies = {};
   }else{
     this._dependencies = _dependenicesCache;
@@ -40,27 +46,31 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
   check(deps, [CS.Dependency]);
 
   var key = pvkey(p, v);
-  if (_.has(this._dependencies, key)) {
-    throw new Error("Already have an entry for " + key);
-  }
 
-  if (! _.has(this._versions, p)) {
-    this._versions[p] = [];
-  }
-  this._versions[p].push(v);
-  this._versions[p].sorted = false;
-
-  var depsByPackage = {};
-  this._dependencies[key] = depsByPackage;
-  _dependenicesCache[key] = depsByPackage;
-  _.each(deps, function (d) {
-    var p2 = d.packageConstraint.package;
-    if (_.has(depsByPackage, p2)) {
-      throw new Error("Can't have two dependencies on " + p2 +
-                      " in " + key);
+  if(!_.has(_dependenicesCache, key))
+  {
+    if (_.has(this._dependencies, key)) {
+      throw new Error("Already have an entry for " + key);
     }
-    depsByPackage[p2] = d;
-  });
+
+    if (! _.has(this._versions, p)) {
+      this._versions[p] = [];
+    }
+    this._versions[p].push(v);
+    this._versions[p].sorted = false;
+
+    var depsByPackage = {};
+    this._dependencies[key] = depsByPackage;
+    _dependenicesCache[key] = depsByPackage;
+    _.each(deps, function (d) {
+      var p2 = d.packageConstraint.package;
+      if (_.has(depsByPackage, p2)) {
+        throw new Error("Can't have two dependencies on " + p2 +
+            " in " + key);
+      }
+      depsByPackage[p2] = d;
+    });
+  }
 };
 
 // Returns the dependencies of a (package, version), stored in a map.
