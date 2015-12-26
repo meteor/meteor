@@ -131,7 +131,7 @@ var runVelocity = function (url) {
         var browserProcess = child_process.execFile(
           '/bin/bash',
           ['-c',
-          ("exec " + phantomjs.path + " " + files.convertToOSPath(phantomScriptPath))
+          ("exec " + (process.env.PHANTOMJS_BIN || phantomjs.path) + " " + files.convertToOSPath(phantomScriptPath))
           ]
         );
         var prependPhantomJSOutput = function (data) {
