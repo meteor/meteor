@@ -14,20 +14,27 @@ var pvkey = function (pkg, version) {
 CS.CatalogCache = function (deps) {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  if(_.isUndefined(_dependenicesCache) || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0 || _previousDepsCache.length === 0 || _depCacheCount < 1)
+  if(_.isUndefined(deps))
   {
-    if(_previousDepsCache.length === 0 || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0)
-    {
-      _depCacheCount = 0;
-    }else{
-      _depCacheCount++;
-    }
     _dependenicesCache = {};
-    _previousDepsCache = deps;
     this._dependencies = {};
   }else{
-    this._dependencies = _dependenicesCache;
+    if(_.isUndefined(_dependenicesCache) || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0 || _previousDepsCache.length === 0 || _depCacheCount < 1)
+    {
+      if(_previousDepsCache.length === 0 || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0)
+      {
+        _depCacheCount = 0;
+      }else{
+        _depCacheCount++;
+      }
+      _dependenicesCache = {};
+      _previousDepsCache = deps;
+      this._dependencies = {};
+    }else{
+      this._dependencies = _dependenicesCache;
+    }
   }
+
   // A map derived from the keys of _dependencies, for ease of iteration.
   // "foo" -> ["1.0.0", ...]
   // Versions in the array are unique but not sorted, unless the `.sorted`
