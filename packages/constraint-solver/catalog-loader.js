@@ -61,7 +61,7 @@ CS.CatalogLoader.prototype._getSortedVersionRecords = function (pkg) {
   if (! _.has(this._sortedVersionRecordsCache, pkg)) {
     this._sortedVersionRecordsCache[pkg] =
       this.catalog.getSortedVersionRecords(pkg);
-    if(process.env.METEOR_FAST_RESOLVER != 'dev')
+    if(process.env.METEOR_FAST_RESOLVER == 'dev')
       _preSortedVersionRecordsCache[pkg] = this._sortedVersionRecordsCache[pkg];
   }
 

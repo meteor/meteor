@@ -4,7 +4,7 @@ var PV = PackageVersion;
 var _versionCache = {};
 var _dependenicesCache = {};
 var _previousDepsCache = [];
-var _depCacheCount = [];
+var _depCacheCount = 0;
 
 var pvkey = function (pkg, version) {
   return pkg + " " + version;
