@@ -14,7 +14,7 @@ var pvkey = function (pkg, version) {
 CS.CatalogCache = function (deps) {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  if(_.isUndefined(deps))
+  if(typeof deps === 'undefined')
   {
     _dependenicesCache = {};
     this._dependencies = {};
