@@ -2,7 +2,7 @@ var Console = require('../console/console.js').Console;
 var isopackets = require("../tool-env/isopackets.js");
 var files = require('../fs/files.js');
 
-var phantomjs = require('phantomjs');
+var phantomjs = require('phantomjs2');
 var child_process = require('child_process');
 var _ = require('underscore');
 
@@ -131,7 +131,7 @@ var runVelocity = function (url) {
         var browserProcess = child_process.execFile(
           '/bin/bash',
           ['-c',
-          ("exec " + (process.env.PHANTOMJS_BIN || phantomjs.path) + " " + files.convertToOSPath(phantomScriptPath))
+          ("exec " + phantomjs.path + " " + files.convertToOSPath(phantomScriptPath))
           ]
         );
         var prependPhantomJSOutput = function (data) {

@@ -2,7 +2,7 @@ var _ = require('underscore');
 var util = require('util');
 var Future = require('fibers/future');
 var child_process = require('child_process');
-var phantomjs = require('phantomjs');
+var phantomjs = require('phantomjs2');
 var webdriver = require('browserstack-webdriver');
 
 var files = require('../fs/files.js');
