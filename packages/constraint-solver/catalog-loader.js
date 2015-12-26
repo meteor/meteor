@@ -21,8 +21,7 @@ CS.CatalogLoader = function (fromCatalog, toCatalogCache) {
 
   self.catalog = fromCatalog;
   self.catalogCache = toCatalogCache;
-
-  if(_.isUndefined(_preSortedVersionRecordsCache))
+  if(_.isUndefined(_preSortedVersionRecordsCache) || process.env.METEOR_FAST_RESOLVER != 'dev')
   {
     _preSortedVersionRecordsCache = {};
     self._sortedVersionRecordsCache = {};
@@ -62,7 +61,8 @@ CS.CatalogLoader.prototype._getSortedVersionRecords = function (pkg) {
   if (! _.has(this._sortedVersionRecordsCache, pkg)) {
     this._sortedVersionRecordsCache[pkg] =
       this.catalog.getSortedVersionRecords(pkg);
-    _preSortedVersionRecordsCache[pkg] = this._sortedVersionRecordsCache[pkg];
+    if(process.env.METEOR_FAST_RESOLVER != 'dev')
+      _preSortedVersionRecordsCache[pkg] = this._sortedVersionRecordsCache[pkg];
   }
 
   return this._sortedVersionRecordsCache[pkg];

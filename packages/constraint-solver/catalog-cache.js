@@ -14,7 +14,7 @@ var pvkey = function (pkg, version) {
 CS.CatalogCache = function (deps) {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  if(typeof deps === 'undefined')
+  if(typeof deps === 'undefined' || process.env.METEOR_FAST_RESOLVER == 'dev')
   {
     _dependenicesCache = {};
     this._dependencies = {};
@@ -68,7 +68,8 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
 
     var depsByPackage = {};
     this._dependencies[key] = depsByPackage;
-    _dependenicesCache[key] = depsByPackage;
+    if(process.env.METEOR_FAST_RESOLVER == 'dev')
+      _dependenicesCache[key] = depsByPackage;
     _.each(deps, function (d) {
       var p2 = d.packageConstraint.package;
       if (_.has(depsByPackage, p2)) {
@@ -94,9 +95,13 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
 // Returns an array of version strings, sorted, possibly empty.
 // (Don't mutate the result.)
 CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
-  var resultCache = (_.has(_versionCache, pkg) ? _versionCache[pkg] : []);
-  if(resultCache.length)
-    return resultCache;
+  if(process.env.METEOR_FAST_RESOLVER == 'dev')
+  {
+    var resultCache = (_.has(_versionCache, pkg) ? _versionCache[pkg] : []);
+    if(resultCache.length)
+      return resultCache;
+  }
+
   var result = (_.has(this._versions, pkg) ?
                 this._versions[pkg] : []);
   if ((!result.length) || result.sorted) {
@@ -106,7 +111,8 @@ CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
     // (we'll sort again if more versions are pushed onto the array)
     result.sort(PV.compare);
     result.sorted = true;
-    _versionCache[pkg] = result;
+    if(process.env.METEOR_FAST_RESOLVER == 'dev')
+      _versionCache[pkg] = result;
     return result;
   }
 };
