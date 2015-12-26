@@ -679,6 +679,7 @@ _.extend(ProjectContext.prototype, {
 
     var constraintSolverPackage =
           isopackets.load('constraint-solver')['constraint-solver'];
+    var depsAndConstraints = self._getRootDepsAndConstraints();
     var resolver =
           new constraintSolverPackage.ConstraintSolver.PackagesResolver(
             self.projectCatalog, {
@@ -686,7 +687,8 @@ _.extend(ProjectContext.prototype, {
                 Console.nudge(true);
               },
               Profile: Profile,
-              resultCache: self._resolverResultCache
+              resultCache: self._resolverResultCache,
+                depsResult: depsAndConstraints.deps
             });
     return resolver;
   },

@@ -1,15 +1,40 @@
 var CS = ConstraintSolver;
 var PV = PackageVersion;
 
+var _versionCache = {};
+var _dependenicesCache = {};
+var _previousDepsCache = [];
+var _depCacheCount = 0;
+
 var pvkey = function (pkg, version) {
   return pkg + " " + version;
 };
 
 // Stores the Dependencies for each known PackageAndVersion.
-CS.CatalogCache = function () {
+CS.CatalogCache = function (deps) {
   // String(PackageAndVersion) -> String -> Dependency.
   // For example, "foo 1.0.0" -> "bar" -> Dependency.fromString("?bar@1.0.2").
-  this._dependencies = {};
+  if(typeof deps === 'undefined' || process.env.METEOR_FAST_RESOLVER == 'dev')
+  {
+    _dependenicesCache = {};
+    this._dependencies = {};
+  }else{
+    if(_.isUndefined(_dependenicesCache) || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0 || _previousDepsCache.length === 0 || _depCacheCount < 1)
+    {
+      if(_previousDepsCache.length === 0 || _.difference(_previousDepsCache, deps).length > 0 || _.difference(deps, _previousDepsCache).length > 0)
+      {
+        _depCacheCount = 0;
+      }else{
+        _depCacheCount++;
+      }
+      _dependenicesCache = {};
+      _previousDepsCache = deps;
+      this._dependencies = {};
+    }else{
+      this._dependencies = _dependenicesCache;
+    }
+  }
+
   // A map derived from the keys of _dependencies, for ease of iteration.
   // "foo" -> ["1.0.0", ...]
   // Versions in the array are unique but not sorted, unless the `.sorted`
@@ -28,26 +53,32 @@ CS.CatalogCache.prototype.addPackageVersion = function (p, v, deps) {
   check(deps, [CS.Dependency]);
 
   var key = pvkey(p, v);
-  if (_.has(this._dependencies, key)) {
-    throw new Error("Already have an entry for " + key);
-  }
 
-  if (! _.has(this._versions, p)) {
-    this._versions[p] = [];
-  }
-  this._versions[p].push(v);
-  this._versions[p].sorted = false;
-
-  var depsByPackage = {};
-  this._dependencies[key] = depsByPackage;
-  _.each(deps, function (d) {
-    var p2 = d.packageConstraint.package;
-    if (_.has(depsByPackage, p2)) {
-      throw new Error("Can't have two dependencies on " + p2 +
-                      " in " + key);
+  if(!_.has(_dependenicesCache, key))
+  {
+    if (_.has(this._dependencies, key)) {
+      throw new Error("Already have an entry for " + key);
     }
-    depsByPackage[p2] = d;
-  });
+
+    if (! _.has(this._versions, p)) {
+      this._versions[p] = [];
+    }
+    this._versions[p].push(v);
+    this._versions[p].sorted = false;
+
+    var depsByPackage = {};
+    this._dependencies[key] = depsByPackage;
+    if(process.env.METEOR_FAST_RESOLVER == 'dev')
+      _dependenicesCache[key] = depsByPackage;
+    _.each(deps, function (d) {
+      var p2 = d.packageConstraint.package;
+      if (_.has(depsByPackage, p2)) {
+        throw new Error("Can't have two dependencies on " + p2 +
+            " in " + key);
+      }
+      depsByPackage[p2] = d;
+    });
+  }
 };
 
 // Returns the dependencies of a (package, version), stored in a map.
@@ -64,6 +95,13 @@ CS.CatalogCache.prototype.getDependencyMap = function (p, v) {
 // Returns an array of version strings, sorted, possibly empty.
 // (Don't mutate the result.)
 CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
+  if(process.env.METEOR_FAST_RESOLVER == 'dev')
+  {
+    var resultCache = (_.has(_versionCache, pkg) ? _versionCache[pkg] : []);
+    if(resultCache.length)
+      return resultCache;
+  }
+
   var result = (_.has(this._versions, pkg) ?
                 this._versions[pkg] : []);
   if ((!result.length) || result.sorted) {
@@ -73,6 +111,8 @@ CS.CatalogCache.prototype.getPackageVersions = function (pkg) {
     // (we'll sort again if more versions are pushed onto the array)
     result.sort(PV.compare);
     result.sorted = true;
+    if(process.env.METEOR_FAST_RESOLVER == 'dev')
+      _versionCache[pkg] = result;
     return result;
   }
 };
