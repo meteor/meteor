@@ -68,7 +68,7 @@ Meteor.publish('Lists.private', function() {
 
 Thanks to the guarantees provided by DDP and Meteor's accounts system, the above publication can be confident that it will only ever publish private lists to the user that they belong to. Note that the publication will re-run if the user logs out (or back in again), which means that the published set of private lists will change as the active user changes.
 
-In the case of a logged-out in user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
+In the case of a logged-out user, we explicitly call `this.ready()`, which indicates to the subscription that we've sent all the data we are initially going to send (in this case none). It's important to know that if you don't return a cursor from the publication or call `this.ready()`, the user's subscription will never become ready, and they will likely see a loading state forever.
 
 Here's an example of a publication which takes a named argument. Note that it's important to check the types of arguments that come in over the network.
 
@@ -151,7 +151,7 @@ However, it's generally a good idea to use a layout component (which you wrap al
 
 <h2 id="patterns">Patterns for data loading</h2>
 
-Across Meteor applications, there are some common patterns of data loading and and management on the client side that are worth knowing. We'll go into more detail about some of these in the [UI/UX Article](ui-ux.html).
+Across Meteor applications, there are some common patterns of data loading and management on the client side that are worth knowing. We'll go into more detail about some of these in the [UI/UX Article](ui-ux.html).
 
 <h3 id="readiness">Subscription readiness</h3>
 
