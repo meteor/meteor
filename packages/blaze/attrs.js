@@ -65,7 +65,7 @@ AttributeHandler.extend = function (options) {
 //
 // Extended below to support classes, SVG elements and styles.
 
-var DiffingAttributeHandler = AttributeHandler.extend({
+Blaze._DiffingAttributeHandler = AttributeHandler.extend({
   update: function (element, oldValue, value) {
     if (!this.getCurrentValue || !this.setValue || !this.parseValue)
       throw new Error("Missing methods in subclass of 'DiffingAttributeHandler'");
@@ -91,7 +91,7 @@ var DiffingAttributeHandler = AttributeHandler.extend({
   }
 });
 
-var ClassHandler = DiffingAttributeHandler.extend({
+var ClassHandler = Blaze._DiffingAttributeHandler.extend({
   // @param rawValue {String}
   getCurrentValue: function (element) {
     return element.className;
@@ -119,7 +119,7 @@ var SVGClassHandler = ClassHandler.extend({
   }
 });
 
-var StyleHandler = DiffingAttributeHandler.extend({
+var StyleHandler = Blaze._DiffingAttributeHandler.extend({
   getCurrentValue: function (element) {
     return element.getAttribute('style');
   },
@@ -281,7 +281,7 @@ var UrlHandler = AttributeHandler.extend({
 });
 
 // XXX make it possible for users to register attribute handlers!
-makeAttributeHandler = function (elem, name, value) {
+Blaze._makeAttributeHandler = function (elem, name, value) {
   // generally, use setAttribute but certain attributes need to be set
   // by directly setting a JavaScript property on the DOM element.
   if (name === 'class') {
@@ -346,7 +346,7 @@ ElementAttributesUpdater.prototype.update = function(newAttrs) {
     if (! _.has(handlers, k)) {
       if (value !== null) {
         // make new handler
-        handler = makeAttributeHandler(elem, k, value);
+        handler = Blaze._makeAttributeHandler(elem, k, value);
         handlers[k] = handler;
         oldValue = null;
       }
