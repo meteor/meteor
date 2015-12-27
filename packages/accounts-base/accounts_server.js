@@ -120,6 +120,14 @@ AccountsServer = class AccountsServer extends AccountsCommon {
 
     this._onCreateUserHook = func;
   }
+
+  ///
+  /// LOGOUT HOOK
+  ///
+
+  onLogout(func) {
+    this._onLogoutHook = func;
+  }
 };
 
 var Ap = AccountsServer.prototype;
@@ -525,11 +533,15 @@ Ap._initServerMethods = function () {
   };
 
   methods.logout = function () {
+    var user = accounts.users.findOne(this.userId)
     var token = accounts._getLoginToken(this.connection.id);
     accounts._setLoginToken(this.userId, this.connection, null);
     if (token && this.userId)
       accounts.destroyToken(this.userId, token);
     this.setUserId(null);
+
+    if(accounts._onLogoutHook)
+      accounts._onLogoutHook(user)
   };
 
   // Delete all the current user's tokens and close all open connections logged
