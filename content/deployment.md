@@ -69,6 +69,32 @@ If you are following the above approach, you may also want to manually add the C
 
 There are many options on where to deploy your Meteor application. We'll discuss some of the most popular ones here.
 
+<h3 id="galaxy">Deploying to Galaxy</h3>
+
+Our recommended option is to deploy to Galaxy, Meteor's paid hosting service. In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing), and separately provision a MongoDB database (see below).
+
+Once you've done that, you can [deploy to Galaxy](https://galaxy.meteor.com/help/deploying-to-galaxy) almost as easily as you can to Meteor's free servers. You just need to [add some environment variables to your settings file](https://galaxy.meteor.com/help/setting-environment-variables) to point it at your MongoDB, and you can deploy with:
+
+```bash
+DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
+```
+
+In order for galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](https://galaxy.meteor.com/help/configuring-dns). Once you've done this, you should be able to reach your site from a browser.
+
+You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
+
+<img src="images/galaxy-org-dashboard.png">
+
+If you are following [our advice](security.html#ssl), you'll probably want to [set up SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain. The key things here are to add the `force-ssl` package and to use the Galaxy UI to add your SSL certificate.
+
+Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
+
+<img src="images/galaxy-scaling.png">
+
+<h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
+
+If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](https://compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
+
 <h3 id="custom-deployment">Custom deployment</h3>
 
 The Meteor tool has a command `meteor build` that creates a deployment bundle, which is a complete node application which can be run on any host that can run node applications (once pointed at a MongoDB instance). You can host this application wherever you like and there are many options in terms of how you set it up and configure it.
@@ -175,33 +201,7 @@ You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for
 
 Read more about using Meteor with Modulus [here](http://help.modulus.io/customer/portal/articles/1647770-using-meteor-with-modulus).
 
-Note however that in order use oplog tailing (highly recommended for performance), you'll need to either get a dedicated database hosting service from Modulus or use a different MongoDB provider (see below).
-
-<h3 id="galaxy">Deploying to Galaxy</h3>
-
-Another option is to deploy to Galaxy, Meteor's paid hosting service. In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing), and separately provision a MongoDB database (see below).
-
-Once you've done that, you can [deploy to Galaxy](https://galaxy.meteor.com/help/deploying-to-galaxy) almost as easily as you can to Meteor's free servers. You just need to [add some environment variables to your settings file](https://galaxy.meteor.com/help/setting-environment-variables) to point it at your MongoDB, and you can deploy with:
-
-```bash
-DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
-```
-
-In order for galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](https://galaxy.meteor.com/help/configuring-dns). Once you've done this, you should be able to reach your site from a browser.
-
-You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
-
-<img src="images/galaxy-org-dashboard.png">
-
-If you are following [our advice](security.html#ssl), you'll probably want to [set up SSL](https://galaxy.meteor.com/help/using-ssl) on your Galaxy application with the certificate and key for your domain. The key things here are to add the `force-ssl` package and to use the Galaxy UI to add your SSL certificate.
-
-Once you are setup with Galaxy, deployment is simple (just re-run the `meteor deploy` command above), and scaling is even easier---simply log into galaxy.meteor.com, and scale instantly from there.
-
-<img src="images/galaxy-scaling.png">
-
-<h4 id="galaxy-mongo">MongoDB hosting services to use with Galaxy</h4>
-
-If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](https://compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
+Note however that in order use oplog tailing (highly recommended for performance), you'll need to either get a dedicated database hosting service from Modulus or use a different MongoDB provider (see the section on [databases for Galaxy](#galaxy-mongo) for some suggestions).
 
 <h2 id="process">Deployment Process</h2>
 
