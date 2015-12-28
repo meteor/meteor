@@ -14,6 +14,7 @@ After reading this guide, you'll know:
 7. How to use the low-level publish API to publish anything.
 8. How to turn a 3rd-party REST endpoint into a publication.
 9. How to turn a publication in your app into a REST endpoint.
+10. How the publication lifecycle works precisely. 
 
 <h2 id="publications-and-subscriptions">Publications and subscriptions</h2>
 
@@ -604,3 +605,45 @@ $ curl localhost:3000/publications/Lists.private -H "Authorization: Bearer 6PN4E
   ]
 }
 ```
+
+<h2 id="lifecycle">Publication Lifecycle</h2>
+
+Suppose you have a simple publication of the following form:
+
+```js
+Meteor.publish('Posts.all', function() {
+  return Posts.find({}, {limit: 10});
+});
+```
+
+Then when a client calls `Meteor.subscribe('Posts.all')` the following things happen in the livedata stack:
+
+1. The client sends a `sub` message with the name of the subscription over DDP.
+
+2. The server starts up the subscription, running the publication handler above.
+
+3. As the publication handler returns a cursor, a standard set of behaviour kicks in:
+
+4. The server sets up a query observer on that cursor---unless a such an observer already exists on the server (for any user), in which case it re-uses it.
+
+5. The observer fetches the current set of documents matching the cursor, and passes them back to the subscription (via the `this.added()` callback).
+
+6. The subscription passes the added documents to the subscribing client's connection *mergebox*, which is an on-server cache of the documents that have been published to this particular client. Each document is merged with any existing version of the document that the client knows about, and an `added` (if the document is new to the client) or `changed` (if it is known but this subscription is adding or changing fields) DDP message is sent.
+
+  Note that the mergebox operates at the level of top-level fields, so if two subscriptions publish nested fields (e.g. sub1 publishes `doc.a.b = 7` and sub2 publishes `doc.a.c = 8`), then the "merged" document might not look as you expect (in this case `doc.a = {c: 8}`, if sub2 happens second).
+
+7. The subscription receives the `.ready()` message and sends that message to the client via the DDP `ready` message.
+
+8. The observer observes the query. Typically, it uses MongoDB's Oplog to [notice changes that affect the query](https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver). If it sees a change that's relevant (like a new document matching or a change in a field on a matching document), it calls into the subscription (via `.added()`, `.changed()` or `.removed()`), which again sends the changes to the mergebox, and then usually over to the client via DDP.
+
+This continues ad-infinitum until the client [stops](#stopping-subscriptions) the subscription, triggering the following behavior:
+
+1. The client sends the `unsub` DDP message.
+
+2. The server will stop its internal subscription object, which has the effect of:
+
+3. Running any callbacks of `this.onStop()` setup by the publish handler, which is this case is a single one automatically setup when returning a cursors from the handler. The callback stops the observe, which cleans up the observer unless there are other subscriptions listening to it still.
+
+4. Removing all the documents tracked by this subscription from the mergebox---which may or may not mean they are removed from the client.
+
+5. Sending the `nosub` message to the client to indicate that the subscription has stopped.
