@@ -42,7 +42,7 @@ Meteor.publish('Lists.public', function() {
 
 There are a few things to understand about this code block. First, we've named the publication with the unique string `Lists.public`, and that will be how we access it from the client. Second, we are simply returning a Mongo *cursor* from the publication function. Note that the cursor is filtered to only return certain fields from the collection, as detailed in the [Security article](security.html#fields).
 
-What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `Lists` on the client will have all of the public lists that are available in the server collection named `Lists` while that subscription is open. In this particular example, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
+What that means is that the publication will simply ensure the set of data matching that query is available to any client that subscribes to it. In this case, all lists that do not have a `userId` setting. So the collection named `Lists` on the client will have all of the public lists that are available in the server collection named `Lists` while that subscription is open. In this particular example in the Todos application, the subscription is initialized when the app starts and never stopped, but a later section will talk about [subscription life cycle](data-loading.html#patterns).
 
 Every publication takes two types of parameters:
 
@@ -108,7 +108,7 @@ The subscription handle also has another important property, the `.stop()` metho
 
 *However*, if you call `Meteor.subscribe()` conditionally inside a reactive context (such as an `autorun`, or `getMeteorData` in React) or via `this.subscribe()` in a Blaze component, then Meteor's reactive system will automatically call `this.stop()` for you at the appropriate time.
 
-<h3 id="organizing-subscriptions">Organizing subscriptions</h3>
+<h3 id="organizing-subscriptions">Subscribe in UI components</h3>
 
 It is best to place the subscription as close as possible to the place where the data from the subscription is needed. This reduces "action at a distance" and makes it easier to understand the flow of data through your application. If the subscription and fetch are separated, then it's not always clear how and why changes to the subscriptions (such as changing arguments), will affect the contents of the cursor.
 
