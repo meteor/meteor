@@ -378,7 +378,7 @@ If you need to wait on specific data that you aren't already subscribed to at cr
 ```js
 Template.rootRedirector.onCreated(() => {
   // If we needed to open this subscription here
-  this.subscribe('lists/public');
+  this.subscribe('Lists.public');
 
   // Now we need to wait for the above subscription. We'll need the template to
   // render some kind of loading state while we wait, too.
