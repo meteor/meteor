@@ -525,22 +525,22 @@ For instance, suppose you have many places in your application where you need an
 
 ```html
 <template name="autocompleteInput">
-  {{> blurringInput name=name value=currentValue}}
+  {{> blurringInput name=name value=currentValue onChange=onChange}}
 </template>
 ```
-
-XXX: we are violating our own rule here and reading into the sub-component. But there's no real mechanism to pass through generic event handlers in Blaze
 
 ```js
 Template.autocompleteInput.helpers({
   currentValue() {
     // perform complex logic to determine the auto-complete's current text value
-  }
-});
-
-Template.autocompleteInput.events({
-  'change input'(event, instance) {
-    // read the current value out of the input, potentially change the value
+  },
+  onChange() {
+    // This is the `autocompleteInput`'s template instance
+    const instance = Template.instance();
+    // The second argument to this function is the template instance of the `blurringInput`.
+    return (event) => {
+      // read the current value out of the input, potentially change the value
+    };
   }
 });
 ```
