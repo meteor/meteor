@@ -22,7 +22,7 @@ As an example, consider the `todosItem` template from the Todos example app:
 
 ```html
 <template name="todosItem">
-  <div class="list-item {{checkedClass}} {{editingClass}}">
+  <div class="list-item {{checkedClass todo}} {{editingClass editing}}">
     <label class="checkbox">
       <input type="checkbox" checked={{todo.checked}} name="checked">
       <span class="checkbox-custom"></span>
@@ -40,17 +40,17 @@ This template expects to be rendered with an object with key `todo` as data cont
 
 Note that simple string interpolations like this will always escape any HTML for you, so you don't need to perform safety checks for XSS.
 
-Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass}}{% endraw %}` calls out to a `checkedClass` helper defined in a separate JavaScript file. The HTML template and JavaScript file together define the `todosItem` component:
+Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass todo}}{% endraw %}` calls out to a `checkedClass` helper defined in a separate JavaScript file. The HTML template and JavaScript file together define the `todosItem` component:
 
 ```js
 Template.todosItem.helpers({
-  checkedClass() {
-    return this.todo.checked && 'checked';
+  checkedClass(todo) {
+    return todo.checked && 'checked';
   }
 });
 ```
 
-In the context of a Blaze helper, `this` is scoped to the current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument.
+In the context of a Blaze helper, `this` is scoped to the current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument (as we do here).
 
 Apart from simple interpolation, mustache tags can be used for control flow in the template. For instance, in the `listsShow` template, we render a list of todos like this:
 
@@ -293,6 +293,10 @@ Additionally, for better clarity, always explicitly provide a data context to an
 For similar reasons to the above, it's better to use `{% raw %}{{#each todo in todos}}{% endraw %}` rather than the older `{% raw %}{{#each todos}}{% endraw %}`. The second sets the entire data context of its children to a single `todo` object, and makes it difficult to access any context from outside of the block.
 
 The only reason not to use `{% raw %}{{#each .. in}}{% endraw %}` because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
+
+<h3 id="pass-data-into-helpers">Pass data into helpers</h3>
+
+Rather than accessing data in helpers via `this`, it's better to pass the arguments in directly from the template. So our `checkedClass` helper takes the `todo` as an argument and inspects it directly, rather than implicitly using `this.todo`. We do this for similar reasons to why we always pass arguments to template inclusions, and because "template variables" (such as the iteratee of the `{% raw %}{{#each .. in}}{% endraw %}` helper) are not available on `this`.
 
 <h3 id="use-template-instance">Use the template instance</h3>
 
