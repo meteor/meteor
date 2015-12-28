@@ -122,7 +122,7 @@ In this case, the `subComponent` component can expect a data context of the form
 }
 ```
 
-<h3 id="helpers-in-tags">Helpers in tags</h3>
+<h3 id="attribute-helpers">Attribute Helpers</h3>
 
 We saw above that using a helper (or data context lookup) in the form `checked={% raw %}{{todo.checked}}{% endraw %}` will add the checked property to the HTML tag if `todo.checked` evaluates to true. Also, you can directly include an object in the attribute list of an HTML element to set multiple attributes at once:
 
@@ -551,9 +551,9 @@ Template.autocompleteInput.helpers({
 
 By making the `blurringInput` flexible and reusable, we can avoid re-implementing functionality in the `autocompleteInput`.
 
-<h3 id="utility-libraries">Utility libraries</h3>
+<h3 id="libraries">Libraries</h3>
 
-It's usually best to keep your view layer as thin as possible and contain a component to whatever specific task it specifically needs to do. If there's heavy lifting involved (such as complicated data loading logic), it often makes sense to abstract it out into a utility library that simply deals with the logic alone and doesn't deal with the Blaze system at all.
+It's usually best to keep your view layer as thin as possible and contain a component to whatever specific task it specifically needs to do. If there's heavy lifting involved (such as complicated data loading logic), it often makes sense to abstract it out into a library that simply deals with the logic alone and doesn't deal with the Blaze system at all.
 
 For example, if a component requires a lot of complicated [D3](http://d3js.org) code for drawing graphs, it's likely that that code itself could live in a separate module that's called by the component. That makes it easier to abstract the code later and share it between various components that need to all draw graphs.
 
