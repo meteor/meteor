@@ -30,7 +30,7 @@ When you create a collection on the server:
 Todos = new Mongo.Collection('Todos');
 ```
 
-You are creating a collection within MongoDB, and an interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous (fibers-based) API:
+You are creating a collection within MongoDB, and an interface to that collection to be used on the server. It's a fairly straightforward layer on top of the underlying Node MongoDB driver, but with a synchronous API:
 
 ```js
 // This line won't complete until the insert is done
@@ -164,7 +164,7 @@ However, given that MongoDB prior to version 3.2 doesn't support queries over mu
 
 In the case of the Todos application, as we want to display the number of unfinished todos next to each list, we need to denormalize `list.incompleteTodoCount`. This is an inconvenience but typically reasonably easy to do as we'll see in the section on [abstracting denormalizers](#abstracting-denormalizers) below.
 
-Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it might make sense to denormalize `todo.userId` also.
+Another denormalization that this architecture sometimes requires can be from the parent document onto sub-documents. For instance, in Todos, as we enforce privacy of the todo lists via the `list.userId` attribute, but we publish the todos separately, it might make sense to denormalize `todo.userId` also. To do this, we'd need to be careful to take the `userId` from the list when creating the todo, and updating all relevant todos whenever a list's `userId` changed.
 
 <h3 id="designing-for-future">Designing for the future</h3>
 
@@ -243,7 +243,7 @@ This technique has a few disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
-A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We'll see an example of that below.
+A way to deal with points 1. and 2. is to separate out the set of hooks into their own module, and simply use the mutator as a point to call out to that module in a sensible way. We'll see an example of that [below](#abstracting-denormalizers).
 
 Point 3. can usually be resolved by placing the hook in the *Method* that calls the mutator, rather than the hook itself. Although this is an imperfect compromise (as we need to be careful if we ever add another Method that calls that mutator in the future), it is better than writing a bunch of code that is never actually called (which is guaranteed to not work!), or giving the impression that your hook is more general that it actually is.
 
