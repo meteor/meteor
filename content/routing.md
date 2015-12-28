@@ -449,6 +449,8 @@ As we've discussed, Meteor is a framework for client rendered applications, but 
 
 Although Meteor allows you to [write low-level connect handlers](http://docs.meteor.com/#/full/webapp) to create any kind of API you like on the server-side, if you all you want to do is create a RESTful version of your Methods and Publications, you can often use the [`simple:rest`](http://atmospherejs.com/simple/rest) package to do this easily. See the [Data Loading](data-loading.html#publications-as-rest) and [Methods](methods.html) articles for more information.
 
+If you need more control, you can use the comphrensive [`nimble:restivus`](https://atmospherejs.com/nimble/restivus) package to create more or less whatever you need in whatever ontology you require.
+
 <h4 id="server-side-rendering">Server Rendering</h4>
 
 The Blaze UI library does not have support for server-side rendering, so it's not possible to render your pages on the server if you use Blaze. However, the React UI library does. This means it is possible to render HTML on the server if you use React as your rendering framework.
