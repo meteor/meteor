@@ -8,7 +8,6 @@ import LRU from 'lru-cache';
 import {sourceMapLength} from '../utils/utils.js';
 import files from '../fs/files.js';
 import {findAssignedGlobals} from './js-analyze.js';
-import ImportScanner from './import-scanner.js';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -911,6 +910,9 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // actually combine files into a single file. used when linking apps (as
   // opposed to packages).
   useGlobalNamespace,
+  // Boolean indicating whether the output bundle should use
+  // meteorInstall, thereby enabling modules.
+  useMeteorInstall,
   // If we end up combining all of the files into one, use this as the
   // servePath.
   combinedServePath,
@@ -918,8 +920,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // imports of other modules); null if the module has no name (in that
   // case exports will not work properly)
   name,
-  // The architecture for which this bundle is to be linked.
-  bundleArch,
   // An array of symbols that the module exports. Symbols are
   // {name,testOnly} pairs.
   declaredExports,
@@ -929,26 +929,11 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // If useGlobalNamespace is set, this is the name of the file to create
   // with imports into the global namespace.
   importStubServePath,
-  // Object whose keys are the names of all the packages used by this
-  // package or application.
-  usedPackageNames,
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
-  // Absolute path of the package or application root directory. Can be
-  // joined with the .path of an input file to determine the absolute path
-  // of the file.
-  sourceRoot,
-  // Absolute path to the node_modules directory to use at runtime to
-  // resolve require() calls for this package, or null if we're not
-  // linking a package, or if this package has no node_modules.
-  nodeModulesPath,
 }) {
   buildmessage.assertInJob();
-
-  const useMeteorInstall =
-    _.isString(sourceRoot) &&
-    _.has(usedPackageNames, "modules");
 
   var module = new Module({
     name,
@@ -957,17 +942,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     combinedServePath,
     noLineNumbers: false
   });
-
-  if (useMeteorInstall) {
-    inputFiles = new ImportScanner({
-      name,
-      bundleArch,
-      sourceRoot,
-      usedPackageNames,
-      nodeModulesPath,
-    }).addInputFiles(inputFiles)
-      .getOutputFiles();
-  }
 
   _.each(inputFiles, file => module.addFile(file));
 

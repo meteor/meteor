@@ -12,6 +12,7 @@ import {sha1} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
+import ImportScanner from './import-scanner.js';
 
 // This file implements the new compiler plugins added in Meteor 1.2, which are
 // registered with the Plugin.registerCompiler API.
@@ -595,12 +596,29 @@ class PackageSourceBatch {
 
     var bundleArch = self.processor.arch;
 
+    const useMeteorInstall =
+      _.isString(self.sourceRoot) &&
+      _.has(self.usedPackageNames, "modules");
+
+    if (useMeteorInstall) {
+      // If the module system is enabled, scan the input files to find
+      // their transitive dependencies.
+      jsResources = new ImportScanner({
+        name: self.unibuild.pkg.name || null,
+        bundleArch,
+        sourceRoot: self.sourceRoot,
+        usedPackageNames: self.usedPackageNames,
+        nodeModulesPath: self.unibuild.nodeModulesPath,
+        watchSet: self.unibuild.watchSet,
+      }).addInputFiles(jsResources)
+        .getOutputFiles();
+    }
+
     // Run the linker.
     const isApp = ! self.unibuild.pkg.name;
     const linkerOptions = {
       useGlobalNamespace: isApp,
-      sourceRoot: self.sourceRoot,
-      nodeModulesPath: self.unibuild.nodeModulesPath,
+      useMeteorInstall,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
@@ -610,10 +628,8 @@ class PackageSourceBatch {
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
-      bundleArch,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
       imports: self.importedSymbolToPackageName,
-      usedPackageNames: self.usedPackageNames,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
       includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")

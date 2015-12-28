@@ -1,6 +1,6 @@
 import assert from "assert";
 import {isString, has, keys, each, without} from "underscore";
-import {sha1} from "../fs/watch.js";
+import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import {
@@ -11,7 +11,6 @@ import {
   pathBasename,
   pathExtname,
   statOrNull,
-  readFile,
   convertToPosixPath,
 } from "../fs/files.js";
 
@@ -35,6 +34,7 @@ export default class ImportScanner {
     sourceRoot,
     usedPackageNames = {},
     nodeModulesPath,
+    watchSet,
   }) {
     assert.ok(isString(sourceRoot));
 
@@ -43,6 +43,7 @@ export default class ImportScanner {
     this.sourceRoot = sourceRoot;
     this.usedPackageNames = usedPackageNames;
     this.nodeModulesPath = nodeModulesPath;
+    this.watchSet = watchSet;
     this.absPathToOutputIndex = {};
     this.outputFiles = [];
   }
@@ -141,17 +142,14 @@ export default class ImportScanner {
 
       var relImportedPath = pathRelative(this.sourceRoot, absImportedPath);
 
-      const depData = this._readModule(absImportedPath);
-      const depFile = {
-        type: "js", // TODO Is this correct?
-        data: depData,
-        sourcePath: relImportedPath,
-        installPath,
-        servePath: installPath,
-        hash: sha1(depData),
-        lazy: true,
-        imported: true,
-      };
+      // The result of _readModule will have .data and .hash properties.
+      const depFile = this._readModule(absImportedPath);
+      depFile.type = "js"; // TODO Is this correct?
+      depFile.sourcePath = relImportedPath;
+      depFile.installPath = installPath;
+      depFile.servePath = installPath;
+      depFile.lazy = true;
+      depFile.imported = true;
 
       // Append this file to the output array and record its index.
       this.absPathToOutputIndex[absImportedPath] =
@@ -163,18 +161,31 @@ export default class ImportScanner {
     return deps;
   }
 
+  _readFile(absPath) {
+    let { contents, hash } =
+      readAndWatchFileWithHash(this.watchSet, absPath);
+
+    return {
+      data: contents.toString("utf8"),
+      hash,
+    };
+  }
+
   _readModule(absPath) {
-    let data = readFile(absPath, "utf8");
+    const info = this._readFile(absPath);
 
     // Same logic/comment as stripBOM in node/lib/module.js:
     // Remove byte order marker. This catches EF BB BF (the UTF-8 BOM)
     // because the buffer-to-string conversion in `fs.readFileSync()`
     // translates it to FEFF, the UTF-16 BOM.
-    if (data.charCodeAt(0) === 0xfeff) {
-      data = data.slice(1);
+    if (info.data.charCodeAt(0) === 0xfeff) {
+      info.data = info.data.slice(1);
     }
 
-    return extensions[pathExtname(absPath).toLowerCase()](data);
+    const ext = pathExtname(absPath).toLowerCase();
+    info.data = extensions[ext](info.data);
+
+    return info;
   }
 
   // Returns a relative path indicating where to install the given file
@@ -372,7 +383,7 @@ export default class ImportScanner {
 
     let pkg;
     try {
-      pkg = JSON.parse(readFile(pkgJsonPath, "utf8"));
+      pkg = JSON.parse(this._readFile(pkgJsonPath).data);
     } catch (e) {
       return null;
     }
