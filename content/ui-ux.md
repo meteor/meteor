@@ -6,7 +6,7 @@ order: 6
 After reading this guide, you'll know:
 
 1. How to build reusable client side components in any user interface framework.
-2. How to build a styleguide to allow you to visually test such reusable components.
+2. How to build a style guide to allow you to visually test such reusable components.
 3. Patterns for building front end components in a performant way in Meteor.
 4. How to build user interfaces in a maintainable and extensible way.
 5. How to build components that can cope with a variety of different data sources.
@@ -71,15 +71,15 @@ A typical use case for a smart component is the "page" component that the router
 
 <h2 id="styleguides">Visually testing reusable components</h2>
 
-A useful property of reusable components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _styleguide_ or harness.
+A useful property of reusable components is that you can render them anywhere because they don't rely on complicated environments. One very useful thing that this enables is a component _style guide_ or harness.
 
-To use a styleguide, you need to add two things to your app:
+To use a style guide, you need to add two things to your app:
 
 1. A list of "entries", where each entry is a component with a list of specifications. Each specification is a list of arguments which trigger different behavior when passed to the component.
 
 2. A special route in the development version of the application that renders each of the components for each specification.
 
-For instance, in Galaxy, we have a component styleguide that renders each reusable component either one specification at a time, or with all specifications at once.
+For instance, in Galaxy, we have a component style guide that renders each reusable component either one specification at a time, or with all specifications at once.
 
 <img src="images/galaxy-styleguide.png">
 
@@ -203,11 +203,11 @@ For example, in Galaxy, while you wait for your app's log to load, you see a loa
 
 <img src="images/galaxy-placeholders.png">
 
-<h4 id="styleguide-and-loading">Using the styleguide to prototype loading state</h4>
+<h4 id="styleguide-and-loading">Using the style guide to prototype loading state</h4>
 
 Loading states are notoriously difficult to work on visually as they are by definition transient and often are barely noticeable in a development environment where subscriptions load almost instantly.
 
-This is one reason why being able to achieve any state at will in the [component styleguide](#styleguides) is so useful. As our reusable component `listsShow` simply chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a styleguide.
+This is one reason why being able to achieve any state at will in the [component style guide](#styleguides) is so useful. As our reusable component `listsShow` simply chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a style guide.
 
 <h3 id="pagination">Pagination</h3>
 
@@ -240,7 +240,7 @@ We can now distinguish between the 5 states above based on these conditions:
 4. `items.length === requested && count > 0`
 5. `count === 0`
 
-You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component styleguide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our styleguide for each of the lists of our app and we can ensure all work as expected and appear correctly:
+You can see that although the situation is a little complex, it's also completely determined by the arguments and thus very much testable. A component style guide helps immeasurably in seeing all these states easily! In Galaxy we have each state in our style guide for each of the lists of our app and we can ensure all work as expected and appear correctly:
 
 <image src="images/galaxy-styleguide-list.png">
 
