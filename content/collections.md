@@ -311,7 +311,9 @@ As we discussed above, trying to predict all future requirements of your data sc
 
 <h3 id="writing-migrations">Writing migrations</h3>
 
-A useful package for writing migrations is [`percolate:migrations`](https://atmospherejs.com/percolate/migrations), which provides a nice framework for switching between different versions of your schema. Suppose, as an example, that we wanted to add a `list.todoCount` field, and ensure that it was set for all existing lists. Then we might write:
+A useful package for writing migrations is [`percolate:migrations`](https://atmospherejs.com/percolate/migrations), which provides a nice framework for switching between different versions of your schema. 
+
+Suppose, as an example, that we wanted to add a `list.todoCount` field, and ensure that it was set for all existing lists. Then we might write the following in server-only code (e.g. `/server/migrations.js`):
 
 ```js
 Migrations.add({
