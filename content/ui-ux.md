@@ -14,6 +14,8 @@ After reading this guide, you'll know:
 
 <h2 id="components">UI components</h2>
 
+In Meteor, we officially support three user interface (UI) rendering libraries, [Blaze](blaze.html), [React](http://react-in-meteor.readthedocs.org/en/latest/) and [Angular](http://www.angular-meteor.com).
+
 Regardless of the rendering library that you are using, there are some patterns in how you build your User Interface (UI) that will help make your app's code easier to understand, test, and maintain. These patterns, much like general patterns of modularity, revolve around making the interfaces to your UI elements very clear, and avoiding using techniques that bypass these known interfaces.
 
 In this article, we'll refer to the elements in your user interface as "components". Although in some systems, you may refer to them as "templates", it can be a good idea to think of them as something more like a component which has an API and internal logic, rather than a template which is just a bit of HTML.
@@ -67,6 +69,46 @@ A typical use case for a smart component is the "page" component that the router
     {{> appNotFound}}
   {{/each}}
 </template>
+```
+
+The JavaScript of this component is responsible for subscribing and fetching the data that's used by the `listsShow` template itself:
+
+```js
+Template.listsShowPage.onCreated(function() {
+  this.getListId = () => FlowRouter.getParam('_id');
+
+  this.autorun(() => {
+    this.subscribe('Todos.inList', this.getListId());
+  });
+});
+
+Template.listsShowPage.helpers({
+  // We use #each on an array of one item so that the "list" template is
+  // removed and a new copy is added when changing lists, which is
+  // important for animation purposes.
+  listIdArray() {
+    const instance = Template.instance();
+    const listId = instance.getListId();
+    return listId ? [listId] : [];
+  },
+  listArgs(listId) {
+    const instance = Template.instance();
+    return {
+      todosReady: instance.subscriptionsReady(),
+      // We pass `list` (which contains the full list, with all fields, as a function
+      // because we want to control reactivity. When you check a todo item, the
+      // `list.incompleteCount` changes. If we didn't do this the entire list would
+      // re-render whenever you checked an item. By isolating the reactiviy on the list
+      // to the area that cares about it, we stop it from happening.
+      list() {
+        return Lists.findOne(listId);
+      },
+      // By finding the list with only the `_id` field set, we don't create a dependency on the
+      // `list.incompleteCount`, and avoid re-rendering the todos when it changes
+      todos: Lists.findOne(listId, {fields: {_id: true}}).todos()
+    };
+  }
+});
 ```
 
 <h2 id="styleguides">Visually testing reusable components</h2>
@@ -256,15 +298,19 @@ In the Todos example app, we already have a wrapping component for the list that
 const PAGE_SIZE = 10;
 
 Template.listsShowPage.onCreated(function() {
+  // We use internal state to store the number of items we've requested
   this.state = new ReactiveDict();
 
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('list/todos', this.getListId(), this.state.get('requested'));
-    this.countSub = this.subscribe('list/todoCount', this.getListId());
+    // As the `requested` state increases, we re-subscribe to a greater number of todos
+    this.subscribe('List.todos', this.getListId(), this.state.get('requested'));
+    this.countSub = this.subscribe('Lists.todoCount', this.getListId());
   });
 
+  // The `onNextPage` function is used to increment the `requested` state variable. It's passed
+  // into the listShow subcomponent to be triggered when the user reaches the end of the visible todos
   this.onNextPage = () => {
     this.state.set('requested', this.state.get('requested') + PAGE_SIZE);
   };
@@ -301,12 +347,15 @@ However, it is possible to do this thanks to our split between smart and reusabl
 Template.listsShowPage.onCreated(function() {
   // ...
 
+  // The visible todos are the todos that the user can actually see on the screen
+  // (whereas Todos are the todos that actually exist)
   this.visibleTodos = new Mongo.Collection();
 
   this.getTodos = () => {
     const list = Lists.findOne(this.this.getListId());
     return list.todos({}, {limit: instance.state.get('requested')});
   };
+  // When the user requests it, we should sync the visible todos to reflect the true state of the world
   this.syncTodos = (todos) => {
     todos.forEach(todo => this.visibleTodos.insert(todo));
     this.state.set('hasChanges', false);
@@ -318,7 +367,8 @@ Template.listsShowPage.onCreated(function() {
   this.autorun((computation) => {
     const todos = this.getTodos();
 
-    // if this autorun re-runs, the list id or set of todos much have changed
+    // If this autorun re-runs, the list id or set of todos must have changed, so we should
+    // flag it to the user so they know there are changes to be seen.
     if (!computation.firstRun) {
       this.state.set('hasChanges', true);
     } else {
@@ -340,6 +390,8 @@ Template.listsShowPage.helpers({
       countReady: instance.countSub.ready(),
       count: Counts.get(`list/todoCount${listId}`),
       onNextPage: instance.onNextPage,
+      // These two properties allow the user to know that there are changes to be viewed
+      // and allow them to view them
       hasChanges: instance.state.get('hasChanges'),
       onShowChanges:instance.onShowChanges
     };
