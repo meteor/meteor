@@ -102,6 +102,10 @@ To use publications, you need to create a subscription to it on the client. To d
 
 `Meteor.subscribe()` also returns a "subscription handle" with a property called `.ready()`. This is a reactive function that returns `true` when the publication is marked ready (either you call `this.ready()` explicitly, or the initial contents of a returned cursor are sent over).
 
+```js
+const handle = Meteor.subscribe('Lists.public');
+```
+
 <h3 id="stopping-subscriptions">Stopping Subscriptions</h3>
 
 The subscription handle also has another important property, the `.stop()` method. When you are subscribing, it is very important to ensure that you always call `.stop()` on the subscription when you are done with it. This ensures that the documents sent by the subscription are cleared from your local Minimongo cache and the server stops doing the work required to service your subscription. If you forget to call stop, you'll consume unnecessary resources both on the client and the server.
