@@ -107,20 +107,18 @@ Here the `todo` is passed as argument to the `todoArgs` helper, then the output 
 
 <h3 id="inclusion">Template inclusion</h3>
 
-You "include" a sub-component with the `{% raw %}{{> }}{% endraw %}` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object which will become the entire data context (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments which will be put together into one object, as the `listShowPage` template does:
+You "include" a sub-component with the `{% raw %}{{> }}{% endraw %}` syntax. By default, the sub-component will gain the data context of the caller, although it's usually a good idea to be explicit. You can provide a single object which will become the entire data context (as we did with the object returned by the `todoArgs` helper above), or provide a list of keyword arguments which will be put together into one object, like so:
 
 ```html
-{{> listsShow todosReady=Template.subscriptionsReady
-  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
+{{> subComponent arg1="value-of-arg1" arg2=helperThatReturnsValueOfArg2}}
 ```
 
-In this case, the `listShow` component can expect a data context of the form:
+In this case, the `subComponent` component can expect a data context of the form:
 
 ```js
 {
-  todosReady: ...,
-  list: ...,
-  todos: ...
+  arg1: ...,
+  arg2: ...
 }
 ```
 
@@ -432,7 +430,7 @@ Template.todosItem.events({
 
 As we mentioned above, the `onRendered()` callback is typically the right spot to call out to third party libraries that expect a pre-rendered DOM (such as jQuery plugins). The `onRendered()` callback is triggered *once* after the component has rendered and attached to the DOM for the first time.
 
-Occasionally, you may need to wait for data to become ready before it's time to attach the plugin (although typically it's a better idea to use a sub-component in this use case). To do so, you can setup an `autorun` in the `onRendered()` callback. For instance, in the `listShowPage` template, we want to wait until the subscription for the list is ready (i.e. the todos have rendered) before we hide the launch screen:
+Occasionally, you may need to wait for data to become ready before it's time to attach the plugin (although typically it's a better idea to use a sub-component in this use case). To do so, you can setup an `autorun` in the `onRendered()` callback. For instance, in the `listsShowPage` component, we want to wait until the subscription for the list is ready (i.e. the todos have rendered) before we hide the launch screen:
 
 ```js
 Template.listsShowPage.onRendered(function() {
@@ -467,25 +465,52 @@ Template.listsShowPage.onCreated(function() {
 
 We use `this.subscribe()` as opposed to `Meteor.subscribe()` so that the component automatically keeps track of when the subscriptions are ready. We can use this information in our HTML template with the built-in `{% raw %}{{Template.subscriptionsReady}}{% endraw %}` helper or within helpers using `instance.subscriptionsReady()`.
 
-Notice that in this component we are also accessing the global client-side state store `FlowRouter`, which we wrap in a instance method called `getListId()`. This instance method is called both from the `autorun` in `onCreated`, and from the `listArray` helper:
+Notice that in this component we are also accessing the global client-side state store `FlowRouter`, which we wrap in a instance method called `getListId()`. This instance method is called both from the `autorun` in `onCreated`, and from the `listIdArray` helper:
 
 ```js
 Template.listsShowPage.helpers({
-  listArray() {
+  // We use #each on an array of one item so that the "list" template is
+  // removed and a new copy is added when changing lists, which is
+  // important for animation purposes.
+  listIdArray() {
     const instance = Template.instance();
-    const list = Lists.findOne(instance.getListId());
-    return list ? [list] : [];
-  }
+    const listId = instance.getListId();
+    return listId ? [listId] : [];
+  },
 });
 ```
 
 <h3 id="fetch-in-smart-components">Fetch in helpers</h3>
 
-As described in the [UI/UX article](ui-ux.html#smart-components), you should fetch data in the same component where you subscribed to that data. In a Blaze smart component, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listShowPage`:
+As described in the [UI/UX article](ui-ux.html#smart-components), you should fetch data in the same component where you subscribed to that data. In a Blaze smart component, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listsShowPage`:
 
 ```html
-{{> listsShow todosReady=Template.subscriptionsReady
-  list=(getFullList listIdOnly) todos=listIdOnly.todos}}
+{{> listsShow (listArgs listId)}}
+```
+
+The `listArgs` helper fetches the data that we've subscribed to above:
+
+```js
+Template.listsShowPage.helpers({
+  listArgs(listId) {
+    const instance = Template.instance();
+    return {
+      todosReady: instance.subscriptionsReady(),
+      // We pass `list` (which contains the full list, with all fields, as a function
+      // because we want to control reactivity. When you check a todo item, the
+      // `list.incompleteCount` changes. If we didn't do this the entire list would
+      // re-render whenever you checked an item. By isolating the reactiviy on the list
+      // to the area that cares about it, we stop it from happening.
+      list() {
+        return Lists.findOne(listId);
+      },
+      // By finding the list with only the `_id` field set, we don't create a dependency on the
+      // `list.incompleteCount`, and avoid re-rendering the todos when it changes
+      todos: Lists.findOne(listId, {fields: {_id: true}}).todos()
+    };
+  }
+});
+
 ```
 
 <h2 id="reusing-code">Reusing code in Blaze</h2>

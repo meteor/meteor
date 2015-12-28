@@ -271,9 +271,8 @@ Template.listsShowPage.onCreated(function() {
 });
 
 Template.listsShowPage.helpers({
-  listShowArguments() {
+  listArgs(listId) {
     const instance = Template.instance();
-    const listId = instance.getListId();
     const list = Lists.findOne(listId);
     const requested = instance.state.get('requested');
     return {
@@ -329,9 +328,8 @@ Template.listsShowPage.onCreated(function() {
 });
 
 Template.listsShowPage.helpers({
-  listShowArguments() {
+  listArgs(listId) {
     const instance = Template.instance();
-    const listId = instance.getListId();
     const list = Lists.findOne(listId);
     const requested = instance.state.get('requested');
     return {

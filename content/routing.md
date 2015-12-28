@@ -180,17 +180,49 @@ It makes sense for a "page" smart component like `listsShowPage` to:
 3. Fetch the data from those subscriptions, and
 4. Pass that data into a sub-component.
 
-In this case, the HTML template for `listsShowPage` will look very simple, with all of the logic in the JavaScript code:
+In this case, the HTML template for `listsShowPage` will look very simple, with most of the logic in the JavaScript code:
 
 ```html
 <template name="listsShowPage">
-  {{#each list in listArray}}
-    {{> listsShow todosReady=Template.subscriptionsReady list=list}}
+  {{#each listId in listIdArray}}
+    {{> listsShow (listArgs listId)}}
+  {{else}}
+    {{> appNotFound}}
   {{/each}}
 </template>
 ```
 
-(The `{% raw %}{{#each}}{% endraw %}}` is an animation technique for [page to page transitions](ui-ux.html#animating-page-changes)).
+(The `{% raw %}{{#each listId in listIdArray}}{% endraw %}}` is an animation technique for [page to page transitions](ui-ux.html#animating-page-changes)).
+
+```js
+Template.listsShowPage.helpers({
+  // We use #each on an array of one item so that the "list" template is
+  // removed and a new copy is added when changing lists, which is
+  // important for animation purposes.
+  listIdArray() {
+    const instance = Template.instance();
+    const listId = instance.getListId();
+    return listId ? [listId] : [];
+  },
+  listArgs(listId) {
+    const instance = Template.instance();
+    return {
+      todosReady: instance.subscriptionsReady(),
+      // We pass `list` (which contains the full list, with all fields, as a function
+      // because we want to control reactivity. When you check a todo item, the
+      // `list.incompleteCount` changes. If we didn't do this the entire list would
+      // re-render whenever you checked an item. By isolating the reactiviy on the list
+      // to the area that cares about it, we stop it from happening.
+      list() {
+        return Lists.findOne(listId);
+      },
+      // By finding the list with only the `_id` field set, we don't create a dependency on the
+      // `list.incompleteCount`, and avoid re-rendering the todos when it changes
+      todos: Lists.findOne(listId, {fields: {_id: true}}).todos()
+    };
+  }
+});
+```
 
 It's the `listShow` component (a reusuable component) that actually handles the job of rendering the content of the page. As the page component is passing the arguments into the reusuable component, it is able to be quite mechanical and the concerns of talking to the router and rendering the page have been separated.
 
@@ -203,8 +235,10 @@ It's best to keep all logic around what to render in the component hierarchy (i.
 ```html
 <template name="listsShowPage">
   {{#if currentUser}}
-    {{#each list in listArray}}
-      {{> listsShow todosReady=Template.subscriptionsReady list=list}}
+    {{#each listId in listIdArray}}
+      {{> listsShow (listArgs listId)}}
+    {{else}}
+      {{> appNotFound}}
     {{/each}}
   {{else}}
     Please log in to edit posts.
@@ -231,8 +265,10 @@ Once that template exists, we can simply wrap our `listsShowPage`:
 ```html
 <template name="listsShowPage">
   {{#forceLoggedIn}}
-    {{#each list in listArray}}
-      {{> listsShow todosReady=Template.subscriptionsReady list=list}}
+    {{#each listId in listIdArray}}
+      {{> listsShow (listArgs listId)}}
+    {{else}}
+      {{> appNotFound}}
     {{/each}}
   {{/forceLoggedIn}}
 </template>
@@ -393,12 +429,12 @@ The second is when the URL is valid, but doesn't actually match any data. In thi
 
 ```html
 <template name="listsShowPage">
-  {{#each list in listArray}}
-    {{> listsShow todosReady=Template.subscriptionsReady list=list todos=list.todos}}
+    {{#each listId in listIdArray}}
+    {{> listsShow (listArgs listId)}}
   {{else}}
     {{> appNotFound}}
   {{/each}}
-</template>
+<template>
 ```
 
 <h3 id="analytics">Analytics</h3>
