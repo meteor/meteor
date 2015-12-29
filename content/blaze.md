@@ -18,10 +18,10 @@ Blaze is not required to build applications in Meteor---you can also easily use 
 
 Spacebars is a handlebars-like templating language, built on the concept of rendering a reactively changing *data context*. Spacebars templates look like simple HTML with special "mustache" tags delimited by curly braces: `{% raw %}{{ }}{% endraw %}`.
 
-As an example, consider the `todosItem` template from the Todos example app:
+As an example, consider the `Todos_item` template from the Todos example app:
 
 ```html
-<template name="todosItem">
+<template name="Todos_item">
   <div class="list-item {{checkedClass todo}} {{editingClass editing}}">
     <label class="checkbox">
       <input type="checkbox" checked={{todo.checked}} name="checked">
@@ -40,10 +40,10 @@ This template expects to be rendered with an object with key `todo` as data cont
 
 Note that simple string interpolations like this will always escape any HTML for you, so you don't need to perform safety checks for XSS.
 
-Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass todo}}{% endraw %}` calls out to a `checkedClass` helper defined in a separate JavaScript file. The HTML template and JavaScript file together define the `todosItem` component:
+Additionally we can see an example of a *template helper*---`{% raw %}{{checkedClass todo}}{% endraw %}` calls out to a `checkedClass` helper defined in a separate JavaScript file. The HTML template and JavaScript file together define the `Todos_item` component:
 
 ```js
-Template.todosItem.helpers({
+Template.Todos_item.helpers({
   checkedClass(todo) {
     return todo.checked && 'checked';
   }
@@ -52,11 +52,11 @@ Template.todosItem.helpers({
 
 In the context of a Blaze helper, `this` is scoped to the current *data context* at the point the helper was used. This can be hard to reason about, so it's often a good idea to instead pass the required data into the helper as an argument (as we do here).
 
-Apart from simple interpolation, mustache tags can be used for control flow in the template. For instance, in the `listsShow` template, we render a list of todos like this:
+Apart from simple interpolation, mustache tags can be used for control flow in the template. For instance, in the `Lists_show` template, we render a list of todos like this:
 
 ```html
   {{#each todo in todos}}
-    {{> todosItem (todoArgs todo)}}
+    {{> Todos_item (todoArgs todo)}}
   {{else}}
     <div class="wrapper-message">
       <div class="title-message">No tasks here</div>
@@ -68,7 +68,7 @@ Apart from simple interpolation, mustache tags can be used for control flow in t
 This snippet illustrates a few things:
 
  - The `{% raw %}{{#each .. in}}{% endraw %}` block helper which repeats a block of HTML for each element in an array or cursor, or renders the contents of the `{% raw %}{{else}}{% endraw %}` block if no items exist.
- - The template inclusion tag, `{% raw %}{{> todosItem (todoArgs todo)}}{% endraw %}` which renders the `todosItem` component with the data context returned from the `todosArg` helper.
+ - The template inclusion tag, `{% raw %}{{> Todos_item (todoArgs todo)}}{% endraw %}` which renders the `Todos_item` component with the data context returned from the `todosArg` helper.
 
 You can read about the full syntax [in the Spacebars README](https://github.com/meteor/meteor/blob/devel/packages/spacebars/README.md). In this section we'll attempt to cover some of the important details beyond just the syntax.
 
@@ -83,7 +83,7 @@ Note that Spacebars is very forgiving of `null` values. It will not complain if 
 You can provide arguments to a helper like `checkedClass` by simply placing the argument after the helper call, as in: `{% raw %}{{checkedClass todo true 'checked'}}{% endraw %}`. You can also provide a list of named keyword arguments to a helper with `{% raw %}{{checkedClass todo noClass=true classname='checked'}}{% endraw %}`. When you pass keyword arguments, you need to read them off of the `hash` property of the final argument. Here's how it would look for the example we just saw:
 
 ```js
-Template.todosItem.helpers({
+Template.Todos_item.helpers({
   checkedClass(todo, options) {
     const classname = options.hash.classname || 'checked';
     if (todo.checked) {
@@ -100,10 +100,10 @@ Note that using keyword arguments to helpers is a little awkward, so in general 
 You can also pass the output of a helper to a template inclusion or other helper. To do so, use parentheses to show precedence:
 
 ```html
-{{> todosItem (todoArgs todo)}}
+{{> Todos_item (todoArgs todo)}}
 ```
 
-Here the `todo` is passed as argument to the `todoArgs` helper, then the output is passed into the `todosItem` template.
+Here the `todo` is passed as argument to the `todoArgs` helper, then the output is passed into the `Todos_item` template.
 
 <h3 id="inclusion">Template inclusion</h3>
 
@@ -256,7 +256,7 @@ In order to ensure your component always gets the data you expect, you should va
 You can do this in a Blaze component's `onCreated()` callback, like so:
 
 ```js
-Template.listsShow.onCreated(function() {
+Template.Lists_show.onCreated(function() {
   this.autorun(() => {
     new SimpleSchema({
       list: {type: Function},
@@ -271,12 +271,12 @@ We use an `autorun()` here to ensure that the data context is re-validated whene
 
 <h3 id="name-data-contexts">Name data contexts to template inclusions</h3>
 
-It's tempting to just provide the object you're interested in as the entire data context of the template (like `{% raw %}{{> todosItem todo}}{% endraw %}`). It's better to explicitly give it a name (`{% raw %}{{> todosItem todo=todo}}{% endraw %}`). There are two primary reasons for this:
+It's tempting to just provide the object you're interested in as the entire data context of the template (like `{% raw %}{{> Todos_item todo}}{% endraw %}`). It's better to explicitly give it a name (`{% raw %}{{> Todos_item todo=todo}}{% endraw %}`). There are two primary reasons for this:
 
 1. When using the data in the sub-component, it's a lot clearer what you are accessing; `{% raw %}{{todo.title}}{% endraw %}` is clearer than `{% raw %}{{title}}{% endraw %}`.
 2. It's more flexible, in case you need to give the component more arguments in the future.
 
-For instance, in the case of the `todosItem` sub-component, we need to provide two extra arguments to control the editing state of the item, which would have been a hassle to add if the item was used with a single `todo` argument.
+For instance, in the case of the `Todos_item` sub-component, we need to provide two extra arguments to control the editing state of the item, which would have been a hassle to add if the item was used with a single `todo` argument.
 
 Additionally, for better clarity, always explicitly provide a data context to an inclusion rather than letting it inherit the context of the template where it was rendered:
 
@@ -305,7 +305,7 @@ Although Blaze's simple API doesn't necessarily encourage a componentized approa
 We suggest a convention of naming it `instance` in these contexts and assigning it at the top of every relevant helper. For instance:
 
 ```js
-Template.listsShow.helpers({
+Template.Lists_show.helpers({
   todoArgs(todo) {
     const instance = Template.instance();
     return {
@@ -318,7 +318,7 @@ Template.listsShow.helpers({
   }
 });
 
-Template.listsShow.events({
+Template.Lists_show.events({
   'click .js-cancel'(event, instance) {
     instance.state.set('editing', false);
   }
@@ -330,7 +330,7 @@ Template.listsShow.events({
 The [`reactive-dict`](https://atmospherejs.com/meteor/reactive-dict) package lets you define a simple reactive key-value dictionary. It's a convenient way to attach internal state to a component. We create the `state` dictionary in the `onCreated` callback, and attach it to the template instance:
 
 ```js
-Template.listsShow.onCreated(function() {
+Template.Lists_show.onCreated(function() {
   this.state = new ReactiveDict();
   this.state.setDefault({
     editing: false,
@@ -346,7 +346,7 @@ Once the state dictionary has been created we can access it from helpers and mod
 If you have common functionality for a template instance that needs to be abstracted or called from multiple event handlers, it's sensible to attach it as functions directly to the template instance in the `onCreated()` callback:
 
 ```js
-Template.listsShow.onCreated(function() {
+Template.Lists_show.onCreated(function() {
   this.saveList = () => {
     this.state.set('editing', false);
 
@@ -363,7 +363,7 @@ Template.listsShow.onCreated(function() {
 Then you can call that function from within an event handler:
 
 ```js
-Template.listsShow.events({
+Template.Lists_show.events({
   'submit .js-edit-form'(event, instance) {
     event.preventDefault();
     instance.saveList();
@@ -378,7 +378,7 @@ It's a bad idea to look up things directly in the DOM with jQuery's global `$()`
 Instead, Blaze gives you `instance.$()` which scopes a lookup to within the current template instance. Typically you use this either from a `onRendered()` callback to setup jQuery plugins, or from event handlers to call DOM functions directly. For instance, when the user clicks the add todo button, we want to focus the `<input>` element:
 
 ```js
-Template.listsShow.events({
+Template.Lists_show.events({
   'click .js-todo-add'(event, instance) {
     instance.$('.js-todo-new input').focus();
   }
@@ -403,14 +403,14 @@ This is more or less the way that the [`kadira:blaze-layout`](https://atmosphere
 
 If you need to communicate *up* the component hierarchy, it's best to pass a *callback* for the sub-component to call.
 
-For instance, only one todo item can be in the editing state at a time, so the `listsShow` component manages the state of which is edited. When you focus on an item, that item needs to tell the list's component to make it the "edited" one. To do that, we pass a callback into the `todosItem` component, and the child calls it whenever the state needs to be updated in the parent:
+For instance, only one todo item can be in the editing state at a time, so the `Lists_show` component manages the state of which is edited. When you focus on an item, that item needs to tell the list's component to make it the "edited" one. To do that, we pass a callback into the `Todos_item` component, and the child calls it whenever the state needs to be updated in the parent:
 
 ```html
-{{> todosItem (todoArgs todo)}}
+{{> Todos_item (todoArgs todo)}}
 ```
 
 ```js
-Template.listsShow.helpers({
+Template.Lists_show.helpers({
   todoArgs(todo) {
     const instance = Template.instance();
     return {
@@ -423,7 +423,7 @@ Template.listsShow.helpers({
   }
 });
 
-Template.todosItem.events({
+Template.Todos_item.events({
   'focus input[type=text]'() {
     this.onEditing(true);
   }
@@ -434,10 +434,10 @@ Template.todosItem.events({
 
 As we mentioned above, the `onRendered()` callback is typically the right spot to call out to third party libraries that expect a pre-rendered DOM (such as jQuery plugins). The `onRendered()` callback is triggered *once* after the component has rendered and attached to the DOM for the first time.
 
-Occasionally, you may need to wait for data to become ready before it's time to attach the plugin (although typically it's a better idea to use a sub-component in this use case). To do so, you can setup an `autorun` in the `onRendered()` callback. For instance, in the `listsShowPage` component, we want to wait until the subscription for the list is ready (i.e. the todos have rendered) before we hide the launch screen:
+Occasionally, you may need to wait for data to become ready before it's time to attach the plugin (although typically it's a better idea to use a sub-component in this use case). To do so, you can setup an `autorun` in the `onRendered()` callback. For instance, in the `Lists_show_page` component, we want to wait until the subscription for the list is ready (i.e. the todos have rendered) before we hide the launch screen:
 
 ```js
-Template.listsShowPage.onRendered(function() {
+Template.Lists_show_page.onRendered(function() {
   this.autorun(() => {
     if (this.subscriptionsReady()) {
       // Handle for launch screen defined in app-body.js
@@ -455,10 +455,10 @@ All of the suggestions about reusable components apply to smart components. In a
 
 <h3 id="subscribing">Subscribe from `onCreated`</h3>
 
-You should subscribe to publications from the server from an `onCreated` callback (within an `autorun` block if you have reactively changing arguments). In the Todos example app, in the `listsShowPage` template we subscribe to the `Todos.inList` publication based on the current `_id` FlowRouter param:
+You should subscribe to publications from the server from an `onCreated` callback (within an `autorun` block if you have reactively changing arguments). In the Todos example app, in the `Lists_show_page` template we subscribe to the `Todos.inList` publication based on the current `_id` FlowRouter param:
 
 ```js
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
@@ -472,30 +472,30 @@ We use `this.subscribe()` as opposed to `Meteor.subscribe()` so that the compone
 Notice that in this component we are also accessing the global client-side state store `FlowRouter`, which we wrap in a instance method called `getListId()`. This instance method is called both from the `autorun` in `onCreated`, and from the `listIdArray` helper:
 
 ```js
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   // We use #each on an array of one item so that the "list" template is
   // removed and a new copy is added when changing lists, which is
   // important for animation purposes.
   listIdArray() {
     const instance = Template.instance();
     const listId = instance.getListId();
-    return listId ? [listId] : [];
+    return Lists.findOne(listId) ? [listId] : [];
   },
 });
 ```
 
 <h3 id="fetch-in-smart-components">Fetch in helpers</h3>
 
-As described in the [UI/UX article](ui-ux.html#smart-components), you should fetch data in the same component where you subscribed to that data. In a Blaze smart component, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `listsShowPage`:
+As described in the [UI/UX article](ui-ux.html#smart-components), you should fetch data in the same component where you subscribed to that data. In a Blaze smart component, it's usually simplest to fetch the data in a helper, which you can then use to pass data into a reusable child component. For example, in the `Lists_show_page`:
 
 ```html
-{{> listsShow (listArgs listId)}}
+{{> Lists_show (listArgs listId)}}
 ```
 
 The `listArgs` helper fetches the data that we've subscribed to above:
 
 ```js
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   listArgs(listId) {
     const instance = Template.instance();
     return {

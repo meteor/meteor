@@ -40,7 +40,7 @@ The basic purpose of a router is to match certain URLs and perform actions as a 
 
 ```js
 FlowRouter.route('/lists/:_id', {
-  name: 'listsShow',
+  name: 'Lists.show',
   action(params, queryParams) {
     console.log("Looking at a list?");
   }
@@ -104,7 +104,7 @@ A convenient package for this is [`zimme:active-route`](https://atmospherejs.com
 meteor add zimme:active-route
 ```
 
-In the Todos example app, we link to each list the user knows about in the `appBody` template:
+In the Todos example app, we link to each list the user knows about in the `App_body` template:
 
 ```html
 {{#each list in lists}}
@@ -119,9 +119,9 @@ In the Todos example app, we link to each list the user knows about in the `appB
 We can determine if the user is currently viewing the list with the `activeListClass` helper:
 
 ```js
-Template.appBody.helpers({
+Template.App_body.helpers({
   activeListClass(list) {
-    const active = ActiveRoute.name('listsShow')
+    const active = ActiveRoute.name('Lists.show')
       && FlowRouter.getParam('_id') === list._id;
 
     return active && 'active';
@@ -141,53 +141,53 @@ When using Flow Router, the simplest way to display different views on the page 
 meteor add kadira:blaze-layout
 ```
 
-To use this package, we need to define a "layout" component. In the Todos example app, that component is called `appBody`:
+To use this package, we need to define a "layout" component. In the Todos example app, that component is called `App_body`:
 
 ```html
-<template name="appBody">
+<template name="App_body">
   ...
   {{> Template.dynamic template=main}}
   ...
 </template>
 ```
 
-(This is not the entire `appBody` component, but we highlight the most important part here).
+(This is not the entire `App_body` component, but we highlight the most important part here).
 Here, we are using a Blaze feature called `Template.dynamic` to render a template which is attached to the the `main` property of the data context. Using Blaze Layout, we can change that `main` property when a route is accessed.
 
-We do that in the `action` function of our `listsShow` route definition:
+We do that in the `action` function of our `Lists.show` route definition:
 
 ```js
 FlowRouter.route('/lists/:_id', {
-  name: 'listsShow',
+  name: 'Lists.show',
   action() {
-    BlazeLayout.render('appBody', {main: 'listsShowPage'});
+    BlazeLayout.render('App_body', {main: 'Lists_show_page'});
   }
 });
 ```
 
-What this means is that whenever a user visits a URL of the form `/lists/X`, the `listsShow` route will kick in, triggering the `BlazeLayout` call to set the `main` property of the `appBody` component.
+What this means is that whenever a user visits a URL of the form `/lists/X`, the `Lists.show` route will kick in, triggering the `BlazeLayout` call to set the `main` property of the `App_body` component.
 
 <h2 id="page-templates">Components as pages</h2>
 
-Notice that we called the component to be rendered `listsShowPage` (rather than `listsShow`). This indicates that this template is rendered directly by a Flow Router action and forms the 'top' of the rendering hierarchy for this URL.
+Notice that we called the component to be rendered `Lists_show_page` (rather than `Lists_show`). This indicates that this template is rendered directly by a Flow Router action and forms the 'top' of the rendering hierarchy for this URL.
 
-The `listsShowPage` template renders *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `listsShowPage` template is very tied to the route that rendered it, and so it needs to be a smart component. See the article on [UI/UX](ui-ux.html) for more about smart and reusable components.
+The `Lists_show_page` template renders *without* arguments---it is this template's responsibility to collect information from the current route, and then pass this information down into its child templates. Correspondingly the `Lists_show_page` template is very tied to the route that rendered it, and so it needs to be a smart component. See the article on [UI/UX](ui-ux.html) for more about smart and reusable components.
 
-It makes sense for a "page" smart component like `listsShowPage` to:
+It makes sense for a "page" smart component like `Lists_show_page` to:
 
 1. Collect route information,
 2. Subscribe to relevant subscriptions,
 3. Fetch the data from those subscriptions, and
 4. Pass that data into a sub-component.
 
-In this case, the HTML template for `listsShowPage` will look very simple, with most of the logic in the JavaScript code:
+In this case, the HTML template for `Lists_show_page` will look very simple, with most of the logic in the JavaScript code:
 
 ```html
-<template name="listsShowPage">
+<template name="Lists_show_page">
   {{#each listId in listIdArray}}
-    {{> listsShow (listArgs listId)}}
+    {{> Lists_show (listArgs listId)}}
   {{else}}
-    {{> appNotFound}}
+    {{> App_notFound}}
   {{/each}}
 </template>
 ```
@@ -195,14 +195,14 @@ In this case, the HTML template for `listsShowPage` will look very simple, with 
 (The `{% raw %}{{#each listId in listIdArray}}{% endraw %}}` is an animation technique for [page to page transitions](ui-ux.html#animating-page-changes)).
 
 ```js
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   // We use #each on an array of one item so that the "list" template is
   // removed and a new copy is added when changing lists, which is
   // important for animation purposes.
   listIdArray() {
     const instance = Template.instance();
     const listId = instance.getListId();
-    return listId ? [listId] : [];
+    return Lists.findOne(listId) ? [listId] : [];
   },
   listArgs(listId) {
     const instance = Template.instance();
@@ -230,15 +230,15 @@ It's the `listShow` component (a reusuable component) that actually handles the 
 
 There are types of rendering logic that appear related to the route but which also seem related to user interface rendering. A classic example is authorization; for instance, you may want to render a login form for some subset of your pages if the user is not yet logged in.
 
-It's best to keep all logic around what to render in the component hierarchy (i.e. the tree of rendered components). So this authorization should happen inside a component. Suppose we wanted to add this to the `listsShowPage` we were looking at above. We could do something like:
+It's best to keep all logic around what to render in the component hierarchy (i.e. the tree of rendered components). So this authorization should happen inside a component. Suppose we wanted to add this to the `Lists_show_page` we were looking at above. We could do something like:
 
 ```html
-<template name="listsShowPage">
+<template name="Lists_show_page">
   {{#if currentUser}}
     {{#each listId in listIdArray}}
-      {{> listsShow (listArgs listId)}}
+      {{> Lists_show (listArgs listId)}}
     {{else}}
-      {{> appNotFound}}
+      {{> App_notFound}}
     {{/each}}
   {{else}}
     Please log in to edit posts.
@@ -260,21 +260,21 @@ You can create wrapper components by using the "template as block helper" abilit
 </template>
 ```
 
-Once that template exists, we can simply wrap our `listsShowPage`:
+Once that template exists, we can simply wrap our `Lists_show_page`:
 
 ```html
-<template name="listsShowPage">
+<template name="Lists_show_page">
   {{#forceLoggedIn}}
     {{#each listId in listIdArray}}
-      {{> listsShow (listArgs listId)}}
+      {{> Lists_show (listArgs listId)}}
     {{else}}
-      {{> appNotFound}}
+      {{> App_notFound}}
     {{/each}}
   {{/forceLoggedIn}}
 </template>
 ```
 
-The main advantage of this approach is that it is immediately clear when viewing the `listsShowPage` what behavior will occur when a user visits the page.
+The main advantage of this approach is that it is immediately clear when viewing the `Lists_show_page` what behavior will occur when a user visits the page.
 
 Multiple behaviors of this type can be composed by wrapping a template in multiple wrappers, or creating a meta-wrapper that combines multiple wrapper templates.
 
@@ -291,7 +291,7 @@ Now that you have this package, you can use helpers in your templates to display
 
 
 ```html
-<a href="{{pathFor 'listsShow' _id=list._id}}" title="{{list.name}}"
+<a href="{{pathFor 'Lists.show' _id=list._id}}" title="{{list.name}}"
     class="list-todo {{activeListClass list}}">
 ```
 
@@ -300,10 +300,10 @@ Now that you have this package, you can use helpers in your templates to display
 In some cases you want to change routes based on user action outside of them clicking on a link. For instance, in the example app, when a user creates a new list, we want to route them to the list they just created. We do this by calling `FlowRouter.go()` once we know the id of the new list:
 
 ```js
-Template.appBody.events({
+Template.App_body.events({
   'click .js-new-list'() {
     const listId = Lists.methods.insert.call();
-    FlowRouter.go('listsShow', { _id: listId });
+    FlowRouter.go('Lists.show', { _id: listId });
   }
 });
 ```
@@ -343,32 +343,32 @@ If a URL is simply out-of-date (sometimes you might change the URL scheme of an 
 ```js
 FlowRouter.route('/old-list-route/:_id', {
   action(params) {
-    FlowRouter.go('listsShow', params);
+    FlowRouter.go('Lists.show', params);
   }
 });
 ```
 
 <h3 id="redirecting-dynamically">Redirecting dynamically</h3>
 
-The above approach will only work for static redirects. However, sometimes you need to load some data to figure out where to redirect to. In this case you'll need to render part of the component hierarchy to subscribe to the data you need. For example, in the Todos example app, we want to make the root (`/`) route redirect to the first known list. To achieve this, we need to render a special `rootRedirector` route:
+The above approach will only work for static redirects. However, sometimes you need to load some data to figure out where to redirect to. In this case you'll need to render part of the component hierarchy to subscribe to the data you need. For example, in the Todos example app, we want to make the root (`/`) route redirect to the first known list. To achieve this, we need to render a special `App_rootRedirector` route:
 
 ```js
 FlowRouter.route('/', {
-  name: 'home',
+  name: 'App.home',
   action() {
-    BlazeLayout.render('appBody', {main: 'rootRedirector'});
+    BlazeLayout.render('App_body', {main: 'App_rootRedirector'});
   }
 });
 ```
 
-The `rootRedirector` component is rendered inside the `appBody` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `rootRedirector` ends up being created, there'll be a list loaded, so we can simply do:
+The `App_rootRedirector` component is rendered inside the `App_body` layout, which takes care of subscribing to the set of lists the user knows about *before* rendering its sub-component, and we are guaranteed there is at least one such list. This means that if the `App_rootRedirector` ends up being created, there'll be a list loaded, so we can simply do:
 
 ```js
-Template.rootRedirector.onCreated(() => {
+Template.App_rootRedirector.onCreated(() => {
   // We need to set a timeout here so that we don't redirect from inside a redirection
   //   which is a limitation of the current version of FR.
   Meteor.setTimeout(() => {
-    FlowRouter.go('listsShow', Lists.findOne());
+    FlowRouter.go('Lists.show', Lists.findOne());
   });
 });
 ```
@@ -376,7 +376,7 @@ Template.rootRedirector.onCreated(() => {
 If you need to wait on specific data that you aren't already subscribed to at creation time, you can use an `autorun` and `subscriptionsReady()` to wait on that subscription:
 
 ```js
-Template.rootRedirector.onCreated(() => {
+Template.App_rootRedirector.onCreated(() => {
   // If we needed to open this subscription here
   this.subscribe('Lists.public');
 
@@ -384,7 +384,7 @@ Template.rootRedirector.onCreated(() => {
   // render some kind of loading state while we wait, too.
   this.autorun(() => {
     if (this.subscriptionsReady()) {
-      FlowRouter.go('listsShow', Lists.findOne());
+      FlowRouter.go('Lists.show', Lists.findOne());
     }
   });
 });
@@ -397,11 +397,11 @@ Often, you just want to go to a new route programmatically when a user has compl
 However, if we wanted to wait for the method to return from the server, we can put the redirection in the callback of the method:
 
 ```js
-Template.appBody.events({
+Template.App_body.events({
   'click .js-new-list'() {
     Lists.methods.insert.call((err, listId) => {
       if (!err) {
-        FlowRouter.go('listsShow', { _id: listId });  
+        FlowRouter.go('Lists.show', { _id: listId });  
       }
     });
   }
@@ -417,10 +417,10 @@ You will also want to show some kind of status while the method is working so th
 If a user types an incorrect URL, chances are you want to show them some kind of amusing not found page. There are actually two categories of "not found" pages. The first is when the URL typed in doesn't match any of your route definitions. You can use `FlowRouter.notFound` to handle this:
 
 ```js
-// the appNotFound template is used for unknown routes and missing lists
+// the App_notFound template is used for unknown routes and missing lists
 FlowRouter.notFound = {
   action() {
-    BlazeLayout.render('appBody', {main: 'appNotFound'});
+    BlazeLayout.render('App_body', {main: 'App_notFound'});
   }
 };
 ```
@@ -428,11 +428,11 @@ FlowRouter.notFound = {
 The second is when the URL is valid, but doesn't actually match any data. In this case, the URL matches a route, but once the route has successfully subscribed, it discovers there is no data. It usually makes sense in this case for the page component (which subscribes and fetches the data) to render a not found template instead of the usual template for the page:
 
 ```html
-<template name="listsShowPage">
+<template name="Lists_show_page">
     {{#each listId in listIdArray}}
-    {{> listsShow (listArgs listId)}}
+    {{> Lists_show (listArgs listId)}}
   {{else}}
-    {{> appNotFound}}
+    {{> App_notFound}}
   {{/each}}
 <template>
 ```

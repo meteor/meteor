@@ -137,14 +137,14 @@ First, we need to configure the layout we want to use when rendering the account
 
 ```js
 AccountsTemplates.configure({
-  defaultTemplate: 'authPage',
-  defaultLayout: 'appBody',
+  defaultTemplate: 'Auth_page',
+  defaultLayout: 'App_body',
   defaultContentRegion: 'main',
   defaultLayoutRegions: {}
 });
 ```
 
-In this case, we want to use the `appBody` layout template for all of the accounts-related pages. This template has a content region called `main`. Now, let's configure some routes:
+In this case, we want to use the `App_body` layout template for all of the accounts-related pages. This template has a content region called `main`. Now, let's configure some routes:
 
 ```js
 // Define these routes in a file loaded on both client and server

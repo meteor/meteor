@@ -94,7 +94,7 @@ Meteor.subscribe('Todos.inList', list._id);
 
 It makes sense to place a publication alongside the feature that it's targeted for. For instance, sometimes publications provide very specific data that's only really useful for the view for which they were developed. In that case, placing the publication in the same module or directory as the view code makes perfect sense.
 
-Often, however, a publication is more general. For example in the Todos example application, we create a `Todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `listsShow` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
+Often, however, a publication is more general. For example in the Todos example application, we create a `Todos.inList` publication, which publishes all the todos in a list. Although in the application we only use this in one place (in the `Lists_show` template), in a larger app, there's a good chance we might need to access all the todos for a list in other places. So putting the publication in the `todos` package is a sensible approach.
 
 <h2 id="subscriptions">Subscribing to data</h2>
 
@@ -119,7 +119,7 @@ It is best to place the subscription as close as possible to the place where the
 What this means in practice is that you should place your subscription calls in *components*. In Blaze, it's best to do this in the `onCreated()` callback:
 
 ```js
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
@@ -187,7 +187,7 @@ We can use this information to be more subtle about when we try and show data to
 We've already seen an example of using an `autorun` to re-subscribe when the (reactive) arguments to a subscription change. It's worth digging in a little more detail to understand what happens in this scenario.
 
 ```js
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
@@ -254,7 +254,7 @@ It's important that we set a `sort` parameter on our query (to ensure a repeatab
 Then on the client side, we'd some kind of reactive state variable to control how many items to request:
 
 ```js
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {

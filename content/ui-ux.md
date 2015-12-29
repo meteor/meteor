@@ -26,7 +26,7 @@ To begin with, let's consider two categories of UI components that are useful to
 
 A "reusable" component is a component which doesn't rely on anything from the environment it renders in. It renders purely based on its direct inputs (its *template arguments* in Blaze, or *props* in React) and internal state.
 
-In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `listsShow` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
+In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `Lists_show` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
 
 Reusable components have many advantages:
 
@@ -38,7 +38,7 @@ Reusable components have many advantages:
 
  4. You know exactly what dependencies you need to provide for them to work in different environments.
 
- There's also an even more restricted type of reusable component, a "pure" component, which does not have any internal state. For instance in the Todos app, the `todosItem` template decides what to render solely based on its arguments. Pure components are even easier to reason about and test than reusable ones and so should be preferred wherever possible.
+ There's also an even more restricted type of reusable component, a "pure" component, which does not have any internal state. For instance in the Todos app, the `Todos_item` template decides what to render solely based on its arguments. Pure components are even easier to reason about and test than reusable ones and so should be preferred wherever possible.
 
 <h3 id="global-stores">Global data stores</h3>
 
@@ -62,19 +62,19 @@ Ideally, once a smart component has assembled such a set of data, it passes it o
 A typical use case for a smart component is the "page" component that the router points you to when you access a URL. Such a component typically needs to do the three things above and then can pass the resulting arguments into child components. In the Todos example app, the `listShowPage` does exactly this, resulting in a template with very simple HTML:
 
 ```html
-<template name="listsShowPage">
+<template name="Lists_show_page">
   {{#each listId in listIdArray}}
-    {{> listsShow (listArgs listId)}}
+    {{> Lists_show (listArgs listId)}}
   {{else}}
-    {{> appNotFound}}
+    {{> App_notFound}}
   {{/each}}
 </template>
 ```
 
-The JavaScript of this component is responsible for subscribing and fetching the data that's used by the `listsShow` template itself:
+The JavaScript of this component is responsible for subscribing and fetching the data that's used by the `Lists_show` template itself:
 
 ```js
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
@@ -82,14 +82,14 @@ Template.listsShowPage.onCreated(function() {
   });
 });
 
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   // We use #each on an array of one item so that the "list" template is
   // removed and a new copy is added when changing lists, which is
   // important for animation purposes.
   listIdArray() {
     const instance = Template.instance();
     const listId = instance.getListId();
-    return listId ? [listId] : [];
+    return Lists.findOne(listId) ? [listId] : [];
   },
   listArgs(listId) {
     const instance = Template.instance();
@@ -163,7 +163,7 @@ If you do not, you'll see performance problems across the board: you'll be flood
 To throttle writes, a typical approach is to use underscore's [`.throttle()`](http://underscorejs.org/#throttle) or [`.debounce()`](http://underscorejs.org/#debounce) functions. For instance, in the Todos example app, we throttle writes on user input to 300ms:
 
 ```js
-Template.todosItem.events({
+Template.Todos_item.events({
   // update the text of the item on keypress but throttle the event to ensure
   // we don't flood the server with updates (handles the event at most once
   // every 300ms)
@@ -198,7 +198,7 @@ There are a few UX techniques for dealing with this waiting period. The simplest
 {{#if Template.subscriptionsReady}}
   {{> Template.dynamic template=main}}
 {{else}}
-  {{> appLoading}}
+  {{> App_loading}}
 {{/if}}
 ```
 
@@ -213,7 +213,7 @@ Usually it makes for a better UX to show as much of the screen as possible as qu
 We achieve this by passing the readiness of the todos list down from the smart component which is subscribing (the `listShowPage`) into the reusable component which renders the data:
 
 ```html
-{{> listsShow todosReady=Template.subscriptionsReady list=list}}
+{{> Lists_show todosReady=Template.subscriptionsReady list=list}}
 ```
 
 And then we use that state to determine what to render in the reusable component (`listShow`):
@@ -222,7 +222,7 @@ And then we use that state to determine what to render in the reusable component
 {{#if todosReady}}
   {{#with list._id}}
     {{#each todo in (todos this)}}
-      {{> todosItem (todoArgs todo)}}
+      {{> Todos_item (todoArgs todo)}}
     {{else}}
       <div class="wrapper-message">
         <div class="title-message">No tasks here</div>
@@ -249,7 +249,7 @@ For example, in Galaxy, while you wait for your app's log to load, you see a loa
 
 Loading states are notoriously difficult to work on visually as they are by definition transient and often are barely noticeable in a development environment where subscriptions load almost instantly.
 
-This is one reason why being able to achieve any state at will in the [component style guide](#styleguides) is so useful. As our reusable component `listsShow` simply chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a style guide.
+This is one reason why being able to achieve any state at will in the [component style guide](#styleguides) is so useful. As our reusable component `Lists_show` simply chooses to render based on its `todosReady` argument and does not concern itself with a subscription, it is trivial to render its loading state in a style guide.
 
 <h3 id="pagination">Pagination</h3>
 
@@ -297,7 +297,7 @@ In the Todos example app, we already have a wrapping component for the list that
 ```js
 const PAGE_SIZE = 10;
 
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   // We use internal state to store the number of items we've requested
   this.state = new ReactiveDict();
 
@@ -316,7 +316,7 @@ Template.listsShowPage.onCreated(function() {
   };
 });
 
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   listArgs(listId) {
     const instance = Template.instance();
     const list = Lists.findOne(listId);
@@ -344,7 +344,7 @@ An option in this case is to call out that there are changes to the data the use
 However, it is possible to do this thanks to our split between smart and reusable components. The reusable component simply renders what it's given, so we use our smart component to control that information. We can use a [*local collection*](collections.html#local-collections) to store the rendered data, and then push data into it when the user requests an update:
 
 ```js
-Template.listsShowPage.onCreated(function() {
+Template.Lists_show_page.onCreated(function() {
   // ...
 
   // The visible todos are the todos that the user can actually see on the screen
@@ -377,7 +377,7 @@ Template.listsShowPage.onCreated(function() {
   });
 });
 
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   listArgs(listId) {
     const instance = Template.instance();
     const list = Lists.findOne(listId);
@@ -412,24 +412,24 @@ So when should you wait for the server and when not? It basically comes down to 
 For instance, in the Todos example app, when creating a new list, the list creation will basically always succeed, so we write:
 
 ```js
-Template.appBody.events({
+Template.App_body.events({
   'click .js-new-list'() {
     const listId = Lists.methods.insert.call((err) => {
       if (err) {
         // At this point, we have already redirected to the new list page, but
         // for some reason the list didn't get created. This should almost never
         // happen, but it's good to handle it anyway.
-        FlowRouter.go('home');
+        FlowRouter.go('App.home');
         alert('Could not create list.');
       }
     });
 
-    FlowRouter.go('listsShow', { _id: listId });
+    FlowRouter.go('Lists.show', { _id: listId });
   }
 });
 ```
 
-We place the `FlowRouter.go('listsShow')` outside of the callback of the Method call, so that it runs right away. First we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice). In the unlikely event that the server call fails, we show an error and redirect back to the homepage.
+We place the `FlowRouter.go('Lists.show')` outside of the callback of the Method call, so that it runs right away. First we *simulate* the method (which creates a list locally in Minimongo), then route to it. Eventually the server returns, usually creating the exact same list (which the user will not even notice). In the unlikely event that the server call fails, we show an error and redirect back to the homepage.
 
 Note that the `listId` returned by the list method (which is the one generated by the client stub) is guaranteed to be the same as the one generated on the server, due to [the way that Meteor generates IDs](methods.html#consistent-id-generation) and ensures they are the same between client and server.
 
@@ -517,34 +517,34 @@ Let's consider the case of the Todos example app. Here we do a similar thing to 
   {{#if Template.subscriptionsReady}}
     {{> Template.dynamic template=main}}
   {{else}}
-    {{> appLoading}}
+    {{> App_loading}}
   {{/if}}
 {{/momentum}}
 ```
 
-This looks like it should just work, but there's one problem: Sometimes the rendering system will prefer to simply change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze will try to simply re-render the `listsShow` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that is nice in principle, but that we want to avoid here for animation purposes. More specifically, we want to make sure the animation *only* happens when the `listId` changes and not on other reactive changes.
+This looks like it should just work, but there's one problem: Sometimes the rendering system will prefer to simply change an existing component rather than switching it out and triggering the animation system. For example in the Todos example app, when you navigate between lists, by default Blaze will try to simply re-render the `Lists_show` component with a new `listId` (a changed argument) rather than pull the old list out and put in a new one. This is an optimization that is nice in principle, but that we want to avoid here for animation purposes. More specifically, we want to make sure the animation *only* happens when the `listId` changes and not on other reactive changes.
 
 To do so in this case, we can use a little trick (that is specific to Blaze, although similar techniques apply to other rendering engines) of using the fact that the `{% raw %}{{#each}}{% endraw %}` helper diffs arrays of strings, and completely re-renders elements when they change.
 
 ```html
-<template name="listsShowPage">
+<template name="Lists_show_page">
   {{#each listId in listIdArray}}
-    {{> listsShow (listArgs listId)}}
+    {{> Lists_show (listArgs listId)}}
   {{else}}
-    {{> appNotFound}}
+    {{> App_notFound}}
   {{/each}}
 </template>
 ```
 
 ```js
-Template.listsShowPage.helpers({
+Template.Lists_show_page.helpers({
   // We use #each on an array of one item so that the "list" template is
   // removed and a new copy is added when changing lists, which is
   // important for animation purposes.
   listIdArray() {
     const instance = Template.instance();
     const listId = instance.getListId();
-    return listId ? [listId] : [];
+    return Lists.findOne(listId) ? [listId] : [];
   }
 });
 ```
