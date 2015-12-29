@@ -251,7 +251,7 @@ Of course, we might find that we need to share this functionality between multip
 You can create wrapper components by using the "template as block helper" ability of Blaze (see the [Blaze Article](blaze.html#block-helpers)). Here's how we could write an authorization template:
 
 ```html
-<template name="forceLoggedIn">
+<template name="App_forceLoggedIn">
   {{#if currentUser}}
     {{> Template.contentBlock}}
   {{else}}
@@ -264,13 +264,13 @@ Once that template exists, we can simply wrap our `Lists_show_page`:
 
 ```html
 <template name="Lists_show_page">
-  {{#forceLoggedIn}}
+  {{#App_forceLoggedIn}}
     {{#each listId in listIdArray}}
       {{> Lists_show (listArgs listId)}}
     {{else}}
       {{> App_notFound}}
     {{/each}}
-  {{/forceLoggedIn}}
+  {{/App_forceLoggedIn}}
 </template>
 ```
 
