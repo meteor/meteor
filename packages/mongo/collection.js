@@ -209,6 +209,11 @@ Mongo.Collection = function (name, options) {
       getDoc: function(id) {
         return self.findOne(id);
       },
+      
+      // To be able to get back to the collection from the store.
+      _getCollection: function () {
+        return self;
+      }
     });
 
     if (!ok)
