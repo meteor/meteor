@@ -178,7 +178,9 @@ Template.Todos_item.events({
 });
 ```
 
-Typically, you use `.throttle()` if you are OK with the event happening during the user series of actions (i.e. you don't mind the multiple, throttled events happening over time, as in this case), whereas you use `.debounce()` if you want an event to just happen *once* at the end of all the repeated user-generated events.
+Typically, you use `.throttle()` if you are OK with the event happening during the user series of actions (i.e. you don't mind the multiple, throttled events happening over time, as in this case), whereas you use `.debounce()` if you want the events to happen whenever (in this example) the user stops typing for 300ms or longer.
+
+<img src="images/throttle-vs-debounce.png">
 
 <h4 id="limiting-re-rendering">Limiting re-rendering</h4>
 
