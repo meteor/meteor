@@ -1,4 +1,4 @@
-import {AccountsTest} from "accounts-base";
+import {AccountsTest} from "@meteor/accounts-base";
 
 Tinytest.add("accounts - parse urls for accounts-password",
   function (test) {
@@ -9,7 +9,7 @@ Tinytest.add("accounts - parse urls for accounts-password",
 
     _.each(actions, function (hashPart) {
       var fakeToken = "asdf";
-      
+
       var hashTokenOnly = "#/" + hashPart + "/" + fakeToken;
       AccountsTest.attemptToMatchHash(hashTokenOnly, function (token, action) {
         test.equal(token, fakeToken);

@@ -35,6 +35,7 @@ export default class ImportScanner {
     sourceRoot,
     usedPackageNames = {},
     nodeModulesPath,
+    packageModuleScope = "meteor",
   }) {
     assert.ok(isString(sourceRoot));
 
@@ -43,6 +44,7 @@ export default class ImportScanner {
     this.sourceRoot = sourceRoot;
     this.usedPackageNames = usedPackageNames;
     this.nodeModulesPath = nodeModulesPath;
+    this.packageModuleScope = packageModuleScope;
     this.absPathToOutputIndex = {};
     this.outputFiles = [];
   }
@@ -356,9 +358,19 @@ export default class ImportScanner {
   }
 
   _getMeteorPackageNameFromId(id) {
-    const possiblePackageName = id.split("/", 1)[0];
-    if (has(this.usedPackageNames, possiblePackageName)) {
-      return possiblePackageName;
+    // To disambiguate between meteor packages and npm packages
+    // we use a npm scope - https://docs.npmjs.com/misc/scope
+    // eg, To import the meteor package "underscore"
+    //      we `import "@meteor/underscore"`
+    if (id[0] !== "@") {
+      return;
+    }
+    const [scope, possiblePackageName] = id.split("/", 2);
+
+    if (scope.slice(1) === this.packageModuleScope
+        && possiblePackageName != null
+        && has(this.usedPackageNames, possiblePackageName)) {
+          return possiblePackageName;
     }
   }
 
@@ -420,7 +432,7 @@ export default class ImportScanner {
   // directories, npm never takes advantage of this possibility, which
   // conveniently allows Meteor to install files there without conflict.
   _addMeteorPackageStubToOutput(packageName) {
-    const relPkgPath = pathJoin("node_modules", packageName + ".js");
+    const relPkgPath = pathJoin("node_modules", `@${this.packageModuleScope}`, `${packageName}.js`);
     const absPkgPath = pathJoin(this.sourceRoot, relPkgPath);
 
     // Note that this absPkgPath need not actually exist on disk!
