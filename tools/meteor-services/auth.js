@@ -657,7 +657,7 @@ exports.pollForRegistrationCompletion = function (options) {
     connection.call('getUsername', function (err, username) {
       // If anything went wrong, return null just as we would have if we
       // hadn't bothered to ask the server.
-      resove(err ? null : username);
+      resolve(err ? null : username);
     });
 
     timer = setTimeout(function () {
