@@ -256,6 +256,18 @@ Todos.methods.updateText.call({
 
 We'll talk about how to handle the `ValidationError` in the section on forms below.
 
+<h3 id="throw-stub-exceptions">Errors in Method simulation</h3>
+
+When a Method is called, it usually runs twice---once on the client to simulate the result for Optimistic UI, and again on the server to make the actual change to the database. This means that if your Method throws an error, it will likely fail on the client _and_ the server. For this reason, `ValidatedMethod` turns on undocumented option in Meteor to avoid calling the server-side implementation if the simulation throws an error.
+
+While this behavior is good for saving server resources in cases where a Method will certainly fail, it's important to make sure that the simulation doesn't throw an error in cases where the server Method would have succeeded (for example, if you didn't load some data on the client that the Method needs to do the simulation properly). In this case, you can wrap server-side-only logic in a block that checks for a method simulation:
+
+```js
+if (!this.isSimulation) {
+  // Logic that depends on server environment here
+}
+```
+
 <h2 id="method-form">Calling a Method from a form</h2>
 
 The main thing enabled by the `ValidationError` convention is simple integration between Methods and the forms that call them. In general, your app is likely to have a one-to-one mapping of forms in the UI to Methods. First, let's define a Method for our business logic:
@@ -410,6 +422,8 @@ Here's exactly what happens, in order, when a Method is called:
 If we defined this Method in client and server code, as all Methods should be, a Method simulation is executed in the client that called it.
 
 The client enters a special mode where it tracks all changes made to client-side collections, so that they can be rolled back later. When this step is complete, the user of your app sees their UI update instantly with the new content of the client-side database, but the server hasn't received any data yet.
+
+If an exception is thrown from the Method simulation, then by default Meteor ignores it and continues to step (2). If you are using `ValidatedMethod` or pass a special `throwStubExceptions` option to `Meteor.apply`, then an exception thrown from the simulation will stop the server-side Method from running at all.
 
 The return value of the Method simulation is discarded, unless the `returnStubValue` option is passed when calling the Method, in which case it is returned to the Method caller. ValidatedMethod passes this option by default.
 
