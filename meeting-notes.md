@@ -1,3 +1,18 @@
+## Standup 4th Jan
+
+With Zol, Sashko.
+
+### Notes
+
+- Testing, forms and app structure blocked on more 1.3 stuff.
+
+### Decisions
+
+- Ignore code style article this week.
+- Sashko to work on 'soft launch meta issues' cleanup ticket in the next week, then do data stuff till Tom gets back.
+- Sashko to see what is left for us to be able to 1.3 preview release.
+- Sashko to try and massage todos to work with 1.3 preview, commenting out tests if necessary.
+
 ## Standup 14th Dec
 
 With Zol, Tom, Sashko.
