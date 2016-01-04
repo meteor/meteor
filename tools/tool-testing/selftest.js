@@ -1644,6 +1644,12 @@ var getFilteredTests = function (options) {
         newTags.push('non-galaxy');
       }
 
+      // We make sure to not run galaxy tests unless the user explicitly asks us
+      // to. Someday, this might not be the case.
+      if ( _.indexOf(test.tags, "galaxy") === -1) {
+        newTags.push('non-galaxy');
+      }
+
       if (! newTags.length) {
         return test;
       }

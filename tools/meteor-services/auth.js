@@ -472,6 +472,10 @@ var doInteractivePasswordLogin = function (options) {
     loginData.password = options.password;
   }
 
+  if (_.has(options, 'password')) {
+    loginData.password = options.password;
+  }
+
   var loginFailed = function () {
     if (! options.suppressErrorMessage) {
       Console.error("Login failed.");
