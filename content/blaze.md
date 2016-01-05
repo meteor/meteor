@@ -247,7 +247,7 @@ In <a href="ui-ux">the UI/UX article</a> we discussed the merits of creating reu
 
 Although Blaze, which is a simple template-based rendering engine, doesn't enforce a lot of these principles (unlike other frameworks like React and Angular) you can enjoy most of the same benefits by following some conventions when writing your Blaze components. This section will outline some of these "best practices" for writing reusable Blaze components.
 
-Examples below will reference the `listShow` component from the Todos example app.
+Examples below will reference the `Lists_show` component from the Todos example app.
 
 <h3 id="validate-data-context">Validate data context</h3>
 
