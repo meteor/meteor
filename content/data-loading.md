@@ -511,6 +511,8 @@ One point to be aware of is that if you allow the user to *modify* data in the "
 
 <h3 id="lifecycle">Publication lifecycle</h3>
 
+Although you can use publications and subscriptions in Meteor via an intuitive understanding, sometimes it's useful to know exactly what happens under the hood when you subscribe to data.
+
 Suppose you have a simple publication of the following form:
 
 ```js
@@ -519,15 +521,15 @@ Meteor.publish('Posts.all', function() {
 });
 ```
 
-Then when a client calls `Meteor.subscribe('Posts.all')` the following things happen in the livedata stack:
+Then when a client calls `Meteor.subscribe('Posts.all')` the following things happen inside Meteor:
 
 1. The client sends a `sub` message with the name of the subscription over DDP.
 
-2. The server starts up the subscription, running the publication handler above.
+2. The server starts up the subscription by running the publication handler function.
 
-3. As the publication handler returns a cursor, a standard set of behaviour kicks in:
+3. The publication handler identifies that the return value is a cursor. This enables a convenient mode for publishing cursors.
 
-4. The server sets up a query observer on that cursor---unless a such an observer already exists on the server (for any user), in which case it re-uses it.
+4. The server sets up a query observer on that cursor, unless a such an observer already exists on the server (for any user), in which case that observer is re-used.
 
 5. The observer fetches the current set of documents matching the cursor, and passes them back to the subscription (via the `this.added()` callback).
 
@@ -535,21 +537,21 @@ Then when a client calls `Meteor.subscribe('Posts.all')` the following things ha
 
   Note that the mergebox operates at the level of top-level fields, so if two subscriptions publish nested fields (e.g. sub1 publishes `doc.a.b = 7` and sub2 publishes `doc.a.c = 8`), then the "merged" document might not look as you expect (in this case `doc.a = {c: 8}`, if sub2 happens second).
 
-7. The subscription receives the `.ready()` message and sends that message to the client via the DDP `ready` message.
+7. The publication calls the `.ready()` callback, which sends the DDP `ready` message to the client. The subscription handle on the client is marked as ready.
 
-8. The observer observes the query. Typically, it uses MongoDB's Oplog to [notice changes that affect the query](https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver). If it sees a change that's relevant (like a new document matching or a change in a field on a matching document), it calls into the subscription (via `.added()`, `.changed()` or `.removed()`), which again sends the changes to the mergebox, and then usually over to the client via DDP.
+8. The observer observes the query. Typically, it [uses MongoDB's Oplog](https://github.com/meteor/meteor/wiki/Oplog-Observe-Driver) to notice changes that affect the query. If it sees a relevant change, like a new matching document or a change in a field on a matching document, it calls into the subscription (via `.added()`, `.changed()` or `.removed()`), which again sends the changes to the mergebox, and then to the client via DDP.
 
-This continues ad-infinitum until the client [stops](#stopping-subscriptions) the subscription, triggering the following behavior:
+This continues until the client [stops](#stopping-subscriptions) the subscription, triggering the following behavior:
 
 1. The client sends the `unsub` DDP message.
 
-2. The server will stop its internal subscription object, which has the effect of:
+2. The server stops its internal subscription object, triggering the following effects:
 
-3. Running any callbacks of `this.onStop()` setup by the publish handler, which is this case is a single one automatically setup when returning a cursors from the handler. The callback stops the observe, which cleans up the observer unless there are other subscriptions listening to it still.
+3. Any `this.onStop()` callbacks setup by the publish handler run. In this case, it is a single automatic callback setup when returning a cursor from the handler, which stops the query observer and cleans it up if necessary.
 
-4. Removing all the documents tracked by this subscription from the mergebox---which may or may not mean they are removed from the client.
+4. All documents tracked by this subscription are removed from the mergebox, which may or may not mean they are also removed from the client.
 
-5. Sending the `nosub` message to the client to indicate that the subscription has stopped.
+5. The `nosub` message is sent to the client to indicate that the subscription has stopped.
 
 <h2 id="rest-interop">Working with REST APIs</h2>
 
