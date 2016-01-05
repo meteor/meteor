@@ -2,19 +2,13 @@
 
 [![Articles drafted](https://badge.waffle.io/meteor/guide.svg?label=status:%20first%20draft&title=Articles%20Drafted)](https://waffle.io/meteor/guide?label=article)
 
-We're tracking [our progress](https://waffle.io/meteor/guide?label=article) using Waffle.io.
-
 - See the example app we're working to embody the principles from the guide at [meteor/todos](https://github.com/meteor/todos)
 - Check out the [outlines and discussions](https://github.com/meteor/guide/labels/article)
-- Checkout the [live site](http://guide.meteor.com/)
+- Check out the [live site](http://guide.meteor.com/)
 
-### How to contribute
+## Contributing
 
-If you're interested in helping out, the best thing to do is to look at the [GitHub issues which represent the 16 guide articles](https://github.com/meteor/guide/labels/article). If any topics interest you, read the outlines and major decision points linked from the issue, and post comments or PRs offering suggestions!
-
---------
-
-We're building a Meteor Guide. Like the [Rails Guide](http://guides.rubyonrails.org/), but for Meteor. We're going to do this totally out in the open, and we can't do it without the community. Read more in the [interview on the Meteor Blog](http://info.meteor.com/blog/meteor-guide-interview).
+If you're interested in helping out, the best thing to do is to look at the [GitHub issues which represent the guide articles](https://github.com/meteor/guide/labels/article). If any topics interest you, read the outlines and major decision points linked from the issue, and post comments or PRs offering suggestions!
 
 ### Writing tips
 
