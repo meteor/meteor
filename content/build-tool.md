@@ -172,6 +172,10 @@ sendTextMessage() {
 }
 ```
 
+<h3 id="client-npm">NPM on the client</h3>
+
+NPM started as a package manager for Node.js, but is quickly becoming one of the most popular places to publish client-side modules as well. Meteor 1.3 will include built-in support for bundling NPM modules on the client, but in the meantime the best option is to use the [`cosmos:browserify`](https://atmospherejs.com/cosmos/browserify) package to bundle these modules. Since one of the most common scenarios is using React components from NPM, read about how to do this in the [React in Meteor guide](http://react-in-meteor.readthedocs.org/en/latest/client-npm/).
+
 <h2 id="javascript-transpilation">JavaScript transpilation</h2>
 
 These days, the landscape of JavaScript tools and frameworks is constantly shifting, and the language itself is evolving just as rapidly. It's no longer reasonable to wait for web browsers to implement the language features you want to use. Most JavaScript development workflows rely on compiling code to work on the lowest common denominator of environments, while letting you use the newest features in development. Meteor has support for some of the most popular tools out of the box.
