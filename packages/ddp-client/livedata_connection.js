@@ -76,6 +76,9 @@ var Connection = function (url, options) {
   self._heartbeatInterval = options.heartbeatInterval;
   self._heartbeatTimeout = options.heartbeatTimeout;
 
+  // Option to extend ddp messages with custom messages 
+  self._customMessages = options.customMessages || {};
+  
   // Tracks methods which the user has tried to call but which have not yet
   // called their user callback (ie, they are waiting on their result or for all
   // of their writes to be written to the local cache). Map from method ID to
@@ -258,6 +261,8 @@ var Connection = function (url, options) {
       self._livedata_result(msg);
     else if (msg.msg === 'error')
       self._livedata_error(msg);
+    else if (_.include(_.keys(self._customMessages), msg.msg))
+      self._customMessages[msg.msg].call(self, msg);
     else
       Meteor._debug("discarding unknown livedata message type", msg);
   };
