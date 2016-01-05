@@ -209,7 +209,7 @@ It's a good idea to have a release process that you follow in releasing your app
 
 Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our [Testing Article](XXX) for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
 
-<h3 id="continuous-deployment">Continuous seployment</h3>
+<h3 id="continuous-deployment">Continuous deployment</h3>
 
 Continuous deployment refers to the process of deploying an application via a continuous integration tool, usually when some condition is reached (such as a git push to the `master` branch). You can use CD to deploy to Galaxy or Meteor's free hosting, as Nate Strauser explains in a [blog post on the subject](https://medium.com/@natestrauser/migrating-meteor-apps-from-modulus-to-galaxy-with-continuous-deployment-from-codeship-aed2044cabd9#.lvio4sh4a).
 

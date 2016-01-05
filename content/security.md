@@ -439,17 +439,15 @@ You can ensure that any unsecured connection to your app redirects to a secure c
 
 <h2 id="checklist">Security checklist</h2>
 
-// XXX to be finalized later
+This is a collection of points to check about your app that might catch common errors. However, it's not an exhaustive list yet---if we missed something, please let us know or file a pull request!
 
-1. Remove the `insecure` package.
-1. Remove the `autopublish` package.
-1. Validate all Method and publication arguments, and use `audit-argument-checks` to ensure this.
-1. Deny writes to the `profile` field on user documents // XXX link to accounts.
-1. Use Methods instead of client-side insert/update/remove and allow/deny.
-1. Use specific selectors and filter fields in publications.
-1. Don't use raw string inclusion in Blaze unless you really know what you are doing.
-1. Make sure secret API keys and passwords aren't in your source code.
-1. Use package scan as a safety net.
+1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
+1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
+1. [Deny writes to the `profile` field on user documents.](accounts.html#dont-use-profile)
+1. [Use Methods instead of client-side insert/update/remove and allow/deny.](security.html#allow-deny)
+1. Use specific selectors and [filter fields](http://guide.meteor.com/security.html#fields) in publications.
+1. Don't use [raw HTML inclusion in Blaze](blaze.html#rendering-html) unless you really know what you are doing.
+1. [Make sure secret API keys and passwords aren't in your source code.](security.html#api-keys)
 1. Secure the data, not the UI - redirecting away from a client-side route does nothing for security, it's just a nice UX feature.
-1. Don't ever trust user IDs passed from the client. Use `this.userId` inside Methods and publications.
-1. Set up browser policy, but know that not all browsers support it so it's mostly a convenience/extra layer thing
+1. [Don't ever trust user IDs passed from the client.](http://guide.meteor.com/security.html#user-id-client) Use `this.userId` inside Methods and publications.
+1. Set up [browser policy](https://atmospherejs.com/meteor/browser-policy), but know that not all browsers support it so it just provides an extra layer of security to users with modern browsers.
