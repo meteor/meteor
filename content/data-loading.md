@@ -509,7 +509,7 @@ From the client's perspective, data published like this doesn't look any differe
 
 One point to be aware of is that if you allow the user to *modify* data in the "psuedo-collection" you are publishing in this fashion, you'll want to be sure to re-publish the modifications to them via the publication, to achieve an optimistic user experience.
 
-<h3 id="lifecycle">Publication lifecycle</h3>
+<h3 id="lifecycle">Subscription lifecycle</h3>
 
 Although you can use publications and subscriptions in Meteor via an intuitive understanding, sometimes it's useful to know exactly what happens under the hood when you subscribe to data.
 
