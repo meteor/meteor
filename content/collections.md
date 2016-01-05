@@ -249,12 +249,12 @@ Point 3. can usually be resolved by placing the hook in the *Method* that calls 
 
 <h3 id="abstracting-denormalizers">Abstracting denormalizers</h3>
 
-To properly abstract the logic of a denormalizer (which may need to happen on various mutators of more than one collection), it's sensible to define the logic of the denormalizer in one place, and "hook" it into the mutator with a single line of code. The advantage of this approach is that although the logic is in a single spot rather than spread over many files, you can still examine the code for one of the collections and fully understand what happens on each update.
+Denormalization may need to happen on various mutators of several collections. Therefore, it's sensible to define the denormalization logic in one place, and hook it into each mutator with one line of code. The advantage of this approach is that the denormalization logic is one place rather than spread over many files, but you can still examine the code for each collection and fully understand what happens on each update.
 
-In the Todos example app, we build a `incompleteCountDenormalizer` to abstract the counting of incomplete todos on the lists. This code needs to run whenever a todo item is inserted, updated (it could be checked or unchecked), or removed. The code looks like:
+In the Todos example app, we build a `incompleteCountDenormalizer` to abstract the counting of incomplete todos on the lists. This code needs to run whenever a todo item is inserted, updated (checked or unchecked), or removed. The code looks like:
 
 ```js
-Todos.incompleteCountDenormalizer = {
+const incompleteCountDenormalizer = {
   _updateList(listId) {
     // Recalculate the correct incomplete count direct from MongoDB
     const incompleteCount = Todos.find({
@@ -286,22 +286,22 @@ Todos.incompleteCountDenormalizer = {
 };
 ```
 
-We are then able to wire in the denormalizer into the mutations of the `Todos` collection with code like:
+We are then able to wire in the denormalizer into the mutations of the `Todos` collection like so:
 
 ```js
 class TodosCollection extends Mongo.Collection {
   insert(doc, callback) {
     doc.createdAt = doc.createdAt || new Date();
     const result = super(doc, callback);
-    Todos.incompleteCountDenormalizer.afterInsertTodo(doc);
+    incompleteCountDenormalizer.afterInsertTodo(doc);
     return result;
   }
 }
 ```
 
-Note that we've just built the code we actually use in the application---we don't deal with all conceptual potential ways the todo count on a list could change (for instance, when you update a todo, if you changed the `listId`, it would need to change the `incompleteCount` of *two* lists---however this doesn't actually happen in the application).
+Note that we only handled the mutators we actually use in the application---we don't deal with all possible ways the todo count on a list could change. For example, if you changed the `listId` on a todo item, it would need to change the `incompleteCount` of *two* lists. However, since our application doesn't do this, we don't handle it in the denormalizer.
 
-Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on just dealing with the modifiers we know we'll see in our app. If even this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
+Dealing with every possible MongoDB operator is difficult to get right, as MongoDB has a rich modifier language. Instead we focus on just dealing with the modifiers we know we'll see in our app. If this gets too tricky, then moving the hooks for the logic into the Methods that actually make the relevant modifications could be sensible (although you need to be diligent to ensure you do it in *all* the relevant places, both now and as the app changes in the future).
 
 It could make sense for packages to exist to completely abstract some common denormalization techniques and actually attempt to deal with all possible modifications. If you write such a package, please let us know!
 
@@ -311,7 +311,7 @@ As we discussed above, trying to predict all future requirements of your data sc
 
 <h3 id="writing-migrations">Writing migrations</h3>
 
-A useful package for writing migrations is [`percolate:migrations`](https://atmospherejs.com/percolate/migrations), which provides a nice framework for switching between different versions of your schema. 
+A useful package for writing migrations is [`percolate:migrations`](https://atmospherejs.com/percolate/migrations), which provides a nice framework for switching between different versions of your schema.
 
 Suppose, as an example, that we wanted to add a `list.todoCount` field, and ensure that it was set for all existing lists. Then we might write the following in server-only code (e.g. `/server/migrations.js`):
 

@@ -65,7 +65,7 @@ You want to put your CDN in front of the static assets that Meteor knows about. 
 
 If you are following the above approach, you may also want to manually add the CDN's hostname whenever you put an image/other asset URL in your application's code. To do this throughout your app, you can write a generic helper like `imageUrl()`.
 
-<h2 id="deploying">Deploying</h2>
+<h2 id="deployment-options">Deployment options</h2>
 
 There are many options on where to deploy your Meteor application. We'll discuss some of the most popular ones here.
 
@@ -195,7 +195,7 @@ mup deploy
 
 You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
 
-<h2 id="process">Deployment Process</h2>
+<h2 id="process">Deployment process</h2>
 
 Although it's much easier to deploy a web application than release most other types of software, that doesn't mean you should be cavalier with your deployment. It's important to properly QA and test your releases before you push them live, to ensure that users don't have a bad experience, or even worse, data get corrupted.
 
@@ -209,7 +209,7 @@ It's a good idea to have a release process that you follow in releasing your app
 
 Steps 2. and 5. can be quite time-consuming, especially if you are aiming to maintain a high level of quality in your application. That's why it's a great idea to develop a suite of acceptance tests (see our [Testing Article](XXX) for more on this). To take things even further, you could run a load/stress test against your staging server on every release.
 
-<h3 id="continuous-deployment">Continuous Deployment</h3>
+<h3 id="continuous-deployment">Continuous seployment</h3>
 
 Continuous deployment refers to the process of deploying an application via a continuous integration tool, usually when some condition is reached (such as a git push to the `master` branch). You can use CD to deploy to Galaxy or Meteor's free hosting, as Nate Strauser explains in a [blog post on the subject](https://medium.com/@natestrauser/migrating-meteor-apps-from-modulus-to-galaxy-with-continuous-deployment-from-codeship-aed2044cabd9#.lvio4sh4a).
 
@@ -269,7 +269,7 @@ To achieve a similar abstraction for subscriptions/publications, you may want to
 
 When you are running an app in production, it's vitally important that you keep tabs on the performance of your application and ensure it is running smoothly.
 
-<h3 id="meteor-performance">Understanding Meteor Performance</h3>
+<h3 id="meteor-performance">Understanding Meteor performance</h3>
 
 Although a host of tools exist to monitor the performance of HTTP, request-response based applications, the insights they give aren't necessarily useful for a connected client system like a Meteor application. Although it's true that slow HTTP response times would be a problem for your app, and so using a tool like [Pingdom](https://www.pingdom.com) can serve a purpose, there are many kinds of issues with your app that won't be surfaced by such tools.
 
