@@ -661,6 +661,30 @@ _.extend(Isopack.prototype, {
         sourceProcessorSet.addSourceProcessor(sp);
       },
 
+      _getByExtension: function (sourceProcessorSet, extension) {
+        return sourceProcessorSet.getByExtension(extension);
+      },
+
+      _getByFilename: function (sourceProcessorSet, filename) {
+        return sourceProcessorSet.getByFilename(filename);
+      },
+
+      _getCompilerByExtension: function (extension) {
+        return Plugin._getByExtension(isopack.sourceProcessors.compiler, extension);
+      },
+
+      _getMinifierByExtension: function (extension) {
+        return Plugin._getByExtension(isopack.sourceProcessors.minifier, extension);
+      },
+
+      _getCompilerByFilename: function (filename) {
+        return Plugin._getByFilename(isopack.sourceProcessors.compiler, filename);
+      },
+
+      _getMinifierByFilename: function (filename) {
+        return Plugin._getByFilename(isopack.sourceProcessors.minifier, filename);
+      },
+
       // Compilers are part of the Batch Plugins API.
       //
       // A compiler plugin is provided by packages to participate in
