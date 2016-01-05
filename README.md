@@ -103,6 +103,9 @@ Migrations.config({
 
   // Enable/disable logging "Not migrating, already at version {number}"
   logIfLatest: true
+
+  // migrations collection name to use in the database
+  collectionName: "migrations"
 });
 ```
 
@@ -135,6 +138,10 @@ The `opts` object passed to `MyLogger` above includes `level`, `message`, and `t
 - `level` will be one of `info`, `warn`, `error`, `debug`.
 - `message` is something like `Finished migrating.`.
 - `tag` will always be `"Migrations"` (handy for filtering).
+
+### Custom collection name
+
+By default, the collection name is **migrations**. There may be cases where this is inadequate such as using the same Mongo database for multiple Meteor applications that each have their own set of migrations that need to be run.
 
 ### Command line use
 

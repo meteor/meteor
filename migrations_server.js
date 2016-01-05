@@ -39,8 +39,8 @@ Migrations = {
     logger: null,
     // enable/disable info log "already at latest."
     logIfLatest: true,
-		// migrations collection name
-		collectionName: "migrations"
+    // migrations collection name
+    collectionName: "migrations"
   },
   config: function(opts) {
     this.options = _.extend({}, this.options, opts);
@@ -92,8 +92,8 @@ var log;
 Meteor.startup(function () {
   var options = Migrations.options;
 
-	// collection holding the control record
-	Migrations._collection = new Mongo.Collection(options.collectionName);
+  // collection holding the control record
+  Migrations._collection = new Mongo.Collection(options.collectionName);
 
   log = createLogger('Migrations');
 
