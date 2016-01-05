@@ -414,7 +414,7 @@ var File = function (inputFile, module) {
   self.deps = inputFile.deps || [];
 
   // True if the input file should not be evaluated eagerly.
-  self.lazy = !!inputFile.lazy;
+  self.lazy = inputFile.lazy; // could be `true`, `false` or `undefined` <sigh>
 
   // True if the file is an eagerly evaluated entry point, or if some
   // other file imports or requires it.

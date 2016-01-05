@@ -412,7 +412,9 @@ class ResourceSlot {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      lazy: !! getOption("lazy"),
+      // intentionally preserve a possible `undefined` value for files
+      // in apps, rather than convert it into `false` via `!!`
+      lazy: getOption("lazy") === undefined ? undefined : !! getOption("lazy"),
       bare: !! getOption("bare"),
       mainModule: !! getOption("mainModule"),
     });

@@ -76,15 +76,15 @@ export default class ImportScanner {
   getOutputFiles() {
     this.outputFiles.forEach(file => {
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
-      file.deps = this._scanDeps(absPath, file.data)
+      file.deps = this._scanDeps(absPath, file.data);
     });
 
     return this.outputFiles;
   }
 
   _isFileLazy(file) {
-    if (has(file, "lazy")) {
-      return !! file.lazy;
+    if (file.lazy !== undefined) {
+      return file.lazy;
     }
 
     if (file.sourcePath.endsWith(".json")) {
