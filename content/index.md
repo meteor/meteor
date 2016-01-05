@@ -1,15 +1,19 @@
 ---
-title: Welcome!
+title: Introduction
 order: 0
 ---
 
-This is a work in progress deployment of the Meteor Guide. We're tracking our progress writing articles using [Waffle.io](https://waffle.io/meteor/guide?label=article). See the example app we're working on to embody the principles from the guide at [meteor/todos](https://github.com/meteor/todos). Keep in mind that it's still a work in progress so some things are rough around the edges.
+<h2 id="what-is-meteor">What is Meteor?</h2>
 
-### How to contribute
+Meteor is a full-stack JavaScript platform for developing modern web and mobile applications. Meteor includes a key set of technologies for building connected-client reactive user interfaces, a build tool, and a curated set of packages from the Node.js and general JavaScript community.
 
-Read the [published guide articles](http://guide.meteor.com/). If you see something that could be better, click "edit on GitHub" at the bottom to file a PR, or open an issue for discussion!
+- Meteor allows you to develop in **one language**, JavaScript, in all environments: application server, web browser, and mobile device.
 
----
+- Meteor uses **data on the wire**, meaning the server sends data, not HTML, and the client renders it.
+
+- Meteor **embraces the ecosystem**, bringing the best parts of the extremely active JavaScript community to you in a careful and considered way.
+
+- Meteor provides **full stack reactivity**, allowing your UI to seamlessly reflect the true state of the world with minimal development effort.
 
 <h2 id="what-is-it">What is the Meteor Guide?</h2>
 
@@ -23,23 +27,11 @@ The guide is targeted towards intermediate developers that have some familiarity
 
 <h2 id="example-app">Example app</h2>
 
-Most guides make reference to the Todos example application. This code is actively being developed alongside the guide. You can see the latest source code for the app, and file issues or make suggestions via pull request at its [GitHub repository](https://github.com/meteor/todos).
-
-<h2 id="what-is-meteor">What is Meteor?</h2>
-
-Meteor is a full-stack JavaScript platform for developing modern web and mobile applications. Meteor includes a key set of technologies for building connected-client reactive user interfaces, a build tool, and a curated set of packages from the Node.js and general JavaScript community.
-
- - Meteor allows you to develop in **one language**, JavaScript, in all environments, be it server, web browser or mobile device.
-
- - Meteor prefers **data on the wire**, meaning the server sends data, not HTML, and the client renders it.
-
- - Meteor **embraces the ecosystem**, bringing the best parts of the extremely active JavaScript community to you in careful and considered way.
-
- - Meteor provides **full stack reactivity**, allowing you to write frontends that seamlessly reflect the true state of the world with minimal development effort.
+Many articles reference the Todos example application. This code is being actively developed alongside the guide. You can see the latest source code for the app, and file issues or make suggestions via pull request at its [GitHub repository](https://github.com/meteor/todos).
 
 <h2 id="guide-concepts">Guide concepts</h2>
 
-The Meteor Guide is **developed in the open** at the [GitHub repository](https://github.com/meteor/guide). We encourage pull requests and issues to discuss problems with and changes that could be made to the content. We hope that keeping our process open and honest will make it clear what we plan to include in the guide and what changes will be coming in future Meteor versions.
+Ongoing Meteor Guide development takes place **in the open** [on GitHub](https://github.com/meteor/guide). We encourage pull requests and issues to discuss problems with and changes that could be made to the content. We hope that keeping our process open and honest will make it clear what we plan to include in the guide and what changes will be coming in future Meteor versions.
 
 The decisions made and practices outlined in the guide must necessarily be **opinionated**. Certain best practices will be highlighted and other valid approaches ignored. We aim to reach community consensus around major decisions but there will always be other ways to solve problems when developing your application. We believe it's important to know what the "standard" way to solve a problem is before branching out to other options. If an alternate approach proves itself superior, then it should make its way into a future version of the guide.
 
