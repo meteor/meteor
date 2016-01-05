@@ -195,14 +195,6 @@ mup deploy
 
 You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
 
-<h3 id="modulus">Deploying to Modulus</h3>
-
-[Modulus](https://modulus.io) is a container based hosting service that's an affordable way to host Meteor applications without needing to deal with managing your own servers directly. You can use them to host your MongoDB database and deploy your Meteor application using their commandline tool.
-
-Read more about using Meteor with Modulus [here](http://help.modulus.io/customer/portal/articles/1647770-using-meteor-with-modulus).
-
-Note however that in order use oplog tailing (highly recommended for performance), you'll need to either get a dedicated database hosting service from Modulus or use a different MongoDB provider (see the section on [databases for Galaxy](#galaxy-mongo) for some suggestions).
-
 <h2 id="process">Deployment Process</h2>
 
 Although it's much easier to deploy a web application than release most other types of software, that doesn't mean you should be cavalier with your deployment. It's important to properly QA and test your releases before you push them live, to ensure that users don't have a bad experience, or even worse, data get corrupted.
