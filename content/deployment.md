@@ -69,7 +69,7 @@ If you are following the above approach, you may also want to manually add the C
 
 There are many options on where to deploy your Meteor application. We'll discuss some of the most popular ones here.
 
-<h3 id="galaxy">Deploying to Galaxy</h3>
+<h3 id="galaxy">Galaxy (recommended)</h3>
 
 Our recommended option is to deploy to Galaxy, Meteor's paid hosting service. In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing), and separately provision a MongoDB database (see below).
 
