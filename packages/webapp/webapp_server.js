@@ -708,7 +708,8 @@ var runWebAppServer = function () {
       return undefined;
     }
 
-    res.writeHead(200, headers);
+    var statusCode = res.statusCode ? res.statusCode : 200;
+    res.writeHead(statusCode, headers);
     res.write(boilerplate);
     res.end();
     return undefined;
