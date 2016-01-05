@@ -334,21 +334,26 @@ export default class ImportScanner {
 
   _resolveNodeModule(id, path) {
     let resolved = null;
+    let dir = path;
 
-    const packageName = this._getMeteorPackageNameFromId(id);
-    if (packageName) {
-      this._addMeteorPackageStubToOutput(packageName);
-    } else {
-      let dir = path;
-      do {
-        dir = pathDirname(dir);
-        resolved = this._joinAndStat(dir, "node_modules", id);
-      } while (! resolved && dir !== this.sourceRoot);
+    do {
+      dir = pathDirname(dir);
+      resolved = this._joinAndStat(dir, "node_modules", id);
+    } while (! resolved && dir !== this.sourceRoot);
 
-      if (! resolved && this.nodeModulesPath) {
-        // After checking any local node_modules directories, fall back to
-        // the package NPM directory, if one was specified.
-        resolved = this._joinAndStat(this.nodeModulesPath, id);
+    if (! resolved && this.nodeModulesPath) {
+      // After checking any local node_modules directories, fall back to
+      // the package NPM directory, if one was specified.
+      resolved = this._joinAndStat(this.nodeModulesPath, id);
+    }
+
+    if (! resolved) {
+      // If the package is still not resolved, and it appears to refer to
+      // a Meteor package, create a stub for that package that just sets
+      // module.exports = Package[packageName].
+      const packageName = this._getMeteorPackageNameFromId(id);
+      if (packageName) {
+        this._addMeteorPackageStubToOutput(packageName);
       }
     }
 
