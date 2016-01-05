@@ -86,9 +86,6 @@ function createLogger(prefix) {
 
 var log;
 
-// // collection holding the control record
-// Migrations._collection = new Mongo.Collection('migrations');
-
 Meteor.startup(function () {
   var options = Migrations.options;
 
