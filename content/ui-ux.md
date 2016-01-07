@@ -1,6 +1,7 @@
 ---
 title: User Interfaces
 order: 6
+description: General tips for structuring your UI code, independent of your view rendering technology.
 ---
 
 After reading this guide, you'll know:

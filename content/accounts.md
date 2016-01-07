@@ -1,6 +1,7 @@
 ---
 title: Users and Accounts
 order: 5
+description: How to build user login functionality into a Meteor app. Let your users log in with passwords, Facebook, Google, GitHub, and more.
 ---
 
 After reading this article, you'll know:

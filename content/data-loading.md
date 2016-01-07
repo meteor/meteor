@@ -1,6 +1,7 @@
 ---
 title: Publications and Data Loading
 order: 2
+description: How and where to load data in your Meteor app using publications and subscriptions.
 ---
 
 After reading this guide, you'll know:

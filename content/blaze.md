@@ -1,6 +1,7 @@
 ---
 title: Blaze
 order: 7
+description: How to use Blaze, Meteor's frontend rendering system, to build usable and maintainable user interfaces.
 ---
 
 After reading this guide, you'll know:
