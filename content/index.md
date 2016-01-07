@@ -67,3 +67,5 @@ The Meteor Guide will never be done. In particular, it will be updated with new 
 4. The [Meteor docs](https://docs.meteor.com) is the best place to find the core API documentation of the platform.
 
 5. [Atmosphere](https://atmospherejs.com) is the repository of community packages designed especially for Meteor.
+
+6. The [projects](https://www.meteor.com/projects) section of the Meteor website describes the projects that make up the Meteor platform. 
