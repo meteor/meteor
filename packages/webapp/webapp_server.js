@@ -411,10 +411,10 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     res.write(info.content);
     res.end();
   } else {
-    send(req, info.absolutePath)
-      .maxage(maxAge)
-      .hidden(true)  // if we specified a dotfile in the manifest, serve it
-      .on('error', function (err) {
+    send(req, info.absolutePath, {
+        maxage: maxAge,
+        dotfiles: 'allow' // if we specified a dotfile in the manifest, serve it
+      }).on('error', function (err) {
         Log.error("Error serving static file " + err);
         res.writeHead(500);
         res.end();
