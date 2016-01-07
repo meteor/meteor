@@ -24,9 +24,6 @@ var sections = [
       section("Quick Start", {
         id: "quickstart"
       }),
-      section("Principles", {
-        id: "sevenprinciples"
-      }),
       section("Learning Resources", {
         id: "learning-resources"
       }),
