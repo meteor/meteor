@@ -157,11 +157,11 @@ outdated platforms`);
 
     builder.writeConfigXmlAndCopyResources();
     builder.copyWWW(bundlePath);
+    builder.copyBuildOverride();
 
     this.ensurePlatformsAreSynchronized();
     this.ensurePluginsAreSynchronized(pluginVersions,
       builder.pluginsConfiguration);
-    builder.copyBuildOverride();
   }
 
   prepareForPlatform(platform) {
