@@ -99,9 +99,37 @@ Once you are setup with Galaxy, deployment is simple (just re-run the `meteor de
 
 If you are using Galaxy (or need a production quality, managed MongoDB for one of the other options listed here), it's usually a good idea to use a [MongoDB hosting provider](https://galaxy.meteor.com/help/configuring-mongodb). There are a variety of options out there, but a good choice is [Compose](https://compose.io). The main things to look for are support for oplog tailing, and a presence in the us-east-1 AWS region.
 
-<h3 id="free-hosting">Meteor's free hosting</h3>
+<h3 id="mup">Meteor Up</h3>
 
-If you are still developing your application and want to see how it behaves online, or share it with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`. We do **not** recommend hosting critical apps on a subdomain of meteor.com. Each app runs in a single process, and this free service is not capable of scaling to support production workloads.
+[Meteor Up](https://github.com/kadirahq/meteor-up), often referred to as "mup", is an open source tool that can be used to deploy Meteor application to any online server over SSH.
+
+To use mup, you need to install the `mup` tool via `npm`.
+
+```bash
+npm install -g mup
+```
+
+Once you've installed the command, you can initialize your project with `mup init`, which will create a `mup.json` file which you can use to configure your setup. You can read the [finer details here](https://github.com/kadirahq/meteor-up#example-file), but essentially you need to list the servers you would like to install to as well as some options on exactly how to set them up.
+
+You can obtain a server running Ubuntu or Debian from many generic hosting providers. Mup can SSH into your server with the keys you provide in the config.
+
+Once you've configured mup, you can get your servers installed with
+
+```bash
+mup setup
+```
+
+Once you've done so, you can redeploy each time with:
+
+```bash
+mup deploy
+```
+
+You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+
+<h3 id="free-hosting">Basic meteor.com hosting</h3>
+
+If you are in the process of developing your application and want to see how it behaves online, or share it with a small group without needing a full production setup, you can get started quickly on the free hosting available at `meteor.com`. We do **not** recommend hosting critical apps on a subdomain of meteor.com. Each app runs in a single process, and this free service is not capable of scaling to support production workloads.
 
 Deploying is simple, just type:
 
@@ -170,34 +198,6 @@ env PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
 ```
 
 However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch.
-
-<h3 id="mup">Deploying with Meteor Up</h3>
-
-[Meteor Up](https://github.com/kadirahq/meteor-up), often referred to as "mup", is an open source tool that can be used to deploy Meteor application to any online server over SSH.
-
-To use mup, you need to install the `mup` tool via `npm`.
-
-```bash
-npm install -g mup
-```
-
-Once you've installed the command, you can initialize your project with `mup init`, which will create a `mup.json` file which you can use to configure your setup. You can read the [finer details here](https://github.com/kadirahq/meteor-up#example-file), but essentially you need to list the servers you would like to install to as well as some options on exactly how to set them up.
-
-To list those servers you'll first need to obtain some! A good option is [Digital Ocean](https://www.digitalocean.com), which will provide a Virtual Private Server for a very reasonable price. You'll need to ensure that Ubuntu or Debian is installed on the machine and mup can SSH into your server with the keys you provide in the config.
-
-Once you've configured mup, you can get your servers installed with
-
-```bash
-mup setup
-```
-
-Once you've done so, you can redeploy each time with:
-
-```bash
-mup deploy
-```
-
-You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
 
 <h2 id="process">Deployment process</h2>
 
