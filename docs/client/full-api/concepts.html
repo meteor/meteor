@@ -1,13 +1,6 @@
 <template name="concepts">
 
 <h1 id="concepts">Concepts</h1>
-
-We've written our fair share of single-page JavaScript applications by hand.
-Writing an entire application in one language (JavaScript) with one
-data format (JSON) is a real joy.  Meteor is everything we wanted
-when writing those apps.
-
-{{> whatismeteor }}
 {{> structure }}
 {{> data_ }}
 {{> reactivity }}
@@ -16,49 +9,6 @@ when writing those apps.
 {{> namespacing }}
 {{> deploying }}
 {{> packages_writing }}
-</template>
-
-<template name="whatismeteor">
-
-{{#markdown}}
-
-<h2 id="whatismeteor">What is Meteor?</h2>
-
-Meteor is two things:
-
-* A _library of packages_: pre-written, self-contained modules that
-  you might need in your app.
-
-  There are about a dozen core Meteor packages that most any app will use. Two
-  examples: [`webapp`](#webapp), which handles incoming HTTP connections, and
-  `templating`, which lets you make HTML templates that automatically update
-  live as data changes. Then there are optional packages like `email`, which
-  lets your app send emails, or the Meteor Accounts series (`accounts-password`,
-  `accounts-facebook`, `accounts-ui`, and others) which provide a full-featured
-  user account system that you can drop right into your app. In addition to
-  these "core" packages, there are thousands of community-written packages in
-  [Atmosphere](https://atmospherejs.com/), one of which might do just what you
-  need.
-
-* A _command-line tool_ called `meteor`.
-
-  `meteor` is a build tool analogous to `make`, `rake`, or the non-visual parts
-of Visual Studio. It gathers up all of the source files and assets in your
-application, carries out any necessary build steps (such as compiling
-[CoffeeScript](http://coffeescript.org), minifying CSS, building
-[npm](https://npmjs.org/) modules, or generating source maps), fetches the
-packages used by your app, and outputs a standalone, ready-to-run application
-bundle. In development mode it can do all of this interactively, so that
-whenever you change a file you immediately see the changes in your browser. It's
-super easy to use out of the box, but it's also extensible: you can add support
-for new languages and compilers by adding build plugin packages to your app.
-
-  The key idea in the Meteor package system is that _everything should work
-  identically in the browser and on the server_ (wherever it makes sense, of
-  course: browsers can't send email and servers can't capture mouse events). Our
-  whole ecosystem has been built from the ground up to support this.
-
-{{/markdown}}
 </template>
 
 <template name="structure">
@@ -295,149 +245,15 @@ packages/oranges/<anything>.js # file loading is controlled by package.js
 <template name="data_">
 {{#markdown}}
 
+<a id="dataandsecurity-validation"></a>
 <h2 id="dataandsecurity">Data and security</h2>
 
-Meteor makes writing distributed client code as simple as talking to a
-local database.  It's a clean, simple, and secure approach that removes
-the need to implement individual RPC endpoints, manually cache data on
-the client to avoid slow roundtrips to the server, and carefully
-orchestrate invalidation messages to every client as data changes.
+To read about best practices for managing data and security in Meteor, consult the Meteor Guide:
 
-In Meteor, the client and server share the same database API.  The same
-exact application code &mdash; like validators and computed properties &mdash; can
-often run in both places.  But while code running on the server has
-direct access to the database, code running on the client does *not*.
-This distinction is the basis for Meteor's data security model.
-
-{{#note}}
-By default, a new Meteor app includes the `autopublish` and `insecure`
-packages, which together mimic the effect of each client having full
-read/write access to the server's database.  These are useful
-prototyping tools, but typically not appropriate for production
-applications.  When you're ready, just remove the packages.
-{{/note}}
-
-Every Meteor client includes an in-memory database cache.  To manage the
-client cache, the server *publishes* sets of JSON documents, and the
-client *subscribes* to those sets.  As documents in a set change, the
-server patches each client's cache.
-
-Today most Meteor apps use MongoDB as their database because it is the
-best supported, though support for other databases is coming in the
-future. The
-[`Mongo.Collection`](#mongo_collection) class
-is used to declare Mongo collections and to manipulate them. Thanks to
-`minimongo`, Meteor's client-side Mongo emulator, `Mongo.Collection`
-can be used from both client and server code.
-
-```js
-// declare collections
-// this code should be included in both the client and the server
-Rooms = new Mongo.Collection("rooms");
-Messages = new Mongo.Collection("messages");
-Parties = new Mongo.Collection("parties");
-
-// server: populate collections with some initial documents
-Rooms.insert({name: "Conference Room A"});
-var myRooms = Rooms.find({}).fetch();
-Messages.insert({text: "Hello world", room: myRooms[0]._id});
-Parties.insert({name: "Super Bowl Party"});
-```
-
-Each document set is defined by a publish function on the server.  The
-publish function runs each time a new client subscribes to a document
-set.  The data in a document set can come from anywhere, but the common
-case is to publish a database query.
-
-```js
-// server: publish all room documents
-Meteor.publish("all-rooms", function () {
-  return Rooms.find(); // everything
-});
-
-// server: publish all messages for a given room
-Meteor.publish("messages", function (roomId) {
-  check(roomId, String);
-  return Messages.find({room: roomId});
-});
-
-// server: publish the set of parties the logged-in user can see.
-Meteor.publish("parties", function () {
-  return Parties.find({$or: [{"public": true},
-                             {invited: this.userId},
-                             {owner: this.userId}]});
-});
-```
-
-Publish functions can provide different results to each client.  In the
-last example, a logged in user can only see `Party` documents that
-are public, that the user owns, or that the user has been invited to.
-
-Once subscribed, the client uses its cache as a fast local database,
-dramatically simplifying client code.  Reads never require a costly
-round trip to the server.  And they're limited to the contents of the
-cache: a query for every document in a collection on a client will only
-return documents the server is publishing to that client.
-
-```js
-// client: start a parties subscription
-Meteor.subscribe("parties");
-
-// client: return array of Parties this client can read
-return Parties.find().fetch(); // synchronous!
-```
-
-Sophisticated clients can turn subscriptions on and off to control how
-much data is kept in the cache and manage network traffic.  When a
-subscription is turned off, all its documents are removed from the cache
-unless the same document is also provided by another active
-subscription.
-
-When the client *changes* one or more documents, it sends a message to
-the server requesting the change.  The server checks the proposed change
-against a set of allow/deny rules you write as JavaScript functions.
-The server only accepts the change if all the rules pass.
-
-```js
-// server: don't allow client to insert a party
-Parties.allow({
-  insert: function (userId, party) {
-    return false;
-  }
-});
-
-// client: this will fail
-var party = { ... };
-Parties.insert(party);
-```
-
-If the server accepts the change, it applies the change to the database
-and automatically propagates the change to other clients subscribed to
-the affected documents.  If not, the update fails, the server's database
-remains untouched, and no other client sees the update.
-
-Meteor has a cute trick, though.  When a client issues a write to the
-server, it also updates its local cache immediately, without waiting for
-the server's response.  This means the screen will redraw right away.
-If the server accepted the update &mdash; what ought to happen most of the
-time in a properly behaving client &mdash; then the client got a jump on the
-change and didn't have to wait for the round trip to update its own
-screen.  If the server rejects the change, Meteor patches up the
-client's cache with the server's result.
-
-Putting it all together, these techniques accomplish latency
-compensation.  Clients hold a fresh copy of the data they need, and
-never need to wait for a roundtrip to the server. And when clients
-modify data, those modifications can run locally without waiting for the
-confirmation from the server, while still giving the server final say
-over the requested change.
-
-{{#note}}
-The current release of Meteor supports MongoDB, the popular document
-database, and the examples in this section use the
-        [MongoDB API](http://www.mongodb.org/display/DOCS/Manual).  Future
-releases will include support for other databases.
-{{/note}}
+- [Security](http://guide.meteor.com/security.html)
+- [Database collections](http://guide.meteor.com/collections.html)
+- [Data loading](http://guide.meteor.com/data-loading.html)
+- [Methods and saving data](http://guide.meteor.com/methods.html)
 
 <h3 id="dataandsecurity-authentication">Authentication and user accounts</h3>
 
@@ -454,27 +270,7 @@ password change, and password reset emails. You can add [Accounts
 UI](#accountsui) to your app with just one line of code. The `accounts-ui` package even provides a configuration wizard that walks you through the steps to
 set up the external login services you're using in your app.
 
-<h3 id="dataandsecurity-validation">Input validation</h3>
-
-Meteor allows your methods and publish functions to take arguments of any
-[JSON](http://json.org/) type. (In fact, Meteor's wire protocol supports
-[EJSON](#ejson), an extension of JSON which also supports other common types
-like dates and binary buffers.) JavaScript's dynamic typing means you don't need
-to declare precise types of every variable in your app, but it's usually helpful
-to ensure that the arguments that clients are passing to your methods and
-publish functions are of the type that you expect.
-
-Meteor provides a [lightweight library](#check_package) for checking that arguments and
-other values are the type you expect them to be. Simply start your functions
-with statements like `check(username, String)` or
-`check(office, {building: String, room: Number})`. The `check` call will
-throw an error if its argument is of an unexpected type.
-
-Meteor also provides an easy way to make sure that all of your methods
-and publish functions validate all of their arguments. Just run
-<code>meteor add [audit-argument-checks](#auditargumentchecks)</code> and any
-method or publish function which skips `check`ing any of its arguments will fail
-with an exception.
+[Read about how to manage user accounts in your Meteor app in the Meteor Guide.](http://guide.meteor.com/accounts.html)
 
 {{/markdown}}
 </template>
@@ -557,162 +353,7 @@ page update technology, you can render your HTML _reactively_, meaning
 that it will update automatically to track changes in the data used to
 generate it.
 
-Meteor makes it easy to use your favorite HTML templating language along with
-Meteor's live page update technology. Just write your template as you normally
-would, and Meteor will take care of making it update in realtime.
-
-Meteor ships with a templating language called
-[Spacebars](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md),
-inspired by [Handlebars](http://handlebarsjs.com/).  It shares some of the
-spirit and syntax of Handlebars, but it has been tailored to produce reactive
-Meteor templates when compiled.
-
-{{#note}}
-  Today, the only templating system that ships with Meteor is Spacebars, though
-  our community has created packages for other languages such as
-  [Jade](https://atmospherejs.com/mquandalle/jade).
-{{/note}}
-
-To define templates, create a file in your project with the `.html`
-extension. In the file, make a `<template>` tag and give it a
-`name` attribute. Put the template contents inside the tag. Meteor
-will precompile the template, ship it down to the client, and make it
-available as on the global `Template` object.
-
-When your app is loaded, it automatically renders the special template called
-`<body>`, which is written using the `<body>` element instead of a
-`<template>`. You insert a template inside another template by using the
-`{{dstache}}> inclusion}}` operator.
-
-The easiest way to get data into templates is by defining helper
-functions in JavaScript. Define helpers with the
-`Template.templateName.helpers({ ... })` function. Putting it all together:
-
-```html
-<!-- in myapp.html -->
-<body>
-  <h1>Today's weather!</h1>
-  {{dstache}}> forecast}}
-</body>
-
-<template name="forecast">
-  <div>It'll be {{dstache}}prediction}} tonight</div>
-{{lt}}/template>
-```
-
-```js
-// in client/myapp.js: reactive helper function
-Template.forecast.helpers({
-  prediction: function () {
-    return Session.get("weather");
-  }
-});
-```
-
-```js
-// in the JavaScript console
-> Session.set("weather", "cloudy");
-> document.body.innerHTML
- => "<h1>Today's weather!</h1> <div>It'll be cloudy tonight</div>"
-
-> Session.set("weather", "cool and dry");
-> document.body.innerHTML
- => "<h1>Today's weather!</h1> <div>It'll be cool and dry tonight</div>"
-```
-
-
-To iterate over an array or database cursor, use `{{dstache}}#each}}`:
-
-```html
-<!-- in myapp.html -->
-<template name="players">
-  {{dstache}}#each topScorers}}
-    <div>{{dstache}}name}}</div>
-  {{dstache}}/each}}
-{{lt}}/template>
-```
-
-```js
-// in myapp.js
-Template.players.helpers({
-  topScorers: function () {
-    return Users.find({score: {$gt: 100}}, {sort: {score: -1}});
-  }
-});
-```
-
-In this case, the data is coming from a database query. When the
-database cursor is passed to `{{dstache}}#each}}`, it will wire up all of the
-machinery to efficiently add and move DOM nodes as new results enter
-the query.
-
-Helpers can take arguments, and they receive the current template context data
-in `this`. Note that some block helpers change the current context (notably
-`{{dstache}}#each}}` and `{{dstache}}#with}}`):
-
-```js
-// in a JavaScript file
-Template.players.helpers({
-  leagueIs: function (league) {
-    return this.league === league;
-  }
-});
-```
-
-```html
-<!-- in a HTML file -->
-<template name="players">
-  {{dstache}}#each topScorers}}
-    {{dstache}}#if leagueIs "junior"}}
-      <div>Junior: {{dstache}}name}}</div>
-    {{dstache}}/if}}
-    {{dstache}}#if leagueIs "senior"}}
-      <div>Senior: {{dstache}}name}}</div>
-    {{dstache}}/if}}
-  {{dstache}}/each}}
-{{lt}}/template>
-```
-
-Helpers can also be used to pass in constant data.
-
-```js
-// Works fine with {{dstache}}#each sections}}
-Template.report.helpers({
-  sections: ["Situation", "Complication", "Resolution"]
-});
-```
-
-Finally, you can use the `events` function on a template to attach
-event handlers. The object passed into `events` is documented at
-[Event Maps](#eventmaps). The `this` argument to the event handler will
-be the data context of the element that triggered the event.
-
-```html
-<!-- myapp.html -->
-<template name="scores">
-  {{dstache}}#each player}}
-    {{dstache}}> playerScore}}
-  {{dstache}}/each}}
-{{lt}}/template>
-
-<template name="playerScore">
-  <div>{{dstache}}name}}: {{dstache}}score}}
-    <span class="give-points">Give points</span>
-  </div>
-{{lt}}/template>
-```
-
-```js
-// myapp.js
-Template.playerScore.events({
-  'click .give-points': function () {
-    Users.update(this._id, {$inc: {score: 2}});
-  }
-});
-```
-
-For more details about Spacebars, read [the Spacebars
-README](https://github.com/meteor/meteor/blob/master/packages/spacebars/README.md).
+[Read about how to use Blaze in the Meteor Guide.](http://guide.meteor.com/blaze.html)
 
 {{/markdown}}
 </template>
@@ -868,64 +509,8 @@ check for it and throw an error if you do.
 
 <h2 id="deploying">Deploying</h2>
 
-Meteor is a full application server.  We include everything you need
-to deploy your application on the internet: you just provide the JavaScript,
-HTML, and CSS.
-
-<h3 class="nosection">Running on Meteor's infrastructure</h3>
-
-The easiest way to deploy your application is to use `meteor
-deploy`.  We provide it because it's what, personally, we've always
-wanted: an easy way to take an app idea, flesh it out over a weekend,
-and put it out there for the world to use, with nothing getting in the
-way of creativity.
-
-```bash
-meteor deploy myapp.meteor.com
-```
-
-Your application is now available at myapp.meteor.com.  If
-this is the first time deploying to this hostname, Meteor creates a
-fresh empty database for your application.  If you want to deploy an
-update, Meteor will preserve the existing data and just refresh the
-code.
-
-You can also deploy to your own domain.  Just set up the hostname you
-want to use as a CNAME to `origin.meteor.com`, then deploy to that name.
-
-```bash
-meteor deploy www.myapp.com
-```
-
-We provide this as a free service so you can try Meteor.  It is also
-helpful for quickly putting up internal betas, demos, and so on. For
-more information, see [meteor deploy](#meteordeploy).
-
-<h3 class="nosection">Running on your own infrastructure</h3>
-
-You can also run your application on your own infrastructure or any
-hosting provider that can run Node.js apps.
-
-To get started, run
-
-```bash
-meteor build my_directory
-```
-
-This command will generate a fully-contained Node.js application in the form of
-a tarball.  To run this application, you need to provide Node.js 0.10 and a
-MongoDB server.  (The current release of Meteor has been tested with Node
-0.10.40.) You can then run the application by invoking node, specifying the
-HTTP port for the application to listen on, and the MongoDB endpoint.
-
-```bash
-cd my_directory
-(cd programs/server && npm install)
-env PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
-```
-
-Some packages might require other environment variables. For example,
-the `email` package requires a `MAIL_URL` environment variable.
+To learn how to deploy Meteor apps, read the
+[deployment article in the Meteor Guide](http://guide.meteor.com/deployment.html).
 
 {{/markdown}}
 </template>
@@ -934,7 +519,7 @@ the `email` package requires a `MAIL_URL` environment variable.
 <template name="packages_writing">
 {{#markdown}}
 
-  <h2 id="writingpackages">Writing packages</h2>
+<h2 id="writingpackages">Writing packages</h2>
 
 Writing Meteor packages is easy. To initialize a meteor package, run
 `meteor create --package username:packagename`, where `username` is your Meteor
