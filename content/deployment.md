@@ -83,7 +83,7 @@ Once you've done that, you can [deploy to Galaxy](https://galaxy.meteor.com/help
 DEPLOY_HOSTNAME=galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
 ```
 
-In order for galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](https://galaxy.meteor.com/help/configuring-dns). Once you've done this, you should be able to reach your site from a browser.
+In order for Galaxy to work with your custom domain (`your-app.com` in this case), you need to [set up your DNS to point at Galaxy](https://galaxy.meteor.com/help/configuring-dns). Once you've done this, you should be able to reach your site from a browser.
 
 You can also log into the Galaxy UI at https://galaxy.meteor.com. Once there you can manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
 
@@ -101,31 +101,9 @@ If you are using Galaxy (or need a production quality, managed MongoDB for one o
 
 <h3 id="mup">Meteor Up</h3>
 
-[Meteor Up](https://github.com/kadirahq/meteor-up), often referred to as "mup", is an open source tool that can be used to deploy Meteor application to any online server over SSH.
+[Meteor Up](https://github.com/arunoda/meteor-up), often referred to as "mup", is an open source tool that can be used to deploy Meteor application to any online server over SSH. Mup handles some of the essential deployment requirements, but you will still need to do a lot of work to get your load balancing and version updates working smoothly - it's essentially a way to automate the manual steps of using `meteor build` and putting that bundle on your server.
 
-To use mup, you need to install the `mup` tool via `npm`.
-
-```bash
-npm install -g mup
-```
-
-Once you've installed the command, you can initialize your project with `mup init`, which will create a `mup.json` file which you can use to configure your setup. You can read the [finer details here](https://github.com/kadirahq/meteor-up#example-file), but essentially you need to list the servers you would like to install to as well as some options on exactly how to set them up.
-
-You can obtain a server running Ubuntu or Debian from many generic hosting providers. Mup can SSH into your server with the keys you provide in the config.
-
-Once you've configured mup, you can get your servers installed with
-
-```bash
-mup setup
-```
-
-Once you've done so, you can redeploy each time with:
-
-```bash
-mup deploy
-```
-
-You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
+You can obtain a server running Ubuntu or Debian from many generic hosting providers. Mup can SSH into your server with the keys you provide in the config. You can also [watch this video](https://www.youtube.com/watch?v=WLGdXtZMmiI) for a more complete walkthrough on how to do it.
 
 <h3 id="free-hosting">Basic meteor.com hosting</h3>
 
