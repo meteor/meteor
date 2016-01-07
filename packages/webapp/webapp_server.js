@@ -685,6 +685,17 @@ var runWebAppServer = function () {
       return undefined;
     }
 
+    if (request.url.query && request.url.query['meteor_dont_serve_index']) {
+      // When downloading files during a Cordova hot code push, we need
+      // to detect if a file is not available instead of inadvertently
+      // downloading the default index page.
+      // So similar to the situation above, we serve an uncached 404.
+      headers['Cache-Control'] = 'no-cache';
+      res.writeHead(404, headers);
+      res.end("404 Not Found");
+      return undefined;
+    }
+
     // /packages/asdfsad ... /__cordova/dafsdf.js
     var pathname = connect.utils.parseUrl(req).pathname;
     var archKey = pathname.split('/')[1];
