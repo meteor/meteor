@@ -405,7 +405,8 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   } else {
     send(req, info.absolutePath, {
         maxage: maxAge,
-        dotfiles: 'allow' // if we specified a dotfile in the manifest, serve it
+        dotfiles: 'allow', // if we specified a dotfile in the manifest, serve it
+        lastModified: false // don't set last-modified based on the file date
       }).on('error', function (err) {
         Log.error("Error serving static file " + err);
         res.writeHead(500);
