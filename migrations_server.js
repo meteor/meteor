@@ -215,7 +215,7 @@ Migrations._migrateTo = function(version, rerun) {
     // the unlocked control, and locking occurs in the same update's modifier.
     // All other simultaneous callers will get false back from the update.
     return self._collection.update(
-      {_id: 'control', locked: false}, {$set: {locked: true, lastLocked: new Date()}}
+      {_id: 'control', locked: false}, {$set: {locked: true, lockedAt: new Date()}}
     ) === 1;
   }
 
