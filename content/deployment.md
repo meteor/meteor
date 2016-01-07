@@ -175,7 +175,7 @@ cd my_directory
 env PORT=3000 MONGO_URL=mongodb://localhost:27017/myapp node main.js
 ```
 
-However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch.
+However, unless you have a specific need to roll your own hosting environment, the other options here are definitely easier, and probably make for a better setup than doing everything from scratch. Operating a Meteor app in a way that it works correctly for everyone can be complex, and [Galaxy](#galaxy) handles a lot of the specifics like routing clients to the right containers and handling coordinated version updates for you.
 
 <h2 id="process">Deployment process</h2>
 
