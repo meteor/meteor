@@ -73,7 +73,7 @@ Meteor is an open source platform, and you can run the apps that you make with M
 
 The easiest way to operate your app with confidence is to use Galaxy, the service built by Meteor Development Group specifically to run Meteor apps.
 
-Galaxy is a distributed system that runs on Amazon AWS. If you [understand what it takes to run Meteor apps correctly and just how Galaxy works](/doc/whygalaxy-campaign-salFVpd94vByNkG3dQwcP), you’ll come to appreciate Galaxy’s value, and that it will save you a lot of time and trouble. Most large Meteor apps run on Galaxy today, and many of them have switched from custom solutions they used prior to Galaxy’s launch.
+Galaxy is a distributed system that runs on Amazon AWS. If you understand what it takes to run Meteor apps correctly and just how Galaxy works, you’ll come to appreciate Galaxy’s value, and that it will save you a lot of time and trouble. Most large Meteor apps run on Galaxy today, and many of them have switched from custom solutions they used prior to Galaxy’s launch.
 
 In order to deploy to Galaxy, you'll need to sign up for an account [here](https://www.meteor.com/why-meteor/pricing), and separately provision a MongoDB database (see below).
 
