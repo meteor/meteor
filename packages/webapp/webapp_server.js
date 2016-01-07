@@ -367,17 +367,9 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   // Cacheable files are files that should never change. Typically
   // named by their hash (eg meteor bundled js and css files).
   // We cache them ~forever (1yr).
-  //
-  // We cache non-cacheable files anyway. This isn't really correct, as users
-  // can change the files and changes won't propagate immediately. However, if
-  // we don't cache them, browsers will 'flicker' when rerendering
-  // images. Eventually we will probably want to rewrite URLs of static assets
-  // to include a query parameter to bust caches. That way we can both get
-  // good caching behavior and allow users to change assets without delay.
-  // https://github.com/meteor/meteor/issues/773
   var maxAge = info.cacheable
         ? 1000 * 60 * 60 * 24 * 365
-        : 1000 * 60 * 60 * 24;
+        : 0;
 
   // Set the X-SourceMap header, which current Chrome, FireFox, and Safari
   // understand.  (The SourceMap header is slightly more spec-correct but FF
