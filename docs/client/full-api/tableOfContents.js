@@ -1,11 +1,9 @@
 var toc = [
   [
     "Quick start",
-    "Seven principles",
     "Resources"
   ],
   "Concepts", [
-    "What is Meteor?",
     "Structuring your app",
     "Data and security",
     "Reactivity",

@@ -34,6 +34,10 @@ Meteor.startup(function () {
       return "meteorbuild";
     }
 
+    if (hash === "whatismeteor" || hash === "sevenprinciples") {
+      window.location.replace("http://guide.meteor.com/#what-is-meteor");
+    }
+
     // don't redirect
     return false;
   };
