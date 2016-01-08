@@ -76,8 +76,10 @@ export default class ImportScanner {
 
   getOutputFiles() {
     this.outputFiles.forEach(file => {
-      const absPath = pathJoin(this.sourceRoot, file.sourcePath);
-      file.deps = this._scanDeps(absPath, file.data);
+      if (! file.lazy || file.imported) {
+        const absPath = pathJoin(this.sourceRoot, file.sourcePath);
+        file.deps = this._scanDeps(absPath, file.data);
+      }
     });
 
     return this.outputFiles;
@@ -121,8 +123,22 @@ export default class ImportScanner {
         // as imported so we know to include them in the bundle if they
         // are lazy.
         const index = this.absPathToOutputIndex[absImportedPath];
-        this.outputFiles[index].imported = true;
-        return;
+        const file = this.outputFiles[index];
+
+        // Eager files and files that we have imported before do not need
+        // to be scanned again. Lazy files that we have not imported
+        // before still need to be scanned, however.
+        const alreadyScanned = ! file.lazy || file.imported;
+
+        // Whether the file is eager or lazy, mark it as imported. For
+        // lazy files, this makes the difference between being included in
+        // or omitted from the bundle. For eager files, this just ensures
+        // we won't scan them again.
+        file.imported = true;
+
+        if (alreadyScanned) {
+          return;
+        }
       }
 
       if (! this._hasKnownExtension(absImportedPath)) {
