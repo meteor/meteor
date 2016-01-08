@@ -577,11 +577,11 @@ Meteor.publish('polled-publication', function() {
     const data = HTTP.get(REST_URL, REST_OPTIONS);
 
     data.forEach((doc) => {
-      if (publishedKeys(doc._id)) {
+      if (publishedKeys[doc._id]) {
         this.updated(COLLECTION_NAME, doc._id, doc);
       } else {
         publishedKeys[doc._id] = true;
-        if (publishedKeys(doc._id)) {
+        if (publishedKeys[doc._id]) {
           this.added(COLLECTION_NAME, doc._id, doc);
         }
       }
