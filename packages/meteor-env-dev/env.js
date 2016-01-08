@@ -1,3 +1,7 @@
+if (typeof global === "object" && global.process) {
+  process = global.process;
+}
+
 if (typeof process !== "object") {
   process = {};
 }

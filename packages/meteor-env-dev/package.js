@@ -8,5 +8,6 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use('meteor', { unordered: true });
+  api.export("process");
   api.addFiles('env.js');
 });

@@ -949,7 +949,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   // If we're in the app, then we just add the import code as its own file in
   // the front.
-  if (useGlobalNamespace && ! useMeteorInstall) { // TODO
+  if (useGlobalNamespace) {
     if (!_.isEmpty(imports)) {
       prelinkedFiles.unshift({
         source: getImportCode(imports,

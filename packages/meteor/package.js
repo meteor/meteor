@@ -20,8 +20,14 @@ Package.onUse(function (api) {
   // dependency on the meteor package.
   api.use('es5-shim', { weak: true });
 
+  // Get access to `process`
   api.use("meteor-env-dev");
   api.use("meteor-env-prod");
+  // Need to find `process` via `Package["meteor-env-dev"]` or
+  // `Package["meteor-env-prod"]` because linker doesn't automatically
+  // import symbols from `debugOnly` or `prodOnly` packages.
+  api.addFiles("import_process.js");
+  api.export("process");
 
   api.use('underscore', ['client', 'server']);
 

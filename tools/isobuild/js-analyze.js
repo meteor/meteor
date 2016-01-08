@@ -171,7 +171,6 @@ export function findAssignedGlobals(source) {
   // ignore.
   const scopeManager = analyzeScope(ast, {
     ecmaVersion: 6,
-    sourceType: "module",
     ignoreEval: true,
   });
   const globalScope = scopeManager.acquire(ast);
