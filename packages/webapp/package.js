@@ -4,6 +4,7 @@ Package.describe({
 });
 
 Npm.depends({connect: "2.30.2",
+             parseurl: "1.3.0",
              send: "0.13.0",
              useragent: "2.0.7"});
 

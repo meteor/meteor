@@ -8,6 +8,7 @@ var url = Npm.require("url");
 var crypto = Npm.require("crypto");
 
 var connect = Npm.require('connect');
+var parseurl = Npm.require('parseurl');
 var useragent = Npm.require('useragent');
 var send = Npm.require('send');
 
@@ -326,7 +327,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
     next();
     return;
   }
-  var pathname = connect.utils.parseUrl(req).pathname;
+  var pathname = parseurl(req).pathname;
   try {
     pathname = decodeURIComponent(pathname);
   } catch (e) {
@@ -697,7 +698,7 @@ var runWebAppServer = function () {
     }
 
     // /packages/asdfsad ... /__cordova/dafsdf.js
-    var pathname = connect.utils.parseUrl(req).pathname;
+    var pathname = parseurl(req).pathname;
     var archKey = pathname.split('/')[1];
     var archKeyCleaned = 'web.' + archKey.replace(/^__/, '');
 
