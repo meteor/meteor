@@ -102,7 +102,7 @@ Migrations.config({
   logger: null,
 
   // Enable/disable logging "Not migrating, already at version {number}"
-  logIfLatest: true
+  logIfLatest: true,
 
   // migrations collection name to use in the database
   collectionName: "migrations"
