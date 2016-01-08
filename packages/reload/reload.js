@@ -219,7 +219,7 @@ Reload._reload = function (options) {
   var tryReload = function () { _.defer(function () {
     if (Reload._migrate(tryReload, options)) {
       // Tell the browser to shut down this VM and make a new one
-      window.location.reload();
+      window.location = window.location.href;
     }
   }); };
 
