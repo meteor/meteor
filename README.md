@@ -7,16 +7,16 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 <a id="roles-toc" name="roles-toc"></a>
 ### Table of Contents
-* [Contributors](#user-content-roles-contributors)
-* [Authorization](#user-content-roles-authorization)
-* [Permissions vs roles](#user-content-roles-naming)
-* [What are "groups"?](#user-content-roles-groups)
-* [Changes to default Meteor](#user-content-roles-changes)
-* [Installation](#user-content-roles-installing)
-* [Usage examples](#user-content-roles-usage)
-* [Online API docs](#user-content-roles-docs)
-* [Example apps](#user-content-roles-example-apps)
-* [Running tests](#user-content-roles-testing)
+* [Contributors](#roles-contributors)
+* [Authorization](#roles-authorization)
+* [Permissions vs roles](#roles-naming)
+* [What are "groups"?](#roles-groups)
+* [Changes to default Meteor](#roles-changes)
+* [Installation](#roles-installing)
+* [Usage examples](#roles-usage)
+* [Online API docs](#roles-docs)
+* [Example apps](#roles-example-apps)
+* [Running tests](#roles-testing)
 
 
 <br />
