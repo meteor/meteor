@@ -376,9 +376,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       resources.push({
         type: "js",
         data: data,
-        // The sourcePath should not be alterable by plugins, so it makes
-        // sense to set it unconditionally here.
-        sourcePath: this.inputPath,
+        sourcePath: options.sourcePath,
         servePath: colonConverter.convert(
           files.pathJoin(
             inputSourceArch.pkg.serveRoot,
@@ -386,7 +384,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        lazy: !! getOption("lazy"),
+        lazy: getOption("lazy"),
         bare: !! getOption("bare"),
         mainModule: !! getOption("mainModule"),
       });

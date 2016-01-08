@@ -353,10 +353,11 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        self.jsOutputResources.push({
-          ...self.inputResource,
-          sourcePath: self.inputResource.path,
-        });
+        let resource = self.inputResource;
+        if (! _.isString(resource.sourcePath)) {
+          resource.sourcePath = self.inputResource.path;
+        }
+        self.jsOutputResources.push(resource);
       } else {
         self.outputResources.push(self.inputResource);
       }
@@ -415,7 +416,7 @@ class ResourceSlot {
       sourceMap: options.sourceMap,
       // intentionally preserve a possible `undefined` value for files
       // in apps, rather than convert it into `false` via `!!`
-      lazy: getOption("lazy") === undefined ? undefined : !! getOption("lazy"),
+      lazy: getOption("lazy"),
       bare: !! getOption("bare"),
       mainModule: !! getOption("mainModule"),
     });

@@ -84,7 +84,7 @@ export default class ImportScanner {
   }
 
   _isFileLazy(file) {
-    if (file.lazy !== undefined) {
+    if (typeof file.lazy === "boolean") {
       return file.lazy;
     }
 
