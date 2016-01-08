@@ -41,6 +41,10 @@ function createUsers () {
       Meteor.users.update({_id: id},
                           {$set:{'emails.0.verified': true}});
 
+      _.each(userData.roles, function (role) {
+        Roles.createRole(role, {unlessExists: true});
+      });
+
       Roles.addUsersToRoles(id, userData.roles);
     
     });
