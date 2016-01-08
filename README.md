@@ -5,7 +5,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 <br />
 
-<a name="roles-toc"></a>
+<a id="roles-toc" name="roles-toc"></a>
 ### Table of Contents
 * [Contributors](#user-content-roles-contributors)
 * [Authorization](#user-content-roles-authorization)
@@ -22,7 +22,7 @@ Authorization package for Meteor - compatible with built-in accounts package.
 <br />
 
 
-<a name="roles-contributors"></a>
+<a id="roles-contributors" name="roles-contributors"></a>
 ### Contributors
 
 Thanks to:
@@ -44,7 +44,7 @@ Thanks to:
 <br />
 
 
-<a name="roles-authorization"></a>
+<a id="roles-authorization" name="roles-authorization"></a>
 ### Authorization
 
 This package lets you attach permissions to a user which you can then check against later when deciding whether to grant access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching strings to a user object and then checking for the existance of those strings later. In some sense, it is very similar to tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying those permissions easier.
@@ -58,7 +58,7 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 
 <br />
 
-<a name="roles-naming"></a>
+<a id="roles-naming" name="roles-naming"></a>
 ### Permissions vs roles  (or What's in a name...)
 
 Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign on a user and which you can check for later.
@@ -67,7 +67,7 @@ You can have traditional roles like, "admin" or "webmaster", or you can assign m
 
 <br />
 
-<a name="roles-groups"></a>
+<a id="roles-groups" name="roles-groups"></a>
 ### What are "groups"?
 
 Sometimes it's useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is more clear.  Users can have one set of permissions in group A and another set of permissions in group B.  Let's go through an example of this using soccer/football teams as groups.
@@ -99,7 +99,7 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 
 <br />
 
-<a name="roles-changes"></a>
+<a id="roles-changes" name="roles-changes"></a>
 ### Changes to default Meteor behavior
 
   1. User entries in the `Meteor.users` collection gain a new field named `roles` corresponding to the user's roles. †
@@ -140,7 +140,7 @@ Meteor.publish(null, function (){
 
 <br />
 
-<a name="roles-installing"></a>
+<a id="roles-installing" name="roles-installing"></a>
 ### Installing
 
 #### Meteor 0.9 - latest
@@ -186,7 +186,7 @@ NOTE for Meteor 0.8-0.8.3:  Manually add the 'ui' package to your '.meteor/packa
 <br />
 
 
-<a name="roles-usage"></a>
+<a id="roles-usage" name="roles-usage"></a>
 ### Usage Examples
 
 <br />
@@ -369,7 +369,7 @@ To check for permissions when using groups:
 <br />
 
 
-<a name="roles-docs"></a>
+<a id="roles-docs" name="roles-docs"></a>
 ### API Docs
 
 Online API docs found here: http://alanning.github.io/meteor-roles/classes/Roles.html
@@ -391,7 +391,7 @@ To serve documentation locally:
 <br />
 
 
-<a name="roles-example-apps"></a>
+<a id="roles-example-apps" name="roles-example-apps"></a>
 ### Example Apps
 
 The `examples` directory contains Meteor apps which show off the following features:
@@ -431,7 +431,7 @@ _Deprecated routing packages: Mini-Pages or Router_
 <br />
 
 
-<a name="roles-testing"></a>
+<a id="roles-testing" name="roles-testing"></a>
 ### Tests
 
 
