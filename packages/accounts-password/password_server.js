@@ -517,6 +517,31 @@ Meteor.methods({forgotPassword: function (options) {
  * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
  */
 Accounts.sendResetPasswordEmail = function (userId, email) {
+  Accounts.sendEmail(userId, email, 'resetPassword');
+};
+
+// send the user an email informing them that their account was created, with
+// a link that when opened both marks their email as verified and forces them
+// to choose their password. The email must be one of the addresses in the
+// user's emails field, or undefined to pick the first email automatically.
+//
+// This is not called automatically. It must be called manually if you
+// want to use enrollment emails.
+
+/**
+ * @summary Send an email with a link the user can use to set their initial password.
+ * @locus Server
+ * @param {String} userId The id of the user to send email to.
+ * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
+ */
+Accounts.sendEnrollmentEmail = function (userId, email) {
+  Accounts.sendEmail(userId, email, 'enrollAccount');
+};
+
+/**
+ * @param {String} type Can be either resetPassword or enrollAccount depending on which function called it.
+ */
+Accounts.sendEmail = function (userId, email, type) {
   // Make sure the user exists, and email is one of their addresses.
   var user = Meteor.users.findOne(userId);
   if (!user)
@@ -535,105 +560,45 @@ Accounts.sendResetPasswordEmail = function (userId, email) {
     email: email,
     when: when
   };
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": tokenRecord
-  }});
+  Meteor.users.update(userId, {
+    $set: {
+      "services.password.reset": tokenRecord
+    }
+  });
   // before passing to template, update user object with new token
   Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
 
-  var resetPasswordUrl = Accounts.urls.resetPassword(token);
+  var url;
+
+  if (type === 'resetPassword') {
+    url = Accounts.urls.resetPassword(token);
+  }
+
+  if (type === 'enrollAccount') {
+    url = Accounts.urls.enrollAccount(token);
+  }
 
   var options = {
     to: email,
-    from: Accounts.emailTemplates.resetPassword.from
-      ? Accounts.emailTemplates.resetPassword.from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.resetPassword.subject(user)
+    from: Accounts.emailTemplates[type].from ? Accounts.emailTemplates[type].from(user) : Accounts.emailTemplates.from,
+    subject: Accounts.emailTemplates[type].subject(user)
   };
 
-  if (typeof Accounts.emailTemplates.resetPassword.text === 'function') {
+  if (typeof Accounts.emailTemplates[type].text === 'function') {
     options.text =
-      Accounts.emailTemplates.resetPassword.text(user, resetPasswordUrl);
+      Accounts.emailTemplates[type].text(user, url);
   }
 
-  if (typeof Accounts.emailTemplates.resetPassword.html === 'function')
+  if (typeof Accounts.emailTemplates[type].html === 'function')
     options.html =
-      Accounts.emailTemplates.resetPassword.html(user, resetPasswordUrl);
+    Accounts.emailTemplates[type].html(user, url);
 
   if (typeof Accounts.emailTemplates.headers === 'object') {
     options.headers = Accounts.emailTemplates.headers;
   }
 
   Email.send(options);
-};
-
-// send the user an email informing them that their account was created, with
-// a link that when opened both marks their email as verified and forces them
-// to choose their password. The email must be one of the addresses in the
-// user's emails field, or undefined to pick the first email automatically.
-//
-// This is not called automatically. It must be called manually if you
-// want to use enrollment emails.
-
-/**
- * @summary Send an email with a link the user can use to set their initial password.
- * @locus Server
- * @param {String} userId The id of the user to send email to.
- * @param {String} [email] Optional. Which address of the user's to send the email to. This address must be in the user's `emails` list. Defaults to the first email in the list.
- */
-Accounts.sendEnrollmentEmail = function (userId, email) {
-  // XXX refactor! This is basically identical to sendResetPasswordEmail.
-
-  // Make sure the user exists, and email is in their addresses.
-  var user = Meteor.users.findOne(userId);
-  if (!user)
-    throw new Error("Can't find user");
-  // pick the first email if we weren't passed an email.
-  if (!email && user.emails && user.emails[0])
-    email = user.emails[0].address;
-  // make sure we have a valid email
-  if (!email || !_.contains(_.pluck(user.emails || [], 'address'), email))
-    throw new Error("No such email for user.");
-
-  var token = Random.secret();
-  var when = new Date();
-  var tokenRecord = {
-    token: token,
-    email: email,
-    when: when
-  };
-  Meteor.users.update(userId, {$set: {
-    "services.password.reset": tokenRecord
-  }});
-
-  // before passing to template, update user object with new token
-  Meteor._ensure(user, 'services', 'password').reset = tokenRecord;
-
-  var enrollAccountUrl = Accounts.urls.enrollAccount(token);
-
-  var options = {
-    to: email,
-    from: Accounts.emailTemplates.enrollAccount.from
-      ? Accounts.emailTemplates.enrollAccount.from(user)
-      : Accounts.emailTemplates.from,
-    subject: Accounts.emailTemplates.enrollAccount.subject(user)
-  };
-
-  if (typeof Accounts.emailTemplates.enrollAccount.text === 'function') {
-    options.text =
-      Accounts.emailTemplates.enrollAccount.text(user, enrollAccountUrl);
-  }
-
-  if (typeof Accounts.emailTemplates.enrollAccount.html === 'function')
-    options.html =
-      Accounts.emailTemplates.enrollAccount.html(user, enrollAccountUrl);
-
-  if (typeof Accounts.emailTemplates.headers === 'object') {
-    options.headers = Accounts.emailTemplates.headers;
-  }
-
-  Email.send(options);
-};
+}
 
 
 // Take token from sendResetPasswordEmail or sendEnrollmentEmail, change
