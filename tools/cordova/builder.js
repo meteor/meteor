@@ -402,7 +402,7 @@ export class CordovaBuilder {
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,
-      ROOT_URL: mobileServerUrl + "/",
+      ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',
       DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
