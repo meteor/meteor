@@ -3,6 +3,7 @@ import {isString, has, keys, each, without} from "underscore";
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import buildmessage from "../utils/buildmessage.js";
 import {
   pathJoin,
   pathRelative,
@@ -371,24 +372,34 @@ export default class ImportScanner {
       resolved = this._joinAndStat(this.nodeModulesPath, id);
     }
 
-    if (! resolved) {
-      // If the package is still not resolved, and it appears to refer to
-      // a Meteor package, create a stub for that package that just sets
-      // module.exports = Package[packageName].
-      const packageName = this._getMeteorPackageNameFromId(id);
-      if (packageName) {
-        this._addMeteorPackageStubToOutput(packageName);
-      }
+    // If the package is still not resolved, it might be handled by the
+    // fallback function defined in meteor/packages/modules/modules.js.
+    if (! resolved &&
+        ! this._getExternalPackageName(id)) {
+      buildmessage.error(
+        "could not resolve module " + JSON.stringify(id),
+        { file: path }
+      );
     }
 
     return resolved;
   }
 
-  _getMeteorPackageNameFromId(id) {
-    const [meteor, packageName] = id.split("/", 2);
-    if (meteor === "meteor" &&
-        has(this.usedPackageNames, packageName)) {
-      return packageName;
+  _getExternalPackageName(id) {
+    const parts = id.split("/");
+    if (parts.length > 1 &&
+        parts[0] === "meteor" &&
+        // If the package we're importing is the current package, or a
+        // package used by the current package, trust the fallback
+        // function to handle it at runtime.
+        (parts[1] === this.name ||
+         has(this.usedPackageNames, parts[1]))) {
+      return parts[1];
+    }
+
+    if (this.nodeModulesPath &&
+        this._joinAndStat(this.nodeModulesPath, parts[0])) {
+      return parts[0];
     }
   }
 
@@ -438,42 +449,6 @@ export default class ImportScanner {
 
       this.absPathToOutputIndex[pkgJsonPath] =
         this.outputFiles.push(pkgFile) - 1;
-    }
-  }
-
-  // Adds a <packageName>.js module file to the top-level node_modules
-  // directory. This module just exports the Package[packageName] object.
-  // If the package installs any modules when we link it, those modules
-  // will end up in a directory called node_modules/<packageName>/, which
-  // is importantly distinct from node_modules/<packageName>.js. Though
-  // Node allows .js module files as direct children of node_modules
-  // directories, npm never takes advantage of this possibility, which
-  // conveniently allows Meteor to install files there without conflict.
-  _addMeteorPackageStubToOutput(packageName) {
-    const relPkgPath = pathJoin("node_modules", "meteor", packageName + ".js");
-    const absPkgPath = pathJoin(this.sourceRoot, relPkgPath);
-
-    // Note that this absPkgPath need not actually exist on disk!
-    if (! has(this.absPathToOutputIndex, absPkgPath)) {
-      const data = new Buffer(
-        "module.exports = Package[" +
-          JSON.stringify(packageName) +
-        "];\n"
-      );
-
-      const stubFile = {
-        type: "js",
-        data,
-        deps: [], // Avoid accidentally re-scanning this file.
-        sourcePath: relPkgPath,
-        installPath: relPkgPath,
-        servePath: relPkgPath,
-        lazy: true,
-        imported: true,
-      };
-
-      this.absPathToOutputIndex[absPkgPath] =
-        this.outputFiles.push(stubFile) - 1;
     }
   }
 }

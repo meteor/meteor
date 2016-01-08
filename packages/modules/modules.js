@@ -1,4 +1,5 @@
 var options = {};
+var hasOwn = options.hasOwnProperty;
 
 // RegExp matching strings that don't start with a `.` or a `/`.
 var topLevelIdPattern = /^[^./]/;
@@ -14,11 +15,20 @@ options.fallback = function (id, dir, error) {
   // that the resulting modules were located in a known directory (not
   // some arbitrary location on the file system), and we only really need
   // the fallback for dependencies installed in node_modules directories.
-  if (topLevelIdPattern.test(id) &&
-      typeof Npm === "object" &&
-      typeof Npm.require === "function") {
-    return Npm.require(id);
+  if (topLevelIdPattern.test(id)) {
+    var parts = id.split("/");
+    if (parts.length === 2 &&
+        parts[0] === "meteor" &&
+        hasOwn.call(Package, parts[1])) {
+      return Package[parts[1]];
+    }
+
+    if (typeof Npm === "object" &&
+        typeof Npm.require === "function") {
+      return Npm.require(id);
+    }
   }
+
   throw error;
 };
 
