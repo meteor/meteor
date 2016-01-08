@@ -398,6 +398,37 @@ exports.defineAutoTests = function() {
       });
     });
 
+    describe("when downloading an invalid index page", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("version2_with_invalid_index_page", done);
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should invoke the onDownloadFailure callback with an error", function(done) {
+        WebAppCordova.onDownloadFailure(function(error) {
+          expect(error.message).toEqual("Version mismatch for index page, expected: version2, actual: version3");
+          done();
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionDownloaded callback", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
     describe("when resuming a partial download with the same version", function() {
       beforeEach(function(done) {
         WebAppCordova.simulatePartialDownload("version2", function() {

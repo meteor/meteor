@@ -3,6 +3,19 @@ private let configJSONRegEx = try! NSRegularExpression(
   pattern: "__meteor_runtime_config__ = JSON.parse\\(decodeURIComponent\\(\"([^\"]*)\"\\)\\)",
   options: [])
 
+/// Load the runtime config by extracting and parsing
+/// `__meteor_runtime_config__` from index.html
+func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) -> JSONObject? {
+  guard
+    let indexFileString = try? NSString(contentsOfURL: fileURL, encoding: NSUTF8StringEncoding),
+    let match  = configJSONRegEx.firstMatchInString(indexFileString as String),
+    let configString = (indexFileString.substringWithRange(match.rangeAtIndex(1)) as NSString).stringByRemovingPercentEncoding,
+    let configData = configString.dataUsingEncoding(NSUTF8StringEncoding)
+    else { return nil }
+  
+  return try? NSJSONSerialization.JSONObjectWithData(configData, options: []) as! JSONObject
+}
+
 final class AssetBundle {
   private(set) var directoryURL: NSURL
 
@@ -79,19 +92,13 @@ final class AssetBundle {
       return nil
     }
   }
-
-  /// Returns the runtime config by extracting and parsing
-  /// `__meteor_runtime_config__` from index.html
-  func runtimeConfigFromIndexFile() -> JSONObject? {
-    guard let indexFile = indexFile,
-      let indexFileString = try? NSString(contentsOfURL: indexFile.fileURL, encoding: NSUTF8StringEncoding),
-      let match  = configJSONRegEx.firstMatchInString(indexFileString as String),
-      let configString = (indexFileString.substringWithRange(match.rangeAtIndex(1)) as NSString).stringByRemovingPercentEncoding,
-      let configData = configString.dataUsingEncoding(NSUTF8StringEncoding)
-      else { return nil }
-
-    return try? NSJSONSerialization.JSONObjectWithData(configData, options: []) as! JSONObject
-  }
+  
+  /// The runtime config is lazily initialized by loading it from the index.html
+  lazy var runtimeConfig: JSONObject? = {
+    guard let indexFile = self.indexFile else { return nil }
+    
+    return loadRuntimeConfigFromIndexFileAtURL(indexFile.fileURL)
+  }()
 
   func didMoveToDirectoryAtURL(directoryURL: NSURL) {
     self.directoryURL = directoryURL

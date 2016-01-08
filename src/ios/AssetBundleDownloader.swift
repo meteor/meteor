@@ -162,6 +162,17 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
           where sha1HashRegEx.matches(ETag) && ETag != hash {
         self.cancelAndFailWithReason("Hash mismatch for asset: \(asset.filePath)")
         return
+      // We don't have a hash for the index page, so we have to parse the runtime config
+      // and compare autoupdateVersionCordova to the version in the manifest to verify
+      // if we downloaded the expected version
+      } else if asset.filePath == "index.html" {        
+        if let expectedVersion = assetBundle.version,
+            let runtimeConfig = loadRuntimeConfigFromIndexFileAtURL(location),
+            let actualVersion = runtimeConfig["autoupdateVersionCordova"] as? String
+            where expectedVersion != actualVersion {
+          self.cancelAndFailWithReason("Version mismatch for index page, expected: \(expectedVersion), actual: \(actualVersion)")
+          return
+        }
       }
 
       do {

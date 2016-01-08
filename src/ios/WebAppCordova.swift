@@ -19,7 +19,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   var currentAssetBundle: AssetBundle! {
     didSet {
       if currentAssetBundle != nil {
-        runtimeConfig = currentAssetBundle.runtimeConfigFromIndexFile()
+        runtimeConfig = currentAssetBundle.runtimeConfig
 
         if let version = currentAssetBundle.version {
           NSLog("Serving asset bundle version: \(version)")
