@@ -67,8 +67,26 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
         URLPath = String(asset.URLPath.utf16.dropFirst())
       }
 
-      guard let URL = NSURL(string: URLPath, relativeToURL: baseURL) else {
-        self.cancelAndFailWithReason("Invalid URL path for asset: \(URLPath)")
+      guard let URLComponents = NSURLComponents(string: URLPath) else {
+        self.cancelAndFailWithReason("Invalid URL for asset: \(URLPath)")
+        return
+      }
+      
+      // To avoid inadvertently downloading the default index page when an asset
+      // is not found, we add meteor_dont_serve_index=true to the URL unless we 
+      // are actually downloading the index page.
+      if asset.filePath != "index.html" {
+        let queryItem = NSURLQueryItem(name: "meteor_dont_serve_index", value: "true")
+        if var queryItems = URLComponents.queryItems {
+          queryItems.append(queryItem)
+          URLComponents.queryItems = queryItems
+        } else {
+          URLComponents.queryItems = [queryItem]
+        }
+      }
+      
+      guard let URL = URLComponents.URLRelativeToURL(baseURL) else {
+        self.cancelAndFailWithReason("Invalid URL for asset: \(URLPath)")
         return
       }
 
