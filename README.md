@@ -5,24 +5,24 @@ Authorization package for Meteor - compatible with built-in accounts package.
 
 <br />
 
-<a name="toc"></a>
+<a name="roles-toc"></a>
 ### Table of Contents
-* [Contributors](#user-content-contributors)
-* [Authorization](#user-content-authorization)
-* [Permissions vs roles](#user-content-naming)
-* [What are "groups"?](#groups)
-* [Changes to default Meteor](#user-content-changes)
-* [Installation](#user-content-installing)
-* [Usage examples](#user-content-usage)
-* [Online API docs](#user-content-docs)
-* [Example apps](#user-content-example-apps)
-* [Running tests](#user-content-testing)
+* [Contributors](#user-content-roles-contributors)
+* [Authorization](#user-content-roles-authorization)
+* [Permissions vs roles](#user-content-roles-naming)
+* [What are "groups"?](#user-content-roles-groups)
+* [Changes to default Meteor](#user-content-roles-changes)
+* [Installation](#user-content-roles-installing)
+* [Usage examples](#user-content-roles-usage)
+* [Online API docs](#user-content-roles-docs)
+* [Example apps](#user-content-roles-example-apps)
+* [Running tests](#user-content-roles-testing)
 
 
 <br />
 
 
-<a name="contributors"></a>
+<a name="roles-contributors"></a>
 ### Contributors
 
 Thanks to:
@@ -44,7 +44,7 @@ Thanks to:
 <br />
 
 
-<a name="authorization"></a>
+<a name="roles-authorization"></a>
 ### Authorization
 
 This package lets you attach permissions to a user which you can then check against later when deciding whether to grant access to Meteor methods or publish data.  The core concept is very simple, essentially you are attaching strings to a user object and then checking for the existance of those strings later. In some sense, it is very similar to tags on blog posts. This package provides helper methods to make the process of adding, removing, and verifying those permissions easier.
@@ -58,7 +58,7 @@ All versions of Meteor from 0.5 to current are supported (excluding Meteor 0.9.1
 
 <br />
 
-<a name="naming"></a>
+<a name="roles-naming"></a>
 ### Permissions vs roles  (or What's in a name...)
 
 Although the name of this package is 'roles', you can define your permissions however you like.  They are essentially just tags that you assign on a user and which you can check for later.
@@ -67,7 +67,7 @@ You can have traditional roles like, "admin" or "webmaster", or you can assign m
 
 <br />
 
-<a name="groups"></a>
+<a name="roles-groups"></a>
 ### What are "groups"?
 
 Sometimes it's useful to let a user have independent sets of permissions.  The `roles` package calls these independent sets, "groups" for lack of a better term.  You can think of them as "partitions" if that is more clear.  Users can have one set of permissions in group A and another set of permissions in group B.  Let's go through an example of this using soccer/football teams as groups.
@@ -99,7 +99,7 @@ if (Roles.userIsInRole(joesUserId, ['manage-team', 'super-admin'], 'real-madrid.
 
 <br />
 
-<a name="changes"></a>
+<a name="roles-changes"></a>
 ### Changes to default Meteor behavior
 
   1. User entries in the `Meteor.users` collection gain a new field named `roles` corresponding to the user's roles. †
@@ -140,7 +140,7 @@ Meteor.publish(null, function (){
 
 <br />
 
-<a name="installing"></a>
+<a name="roles-installing"></a>
 ### Installing
 
 #### Meteor 0.9 - latest
@@ -186,7 +186,7 @@ NOTE for Meteor 0.8-0.8.3:  Manually add the 'ui' package to your '.meteor/packa
 <br />
 
 
-<a name="usage"></a>
+<a name="roles-usage"></a>
 ### Usage Examples
 
 <br />
@@ -369,7 +369,7 @@ To check for permissions when using groups:
 <br />
 
 
-<a name="docs"></a>
+<a name="roles-docs"></a>
 ### API Docs
 
 Online API docs found here: http://alanning.github.io/meteor-roles/classes/Roles.html
@@ -391,7 +391,7 @@ To serve documentation locally:
 <br />
 
 
-<a name="example-apps"></a>
+<a name="roles-example-apps"></a>
 ### Example Apps
 
 The `examples` directory contains Meteor apps which show off the following features:
@@ -431,7 +431,7 @@ _Deprecated routing packages: Mini-Pages or Router_
 <br />
 
 
-<a name="testing"></a>
+<a name="roles-testing"></a>
 ### Tests
 
 
