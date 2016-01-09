@@ -5,7 +5,7 @@ let oneYearInSeconds = 60 * 60 * 24 * 365
 let GCDWebServerRequestAttribute_Asset = "GCDWebServerRequestAttribute_Asset"
 let GCDWebServerRequestAttribute_FilePath = "GCDWebServerRequestAttribute_FilePath"
 
-// The range of listening ports to choose from. It should be large enough to 
+// The range of listening ports to choose from. It should be large enough to
 // avoid collisions with other Meteor apps, but chosen to avoid collisions
 // with other apps or services on the device.
 // See https://support.apple.com/en-us/HT202944 for some common ports in
@@ -56,7 +56,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       }
     }
   }
-  
+
   /// The appId as defined in the runtime config
   private(set) var appId: String?
 
@@ -198,11 +198,11 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     }
 
     lastSeenInitialVersion = initialAssetBundle.version
-    
+
     // The WebAppLocalServerPort setting is only used for testing
     if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
       localServerPort = UInt(portString) ?? 0
-    // In other cases, we select a listening port based on the appId to try and 
+    // In other cases, we select a listening port based on the appId to try and
     // avoid collisions between Meteor apps installed on the same device
     } else {
       let hashValue = appId?.hashValue ?? 0
@@ -381,10 +381,10 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       GCDWebServerOption_Port: NSNumber(unsignedInteger: localServerPort),
       GCDWebServerOption_BindToLocalhost: true]
     try localServer.startWithOptions(options)
-    
+
     // Set localServerPort to the assigned port, in case it is different
     localServerPort = localServer.port
-    
+
     if let viewController = self.viewController as? CDVViewController {
       // Do not modify startPage if we are testing the app using
       // cordova-plugin-test-framework
@@ -393,7 +393,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       }
     }
   }
-  
+
   // MARK: Request Handlers
 
   private func addHandlerForAssetBundle() {
