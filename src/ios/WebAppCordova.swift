@@ -3,10 +3,18 @@ let oneYearInSeconds = 60 * 60 * 24 * 365
 let GCDWebServerRequestAttribute_Asset = "GCDWebServerRequestAttribute_Asset"
 let GCDWebServerRequestAttribute_FilePath = "GCDWebServerRequestAttribute_FilePath"
 
+// The range of listening ports to choose from. It should be large enough to 
+// avoid collisions with other Meteor apps, but chosen to avoid collisions
+// with other apps or services on the device.
+// See https://support.apple.com/en-us/HT202944 for some common ports in
+// use by Apple services.
+let listeningPortRange: Range<UInt> = 12000...13000
+
 @objc(METWebAppCordova)
 final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// The local web server responsible for serving assets to the web app
   private(set) var localServer: GCDWebServer!
+  private var localServerPort: UInt = 0
 
   /// The www directory in the app bundle
   private(set) var wwwDirectoryURL: NSURL!
@@ -35,6 +43,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// Setting the runtime config initializes autoupdateVersion and rootURL
   private var runtimeConfig: JSONObject? {
     didSet {
+      appId = runtimeConfig?["appId"] as? String
       autoupdateVersion = runtimeConfig?["autoupdateVersionCordova"] as? String
       if let rootURLString = runtimeConfig?["ROOT_URL"] as? String {
         rootURL = NSURL(string: rootURLString)
@@ -43,6 +52,9 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       }
     }
   }
+  
+  /// The appId as defined in the runtime config
+  private(set) var appId: String?
 
   /// The autoupdate version as defined in the runtime config
   private(set) var autoupdateVersion: String?
@@ -155,6 +167,17 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     }
 
     lastSeenInitialVersion = initialAssetBundle.version
+    
+    // The WebAppLocalServerPort setting is only used for testing
+    if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
+      localServerPort = UInt(portString) ?? 0
+    // In other cases, we select a listening port based on the appId to try and 
+    // avoid collisions between Meteor apps installed on the same device
+    } else {
+      let hashValue = appId?.hashValue ?? 0
+      localServerPort = listeningPortRange.startIndex +
+        (UInt(bitPattern: hashValue) % UInt(listeningPortRange.count))
+    }
 
     do {
       try startLocalServer()
@@ -269,26 +292,24 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     addHandlerForWwwDirectory()
     addHandlerForAssetBundle()
 
-    let port: UInt
-    if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
-      port = UInt(portString)!
-    } else {
-      port = 0
-    }
-
     let options = [
-      GCDWebServerOption_Port: NSNumber(unsignedInteger: port),
+      GCDWebServerOption_Port: NSNumber(unsignedInteger: localServerPort),
       GCDWebServerOption_BindToLocalhost: true]
     try localServer.startWithOptions(options)
-
-    let assignedPort = localServer.port
-
+    
+    // Set localServerPort to the assigned port, in case it is different
+    localServerPort = localServer.port
+    
     if let viewController = self.viewController as? CDVViewController {
+      // Do not modify startPage if we are testing the app using
+      // cordova-plugin-test-framework
       if viewController.startPage != "cdvtests/index.html" {
-        viewController.startPage = "http://localhost:\(assignedPort)"
+        viewController.startPage = "http://localhost:\(localServerPort)"
       }
     }
   }
+  
+  // MARK: Request Handlers
 
   private func addHandlerForAssetBundle() {
     localServer.addHandlerWithMatchBlock({ [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
