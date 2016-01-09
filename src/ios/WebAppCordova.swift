@@ -1,3 +1,5 @@
+import WebKit
+
 let oneYearInSeconds = 60 * 60 * 24 * 365
 
 let GCDWebServerRequestAttribute_Asset = "GCDWebServerRequestAttribute_Asset"
@@ -9,6 +11,8 @@ let GCDWebServerRequestAttribute_FilePath = "GCDWebServerRequestAttribute_FilePa
 // See https://support.apple.com/en-us/HT202944 for some common ports in
 // use by Apple services.
 let listeningPortRange: Range<UInt> = 12000...13000
+
+let startupTimeoutInterval = 10.0
 
 @objc(METWebAppCordova)
 final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
@@ -82,7 +86,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     set {
       if newValue != lastDownloadedVersion {
         let userDefaults = NSUserDefaults.standardUserDefaults()
-        NSUserDefaults.standardUserDefaults().setObject(newValue, forKey: "MeteorWebAppLastDownloadedVersion")
+        userDefaults.setObject(newValue, forKey: "MeteorWebAppLastDownloadedVersion")
         userDefaults.synchronize()
       }
     }
@@ -97,7 +101,26 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     set {
       if newValue != lastDownloadedVersion {
         let userDefaults = NSUserDefaults.standardUserDefaults()
-        NSUserDefaults.standardUserDefaults().setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
+        userDefaults.setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
+        userDefaults.synchronize()
+      }
+    }
+  }
+
+  /// Blacklisted asset bundle versions, stored in `NSUserDefaults`
+  var blacklistedVersions: [String] {
+    get {
+      return NSUserDefaults.standardUserDefaults().arrayForKey("MeteorWebAppBlacklistedVersions") as? [String] ?? []
+    }
+
+    set {
+      if newValue != blacklistedVersions {
+        let userDefaults = NSUserDefaults.standardUserDefaults()
+        if newValue.isEmpty {
+          userDefaults.removeObjectForKey("MeteorWebAppBlacklistedVersions")
+        } else {
+          userDefaults.setObject(newValue, forKey: "MeteorWebAppBlacklistedVersions")
+        }
         userDefaults.synchronize()
       }
     }
@@ -109,11 +132,17 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// Callback ID used to send a downloadFailure notification to JavaScript
   private var downloadFailureCallbackId: String?
 
+  private var startupTimer: METTimer!
+
   // MARK: - Lifecycle
 
   /// Called by Cordova on plugin initialization
   override public func pluginInitialize() {
     super.pluginInitialize()
+    
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
+
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
 
     wwwDirectoryURL = NSBundle.mainBundle().resourceURL!.URLByAppendingPathComponent("www")
 
@@ -134,6 +163,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
     // If the last seen initial version is different from the currently bundled
     // version, we delete the versions directory and unset lastDownloadedVersion
+    // and blacklistedVersions
     if lastSeenInitialVersion != initialAssetBundle.version {
       do {
         if fileManager.fileExistsAtPath(versionsDirectoryURL.path!) {
@@ -144,6 +174,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       }
 
       lastDownloadedVersion = nil
+      blacklistedVersions = []
     }
 
     do {
@@ -185,9 +216,14 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       NSLog("Could not start local server: \(error)")
       return
     }
+    
+    startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
+      NSLog("Startup timed out")
+      self.revertToLastKnownGoodVersion()
+    }
   }
 
-  /// Called by Cordova on page reload
+  /// Called by Cordova before page reload
   override public func onReset() {
     super.onReset()
 
@@ -196,11 +232,31 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       currentAssetBundle = pendingAssetBundle
       self.pendingAssetBundle = nil
     }
+
+    startupTimer.startWithTimeInterval(startupTimeoutInterval)
+  }
+  
+  // MARK: - Notifications
+
+  func pageDidLoad() {
+    NSLog("pageDidLoad")
+  }
+  
+  func applicationDidEnterBackground() {
+    NSLog("applicationDidEnterBackground")
+    
+    // Stop startup timer when going into the background, to avoid
+    // blacklisting a version just because the web view has been suspended
+    startupTimer.stop()
   }
 
   // MARK: - Public plugin commands
 
   public func startupDidComplete(command: CDVInvokedUrlCommand) {
+    NSLog("startupDidComplete")
+    
+    startupTimer.stop()
+
     commandDelegate?.runInBackground() {
       do {
         let currentVersion = self.currentAssetBundle.version
@@ -260,6 +316,26 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: errorMessage)
     commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
   }
+  
+  // MARK: - Managing Versions
+  
+  func revertToLastKnownGoodVersion() {
+    if let currentVersion = currentAssetBundle.version {
+      var blacklistedVersions = self.blacklistedVersions
+      blacklistedVersions.append(currentVersion)
+      self.blacklistedVersions = blacklistedVersions
+    }
+    
+    pendingAssetBundle = assetBundleManager.initialAssetBundle
+    
+    forceReload()
+  }
+  
+  func forceReload() {
+    if let webView = self.webView as? WKWebView {
+      webView.reloadFromOrigin()
+    }
+  }
 
   // MARK: AssetBundleManagerDelegate
 
@@ -276,8 +352,17 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, shouldDownloadBundleForManifest manifest: AssetManifest) -> Bool {
-    // TODO: Native code compatibility check?
-    return currentAssetBundle.version != manifest.version
+    // No need to redownload the current version
+    if currentAssetBundle.version == manifest.version {
+      return false
+    }
+
+    // Don't download blacklisted versions
+    if blacklistedVersions.contains(manifest.version!) {
+      return false
+    }
+
+    return true
   }
 
   // MARK: - Local server

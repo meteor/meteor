@@ -41,6 +41,9 @@
     <source-file src="src/ios/Errors.swift" />
     <source-file src="src/ios/Utility.swift" />
 
+    <header-file src="src/ios/METTimer.h" />
+    <source-file src="src/ios/METTimer.m" />
+
     <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServer.h" />
     <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerConnection.h" />
     <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerFunctions.h" />
