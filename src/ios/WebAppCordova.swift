@@ -86,7 +86,11 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     set {
       if newValue != lastDownloadedVersion {
         let userDefaults = NSUserDefaults.standardUserDefaults()
-        userDefaults.setObject(newValue, forKey: "MeteorWebAppLastDownloadedVersion")
+        if newValue == nil {
+          userDefaults.removeObjectForKey("MeteorWebAppLastDownloadedVersion")
+        } else {
+          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastDownloadedVersion")
+        }
         userDefaults.synchronize()
       }
     }
@@ -101,7 +105,30 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     set {
       if newValue != lastDownloadedVersion {
         let userDefaults = NSUserDefaults.standardUserDefaults()
-        userDefaults.setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
+        if newValue == nil {
+          userDefaults.removeObjectForKey("MeteorWebAppLastSeenInitialVersion")
+        } else {
+          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
+        }
+        userDefaults.synchronize()
+      }
+    }
+  }
+  
+  /// The last kwown good version of the asset bundle, stored in `NSUserDefaults`
+  var lastKnownGoodVersion: String? {
+    get {
+      return NSUserDefaults.standardUserDefaults().stringForKey("MeteorWebAppLastKnownGoodVersion")
+    }
+    
+    set {
+      if newValue != lastKnownGoodVersion {
+        let userDefaults = NSUserDefaults.standardUserDefaults()
+        if newValue == nil {
+          userDefaults.removeObjectForKey("MeteorWebAppLastKnownGoodVersion")
+        } else {
+          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastKnownGoodVersion")
+        }
         userDefaults.synchronize()
       }
     }
@@ -174,6 +201,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       }
 
       lastDownloadedVersion = nil
+      lastKnownGoodVersion = nil
       blacklistedVersions = []
     }
 
@@ -256,6 +284,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     NSLog("startupDidComplete")
     
     startupTimer.stop()
+    
+    lastKnownGoodVersion = currentAssetBundle.version
 
     commandDelegate?.runInBackground() {
       do {
@@ -326,7 +356,12 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       self.blacklistedVersions = blacklistedVersions
     }
     
-    pendingAssetBundle = assetBundleManager.initialAssetBundle
+    if let lastKnownGoodVersion = lastKnownGoodVersion,
+        let lastKnownGoodAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion) {
+      pendingAssetBundle = lastKnownGoodAssetBundle
+    } else {
+      pendingAssetBundle = assetBundleManager.initialAssetBundle
+    }
     
     forceReload()
   }
