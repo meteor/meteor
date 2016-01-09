@@ -22,6 +22,26 @@
   either `development` or `production`, which also determines the boolean
   flags `Meteor.isDevelopment` and `Meteor.isProduction`.
 
+* Absolute identifiers for app modules no longer have the `/app/` prefix,
+  and absolute identifiers for Meteor packages now have the prefix
+  `/node_modules/meteor/` instead of just `/node_modules/`, meaning you
+  should `import {Blaze} from "meteor/blaze"` instead of `from "blaze"`.
+
+* Package variables imported by application code are once again exposed
+  globally, allowing them to be accessed from the browser console or from
+  `meteor shell`. #5868
+
+* Fixed global variable assignment analysis during linking. #5870 #5819
+
+* Changes to files in node_modules will now trigger a restart of the
+  development server, just like any other file changes. #5815
+
+* The meteor package now exports a `global` variable (a la Node) that
+  provides a reliable reference to the global object for all Meteor code.
+
+* Packages in local node_modules directories now take precedence over
+  Meteor packages of the same name. #5933
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
