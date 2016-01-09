@@ -150,11 +150,8 @@ function getImportedModuleId(node) {
 // It only cares about assignments to variables; an assignment to a field on an
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
 export function findAssignedGlobals(source) {
-  // escope's analyzer treats vars in the top-level "Program" node as globals.
-  // The \n// */\n is necessary in case source ends with an unclosed comment.
-  const wrappedSource = 'function wrapper() {' + source + '\n// */\n}';
+  const ast = tryToParse(source);
 
-  const ast = tryToParse(wrappedSource);
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.
   // This is because an eval can pull references inward:
@@ -171,14 +168,33 @@ export function findAssignedGlobals(source) {
   // ignore.
   const scopeManager = analyzeScope(ast, {
     ecmaVersion: 6,
+    sourceType: "module",
     ignoreEval: true,
+    // Ensures we don't treat top-level var declarations as globals.
+    nodejsScope: true,
   });
-  const globalScope = scopeManager.acquire(ast);
 
+  const program = ast.type === "File" ? ast.program : ast;
+  const programScope = scopeManager.acquire(program);
   const assignedGlobals = {};
-  // Underscore is not available in this package.
-  globalScope.implicit.variables.forEach((variable) => {
+
+  // Passing {sourceType: "module"} to analyzeScope leaves this list
+  // strangely empty, but {sourceType: "script"} forbids ImportDeclaration
+  // nodes (because they are only legal in modules.
+  programScope.implicit.variables.forEach(variable => {
     assignedGlobals[variable.name] = true;
+  });
+
+  // Fortunately, even with {sourceType: "module"}, the .implicit.left
+  // array still has all the information we need, as long as we ignore
+  // global variable references that are not assignments.
+  programScope.implicit.left.forEach(entry => {
+    if (entry.identifier &&
+        entry.identifier.type === "Identifier" &&
+        // Only consider identifers that are assigned a value.
+        entry.writeExpr) {
+      assignedGlobals[entry.identifier.name] = true;
+    }
   });
 
   return assignedGlobals;
