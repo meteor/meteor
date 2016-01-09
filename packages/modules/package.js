@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules",
-  version: "0.4.1-modules.2",
+  version: "0.4.1-modules.3",
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"

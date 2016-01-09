@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Standards-compliant HTML tools",
-  version: '1.0.6-modules.2'
+  version: '1.0.6-modules.3'
 });
 
 Package.onUse(function (api) {
