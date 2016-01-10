@@ -289,8 +289,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
     commandDelegate?.runInBackground() {
       do {
-        let currentVersion = self.currentAssetBundle.version
-        try self.assetBundleManager.removeAllAssetBundlesExceptForCurrentVersion(currentVersion)
+        try self.assetBundleManager.removeAllDownloadedAssetBundlesExceptFor(self.currentAssetBundle)
       } catch {
         let errorMessage = "Could not remove unused asset bundles: \(error)"
         let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAsString: errorMessage)

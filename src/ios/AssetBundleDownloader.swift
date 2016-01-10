@@ -1,6 +1,6 @@
 protocol AssetBundleDownloaderDelegate: class {
-  func assetBundleDownloader(assetBundleDownloader: AssetBundleDownloader, didFinishDownloadingBundle assetBundle: AssetBundle)
-  func assetBundleDownloader(assetBundleDownloader: AssetBundleDownloader, didFailDownloadingWithError error: ErrorType)
+  func assetBundleDownloaderDidFinish(assetBundleDownloader: AssetBundleDownloader)
+  func assetBundleDownloader(assetBundleDownloader: AssetBundleDownloader, didFailWithError error: ErrorType)
 }
 
 final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate {
@@ -110,21 +110,6 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     endBackgroundTask()
   }
 
-  private func cancelAndFailWithReason(reason: String, underlyingError: ErrorType? = nil) {
-    cancel()
-
-    let error = WebAppError.DownloadFailure(reason: reason, underlyingError: underlyingError)
-    delegate?.assetBundleDownloader(self, didFailDownloadingWithError: error)
-  }
-
-  private func didFinishDownloadingBundle() {
-    session.finishTasksAndInvalidate()
-
-    delegate?.assetBundleDownloader(self, didFinishDownloadingBundle: assetBundle)
-
-    endBackgroundTask()
-  }
-
   // MARK: NSURLSessionDelegate
 
   func URLSession(session: NSURLSession, didBecomeInvalidWithError error: NSError?) {
@@ -146,12 +131,10 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
 
   // MARK: NSURLSessionDownloadDelegate
 
-  func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-    NSLog("\(downloadTask.originalRequest!.URL!) did download \(totalBytesWritten) bytes")
-  }
-
   func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didFinishDownloadingToURL location: NSURL) {
     NSLog("\(downloadTask.originalRequest!.URL!) did finish downloading")
+    
+    // TODO: Check for 200 response code
 
     if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(downloadTask.taskIdentifier) {
       // If we have a hash for the asset, and the ETag header also specifies
@@ -183,8 +166,23 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
       }
 
       if assetsDownloadingByTaskIdentifier.isEmpty && !cancelled {
-        didFinishDownloadingBundle()
+        didFinish()
       }
     }
+  }
+  
+  private func cancelAndFailWithReason(reason: String, underlyingError: ErrorType? = nil) {
+    cancel()
+    
+    let error = WebAppError.DownloadFailure(reason: reason, underlyingError: underlyingError)
+    delegate?.assetBundleDownloader(self, didFailWithError: error)
+  }
+  
+  private func didFinish() {
+    session.finishTasksAndInvalidate()
+    
+    delegate?.assetBundleDownloaderDidFinish(self)
+    
+    endBackgroundTask()
   }
 }
