@@ -86,9 +86,11 @@ class WebAppMockRemoteServer: CDVPlugin, GCDWebServerTestingDelegate {
           response = GCDWebServerFileResponse(file: fileURL.path!)
           let fileHash = NSData(contentsOfURL: fileURL)!.SHA1()
           response.eTag = fileHash
-        } else {
+        } else if request.query["meteor_dont_serve_index"] == nil {
           let indexFileURL = self.versionDirectoryURL.URLByAppendingPathComponent("index.html")
           response = GCDWebServerFileResponse(file: indexFileURL.path!)
+        } else {
+          response = GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_NotFound.rawValue)
         }
 
         response.cacheControlMaxAge = 0
