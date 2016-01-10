@@ -372,35 +372,15 @@ export default class ImportScanner {
       resolved = this._joinAndStat(this.nodeModulesPath, id);
     }
 
-    // If the package is still not resolved, it might be handled by the
-    // fallback function defined in meteor/packages/modules/modules.js.
-    if (! resolved &&
-        ! this._getExternalPackageName(id)) {
-      buildmessage.error(
-        "could not resolve module " + JSON.stringify(id),
-        { file: path }
-      );
-    }
+    // If the dependency is still not resolved, it might be handled by the
+    // fallback function defined in meteor/packages/modules/modules.js, or
+    // it might be imported in code that will never run on this platform,
+    // so there is always the possibility that its absence is not actually
+    // a problem. As much as we might like to issue warnings about missing
+    // dependencies here, we just don't have enough information to make
+    // that determination until the code actually runs.
 
     return resolved;
-  }
-
-  _getExternalPackageName(id) {
-    const parts = id.split("/");
-    if (parts.length > 1 &&
-        parts[0] === "meteor" &&
-        // If the package we're importing is the current package, or a
-        // package used by the current package, trust the fallback
-        // function to handle it at runtime.
-        (parts[1] === this.name ||
-         has(this.usedPackageNames, parts[1]))) {
-      return parts[1];
-    }
-
-    if (this.nodeModulesPath &&
-        this._joinAndStat(this.nodeModulesPath, parts[0])) {
-      return parts[0];
-    }
   }
 
   _resolvePkgJsonMain(dirPath) {
