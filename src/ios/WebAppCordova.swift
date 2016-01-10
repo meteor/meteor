@@ -159,7 +159,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// Callback ID used to send a downloadFailure notification to JavaScript
   private var downloadFailureCallbackId: String?
 
-  private var startupTimer: METTimer!
+  private var startupTimer: METTimer?
 
   // MARK: - Lifecycle
 
@@ -245,9 +245,11 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       return
     }
     
-    startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-      NSLog("Startup timed out")
-      self.revertToLastKnownGoodVersion()
+    if startupTimer == nil {
+      startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
+        NSLog("Startup timed out")
+        self.revertToLastKnownGoodVersion()
+      }
     }
   }
 
@@ -260,8 +262,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       currentAssetBundle = pendingAssetBundle
       self.pendingAssetBundle = nil
     }
-
-    startupTimer.startWithTimeInterval(startupTimeoutInterval)
+    
+    startupTimer?.startWithTimeInterval(startupTimeoutInterval)
   }
   
   // MARK: - Notifications
@@ -275,7 +277,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     
     // Stop startup timer when going into the background, to avoid
     // blacklisting a version just because the web view has been suspended
-    startupTimer.stop()
+    startupTimer?.stop()
   }
 
   // MARK: - Public plugin commands
@@ -283,7 +285,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   public func startupDidComplete(command: CDVInvokedUrlCommand) {
     NSLog("startupDidComplete")
     
-    startupTimer.stop()
+    startupTimer?.stop()
     
     lastKnownGoodVersion = currentAssetBundle.version
 
