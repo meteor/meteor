@@ -137,9 +137,11 @@ export default class ImportScanner {
         // we won't scan them again.
         file.imported = true;
 
-        if (alreadyScanned) {
-          return;
+        if (! alreadyScanned) {
+          this._scanDeps(absImportedPath, file.data);
         }
+
+        return;
       }
 
       if (! this._hasKnownExtension(absImportedPath)) {
