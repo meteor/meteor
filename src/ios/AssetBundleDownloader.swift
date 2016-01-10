@@ -132,18 +132,22 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
   // MARK: NSURLSessionDownloadDelegate
 
   func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didFinishDownloadingToURL location: NSURL) {
+    
     NSLog("\(downloadTask.originalRequest!.URL!) did finish downloading")
     
-    // TODO: Check for 200 response code
-
+    guard let response = downloadTask.response as? NSHTTPURLResponse else { return }
+    
     if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(downloadTask.taskIdentifier) {
+      // A response with a non-success status code should not be considered a succesful download
+      if !(200..<300).contains(response.statusCode) {
+        self.cancelAndFailWithReason("Non-success status code for asset: \(asset.URLPath)")
+        return
       // If we have a hash for the asset, and the ETag header also specifies
       // a hash, we compare these to verify if we received the expected asset version
-      if let hash = asset.hash,
-          let response = downloadTask.response as? NSHTTPURLResponse,
+      } else if let hash = asset.hash,
           let ETag = response.allHeaderFields["ETag"] as? String
           where sha1HashRegEx.matches(ETag) && ETag != hash {
-        self.cancelAndFailWithReason("Hash mismatch for asset: \(asset.filePath)")
+        self.cancelAndFailWithReason("Hash mismatch for asset: \(asset.URLPath)")
         return
       // We don't have a hash for the index page, so we have to parse the runtime config
       // and compare autoupdateVersionCordova to the version in the manifest to verify

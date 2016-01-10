@@ -367,6 +367,37 @@ exports.defineAutoTests = function() {
       });
     });
 
+    describe("when downloading a missing asset", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("version2_with_missing_asset", done);
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should invoke the onDownloadFailure callback with an error", function(done) {
+        WebAppCordova.onDownloadFailure(function(error) {
+          expect(error.message).toEqual("Non-success status code for asset: /app/template.mobileapp.js");
+          done();
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionDownloaded callback", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
     describe("when downloading an invalid asset", function() {
       beforeEach(function(done) {
         WebAppMockRemoteServer.serveVersion("version2_with_invalid_asset", done);
@@ -378,7 +409,7 @@ exports.defineAutoTests = function() {
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
         WebAppCordova.onDownloadFailure(function(error) {
-          expect(error.message).toEqual("Hash mismatch for asset: app/template.mobileapp.js");
+          expect(error.message).toEqual("Hash mismatch for asset: /app/template.mobileapp.js");
           done();
         });
 
