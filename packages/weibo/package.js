@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Weibo OAuth flow",
-  version: '1.1.5-modules.3'
+  version: '1.1.5-modules.4'
 });
 
 Package.onUse(function(api) {

@@ -1,6 +1,6 @@
 Package.describe({
   name: "es5-shim",
-  version: "4.3.2-modules.3",
+  version: "4.3.2-modules.4",
   summary: "Shims and polyfills to improve ECMAScript 5 support",
   documentation: "README.md"
 });
