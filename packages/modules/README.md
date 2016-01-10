@@ -133,11 +133,13 @@ When you use `api.mainModule`, the exports of the main module are exposed global
 
 ```js
 // In an application that uses my-modular-package:
-import {Foo as ExplicitFoo, bar} from "my-modular-package";
+import {Foo as ExplicitFoo, bar} from "meteor/my-modular-package";
 console.log(Foo); // Auto-imported because of api.export.
 console.log(ExplicitFoo); // Explicitly imported, but identical to Foo.
 console.log(bar); // Exported by server.js or client.js, but not auto-imported.
 ```
+
+Note that the `import` is `from "meteor/my-modular-package"`, not `from "my-modular-package"`. Meteor package identifier strings must include the prefix `meteor/...` to disambiguate them from npm packages.
 
 Finally, since this package is using the new `modules` package, and the package `Npm.depends` on the "moment" npm package, modules within the package can `import moment from "moment"` on both the client and the server. This is great news, because previous versions of Meteor allowed npm imports only on the server, via `Npm.require`.
 
