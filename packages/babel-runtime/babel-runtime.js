@@ -177,6 +177,42 @@ babelHelpers = {
     return obj && obj.__esModule ? obj : { 'default': obj };
   },
 
+  interopRequireWildcard: function (obj) {
+    if (obj && obj.__esModule) {
+      return obj;
+    }
+
+    var newObj = {};
+
+    if (obj != null) {
+      for (var key in obj) {
+        if (hasOwn.call(obj, key)) {
+          newObj[key] = obj[key];
+        }
+      }
+    }
+
+    newObj["default"] = obj;
+    return newObj;
+  },
+
+  interopExportWildcard: function (obj, defaults) {
+    var newObj = defaults({}, obj);
+    delete newObj["default"];
+    return newObj;
+  },
+
+  defaults: function (obj, defaults) {
+    Object.getOwnPropertyNames(defaults).forEach(function (key) {
+      var desc = Object.getOwnPropertyDescriptor(defaults, key);
+      if (desc && desc.configurable && typeof obj[key] === "undefined") {
+        Object.defineProperty(obj, key, desc);
+      }
+    });
+
+    return obj;
+  },
+
   // es7.objectRestSpread and react (JSX)
   _extends: Object.assign || (function (target) {
     for (var i = 1; i < arguments.length; i++) {
