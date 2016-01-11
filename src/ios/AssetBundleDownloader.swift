@@ -180,9 +180,13 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
   }
   
   private func cancelAndFailWithReason(reason: String, underlyingError: ErrorType? = nil) {
+    let error = WebAppError.DownloadFailure(reason: reason, underlyingError: underlyingError)
+    cancelAndFailWithError(error)
+  }
+  
+  private func cancelAndFailWithError(error: ErrorType) {
     cancel()
     
-    let error = WebAppError.DownloadFailure(reason: reason, underlyingError: underlyingError)
     delegate?.assetBundleDownloader(self, didFailWithError: error)
   }
   
@@ -244,24 +248,14 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     guard let response = response as? NSHTTPURLResponse else { return }
     
     if let asset = assetsDownloadingByTaskIdentifier[dataTask.taskIdentifier] {
-      // A response with a non-success status code should not be considered a succesful download
-      if !(200..<300).contains(response.statusCode) {
+      do {
+        try verifyResponse(response, forAsset: asset)
+        completionHandler(.BecomeDownload)
+      } catch let error {
         completionHandler(.Cancel)
-        self.cancelAndFailWithReason("Non-success status code for asset: \(asset)")
-        return
-        // If we have a hash for the asset, and the ETag header also specifies
-        // a hash, we compare these to verify if we received the expected asset version
-      } else if let expectedHash = asset.hash,
-        let ETag = response.allHeaderFields["ETag"] as? String,
-        let actualHash = SHA1HashFromETag(ETag)
-        where actualHash != expectedHash {
-          completionHandler(.Cancel)
-          self.cancelAndFailWithReason("Hash mismatch for asset: \(asset)")
-          return
+        self.cancelAndFailWithError(error)
       }
     }
-
-    completionHandler(.BecomeDownload)
   }
   
   func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didBecomeDownloadTask downloadTask: NSURLSessionDownloadTask) {
@@ -280,6 +274,16 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
   }
   
   func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
+    
+    guard let response = downloadTask.response as? NSHTTPURLResponse else { return }
+    
+    if let asset = assetsDownloadingByTaskIdentifier[downloadTask.taskIdentifier] {
+      do {
+        try verifyResponse(response, forAsset: asset)
+      } catch let error {
+        self.cancelAndFailWithError(error)
+      }
+    }
   }
 
   func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didFinishDownloadingToURL location: NSURL) {
@@ -310,6 +314,20 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
       if missingAssets.isEmpty && status != .Canceling {
         didFinish()
       }
+    }
+  }
+  
+  private func verifyResponse(response: NSHTTPURLResponse, forAsset asset: Asset) throws {
+    // A response with a non-success status code should not be considered a succesful download
+    if !(200..<300).contains(response.statusCode) {
+      throw WebAppError.DownloadFailure(reason: "Non-success status code for asset: \(asset)", underlyingError: nil)
+      // If we have a hash for the asset, and the ETag header also specifies
+      // a hash, we compare these to verify if we received the expected asset version
+    } else if let expectedHash = asset.hash,
+      let ETag = response.allHeaderFields["ETag"] as? String,
+      let actualHash = SHA1HashFromETag(ETag)
+      where actualHash != expectedHash {
+        throw WebAppError.DownloadFailure(reason: "Hash mismatch for asset: \(asset)", underlyingError: nil)
     }
   }
 }
