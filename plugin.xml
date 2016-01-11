@@ -42,7 +42,13 @@
     <source-file src="src/ios/Utility.swift" />
 
     <header-file src="src/ios/METTimer.h" />
+    <header-file src="src/ios/METRetryStrategy.h" />
+    <header-file src="src/ios/METNetworkReachabilityManager.h" />
+    <header-file src="src/ios/METRandomValueGenerator.h" />
     <source-file src="src/ios/METTimer.m" />
+    <source-file src="src/ios/METRetryStrategy.m" />
+    <source-file src="src/ios/METNetworkReachabilityManager.m" />
+    <source-file src="src/ios/METRandomValueGenerator.m" />
 
     <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServer.h" />
     <header-file src="src/ios/GCDWebServer/GCDWebServer/Core/GCDWebServerConnection.h" />

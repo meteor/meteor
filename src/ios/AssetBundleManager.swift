@@ -173,7 +173,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   }
 
   private func downloadAssetBundle(assetBundle: AssetBundle, withBaseURL baseURL: NSURL) {
-    var missingAssets = [Asset]()
+    var missingAssets = Set<Asset>()
 
     for asset in assetBundle.ownAssets {
       // Create containing directories for the asset if necessary
@@ -195,7 +195,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
           return
         }
       } else {
-        missingAssets.append(asset)
+        missingAssets.insert(asset)
       }
     }
 
@@ -209,9 +209,9 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
         return
       }
     } else {
-      assetBundleDownloader = AssetBundleDownloader(assetBundle: assetBundle, queue: queue)
-      assetBundleDownloader?.delegate = self
-      assetBundleDownloader?.downloadAssets(missingAssets, withBaseURL: baseURL)
+      assetBundleDownloader = AssetBundleDownloader(assetBundle: assetBundle, baseURL: baseURL, missingAssets: missingAssets)
+      assetBundleDownloader!.delegate = self
+      assetBundleDownloader!.resume()
     }
   }
 

@@ -22,3 +22,18 @@ struct Asset {
     self.sourceMapURLPath = sourceMapURLPath
   }
 }
+
+extension Asset: CustomStringConvertible {
+  var description: String {
+    return URLPath
+  }
+}
+
+extension Asset: Hashable, Equatable {
+  var hashValue: Int { return ObjectIdentifier(bundle).hashValue ^ URLPath.hashValue }
+}
+
+func ==(lhs: Asset, rhs: Asset) -> Bool {
+  return ObjectIdentifier(lhs.bundle) == ObjectIdentifier(rhs.bundle)
+    && lhs.URLPath == rhs.URLPath
+}

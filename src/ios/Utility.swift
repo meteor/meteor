@@ -43,6 +43,17 @@ func URLPathByRemovingQueryString(URLString: String) -> String {
 // Regex that matches a SHA1 hash
 let sha1HashRegEx = try! NSRegularExpression(pattern: "[0-9a-f]{40}", options: [])
 
+// Regex that matches an ETag with a SHA1 hash
+let ETagWithSha1HashRegEx = try! NSRegularExpression(pattern: "\"([0-9a-f]{40})\"", options: [])
+
+func SHA1HashFromETag(ETag: String) -> String? {
+  guard let match = ETagWithSha1HashRegEx.firstMatchInString(ETag) else {
+    return nil
+  }
+  
+  return (ETag as NSString).substringWithRange(match.rangeAtIndex(1))
+}
+
 extension NSRegularExpression {
   func firstMatchInString(string: String) -> NSTextCheckingResult? {
     return firstMatchInString(string, options: [],

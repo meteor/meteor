@@ -3,25 +3,54 @@ protocol AssetBundleDownloaderDelegate: class {
   func assetBundleDownloader(assetBundleDownloader: AssetBundleDownloader, didFailWithError error: ErrorType)
 }
 
-final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate {
+final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, METNetworkReachabilityManagerDelegate {
   private(set) var assetBundle: AssetBundle
-
+  private(set) var baseURL: NSURL
+  
   weak var delegate: AssetBundleDownloaderDelegate?
 
   /// A private serial queue used to synchronize access
   private let queue: dispatch_queue_t
 
   private let fileManager = NSFileManager()
-
+  
   private var session: NSURLSession!
-  private var assetsDownloadingByTaskIdentifier: [Int:Asset]
-  private var cancelled: Bool = false
+  
+  private var missingAssets: Set<Asset>
+  private var assetsDownloadingByTaskIdentifier = [Int: Asset]()
+  private var resumeDataByAsset = [Asset: NSData]()
+  
+  private var retryStrategy: METRetryStrategy
+  private var numberOfRetryAttempts: UInt = 0
+  private var resumeTimer: METTimer!
+  private var networkReachabilityManager: METNetworkReachabilityManager!
+  
+  enum Status {
+    case Suspended
+    case Running
+    case Waiting
+    case Offline
+    case Canceling
+    case Invalid
+  }
+  
+  private var status: Status = .Suspended
 
   private var backgroundTask: UIBackgroundTaskIdentifier = UIBackgroundTaskInvalid
-
-  init(assetBundle: AssetBundle, queue: dispatch_queue_t) {
+  
+  init(assetBundle: AssetBundle, baseURL: NSURL, missingAssets: Set<Asset>) {
     self.assetBundle = assetBundle
-    self.queue = queue
+    self.baseURL = baseURL
+    self.missingAssets = missingAssets
+    
+    queue = dispatch_queue_create("com.meteor.webapp.AssetBundleDownloader", nil)
+    
+    retryStrategy = METRetryStrategy()
+    retryStrategy.minimumTimeInterval = 0.1
+    retryStrategy.numberOfAttemptsAtMinimumTimeInterval = 2
+    retryStrategy.baseTimeInterval = 1
+    retryStrategy.exponent = 2.2
+    retryStrategy.randomizationFactor = 0.5
 
     let sessionConfiguration = NSURLSessionConfiguration.defaultSessionConfiguration()
     sessionConfiguration.HTTPMaximumConnectionsPerHost = 6
@@ -35,85 +64,159 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     operationQueue.maxConcurrentOperationCount = 1
     operationQueue.underlyingQueue = queue
 
-    assetsDownloadingByTaskIdentifier = [Int:Asset]()
-
     super.init()
 
     session = NSURLSession(configuration: sessionConfiguration, delegate: self, delegateQueue: operationQueue)
+    
+    resumeTimer = METTimer(queue: queue) { [weak self] in
+      self?.resume()
+    }
+    
+    networkReachabilityManager = METNetworkReachabilityManager(hostName: baseURL.host!)
+    networkReachabilityManager.delegate = self
+    networkReachabilityManager.delegateQueue = queue
+    networkReachabilityManager.startMonitoring()
+    
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationWillEnterForeground", name: UIApplicationWillEnterForegroundNotification, object: nil)
+  }
+  
+  deinit {
+    NSNotificationCenter.defaultCenter().removeObserver(self)
   }
 
-  func downloadAssets(assets: [Asset], withBaseURL baseURL: NSURL) {
-    NSLog("Start downloading assets from bundle with version: \(assetBundle.version!)")
-
-    CDVTimer.start("assetBundleDownload")
-
+  func resume() {
     if backgroundTask == UIBackgroundTaskInvalid {
+      NSLog("Start downloading assets from bundle with version: \(assetBundle.version!)")
+      
+      CDVTimer.start("assetBundleDownload")
+      
       let application = UIApplication.sharedApplication()
       backgroundTask = application.beginBackgroundTaskWithName("AssetBundleDownload") {
         // Expiration handler, usually invoked 180 seconds after the app goes
         // into the background
         NSLog("AssetBundleDownload task expired, app is suspending")
+        self.status = .Suspended
         self.endBackgroundTask()
       }
     }
-
-    var downloadTasks = [NSURLSessionDownloadTask]()
-
-    for asset in assets {
-      var URLPath = asset.URLPath
-
-      // Remove leading / from URL path because the path should be relative to the base URL
-      if URLPath.hasPrefix("/") {
-        URLPath = String(asset.URLPath.utf16.dropFirst())
-      }
-
-      guard let URLComponents = NSURLComponents(string: URLPath) else {
-        self.cancelAndFailWithReason("Invalid URL for asset: \(URLPath)")
-        return
-      }
+    
+    status = .Running
+    
+    let assetsDownloading = Set(assetsDownloadingByTaskIdentifier.values)
+    
+    for asset in missingAssets {
+      if assetsDownloading.contains(asset) { continue }
       
-      // To avoid inadvertently downloading the default index page when an asset
-      // is not found, we add meteor_dont_serve_index=true to the URL unless we 
-      // are actually downloading the index page.
-      if asset.filePath != "index.html" {
-        let queryItem = NSURLQueryItem(name: "meteor_dont_serve_index", value: "true")
-        if var queryItems = URLComponents.queryItems {
-          queryItems.append(queryItem)
-          URLComponents.queryItems = queryItems
-        } else {
-          URLComponents.queryItems = [queryItem]
+      let downloadTask: NSURLSessionDownloadTask
+
+      // If we have previously stored resume data, use that to recreate the
+      // task
+      if let resumeData = resumeDataByAsset.removeValueForKey(asset) {
+        downloadTask = session.downloadTaskWithResumeData(resumeData)
+      } else {
+        guard let URL = self.downloadURLForAsset(asset) else {
+          self.cancelAndFailWithReason("Invalid URL for asset: \(asset)")
+          return
         }
+        
+        downloadTask = session.downloadTaskWithURL(URL)
       }
       
-      guard let URL = URLComponents.URLRelativeToURL(baseURL) else {
-        self.cancelAndFailWithReason("Invalid URL for asset: \(URLPath)")
-        return
-      }
-
-      let downloadTask = session.downloadTaskWithURL(URL)
       assetsDownloadingByTaskIdentifier[downloadTask.taskIdentifier] = asset
-      downloadTasks.append(downloadTask)
+      downloadTask.resume()
     }
-
-    downloadTasks.forEach({ $0.resume() })
+  }
+  
+  private func resumeLater() {
+    if status == .Running {
+      let retryInterval = retryStrategy.retryIntervalForNumberOfAttempts(numberOfRetryAttempts)
+      NSLog("Will retry resuming downloads after %f seconds", retryInterval);
+      resumeTimer.startWithTimeInterval(retryInterval)
+      numberOfRetryAttempts++
+      status = .Waiting
+    }
+  }
+  
+  private func downloadURLForAsset(asset: Asset) -> NSURL? {
+    var URLPath = asset.URLPath
+    
+    // Remove leading / from URL path because the path should be relative to the base URL
+    if URLPath.hasPrefix("/") {
+      URLPath = String(asset.URLPath.utf16.dropFirst())
+    }
+    
+    guard let URLComponents = NSURLComponents(string: URLPath) else {
+      return nil
+    }
+    
+    // To avoid inadvertently downloading the default index page when an asset
+    // is not found, we add meteor_dont_serve_index=true to the URL unless we
+    // are actually downloading the index page.
+    if asset.filePath != "index.html" {
+      let queryItem = NSURLQueryItem(name: "meteor_dont_serve_index", value: "true")
+      if var queryItems = URLComponents.queryItems {
+        queryItems.append(queryItem)
+        URLComponents.queryItems = queryItems
+      } else {
+        URLComponents.queryItems = [queryItem]
+      }
+    }
+    
+    return URLComponents.URLRelativeToURL(baseURL)
   }
 
   private func endBackgroundTask() {
     let application = UIApplication.sharedApplication()
     application.endBackgroundTask(self.backgroundTask)
     self.backgroundTask = UIBackgroundTaskInvalid;
+    
+    CDVTimer.stop("assetBundleDownload")
   }
 
   func cancel() {
-    cancelled = true
+    status = .Canceling
     session.invalidateAndCancel()
     endBackgroundTask()
+  }
+  
+  private func cancelAndFailWithReason(reason: String, underlyingError: ErrorType? = nil) {
+    cancel()
+    
+    let error = WebAppError.DownloadFailure(reason: reason, underlyingError: underlyingError)
+    delegate?.assetBundleDownloader(self, didFailWithError: error)
+  }
+  
+  private func didFinish() {
+    session.finishTasksAndInvalidate()
+    
+    delegate?.assetBundleDownloaderDidFinish(self)
+    
+    endBackgroundTask()
+  }
+  
+  // MARK: Application State Notifications
+  
+  func applicationWillEnterForeground() {
+    NSLog("applicationWillEnterForeground")
+    
+    if status == .Suspended {
+      resume()
+    }
+  }
+  
+  // MARK: METNetworkReachabilityManagerDelegate
+  
+  func networkReachabilityManager(reachabilityManager: METNetworkReachabilityManager, didDetectReachabilityStatusChange reachabilityStatus: METNetworkReachabilityStatus) {
+    
+    if reachabilityStatus == .Reachable && status == .Waiting {
+      resume()
+    }
   }
 
   // MARK: NSURLSessionDelegate
 
   func URLSession(session: NSURLSession, didBecomeInvalidWithError error: NSError?) {
-    CDVTimer.stop("assetBundleDownload")
+    status = .Invalid
   }
 
   func URLSessionDidFinishEventsForBackgroundURLSession(session: NSURLSession) {
@@ -123,8 +226,16 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
 
   func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
     if let error = error, let downloadTask = task as? NSURLSessionDownloadTask {
-      if !cancelled {
-        NSLog("Download of \(downloadTask.originalRequest!.URL!) did fail with error: \(error)")
+      if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(downloadTask.taskIdentifier) {
+        if status != .Canceling {
+          NSLog("Download of asset: \(asset) did fail with error: \(error)")
+          
+          // If there is resume data, we store it and use it to recreate the task later
+          if let resumeData = error.userInfo[NSURLSessionDownloadTaskResumeData] as? NSData {
+            resumeDataByAsset[asset] = resumeData
+          }
+          resumeLater()
+        }
       }
     }
   }
@@ -140,14 +251,15 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(downloadTask.taskIdentifier) {
       // A response with a non-success status code should not be considered a succesful download
       if !(200..<300).contains(response.statusCode) {
-        self.cancelAndFailWithReason("Non-success status code for asset: \(asset.URLPath)")
+        self.cancelAndFailWithReason("Non-success status code for asset: \(asset)")
         return
       // If we have a hash for the asset, and the ETag header also specifies
       // a hash, we compare these to verify if we received the expected asset version
-      } else if let hash = asset.hash,
-          let ETag = response.allHeaderFields["ETag"] as? String
-          where sha1HashRegEx.matches(ETag) && ETag != hash {
-        self.cancelAndFailWithReason("Hash mismatch for asset: \(asset.URLPath)")
+      } else if let expectedHash = asset.hash,
+          let ETag = response.allHeaderFields["ETag"] as? String,
+          let actualHash = SHA1HashFromETag(ETag)
+          where actualHash != expectedHash {
+        self.cancelAndFailWithReason("Hash mismatch for asset: \(asset)")
         return
       // We don't have a hash for the index page, so we have to parse the runtime config
       // and compare autoupdateVersionCordova to the version in the manifest to verify
@@ -168,25 +280,12 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
         self.cancelAndFailWithReason("Could not move downloaded asset", underlyingError: error)
         return
       }
-
-      if assetsDownloadingByTaskIdentifier.isEmpty && !cancelled {
+      
+      missingAssets.remove(asset)
+      
+      if missingAssets.isEmpty && status != .Canceling {
         didFinish()
       }
     }
-  }
-  
-  private func cancelAndFailWithReason(reason: String, underlyingError: ErrorType? = nil) {
-    cancel()
-    
-    let error = WebAppError.DownloadFailure(reason: reason, underlyingError: underlyingError)
-    delegate?.assetBundleDownloader(self, didFailWithError: error)
-  }
-  
-  private func didFinish() {
-    session.finishTasksAndInvalidate()
-    
-    delegate?.assetBundleDownloaderDidFinish(self)
-    
-    endBackgroundTask()
   }
 }
