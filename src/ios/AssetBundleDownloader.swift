@@ -3,7 +3,7 @@ protocol AssetBundleDownloaderDelegate: class {
   func assetBundleDownloader(assetBundleDownloader: AssetBundleDownloader, didFailWithError error: ErrorType)
 }
 
-final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDownloadDelegate, METNetworkReachabilityManagerDelegate {
+final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionTaskDelegate, NSURLSessionDataDelegate, NSURLSessionDownloadDelegate, METNetworkReachabilityManagerDelegate {
   private(set) var assetBundle: AssetBundle
   private(set) var baseURL: NSURL
   
@@ -107,23 +107,23 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     for asset in missingAssets {
       if assetsDownloading.contains(asset) { continue }
       
-      let downloadTask: NSURLSessionDownloadTask
+      let task: NSURLSessionTask
 
       // If we have previously stored resume data, use that to recreate the
       // task
       if let resumeData = resumeDataByAsset.removeValueForKey(asset) {
-        downloadTask = session.downloadTaskWithResumeData(resumeData)
+        task = session.downloadTaskWithResumeData(resumeData)
       } else {
         guard let URL = self.downloadURLForAsset(asset) else {
           self.cancelAndFailWithReason("Invalid URL for asset: \(asset)")
           return
         }
         
-        downloadTask = session.downloadTaskWithURL(URL)
+        task = session.dataTaskWithURL(URL)
       }
       
-      assetsDownloadingByTaskIdentifier[downloadTask.taskIdentifier] = asset
-      downloadTask.resume()
+      assetsDownloadingByTaskIdentifier[task.taskIdentifier] = asset
+      task.resume()
     }
   }
   
@@ -197,8 +197,6 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
   // MARK: Application State Notifications
   
   func applicationWillEnterForeground() {
-    NSLog("applicationWillEnterForeground")
-    
     if status == .Suspended {
       resume()
     }
@@ -225,9 +223,9 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
   // MARK: NSURLSessionTaskDelegate
 
   func URLSession(session: NSURLSession, task: NSURLSessionTask, didCompleteWithError error: NSError?) {
-    if let error = error, let downloadTask = task as? NSURLSessionDownloadTask {
-      if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(downloadTask.taskIdentifier) {
-        if status != .Canceling {
+    if let error = error {
+      if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(task.taskIdentifier) {
+        if task is NSURLSessionDownloadTask && status != .Canceling {
           NSLog("Download of asset: \(asset) did fail with error: \(error)")
           
           // If there is resume data, we store it and use it to recreate the task later
@@ -239,32 +237,58 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
       }
     }
   }
+  
+  // MARK: NSURLSessionDataDelegate
+  
+  func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didReceiveResponse response: NSURLResponse, completionHandler: (NSURLSessionResponseDisposition) -> Void) {
+    guard let response = response as? NSHTTPURLResponse else { return }
+    
+    if let asset = assetsDownloadingByTaskIdentifier[dataTask.taskIdentifier] {
+      // A response with a non-success status code should not be considered a succesful download
+      if !(200..<300).contains(response.statusCode) {
+        completionHandler(.Cancel)
+        self.cancelAndFailWithReason("Non-success status code for asset: \(asset)")
+        return
+        // If we have a hash for the asset, and the ETag header also specifies
+        // a hash, we compare these to verify if we received the expected asset version
+      } else if let expectedHash = asset.hash,
+        let ETag = response.allHeaderFields["ETag"] as? String,
+        let actualHash = SHA1HashFromETag(ETag)
+        where actualHash != expectedHash {
+          completionHandler(.Cancel)
+          self.cancelAndFailWithReason("Hash mismatch for asset: \(asset)")
+          return
+      }
+    }
+
+    completionHandler(.BecomeDownload)
+  }
+  
+  func URLSession(session: NSURLSession, dataTask: NSURLSessionDataTask, didBecomeDownloadTask downloadTask: NSURLSessionDownloadTask) {
+    if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(dataTask.taskIdentifier) {
+      assetsDownloadingByTaskIdentifier[downloadTask.taskIdentifier] = asset
+    }
+  }
 
   // MARK: NSURLSessionDownloadDelegate
+  
+  func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
+    
+    let percentage: Float64 = (Float64(totalBytesWritten) / Float64(totalBytesExpectedToWrite)) * 100
+    
+    NSLog("\(downloadTask.originalRequest!.URL!) downloaded %.2f%%", percentage)
+  }
+  
+  func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
+  }
 
   func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didFinishDownloadingToURL location: NSURL) {
     
-    NSLog("\(downloadTask.originalRequest!.URL!) did finish downloading")
-    
-    guard let response = downloadTask.response as? NSHTTPURLResponse else { return }
-    
     if let asset = assetsDownloadingByTaskIdentifier.removeValueForKey(downloadTask.taskIdentifier) {
-      // A response with a non-success status code should not be considered a succesful download
-      if !(200..<300).contains(response.statusCode) {
-        self.cancelAndFailWithReason("Non-success status code for asset: \(asset)")
-        return
-      // If we have a hash for the asset, and the ETag header also specifies
-      // a hash, we compare these to verify if we received the expected asset version
-      } else if let expectedHash = asset.hash,
-          let ETag = response.allHeaderFields["ETag"] as? String,
-          let actualHash = SHA1HashFromETag(ETag)
-          where actualHash != expectedHash {
-        self.cancelAndFailWithReason("Hash mismatch for asset: \(asset)")
-        return
       // We don't have a hash for the index page, so we have to parse the runtime config
       // and compare autoupdateVersionCordova to the version in the manifest to verify
       // if we downloaded the expected version
-      } else if asset.filePath == "index.html" {        
+      if asset.filePath == "index.html" {
         if let expectedVersion = assetBundle.version,
             let runtimeConfig = loadRuntimeConfigFromIndexFileAtURL(location),
             let actualVersion = runtimeConfig["autoupdateVersionCordova"] as? String
