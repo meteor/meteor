@@ -246,9 +246,9 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     }
     
     if startupTimer == nil {
-      startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
+      startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
         NSLog("Startup timed out")
-        self.revertToLastKnownGoodVersion()
+        self?.revertToLastKnownGoodVersion()
       }
     }
   }
@@ -488,7 +488,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     // Support partial requests using byte ranges
     let response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange)
     response.setValue("bytes", forAdditionalHeader: "Accept-Ranges")
-
+    
     // Only cache files when the file is cacheable and the request URL includes a cache buster
     let shouldCache = cacheable &&
       (!(request.URL.query?.isEmpty ?? true)
