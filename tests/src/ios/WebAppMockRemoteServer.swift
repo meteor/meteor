@@ -85,7 +85,7 @@ class WebAppMockRemoteServer: CDVPlugin, GCDWebServerTestingDelegate {
             && !isDirectory.boolValue {
           response = GCDWebServerFileResponse(file: fileURL.path!)
           let fileHash = NSData(contentsOfURL: fileURL)!.SHA1()
-          response.eTag = fileHash
+          response.eTag = "\"\(fileHash)\""
         } else if request.query["meteor_dont_serve_index"] == nil {
           let indexFileURL = self.versionDirectoryURL.URLByAppendingPathComponent("index.html")
           response = GCDWebServerFileResponse(file: indexFileURL.path!)
