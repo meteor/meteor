@@ -504,6 +504,7 @@ var runWebAppServer = function () {
         staticFiles[path.join(urlPrefix, getItemPathname('/manifest.json'))] = {
           content: JSON.stringify(program),
           cacheable: true,
+          hash: program.version,
           type: "json"
         };
       };
