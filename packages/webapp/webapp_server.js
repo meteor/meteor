@@ -397,7 +397,7 @@ WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
   }
 
   if (info.hash) {
-    res.setHeader('ETag', info.hash);
+    res.setHeader('ETag', '"' + info.hash + '"');
   }
 
   if (info.content) {
