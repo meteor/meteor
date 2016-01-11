@@ -1135,12 +1135,27 @@ Tinytest.add("minimongo - selector_compiler", function (test) {
         {a: [{x: 1, b: 1}]});
   match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}], x: 1}}},
         {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$or: [{a: 1}, {b: 1}]}}},
+        {a: [{x: 1, b: 1}]});
+  match({a: {$elemMatch: {$and: [{b: 1}, {x: 1}]}}},
+        {a: [{x: 1, b: 1}]});
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
           {a: [{b: 1}]});
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
           {a: [{x: 1}]});
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
           {a: [{x: 1}, {b: 1}]});
+
+  test.throws(function () {
+    match({a: {$elemMatch: {$gte: 1, $or: [{a: 1}, {b: 1}]}}},
+          {a: [{x: 1, b: 1}]});
+  });
+
+  test.throws(function () {
+    match({x: {$elemMatch: {$and: [{$gt: 5, $lt: 9}]}}}, {x: [8]});
+  });
 
   // $comment
   match({a: 5, $comment: "asdf"}, {a: 5});
