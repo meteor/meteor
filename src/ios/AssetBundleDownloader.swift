@@ -86,7 +86,7 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
 
   func resume() {
     if backgroundTask == UIBackgroundTaskInvalid {
-      NSLog("Start downloading assets from bundle with version: \(assetBundle.version!)")
+      NSLog("Start downloading assets from bundle with version: \(assetBundle.version)")
       
       CDVTimer.start("assetBundleDownload")
       
@@ -251,7 +251,7 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
       do {
         try verifyResponse(response, forAsset: asset)
         completionHandler(.BecomeDownload)
-      } catch let error {
+      } catch {
         completionHandler(.Cancel)
         self.cancelAndFailWithError(error)
       }
@@ -280,7 +280,7 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     if let asset = assetsDownloadingByTaskIdentifier[downloadTask.taskIdentifier] {
       do {
         try verifyResponse(response, forAsset: asset)
-      } catch let error {
+      } catch {
         self.cancelAndFailWithError(error)
       }
     }

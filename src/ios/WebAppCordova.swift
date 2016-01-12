@@ -374,9 +374,23 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   // MARK: AssetBundleManagerDelegate
+  
+  func assetBundleManager(assetBundleManager: AssetBundleManager, shouldDownloadBundleForManifest manifest: AssetManifest) -> Bool {
+    // No need to redownload the current version
+    if currentAssetBundle.version == manifest.version {
+      return false
+    }
+    
+    // Don't download blacklisted versions
+    if blacklistedVersions.contains(manifest.version) {
+      return false
+    }
+    
+    return true
+  }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFinishDownloadingBundle assetBundle: AssetBundle) {
-    NSLog("Finished downloading new asset bundle version: \(assetBundle.version!)")
+    NSLog("Finished downloading new asset bundle version: \(assetBundle.version)")
     lastDownloadedVersion = assetBundle.version
     pendingAssetBundle = assetBundle
     notifyNewVersionDownloaded(assetBundle.version)
@@ -385,20 +399,6 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFailDownloadingBundleWithError error: ErrorType) {
     NSLog("Failed downloading new asset bundle version: \(error)")
     notifyDownloadFailure(error)
-  }
-
-  func assetBundleManager(assetBundleManager: AssetBundleManager, shouldDownloadBundleForManifest manifest: AssetManifest) -> Bool {
-    // No need to redownload the current version
-    if currentAssetBundle.version == manifest.version {
-      return false
-    }
-
-    // Don't download blacklisted versions
-    if blacklistedVersions.contains(manifest.version!) {
-      return false
-    }
-
-    return true
   }
 
   // MARK: - Local server

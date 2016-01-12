@@ -19,7 +19,7 @@ func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) -> JSONObject? {
 final class AssetBundle {
   private(set) var directoryURL: NSURL
 
-  var version: String?
+  var version: String!
 
   private var parentAssetBundle: AssetBundle?
   private var ownAssetsByURLPath: [String: Asset] = [:]
@@ -32,14 +32,14 @@ final class AssetBundle {
   convenience init(directoryURL: NSURL, parentAssetBundle: AssetBundle? = nil) throws {
     let manifestURL = directoryURL.URLByAppendingPathComponent("program.json")
     let manifest = try AssetManifest(fileURL: manifestURL)
-    self.init(directoryURL: directoryURL, manifest: manifest, parentAssetBundle: parentAssetBundle)
+    try self.init(directoryURL: directoryURL, manifest: manifest, parentAssetBundle: parentAssetBundle)
   }
 
-  init(directoryURL: NSURL, manifest: AssetManifest, parentAssetBundle: AssetBundle? = nil) {
+  init(directoryURL: NSURL, manifest: AssetManifest, parentAssetBundle: AssetBundle? = nil) throws {
     self.directoryURL = directoryURL
     self.parentAssetBundle = parentAssetBundle
-
-    version = manifest.version
+    
+    self.version = manifest.version
 
     for entry in manifest.entries {
       let URLPath = URLPathByRemovingQueryString(entry.URLPath)

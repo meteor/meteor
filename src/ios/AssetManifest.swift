@@ -9,7 +9,7 @@ struct AssetManifest {
     let sourceMapURLPath: String?
   }
 
-  let version: String?
+  let version: String
   var entries: [Entry]
 
   init(fileURL: NSURL) throws {
@@ -17,13 +17,22 @@ struct AssetManifest {
   }
 
   init(data: NSData) throws {
-    let JSON = try NSJSONSerialization.JSONObjectWithData(data, options: [])
-
-    if let format = JSON["format"] as? String where format != "web-program-pre1" {
-      throw WebAppError.IncompatibleAssetManifest(format: format)
+    let JSON: JSONObject
+    do {
+      JSON = try NSJSONSerialization.JSONObjectWithData(data, options: []) as! JSONObject
+    } catch {
+      throw WebAppError.InvalidAssetManifest(reason: "Error parsing asset manifest", underlyingError: error)
     }
 
-    version = JSON["version"] as? String
+    if let format = JSON["format"] as? String where format != "web-program-pre1" {
+      throw WebAppError.InvalidAssetManifest(reason: "The asset manifest format is incompatible: \(format)", underlyingError: nil)
+    }
+
+    guard let version = JSON["version"] as? String else {
+      throw WebAppError.InvalidAssetManifest(reason: "Asset manifest does not have a version", underlyingError: nil)
+    }
+    
+    self.version = version
 
     let entriesJSON = JSON["manifest"] as? [JSONObject] ?? []
     entries = []
