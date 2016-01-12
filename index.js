@@ -1,6 +1,7 @@
 // TODO Somehow expose a hash of these plugin options?
 module.exports = {
   plugins: [
+    require("babel-plugin-transform-runtime"),
     require("babel-plugin-check-es2015-constants"),
     require("babel-plugin-syntax-flow"),
     require("babel-plugin-syntax-trailing-function-commas"),
@@ -42,9 +43,6 @@ module.exports = {
     require("babel-plugin-transform-es3-member-expression-literals"),
     require("babel-plugin-transform-es3-property-literals"),
     require("babel-plugin-transform-flow-strip-types"),
-    require("babel-plugin-transform-regenerator"),
-    [require("babel-plugin-transform-runtime"), {
-      polyfill: false
-    }],
+    require("babel-plugin-transform-regenerator")
   ]
 };
