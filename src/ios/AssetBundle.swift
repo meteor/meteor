@@ -19,7 +19,7 @@ func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) -> JSONObject? {
 final class AssetBundle {
   private(set) var directoryURL: NSURL
 
-  var version: String!
+  var version: String
 
   private var parentAssetBundle: AssetBundle?
   private var ownAssetsByURLPath: [String: Asset] = [:]

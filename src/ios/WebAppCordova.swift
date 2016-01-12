@@ -18,56 +18,29 @@ let startupTimeoutInterval = 10.0
 final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// The local web server responsible for serving assets to the web app
   private(set) var localServer: GCDWebServer!
+  
+  /// The listening port of the local web server
   private var localServerPort: UInt = 0
 
   /// The www directory in the app bundle
   private(set) var wwwDirectoryURL: NSURL!
+  
+  /// Persistent configuration settings for the webapp
+  private var configuration: WebAppConfiguration!
 
   /// The asset bundle manager is responsible for downloading and managing
   /// asset bundles
-  var assetBundleManager: AssetBundleManager!
+  private(set) var assetBundleManager: AssetBundleManager!
 
   /// The asset bundle currently used to serve assets from
   var currentAssetBundle: AssetBundle! {
     didSet {
       if currentAssetBundle != nil {
-        runtimeConfig = currentAssetBundle.runtimeConfig
-
-        if let version = currentAssetBundle.version {
-          NSLog("Serving asset bundle version: \(version)")
-        } else {
-          NSLog("Serving initial asset bundle")
+        if let runtimeConfig = currentAssetBundle.runtimeConfig {
+          configuration.updateWithRuntimeConfig(runtimeConfig)
         }
-      } else {
-        runtimeConfig = nil
-      }
-    }
-  }
 
-  /// Setting the runtime config initializes autoupdateVersion and rootURL
-  private var runtimeConfig: JSONObject? {
-    didSet {
-      appId = runtimeConfig?["appId"] as? String
-      autoupdateVersion = runtimeConfig?["autoupdateVersionCordova"] as? String
-      if let rootURLString = runtimeConfig?["ROOT_URL"] as? String {
-        rootURL = NSURL(string: rootURLString)
-      } else {
-        rootURL = nil
-      }
-    }
-  }
-
-  /// The appId as defined in the runtime config
-  private(set) var appId: String?
-
-  /// The autoupdate version as defined in the runtime config
-  private(set) var autoupdateVersion: String?
-
-  /// The rootURL as defined in the runtime config
-  private(set) var rootURL: NSURL? {
-    didSet {
-      if oldValue != nil && rootURL != oldValue {
-        NSLog("ROOT_URL seems to have changed, new: \(rootURL), old: \(oldValue)")
+        NSLog("Serving asset bundle version: \(currentAssetBundle.version)")
       }
     }
   }
@@ -76,82 +49,6 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// because we don't want the app to end up in an inconsistent state by
   /// loading assets from different bundles.
   private var pendingAssetBundle: AssetBundle?
-
-  /// The last downloaded version of the asset bundle, stored in `NSUserDefaults`
-  var lastDownloadedVersion: String? {
-    get {
-      return NSUserDefaults.standardUserDefaults().stringForKey("MeteorWebAppLastDownloadedVersion")
-    }
-
-    set {
-      if newValue != lastDownloadedVersion {
-        let userDefaults = NSUserDefaults.standardUserDefaults()
-        if newValue == nil {
-          userDefaults.removeObjectForKey("MeteorWebAppLastDownloadedVersion")
-        } else {
-          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastDownloadedVersion")
-        }
-        userDefaults.synchronize()
-      }
-    }
-  }
-
-  /// The last seen initial version of the asset bundle, stored in `NSUserDefaults`
-  var lastSeenInitialVersion: String? {
-    get {
-      return NSUserDefaults.standardUserDefaults().stringForKey("MeteorWebAppLastSeenInitialVersion")
-    }
-
-    set {
-      if newValue != lastDownloadedVersion {
-        let userDefaults = NSUserDefaults.standardUserDefaults()
-        if newValue == nil {
-          userDefaults.removeObjectForKey("MeteorWebAppLastSeenInitialVersion")
-        } else {
-          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
-        }
-        userDefaults.synchronize()
-      }
-    }
-  }
-  
-  /// The last kwown good version of the asset bundle, stored in `NSUserDefaults`
-  var lastKnownGoodVersion: String? {
-    get {
-      return NSUserDefaults.standardUserDefaults().stringForKey("MeteorWebAppLastKnownGoodVersion")
-    }
-    
-    set {
-      if newValue != lastKnownGoodVersion {
-        let userDefaults = NSUserDefaults.standardUserDefaults()
-        if newValue == nil {
-          userDefaults.removeObjectForKey("MeteorWebAppLastKnownGoodVersion")
-        } else {
-          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastKnownGoodVersion")
-        }
-        userDefaults.synchronize()
-      }
-    }
-  }
-
-  /// Blacklisted asset bundle versions, stored in `NSUserDefaults`
-  var blacklistedVersions: [String] {
-    get {
-      return NSUserDefaults.standardUserDefaults().arrayForKey("MeteorWebAppBlacklistedVersions") as? [String] ?? []
-    }
-
-    set {
-      if newValue != blacklistedVersions {
-        let userDefaults = NSUserDefaults.standardUserDefaults()
-        if newValue.isEmpty {
-          userDefaults.removeObjectForKey("MeteorWebAppBlacklistedVersions")
-        } else {
-          userDefaults.setObject(newValue, forKey: "MeteorWebAppBlacklistedVersions")
-        }
-        userDefaults.synchronize()
-      }
-    }
-  }
 
   /// Callback ID used to send a newVersionDownloaded notification to JavaScript
   private var newVersionDownloadedCallbackId: String?
@@ -166,7 +63,9 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// Called by Cordova on plugin initialization
   override public func pluginInitialize() {
     super.pluginInitialize()
-    
+
+    configuration = WebAppConfiguration()
+
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
 
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
@@ -191,7 +90,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     // If the last seen initial version is different from the currently bundled
     // version, we delete the versions directory and unset lastDownloadedVersion
     // and blacklistedVersions
-    if lastSeenInitialVersion != initialAssetBundle.version {
+    if configuration.lastSeenInitialVersion != initialAssetBundle.version {
       do {
         if fileManager.fileExistsAtPath(versionsDirectoryURL.path!) {
           try fileManager.removeItemAtURL(versionsDirectoryURL)
@@ -199,10 +98,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       } catch {
         NSLog("Could not remove versions directory: \(error)")
       }
-
-      lastDownloadedVersion = nil
-      lastKnownGoodVersion = nil
-      blacklistedVersions = []
+      
+      configuration.reset()
     }
 
     do {
@@ -218,14 +115,14 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
     // If a last downloaded version has been set and the asset bundle exists,
     // we set it as the current asset bundle
-    if let lastDownloadedVersion = lastDownloadedVersion,
+    if let lastDownloadedVersion = configuration.lastDownloadedVersion,
         let downloadedAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastDownloadedVersion) {
       currentAssetBundle = downloadedAssetBundle
     } else {
       currentAssetBundle = initialAssetBundle
     }
 
-    lastSeenInitialVersion = initialAssetBundle.version
+    configuration.lastSeenInitialVersion = initialAssetBundle.version
 
     // The WebAppLocalServerPort setting is only used for testing
     if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
@@ -233,7 +130,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     // In other cases, we select a listening port based on the appId to try and
     // avoid collisions between Meteor apps installed on the same device
     } else {
-      let hashValue = appId?.hashValue ?? 0
+      let hashValue = configuration.appId?.hashValue ?? 0
       localServerPort = listeningPortRange.startIndex +
         (UInt(bitPattern: hashValue) % UInt(listeningPortRange.count))
     }
@@ -244,7 +141,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       NSLog("Could not start local server: \(error)")
       return
     }
-    
+
     if startupTimer == nil {
       startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
         NSLog("Startup timed out")
@@ -262,19 +159,19 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       currentAssetBundle = pendingAssetBundle
       self.pendingAssetBundle = nil
     }
-    
+
     startupTimer?.startWithTimeInterval(startupTimeoutInterval)
   }
-  
+
   // MARK: - Notifications
 
   func pageDidLoad() {
     NSLog("pageDidLoad")
   }
-  
+
   func applicationDidEnterBackground() {
     NSLog("applicationDidEnterBackground")
-    
+
     // Stop startup timer when going into the background, to avoid
     // blacklisting a version just because the web view has been suspended
     startupTimer?.stop()
@@ -284,10 +181,10 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
   public func startupDidComplete(command: CDVInvokedUrlCommand) {
     NSLog("startupDidComplete")
-    
+
     startupTimer?.stop()
-    
-    lastKnownGoodVersion = currentAssetBundle.version
+
+    configuration.lastKnownGoodVersion = currentAssetBundle.version
 
     commandDelegate?.runInBackground() {
       do {
@@ -305,7 +202,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   public func checkForUpdates(command: CDVInvokedUrlCommand) {
-    guard let rootURL = rootURL else {
+    guard let rootURL = configuration.rootURL else {
       let errorMessage = "checkForUpdates requires a rootURL to be configured"
       let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAsString: errorMessage)
       commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
@@ -347,26 +244,22 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: errorMessage)
     commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
   }
-  
+
   // MARK: - Managing Versions
-  
+
   func revertToLastKnownGoodVersion() {
-    if let currentVersion = currentAssetBundle.version {
-      var blacklistedVersions = self.blacklistedVersions
-      blacklistedVersions.append(currentVersion)
-      self.blacklistedVersions = blacklistedVersions
-    }
-    
-    if let lastKnownGoodVersion = lastKnownGoodVersion,
+    configuration.addBlacklistedVersion(currentAssetBundle.version)
+
+    if let lastKnownGoodVersion = configuration.lastKnownGoodVersion,
         let lastKnownGoodAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion) {
       pendingAssetBundle = lastKnownGoodAssetBundle
     } else {
       pendingAssetBundle = assetBundleManager.initialAssetBundle
     }
-    
+
     forceReload()
   }
-  
+
   func forceReload() {
     if let webView = self.webView as? WKWebView {
       webView.reloadFromOrigin()
@@ -374,24 +267,24 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   // MARK: AssetBundleManagerDelegate
-  
+
   func assetBundleManager(assetBundleManager: AssetBundleManager, shouldDownloadBundleForManifest manifest: AssetManifest) -> Bool {
     // No need to redownload the current version
     if currentAssetBundle.version == manifest.version {
       return false
     }
-    
+
     // Don't download blacklisted versions
-    if blacklistedVersions.contains(manifest.version) {
+    if configuration.blacklistedVersions.contains(manifest.version) {
       return false
     }
-    
+
     return true
   }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFinishDownloadingBundle assetBundle: AssetBundle) {
     NSLog("Finished downloading new asset bundle version: \(assetBundle.version)")
-    lastDownloadedVersion = assetBundle.version
+    configuration.lastDownloadedVersion = assetBundle.version
     pendingAssetBundle = assetBundle
     notifyNewVersionDownloaded(assetBundle.version)
   }
@@ -488,7 +381,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     // Support partial requests using byte ranges
     let response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange)
     response.setValue("bytes", forAdditionalHeader: "Accept-Ranges")
-    
+
     // Only cache files when the file is cacheable and the request URL includes a cache buster
     let shouldCache = cacheable &&
       (!(request.URL.query?.isEmpty ?? true)

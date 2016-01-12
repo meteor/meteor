@@ -293,8 +293,8 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
       // and compare autoupdateVersionCordova to the version in the manifest to verify
       // if we downloaded the expected version
       if asset.filePath == "index.html" {
-        if let expectedVersion = assetBundle.version,
-            let runtimeConfig = loadRuntimeConfigFromIndexFileAtURL(location),
+        let expectedVersion = assetBundle.version
+        if let runtimeConfig = loadRuntimeConfigFromIndexFileAtURL(location),
             let actualVersion = runtimeConfig["autoupdateVersionCordova"] as? String
             where expectedVersion != actualVersion {
           self.cancelAndFailWithReason("Version mismatch for index page, expected: \(expectedVersion), actual: \(actualVersion)")

@@ -33,6 +33,7 @@
     <header-file src="src/ios/cordova-plugin-meteor-webapp-Bridging-Header.h" />
 
     <source-file src="src/ios/WebAppCordova.swift" />
+    <source-file src="src/ios/WebAppConfiguration.swift" />
     <source-file src="src/ios/AssetBundleManager.swift" />
     <source-file src="src/ios/AssetBundle.swift" />
     <source-file src="src/ios/Asset.swift" />
