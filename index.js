@@ -21,7 +21,12 @@ module.exports = {
     }],
     require("babel-plugin-transform-es2015-function-name"),
     require("babel-plugin-transform-es2015-literals"),
-    [require("babel-plugin-transform-es2015-modules-commonjs"), {
+    [require(
+      // TODO When https://github.com/babel/babel/pull/3118 gets merged,
+      //      go back to using the official npm package:
+      // "babel-plugin-transform-es2015-modules-commonjs"
+      "./plugins/modules-commonjs.js"
+    ), {
       loose: true
     }],
     require("babel-plugin-transform-es2015-object-super"),
@@ -29,9 +34,7 @@ module.exports = {
     require("babel-plugin-transform-es2015-shorthand-properties"),
     require("babel-plugin-transform-es2015-spread"),
     require("babel-plugin-transform-es2015-sticky-regex"),
-    [require("babel-plugin-transform-es2015-template-literals"), {
-      loose: true
-    }],
+    require("babel-plugin-transform-es2015-template-literals"),
     require("babel-plugin-transform-es2015-typeof-symbol"),
     require("babel-plugin-transform-es2015-unicode-regex"),
     require("babel-plugin-syntax-object-rest-spread"),
