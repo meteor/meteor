@@ -2,6 +2,7 @@ enum WebAppError: ErrorType, CustomStringConvertible {
   case InvalidAssetManifest(reason: String, underlyingError: ErrorType?)
   case FileSystemFailure(reason: String, underlyingError: ErrorType?)
   case DownloadFailure(reason: String, underlyingError: ErrorType?)
+  case UnsuitableAssetBundle(reason: String, underlyingError: ErrorType?)
 
   var description: String {
     switch self {
@@ -10,6 +11,8 @@ enum WebAppError: ErrorType, CustomStringConvertible {
     case .FileSystemFailure(let reason, let underlyingError):
       return errorMessageWithReason(reason, underlyingError: underlyingError)
     case .DownloadFailure(let reason, let underlyingError):
+      return errorMessageWithReason(reason, underlyingError: underlyingError)
+    case .UnsuitableAssetBundle(let reason, let underlyingError):
       return errorMessageWithReason(reason, underlyingError: underlyingError)
     }
   }

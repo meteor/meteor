@@ -99,6 +99,18 @@ final class AssetBundle {
     
     return loadRuntimeConfigFromIndexFileAtURL(indexFile.fileURL)
   }()
+  
+  var appId: String? {
+    return runtimeConfig?["appId"] as? String
+  }
+  
+  var rootURL: NSURL? {
+    if let rootURLString = runtimeConfig?["ROOT_URL"] as? String {
+      return NSURL(string: rootURLString)
+    } else {
+      return nil
+    }
+  }
 
   func didMoveToDirectoryAtURL(directoryURL: NSURL) {
     self.directoryURL = directoryURL

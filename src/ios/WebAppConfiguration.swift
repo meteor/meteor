@@ -2,30 +2,38 @@ final class WebAppConfiguration {
   let userDefaults = NSUserDefaults.standardUserDefaults()
   
   /// The appId as defined in the runtime config
-  private(set) var appId: String? {
-    didSet {
-      if oldValue != nil && appId != oldValue {
-        NSLog("appId seems to have changed, new: \(appId), old: \(oldValue)")
+  var appId: String? {
+    get {
+      return userDefaults.stringForKey("MeteorWebAppId")
+    }
+    set {
+      let oldValue = appId
+      if newValue != oldValue && newValue != nil {
+        if oldValue != nil {
+          NSLog("appId seems to have changed, new: \(newValue!), old: \(oldValue!)")
+        }
+        
+        userDefaults.setObject(newValue, forKey: "MeteorWebAppId")
+        userDefaults.synchronize()
       }
     }
   }
   
   /// The rootURL as defined in the runtime config
-  private(set) var rootURL: NSURL? {
-    didSet {
-      if oldValue != nil && rootURL != oldValue {
-        NSLog("ROOT_URL seems to have changed, new: \(rootURL), old: \(oldValue)")
-      }
+  var rootURL: NSURL? {
+    get {
+      return userDefaults.URLForKey("MeteorWebAppRootURL")
     }
-  }
-  
-  /// Update appId and rootURL with the values in the runtime config
-  func updateWithRuntimeConfig(runtimeConfig: JSONObject) {
-    appId = runtimeConfig["appId"] as? String
-    if let rootURLString = runtimeConfig["ROOT_URL"] as? String {
-      rootURL = NSURL(string: rootURLString)
-    } else {
-      rootURL = nil
+    set {
+      let oldValue = rootURL
+      if newValue != oldValue && newValue != nil {
+        if oldValue != nil {
+          NSLog("ROOT_URL seems to have changed, new: \(newValue!), old: \(oldValue!)")
+        }
+        
+        userDefaults.setURL(newValue, forKey: "MeteorWebAppRootURL")
+        userDefaults.synchronize()
+      }
     }
   }
   

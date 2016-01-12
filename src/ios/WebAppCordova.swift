@@ -36,9 +36,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   var currentAssetBundle: AssetBundle! {
     didSet {
       if currentAssetBundle != nil {
-        if let runtimeConfig = currentAssetBundle.runtimeConfig {
-          configuration.updateWithRuntimeConfig(runtimeConfig)
-        }
+        configuration.appId = currentAssetBundle.appId
+        configuration.rootURL = currentAssetBundle.rootURL
 
         NSLog("Serving asset bundle version: \(currentAssetBundle.version)")
       }
@@ -240,6 +239,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   private func notifyDownloadFailure(error: ErrorType) {
+    NSLog("Failure: \(error)")
+    
     let errorMessage = String(error)
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: errorMessage)
     commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
@@ -284,13 +285,37 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFinishDownloadingBundle assetBundle: AssetBundle) {
     NSLog("Finished downloading new asset bundle version: \(assetBundle.version)")
-    configuration.lastDownloadedVersion = assetBundle.version
-    pendingAssetBundle = assetBundle
-    notifyNewVersionDownloaded(assetBundle.version)
+    
+    do {
+      try verifyDownloadedAssetBundle(assetBundle)
+      
+      configuration.lastDownloadedVersion = assetBundle.version
+      pendingAssetBundle = assetBundle
+      notifyNewVersionDownloaded(assetBundle.version)
+    } catch {
+      notifyDownloadFailure(error)
+    }
+  }
+  
+  private func verifyDownloadedAssetBundle(assetBundle: AssetBundle) throws {
+    guard let appId = assetBundle.appId else {
+      throw WebAppError.UnsuitableAssetBundle(reason: "Could not find appId in downloaded asset bundle", underlyingError: nil)
+    }
+    
+    if appId != configuration.appId {
+      throw WebAppError.UnsuitableAssetBundle(reason: "appId in downloaded asset bundle does not match current appId", underlyingError: nil)
+    }
+    
+    guard let rootURL = assetBundle.rootURL else {
+      throw WebAppError.UnsuitableAssetBundle(reason: "Could not find ROOT_URL in downloaded asset bundle", underlyingError: nil)
+    }
+    
+    if configuration.rootURL?.host != "localhost" && rootURL.host == "localhost" {
+      throw WebAppError.UnsuitableAssetBundle(reason: "ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.", underlyingError: nil)
+    }
   }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFailDownloadingBundleWithError error: ErrorType) {
-    NSLog("Failed downloading new asset bundle version: \(error)")
     notifyDownloadFailure(error)
   }
 
