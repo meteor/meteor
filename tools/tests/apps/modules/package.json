@@ -7,6 +7,6 @@
     "moment": "^2.11.1"
   },
   "scripts": {
-    "test": "meteor run"
+    "test": "../../../../meteor run"
   }
 }
