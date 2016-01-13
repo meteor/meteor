@@ -24,6 +24,8 @@ var runMongoShell = function (url) {
   if (ssl) args.push('--ssl');
   if (auth) args.push('-u', auth[0]);
   if (auth) args.push('-p', auth[1]);
+  // 32-linux build of mongod doesn't support wiredtiger.
+  args.push("--storageEngine=mmapv1");
   args.push(mongoUrl.hostname + ':' + mongoUrl.port + mongoUrl.pathname);
 
   child_process.spawn(files.convertToOSPath(mongoPath),
