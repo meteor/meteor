@@ -22,9 +22,7 @@ function canDefineNonEnumerableProperties() {
   return testObj[testPropName] === testObj;
 }
 
-// The name `babelHelpers` is hard-coded in Babel.  Otherwise we would make it
-// something capitalized and more descriptive, like `BabelRuntime`.
-babelHelpers = {
+meteorBabelHelpers = {
   // Meteor-specific runtime helper for wrapping the object of for-in
   // loops, so that inherited Array methods defined by es5-shim can be
   // ignored in browsers where they cannot be defined as non-enumerable.
@@ -43,8 +41,10 @@ babelHelpers = {
       }
 
       return obj;
-    },
+    }
+};
 
+var BabelRuntime = {
   // es6.templateLiterals
   // Constructs the object passed to the tag function in a tagged
   // template literal.
@@ -172,6 +172,27 @@ babelHelpers = {
       return Constructor;
     };
   })(),
+
+  "typeof": function (obj) {
+    return obj && obj.constructor === Symbol ? "symbol" : typeof obj;
+  },
+
+  possibleConstructorReturn: function (self, call) {
+    if (! self) {
+      throw new ReferenceError(
+        "this hasn't been initialised - super() hasn't been called"
+      );
+    }
+
+    var callType = typeof call;
+    if (call &&
+        callType === "function" ||
+        callType === "object") {
+      return call;
+    }
+
+    return self;
+  },
 
   interopRequireDefault: function (obj) {
     return obj && obj.__esModule ? obj : { 'default': obj };
@@ -309,3 +330,33 @@ babelHelpers = {
 
   slice: Array.prototype.slice
 };
+
+// Use meteorInstall to install all of the above helper functions within
+// node_modules/babel-runtime/helpers.
+Object.keys(BabelRuntime).forEach(function (helperName) {
+  var helpers = {};
+
+  helpers[helperName + ".js"] = function (require, exports, module) {
+    module.exports = BabelRuntime[helperName];
+  };
+
+  meteorInstall({
+    node_modules: {
+      "babel-runtime": {
+        helpers: helpers
+      }
+    }
+  });
+});
+
+// Use meteorInstall to install the regenerator runtime at
+// node_modules/babel-runtime/regenerator.
+meteorInstall({
+  node_modules: {
+    "babel-runtime": {
+      "regenerator.js": function (require, exports, module) {
+        module.exports = require("regenerator/runtime-module");
+      }
+    }
+  }
+});

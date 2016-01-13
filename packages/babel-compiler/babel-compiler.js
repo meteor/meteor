@@ -56,7 +56,7 @@ BCp.processFilesForTarget = function (inputFiles) {
         ? "/packages/" + packageName + "/" + inputFilePath
         : "/" + inputFilePath;
 
-      babelOptions.sourceMapName = babelOptions.filename + ".map";
+      babelOptions.sourceMapTarget = babelOptions.filename + ".map";
 
       try {
         var result = Babel.compile(source, babelOptions);

@@ -8,7 +8,6 @@ Package.describe({
 
 Npm.depends({
   "meteor-ecmascript-runtime": "0.2.6",
-  "regenerator": "0.8.42"
 });
 
 Package.onUse(function(api) {
@@ -24,7 +23,6 @@ Package.onUse(function(api) {
   api.export("Symbol");
   api.export("Map");
   api.export("Set");
-  api.export("regeneratorRuntime");
 });
 
 Package.onTest(function(api) {

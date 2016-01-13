@@ -1,6 +1,6 @@
 allow-deny@1.0.1-modules.4
 autoupdate@1.2.5-modules.4
-babel-compiler@5.8.25-modules.5
+babel-compiler@6.4.0-modules.4
 babel-runtime@0.1.5-modules.4
 base64@1.0.5-modules.4
 binary-heap@1.0.5-modules.4
@@ -19,7 +19,7 @@ ddp-common@1.2.2
 ddp-server@1.2.3-modules.4
 deps@1.0.9
 diff-sequence@1.0.2-modules.4
-ecmascript@0.3.1-modules.4
+ecmascript@0.4.0-modules.4
 ecmascript-runtime@0.2.7-modules.4
 ejson@1.0.8-modules.4
 es5-shim@4.3.2-modules.4
