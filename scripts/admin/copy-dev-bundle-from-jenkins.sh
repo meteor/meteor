@@ -45,7 +45,7 @@ trap - EXIT
 
 # This awful perl line means "print everything after the last whitespace".
 for FILE in $(aws s3 ls s3://com.meteor.jenkins/$DIRNAME/ | perl -nla -e 'print $F[-1]'); do
-  if aws s3 ls $TARGET$FILE >/dev/null; then
+  if [[ $(aws s3 ls $TARGET$FILE) ]]; then
     echo "$TARGET$FILE already exists (maybe from another branch?)"
     exit 1
   fi
