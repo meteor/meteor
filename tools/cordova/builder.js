@@ -14,42 +14,44 @@ import { CORDOVA_ARCH } from './index.js';
 // Hard-coded size constants
 
 const iconsIosSizes = {
-  'iphone': '60x60',
   'iphone_2x': '120x120',
   'iphone_3x': '180x180',
   'ipad': '76x76',
-  'ipad_2x': '152x152'
+  'ipad_2x': '152x152',
+  'ipad_pro': '167x167'
 };
 
 const iconsAndroidSizes = {
-  'android_ldpi': '36x36',
-  'android_mdpi': '42x42',
+  'android_mdpi': '48x48',
   'android_hdpi': '72x72',
-  'android_xhdpi': '96x96'
+  'android_xhdpi': '96x96',
+  'android_xxhdpi': '144x144',
+  'android_xxxhdpi': '192x192'
 };
 
 const launchIosSizes = {
-  'iphone': '320x480',
   'iphone_2x': '640x960',
   'iphone5': '640x1136',
   'iphone6': '750x1334',
   'iphone6p_portrait': '1242x2208',
   'iphone6p_landscape': '2208x1242',
-  'ipad_portrait': '768x1004',
-  'ipad_portrait_2x': '1536x2008',
-  'ipad_landscape': '1024x748',
-  'ipad_landscape_2x': '2048x1496'
+  'ipad_portrait': '768x1024',
+  'ipad_portrait_2x': '1536x2048',
+  'ipad_landscape': '1024x768',
+  'ipad_landscape_2x': '2048x1536',
+  'ipad_pro_portrait': '2048x2732',
+  'ipad_pro_landscape': '2732x2048'
 };
 
 const launchAndroidSizes = {
-  'android_ldpi_portrait': '320x426',
-  'android_ldpi_landscape': '426x320',
   'android_mdpi_portrait': '320x470',
   'android_mdpi_landscape': '470x320',
   'android_hdpi_portrait': '480x640',
   'android_hdpi_landscape': '640x480',
   'android_xhdpi_portrait': '720x960',
-  'android_xhdpi_landscape': '960x720'
+  'android_xhdpi_landscape': '960x720',
+  'android_xxhdpi_portrait': '1080x1440',
+  'android_xxhdpi_landscape': '1440x1080'
 };
 
 export class CordovaBuilder {
@@ -327,26 +329,6 @@ export class CordovaBuilder {
 
       // Set it to the xml tree
       xmlElement.element(tag, imageAttributes(name, width, height, src));
-
-      // XXX reuse one size for other dimensions
-      const dups = {
-        '60x60': ['29x29', '40x40', '50x50', '57x57', '58x58'],
-        '76x76': ['72x72'],
-        '152x152': ['144x144'],
-        '120x120': ['80x80', '100x100', '114x114'],
-        '768x1004': ['768x1024'],
-        '1536x2008': ['1536x2048'],
-        '1024x748': ['1024x768'],
-        '2048x1496': ['2048x1536']
-      }[size];
-
-      // just use the same image
-      _.each(dups, (size) => {
-        const [width, height] = size.split('x');
-        // XXX this is fine to not supply a name since it is always iOS, but
-        // this is a hack right now.
-        xmlElement.element(tag, imageAttributes('n/a', width, height, src));
-      });
     });
   }
 
@@ -512,15 +494,16 @@ Valid platforms are: ios, android.`);
      * relative to the project root directory.
      *
      * Valid key values:
-     * - `iphone`
-     * - `iphone_2x`
-     * - `iphone_3x`
-     * - `ipad`
-     * - `ipad_2x`
-     * - `android_ldpi`
-     * - `android_mdpi`
-     * - `android_hdpi`
-     * - `android_xhdpi`
+     * - `iphone_2x` (120x120)
+     * - `iphone_3x` (180x180)
+     * - `ipad` (76x76)
+     * - `ipad_2x` (152x152)
+     * - `ipad_pro` (167x167)
+     * - `android_mdpi` (48x48)
+     * - `android_hdpi` (72x72)
+     * - `android_xhdpi` (96x96)
+     * - `android_xxhdpi` (144x144)
+     * - `android_xxxhdpi` (192x192)
      * @memberOf App
      */
     icons: function (icons) {
@@ -528,7 +511,7 @@ Valid platforms are: ios, android.`);
         _.keys(iconsIosSizes).concat(_.keys(iconsAndroidSizes));
       _.each(icons, function (value, key) {
         if (!_.include(validDevices, key)) {
-          throw new Error(key + ": unknown key in App.icons configuration.");
+          Console.warn(key + ": unknown key in App.icons configuration.");
         }
       });
       _.extend(builder.imagePaths.icon, icons);
@@ -545,24 +528,25 @@ Valid platforms are: ios, android.`);
      * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
      *
      * Valid key values:
-     * - `iphone`
-     * - `iphone_2x`
-     * - `iphone5`
-     * - `iphone6`
-     * - `iphone6p_portrait`
-     * - `iphone6p_landscape`
-     * - `ipad_portrait`
-     * - `ipad_portrait_2x`
-     * - `ipad_landscape`
-     * - `ipad_landscape_2x`
-     * - `android_ldpi_portrait`
-     * - `android_ldpi_landscape`
-     * - `android_mdpi_portrait`
-     * - `android_mdpi_landscape`
-     * - `android_hdpi_portrait`
-     * - `android_hdpi_landscape`
-     * - `android_xhdpi_portrait`
-     * - `android_xhdpi_landscape`
+     * - `iphone_2x` (640x960)
+     * - `iphone5` (640x1136)
+     * - `iphone6` (750x1334)
+     * - `iphone6p_portrait` (1242x2208)
+     * - `iphone6p_landscape` (2208x1242)
+     * - `ipad_portrait` (768x1024)
+     * - `ipad_portrait_2x` (1536x2048)
+     * - `ipad_landscape` (1024x768)
+     * - `ipad_landscape_2x` (2048x1536)
+     * - `ipad_pro_portrait` (2048x2732)
+     * - `ipad_pro_landscape` (2732x2048)
+     * - `android_mdpi_portrait` (320x470)
+     * - `android_mdpi_landscape` (470x320)
+     * - `android_hdpi_portrait` (480x640)
+     * - `android_hdpi_landscape` (640x480)
+     * - `android_xhdpi_portrait` (720x960)
+     * - `android_xhdpi_landscape` (960x720)
+     * - `android_xxhdpi_portrait` (1080x1440)
+     * - `android_xxhdpi_landscape` (1440x1080)
      *
      * @memberOf App
      */
@@ -572,7 +556,7 @@ Valid platforms are: ios, android.`);
 
       _.each(launchScreens, function (value, key) {
         if (!_.include(validDevices, key)) {
-          throw new Error(key + ": unknown key in App.launchScreens configuration.");
+          Console.warn(key + ": unknown key in App.launchScreens configuration.");
         }
       });
       _.extend(builder.imagePaths.splash, launchScreens);
