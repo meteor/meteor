@@ -15,6 +15,8 @@
 
 * Allow `git+` URL schemes for npm dependencies #844
 
+* Expose options `disableOplog`, `pollingInterval`, and `pollingThrottle` to `Cursor.find` for tuning observe parameters on the server.
+
 Patches contributed by GitHub users vereed, devgrok, ...
 
 

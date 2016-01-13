@@ -280,6 +280,9 @@ _.extend(Mongo.Collection.prototype, {
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
    * @param {Boolean} options.reactive (Client only) Default `true`; pass `false` to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the  [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
+   * @param {Boolean} options.disableOplog (Server only) Pass true to disable oplog-tailing on this query. This affects the way server processes calls to `observe` on this query. Disabling the oplog can be useful when working with data that updates in large batches.
+   * @param {Number} options.pollingInterval (Server only) How often to poll this query when observing on the server. In milliseconds. Defaults to 10 seconds.
+   * @param {Number} options.pollingThrottle (Server only) Minimum time to allow between re-polling. Increasing this will save CPU and mongo load at the expense of slower updates to users. Decreasing this is not recommended. In milliseconds. Defaults to 50 milliseconds.
    * @returns {Mongo.Cursor}
    */
   find: function (/* selector, options */) {
