@@ -31,18 +31,32 @@ else
     curl "${NODE_URL}" | tar zx
 fi
 
-# Update these values after building the dev-bundle-mongo Jenkins project.
 # Also make sure to update MONGO_VERSION in generate-dev-bundle.ps1.
-MONGO_VERSION=2.6.7
-MONGO_BUILD_NUMBER=6
-MONGO_TGZ="mongo_${PLATFORM}_v${MONGO_VERSION}.tar.gz"
-if [ -f "${CHECKOUT_DIR}/${MONGO_TGZ}" ] ; then
-    tar zxf "${CHECKOUT_DIR}/${MONGO_TGZ}"
+MONGO_VERSION=3.2.1
+
+if [ "${PLATFORM}" = "Darwin_x86_64" ] ; then
+    MONGO_URL="https://fastdl.mongodb.org/osx/mongodb-osx-x86_64-${MONGO_VERSION}.tgz"
+elif [ "${PLATFORM}" = "Linux_i686" ] ; then
+    MONGO_URL="https://fastdl.mongodb.org/linux/mongodb-linux-i686-${MONGO_VERSION}.tgz"
+elif [ "${PLATFORM}" = "Linux_x86_64" ] ; then
+    MONGO_URL="https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-${MONGO_VERSION}.tgz"
 else
-    MONGO_URL="https://${S3_HOST}/dev-bundle-mongo-${MONGO_BUILD_NUMBER}/${MONGO_TGZ}"
-    echo "Downloading Mongo from ${MONGO_URL}"
-    curl "${MONGO_URL}" | tar zx
+    echo "Unexpected value for PLATFORM: ${PLATFORM}"
+    exit 1
 fi
+
+echo "Downloading Mongo from ${MONGO_URL}"
+curl "${MONGO_URL}" | tar zx
+
+# prepare the directory that will become mongodb/bin/ in the dev bundle
+mkdir tmp-mongo-bin
+# directory name is, e.g. mongodb-linux-i686
+mv mongodb*/bin/mongo tmp-mongo-bin/
+mv mongodb*/bin/mongod tmp-mongo-bin/
+rm -rf mongodb*
+# move temp directory into the real mongodb/bin/
+mkdir mongodb
+mv tmp-mongo-bin mongodb/bin
 
 # Copy bundled npm to temporary directory so we can restore it later
 # We do this because the bundled node is built using PORTABLE=1,
