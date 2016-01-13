@@ -154,19 +154,24 @@ export class CordovaBuilder {
     const iconsPath = files.pathJoin(assetsPath, 'icons');
     const launchScreensPath = files.pathJoin(assetsPath, 'launchscreens');
 
-    const setIcon = (size, name) => {
-      this.imagePaths.icon[name] = files.pathJoin(iconsPath, size + '.png');
+    const setDefaultIcon = (size, name) => {
+      const imageFile = files.pathJoin(iconsPath, size + '.png');
+      if (files.exists(imageFile)) {
+        this.imagePaths.icon[name] = imageFile;
+      }
     };
 
-    const setLaunchscreen = (size, name) => {
-      this.imagePaths.splash[name] =
-        files.pathJoin(launchScreensPath, `${size}.png`);
+    const setDefaultLaunchScreen = (size, name) => {
+      const imageFile = files.pathJoin(launchScreensPath, `${size}.png`);
+      if (files.exists(imageFile)) {
+        this.imagePaths.splash[name] = imageFile;
+      }
     };
 
-    _.each(iconsIosSizes, setIcon);
-    _.each(iconsAndroidSizes, setIcon);
-    _.each(launchIosSizes, setLaunchscreen);
-    _.each(launchAndroidSizes, setLaunchscreen);
+    _.each(iconsIosSizes, setDefaultIcon);
+    _.each(iconsAndroidSizes, setDefaultIcon);
+    _.each(launchIosSizes, setDefaultLaunchScreen);
+    _.each(launchAndroidSizes, setDefaultLaunchScreen);
 
     this.pluginsConfiguration = {};
   }
