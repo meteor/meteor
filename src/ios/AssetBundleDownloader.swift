@@ -266,13 +266,6 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
 
   // MARK: NSURLSessionDownloadDelegate
   
-  func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
-    
-    let percentage: Float64 = (Float64(totalBytesWritten) / Float64(totalBytesExpectedToWrite)) * 100
-    
-    NSLog("\(downloadTask.originalRequest!.URL!) downloaded %.2f%%", percentage)
-  }
-  
   func URLSession(session: NSURLSession, downloadTask: NSURLSessionDownloadTask, didResumeAtOffset fileOffset: Int64, expectedTotalBytes: Int64) {
     
     guard let response = downloadTask.response as? NSHTTPURLResponse else { return }

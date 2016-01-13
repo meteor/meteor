@@ -12,6 +12,8 @@ let GCDWebServerRequestAttribute_FilePath = "GCDWebServerRequestAttribute_FilePa
 // use by Apple services.
 let listeningPortRange: Range<UInt> = 12000...13000
 
+/// The number of seconds to wait for startup to complete, after which
+/// we revert to the last known good version
 let startupTimeoutInterval = 10.0
 
 @objc(METWebAppCordova)
@@ -28,8 +30,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// Persistent configuration settings for the webapp
   private var configuration: WebAppConfiguration!
 
-  /// The asset bundle manager is responsible for downloading and managing
-  /// asset bundles
+  /// The asset bundle manager is responsible for managing asset bundles
+  /// and checking for updates
   private(set) var assetBundleManager: AssetBundleManager!
 
   /// The asset bundle currently used to serve assets from
@@ -55,6 +57,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   /// Callback ID used to send a downloadFailure notification to JavaScript
   private var downloadFailureCallbackId: String?
 
+  /// Timer used to wait for startup to complete after a reload
   private var startupTimer: METTimer?
 
   // MARK: - Lifecycle
@@ -65,12 +68,9 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
     configuration = WebAppConfiguration()
 
-    NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
-
-    NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
-
     wwwDirectoryURL = NSBundle.mainBundle().resourceURL!.URLByAppendingPathComponent("www")
 
+    // The initial asset bundle consists of the assets bundled with the app
     let initialAssetBundle: AssetBundle
     do {
       let directoryURL = wwwDirectoryURL.URLByAppendingPathComponent("application")
@@ -96,17 +96,23 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
         }
       } catch {
         NSLog("Could not remove versions directory: \(error)")
+        return
       }
       
       configuration.reset()
     }
+    
+    // We keep track of the last seen initial version (see above)
+    configuration.lastSeenInitialVersion = initialAssetBundle.version
 
+    // If the versions directory does not exist, we create it
     do {
       if !fileManager.fileExistsAtPath(versionsDirectoryURL.path!) {
         try fileManager.createDirectoryAtURL(versionsDirectoryURL, withIntermediateDirectories: true, attributes: nil)
       }
     } catch {
       NSLog("Could not create versions directory: \(error)")
+      return
     }
 
     assetBundleManager = AssetBundleManager(versionsDirectoryURL: versionsDirectoryURL, initialAssetBundle: initialAssetBundle)
@@ -121,13 +127,11 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       currentAssetBundle = initialAssetBundle
     }
 
-    configuration.lastSeenInitialVersion = initialAssetBundle.version
-
     // The WebAppLocalServerPort setting is only used for testing
     if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
       localServerPort = UInt(portString) ?? 0
-    // In other cases, we select a listening port based on the appId to try and
-    // avoid collisions between Meteor apps installed on the same device
+    // In all other cases, we select a listening port based on the appId to
+    // hopefully avoid collisions between Meteor apps installed on the same device
     } else {
       let hashValue = configuration.appId?.hashValue ?? 0
       localServerPort = listeningPortRange.startIndex +
@@ -143,10 +147,14 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
     if startupTimer == nil {
       startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
-        NSLog("Startup timed out")
+        NSLog("App startup timed out, reverting to last known good version")
         self?.revertToLastKnownGoodVersion()
       }
     }
+    
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
+    
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
   }
 
   /// Called by Cordova before page reload
@@ -158,19 +166,16 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       currentAssetBundle = pendingAssetBundle
       self.pendingAssetBundle = nil
     }
-
+    
     startupTimer?.startWithTimeInterval(startupTimeoutInterval)
   }
 
   // MARK: - Notifications
 
   func pageDidLoad() {
-    NSLog("pageDidLoad")
   }
 
   func applicationDidEnterBackground() {
-    NSLog("applicationDidEnterBackground")
-
     // Stop startup timer when going into the background, to avoid
     // blacklisting a version just because the web view has been suspended
     startupTimer?.stop()
@@ -179,20 +184,16 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   // MARK: - Public plugin commands
 
   public func startupDidComplete(command: CDVInvokedUrlCommand) {
-    NSLog("startupDidComplete")
-
     startupTimer?.stop()
 
+    // If startup completed succesfully, we consider a version good
     configuration.lastKnownGoodVersion = currentAssetBundle.version
 
     commandDelegate?.runInBackground() {
       do {
         try self.assetBundleManager.removeAllDownloadedAssetBundlesExceptFor(self.currentAssetBundle)
       } catch {
-        let errorMessage = "Could not remove unused asset bundles: \(error)"
-        let result = CDVPluginResult(status: CDVCommandStatus_ERROR, messageAsString: errorMessage)
-        self.commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
-        return
+        NSLog("Could not remove unused asset bundles: \(error)")
       }
 
       let result = CDVPluginResult(status: CDVCommandStatus_OK)
@@ -249,8 +250,9 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   // MARK: - Managing Versions
 
   func revertToLastKnownGoodVersion() {
+    // Blacklist the current version, so we don't update to it again rightaway
     configuration.addBlacklistedVersion(currentAssetBundle.version)
-
+    
     if let lastKnownGoodVersion = configuration.lastKnownGoodVersion,
         let lastKnownGoodAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion) {
       pendingAssetBundle = lastKnownGoodAssetBundle

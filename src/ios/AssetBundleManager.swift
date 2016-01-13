@@ -111,7 +111,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
         // version, use that
         if let assetBundle = self.downloadedAssetBundleWithVersion(manifest.version) {
           self.didFinishDownloadingAssetBundle(assetBundle)
-        // Prepare downloading the new asset bundle
+        // Else, get ready to download the new asset bundle
         } else {
           self.moveExistingDownloadDirectoryIfNeeded()
 
