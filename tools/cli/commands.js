@@ -348,6 +348,7 @@ function doRunCommand(options) {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+      if (buildmessage.jobHasMessages()) return;
 
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
@@ -964,6 +965,7 @@ on an OS X system.");
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+        if (buildmessage.jobHasMessages()) return;
 
         const plugins = cordova.pluginVersionsFromStarManifest(
           bundleResult.starManifest);
@@ -1580,6 +1582,7 @@ main.registerCommand({
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+      if (buildmessage.jobHasMessages()) return;
 
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       projectContext.platformList.write(cordovaRunner.platformsForRunTargets);

@@ -53,6 +53,7 @@ main.registerCommand({
     }
 
     const cordovaProject = new CordovaProject(projectContext);
+    if (buildmessage.jobHasMessages()) return;
 
     installedPlatforms = installedPlatforms.concat(platformsToAdd)
     const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
@@ -109,6 +110,7 @@ version of Meteor`);
 
     if (process.platform !== 'win32') {
       const cordovaProject = new CordovaProject(projectContext);
+      if (buildmessage.jobHasMessages()) return;
       const cordovaPlatforms = cordova.filterPlatforms(installedPlatforms);
       cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
     }
