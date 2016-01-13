@@ -1460,7 +1460,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An Object where the keys are different\ndevices and screen sizes, and values are image paths\nrelative to the project root directory.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone</code></li>\n<li><code>iphone_2x</code></li>\n<li><code>iphone_3x</code></li>\n<li><code>ipad</code></li>\n<li><code>ipad_2x</code></li>\n<li><code>android_ldpi</code></li>\n<li><code>android_mdpi</code></li>\n<li><code>android_hdpi</code></li>\n<li><code>android_xhdpi</code></li>\n</ul>",
+        "description": "<p>An Object where the keys are different\ndevices and screen sizes, and values are image paths\nrelative to the project root directory.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone_2x</code> (120x120)</li>\n<li><code>iphone_3x</code> (180x180)</li>\n<li><code>ipad</code> (76x76)</li>\n<li><code>ipad_2x</code> (152x152)</li>\n<li><code>ipad_pro</code> (167x167)</li>\n<li><code>android_mdpi</code> (48x48)</li>\n<li><code>android_hdpi</code> (72x72)</li>\n<li><code>android_xhdpi</code> (96x96)</li>\n<li><code>android_xxhdpi</code> (144x144)</li>\n<li><code>android_xxxhdpi</code> (192x192)</li>\n</ul>",
         "name": "icons",
         "type": {
           "names": [
@@ -1510,7 +1510,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>A dictionary where keys are different\ndevices, screen sizes, and orientations, and the values are image paths\nrelative to the project root directory.</p>\n<p>For Android, launch screen images should\nbe special &quot;Nine-patch&quot; image files that specify how they should be\nstretched. See the <a href=\"https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch\">Android docs</a>.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone</code></li>\n<li><code>iphone_2x</code></li>\n<li><code>iphone5</code></li>\n<li><code>iphone6</code></li>\n<li><code>iphone6p_portrait</code></li>\n<li><code>iphone6p_landscape</code></li>\n<li><code>ipad_portrait</code></li>\n<li><code>ipad_portrait_2x</code></li>\n<li><code>ipad_landscape</code></li>\n<li><code>ipad_landscape_2x</code></li>\n<li><code>android_ldpi_portrait</code></li>\n<li><code>android_ldpi_landscape</code></li>\n<li><code>android_mdpi_portrait</code></li>\n<li><code>android_mdpi_landscape</code></li>\n<li><code>android_hdpi_portrait</code></li>\n<li><code>android_hdpi_landscape</code></li>\n<li><code>android_xhdpi_portrait</code></li>\n<li><code>android_xhdpi_landscape</code></li>\n</ul>",
+        "description": "<p>A dictionary where keys are different\ndevices, screen sizes, and orientations, and the values are image paths\nrelative to the project root directory.</p>\n<p>For Android, launch screen images should\nbe special &quot;Nine-patch&quot; image files that specify how they should be\nstretched. See the <a href=\"https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch\">Android docs</a>.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone_2x</code> (640x960)</li>\n<li><code>iphone5</code> (640x1136)</li>\n<li><code>iphone6</code> (750x1334)</li>\n<li><code>iphone6p_portrait</code> (1242x2208)</li>\n<li><code>iphone6p_landscape</code> (2208x1242)</li>\n<li><code>ipad_portrait</code> (768x1024)</li>\n<li><code>ipad_portrait_2x</code> (1536x2048)</li>\n<li><code>ipad_landscape</code> (1024x768)</li>\n<li><code>ipad_landscape_2x</code> (2048x1536)</li>\n<li><code>ipad_pro_portrait</code> (2048x2732)</li>\n<li><code>ipad_pro_landscape</code> (2732x2048)</li>\n<li><code>android_mdpi_portrait</code> (320x470)</li>\n<li><code>android_mdpi_landscape</code> (470x320)</li>\n<li><code>android_hdpi_portrait</code> (480x640)</li>\n<li><code>android_hdpi_landscape</code> (640x480)</li>\n<li><code>android_xhdpi_portrait</code> (720x960)</li>\n<li><code>android_xhdpi_landscape</code> (960x720)</li>\n<li><code>android_xxhdpi_portrait</code> (1080x1440)</li>\n<li><code>android_xxhdpi_landscape</code> (1440x1080)</li>\n</ul>",
         "name": "launchScreens",
         "type": {
           "names": [
@@ -4962,7 +4962,7 @@ DocsData = {
   "Meteor.methods": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1536,
+    "lineno": 1539,
     "locus": "Anywhere",
     "longname": "Meteor.methods",
     "memberof": "Meteor",
@@ -4985,7 +4985,7 @@ DocsData = {
   "Meteor.onConnection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1397,
+    "lineno": 1400,
     "locus": "Server",
     "longname": "Meteor.onConnection",
     "memberof": "Meteor",
@@ -5008,7 +5008,7 @@ DocsData = {
   "Meteor.publish": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1471,
+    "lineno": 1474,
     "locus": "Server",
     "longname": "Meteor.publish",
     "memberof": "Meteor",
@@ -5149,7 +5149,7 @@ DocsData = {
   "Meteor.startup": {
     "filepath": "meteor/startup_client.js",
     "kind": "function",
-    "lineno": 64,
+    "lineno": 70,
     "locus": "Anywhere",
     "longname": "Meteor.startup",
     "memberof": "Meteor",
@@ -5474,7 +5474,7 @@ DocsData = {
   "Mongo.Collection#find": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 264,
+    "lineno": 269,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
@@ -5571,7 +5571,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 290,
+    "lineno": 295,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5659,7 +5659,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 429,
+    "lineno": 434,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5692,7 +5692,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 681,
+    "lineno": 686,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5705,7 +5705,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 693,
+    "lineno": 698,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5718,7 +5718,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 571,
+    "lineno": 576,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5751,7 +5751,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 510,
+    "lineno": 515,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5821,7 +5821,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 635,
+    "lineno": 640,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5883,7 +5883,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 715,
+    "lineno": 720,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -6051,7 +6051,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 708,
+    "lineno": 713,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
@@ -6088,7 +6088,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An object where the keys are package\nnames and the values are one of:</p>\n<ol>\n<li>Version numbers in string form</li>\n<li>Http(s) URLs to a git commit by SHA.   </li>\n<li>Git URLs in the format described <a href=\"https://docs.npmjs.com/files/package.json#git-urls-as-dependencies\">here</a></li>\n<li>Absolute file:// paths</li>\n</ol>\n<p>Https URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre><p>Git URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;git+https://github.com/caolan/async#master&quot;\n});</code></pre>",
+        "description": "<p>An object where the keys are package\nnames and the values are one of:</p>\n<ol>\n<li>Version numbers in string form</li>\n<li>Http(s) URLs to a git commit by SHA.   </li>\n<li>Git URLs in the format described <a href=\"https://docs.npmjs.com/files/package.json#git-urls-as-dependencies\">here</a></li>\n</ol>\n<p>Https URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre><p>Git URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;git+https://github.com/caolan/async#master&quot;\n});</code></pre>",
         "name": "dependencies",
         "type": {
           "names": [
@@ -6947,7 +6947,7 @@ DocsData = {
     "filepath": "ddp-server/livedata_server.js",
     "instancename": "this",
     "kind": "class",
-    "lineno": 933,
+    "lineno": 936,
     "longname": "Subscription",
     "name": "Subscription",
     "options": [],
@@ -6958,7 +6958,7 @@ DocsData = {
   "Subscription#added": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1227,
+    "lineno": 1230,
     "locus": "Server",
     "longname": "Subscription#added",
     "memberof": "Subscription",
@@ -6999,7 +6999,7 @@ DocsData = {
   "Subscription#changed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1245,
+    "lineno": 1248,
     "locus": "Server",
     "longname": "Subscription#changed",
     "memberof": "Subscription",
@@ -7040,7 +7040,7 @@ DocsData = {
   "Subscription#connection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 943,
+    "lineno": 946,
     "locus": "Server",
     "longname": "Subscription#connection",
     "memberof": "Subscription",
@@ -7051,7 +7051,7 @@ DocsData = {
   "Subscription#error": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1170,
+    "lineno": 1173,
     "locus": "Server",
     "longname": "Subscription#error",
     "memberof": "Subscription",
@@ -7074,7 +7074,7 @@ DocsData = {
   "Subscription#onStop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1202,
+    "lineno": 1205,
     "locus": "Server",
     "longname": "Subscription#onStop",
     "memberof": "Subscription",
@@ -7097,7 +7097,7 @@ DocsData = {
   "Subscription#ready": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1278,
+    "lineno": 1281,
     "locus": "Server",
     "longname": "Subscription#ready",
     "memberof": "Subscription",
@@ -7110,7 +7110,7 @@ DocsData = {
   "Subscription#removed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1261,
+    "lineno": 1264,
     "locus": "Server",
     "longname": "Subscription#removed",
     "memberof": "Subscription",
@@ -7142,7 +7142,7 @@ DocsData = {
   "Subscription#stop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1188,
+    "lineno": 1191,
     "locus": "Server",
     "longname": "Subscription#stop",
     "memberof": "Subscription",
@@ -7155,7 +7155,7 @@ DocsData = {
   "Subscription#userId": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 985,
+    "lineno": 988,
     "locus": "Server",
     "longname": "Subscription#userId",
     "memberof": "Subscription",
