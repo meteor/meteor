@@ -116,9 +116,11 @@ export class AndroidRunTarget extends CordovaRunTarget {
     // Unfortunately, this is intertwined with checking requirements, so the
     // only way to get access to this functionality is to run check_reqs and
     // let it modify process.env
-    const check_reqs = require(files.pathJoin(
+    var check_reqs_path = files.pathJoin(
       cordovaProject.projectRoot, 'platforms', this.platform,
-      'cordova', 'lib', 'check_reqs'));
+      'cordova', 'lib', 'check_reqs');
+    check_reqs_path = files.convertToOSPath(check_reqs_path);
+    const check_reqs = require(check_reqs_path);
     // We can't use check_reqs.run() because that will print the values of
     // JAVA_HOME and ANDROID_HOME to stdout.
     await Promise.all([check_reqs.check_java(),
