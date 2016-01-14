@@ -967,10 +967,10 @@ on an OS X system.");
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
         if (buildmessage.jobHasMessages()) return;
 
-        const plugins = cordova.pluginVersionsFromStarManifest(
+        const pluginVersions = cordova.pluginVersionsFromStarManifest(
           bundleResult.starManifest);
 
-        cordovaProject.prepareFromAppBundle(bundlePath, plugins);
+        cordovaProject.prepareFromAppBundle(bundlePath, pluginVersions);
       });
 
       for (platform of cordovaPlatforms) {
