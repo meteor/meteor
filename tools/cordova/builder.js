@@ -18,7 +18,12 @@ const iconsIosSizes = {
   'iphone_3x': '180x180',
   'ipad': '76x76',
   'ipad_2x': '152x152',
-  'ipad_pro': '167x167'
+  'ipad_pro': '167x167',
+  'ios_settings': '29x29',
+  'ios_settings_2x': '58x58',
+  'ios_settings_3x': '87x87',
+  'ios_spotlight': '40x40',
+  'ios_spotlight_2x': '80x80'
 };
 
 const iconsAndroidSizes = {
@@ -499,6 +504,11 @@ Valid platforms are: ios, android.`);
      * - `ipad` (76x76)
      * - `ipad_2x` (152x152)
      * - `ipad_pro` (167x167)
+     * - `ios_settings` (29x29)
+     * - `ios_settings_2x` (58x58)
+     * - `ios_settings_3x` (87x87)
+     * - `ios_spotlight` (40x40)
+     * - `ios_spotlight_2x` (80x80)
      * - `android_mdpi` (48x48)
      * - `android_hdpi` (72x72)
      * - `android_xhdpi` (96x96)

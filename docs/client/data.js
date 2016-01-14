@@ -1460,7 +1460,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An Object where the keys are different\ndevices and screen sizes, and values are image paths\nrelative to the project root directory.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone_2x</code> (120x120)</li>\n<li><code>iphone_3x</code> (180x180)</li>\n<li><code>ipad</code> (76x76)</li>\n<li><code>ipad_2x</code> (152x152)</li>\n<li><code>ipad_pro</code> (167x167)</li>\n<li><code>android_mdpi</code> (48x48)</li>\n<li><code>android_hdpi</code> (72x72)</li>\n<li><code>android_xhdpi</code> (96x96)</li>\n<li><code>android_xxhdpi</code> (144x144)</li>\n<li><code>android_xxxhdpi</code> (192x192)</li>\n</ul>",
+        "description": "<p>An Object where the keys are different\ndevices and screen sizes, and values are image paths\nrelative to the project root directory.</p>\n<p>Valid key values:</p>\n<ul>\n<li><code>iphone_2x</code> (120x120)</li>\n<li><code>iphone_3x</code> (180x180)</li>\n<li><code>ipad</code> (76x76)</li>\n<li><code>ipad_2x</code> (152x152)</li>\n<li><code>ipad_pro</code> (167x167)</li>\n<li><code>ios_settings</code> (29x29)</li>\n<li><code>ios_settings_2x</code> (58x58)</li>\n<li><code>ios_settings_3x</code> (87x87)</li>\n<li><code>ios_spotlight</code> (40x40)</li>\n<li><code>ios_spotlight_2x</code> (80x80)</li>\n<li><code>android_mdpi</code> (48x48)</li>\n<li><code>android_hdpi</code> (72x72)</li>\n<li><code>android_xhdpi</code> (96x96)</li>\n<li><code>android_xxhdpi</code> (144x144)</li>\n<li><code>android_xxxhdpi</code> (192x192)</li>\n</ul>",
         "name": "icons",
         "type": {
           "names": [
