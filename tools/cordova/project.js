@@ -190,7 +190,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
   // Building (includes prepare)
 
-  buildForPlatform(platform, options = [], extraPaths) {
+  buildForPlatform(platform, options = {}, extraPaths) {
     assert(platform);
 
     const commandOptions = _.extend(this.defaultOptions,

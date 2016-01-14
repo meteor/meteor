@@ -981,10 +981,7 @@ on an OS X system.");
         buildmessage.enterJob(
           { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
-            let buildOptions = [];
-            if (!options.debug) {
-              buildOptions.push('--release');
-            }
+            let buildOptions = { release: !options.debug };
             cordovaProject.buildForPlatform(platform, buildOptions);
 
             const buildPath = files.pathJoin(
