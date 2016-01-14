@@ -634,7 +634,10 @@ mobile-config.js accordingly.`);
 
     const oldEnv = process.env;
     if (env) {
-      process.env = env;
+      // this preserves case insensitivity for PATH on windows
+      Object.keys(env).forEach(key => {
+        process.env[key] = env[key];
+      });
     }
 
     try {
