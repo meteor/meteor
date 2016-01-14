@@ -861,11 +861,7 @@ var buildCommand = function (options) {
   if (!options._serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
-    if (process.platform === 'win32' && !_.isEmpty(cordovaPlatforms)) {
-      Console.warn(`Can't build for mobile on Windows. Skipping the following \
-platforms: ${cordovaPlatforms.join(", ")}`);
-      cordovaPlatforms = [];
-    } else if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
+    if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
       Console.warn("Currently, it is only possible to build iOS apps \
 on an OS X system.");

@@ -30,7 +30,7 @@ main.registerCommand({
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never(),
-  notOnWindows: true
+  notOnWindows: false
 }, function (options) {
   Console.setVerbose(!!options.verbose);
 
