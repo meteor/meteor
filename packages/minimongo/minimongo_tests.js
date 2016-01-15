@@ -1969,6 +1969,26 @@ Tinytest.add("minimongo - sort key filter", function (test) {
                 {c: {$lt: 3}}, [3, "bla", 4], true);
 });
 
+Tinytest.add("minimongo - sort function", function (test) {
+  var c = new LocalCollection();
+
+  c.insert({a: 1});
+  c.insert({a: 10});
+  c.insert({a: 5});
+  c.insert({a: 7});
+  c.insert({a: 2});
+  c.insert({a: 4});
+  c.insert({a: 3});
+
+  var sortFunction = function (doc1, doc2) {
+    return doc2.a - doc1.a;
+  };
+
+  test.equal(c.find({}, {sort: sortFunction}).fetch(), c.find({}).fetch().sort(sortFunction));
+  test.notEqual(c.find({}).fetch(), c.find({}).fetch().sort(sortFunction));
+  test.equal(c.find({}, {sort: {a: -1}}).fetch(), c.find({}).fetch().sort(sortFunction));
+});
+
 Tinytest.add("minimongo - binary search", function (test) {
   var forwardCmp = function (a, b) {
     return a - b;
