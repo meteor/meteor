@@ -16,6 +16,7 @@ Minimongo.Sorter = function (spec, options) {
   options = options || {};
 
   self._sortSpecParts = [];
+  self._sortFunction = null;
 
   var addSpecPart = function (path, ascending) {
     if (!path)
@@ -41,9 +42,15 @@ Minimongo.Sorter = function (spec, options) {
     _.each(spec, function (value, key) {
       addSpecPart(key, value >= 0);
     });
+  } else if (typeof spec === "function") {
+    self._sortFunction = spec;
   } else {
     throw Error("Bad sort specification: " + JSON.stringify(spec));
   }
+
+  // If a function is specified for sorting, we skip the rest.
+  if (self._sortFunction)
+    return;
 
   // To implement affectedByModifier, we piggy-back on top of Matcher's
   // affectedByModifier code; we create a selector that is affected by the same
@@ -266,6 +273,9 @@ _.extend(Minimongo.Sorter.prototype, {
   // including a possible geoquery distance tie-breaker).
   _getBaseComparator: function () {
     var self = this;
+
+    if (self._sortFunction)
+      return self._sortFunction;
 
     // If we're only sorting on geoquery distance and no specs, just say
     // everything is equal.
