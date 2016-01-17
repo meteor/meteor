@@ -987,6 +987,34 @@ _.extend(Roles, {
    * @static
    */
   getUsersInRole: function (roles, options, queryOptions) {
+    var result;
+
+    result = Roles._usersInRoleQuery(roles, options, queryOptions);
+
+    return Meteor.users.find(result.query, result.queryOptions);
+  },
+
+  /**
+   * @method _usersInRoleQuery
+   * @param {String|Array} roles Name of role or an array of roles. If array, users
+   *                             returned will have at least one of the roles
+   *                             specified but need not have _all_ roles.
+   *                             Roles do not have to exist.
+   * @param {Object|String} [options] Options:
+   *   - &#x60;partition&#x60;: name of the partition to restrict roles to; user&#x27;s global
+   *     roles will also be checked
+   *   - &#x60;anyPartition&#x60;: if set, role can be in any partition (&#x60;partition&#x60; option is ignored)
+   *   - &#x60;queryOptions&#x60;: options which are passed directly
+   *     through to &#x60;Meteor.users.find(query, options)&#x60;
+   *
+   * Alternatively, it can be a partition name string.
+   * @param {Object} [queryOptions] Options which are passed directly
+   *                                through to &#x60;Meteor.users.find(query, options)&#x60;
+   * @return {Object} Object with &#x60;query&#x60; and &#x60;queryOptions&#x60;.
+   * @private
+   * @static
+   */
+  _usersInRoleQuery: function (roles, options, queryOptions) {
     var query;
 
     options = options || {};
@@ -1032,7 +1060,10 @@ _.extend(Roles, {
       };
     }
 
-    return Meteor.users.find(query, options.queryOptions);
+    return {
+      query: query,
+      queryOptions: options.queryOptions
+    }
   },
 
   /**

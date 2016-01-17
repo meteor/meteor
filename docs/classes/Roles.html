@@ -223,6 +223,11 @@
 
                                     <span class="flag static">static</span>
                             </li>
+                            <li class="index-item method private">
+                                <a href="#method__usersInRoleQuery">_usersInRoleQuery</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
                             <li class="index-item method">
                                 <a href="#method_addRoleParent">addRoleParent</a>
 
@@ -600,7 +605,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1146"><code>roles&#x2F;roles_common.js:1146</code></a>
+        <a href="../files/roles_roles_common.js.html#l1177"><code>roles&#x2F;roles_common.js:1177</code></a>
         </p>
 
 
@@ -656,7 +661,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1160"><code>roles&#x2F;roles_common.js:1160</code></a>
+        <a href="../files/roles_roles_common.js.html#l1191"><code>roles&#x2F;roles_common.js:1191</code></a>
         </p>
 
 
@@ -1471,7 +1476,7 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1133"><code>roles&#x2F;roles_common.js:1133</code></a>
+        <a href="../files/roles_roles_common.js.html#l1164"><code>roles&#x2F;roles_common.js:1164</code></a>
         </p>
 
 
@@ -1522,7 +1527,7 @@ if the role is an assigned role.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1117"><code>roles&#x2F;roles_common.js:1117</code></a>
+        <a href="../files/roles_roles_common.js.html#l1148"><code>roles&#x2F;roles_common.js:1148</code></a>
         </p>
 
 
@@ -1689,7 +1694,7 @@ assigned roles are removed, if <code>null</code>, any role is removed</li>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1060"><code>roles&#x2F;roles_common.js:1060</code></a>
+        <a href="../files/roles_roles_common.js.html#l1091"><code>roles&#x2F;roles_common.js:1091</code></a>
         </p>
 
 
@@ -1772,7 +1777,7 @@ if it is not already.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1100"><code>roles&#x2F;roles_common.js:1100</code></a>
+        <a href="../files/roles_roles_common.js.html#l1131"><code>roles&#x2F;roles_common.js:1131</code></a>
         </p>
 
 
@@ -1851,7 +1856,7 @@ if its name matches <code>roleName</code>, and partition matches <code>partition
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1086"><code>roles&#x2F;roles_common.js:1086</code></a>
+        <a href="../files/roles_roles_common.js.html#l1117"><code>roles&#x2F;roles_common.js:1117</code></a>
         </p>
 
 
@@ -1887,6 +1892,115 @@ if its name matches <code>roleName</code>, and partition matches <code>partition
                         <span class="type">Function</span>:
                     <p>A matcher function which accepts a role object and returns <code>true</code>
 if its name matches <code>roleName</code>.</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method__usersInRoleQuery" class="method item private">
+    <h3 class="name"><code>_usersInRoleQuery</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>roles</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[options]</code>
+                </li>
+                <li class="arg">
+                        <code class="optional">[queryOptions]</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type">Object</span>
+        </span>
+
+
+        <span class="flag private">private</span>
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l912"><code>roles&#x2F;roles_common.js:912</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">roles</code>
+                        <span class="type">String | Array</span>
+
+
+                    <div class="param-description">
+                        <p>Name of role or an array of roles. If array, users
+returned will have at least one of the roles
+specified but need not have <em>all</em> roles.
+Roles do not have to exist.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[options]</code>
+                        <span class="type">Object | String</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options:</p>
+<ul>
+<li><code>partition</code>: name of the partition to restrict roles to; user's global
+roles will also be checked</li>
+<li><code>anyPartition</code>: if set, role can be in any partition (<code>partition</code> option is ignored)</li>
+<li><code>queryOptions</code>: options which are passed directly
+through to <code>Meteor.users.find(query, options)</code></li>
+</ul>
+<p>Alternatively, it can be a partition name string.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name optional">[queryOptions]</code>
+                        <span class="type">Object</span>
+                        <span class="flag optional" title="This parameter is optional.">optional</span>
+
+
+                    <div class="param-description">
+                        <p>Options which are passed directly
+through to <code>Meteor.users.find(query, options)</code></p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type">Object</span>:
+                    <p>Object with <code>query</code> and <code>queryOptions</code>.</p>
 
             </div>
         </div>
@@ -2292,7 +2406,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l953"><code>roles&#x2F;roles_common.js:953</code></a>
+        <a href="../files/roles_roles_common.js.html#l984"><code>roles&#x2F;roles_common.js:984</code></a>
         </p>
 
 
@@ -2336,7 +2450,7 @@ through to <code>Meteor.roles.find(query, options)</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l969"><code>roles&#x2F;roles_common.js:969</code></a>
+        <a href="../files/roles_roles_common.js.html#l1000"><code>roles&#x2F;roles_common.js:1000</code></a>
         </p>
 
 
@@ -2611,7 +2725,7 @@ through to <code>Meteor.users.find(query, options)</code></p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1037"><code>roles&#x2F;roles_common.js:1037</code></a>
+        <a href="../files/roles_roles_common.js.html#l1068"><code>roles&#x2F;roles_common.js:1068</code></a>
         </p>
 
 
@@ -2839,7 +2953,7 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1001"><code>roles&#x2F;roles_common.js:1001</code></a>
+        <a href="../files/roles_roles_common.js.html#l1032"><code>roles&#x2F;roles_common.js:1032</code></a>
         </p>
 
 
