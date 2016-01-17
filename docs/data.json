@@ -600,7 +600,7 @@
                 {
                     "name": "roles",
                     "description": "Name of roles to restrict partitions to.",
-                    "type": "String",
+                    "type": "String|Array",
                     "optional": true
                 }
             ],
