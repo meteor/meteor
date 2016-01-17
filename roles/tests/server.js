@@ -1453,6 +1453,55 @@
     });
 
   Tinytest.add(
+    'roles - renaming of roles',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+
+      Roles.setUserRoles([users.eve, users.bob], ['editor', 'user'], 'partition1');
+      Roles.setUserRoles([users.bob, users.joe], ['user', 'admin'], 'partition2');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'editor', 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'editor', 'partition2'));
+
+      test.isFalse(Roles.userIsInRole(users.joe, 'admin', 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'admin', 'partition2'));
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'user', 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user', 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.joe, 'user', 'partition1'));
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user', 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'user', 'partition2'));
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'partition2'));
+
+      Roles.renameRole('user', 'user2');
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'editor', 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'editor', 'partition2'));
+
+      test.isFalse(Roles.userIsInRole(users.joe, 'admin', 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'admin', 'partition2'));
+
+      test.isTrue(Roles.userIsInRole(users.eve, 'user2', 'partition1'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user2', 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.joe, 'user2', 'partition1'));
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'user2', 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.bob, 'user2', 'partition2'));
+      test.isTrue(Roles.userIsInRole(users.joe, 'user2', 'partition2'));
+
+      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, 'user', 'partition2'));
+    });
+
+  Tinytest.add(
     'roles - migration without global groups',
     function (test) {
       reset();

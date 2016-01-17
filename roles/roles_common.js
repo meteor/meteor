@@ -139,6 +139,64 @@ _.extend(Roles, {
   },
 
   /**
+   * Rename an existing role.
+   *
+   * @method renameRole
+   * @param {String} oldName Old name of a role.
+   * @param {String} newName New name of a role.
+   * @static
+   */
+  renameRole: function (oldName, newName) {
+    var role,
+        count;
+
+    Roles._checkRoleName(oldName);
+    Roles._checkRoleName(newName);
+
+    if (oldName === newName) return;
+
+    role = Meteor.roles.findOne({_id: oldName});
+
+    if (!role) {
+      throw new Error("Role '" + oldName + "' does not exist.");
+    }
+
+    role._id = newName;
+
+    Meteor.roles.insert(role);
+
+    do {
+      count = Meteor.users.update({
+        roles: {
+          $elemMatch: {
+            _id: oldName
+          }
+        }
+      }, {
+        $set: {
+          'roles.$._id': newName
+        }
+      }, {multi: true});
+    } while (count > 0);
+
+    do {
+      count = Meteor.roles.update({
+        children: {
+          $elemMatch: {
+            _id: oldName
+          }
+        }
+      }, {
+        $set: {
+          'children.$._id': newName
+        }
+      }, {multi: true});
+    } while (count > 0);
+
+    Meteor.roles.remove({_id: oldName});
+  },
+
+  /**
    * Add role parent to the role.
    *
    * Previous parents are kept (role can have multiple parents). For users which have the
