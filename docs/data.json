@@ -581,6 +581,45 @@
         {
             "file": "roles/roles_common.js",
             "line": 1001,
+            "description": "Rename a partition.\n\nRoles assigned with a given partition are changed to be under the new partition.",
+            "itemtype": "method",
+            "name": "renamePartition",
+            "params": [
+                {
+                    "name": "oldName",
+                    "description": "Old name of a partition.",
+                    "type": "String"
+                },
+                {
+                    "name": "newName",
+                    "description": "New name of a partition.",
+                    "type": "String"
+                }
+            ],
+            "static": 1,
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 1037,
+            "description": "Remove a partition.\n\nRoles assigned with a given partition are removed.",
+            "itemtype": "method",
+            "name": "removePartition",
+            "params": [
+                {
+                    "name": "name",
+                    "description": "The name of a partition.",
+                    "type": "String"
+                }
+            ],
+            "static": 1,
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 1060,
             "description": "Resolves the user ID into an actual user object with `roles` field,\nif it is not already.",
             "itemtype": "method",
             "name": "_resolveUser",
@@ -608,7 +647,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1027,
+            "line": 1086,
             "itemtype": "method",
             "name": "_roleMatcher",
             "params": [
@@ -630,7 +669,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1041,
+            "line": 1100,
             "itemtype": "method",
             "name": "_roleAndPartitionMatcher",
             "params": [
@@ -657,7 +696,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1058,
+            "line": 1117,
             "itemtype": "method",
             "name": "_partitionMatcher",
             "params": [
@@ -679,7 +718,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1074,
+            "line": 1133,
             "itemtype": "method",
             "name": "_onlyAssignedMatcher",
             "return": {
@@ -694,7 +733,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1087,
+            "line": 1146,
             "description": "Throw an exception if `roleName` is an invalid role name.",
             "itemtype": "method",
             "name": "_checkRoleName",
@@ -713,7 +752,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1101,
+            "line": 1160,
             "description": "Throw an exception if `partitionName` is an invalid partition name.",
             "itemtype": "method",
             "name": "_checkRoleName",
@@ -732,7 +771,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1117,
+            "line": 1176,
             "params": [
                 {
                     "name": "string",
@@ -1034,7 +1073,7 @@
     "warnings": [
         {
             "message": "Missing item type",
-            "line": " roles/roles_common.js:1117"
+            "line": " roles/roles_common.js:1176"
         }
     ]
 }

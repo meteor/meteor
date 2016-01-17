@@ -270,12 +270,22 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
+                                <a href="#method_removePartition">removePartition</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
                                 <a href="#method_removeRoleParent">removeRoleParent</a>
 
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
                                 <a href="#method_removeUsersFromRoles">removeUsersFromRoles</a>
+
+                                    <span class="flag static">static</span>
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renamePartition">renamePartition</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -590,7 +600,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1087"><code>roles&#x2F;roles_common.js:1087</code></a>
+        <a href="../files/roles_roles_common.js.html#l1146"><code>roles&#x2F;roles_common.js:1146</code></a>
         </p>
 
 
@@ -646,7 +656,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1101"><code>roles&#x2F;roles_common.js:1101</code></a>
+        <a href="../files/roles_roles_common.js.html#l1160"><code>roles&#x2F;roles_common.js:1160</code></a>
         </p>
 
 
@@ -1461,7 +1471,7 @@ If it is ambiguous or it is not, returns <code>false</code>.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1074"><code>roles&#x2F;roles_common.js:1074</code></a>
+        <a href="../files/roles_roles_common.js.html#l1133"><code>roles&#x2F;roles_common.js:1133</code></a>
         </p>
 
 
@@ -1512,7 +1522,7 @@ if the role is an assigned role.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1058"><code>roles&#x2F;roles_common.js:1058</code></a>
+        <a href="../files/roles_roles_common.js.html#l1117"><code>roles&#x2F;roles_common.js:1117</code></a>
         </p>
 
 
@@ -1679,7 +1689,7 @@ assigned roles are removed, if <code>null</code>, any role is removed</li>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1001"><code>roles&#x2F;roles_common.js:1001</code></a>
+        <a href="../files/roles_roles_common.js.html#l1060"><code>roles&#x2F;roles_common.js:1060</code></a>
         </p>
 
 
@@ -1762,7 +1772,7 @@ if it is not already.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1041"><code>roles&#x2F;roles_common.js:1041</code></a>
+        <a href="../files/roles_roles_common.js.html#l1100"><code>roles&#x2F;roles_common.js:1100</code></a>
         </p>
 
 
@@ -1841,7 +1851,7 @@ if its name matches <code>roleName</code>, and partition matches <code>partition
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_common.js.html#l1027"><code>roles&#x2F;roles_common.js:1027</code></a>
+        <a href="../files/roles_roles_common.js.html#l1086"><code>roles&#x2F;roles_common.js:1086</code></a>
         </p>
 
 
@@ -2579,6 +2589,62 @@ through to <code>Meteor.users.find(query, options)</code></p>
 
 
 </div>
+<div id="method_removePartition" class="method item">
+    <h3 class="name"><code>removePartition</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1037"><code>roles&#x2F;roles_common.js:1037</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Remove a partition.</p>
+<p>Roles assigned with a given partition are removed.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>The name of a partition.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
 <div id="method_removeRoleParent" class="method item">
     <h3 class="name"><code>removeRoleParent</code></h3>
 
@@ -2747,6 +2813,76 @@ Roles.removeUsersFromRoles(userId, ['user'], 'group1')</code></pre>
 
             </div>
         </div>
+</div>
+<div id="method_renamePartition" class="method item">
+    <h3 class="name"><code>renamePartition</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>oldName</code>
+                </li>
+                <li class="arg">
+                        <code>newName</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+        <span class="flag static">static</span>
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/roles_roles_common.js.html#l1001"><code>roles&#x2F;roles_common.js:1001</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Rename a partition.</p>
+<p>Roles assigned with a given partition are changed to be under the new partition.</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">oldName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>Old name of a partition.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">newName</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>New name of a partition.</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
 </div>
 <div id="method_setUserRoles" class="method item">
     <h3 class="name"><code>setUserRoles</code></h3>
