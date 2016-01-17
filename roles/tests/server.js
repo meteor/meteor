@@ -1,7 +1,7 @@
 ;(function () {
 
   var users = {},
-      roles = ['admin','editor','user'];
+      roles = ['admin', 'editor', 'user'];
 
   // use to run individual tests
   //Tinytest.oadd = Tinytest.add
@@ -787,8 +787,8 @@
       testUser(test, 'bob', ['admin', 'editor', 'user'], 'partition1');
       testUser(test, 'joe', [], 'partition1');
       testUser(test, 'eve', [], 'partition2');
-      testUser(test, 'bob', ['admin','editor'], 'partition2');
-      testUser(test, 'joe', ['admin','editor'], 'partition2');
+      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
+      testUser(test, 'joe', ['admin', 'editor'], 'partition2');
 
       Roles.setUserRoles([eve, bob], ['user'], 'partition1');
       Roles.setUserRoles([eve, joe], ['editor'], 'partition2');
@@ -796,7 +796,7 @@
       testUser(test, 'bob', ['user'], 'partition1');
       testUser(test, 'joe', [], 'partition1');
       testUser(test, 'eve', ['editor'], 'partition2');
-      testUser(test, 'bob', ['admin','editor'], 'partition2');
+      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
       testUser(test, 'joe', ['editor'], 'partition2');
 
       Roles.setUserRoles(bob, 'editor', 'partition1');
@@ -804,7 +804,7 @@
       testUser(test, 'bob', ['editor'], 'partition1');
       testUser(test, 'joe', [], 'partition1');
       testUser(test, 'eve', ['editor'], 'partition2');
-      testUser(test, 'bob', ['admin','editor'], 'partition2');
+      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
       testUser(test, 'joe', ['editor'], 'partition2');
 
       Roles.setUserRoles([bob, users.joe], [], 'partition1');
@@ -812,7 +812,7 @@
       testUser(test, 'bob', [], 'partition1');
       testUser(test, 'joe', [], 'partition1');
       testUser(test, 'eve', ['editor'], 'partition2');
-      testUser(test, 'bob', ['admin','editor'], 'partition2');
+      testUser(test, 'bob', ['admin', 'editor'], 'partition2');
       testUser(test, 'joe', ['editor'], 'partition2');
     });
 
@@ -1177,13 +1177,55 @@
       // by userId
       test.equal(Roles.getPartitionsForUser(userId), []);
       test.equal(Roles.getPartitionsForUser(userId, 'editor'), []);
+      test.equal(Roles.getPartitionsForUser(userId, ['editor']), []);
+      test.equal(Roles.getPartitionsForUser(userId, ['editor', 'user']), []);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
       test.equal(Roles.getPartitionsForUser(userObj), []);
       test.equal(Roles.getPartitionsForUser(userObj, 'editor'), []);
+      test.equal(Roles.getPartitionsForUser(userObj, ['editor']), []);
+      test.equal(Roles.getPartitionsForUser(userObj, ['editor', 'user']), []);
     });
-  
+
+  Tinytest.add(
+    'roles - can get all groups for user by role array',
+    function (test) {
+      reset();
+
+      var userId = users.eve,
+          userObj;
+
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.createRole('moderator');
+      Roles.createRole('admin');
+
+      Roles.addUsersToRoles([users.eve], ['editor'], 'group1');
+      Roles.addUsersToRoles([users.eve], ['editor', 'user'], 'group2');
+      Roles.addUsersToRoles([users.eve], ['moderator'], 'group3');
+
+      // by userId, one role
+      test.equal(Roles.getPartitionsForUser(userId, ['user']), ['group2']);
+      test.equal(Roles.getPartitionsForUser(userId, ['editor']), ['group1', 'group2']);
+      test.equal(Roles.getPartitionsForUser(userId, ['admin']), []);
+
+      // by userId, multiple roles
+      test.equal(Roles.getPartitionsForUser(userId, ['editor', 'user']), ['group1', 'group2']);
+      test.equal(Roles.getPartitionsForUser(userId, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
+      test.equal(Roles.getPartitionsForUser(userId, ['user', 'moderator']), ['group2', 'group3']);
+
+      // by user object, one role
+      userObj = Meteor.users.findOne({_id: userId});
+      test.equal(Roles.getPartitionsForUser(userObj, ['user']), ['group2']);
+      test.equal(Roles.getPartitionsForUser(userObj, ['editor']), ['group1', 'group2']);
+      test.equal(Roles.getPartitionsForUser(userObj, ['admin']), []);
+
+      // by user object, multiple roles
+      test.equal(Roles.getPartitionsForUser(userObj, ['editor', 'user']), ['group1', 'group2']);
+      test.equal(Roles.getPartitionsForUser(userObj, ['editor', 'moderator']), ['group1', 'group2', 'group3']);
+      test.equal(Roles.getPartitionsForUser(userObj, ['user', 'moderator']), ['group2', 'group3']);
+    });
   
   Tinytest.add(
     'roles - getting all partitions for user does not include GLOBAL_PARTITION', 
@@ -1205,12 +1247,20 @@
       test.equal(Roles.getPartitionsForUser(userId, 'user'), ['partition2']);
       test.equal(Roles.getPartitionsForUser(userId, 'editor'), ['partition1', 'partition2']);
       test.equal(Roles.getPartitionsForUser(userId, 'admin'), []);
+      test.equal(Roles.getPartitionsForUser(userId, ['user']), ['partition2']);
+      test.equal(Roles.getPartitionsForUser(userId, ['editor']), ['partition1', 'partition2']);
+      test.equal(Roles.getPartitionsForUser(userId, ['admin']), []);
+      test.equal(Roles.getPartitionsForUser(userId, ['user', 'editor', 'admin']), ['partition1', 'partition2']);
 
       // by user object
       userObj = Meteor.users.findOne({_id: userId});
       test.equal(Roles.getPartitionsForUser(userObj, 'user'), ['partition2']);
       test.equal(Roles.getPartitionsForUser(userObj, 'editor'), ['partition1', 'partition2']);
       test.equal(Roles.getPartitionsForUser(userObj, 'admin'), []);
+      test.equal(Roles.getPartitionsForUser(userObj, ['user']), ['partition2']);
+      test.equal(Roles.getPartitionsForUser(userObj, ['editor']), ['partition1', 'partition2']);
+      test.equal(Roles.getPartitionsForUser(userObj, ['admin']), []);
+      test.equal(Roles.getPartitionsForUser(userObj, ['user', 'editor', 'admin']), ['partition1', 'partition2']);
     });
 
 
@@ -1303,7 +1353,7 @@
       Roles.addUsersToRoles([users.eve, users.joe], ['admin', 'user'], 'partition1');
       Roles.addUsersToRoles([users.bob, users.joe], ['admin'], 'partition2');
 
-      var results = Roles.getUsersInRole('admin','partition1', { fields: { username: 0 }, limit: 1 }).fetch();
+      var results = Roles.getUsersInRole('admin', 'partition1', { fields: { username: 0 }, limit: 1 }).fetch();
 
       test.equal(1, results.length);
       test.isTrue(results[0].hasOwnProperty('_id'));
