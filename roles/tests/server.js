@@ -232,6 +232,67 @@
     });
 
   Tinytest.add(
+    'roles - renaming partitions',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+
+      testUser(test, 'eve', ['admin', 'user'], 'partition1');
+      testUser(test, 'eve', ['editor'], 'partition2');
+
+      Roles.renamePartition('partition1', 'partition3');
+
+      testUser(test, 'eve', ['admin', 'user'], 'partition3');
+      testUser(test, 'eve', ['editor'], 'partition2');
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
+
+      Roles.renamePartition('partition3', null);
+
+      testUser(test, 'eve', ['admin', 'user', 'editor'], 'partition2');
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
+      test.isTrue(Roles.userIsInRole(users.eve, ['admin']));
+      test.isTrue(Roles.userIsInRole(users.eve, ['user']));
+
+      Roles.renamePartition(null, 'partition2');
+
+      testUser(test, 'eve', ['admin', 'user', 'editor'], 'partition2');
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['editor']));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin']));
+      test.isFalse(Roles.userIsInRole(users.eve, ['user']));
+    });
+
+  Tinytest.add(
+    'roles - removing partitions',
+    function (test) {
+      reset();
+
+      Roles.createRole('admin');
+      Roles.createRole('user');
+      Roles.createRole('editor');
+      Roles.addUsersToRoles(users.eve, ['admin', 'user'], 'partition1');
+      Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
+
+      testUser(test, 'eve', ['admin', 'user'], 'partition1');
+      testUser(test, 'eve', ['editor'], 'partition2');
+
+      Roles.removePartition('partition1');
+
+      testUser(test, 'eve', ['editor'], 'partition2');
+
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition1'));
+      test.isFalse(Roles.userIsInRole(users.eve, ['admin', 'user'], 'partition2'));
+    });
+
+  Tinytest.add(
     'roles - can check if non-existant user is in role', 
     function (test) {
       reset();

@@ -999,6 +999,65 @@ _.extend(Roles, {
   },
 
   /**
+   * Rename a partition.
+   *
+   * Roles assigned with a given partition are changed to be under the new partition.
+   *
+   * @method renamePartition
+   * @param {String} oldName Old name of a partition.
+   * @param {String} newName New name of a partition.
+   * @static
+   */
+  renamePartition: function (oldName, newName) {
+    var count;
+
+    oldName = oldName || null;
+    newName = newName || null;
+
+    Roles._checkPartitionName(oldName);
+    Roles._checkPartitionName(newName);
+
+    if (oldName === newName) return;
+
+    do {
+      count = Meteor.users.update({
+        roles: {
+          $elemMatch: {
+            partition: oldName
+          }
+        }
+      }, {
+        $set: {
+          'roles.$.partition': newName
+        }
+      }, {multi: true});
+    } while (count > 0);
+  },
+
+  /**
+   * Remove a partition.
+   *
+   * Roles assigned with a given partition are removed.
+   *
+   * @method removePartition
+   * @param {String} name The name of a partition.
+   * @static
+   */
+  removePartition: function (name) {
+    name = name || null;
+
+    Roles._checkPartitionName(name);
+
+    Meteor.users.update({}, {
+      $pull: {
+        roles: {
+          partition: name
+        }
+      }
+    }, {multi: true});
+  },
+
+  /**
    * Resolves the user ID into an actual user object with `roles` field,
    * if it is not already.
    *
