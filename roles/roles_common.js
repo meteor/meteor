@@ -1002,7 +1002,7 @@ _.extend(Roles, {
    *
    * @method getPartitionsForUser
    * @param {String|Object} user User ID or an actual user object.
-   * @param {String} [roles] Name of roles to restrict partitions to.
+   * @param {String|Array} [roles] Name of roles to restrict partitions to.
    *
    * @return {Array} Array of user's partitions, unsorted.
    * @static
