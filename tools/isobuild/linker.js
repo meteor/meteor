@@ -819,13 +819,26 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 
 var getHeader = function (options) {
   var chunks = [];
-  chunks.push("(function () {\n\n" );
-  chunks.push(getImportCode(options.imports, "/* Imports */\n", false));
-  if (!_.isEmpty(options.packageVariables)) {
-    chunks.push("/* Package-scope variables */\n");
-    chunks.push("var " + options.packageVariables.join(', ') +
-                ";\n\n");
+
+  chunks.push(
+    "(function () {\n\n",
+    getImportCode(options.imports, "/* Imports */\n", false),
+  );
+
+  const packageVariables = _.filter(
+    options.packageVariables,
+    name => ! _.has(options.imports, name),
+  );
+
+  if (!_.isEmpty(packageVariables)) {
+    chunks.push(
+      "/* Package-scope variables */\n",
+      "var ",
+      packageVariables.join(', '),
+      ";\n\n",
+    );
   }
+
   return chunks.join('');
 };
 

@@ -43,7 +43,8 @@ minifiers-js@1.1.8-modules.4
 minimongo@1.0.11-modules.4
 mobile-experience@1.0.1
 mobile-status-bar@1.0.6
-modules@0.4.1-modules.4
+modules@0.5.0-modules.4
+modules-runtime@0.5.0-modules.4
 modules-test-package@0.0.1
 mongo@1.1.4-modules.4
 mongo-id@1.0.1

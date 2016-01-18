@@ -598,8 +598,10 @@ class PackageSourceBatch {
     var bundleArch = self.processor.arch;
 
     const useMeteorInstall =
-      _.isString(self.sourceRoot) &&
-      _.has(self.usedPackageNames, "modules");
+      _.isString(self.sourceRoot) && (
+        self.unibuild.pkg.name === "modules" ||
+        _.has(self.usedPackageNames, "modules")
+      );
 
     if (useMeteorInstall) {
       // If the module system is enabled, scan the input files to find
