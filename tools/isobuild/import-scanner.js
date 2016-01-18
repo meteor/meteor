@@ -72,17 +72,37 @@ export default class ImportScanner {
       }
     });
 
-    return this;
-  }
-
-  getOutputFiles() {
     this.outputFiles.forEach(file => {
       if (! file.lazy || file.imported) {
-        const absPath = pathJoin(this.sourceRoot, file.sourcePath);
-        file.deps = this._scanDeps(absPath, file.data);
+        this._scanFile(file);
       }
     });
 
+    return this;
+  }
+
+  addNodeModules(identifiers) {
+    if (identifiers) {
+      if (typeof identifiers === "object" &&
+          ! Array.isArray(identifiers)) {
+        identifiers = Object.keys(identifiers);
+      }
+
+      if (identifiers.length > 0) {
+        this._scanFile({
+          sourcePath: "fake.js",
+          // By specifying the .deps property of this fake file ahead of
+          // time, we can avoid calling findImportedModuleIdentifiers in the
+          // _scanFile method.
+          deps: identifiers,
+        });
+      }
+    }
+
+    return this;
+  }
+
+  getOutputFiles(options) {
     return this.outputFiles;
   }
 
@@ -110,11 +130,14 @@ export default class ImportScanner {
     ).indexOf("imports") >= 0;
   }
 
-  _scanDeps(absPath, data) {
-    const deps = keys(findImportedModuleIdentifiers(data.toString("utf8")));
+  _scanFile(file) {
+    const absPath = pathJoin(this.sourceRoot, file.sourcePath);
+    file.deps = file.deps || keys(
+      findImportedModuleIdentifiers(file.data.toString("utf8"))
+    );
 
-    each(deps, id => {
-      const absImportedPath = this._tryToResolveImportedPath(id, absPath);
+    each(file.deps, id => {
+      const absImportedPath = this._tryToResolveImportedPath(file, id);
       if (! absImportedPath) {
         return;
       }
@@ -138,7 +161,7 @@ export default class ImportScanner {
         file.imported = true;
 
         if (! alreadyScanned) {
-          this._scanDeps(absImportedPath, file.data);
+          this._scanFile(file);
         }
 
         return;
@@ -159,12 +182,10 @@ export default class ImportScanner {
         return;
       }
 
-      var relImportedPath = pathRelative(this.sourceRoot, absImportedPath);
-
       // The result of _readModule will have .data and .hash properties.
       const depFile = this._readModule(absImportedPath);
       depFile.type = "js"; // TODO Is this correct?
-      depFile.sourcePath = relImportedPath;
+      depFile.sourcePath = pathRelative(this.sourceRoot, absImportedPath);
       depFile.installPath = installPath;
       depFile.servePath = installPath;
       depFile.lazy = true;
@@ -174,10 +195,8 @@ export default class ImportScanner {
       this.absPathToOutputIndex[absImportedPath] =
         this.outputFiles.push(depFile) - 1;
 
-      depFile.deps = this._scanDeps(absImportedPath, depFile.data);
+      this._scanFile(depFile);
     });
-
-    return deps;
   }
 
   _readFile(absPath) {
@@ -308,11 +327,12 @@ export default class ImportScanner {
     return partsInReverse.reverse();
   }
 
-  _tryToResolveImportedPath(id, path) {
+  // TODO This method can probably be consolidated with _getInstallPath.
+  _tryToResolveImportedPath(file, id) {
     let resolved =
-      this._resolveAbsolute(id) ||
-      this._resolveRelative(id, path) ||
-      this._resolveNodeModule(id, path);
+      this._resolveAbsolute(file, id) ||
+      this._resolveRelative(file, id) ||
+      this._resolveNodeModule(file, id);
 
     while (resolved && resolved.stat.isDirectory()) {
       resolved = this._resolvePkgJsonMain(resolved.path) ||
@@ -349,19 +369,22 @@ export default class ImportScanner {
     return null;
   }
 
-  _resolveAbsolute(id) {
+  _resolveAbsolute(file, id) {
     return id.charAt(0) === "/" &&
       this._joinAndStat(this.sourceRoot, id.slice(1));
   }
 
-  _resolveRelative(id, path) {
-    return id.charAt(0) === "." &&
-      this._joinAndStat(path, "..", id);
+  _resolveRelative(file, id) {
+    if (id.charAt(0) === ".") {
+      return this._joinAndStat(
+        this.sourceRoot, file.sourcePath, "..", id
+      );
+    }
   }
 
-  _resolveNodeModule(id, path) {
+  _resolveNodeModule(file, id) {
     let resolved = null;
-    let dir = path;
+    let dir = pathJoin(this.sourceRoot, file.sourcePath);
 
     do {
       dir = pathDirname(dir);
@@ -372,6 +395,20 @@ export default class ImportScanner {
       // After checking any local node_modules directories, fall back to
       // the package NPM directory, if one was specified.
       resolved = this._joinAndStat(this.nodeModulesPath, id);
+    }
+
+    if (! resolved) {
+      const parts = id.split("/");
+      if (parts[0] !== "meteor") { // Exclude meteor/... packages.
+        // If the imported identifier is neither absolute nor relative,
+        // but top-level, then it might be satisfied by a package
+        // installed in the top-level node_modules directory, and we
+        // should record the missing dependency so that we can include it
+        // in the app bundle.
+        const missing = file.missingNodeModules || Object.create(null);
+        missing[id] = true;
+        file.missingNodeModules = missing;
+      }
     }
 
     // If the dependency is still not resolved, it might be handled by the

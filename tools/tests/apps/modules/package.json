@@ -4,7 +4,8 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
-    "moment": "^2.11.1"
+    "moment": "^2.11.1",
+    "regenerator": "^0.8.42"
   },
   "scripts": {
     "test": "../../../../meteor run"

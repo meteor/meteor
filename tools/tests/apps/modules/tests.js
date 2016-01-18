@@ -116,6 +116,11 @@ describe("local node_modules", () => {
       require("/node_modules/moment")
     );
   });
+
+  it("should be importable by packages", () => {
+    // Defined in packages/modules-test-package/common.js.
+    assert.strictEqual(typeof regeneratorRuntime, "object");
+  });
 });
 
 describe("Meteor packages", () => {

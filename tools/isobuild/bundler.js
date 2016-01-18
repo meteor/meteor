@@ -732,6 +732,9 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
+    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
+      .computeJsOutputFilesMap(sourceBatches);
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -747,10 +750,11 @@ class Target {
         });
       }
 
-      const isApp = ! unibuild.pkg.name;
+      const name = unibuild.pkg.name || null;
+      const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources();
+      const resources = sourceBatch.getResources(jsOutputFilesMap.get(name));
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).

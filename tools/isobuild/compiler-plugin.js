@@ -468,7 +468,7 @@ class ResourceSlot {
   }
 }
 
-class PackageSourceBatch {
+export class PackageSourceBatch {
   constructor(unibuild, processor, {
     sourceRoot,
     linkerCacheDir,
@@ -549,6 +549,12 @@ class PackageSourceBatch {
 
       self.usedPackageNames[depUnibuild.pkg.name] = true;
     });
+
+    self.useMeteorInstall =
+      _.isString(self.sourceRoot) && (
+        self.unibuild.pkg.name === "modules" ||
+        _.has(self.usedPackageNames, "modules")
+      );
   }
 
   _getSourceProcessorSet() {
@@ -574,20 +580,123 @@ class PackageSourceBatch {
     return sourceProcessorSet;
   }
 
+  // Returns a map from package names to arrays of JS output files.
+  static computeJsOutputFilesMap(sourceBatches) {
+    const map = new Map;
+    const pkgSourceBatches = [];
+    let appSourceBatch;
+
+    sourceBatches.forEach(batch => {
+      const name = batch.unibuild.pkg.name || null;
+      const inputFiles = [];
+
+      if (name) {
+        pkgSourceBatches.push(batch);
+      } else {
+        appSourceBatch = batch;
+      }
+
+      batch.resourceSlots.forEach(slot => {
+        inputFiles.push(...slot.jsOutputResources);
+      });
+
+      map.set(name, inputFiles);
+    });
+
+    if (! map.has("modules")) {
+      // In the unlikely event that no package is using the modules
+      // package, then the map is already complete, and we don't need to
+      // do any import scanning.
+      return map;
+    }
+
+    const allMissingNodeModules = Object.create(null);
+
+    function scan(batch) {
+      const name = batch.unibuild.pkg.name || null;
+      const isApp = ! name;
+
+      if (! batch.useMeteorInstall && ! isApp) {
+        // If this batch represents a package that does not use the module
+        // system, then we don't need to scan its dependencies.
+        return;
+      }
+
+      const scanner = new ImportScanner({
+        name,
+        bundleArch: batch.processor.arch,
+        sourceRoot: batch.sourceRoot,
+        usedPackageNames: batch.usedPackageNames,
+        nodeModulesPath: batch.unibuild.nodeModulesPath,
+        watchSet: batch.unibuild.watchSet,
+      });
+
+      if (batch.useMeteorInstall) {
+        scanner.addInputFiles(map.get(name));
+
+        scanner.getOutputFiles().forEach(file => {
+          if (file.missingNodeModules) {
+            _.extend(allMissingNodeModules, file.missingNodeModules);
+          }
+        });
+      }
+
+      if (isApp) {
+        scanner.addNodeModules(allMissingNodeModules);
+
+        const appFilesWithoutNodeModules = [];
+
+        scanner.getOutputFiles().forEach(file => {
+          const parts = file.installPath.split("/");
+          const nodeModulesIndex = parts.indexOf("node_modules");
+
+          if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
+                                          parts[1] === "meteor")) {
+            appFilesWithoutNodeModules.push(file);
+          } else {
+            // This file is going to be installed in a node_modules
+            // directory, so we move it to the modules bundle so that it
+            // can be imported by any package that uses the modules
+            // package. Note that this includes all files within any
+            // node_modules directory in the app, even though packages in
+            // client/node_modules will not be importable by Meteor
+            // packages, because it's important for all npm packages in
+            // the app to share the same limited scope (i.e. the scope of
+            // the modules package).
+            map.get("modules").push(file);
+          }
+        });
+
+        map.set(null, appFilesWithoutNodeModules);
+
+      } else {
+        map.set(name, scanner.getOutputFiles());
+      }
+    }
+
+    pkgSourceBatches.forEach(scan);
+    scan(appSourceBatch);
+
+    return map;
+  }
+
   // Called by bundler's Target._emitResources.  It returns the actual resources
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources() {
-    const self = this;
+  getResources(jsResources) {
     buildmessage.assertInJob();
 
-    var flatten = function (arrays) {
+    function flatten(arrays) {
       return Array.prototype.concat.apply([], arrays);
-    };
-    var resources = flatten(_.pluck(self.resourceSlots, 'outputResources'));
-    var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
-    Array.prototype.push.apply(resources, self._linkJS(jsResources));
+    }
+
+    const resources = flatten(_.pluck(this.resourceSlots, 'outputResources'));
+
+    resources.push(...this._linkJS(jsResources || flatten(
+      _.pluck(this.resourceSlots, 'jsOutputResources')
+    )));
+
     return resources;
   }
 
@@ -597,31 +706,11 @@ class PackageSourceBatch {
 
     var bundleArch = self.processor.arch;
 
-    const useMeteorInstall =
-      _.isString(self.sourceRoot) && (
-        self.unibuild.pkg.name === "modules" ||
-        _.has(self.usedPackageNames, "modules")
-      );
-
-    if (useMeteorInstall) {
-      // If the module system is enabled, scan the input files to find
-      // their transitive dependencies.
-      jsResources = new ImportScanner({
-        name: self.unibuild.pkg.name || null,
-        bundleArch,
-        sourceRoot: self.sourceRoot,
-        usedPackageNames: self.usedPackageNames,
-        nodeModulesPath: self.unibuild.nodeModulesPath,
-        watchSet: self.unibuild.watchSet,
-      }).addInputFiles(jsResources)
-        .getOutputFiles();
-    }
-
     // Run the linker.
     const isApp = ! self.unibuild.pkg.name;
     const linkerOptions = {
       useGlobalNamespace: isApp,
-      useMeteorInstall,
+      useMeteorInstall: self.useMeteorInstall,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
