@@ -197,17 +197,33 @@ _.extend(Roles, {
   },
 
   /**
-   * Add role parent to the role.
+   * Add role parent to roles.
    *
    * Previous parents are kept (role can have multiple parents). For users which have the
    * parent role set, new subroles are added automatically.
    *
-   * @method addRoleParent
-   * @param {String} roleName Name of role.
+   * @method addRolesParent
+   * @param {Array|String} rolesNames Name(s) of role(s).
    * @param {String} parentName Name of parent role.
    * @static
    */
-  addRoleParent: function (roleName, parentName) {
+  addRolesParent: function (rolesNames, parentName) {
+    // ensure arrays
+    if (!_.isArray(rolesNames)) rolesNames = [rolesNames];
+
+    _.each(rolesNames, function (roleName) {
+      Roles._addRoleParent(roleName, parentName);
+    });
+  },
+
+  /**
+   * @method _addRoleParent
+   * @param {String} roleName Name of role.
+   * @param {String} parentName Name of parent role.
+   * @private
+   * @static
+   */
+  _addRoleParent: function (roleName, parentName) {
     var role,
         count,
         parentRoles,
@@ -285,17 +301,33 @@ _.extend(Roles, {
   },
 
   /**
-   * Remove role parent from the role.
+   * Remove role parent from roles.
    *
    * Other parents are kept (role can have multiple parents). For users which have the
    * parent role set, removed subrole is removed automatically.
    *
-   * @method removeRoleParent
-   * @param {String} roleName Name of role.
+   * @method removeRolesParent
+   * @param {Array|String} rolesNames Name(s) of role(s).
    * @param {String} parentName Name of parent role.
    * @static
    */
-  removeRoleParent: function (roleName, parentName) {
+  removeRolesParent: function (rolesNames, parentName) {
+    // ensure arrays
+    if (!_.isArray(rolesNames)) rolesNames = [rolesNames];
+
+    _.each(rolesNames, function (roleName) {
+      Roles._removeRoleParent(roleName, parentName);
+    });
+  },
+
+  /**
+   * @method _removeRoleParent
+   * @param {String} roleName Name of role.
+   * @param {String} parentName Name of parent role.
+   * @private
+   * @static
+   */
+  _removeRoleParent: function (roleName, parentName) {
     var role,
         count,
         parentRoles;
@@ -304,7 +336,7 @@ _.extend(Roles, {
     Roles._checkRoleName(parentName);
 
     // check for role existence
-    // this would not really be needed, but we are trying to match addRoleParent
+    // this would not really be needed, but we are trying to match addRolesParent
     role = Meteor.roles.findOne({_id: roleName}, {fields: {_id: 1}});
 
     if (!role) {

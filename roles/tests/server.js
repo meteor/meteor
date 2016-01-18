@@ -966,7 +966,7 @@
       }]);
 
       Roles.createRole('PERMISSION');
-      Roles.addRoleParent('PERMISSION', 'user');
+      Roles.addRolesParent('PERMISSION', 'user');
 
       test.equal(Roles.getRolesForUser(userId, {fullObjects: true, partition: 'partition1'}), [{
         _id: 'admin',
@@ -1672,10 +1672,10 @@
       Roles.createRole('VIEW_PERMISSION');
       Roles.createRole('EDIT_PERMISSION');
       Roles.createRole('DELETE_PERMISSION');
-      Roles.addRoleParent('ALL_PERMISSIONS', 'user');
-      Roles.addRoleParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
-      Roles.addRoleParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
-      Roles.addRoleParent('DELETE_PERMISSION', 'admin');
+      Roles.addRolesParent('ALL_PERMISSIONS', 'user');
+      Roles.addRolesParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('DELETE_PERMISSION', 'admin');
 
       Roles.addUsersToRoles(users.eve, ['user'], 'partition1');
       Roles.addUsersToRoles(users.eve, ['user'], 'partition2');
@@ -1907,10 +1907,10 @@
       Roles.createRole('VIEW_PERMISSION');
       Roles.createRole('EDIT_PERMISSION');
       Roles.createRole('DELETE_PERMISSION');
-      Roles.addRoleParent('ALL_PERMISSIONS', 'user');
-      Roles.addRoleParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
-      Roles.addRoleParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
-      Roles.addRoleParent('DELETE_PERMISSION', 'admin');
+      Roles.addRolesParent('ALL_PERMISSIONS', 'user');
+      Roles.addRolesParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('DELETE_PERMISSION', 'admin');
 
       Roles.addUsersToRoles(users.eve, ['user']);
 
@@ -1984,10 +1984,10 @@
       Roles.createRole('VIEW_PERMISSION');
       Roles.createRole('EDIT_PERMISSION');
       Roles.createRole('DELETE_PERMISSION');
-      Roles.addRoleParent('ALL_PERMISSIONS', 'user');
-      Roles.addRoleParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
-      Roles.addRoleParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
-      Roles.addRoleParent('DELETE_PERMISSION', 'admin');
+      Roles.addRolesParent('ALL_PERMISSIONS', 'user');
+      Roles.addRolesParent('EDIT_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('VIEW_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('DELETE_PERMISSION', 'admin');
 
       Roles.addUsersToRoles(users.eve, ['user']);
       Roles.addUsersToRoles(users.eve, ['ALL_PERMISSIONS'], 'partition');
@@ -2027,7 +2027,7 @@
 
       Roles.createRole('MODERATE_PERMISSION');
 
-      Roles.addRoleParent('MODERATE_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('MODERATE_PERMISSION', 'ALL_PERMISSIONS');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION'));
       test.isTrue(Roles.userIsInRole(users.eve, 'MODERATE_PERMISSION', 'partition'));
@@ -2121,7 +2121,7 @@
         assigned: false
       }]);
 
-      Roles.addRoleParent('DELETE_PERMISSION', 'ALL_PERMISSIONS');
+      Roles.addRolesParent('DELETE_PERMISSION', 'ALL_PERMISSIONS');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION'));
       test.isTrue(Roles.userIsInRole(users.eve, 'DELETE_PERMISSION', 'partition'));
@@ -2255,15 +2255,15 @@
       Roles.createRole('EXTRA_PERMISSION_ROLE_1');
       Roles.createRole('EXTRA_PERMISSION_ROLE_2');
 
-      Roles.addRoleParent('COMMON_PERMISSION_1', 'role1');
-      Roles.addRoleParent('COMMON_PERMISSION_2', 'role1');
-      Roles.addRoleParent('COMMON_PERMISSION_3', 'role1');
-      Roles.addRoleParent('EXTRA_PERMISSION_ROLE_1', 'role1');
+      Roles.addRolesParent('COMMON_PERMISSION_1', 'role1');
+      Roles.addRolesParent('COMMON_PERMISSION_2', 'role1');
+      Roles.addRolesParent('COMMON_PERMISSION_3', 'role1');
+      Roles.addRolesParent('EXTRA_PERMISSION_ROLE_1', 'role1');
 
-      Roles.addRoleParent('COMMON_PERMISSION_1', 'role2');
-      Roles.addRoleParent('COMMON_PERMISSION_2', 'role2');
-      Roles.addRoleParent('COMMON_PERMISSION_3', 'role2');
-      Roles.addRoleParent('EXTRA_PERMISSION_ROLE_2', 'role2');
+      Roles.addRolesParent('COMMON_PERMISSION_1', 'role2');
+      Roles.addRolesParent('COMMON_PERMISSION_2', 'role2');
+      Roles.addRolesParent('COMMON_PERMISSION_3', 'role2');
+      Roles.addRolesParent('EXTRA_PERMISSION_ROLE_2', 'role2');
 
       Roles.addUsersToRoles(users.eve, 'role1');
       Roles.addUsersToRoles(users.eve, 'role2');
@@ -2414,7 +2414,7 @@
         assigned: true
       }]);
 
-      Roles.addRoleParent('EDIT_PERMISSION', 'admin');
+      Roles.addRolesParent('EDIT_PERMISSION', 'admin');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
@@ -2434,7 +2434,7 @@
       Roles.createRole('admin');
       Roles.createRole('EDIT_PERMISSION');
 
-      Roles.addRoleParent('EDIT_PERMISSION', 'admin');
+      Roles.addRolesParent('EDIT_PERMISSION', 'admin');
 
       Roles.addUsersToRoles(users.eve, 'EDIT_PERMISSION');
 
@@ -2447,7 +2447,7 @@
         assigned: true
       }]);
 
-      Roles.removeRoleParent('EDIT_PERMISSION', 'admin');
+      Roles.removeRolesParent('EDIT_PERMISSION', 'admin');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
@@ -2468,7 +2468,7 @@
       Roles.createRole('user');
       Roles.createRole('EDIT_PERMISSION');
 
-      Roles.addRoleParent('EDIT_PERMISSION', 'admin');
+      Roles.addRolesParent('EDIT_PERMISSION', 'admin');
 
       Roles.addUsersToRoles(users.eve, 'EDIT_PERMISSION');
 
@@ -2481,7 +2481,7 @@
         assigned: true
       }]);
 
-      Roles.addRoleParent('EDIT_PERMISSION', 'user');
+      Roles.addRolesParent('EDIT_PERMISSION', 'user');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
@@ -2492,7 +2492,7 @@
         assigned: true
       }]);
 
-      Roles.removeRoleParent('EDIT_PERMISSION', 'user');
+      Roles.removeRolesParent('EDIT_PERMISSION', 'user');
 
       test.isTrue(Roles.userIsInRole(users.eve, 'EDIT_PERMISSION'));
       test.isFalse(Roles.userIsInRole(users.eve, 'admin'));
@@ -2513,11 +2513,11 @@
       Roles.createRole('editor');
       Roles.createRole('user');
 
-      Roles.addRoleParent('editor', 'admin');
-      Roles.addRoleParent('user', 'editor');
+      Roles.addRolesParent('editor', 'admin');
+      Roles.addRolesParent('user', 'editor');
 
       test.throws(function () {
-        Roles.addRoleParent('admin', 'user');
+        Roles.addRolesParent('admin', 'user');
       }, /form a cycle/);
     });
 

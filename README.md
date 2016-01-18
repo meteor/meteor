@@ -81,9 +81,9 @@ Roles.createRole('user');
 Roles.createRole('admin');
 Roles.createRole('USERS_VIEW');
 Roles.createRole('POST_EDIT');
-Roles.addRoleParent('USERS_VIEW', 'admin');
-Roles.addRoleParent('POST_EDIT', 'admin');
-Roles.addRoleParent('POST_EDIT', 'user');
+Roles.addRolesParent('USERS_VIEW', 'admin');
+Roles.addRolesParent('POST_EDIT', 'admin');
+Roles.addRolesParent('POST_EDIT', 'user');
 ```
 
 <br />
@@ -179,7 +179,7 @@ Here is the list of important changes between meteor-roles 1.0 and 2.0 to consid
 * Functions which modify roles are available both on the client and server side, but should be called on the
   client side only from inside Meteor methods.
 * `deleteRole` can now delete role even when in use, it is automatically unset from all users.
-* Functions `addRoleParent` and `removeRoleParent` were added.
+* Functions `addRolesParent` and `removeRolesParent` were added.
 * `addUsersToRoles` and `setUserRoles` now require that roles exist and will not create missing roles automatically.
 * All functions work with 1.0 arguments, but in 2.0 accept extra arguments and/or options.
 
