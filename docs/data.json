@@ -230,14 +230,14 @@
         {
             "file": "roles/roles_common.js",
             "line": 199,
-            "description": "Add role parent to the role.\n\nPrevious parents are kept (role can have multiple parents). For users which have the\nparent role set, new subroles are added automatically.",
+            "description": "Add role parent to roles.\n\nPrevious parents are kept (role can have multiple parents). For users which have the\nparent role set, new subroles are added automatically.",
             "itemtype": "method",
-            "name": "addRoleParent",
+            "name": "addRolesParent",
             "params": [
                 {
-                    "name": "roleName",
-                    "description": "Name of role.",
-                    "type": "String"
+                    "name": "rolesNames",
+                    "description": "Name(s) of role(s).",
+                    "type": "Array|String"
                 },
                 {
                     "name": "parentName",
@@ -251,15 +251,38 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 287,
-            "description": "Remove role parent from the role.\n\nOther parents are kept (role can have multiple parents). For users which have the\nparent role set, removed subrole is removed automatically.",
+            "line": 219,
             "itemtype": "method",
-            "name": "removeRoleParent",
+            "name": "_addRoleParent",
             "params": [
                 {
                     "name": "roleName",
                     "description": "Name of role.",
                     "type": "String"
+                },
+                {
+                    "name": "parentName",
+                    "description": "Name of parent role.",
+                    "type": "String"
+                }
+            ],
+            "access": "private",
+            "tagname": "",
+            "static": 1,
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 303,
+            "description": "Remove role parent from roles.\n\nOther parents are kept (role can have multiple parents). For users which have the\nparent role set, removed subrole is removed automatically.",
+            "itemtype": "method",
+            "name": "removeRolesParent",
+            "params": [
+                {
+                    "name": "rolesNames",
+                    "description": "Name(s) of role(s).",
+                    "type": "Array|String"
                 },
                 {
                     "name": "parentName",
@@ -273,7 +296,30 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 353,
+            "line": 323,
+            "itemtype": "method",
+            "name": "_removeRoleParent",
+            "params": [
+                {
+                    "name": "roleName",
+                    "description": "Name of role.",
+                    "type": "String"
+                },
+                {
+                    "name": "parentName",
+                    "description": "Name of parent role.",
+                    "type": "String"
+                }
+            ],
+            "access": "private",
+            "tagname": "",
+            "static": 1,
+            "class": "Roles",
+            "module": "Roles"
+        },
+        {
+            "file": "roles/roles_common.js",
+            "line": 385,
             "description": "Add users to roles.\n\nAdds roles to existing roles for each user.",
             "example": [
                 "\n    Roles.addUsersToRoles(userId, 'admin')\n    Roles.addUsersToRoles(userId, ['view-secrets'], 'example.com')\n    Roles.addUsersToRoles([user1, user2], ['user','editor'])\n    Roles.addUsersToRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')"
@@ -304,7 +350,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 408,
+            "line": 440,
             "description": "Set users' roles.\n\nReplaces all existing roles with a new set of roles.",
             "example": [
                 "\n    Roles.setUserRoles(userId, 'admin')\n    Roles.setUserRoles(userId, ['view-secrets'], 'example.com')\n    Roles.setUserRoles([user1, user2], ['user','editor'])\n    Roles.setUserRoles([user1, user2], ['glorious-admin', 'perform-action'], 'example.org')"
@@ -335,7 +381,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 475,
+            "line": 507,
             "description": "Add one user to one role.",
             "itemtype": "method",
             "name": "_addUserToRole",
@@ -368,7 +414,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 595,
+            "line": 627,
             "description": "Remove users from assigned roles.",
             "example": [
                 "\n    Roles.removeUsersFromRoles(userId, 'admin')\n    Roles.removeUsersFromRoles([userId, user2], ['editor'])\n    Roles.removeUsersFromRoles(userId, ['user'], 'group1')"
@@ -399,7 +445,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 648,
+            "line": 680,
             "description": "Remove one user from one role.\n\nWARNING: It leaves user's roles in a possibly inconsistent state. Because we allow the same\nrole to be a child of multiple roles it might happen that it removes some subroles which\nit should not because they are in effect also through some other parent role. You should always\ncall `_assureConsistency` after you are finished with calls to `_removeUserFromRole` for a\nparticular user.",
             "itemtype": "method",
             "name": "_removeUserFromRole",
@@ -428,7 +474,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 716,
+            "line": 748,
             "description": "Makes sure all subroles are correctly set, and no extra subroles are set which should not be.\n\nUsed internally after complicated changes, but it can also be used whenever one feels that\nthere might be inconsistencies (eg., after a crash).\n\nWe simply re-set to the user their assigned roles again and remove any roles which\nare marked as not explicitly assigned, and have not been part of what we currently set.",
             "itemtype": "method",
             "name": "_assureConsistency",
@@ -447,7 +493,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 764,
+            "line": 796,
             "description": "Check if user has specified roles.",
             "example": [
                 "\n    // global roles\n    Roles.userIsInRole(user, 'admin')\n    Roles.userIsInRole(user, ['admin','editor'])\n    Roles.userIsInRole(userId, 'admin')\n    Roles.userIsInRole(userId, ['admin','editor'])\n\n    // partition roles (global roles are still checked)\n    Roles.userIsInRole(user, 'admin', 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], 'group1')\n    Roles.userIsInRole(userId, ['admin','editor'], {partition: 'group1'})"
@@ -463,7 +509,7 @@
                 {
                     "name": "roles",
                     "description": "Name of role or an array of roles to check against. If array,\n                            will return `true` if user is in _any_ role.\n                            Roles do not have to exist.",
-                    "type": "String|Array"
+                    "type": "Array|String"
                 },
                 {
                     "name": "options",
@@ -482,7 +528,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 868,
+            "line": 900,
             "description": "Retrieve user's roles.",
             "itemtype": "method",
             "name": "getRolesForUser",
@@ -509,7 +555,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 924,
+            "line": 956,
             "description": "Retrieve cursor of all existing roles.",
             "itemtype": "method",
             "name": "getAllRoles",
@@ -531,7 +577,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 939,
+            "line": 971,
             "description": "Retrieve all users who are in target role.\n\nOptions:",
             "itemtype": "method",
             "name": "getUsersInRole",
@@ -539,7 +585,7 @@
                 {
                     "name": "roles",
                     "description": "Name of role or an array of roles. If array, users\n                            returned will have at least one of the roles\n                            specified but need not have _all_ roles.\n                            Roles do not have to exist.",
-                    "type": "String|Array"
+                    "type": "Array|String"
                 },
                 {
                     "name": "options",
@@ -564,14 +610,14 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 970,
+            "line": 1002,
             "itemtype": "method",
             "name": "_usersInRoleQuery",
             "params": [
                 {
                     "name": "roles",
                     "description": "Name of role or an array of roles. If array, users\n                            returned will have at least one of the roles\n                            specified but need not have _all_ roles.\n                            Roles do not have to exist.",
-                    "type": "String|Array"
+                    "type": "Array|String"
                 },
                 {
                     "name": "options",
@@ -598,7 +644,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1042,
+            "line": 1074,
             "description": "Deprecated. Use `getPartitionsForUser` instead.",
             "itemtype": "method",
             "name": "getGroupsForUser",
@@ -609,7 +655,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1058,
+            "line": 1090,
             "description": "Retrieve users partitions, if any.",
             "itemtype": "method",
             "name": "getPartitionsForUser",
@@ -622,7 +668,7 @@
                 {
                     "name": "roles",
                     "description": "Name of roles to restrict partitions to.",
-                    "type": "String|Array",
+                    "type": "Array|String",
                     "optional": true
                 }
             ],
@@ -636,7 +682,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1090,
+            "line": 1122,
             "description": "Rename a partition.\n\nRoles assigned with a given partition are changed to be under the new partition.",
             "itemtype": "method",
             "name": "renamePartition",
@@ -658,7 +704,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1126,
+            "line": 1158,
             "description": "Remove a partition.\n\nRoles assigned with a given partition are removed.",
             "itemtype": "method",
             "name": "removePartition",
@@ -675,7 +721,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1149,
+            "line": 1181,
             "description": "Resolves the user ID into an actual user object with `roles` field,\nif it is not already.",
             "itemtype": "method",
             "name": "_resolveUser",
@@ -703,7 +749,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1175,
+            "line": 1207,
             "itemtype": "method",
             "name": "_roleMatcher",
             "params": [
@@ -725,7 +771,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1189,
+            "line": 1221,
             "itemtype": "method",
             "name": "_roleAndPartitionMatcher",
             "params": [
@@ -752,7 +798,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1206,
+            "line": 1238,
             "itemtype": "method",
             "name": "_partitionMatcher",
             "params": [
@@ -774,7 +820,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1222,
+            "line": 1254,
             "itemtype": "method",
             "name": "_onlyAssignedMatcher",
             "return": {
@@ -789,7 +835,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1235,
+            "line": 1267,
             "description": "Throw an exception if `roleName` is an invalid role name.",
             "itemtype": "method",
             "name": "_checkRoleName",
@@ -808,7 +854,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1249,
+            "line": 1281,
             "description": "Throw an exception if `partitionName` is an invalid partition name.",
             "itemtype": "method",
             "name": "_checkRoleName",
@@ -827,7 +873,7 @@
         },
         {
             "file": "roles/roles_common.js",
-            "line": 1265,
+            "line": 1297,
             "params": [
                 {
                     "name": "string",
@@ -1129,7 +1175,7 @@
     "warnings": [
         {
             "message": "Missing item type",
-            "line": " roles/roles_common.js:1265"
+            "line": " roles/roles_common.js:1297"
         }
     ]
 }
