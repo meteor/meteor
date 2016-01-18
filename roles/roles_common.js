@@ -778,7 +778,7 @@ _.extend(Roles, {
    *
    * @method userIsInRole
    * @param {String|Object} user User ID or an actual user object.
-   * @param {String|Array} roles Name of role or an array of roles to check against. If array,
+   * @param {Array|String} roles Name of role or an array of roles to check against. If array,
    *                             will return `true` if user is in _any_ role.
    *                             Roles do not have to exist.
    * @param {Object|String} [options] Options:
@@ -942,7 +942,7 @@ _.extend(Roles, {
    * Options:
    *
    * @method getUsersInRole
-   * @param {String|Array} roles Name of role or an array of roles. If array, users
+   * @param {Array|String} roles Name of role or an array of roles. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.
    *                             Roles do not have to exist.
@@ -969,7 +969,7 @@ _.extend(Roles, {
 
   /**
    * @method _usersInRoleQuery
-   * @param {String|Array} roles Name of role or an array of roles. If array, users
+   * @param {Array|String} roles Name of role or an array of roles. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.
    *                             Roles do not have to exist.
@@ -1060,7 +1060,7 @@ _.extend(Roles, {
    *
    * @method getPartitionsForUser
    * @param {String|Object} user User ID or an actual user object.
-   * @param {String|Array} [roles] Name of roles to restrict partitions to.
+   * @param {Array|String} [roles] Name of roles to restrict partitions to.
    *
    * @return {Array} Array of user's partitions, unsorted.
    * @static
