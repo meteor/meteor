@@ -252,7 +252,7 @@ Meteor.publish('Todos.inList', function(listId, limit) {
 
 It's important that we set a `sort` parameter on our query (to ensure a repeatable order of list items as more pages are requested), and that we set an absolute maximum on the number of items a user can request (at least in the case where lists can grow without bound).
 
-Then on the client side, we'd some kind of reactive state variable to control how many items to request:
+Then on the client side, we'd set some kind of reactive state variable to control how many items to request:
 
 ```js
 Template.Lists_show_page.onCreated(function() {
@@ -267,7 +267,7 @@ Template.Lists_show_page.onCreated(function() {
 
 We'd increment that `requestedTodos` variable when the user clicks "load more" (or perhaps just when they scroll to the bottom of the page).
 
-Once piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) package can be useful to publish this. We could add a `Lists.todoCount` publication like so
+One piece of information that's very useful to know when paginating data is the *total number of items* that you could see. The [`tmeasday:publish-counts`](https://atmospherejs.com/tmeasday/publish-counts) package can be useful to publish this. We could add a `Lists.todoCount` publication like so
 
 ```js
 Meteor.publish('Lists.todoCount', function({ listId }) {
