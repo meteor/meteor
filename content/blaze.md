@@ -450,7 +450,7 @@ Template.Lists_show_page.onRendered(function() {
 
 <h2 id="smart-components">Writing smart components with Blaze</h2>
 
-Some of your components will need to access state outside of their data context---for instance, data from the server via subscriptions or the the contents of client-side store. As discussed in the [data loading](data-loading.html#patterns) and [UI](ui-ux.html#smart-components) articles, you should be careful and considered in how use such smart components.
+Some of your components will need to access state outside of their data context---for instance, data from the server via subscriptions or the contents of client-side store. As discussed in the [data loading](data-loading.html#patterns) and [UI](ui-ux.html#smart-components) articles, you should be careful and considered in how use such smart components.
 
 All of the suggestions about reusable components apply to smart components. In addition:
 

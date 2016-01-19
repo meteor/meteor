@@ -27,7 +27,7 @@ To begin with, let's consider two categories of UI components that are useful to
 
 A "reusable" component is a component which doesn't rely on anything from the environment it renders in. It renders purely based on its direct inputs (its *template arguments* in Blaze, or *props* in React) and internal state.
 
-In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `Lists_show` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the the `Todos` or `Lists` collections.
+In Meteor specifically, this means a component which does not access data from any global sources---Collections, Stores, routers, user data, or similar. For instance, in the Todos example app, the `Lists_show` template takes in the list it is rendering and the set of todos for that list, and does not ever look directly in the `Todos` or `Lists` collections.
 
 Reusable components have many advantages:
 
