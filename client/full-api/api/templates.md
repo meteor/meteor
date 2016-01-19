@@ -327,7 +327,7 @@ or the DOM API.
 may be calculated by a helper and may change reactively.  The `data`
 argument is optional, and if it is omitted, the current data context
 is used. It's also possible, to use `Template.dynamic` as a block helper
-(`{{#Template.dynamic}} ... {{/Template.dynamic}}`)
+(`{{dstache}}#Template.dynamic}} ... {{dstache}}/Template.dynamic}}`)
 
 For example, if there is a template named "foo", `{{dstache}}> Template.dynamic
 template="foo"}}` is equivalent to `{{dstache}}> foo}}` and
