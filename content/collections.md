@@ -382,6 +382,8 @@ If the migration logs anything to the console, you'll see it in the terminal win
 
 To run a migration against your production database, run your app locally in production mode (with production settings and environment variables, including database settings), and use the Meteor shell in the same way. What this does is run the `up()` function of all outstanding migrations, against your production database. In our case, it should ensure all lists have a `todoCount` field set.
 
+A good way to do the above is to spin up a virtual machine close to your database that has Meteor installed and SSH access (a special EC2 instance that you start and stop for the purpose is a reasonable option), and running the command after shelling into it. That way any latencies between your machine and the database will be eliminated, but you still can be very careful about how the migration is run.
+
 **Note that you should always take a database backup before running any migration!**
 
 <h3 id="breaking-changes">Breaking schema changes</h3>
