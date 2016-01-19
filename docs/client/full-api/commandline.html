@@ -70,6 +70,16 @@ You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
+<h3 id="meteorloginlogout">meteor login / logout</h3>
+
+Log in and out of your account using Meteor's authentication system.
+
+You can pass `METEOR_SESSION_FILE=token.json` before `meteor login` to generate
+a login session token so you don't have to share your login credentials with
+third-party service providers. You can revoke the token at any time from your
+[accounts settings page](https://www.meteor.com/account-settings/login-locations).
+
+
 <h3 id="meteordeploy">meteor deploy <i>site</i></h3>
 
 Deploy the project in your current directory to Meteor's servers.
