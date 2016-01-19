@@ -449,6 +449,7 @@ export default class ImportScanner {
         // Output a JS module that exports just the "name" and "main"
         // properties defined in the package.json file.
         "exports.name = " + JSON.stringify(pkg.name) + ";\n" +
+        "exports.version = " + JSON.stringify(pkg.version) + ";\n" +
         "exports.main = " + JSON.stringify(pkg.main) + ";\n"
       );
 

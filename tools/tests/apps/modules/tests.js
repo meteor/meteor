@@ -121,6 +121,11 @@ describe("local node_modules", () => {
     // Defined in packages/modules-test-package/common.js.
     assert.strictEqual(typeof regeneratorRuntime, "object");
   });
+
+  it('should expose "version" field of package.json', () => {
+    const pkg = require("moment/package.json");
+    assert.strictEqual(pkg.version, "2.11.1");
+  });
 });
 
 describe("Meteor packages", () => {
