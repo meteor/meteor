@@ -450,7 +450,7 @@ Template.Lists_show_page.onRendered(function() {
 
 <h2 id="smart-components">Writing smart components with Blaze</h2>
 
-Some of your components will need to access state outside of their data context---for instance, data from the server via subscriptions or the the contents of client-side store. As discussed in the [data loading](data-loading.html#patterns) and [UI](ui-ux.html#smart-components) articles, you should be careful and considered in how use such smart components.
+Some of your components will need to access state outside of their data context---for instance, data from the server via subscriptions or the contents of client-side store. As discussed in the [data loading](data-loading.html#patterns) and [UI](ui-ux.html#smart-components) articles, you should be careful and considered in how use such smart components.
 
 All of the suggestions about reusable components apply to smart components. In addition:
 
@@ -526,7 +526,7 @@ It's common to want to reuse code between two otherwise unrelated components. Th
 
 If possible, it's usually best to try and abstract out the reusable part of the two components that need to share functionality into a new, smaller component. If you follow the patterns for [reusable components](#reusable-components), it should be simple to reuse this sub-component everywhere you need this functionality.
 
-For instance, suppose you have many places in your application where you need an input to blur itself when you click the "esc" key. If you were building a autocomplete widget that also wanted this functionality, you could compose a `blurringInput` inside your `autocompleteInput`:
+For instance, suppose you have many places in your application where you need an input to blur itself when you click the "esc" key. If you were building an autocomplete widget that also wanted this functionality, you could compose a `blurringInput` inside your `autocompleteInput`:
 
 ```html
 <template name="autocompleteInput">

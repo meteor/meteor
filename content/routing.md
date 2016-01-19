@@ -153,7 +153,7 @@ To use this package, we need to define a "layout" component. In the Todos exampl
 ```
 
 (This is not the entire `App_body` component, but we highlight the most important part here).
-Here, we are using a Blaze feature called `Template.dynamic` to render a template which is attached to the the `main` property of the data context. Using Blaze Layout, we can change that `main` property when a route is accessed.
+Here, we are using a Blaze feature called `Template.dynamic` to render a template which is attached to the `main` property of the data context. Using Blaze Layout, we can change that `main` property when a route is accessed.
 
 We do that in the `action` function of our `Lists.show` route definition:
 
