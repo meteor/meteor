@@ -526,7 +526,7 @@ It's common to want to reuse code between two otherwise unrelated components. Th
 
 If possible, it's usually best to try and abstract out the reusable part of the two components that need to share functionality into a new, smaller component. If you follow the patterns for [reusable components](#reusable-components), it should be simple to reuse this sub-component everywhere you need this functionality.
 
-For instance, suppose you have many places in your application where you need an input to blur itself when you click the "esc" key. If you were building a autocomplete widget that also wanted this functionality, you could compose a `blurringInput` inside your `autocompleteInput`:
+For instance, suppose you have many places in your application where you need an input to blur itself when you click the "esc" key. If you were building an autocomplete widget that also wanted this functionality, you could compose a `blurringInput` inside your `autocompleteInput`:
 
 ```html
 <template name="autocompleteInput">
