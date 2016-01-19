@@ -675,7 +675,10 @@ export class PackageSourceBatch {
     }
 
     pkgSourceBatches.forEach(scan);
-    scan(appSourceBatch);
+
+    if (appSourceBatch) {
+      scan(appSourceBatch);
+    }
 
     return map;
   }
