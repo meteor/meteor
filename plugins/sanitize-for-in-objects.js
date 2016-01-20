@@ -20,9 +20,7 @@ module.exports = function (babel) {
 
         rightPath.replaceWith(t.callExpression(
           t.memberExpression(
-            t.callExpression(t.identifier("require"), [
-              t.stringLiteral("meteor-babel/runtime") // TODO
-            ]),
+            t.identifier("meteorBabelHelpers"),
             t.identifier("sanitizeForInObject"),
             false
           ),
