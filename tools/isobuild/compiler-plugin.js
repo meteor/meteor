@@ -832,6 +832,9 @@ export class PackageSourceBatch {
         if (CACHE_DEBUG) {
           console.log('LINKER DISK CACHE HIT:', linkerOptions.name, bundleArch);
         }
+        // Add the bufferized value of diskCached to the in-memory LRU cache
+        // so we don't have to go to disk next time.
+        LINKER_CACHE.set(cacheKey, diskCached);
         return diskCached;
       }
     }
