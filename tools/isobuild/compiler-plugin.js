@@ -403,17 +403,40 @@ class ResourceSlot {
       throw Error("addStylesheet on non-source ResourceSlot?");
     }
 
-    self.outputResources.push({
-      type: "css",
+    const data = files.convertToStandardLineEndings(options.data);
+    const useMeteorInstall = self.packageSourceBatch.useMeteorInstall;
+    const resource = {
       refreshable: true,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
+      sourcePath: this.inputResource.path,
+      servePath: self.packageSourceBatch.unibuild.pkg
+        ._getServePath(options.path),
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      lazy: self._isLazy(options),
-    });
+      hash: sha1(data),
+      lazy: this._isLazy(options),
+    };
+
+    if (useMeteorInstall && resource.lazy) {
+      // If the current packageSourceBatch supports modules, and this CSS
+      // file is lazy, add it as a lazy JS module instead of adding it
+      // unconditionally as a CSS resource, so that it can be imported
+      // when needed.
+      resource.type = "js";
+      resource.data = new Buffer(
+        'module.exports = require("meteor/modules").addStyles(' +
+          JSON.stringify(data) + ');\n',
+        'utf8'
+      );
+
+      self.jsOutputResources.push(resource);
+
+    } else {
+      resource.type = "css";
+      resource.data = new Buffer(data, 'utf8'),
+
+      self.outputResources.push(resource);
+    }
   }
 
   addJavaScript(options) {

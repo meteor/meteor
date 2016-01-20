@@ -7,5 +7,6 @@ Package.describe({
 
 Package.onUse(function(api) {
   api.use("modules-runtime");
+  api.mainModule("client.js", "client");
   api.export("meteorInstall");
 });
