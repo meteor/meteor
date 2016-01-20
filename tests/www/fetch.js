@@ -19,7 +19,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-(function() {
+(function(self) {
   'use strict';
 
   if (self.fetch) {
@@ -161,6 +161,14 @@
       } else {
         throw new Error('unsupported BodyInit type')
       }
+
+      if (!this.headers.get('content-type')) {
+        if (typeof body === 'string') {
+          this.headers.set('content-type', 'text/plain;charset=UTF-8')
+        } else if (this._bodyBlob && this._bodyBlob.type) {
+          this.headers.set('content-type', this._bodyBlob.type)
+        }
+      }
     }
 
     if (support.blob) {
@@ -297,13 +305,13 @@
       options = {}
     }
 
-    this._initBody(bodyInit)
     this.type = 'default'
     this.status = options.status
     this.ok = this.status >= 200 && this.status < 300
     this.statusText = options.statusText
     this.headers = options.headers instanceof Headers ? options.headers : new Headers(options.headers)
     this.url = options.url || ''
+    this._initBody(bodyInit)
   }
 
   Body.call(Response.prototype)
@@ -399,4 +407,4 @@
     })
   }
   self.fetch.polyfill = true
-})();
+})(typeof self !== 'undefined' ? self : this);
