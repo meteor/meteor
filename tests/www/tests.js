@@ -550,7 +550,7 @@ exports.defineAutoTests = function() {
 var oneYearInSeconds = 60 * 60 * 24 * 365;
 
 function fetchFromLocalServer(path) {
-  return fetch("http://localhost:2511" + path);
+  return fetch("http://localhost:12000" + path);
 }
 
 function expectIndexPageToBeServed(done) {

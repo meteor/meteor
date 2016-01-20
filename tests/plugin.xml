@@ -30,7 +30,7 @@
     <hook type="after_plugin_install" src="../scripts/iosAddBridgingHeader.js" />
 
     <config-file target="config.xml" parent="/*">
-      <preference name="WebAppLocalServerPort" value="2511" />
+      <preference name="WebAppLocalServerPort" value="12000" />
       <feature name="WebAppMockRemoteServer">
         <param name="ios-package" value="METWebAppMockRemoteServer" />
         <param name="onload" value="true"/>
