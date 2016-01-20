@@ -792,6 +792,13 @@ class Target {
           return;
         }
 
+        if (resource.type !== "js" &&
+            resource.lazy) {
+          // Only files that compile to JS can be imported, so any other
+          // files should be ignored here, if lazy.
+          return;
+        }
+
         if (_.contains(['js', 'css'], resource.type)) {
           if (resource.type === 'css' && ! isWeb) {
             // XXX might be nice to throw an error here, but then we'd

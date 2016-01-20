@@ -271,6 +271,14 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       return ret;
     },
 
+    _getOption(name, options) {
+      if (options && _.has(options, name)) {
+        return options.name;
+      }
+      const fileOptions = this.fileOptions;
+      return fileOptions && fileOptions[name];
+    },
+
     /**
      * @summary Works in web targets only. Add markup to the `head` or `body`
      * section of the document.
@@ -294,7 +302,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
       }
       resources.push({
         type: options.section,
-        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
+        data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+        lazy: this._getOption("lazy", options),
       });
     },
 
@@ -334,7 +343,8 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
             inputSourceArch.pkg.serveRoot,
             files.convertToStandardPath(options.path, true))),
         sourceMap: convertSourceMapPaths(options.sourceMap,
-                                         files.convertToStandardPath)
+                                         files.convertToStandardPath),
+        lazy: this._getOption("lazy", options),
       });
     },
 
@@ -361,16 +371,6 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         throw new Error("'sourcePath' option must be supplied to addJavaScript. Consider passing inputPath.");
       }
 
-      const fileOptions = this.fileOptions;
-
-      function getOption(name) {
-        // By default, use fileOptions for these options but also allow
-        // overriding them with the options.
-        return _.has(options, name)
-          ? options.name
-          : fileOptions && fileOptions[name];
-      }
-
       var data = new Buffer(
         files.convertToStandardLineEndings(options.data), 'utf8');
       resources.push({
@@ -384,9 +384,9 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
         hash: watch.sha1(data),
         sourceMap: convertSourceMapPaths(options.sourceMap,
                                          files.convertToStandardPath),
-        lazy: getOption("lazy"),
-        bare: !! getOption("bare"),
-        mainModule: !! getOption("mainModule"),
+        lazy: this._getOption("lazy", options),
+        bare: !! this._getOption("bare", options),
+        mainModule: !! this._getOption("mainModule", options),
       });
     },
 

@@ -364,6 +364,14 @@ class ResourceSlot {
     }
   }
 
+  _getOption(name, options) {
+    if (options && _.has(options, name)) {
+      return options.name;
+    }
+    const fileOptions = this.inputResource.fileOptions;
+    return fileOptions && fileOptions[name];
+  }
+
   addStylesheet(options) {
     const self = this;
     if (! self.sourceProcessor) {
@@ -378,7 +386,8 @@ class ResourceSlot {
         options.path),
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
-      sourceMap: options.sourceMap
+      sourceMap: options.sourceMap,
+      lazy: self._getOption("lazy", options),
     });
   }
 
@@ -387,16 +396,6 @@ class ResourceSlot {
     // #HardcodeJs this gets called by constructor in the "js" case
     if (! self.sourceProcessor && self.inputResource.extension !== "js") {
       throw Error("addJavaScript on non-source ResourceSlot?");
-    }
-
-    const fileOptions = self.inputResource.fileOptions;
-
-    function getOption(name) {
-      // By default, use fileOptions for these options but also allow
-      // overriding them with the options.
-      return _.has(options, name)
-        ? options.name
-        : fileOptions && fileOptions[name];
     }
 
     var data = new Buffer(
@@ -416,9 +415,9 @@ class ResourceSlot {
       sourceMap: options.sourceMap,
       // intentionally preserve a possible `undefined` value for files
       // in apps, rather than convert it into `false` via `!!`
-      lazy: getOption("lazy"),
-      bare: !! getOption("bare"),
-      mainModule: !! getOption("mainModule"),
+      lazy: self._getOption("lazy", options),
+      bare: !! self._getOption("bare", options),
+      mainModule: !! self._getOption("mainModule", options),
     });
   }
 
@@ -442,7 +441,8 @@ class ResourceSlot {
       path: options.path,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
-      hash: sha1(options.data)
+      hash: sha1(options.data),
+      lazy: self._getOption("lazy", options),
     });
   }
 
@@ -463,7 +463,8 @@ class ResourceSlot {
 
     self.outputResources.push({
       type: options.section,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
+      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+      lazy: self._getOption("lazy", options),
     });
   }
 }
