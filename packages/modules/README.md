@@ -175,7 +175,7 @@ console.log(bThing, "in a.js");
 
 ```js
 // b.js
-export var bThing = "a thing defined in b.js";
+export var bThing = "a thing defined";
 console.log(bThing, "in b.js");
 ```
 
