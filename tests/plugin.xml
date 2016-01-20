@@ -45,4 +45,15 @@
     <header-file src="src/ios/GCDWebServer+Testing.h" />
     <source-file src="src/ios/GCDWebServer+Testing.m" />
   </platform>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="WebAppMockRemoteServer" >
+        <param name="android-package" value="com.meteor.webapp.WebAppMockRemoteServer" />
+        <param name="onload" value="true" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/WebAppMockRemoteServer.java" target-dir="src/com/meteor/webapp" />
+  </platform>
 </plugin>

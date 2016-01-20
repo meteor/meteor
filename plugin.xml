@@ -87,4 +87,22 @@
     <framework src="CFNetwork.framework" />
     <framework src="libz.dylib" />
   </platform>
+
+  <platform name="android">
+    <config-file target="res/xml/config.xml" parent="/*">
+      <feature name="WebAppCordova" >
+        <param name="android-package" value="com.meteor.webapp.WebApp" />
+        <param name="onload" value="true" />
+      </feature>
+    </config-file>
+
+    <source-file src="src/android/WebApp.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/WebResourceHandler.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetManagerCache.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetBundle.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/AssetManifest.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/Utils.java" target-dir="src/com/meteor/webapp" />
+
+    <framework src="src/android/build-extras.gradle" custom="true" type="gradleReference" />
+  </platform>
 </plugin>
