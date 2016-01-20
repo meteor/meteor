@@ -16,7 +16,7 @@
     "babel-plugin-transform-es2015-arrow-functions": "^6.4.0",
     "babel-plugin-transform-es2015-block-scoped-functions": "^6.3.13",
     "babel-plugin-transform-es2015-block-scoping": "^6.4.0",
-    "babel-plugin-transform-es2015-classes": "^6.4.0",
+    "babel-plugin-transform-es2015-classes": "^6.4.5",
     "babel-plugin-transform-es2015-computed-properties": "^6.4.0",
     "babel-plugin-transform-es2015-destructuring": "^6.4.0",
     "babel-plugin-transform-es2015-for-of": "^6.3.13",
@@ -24,18 +24,18 @@
     "babel-plugin-transform-es2015-literals": "^6.3.13",
     "babel-plugin-transform-es2015-modules-commonjs": "^6.4.5",
     "babel-plugin-transform-es2015-object-super": "^6.4.0",
-    "babel-plugin-transform-es2015-parameters": "^6.4.2",
+    "babel-plugin-transform-es2015-parameters": "^6.4.5",
     "babel-plugin-transform-es2015-shorthand-properties": "^6.3.13",
     "babel-plugin-transform-es2015-spread": "^6.4.0",
     "babel-plugin-transform-es2015-sticky-regex": "^6.3.13",
     "babel-plugin-transform-es2015-template-literals": "^6.3.13",
-    "babel-plugin-transform-es2015-typeof-symbol": "^6.4.0",
-    "babel-plugin-transform-es2015-unicode-regex": "^6.3.13",
+    "babel-plugin-transform-es2015-typeof-symbol": "^6.4.3",
+    "babel-plugin-transform-es2015-unicode-regex": "^6.4.3",
     "babel-plugin-transform-es3-member-expression-literals": "^6.3.13",
     "babel-plugin-transform-es3-property-literals": "^6.3.13",
     "babel-plugin-transform-flow-strip-types": "^6.4.0",
     "babel-plugin-transform-object-rest-spread": "^6.3.13",
-    "babel-plugin-transform-regenerator": "^6.3.26",
-    "babel-plugin-transform-runtime": "^6.4.0"
+    "babel-plugin-transform-regenerator": "^6.4.4",
+    "babel-plugin-transform-runtime": "^6.4.3"
   }
 }
