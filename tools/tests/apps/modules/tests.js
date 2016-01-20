@@ -85,6 +85,50 @@ describe("template modules", () => {
   });
 });
 
+Meteor.isClient &&
+describe("css modules", () => {
+  it("should be loaded eagerly unless lazy", () => {
+    assert.strictEqual(
+      $(".app-eager-css").css("display"),
+      "none"
+    );
+
+    let error;
+    try {
+      require("./eager.css");
+    } catch (expected) {
+      error = expected;
+    }
+    assert.ok(error instanceof Error);
+  });
+
+  it("should be importable by an app", () => {
+    assert.strictEqual(
+      $(".app-lazy-css").css("display"),
+      "block"
+    );
+
+    require("./imports/lazy.css");
+
+    assert.strictEqual(
+      $(".app-lazy-css").css("display"),
+      "none"
+    );
+  });
+
+  it("should be importable by a package", () => {
+    assert.strictEqual(
+      $(".pkg-lazy-css.imported").css("display"),
+      "none"
+    );
+
+    assert.strictEqual(
+      $(".pkg-lazy-css.not-imported").css("display"),
+      "block"
+    );
+  });
+});
+
 describe("native node_modules", () => {
   Meteor.isServer &&
   it("can be imported on the server", () => {
