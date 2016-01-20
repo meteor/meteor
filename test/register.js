@@ -1,6 +1,4 @@
 var babelOptions = require("../options").getDefaults({
-  modules: true,
-  asyncAwait: true,
   react: true,
   jscript: true
 });

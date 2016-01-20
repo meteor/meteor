@@ -12,16 +12,6 @@ exports.getDefaults = function getDefaults(features) {
   };
 
   if (features) {
-    if (features.asyncAwait) {
-      options.whitelist.push(
-        "es7.asyncFunctions",
-        "regenerator"
-      );
-    } else if (features.meteorAsyncAwait) {
-      addPlugin(options, "./plugins/async-await.js");
-      options.whitelist.push("es7.asyncFunctions");
-    }
-
     if (features.react) {
       options.presets.push(
         require("babel-preset-react")
