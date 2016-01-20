@@ -807,6 +807,9 @@
       testUser(test, 'bob', ['admin', 'editor'], 'partition2');
       testUser(test, 'joe', ['editor'], 'partition2');
 
+      test.isTrue(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
+      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
+
       Roles.setUserRoles([bob, users.joe], [], 'partition1');
       testUser(test, 'eve', ['user'], 'partition1');
       testUser(test, 'bob', [], 'partition1');
@@ -814,6 +817,10 @@
       testUser(test, 'eve', ['editor'], 'partition2');
       testUser(test, 'bob', ['admin', 'editor'], 'partition2');
       testUser(test, 'joe', ['editor'], 'partition2');
+
+      // When roles in a given partition are removed, we do not want any dangling database content for that partition.
+      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.bob, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
+      test.isFalse(_.contains(_.pluck(Roles.getRolesForUser(users.joe, {anyPartition: true, fullObjects: true}), 'partition'), 'partition1'));
     });
 
   Tinytest.add(
