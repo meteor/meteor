@@ -82,7 +82,7 @@ export class CordovaBuilder {
       author: 'A Meteor Developer',
       email: 'n/a',
       website: 'n/a',
-      contentUrl: 'http://localhost:0/'
+      contentUrl: 'http://localhost:12000/'
     };
 
     // Set some defaults different from the Cordova defaults
