@@ -51,6 +51,35 @@ const pinnedPlatformVersions = {
   'ios': '4.0.1'
 }
 
+// We pin plugin versions to make sure we do not install versions that are
+// incompatible with the current platform versions.
+// Versions are taken from cordova-lib's package.json and should be updated
+// when we update to a newer version of cordova-lib.
+const pinnedPluginVersions = {
+  "cordova-plugin-battery-status": "1.1.1",
+  "cordova-plugin-camera": "2.0.0",
+  "cordova-plugin-console": "1.0.2",
+  "cordova-plugin-contacts": "2.0.0",
+  "cordova-plugin-device": "1.1.0",
+  "cordova-plugin-device-motion": "1.2.0",
+  "cordova-plugin-device-orientation": "1.0.2",
+  "cordova-plugin-dialogs": "1.2.0",
+  "cordova-plugin-file": "4.0.0",
+  "cordova-plugin-file-transfer": "1.4.0",
+  "cordova-plugin-geolocation": "2.0.0",
+  "cordova-plugin-globalization": "1.0.2",
+  "cordova-plugin-inappbrowser": "1.1.0",
+  "cordova-plugin-legacy-whitelist": "1.1.1",
+  "cordova-plugin-media": "2.0.0",
+  "cordova-plugin-media-capture": "1.1.0",
+  "cordova-plugin-network-information": "1.1.0",
+  "cordova-plugin-splashscreen": "3.0.0",
+  "cordova-plugin-statusbar": "2.0.0",
+  "cordova-plugin-test-framework": "1.1.0",
+  "cordova-plugin-vibration": "2.0.0",
+  "cordova-plugin-whitelist": "1.2.0"
+}
+
 export class CordovaProject {
   constructor(projectContext, options = {}) {
 
@@ -500,6 +529,11 @@ from Cordova project`, async () => {
       // SHA reference.
       pluginVersions = convertPluginVersions(pluginVersions);
 
+      // To ensure we do not attempt to install plugin versions incompatible
+      // with the current platform versions, we compare them against a list of
+      // pinned versions and adjust them if necessary.
+      this.ensurePinnedPluginVersions(pluginVersions);
+
       if (buildmessage.jobHasMessages()) {
         return;
       }
@@ -594,6 +628,27 @@ mobile-config.js accordingly.`);
             end: pluginsToInstallCount
           });
         });
+      }
+    });
+  }
+
+  ensurePinnedPluginVersions(pluginVersions) {
+    assert(pluginVersions);
+
+    _.each(pluginVersions, (version, id) => {
+      // Skip plugin specs that are not actual versions
+      if (utils.isUrlWithSha(version) || utils.isUrlWithFileScheme(version)) {
+        return;
+      }
+
+      const pinnedVersion = pinnedPluginVersions[id];
+
+      if (pinnedVersion && semver.lt(version, pinnedVersion)) {
+        Console.labelWarn(`Attempting to install plugin ${id}@${version}, but \
+it should have a minimum version of ${pinnedVersion} to ensure compatibility \
+with the current platform versions. Installing the minimum version for \
+convenience, but you should adjust your dependencies.`);
+        pluginVersions[id] = pinnedVersion;
       }
     });
   }
