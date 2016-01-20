@@ -329,7 +329,8 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     GCDWebServer.setLogLevel(GCDWebServerLoggingLevel.Info.rawValue)
 
     // Handlers are added last to first
-    addDefaultHandler()
+    addNotFoundHandler()
+    addIndexFileHandler()
     addHandlerForWwwDirectory()
     addHandlerForAssetBundle()
 
@@ -385,12 +386,26 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
     }
   }
 
-  private func addDefaultHandler() {
-    localServer.addDefaultHandlerForMethod("GET", requestClass: GCDWebServerRequest.self) { [weak self] (request) -> GCDWebServerResponse! in
-      guard let indexFile = self?.currentAssetBundle?.indexFile else {
-        return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_NotFound.rawValue)
-      }
-      return self?.responseForAsset(request, asset: indexFile)
+  private func addIndexFileHandler() {
+    localServer.addHandlerWithMatchBlock({ [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+      if requestMethod != "GET" { return nil }
+      
+      if URLPath == "/favicon.ico" { return nil }
+
+      guard let indexFile = self?.currentAssetBundle?.indexFile else { return nil }
+        
+      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
+      request.setAttribute(Box(indexFile), forKey: GCDWebServerRequestAttribute_Asset)
+      return request
+      }) { (request) -> GCDWebServerResponse! in
+        let asset = (request.attributeForKey(GCDWebServerRequestAttribute_Asset) as! Box<Asset>).value
+        return self.responseForAsset(request, asset: asset)
+    }
+  }
+  
+  private func addNotFoundHandler() {
+    localServer.addDefaultHandlerForMethod("GET", requestClass: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse! in
+           return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_NotFound.rawValue)
     }
   }
 

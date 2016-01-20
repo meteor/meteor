@@ -54,6 +54,13 @@ exports.defineAutoTests = function() {
         fetchFromLocalServer("/application/not-in-manifest").then(expectIndexPageToBeServed(done));
       });
 
+      it("should not serve index.html for a non-existing /favicon.ico", function(done) {
+        fetchFromLocalServer("/favicon.ico").then(function(response) {
+          expect(response.status).toBe(404);
+          done();
+        });
+      });
+
       // Caching
 
       it("should set the ETag header based on the asset hash", function(done) {
