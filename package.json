@@ -30,11 +30,10 @@
   },
   "dependencies": {
     "babel-core": "^6.2.4",
-    "babel-preset-meteor": "^6.4.0",
+    "babel-preset-meteor": "^6.4.1",
     "babel-preset-react": "^6.2.4",
     "babel-runtime": "^5.8.34",
-    "convert-source-map": "^1.1.2",
-    "meteor-async-await": "^0.1.1"
+    "convert-source-map": "^1.1.2"
   },
   "devDependencies": {
     "fibers": "^1.0.5",
