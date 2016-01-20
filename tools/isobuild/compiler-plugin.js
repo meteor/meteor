@@ -898,3 +898,12 @@ _.each([
     proto[method]
   );
 });
+
+// static methods to measure in profile
+_.each([
+  "computeJsOutputFilesMap"
+], method => {
+  PackageSourceBatch[method] = Profile(
+    "PackageSourceBatch." + method,
+    PackageSourceBatch[method]);
+});
