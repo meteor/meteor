@@ -54,11 +54,8 @@ export default class ImportScanner {
       const absPath = pathJoin(this.sourceRoot, file.sourcePath);
 
       // Files that are not eagerly evaluated (lazy) will only be included
-      // in the bundle if they are actually imported.
-      file.lazy = this._isFileLazy(file);
-
-      // Files that are eagerly evaluated are effectively "imported" as
-      // entry points.
+      // in the bundle if they are actually imported. Files that are
+      // eagerly evaluated are effectively "imported" as entry points.
       file.imported = ! file.lazy;
 
       file.installPath = this._getInstallPath(absPath);
@@ -104,30 +101,6 @@ export default class ImportScanner {
 
   getOutputFiles(options) {
     return this.outputFiles;
-  }
-
-  _isFileLazy(file) {
-    if (typeof file.lazy === "boolean") {
-      return file.lazy;
-    }
-
-    if (file.sourcePath.endsWith(".json")) {
-      // JSON files have no side effects, so there is no reason for them
-      // ever to be evaluated eagerly.
-      return true;
-    }
-
-    // If file.lazy was not previously defined, mark the file lazy if it
-    // is contained by an imports directory. Note that any files contained
-    // by a node_modules directory will already have been marked lazy in
-    // PackageSource#_inferFileOptions. The reason we can't do all our
-    // lazy marking in the _inferFileOptions method is that we don't know
-    // then whether the current app or package is using the modules
-    // package. At this point, we know the modules package must be in use,
-    // because the ImportScanner is only ever used when modules are used.
-    return this._splitPath(
-      pathDirname(file.sourcePath)
-    ).indexOf("imports") >= 0;
   }
 
   _scanFile(file) {

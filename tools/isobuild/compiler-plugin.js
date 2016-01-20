@@ -372,6 +372,31 @@ class ResourceSlot {
     return fileOptions && fileOptions[name];
   }
 
+  _isLazy(options) {
+    let lazy = this._getOption("lazy", options);
+
+    if (typeof lazy === "boolean") {
+      return lazy;
+    }
+
+    const sourcePath = this.inputResource.path;
+
+    if (sourcePath.endsWith(".json")) {
+      // JSON files have no side effects, so there is no reason for them
+      // ever to be evaluated eagerly.
+      return true;
+    }
+
+    // If file.lazy was not previously defined, mark the file lazy if it
+    // is contained by an imports directory. Note that any files contained
+    // by a node_modules directory will already have been marked lazy in
+    // PackageSource#_inferFileOptions.
+    return this.packageSourceBatch.useMeteorInstall &&
+      files.pathDirname(sourcePath)
+        .split(files.pathSep)
+        .indexOf("imports") >= 0;
+  }
+
   addStylesheet(options) {
     const self = this;
     if (! self.sourceProcessor) {
@@ -387,7 +412,7 @@ class ResourceSlot {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      lazy: self._getOption("lazy", options),
+      lazy: self._isLazy(options),
     });
   }
 
@@ -415,7 +440,7 @@ class ResourceSlot {
       sourceMap: options.sourceMap,
       // intentionally preserve a possible `undefined` value for files
       // in apps, rather than convert it into `false` via `!!`
-      lazy: self._getOption("lazy", options),
+      lazy: self._isLazy(options),
       bare: !! self._getOption("bare", options),
       mainModule: !! self._getOption("mainModule", options),
     });
@@ -442,7 +467,7 @@ class ResourceSlot {
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       hash: sha1(options.data),
-      lazy: self._getOption("lazy", options),
+      lazy: self._isLazy(options),
     });
   }
 
@@ -464,7 +489,7 @@ class ResourceSlot {
     self.outputResources.push({
       type: options.section,
       data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-      lazy: self._getOption("lazy", options),
+      lazy: self._isLazy(options),
     });
   }
 }
