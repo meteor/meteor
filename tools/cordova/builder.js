@@ -521,7 +521,8 @@ Valid platforms are: ios, android.`);
         _.keys(iconsIosSizes).concat(_.keys(iconsAndroidSizes));
       _.each(icons, function (value, key) {
         if (!_.include(validDevices, key)) {
-          Console.warn(key + ": unknown key in App.icons configuration.");
+          Console.labelWarn(`${key}: unknown key in App.icons \
+configuration. The key may be deprecated.`);
         }
       });
       _.extend(builder.imagePaths.icon, icons);
@@ -566,7 +567,8 @@ Valid platforms are: ios, android.`);
 
       _.each(launchScreens, function (value, key) {
         if (!_.include(validDevices, key)) {
-          Console.warn(key + ": unknown key in App.launchScreens configuration.");
+          Console.labelWarn(`${key}: unknown key in App.launchScreens \
+configuration. The key may be deprecated.`);
         }
       });
       _.extend(builder.imagePaths.splash, launchScreens);
