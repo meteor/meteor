@@ -9,10 +9,7 @@ var util = require("./util.js");
 
 var config = {
   sourceMapRootPath: null,
-  babelOptions: require("./options").getDefaults({
-    modules: true,
-    meteorAsyncAwait: true
-  })
+  babelOptions: require("./options").getDefaults()
 };
 
 exports = module.exports = function reconfigure(newConfig) {
