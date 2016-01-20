@@ -1,7 +1,11 @@
 // TODO Somehow expose a hash of these plugin options?
 module.exports = {
   plugins: [
-    require("babel-plugin-transform-runtime"),
+    [require("babel-plugin-transform-runtime"), {
+      // Avoid importing polyfills for things like Object.keys, which
+      // Meteor already shims in other ways.
+      polyfill: false
+    }],
     require("babel-plugin-check-es2015-constants"),
     require("babel-plugin-syntax-flow"),
     require("babel-plugin-syntax-trailing-function-commas"),
