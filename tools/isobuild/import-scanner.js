@@ -419,8 +419,8 @@ export default class ImportScanner {
   _addPkgJsonToOutput(pkgJsonPath, pkg) {
     if (! has(this.absPathToOutputIndex, pkgJsonPath)) {
       const data = new Buffer(
-        // Output a JS module that exports just the "name" and "main"
-        // properties defined in the package.json file.
+        // Output a JS module that exports just the "name", "version", and
+        // "main" properties defined in the package.json file.
         "exports.name = " + JSON.stringify(pkg.name) + ";\n" +
         "exports.version = " + JSON.stringify(pkg.version) + ";\n" +
         "exports.main = " + JSON.stringify(pkg.main) + ";\n"
