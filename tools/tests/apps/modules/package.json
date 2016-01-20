@@ -5,7 +5,8 @@
   "private": true,
   "dependencies": {
     "moment": "2.11.1",
-    "regenerator": "^0.8.42"
+    "regenerator": "^0.8.42",
+    "pixi.js": "^3.0.9"
   },
   "scripts": {
     "test": "../../../../meteor run"

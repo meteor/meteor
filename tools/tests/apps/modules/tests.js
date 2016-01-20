@@ -194,3 +194,11 @@ describe("Meteor packages", () => {
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
 });
+
+describe("PixiJS", () => {
+  Meteor.isClient &&
+  it("should be importable on the client", () => {
+    import PIXI from "pixi.js";
+    assert.strictEqual(require("PIXI"), PIXI);
+  });
+});
