@@ -1,6 +1,6 @@
 Package.describe({
   summary: "JavaScript minifiers",
-  version: "1.1.7"
+  version: "1.1.8-cordova.1"
 });
 
 Npm.depends({

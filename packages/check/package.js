@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Check whether a value matches a pattern",
-  version: '1.1.0'
+  version: '1.1.1-cordova.1'
 });
 
 Package.onUse(function (api) {
