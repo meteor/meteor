@@ -354,7 +354,9 @@ Object.keys(BabelRuntime).forEach(function (helperName) {
 meteorInstall({
   node_modules: {
     "babel-runtime": {
-      "regenerator.js": function (require, exports, module) {
+      "regenerator.js": function (r, e, module) {
+        // Note that we use the require function provided to the
+        // babel-runtime.js file, not the one named 'r' above.
         module.exports = require("regenerator/runtime-module");
       }
     }
