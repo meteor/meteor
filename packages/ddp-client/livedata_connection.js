@@ -181,8 +181,8 @@ var Connection = function (url, options) {
   self.__flushBufferedWrites = Meteor.bindEnvironment(self._flushBufferedWrites, "ddp buffered writes", self);
   // Collection name -> array of messages.
   self._bufferedWrites = {};
-  // When current buffer of updates started, in ms timestamp.
-  self._bufferedWritesStartedAt = null;
+  // When current buffer of updates must be flushed at, in ms timestamp.
+  self._bufferedWritesFlushAt = null;
   // Timeout handle for the next processing of all pending writes
   self._bufferedWritesFlushHandle = null;
 
@@ -1233,10 +1233,10 @@ _.extend(Connection.prototype, {
       return;
     }
 
-    if (self._bufferedWritesStartedAt === null) {
-      self._bufferedWritesStartedAt = new Date().valueOf();
+    if (self._bufferedWritesFlushAt === null) {
+      self._bufferedWritesFlushAt = new Date().valueOf() + self._bufferedWritesMaxAge;
     }
-    else if (self._bufferedWritesStartedAt + self._bufferedWritesMaxAge < new Date().valueOf()) {
+    else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
       self._flushBufferedWrites();
       return;
     }
@@ -1255,7 +1255,7 @@ _.extend(Connection.prototype, {
       self._bufferedWritesFlushHandle = null;
     }
 
-    self._bufferedWritesStartedAt = null;
+    self._bufferedWritesFlushAt = null;
     self._performWrites(self._bufferedWrites);
     self._bufferedWrites = {};
   },
