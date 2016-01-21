@@ -252,9 +252,6 @@
         "on-headers": {
           "version": "1.0.1"
         },
-        "parseurl": {
-          "version": "1.3.0"
-        },
         "pause": {
           "version": "0.1.0"
         },
