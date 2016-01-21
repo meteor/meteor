@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Update the client when new client code is available",
-  version: '1.2.4'
+  version: '1.2.5-cordova.1'
 });
 
 Package.onUse(function (api) {
