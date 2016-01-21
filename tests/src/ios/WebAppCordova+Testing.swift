@@ -1,4 +1,4 @@
-extension WebAppCordova {
+extension WebApp {
   func resetToInitialState(command: CDVInvokedUrlCommand) {
     commandDelegate?.runInBackground() {
       self.stopLocalServer()

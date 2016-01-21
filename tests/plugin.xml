@@ -18,7 +18,7 @@
     <clobbers target="WebAppMockRemoteServer" />
   </js-module>
 
-  <js-module src="www/webapp_cordova_testing.js" name="WebAppCordovaTesting">
+  <js-module src="www/webapp_cordova_testing.js" name="MeteorWebAppTesting">
     <merges target="WebAppCordova" />
   </js-module>
 

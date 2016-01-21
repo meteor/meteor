@@ -3,7 +3,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "resetToInitialState",
       []);
   },
@@ -12,7 +12,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "simulatePageReload",
       []);
   },
@@ -21,7 +21,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "simulateAppRestart",
       []);
   },
@@ -30,7 +30,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "downloadedVersionExists",
       [version]);
   },
@@ -39,7 +39,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "simulatePartialDownload",
       [version]);
   }

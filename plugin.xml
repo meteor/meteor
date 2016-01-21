@@ -16,7 +16,7 @@
     <engine name="apple-xcode" version=">=7.2" />
   </engines>
 
-  <js-module src="www/webapp_cordova.js" name="WebAppCordova">
+  <js-module src="www/webapp_cordova.js" name="MeteorWebApp">
     <merges target="WebAppCordova" />
   </js-module>
 
@@ -24,15 +24,15 @@
     <hook type="after_plugin_install" src="scripts/iosAddBridgingHeader.js" />
 
     <config-file target="config.xml" parent="/*">
-      <feature name="WebAppCordova">
-        <param name="ios-package" value="METWebAppCordova"/>
+      <feature name="MeteorWebApp">
+        <param name="ios-package" value="METWebApp"/>
         <param name="onload" value="true"/>
       </feature>
     </config-file>
 
     <header-file src="src/ios/cordova-plugin-meteor-webapp-Bridging-Header.h" />
 
-    <source-file src="src/ios/WebAppCordova.swift" />
+    <source-file src="src/ios/WebApp.swift" />
     <source-file src="src/ios/WebAppConfiguration.swift" />
     <source-file src="src/ios/AssetBundleManager.swift" />
     <source-file src="src/ios/AssetBundle.swift" />
@@ -90,7 +90,7 @@
 
   <platform name="android">
     <config-file target="res/xml/config.xml" parent="/*">
-      <feature name="WebAppCordova" >
+      <feature name="MeteorWebApp" >
         <param name="android-package" value="com.meteor.webapp.WebApp" />
         <param name="onload" value="true" />
       </feature>

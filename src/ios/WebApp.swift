@@ -16,17 +16,17 @@ let listeningPortRange: Range<UInt> = 12000...13000
 /// we revert to the last known good version
 let startupTimeoutInterval = 10.0
 
-@objc(METWebAppCordova)
-final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
+@objc(METWebApp)
+final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   /// The local web server responsible for serving assets to the web app
   private(set) var localServer: GCDWebServer!
-  
+
   /// The listening port of the local web server
   private var localServerPort: UInt = 0
 
   /// The www directory in the app bundle
   private(set) var wwwDirectoryURL: NSURL!
-  
+
   /// Persistent configuration settings for the webapp
   private var configuration: WebAppConfiguration!
 
@@ -98,10 +98,10 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
         NSLog("Could not remove versions directory: \(error)")
         return
       }
-      
+
       configuration.reset()
     }
-    
+
     // We keep track of the last seen initial version (see above)
     configuration.lastSeenInitialVersion = initialAssetBundle.version
 
@@ -151,9 +151,9 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
         self?.revertToLastKnownGoodVersion()
       }
     }
-    
+
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
-    
+
     NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
   }
 
@@ -166,7 +166,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       currentAssetBundle = pendingAssetBundle
       self.pendingAssetBundle = nil
     }
-    
+
     startupTimer?.startWithTimeInterval(startupTimeoutInterval)
   }
 
@@ -241,7 +241,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
   private func notifyDownloadFailure(error: ErrorType) {
     NSLog("Failure: \(error)")
-    
+
     let errorMessage = String(error)
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: errorMessage)
     commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
@@ -252,7 +252,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   func revertToLastKnownGoodVersion() {
     // Blacklist the current version, so we don't update to it again rightaway
     configuration.addBlacklistedVersion(currentAssetBundle.version)
-    
+
     if let lastKnownGoodVersion = configuration.lastKnownGoodVersion,
         let lastKnownGoodAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion) {
       pendingAssetBundle = lastKnownGoodAssetBundle
@@ -287,10 +287,10 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFinishDownloadingBundle assetBundle: AssetBundle) {
     NSLog("Finished downloading new asset bundle version: \(assetBundle.version)")
-    
+
     do {
       try verifyDownloadedAssetBundle(assetBundle)
-      
+
       configuration.lastDownloadedVersion = assetBundle.version
       pendingAssetBundle = assetBundle
       notifyNewVersionDownloaded(assetBundle.version)
@@ -298,20 +298,20 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
       notifyDownloadFailure(error)
     }
   }
-  
+
   private func verifyDownloadedAssetBundle(assetBundle: AssetBundle) throws {
     guard let appId = assetBundle.appId else {
       throw WebAppError.UnsuitableAssetBundle(reason: "Could not find appId in downloaded asset bundle", underlyingError: nil)
     }
-    
+
     if appId != configuration.appId {
       throw WebAppError.UnsuitableAssetBundle(reason: "appId in downloaded asset bundle does not match current appId", underlyingError: nil)
     }
-    
+
     guard let rootURL = assetBundle.rootURL else {
       throw WebAppError.UnsuitableAssetBundle(reason: "Could not find ROOT_URL in downloaded asset bundle", underlyingError: nil)
     }
-    
+
     if configuration.rootURL?.host != "localhost" && rootURL.host == "localhost" {
       throw WebAppError.UnsuitableAssetBundle(reason: "ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.", underlyingError: nil)
     }
@@ -389,11 +389,11 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
   private func addIndexFileHandler() {
     localServer.addHandlerWithMatchBlock({ [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
-      
+
       if URLPath == "/favicon.ico" { return nil }
 
       guard let indexFile = self?.currentAssetBundle?.indexFile else { return nil }
-        
+
       let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
       request.setAttribute(Box(indexFile), forKey: GCDWebServerRequestAttribute_Asset)
       return request
@@ -402,7 +402,7 @@ final public class WebAppCordova: CDVPlugin, AssetBundleManagerDelegate {
         return self.responseForAsset(request, asset: asset)
     }
   }
-  
+
   private func addNotFoundHandler() {
     localServer.addDefaultHandlerForMethod("GET", requestClass: GCDWebServerRequest.self) { (request) -> GCDWebServerResponse! in
            return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_NotFound.rawValue)

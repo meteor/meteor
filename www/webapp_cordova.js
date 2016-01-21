@@ -3,7 +3,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "startupDidComplete",
       []);
   },
@@ -12,7 +12,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "checkForUpdates",
       []);
   },
@@ -21,7 +21,7 @@ module.exports = {
     cordova.exec(
       callback,
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "onNewVersionDownloaded",
       []);
   },
@@ -34,7 +34,7 @@ module.exports = {
         callback(error);
       },
       console.error,
-      "WebAppCordova",
+      "MeteorWebApp",
       "onDownloadFailure",
       []);
   }
