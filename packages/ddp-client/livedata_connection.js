@@ -178,7 +178,8 @@ var Connection = function (url, options) {
   // if we're blocking a migration, the retry func
   self._retryMigrate = null;
 
-  self.__flushBufferedWrites = Meteor.bindEnvironment(self._flushBufferedWrites, "ddp buffered writes", self);
+  self.__flushBufferedWrites = Meteor.bindEnvironment(
+    self._flushBufferedWrites, "flushing DDP buffered writes", self);
   // Collection name -> array of messages.
   self._bufferedWrites = {};
   // When current buffer of updates must be flushed at, in ms timestamp.
