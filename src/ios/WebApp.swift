@@ -253,14 +253,20 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     // Blacklist the current version, so we don't update to it again rightaway
     configuration.addBlacklistedVersion(currentAssetBundle.version)
 
+    // If there is a last known good version and we can load the bundle, revert to it
     if let lastKnownGoodVersion = configuration.lastKnownGoodVersion,
         let lastKnownGoodAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion) {
       pendingAssetBundle = lastKnownGoodAssetBundle
-    } else {
+    // Else, revert to the initial asset bundle, unless that is what we are
+    // currently serving
+  } else if currentAssetBundle.version != assetBundleManager.initialAssetBundle.version {
       pendingAssetBundle = assetBundleManager.initialAssetBundle
     }
 
-    forceReload()
+    // Only reload if we have a pending asset bundle to reload
+    if pendingAssetBundle != nil {
+      forceReload()
+    }
   }
 
   func forceReload() {
