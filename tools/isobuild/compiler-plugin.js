@@ -96,8 +96,8 @@ export class CompilerPluginProcessor {
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
-        ? self.isopackCache.getSourceRoot(name, arch)
-        : self.sourceRoot;
+        && self.isopackCache.getSourceRoot(name, arch)
+        || self.sourceRoot;
 
       return new PackageSourceBatch(unibuild, self, {
         sourceRoot,
