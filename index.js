@@ -34,7 +34,9 @@ module.exports = {
     require("babel-plugin-transform-es2015-shorthand-properties"),
     require("babel-plugin-transform-es2015-spread"),
     require("babel-plugin-transform-es2015-sticky-regex"),
-    require("babel-plugin-transform-es2015-template-literals"),
+    [require("babel-plugin-transform-es2015-template-literals"), {
+      loose: true
+    }],
     require("babel-plugin-transform-es2015-typeof-symbol"),
     require("babel-plugin-transform-es2015-unicode-regex"),
     require("babel-plugin-syntax-object-rest-spread"),
