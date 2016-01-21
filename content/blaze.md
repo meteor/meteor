@@ -293,7 +293,7 @@ Additionally, for better clarity, always explicitly provide a data context to an
 
 For similar reasons to the above, it's better to use `{% raw %}{{#each todo in todos}}{% endraw %}` rather than the older `{% raw %}{{#each todos}}{% endraw %}`. The second sets the entire data context of its children to a single `todo` object, and makes it difficult to access any context from outside of the block.
 
-The only reason not to use `{% raw %}{{#each .. in}}{% endraw %}` because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
+The only reason not to use `{% raw %}{{#each .. in}}{% endraw %}` would be because it makes it difficult to access the `todo` symbol inside event handlers. Typically the solution to this is simply to use a sub-component to render the inside of the loop.
 
 <h3 id="pass-data-into-helpers">Pass data into helpers</h3>
 
