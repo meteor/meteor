@@ -562,8 +562,6 @@ LocalCollection.prototype.insert = function (doc, callback) {
   // trigger live queries that match
   for (var qid in self.queries) {
     var query = self.queries[qid];
-    // Dirty queries will be recomputed in `resumeObservers`
-    // Theoretically, we can never have a dirty query, unless we're paused.
     if (query.dirty) continue;
     var matchResult = query.matcher.documentMatches(doc);
     if (matchResult.result) {
@@ -968,6 +966,9 @@ LocalCollection._updateInResults = function (query, doc, old_doc) {
 LocalCollection.prototype._recomputeResults = function (query, oldResults) {
   var self = this;
   if (self.paused) {
+    // There's no reason to recompute the results now as we're still paused.
+    // By flagging the query as "dirty", the recompute will be performed
+    // when resumeObservers is called.
     query.dirty = true;
     return;
   }
