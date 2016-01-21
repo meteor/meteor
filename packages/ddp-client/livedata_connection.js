@@ -1250,24 +1250,28 @@ _.extend(Connection.prototype, {
 
   _flushBufferedWrites: function () {
     var self = this;
-
     if (self._bufferedWritesFlushHandle) {
       clearTimeout(self._bufferedWritesFlushHandle);
       self._bufferedWritesFlushHandle = null;
     }
 
     self._bufferedWritesStartedAt = null;
+    self._performWrites(self._bufferedWrites);
+    self._bufferedWrites = {};
+  },
 
-    if (self._resetStores || !_.isEmpty(self._bufferedWrites)) {
+  _performWrites: function(updates){
+    var self = this;
+
+    if (self._resetStores || !_.isEmpty(updates)) {
       // Begin a transactional update of each store.
       _.each(self._stores, function (s, storeName) {
-        s.beginUpdate(_.has(self._bufferedWrites, storeName) ?
-                      self._bufferedWrites[storeName].length : 0,
+        s.beginUpdate(_.has(updates, storeName) ? updates[storeName].length : 0,
                       self._resetStores);
       });
       self._resetStores = false;
 
-      _.each(self._bufferedWrites, function (updateMessages, storeName) {
+      _.each(updates, function (updateMessages, storeName) {
         var store = self._stores[storeName];
         if (store) {
           _.each(updateMessages, function (updateMessage) {
@@ -1285,8 +1289,6 @@ _.extend(Connection.prototype, {
                                      updateMessages);
         }
       });
-
-      self._bufferedWrites = {};
 
       // End update transaction.
       _.each(self._stores, function (s) { s.endUpdate(); });
