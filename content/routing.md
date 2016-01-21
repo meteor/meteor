@@ -409,7 +409,7 @@ Template.App_body.events({
 });
 ```
 
-You will also want to show some kind of status while the method is working so that the user knows there is something going on between them clicking the button and the redirect happening (and show the error some kind of message if the method is returning an error too).
+You will also want to show some kind of indication that the method is working in between their click of the button and the redirect completing.  Don't forget to provide feedback if the method is returning an error.
 
 <h2 id="advanced">Advanced Routing</h2>
 
