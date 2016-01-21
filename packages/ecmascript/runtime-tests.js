@@ -230,6 +230,30 @@ Tinytest.add("ecmascript - runtime - spread args to new", (test) => {
   test.isTrue(foo.created);
 });
 
+Tinytest.add("ecmascript - runtime - Map spread", (test) => {
+  const map = new Map;
+
+  map.set(0, 1);
+  map.set(1, 2);
+  map.set(2, 3);
+
+  test.equal([...map], [
+    [0, 1],
+    [1, 2],
+    [2, 3]
+  ]);
+});
+
+Tinytest.add("ecmascript - runtime - Set spread", (test) => {
+  const set = new Set;
+
+  set.add("a");
+  set.add(1);
+  set.add(false);
+
+  test.equal([...set], ["a", 1, false]);
+});
+
 Tinytest.add("ecmascript - runtime - destructuring", (test) => {
   // uses `babelHelpers.objectWithoutProperties` and
   // `babelHelpers.objectDestructuringEmpty`
