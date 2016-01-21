@@ -4,7 +4,7 @@ var newConnection = function (stream) {
   // change.
   return new LivedataTest.Connection(stream, {
     reloadWithOutstanding: true,
-    updatesBatchingInterval: 0
+    bufferedWritesInterval: 0
   });
 };
 

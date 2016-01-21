@@ -40,9 +40,9 @@ var Connection = function (url, options) {
     retry: true,
     respondToPings: true,
     // When updates are coming within this ms interval, batch them together.
-    updatesBatchingInterval: 5,
-    // But if batching is happening for more than this ms, process it anyway.
-    updatesBatchingMaxAge: 500
+    bufferedWritesInterval: 5,
+    // Flush buffers immediately if writes are happening continuously for more than this many ms.
+    bufferedWritesMaxAge: 500
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -178,16 +178,16 @@ var Connection = function (url, options) {
   // if we're blocking a migration, the retry func
   self._retryMigrate = null;
 
-  self.__processBatchedUpdates = Meteor.bindEnvironment(self._processBatchedUpdates, "livedata batch", self);
+  self.__flushBufferedWrites = Meteor.bindEnvironment(self._flushBufferedWrites, "ddp buffered writes", self);
   // Collection name -> array of messages.
-  self._batchedUpdates = {};
-  // When current batching of a updates started, in ms timestamp.
-  self._batchedUpdatesStart = null;
-  // Timeout handle for the next processing of batched updates.
-  self._batchedUpdatesProcessingHandle = null;
+  self._bufferedWrites = {};
+  // When current buffer of updates started, in ms timestamp.
+  self._bufferedWritesStartedAt = null;
+  // Timeout handle for the next processing of all pending writes
+  self._bufferedWritesFlushHandle = null;
 
-  self._updatesBatchingInterval = options.updatesBatchingInterval;
-  self._updatesBatchingMaxAge = options.updatesBatchingMaxAge;
+  self._bufferedWritesInterval = options.bufferedWritesInterval;
+  self._bufferedWritesMaxAge = options.bufferedWritesMaxAge;
 
   // metadata for subscriptions.  Map from sub ID to object with keys:
   //   - id
@@ -1218,56 +1218,56 @@ _.extend(Connection.prototype, {
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
       _.each(self._messagesBufferedUntilQuiescence, function (bufferedMsg) {
-        self._processOneDataMessage(bufferedMsg, self._batchedUpdates);
+        self._processOneDataMessage(bufferedMsg, self._bufferedWrites);
       });
       self._messagesBufferedUntilQuiescence = [];
     } else {
-      self._processOneDataMessage(msg, self._batchedUpdates);
+      self._processOneDataMessage(msg, self._bufferedWrites);
     }
 
     // Sometimes we'll need to disable deferred batching
     //  to make the livedata tests readable / synchronous.
     // Also, it's more responsive to flush batches when subscriptions start / end
-    if (self._updatesBatchingInterval === 0 || msg.msg === "nosub" || msg.msg === "ready") {
-      self._processBatchedUpdates();
+    if (self._bufferedWritesInterval === 0 || msg.msg === "nosub" || msg.msg === "ready") {
+      self._flushBufferedWrites();
       return;
     }
 
-    if (self._batchedUpdatesStart === null) {
-      self._batchedUpdatesStart = new Date().valueOf();
+    if (self._bufferedWritesStartedAt === null) {
+      self._bufferedWritesStartedAt = new Date().valueOf();
     }
-    else if (self._batchedUpdatesStart + self._updatesBatchingMaxAge < new Date().valueOf()) {
-      self._processBatchedUpdates();
+    else if (self._bufferedWritesStartedAt + self._bufferedWritesMaxAge < new Date().valueOf()) {
+      self._flushBufferedWrites();
       return;
     }
 
-    if (self._batchedUpdatesProcessingHandle) {
-      clearTimeout(self._batchedUpdatesProcessingHandle);
+    if (self._bufferedWritesFlushHandle) {
+      clearTimeout(self._bufferedWritesFlushHandle);
     }
-    self._batchedUpdatesProcessingHandle = setTimeout(self.__processBatchedUpdates,
-                                                      self._updatesBatchingInterval);
+    self._bufferedWritesFlushHandle = setTimeout(self.__flushBufferedWrites,
+                                                      self._bufferedWritesInterval);
   },
 
-  _processBatchedUpdates: function () {
+  _flushBufferedWrites: function () {
     var self = this;
 
-    if (self._batchedUpdatesProcessingHandle) {
-      clearTimeout(self._batchedUpdatesProcessingHandle);
-      self._batchedUpdatesProcessingHandle = null;
+    if (self._bufferedWritesFlushHandle) {
+      clearTimeout(self._bufferedWritesFlushHandle);
+      self._bufferedWritesFlushHandle = null;
     }
 
-    self._batchedUpdatesStart = null;
+    self._bufferedWritesStartedAt = null;
 
-    if (self._resetStores || !_.isEmpty(self._batchedUpdates)) {
+    if (self._resetStores || !_.isEmpty(self._bufferedWrites)) {
       // Begin a transactional update of each store.
       _.each(self._stores, function (s, storeName) {
-        s.beginUpdate(_.has(self._batchedUpdates, storeName) ?
-                      self._batchedUpdates[storeName].length : 0,
+        s.beginUpdate(_.has(self._bufferedWrites, storeName) ?
+                      self._bufferedWrites[storeName].length : 0,
                       self._resetStores);
       });
       self._resetStores = false;
 
-      _.each(self._batchedUpdates, function (updateMessages, storeName) {
+      _.each(self._bufferedWrites, function (updateMessages, storeName) {
         var store = self._stores[storeName];
         if (store) {
           _.each(updateMessages, function (updateMessage) {
@@ -1286,7 +1286,7 @@ _.extend(Connection.prototype, {
         }
       });
 
-      self._batchedUpdates = {};
+      self._bufferedWrites = {};
 
       // End update transaction.
       _.each(self._stores, function (s) { s.endUpdate(); });
