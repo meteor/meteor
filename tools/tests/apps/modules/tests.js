@@ -47,7 +47,7 @@ describe("app modules", () => {
     let error;
     let result;
     try {
-      result = require("./server/only");
+      result = require("./server/only").default;
     } catch (expectedOnClient) {
       error = expectedOnClient;
     }
