@@ -248,7 +248,8 @@ Tinytest.add("ecmascript - runtime - destructuring", (test) => {
 
 Tinytest.addAsync("ecmascript - runtime - misc support", (test, done) => {
   // Verify that the runtime was installed.
-  test.equal(typeof babelHelpers, "object");
+  test.equal(typeof meteorBabelHelpers, "object");
+  test.equal(typeof meteorBabelHelpers.sanitizeForInObject, "function");
 
   class Base {
     constructor(...args) {

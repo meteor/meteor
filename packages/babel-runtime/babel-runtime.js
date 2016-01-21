@@ -235,7 +235,7 @@ var BabelRuntime = {
   },
 
   // es7.objectRestSpread and react (JSX)
-  _extends: Object.assign || (function (target) {
+  "extends": Object.assign || (function (target) {
     for (var i = 1; i < arguments.length; i++) {
       var source = arguments[i];
       for (var key in source) {
@@ -327,6 +327,18 @@ var BabelRuntime = {
     };
 
   })(),
+
+  toConsumableArray: function (arr) {
+    if (Array.isArray(arr)) {
+      for (var i = arr.length - 1, arr2 = Array(i + 1); i >= 0; --i) {
+        arr2[i] = arr[i];
+      }
+
+      return arr2;
+    }
+
+    return Array.from(arr);
+  },
 
   slice: Array.prototype.slice
 };
