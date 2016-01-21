@@ -30,6 +30,8 @@ Package.onTest(function (api) {
   api.addFiles("runtime-tests.js");
   api.addFiles("transpilation-tests.js", "server");
 
-  api.addFiles("bare-test-file.js", "client", { bare: true });
-  api.addFiles("bare-test.js", "client");
+  api.addFiles("bare-test.js");
+  api.addFiles("bare-test-file.js", ["client", "server"], {
+    bare: true
+  });
 });

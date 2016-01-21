@@ -366,7 +366,7 @@ class ResourceSlot {
 
   _getOption(name, options) {
     if (options && _.has(options, name)) {
-      return options.name;
+      return options[name];
     }
     const fileOptions = this.inputResource.fileOptions;
     return fileOptions && fileOptions[name];

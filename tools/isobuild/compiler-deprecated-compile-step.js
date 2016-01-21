@@ -273,7 +273,7 @@ exports.makeCompileStep = function (sourceItem, file, inputSourceArch, options) 
 
     _getOption(name, options) {
       if (options && _.has(options, name)) {
-        return options.name;
+        return options[name];
       }
       const fileOptions = this.fileOptions;
       return fileOptions && fileOptions[name];
