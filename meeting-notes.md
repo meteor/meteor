@@ -1,3 +1,34 @@
+## Standup 20th Jan
+
+With Zol, Sashko, Tom, Matt.
+
+### Notes
+
+- Guide should reflect view layer strategy. Blaze is in there and we document best practices. Guide should also document our recommendations with respect to React and Angular.
+- Modules and Testing are critical.
+- Modules and Blaze integration points should tie in well, make sure the situation is reasonable.
+- Blaze, people have been wondering how to use the same template name, i.e this is what modules would solve.
+- Might make sense to leave Blaze as it is, have a sane way to put js+css in the same dir as your html.
+- Currently Templates are still global and if you use a helper that hasn't been imported code blows up at run time.
+- Where do template go in an Angular 2 app? Maybe it would inform what we should do.
+- Deal with how Blaze works right now, work on adding React and Angular to the guide later.
+- 100% start writing about application structure.
+- Avi is working on the testing stuff as we speak, Tom to sync up with him.
+- Time to validate testing implementation and guide article and validate it with bigger Meteor users. Workpop. Asaf in Israel (medical app).
+- What to do about forms? We're still talking about autoform and Blaze. Reason it's not in the guide is the todos app doesn't have enough forms to show much. Are we going to build new example app with lot's of forms? Definitely relevant to the view layer question. We don't have autoform for React.
+- It's ok if the first version of the React chapter in the guide doesn't address as much about forms as the blaze version and/or requires more manual labour than autoform.
+- Ideal outcome is in time for 1.3 we had some chapter for React and Angular 2, even if it's a short chapter. We need to document the Meteor/Angular/React bindings.
+- Sashko non-negotiable article: application structure, testing (complete and awesome). Want to have: barebones React/Angular articles (to replace existing websites). Question Mark: mobile, es2015 code style, forms. Less clear that we need them immediately. We should enlist Martijn to help write mobile article.
+- 1.3 is probably toward the end of February.
+- This adds up according to Tom.
+- Thoughts on long term maintenance? Don't know yet. In the medium term Tom feels like the natural person to be point on that, probably as a coordinator.
+
+### Decisions
+
+- Matt priority order: App structure, Testing, Mobile <-> React/Angular, Forms - items 1&2 are essential, others could slip to after 1.3 (good chance we'll defer mobile improvements to 1.3.1), could lean on the view team for React/Angular.
+- Tom on point for app structure and testing (including updating the todos example app), view team writing Angular/React stuff with Tom's guidance. Martijn to write the mobile chapter. This is the goal for 1.3. Forms is a nice to have which can come later.
+- There's more work to do with fully integrating the guide into the website, tutorials, etc.
+
 ## Standup 4th Jan
 
 With Zol, Sashko.
