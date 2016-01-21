@@ -1225,10 +1225,11 @@ _.extend(Connection.prototype, {
       self._processOneDataMessage(msg, self._bufferedWrites);
     }
 
-    // Sometimes we'll need to disable deferred batching
-    //  to make the livedata tests readable / synchronous.
-    // Also, it's more responsive to flush batches when subscriptions start / end
-    if (self._bufferedWritesInterval === 0 || msg.msg === "nosub" || msg.msg === "ready") {
+    // Immediately flush writes when:
+    //  1. Buffering is disabled. Or;
+    //  2. any non-(added/changed/removed) message arrives.
+    var standardWrite = _.include(['added', 'changed', 'removed'], msg.msg);
+    if (self._bufferedWritesInterval === 0 || !standardWrite) {
       self._flushBufferedWrites();
       return;
     }
@@ -1539,6 +1540,11 @@ _.extend(Connection.prototype, {
     // id, result or error. error has error (code), reason, details
 
     var self = this;
+
+    // Lets make sure there are no buffered writes before returning result.
+    if (!_.isEmpty(self._bufferedWrites)) {
+      self._flushBufferedWrites();
+    }
 
     // find the outstanding request
     // should be O(1) in nearly all realistic use cases
