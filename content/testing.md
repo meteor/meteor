@@ -16,13 +16,13 @@ As we've organized our application into modules based on features, collections a
 
 ### Unit testing via Mocha
 
-We'll use the [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to include these in our application, we can simply add the [`practicalmeteor:mocha`](https://atmospherejs.com/practicalmeteor/mocha) package.
+We'll use the popular [Mocha](https://mochajs.org) test runner alongside the [Chai](http://chaijs.com) assertion library to test our application. In order to write tests in Mocha, we can add the [`practicalmeteor:mocha`](https://atmospherejs.com/practicalmeteor/mocha) package to our app.
 
 ```bash
 meteor add practicalmeteor:mocha
 ```
 
-This package is a `testOnly` package, which means that adding it to our application doesn't actually do anything in development or production mode. However, in test mode (see the upcoming section), it allows us to import Mocha and start defining tests in test files. Let's see how.
+This package provides a way for test files to register tests, and for a [test driver](#test-driver) to run them.
 
 ### Defining a Mocha test
 
@@ -40,7 +40,7 @@ export default Todos = new TodosCollection('Todos');
 ```
 [`imports/todos/Todos.js`]
 
-We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos-tests.js`, and define a mocha test:
+We should test that the `Todos` collection indeed behaves as we expect and sets that field when we insert a doc. To do that, we can write a file `imports/todos/todos.tests.js`, and define a mocha test:
 
 ```js
 import {mocha, chai} from "practicalmeteor:mocha";
@@ -61,36 +61,45 @@ describe('todos', () => {
   });
 });
 ```
+[`imports/todos/Todos.tests.js`]
 
-There are a few things to note here. Firstly, we've imported the Mocha and Factory packages, which are `testOnly` packages, so are only available when we run the app in test mode. Luckily we'll only import this test in test mode also!
+
+There are a few things to note here. Firstly, we've imported from the Mocha and Factory packages, which are special packages that we can only use in test mode. Of course this test file will only be executed in test mode also!
 
 Secondly, we've used [Mocha's API](https://mochajs.org) as well as [Chai's assertions](http://chaijs.com/api/assert/) to define a test suite, and define a test that checks that `createdAt` gets set on a todo that the factory creates.
 
-Now, importantly, we don't `import` this test file from anywhere in our application code, so when we run the app normally, it doesn't execute. So how can we run it?
+### Adding a test driver
 
+A test driver is a mini-application that runs in place of your app and runs each of your defined tests (each of which `import` relevant sections of your app), whilst reporting the results in some kind of user interface.
 
-### `meteor test` -- running Meteor in test mode
+There are two main kinds of test driver packages; web-reporters which are Meteor applications and display a special test reporting web UI that you can view the test results in; and console-reporters that run completely on the command-line and are primary used for automated testing like [continuous integration](#ci) [XXX: we should probably explain more about how phantom is involved in command-line testing?]
 
-So far in our application, imported everything that we need from a `client.js` and `server.js` file. We can do the same with a `test.js` (which is ordinarily ignored by the build system):
-
-```
-import 'imports/todos/todos-test.js';
-
-```
-['tests.js']
-
-By importing the test file we defined above, we add the test case to Mocha, which means when it's time to run the test, the test case will run.
-
-The other thing that we need to get our test working is a *test-reporter*. When we run the app in test mode, most of the default things that happen no longer occur. For instance, Flow Router will no longer attempt to route URLs for you. If you are using Blaze, the `<body>` template is no longer rendered for you. (If you are using Angular or React, you can use `Meteor.isTest` to opt out of rendering to the screen [XXX]).
-
-As we are using Mocha for our tests, we need a test reporter that will run and report Mocha tests. Luckily, the `practical:mocha-web-reporter` [XXX: doesn't exist yet?] can do this for us.
+While developing your app, chances are you'll want to run unit tests against a web reporter; for our example we will use a reporter that renders to Mocha's default web UI. We can add the driver simply by adding the [`practicalmeteor:mocha-web-reporter`](https://atmospherejs.com/practicalmeteor/mocha-web-reporter) package to our app.
 
 ```bash
 meteor add practicalmeteor:mocha-web-reporter
 ```
 
+This package also doesn't do anything in development or production mode, but when our app is run in [unit](#unit-test-mode) or [integration](#integration-test-mode) test mode, it takes over, running test code on both the client and server and rendering results tothe browser.
 
-If we add that package, we can now start the testing system via `meteor test`, then trigger a set of tests to run by visiting `localhost:3000`. If you do so, you should see something like this:
+### Unit test mode
+
+To run the unit tests that our app defines, we can run a special instance of our app in unit test mode. To do so, we run:
+
+```
+meteor test --unit
+```
+
+What this does is run a special version of our application that:
+
+ 1. Doesn't eagerly load *any* of our application code as Meteor normally would.
+ 2. Does eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
+ 3. Sets the `Meteor.isTest` and `Meteor.isUnitTest` flags to be true.
+ 4. Starts up the test reporter package that we've added to our app (`practicalmeteor:mocha-web-reporter`).
+
+As we've defined a test file (`imports/todos/Todos.tests.js`), what this means is that the file above will be eagerly loaded, adding the `'builds correctly from factory'` test to the Mocha registry. 
+
+To run the tests, you visit http://localhost:3000 in your browser, which kicks off `mocha-web-reporter`, who runs tests both in the browser, and on the server. It also renders the test results in the browser in a Mocha test reporter:
 
 [IMAGE]
 
