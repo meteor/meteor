@@ -947,6 +947,18 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
+  // are we running `meteor test-app` or `meteor test-packages`
+  if (global.testCommandMetadata) {
+    // XXX pass in test driver package from CLI
+    var weAreLinkingTheApp = (name === null);
+    if (weAreLinkingTheApp) {
+      prelinkedFiles.push({
+        source: "if (Meteor.isClient) Meteor.startup(function() { Package[\"tinytest-harness\"].runTests(); });",
+        servePath: "/packages/runTests.js"
+      });
+    }
+  }
+
   // If we're in the app, then we just add the import code as its own file in
   // the front.
   if (useGlobalNamespace) {

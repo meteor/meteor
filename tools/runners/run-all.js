@@ -71,7 +71,7 @@ class Runner {
       oplogUrl = disableOplog ? null : oplogUrl;
     } else {
       self.mongoRunner = new MongoRunner({
-        appDir: self.projectContext.projectDir,
+        projectLocalDir: self.projectContext.projectLocalDir,
         port: mongoPort,
         onFailure,
         // For testing mongod failover, run with 3 mongod if the env var is

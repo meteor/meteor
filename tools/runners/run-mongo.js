@@ -69,14 +69,14 @@ var spawnMongod = function (mongodPath, port, dbPath, replSetName) {
 
 // Find all running Mongo processes that were started by this program
 // (even by other simultaneous runs of this program). If passed,
-// appDir and port act as filters on the list of running mongos.
+// dbDir and port act as filters on the list of running mongos.
 //
-// Yields. Returns an array of objects with keys pid, port, appDir.
+// Yields. Returns an array of objects with keys pid, port, dbDir.
 var findMongoPids;
 if (process.platform === 'win32') {
   // Windows doesn't have a ps equivalent that (reliably) includes the command
   // line, so approximate using the combined output of tasklist and netstat.
-  findMongoPids = function (app_dir, port) {
+  findMongoPids = function (dbDir_unused, port) {
     var promise = fiberHelpers.makeFulfillablePromise();
 
     child_process.exec('tasklist /fi "IMAGENAME eq mongod.exe"',
@@ -142,7 +142,7 @@ if (process.platform === 'win32') {
     return promise.await();
   };
 } else {
-  findMongoPids = function (appDir, port) {
+  findMongoPids = function (dbDir, port) {
     var promise = fiberHelpers.makeFulfillablePromise();
 
     // 'ps ax' should be standard across all MacOS and Linux.
@@ -196,18 +196,18 @@ if (process.platform === 'win32') {
           // Matches mongos we start. Note that this matches
           // 'fake-mongod' (our mongod stub for automated tests) as well
           // as 'mongod'.
-          var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+)(?:\/|\\)\.meteor(?:\/|\\)local(?:\/|\\)db/);
+          var m = line.match(/^\s*(\d+).+mongod .+--port (\d+) --dbpath (.+(?:\/|\\)db)/);
           if (m && m.length === 4) {
             var foundPid =  parseInt(m[1], 10);
             var foundPort = parseInt(m[2], 10);
             var foundPath = m[3];
 
             if ( (! port || port === foundPort) &&
-                 (! appDir || appDir === foundPath)) {
+                 (! dbDir || dbDir === foundPath)) {
               ret.push({
                 pid: foundPid,
                 port: foundPort,
-                appDir: foundPath
+                dbDir: foundPath
               });
             }
           }
@@ -222,8 +222,8 @@ if (process.platform === 'win32') {
 
 // See if mongo is running already. Yields. Returns the port that
 // mongo is running on or null if mongo is not running.
-var findMongoPort = function (appDir) {
-  var pids = findMongoPids(appDir);
+var findMongoPort = function (dbDir) {
+  var pids = findMongoPids(dbDir);
 
   if (pids.length !== 1) {
     return null;
@@ -252,10 +252,10 @@ if (process.platform === 'win32') {
   // where we try to connect to a mongod that is not running, or a wrong
   // mongod if our current app is not running but there is a left-over file
   // lying around. This still can be better than always failing to connect.
-  findMongoPort = function (appDir) {
+  findMongoPort = function (dbPath) {
     var mongoPort = null;
 
-    var portFile = files.pathJoin(appDir, '.meteor/local/db/METEOR-PORT');
+    var portFile = files.pathJoin(dbPath, 'METEOR-PORT');
     if (files.exists(portFile)) {
       mongoPort = files.readFile(portFile, 'utf8').replace(/\s/g, '');
     }
@@ -371,9 +371,6 @@ var launchMongo = function (options) {
     // it'd be hard to make fake-mongod support it.
     noOplog = true;
   }
-
-  // add .gitignore if needed.
-  files.addToGitignore(files.pathJoin(options.appDir, '.meteor'), 'local');
 
   var subHandles = [];
   var stopped = false;
@@ -666,21 +663,21 @@ var launchMongo = function (options) {
 
   try {
     if (options.multiple) {
-      var dbBasePath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs');
+      var dbBasePath = files.pathJoin(options.projectLocalDir, 'dbs');
       _.each(_.range(3), function (i) {
         // Did we get stopped (eg, by one of the processes exiting) by now? Then
         // don't start anything new.
         if (stopped) {
           return;
         }
-        var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'dbs', ''+i);
+        var dbPath = files.pathJoin(options.projectLocalDir, 'dbs', ''+i);
         launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port + i);
       });
       if (!stopped) {
         initiateReplSetAndWaitForReady();
       }
     } else {
-      var dbPath = files.pathJoin(options.appDir, '.meteor', 'local', 'db');
+      var dbPath = files.pathJoin(options.projectLocalDir, 'db');
       var portFile = !noOplog && files.pathJoin(dbPath, 'METEOR-PORT');
       launchOneMongoAndWaitForReadyForInitiate(dbPath, options.port, portFile);
       if (!stopped && !noOplog) {
@@ -708,10 +705,10 @@ var launchMongo = function (options) {
 // restarts too often, we give up on restarting it, diagnostics are
 // logged, and onFailure is called.
 //
-// options: appDir, port, onFailure, multiple
+// options: projectLocalDir, port, onFailure, multiple
 var MongoRunner = function (options) {
   var self = this;
-  self.appDir = options.appDir;
+  self.projectLocalDir = options.projectLocalDir;
   self.port = options.port;
   self.onFailure = options.onFailure;
   self.multiple = options.multiple;
@@ -790,7 +787,7 @@ _.extend(MRp, {
     }
 
     self.handle = launchMongo({
-      appDir: self.appDir,
+      projectLocalDir: self.projectLocalDir,
       port: self.port,
       multiple: self.multiple,
       allowKilling: allowKilling,

@@ -377,6 +377,336 @@ function doRunCommand(options) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// test-app and test-packages
+///////////////////////////////////////////////////////////////////////////////
+
+testCommandOptions = {
+  maxArgs: Infinity,
+  catalogRefresh: new catalog.Refresh.Never(),
+  options: {
+    port: { type: String, short: "p", default: DEFAULT_PORT },
+    'mobile-server': { type: String },
+    // XXX COMPAT WITH 0.9.2.2
+    'mobile-port': { type: String },
+    'debug-port': { type: String },
+    deploy: { type: String },
+    production: { type: Boolean },
+    settings: { type: String },
+    velocity: { type: Boolean },
+    verbose: { type: Boolean, short: "v" },
+
+    // Undocumented. See #Once
+    once: { type: Boolean },
+    // Undocumented. To ensure that QA covers both
+    // PollingObserveDriver and OplogObserveDriver, this option
+    // disables oplog for tests.  (It still creates a replset, it just
+    // doesn't do oplog tailing.)
+    'disable-oplog': { type: Boolean },
+    // Undocumented flag to use a different test driver.
+    'driver-package': { type: String, default: 'test-in-browser' },
+
+    // Sets the path of where the temp app should be created
+    'test-app-path': { type: String },
+
+    // Undocumented, runs tests under selenium
+    'selenium': { type: Boolean },
+    'selenium-browser': { type: String },
+
+    // Undocumented.  Usually we just show a banner saying 'Tests' instead of
+    // the ugly path to the temporary test directory, but if you actually want
+    // to see it you can ask for it.
+    'show-test-app-path': { type: Boolean },
+
+    // hard-coded options with all known Cordova platforms
+    ios: { type: Boolean },
+    'ios-device': { type: Boolean },
+    android: { type: Boolean },
+    'android-device': { type: Boolean },
+
+    // This could theoretically be useful/necessary in conjunction with
+    // --test-app-path.
+    'allow-incompatible-update': { type: Boolean },
+
+    // Don't print linting messages for tested packages
+    'no-lint': { type: Boolean },
+
+    // allow excluding packages when testing all packages.
+    // should be a comma-separated list of package names.
+    'exclude': { type: String },
+
+    // one of the following must be true
+    'test-app': { type: Boolean, 'default': false },
+    'test-packages': { type: Boolean, 'default': false }
+  }
+};
+
+main.registerCommand(_.extend({
+  name: 'test-app',
+  requiresApp: true
+}, testCommandOptions), function (options) {
+  options['test-app'] = true;
+  return doTestCommand(options);
+});
+
+main.registerCommand(_.extend(
+  { name: 'test-packages' },
+  testCommandOptions
+), function (options) {
+  options['test-packages'] = true;
+  return doTestCommand(options);
+});
+
+function doTestCommand(options) {
+  // This "metadata" is accessed in a few places. Using a global
+  // variable here was more expedient than navigating the many layers
+  // of abstraction across the the build process.
+  //
+  // As long as the Meteor CLI runs a single command as part of each
+  // process, this should be safe.
+  global.testCommandMetadata = {
+    testRunnerPackage: options['test-runner-package']
+  };
+
+  Console.setVerbose(!!options.verbose);
+
+  const runTargets = parseRunTargets(_.intersection(
+    Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
+
+  const { parsedServerUrl, parsedMobileServerUrl } =
+    parseServerOptionsForRunCommand(options, runTargets);
+
+  // Make a temporary app dir (based on the test runner app). This will be
+  // cleaned up on process exit. Using a temporary app dir means that we can
+  // run multiple "test-packages" commands in parallel without them stomping
+  // on each other.
+  var testRunnerAppDir =
+        options['test-app-path'] || files.mkdtemp('meteor-test-run');
+
+  // Download packages for our architecture, and for the deploy server's
+  // architecture if we're deploying.
+  var serverArchitectures = [archinfo.host()];
+  if (options.deploy && DEPLOY_ARCH !== archinfo.host()) {
+    serverArchitectures.push(DEPLOY_ARCH);
+  }
+
+  var projectContextOptions = {
+    serverArchitectures: serverArchitectures,
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    lintAppAndLocalPackages: !options['no-lint']
+  };
+  var projectContext;
+
+  if (options["test-packages"]) {
+    projectContextOptions.projectDir = testRunnerAppDir;
+    projectContextOptions.projectDirForLocalPackages = options.appDir;
+
+    // Find any packages mentioned by a path instead of a package name. We will
+    // load them explicitly into the catalog.
+    var packagesByPath = _.filter(options.args, function (p) {
+      return p.indexOf('/') !== -1;
+    });
+    // If we're currently in an app, we still want to use the real app's
+    // packages subdirectory, not the test runner app's empty one.
+    projectContextOptions.explicitlyAddedLocalPackageDirs = packagesByPath;
+
+    // XXX Because every run uses a new app with its own IsopackCache directory,
+    //     this always does a clean build of all packages. Maybe we can speed up
+    //     repeated test-packages calls with some sort of shared or semi-shared
+    //     isopack cache that's specific to test-packages?  See #3012.
+    projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+
+    // Overwrite .meteor/release.
+    projectContext.releaseFile.write(
+      release.current.isCheckout() ? "none" : release.current.name);
+
+    var packagesToAdd = getTestPackageNames(projectContext, options.args);
+
+    // filter out excluded packages
+    var excludedPackages = options.exclude && options.exclude.split(',');
+    if (excludedPackages) {
+      packagesToAdd = _.filter(packagesToAdd, function (p) {
+        return ! _.some(excludedPackages, function (excluded) {
+          return p.replace(/^local-test:/, '') === excluded;
+        });
+      });
+    }
+
+    // Use the driver package if running `meteor test-packages`. For
+    // `meteor test-app`, the driver package is expected to already
+    // have been added to the app.
+    if (options["test-packages"]) {
+      packagesToAdd.unshit(options['driver-package']);
+    }
+
+    // Also, add `autoupdate` so that you don't have to manually refresh the tests
+    packagesToAdd.unshift("autoupdate");
+
+    var constraintsToAdd = _.map(packagesToAdd, function (p) {
+      return utils.parsePackageConstraint(p);
+    });
+    // Add the packages to our in-memory representation of .meteor/packages.  (We
+    // haven't yet resolved constraints, so this will affect constraint
+    // resolution.)  This will get written to disk once we prepareProjectForBuild,
+    // either in the Cordova code below, right before deploying below, or in the
+    // app runner.  (Note that removeAllPackages removes any comments from
+    // .meteor/packages, but that's OK since this isn't a real user project.)
+    projectContext.projectConstraintsFile.removeAllPackages();
+    projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
+    // Write these changes to disk now, so that if the first attempt to prepare
+    // the project for build hits errors, we don't lose them on
+    // projectContext.reset.
+    projectContext.projectConstraintsFile.writeIfModified();
+  } else if (options["test-app"]) {
+    // XXX copy existing app build directory before, for faster builds?
+    projectContextOptions.projectDir = options.appDir;
+    projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
+    projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+  } else {
+    throw new Error("Unexpected: neither test-packages nor test-app");
+  }
+
+  main.captureAndExit("=> Errors while setting up tests:", function () {
+    // Read metadata and initialize catalog.
+    projectContext.initializeCatalog();
+  });
+
+  // The rest of the projectContext preparation process will happen inside the
+  // runner, once the proxy is listening. The changes we made were persisted to
+  // disk, so projectContext.reset won't make us forget anything.
+
+  let cordovaRunner;
+
+  if (!_.isEmpty(runTargets)) {
+    main.captureAndExit('', 'preparing Cordova project', () => {
+      const cordovaProject = new CordovaProject(projectContext, {
+        settingsFile: options.settings,
+        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+
+      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+      projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
+      cordovaRunner.checkPlatformsForRunTargets();
+    });
+  }
+
+  options.cordovaRunner = cordovaRunner;
+
+  if (options.velocity) {
+    const serverUrlForVelocity =
+    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
+    const velocity = require('../runners/run-velocity.js');
+    velocity.runVelocity(serverUrlForVelocity);
+  }
+
+  return runTestAppForPackages(projectContext, _.extend(
+    options,
+    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
+}
+
+// Returns the "local-test:*" package names for the given package names (or for
+// all local packages if packageNames is empty/unspecified).
+var getTestPackageNames = function (projectContext, packageNames) {
+  var packageNamesSpecifiedExplicitly = ! _.isEmpty(packageNames);
+  if (_.isEmpty(packageNames)) {
+    // If none specified, test all local packages. (We don't have tests for
+    // non-local packages.)
+    packageNames = projectContext.localCatalog.getAllPackageNames();
+  }
+  var testPackages = [];
+  main.captureAndExit("=> Errors while collecting tests:", function () {
+    _.each(packageNames, function (p) {
+      buildmessage.enterJob("trying to test package `" + p + "`", function () {
+        // If it's a package name, look it up the normal way.
+        if (p.indexOf('/') === -1) {
+          if (p.indexOf('@') !== -1) {
+            buildmessage.error(
+              "You may not specify versions for local packages: " + p );
+            return;  // recover by ignoring
+          }
+          // Check to see if this is a real local package, and if it is a real
+          // local package, if it has tests.
+          var version = projectContext.localCatalog.getLatestVersion(p);
+          if (! version) {
+            buildmessage.error("Not a known local package, cannot test");
+          } else if (version.testName) {
+            testPackages.push(version.testName);
+          } else if (packageNamesSpecifiedExplicitly) {
+            // It's only an error to *ask* to test a package with no tests, not
+            // to come across a package with no tests when you say "test all
+            // packages".
+            buildmessage.error("Package has no tests");
+          }
+        } else {
+          // Otherwise, it's a directory; find it by source root.
+          version = projectContext.localCatalog.getVersionBySourceRoot(
+            files.pathResolve(p));
+          if (! version) {
+            throw Error("should have been caught when initializing catalog?");
+          }
+          if (version.testName) {
+            testPackages.push(version.testName);
+          }
+          // It is not an error to mention a package by directory that is a
+          // package but has no tests; this means you can run `meteor
+          // test-packages $APP/packages/*` without having to worry about the
+          // packages that don't have tests.
+        }
+      });
+    });
+  });
+
+  return testPackages;
+};
+
+var runTestAppForPackages = function (projectContext, options) {
+  var buildOptions = {
+    minifyMode: options.production ? 'production' : 'development',
+    buildMode: options.production ? 'production' : 'development',
+  };
+
+  if (options.deploy) {
+    // Run the constraint solver and build local packages.
+    main.captureAndExit("=> Errors while initializing project:", function () {
+      projectContext.prepareProjectForBuild();
+    });
+    // No need to display the PackageMapDelta here, since it would include all
+    // of the packages!
+
+    buildOptions.serverArch = DEPLOY_ARCH;
+    return deploy.bundleAndDeploy({
+      projectContext: projectContext,
+      site: options.deploy,
+      settingsFile: options.settings,
+      buildOptions: buildOptions,
+      recordPackageUsage: false
+    });
+  } else {
+    var runAll = require('../runners/run-all.js');
+    return runAll.run({
+      projectContext: projectContext,
+      proxyPort: options.port,
+      debugPort: options['debug-port'],
+      disableOplog: options['disable-oplog'],
+      settingsFile: options.settings,
+      banner: options['show-test-app-path'] ? null : "Tests",
+      buildOptions: buildOptions,
+      rootUrl: process.env.ROOT_URL,
+      mongoUrl: process.env.MONGO_URL,
+      oplogUrl: process.env.MONGO_OPLOG_URL,
+      mobileServerUrl: options.mobileServerUrl,
+      once: options.once,
+      recordPackageUsage: false,
+      selenium: options.selenium,
+      seleniumBrowser: options['selenium-browser'],
+      cordovaRunner: options.cordovaRunner,
+      // On the first run, we shouldn't display the delta between "no packages
+      // in the temp app" and "all the packages we're testing". If we make
+      // changes and reload, though, it's fine to display them.
+      omitPackageMapDeltaDisplayOnFirstRun: true
+    });
+  }
+};
+
+///////////////////////////////////////////////////////////////////////////////
 // debug
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1135,7 +1465,7 @@ main.registerCommand({
     // localhost mode
     var findMongoPort =
       require('../runners/run-mongo.js').findMongoPort;
-    var mongoPort = findMongoPort(options.appDir);
+    var mongoPort = findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
     // specified?
@@ -1210,7 +1540,7 @@ main.registerCommand({
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
   var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! findMongoPort(options.appDir);
+  var isRunning = !! findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
   if (isRunning) {
     Console.error("reset: Meteor is running.");
     Console.error();
@@ -1426,288 +1756,6 @@ main.registerCommand({
   return deploy.claim(site);
 });
 
-
-///////////////////////////////////////////////////////////////////////////////
-// test-packages
-///////////////////////////////////////////////////////////////////////////////
-
-//
-// Test your local packages.
-//
-main.registerCommand({
-  name: 'test-packages',
-  maxArgs: Infinity,
-  options: {
-    port: { type: String, short: "p", default: DEFAULT_PORT },
-    'mobile-server': { type: String },
-    // XXX COMPAT WITH 0.9.2.2
-    'mobile-port': { type: String },
-    'debug-port': { type: String },
-    deploy: { type: String },
-    production: { type: Boolean },
-    settings: { type: String },
-    velocity: { type: Boolean },
-    verbose: { type: Boolean, short: "v" },
-
-    // Undocumented. See #Once
-    once: { type: Boolean },
-    // Undocumented. To ensure that QA covers both
-    // PollingObserveDriver and OplogObserveDriver, this option
-    // disables oplog for tests.  (It still creates a replset, it just
-    // doesn't do oplog tailing.)
-    'disable-oplog': { type: Boolean },
-    // Undocumented flag to use a different test driver.
-    'driver-package': { type: String, default: 'test-in-browser' },
-
-    // Sets the path of where the temp app should be created
-    'test-app-path': { type: String },
-
-    // Undocumented, runs tests under selenium
-    'selenium': { type: Boolean },
-    'selenium-browser': { type: String },
-
-    // Undocumented.  Usually we just show a banner saying 'Tests' instead of
-    // the ugly path to the temporary test directory, but if you actually want
-    // to see it you can ask for it.
-    'show-test-app-path': { type: Boolean },
-
-    // hard-coded options with all known Cordova platforms
-    ios: { type: Boolean },
-    'ios-device': { type: Boolean },
-    android: { type: Boolean },
-    'android-device': { type: Boolean },
-
-    // This could theoretically be useful/necessary in conjunction with
-    // --test-app-path.
-    'allow-incompatible-update': { type: Boolean },
-
-    // Don't print linting messages for tested packages
-    'no-lint': { type: Boolean },
-
-    // allow excluding packages when testing all packages.
-    // should be a comma-separated list of package names.
-    'exclude': { type: String }
-  },
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
-  Console.setVerbose(!!options.verbose);
-
-  const runTargets = parseRunTargets(_.intersection(
-    Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
-
-  const { parsedServerUrl, parsedMobileServerUrl } =
-    parseServerOptionsForRunCommand(options, runTargets);
-
-  // Find any packages mentioned by a path instead of a package name. We will
-  // load them explicitly into the catalog.
-  var packagesByPath = _.filter(options.args, function (p) {
-    return p.indexOf('/') !== -1;
-  });
-
-  // Make a temporary app dir (based on the test runner app). This will be
-  // cleaned up on process exit. Using a temporary app dir means that we can
-  // run multiple "test-packages" commands in parallel without them stomping
-  // on each other.
-  var testRunnerAppDir =
-        options['test-app-path'] || files.mkdtemp('meteor-test-run');
-
-  // Download packages for our architecture, and for the deploy server's
-  // architecture if we're deploying.
-  var serverArchitectures = [archinfo.host()];
-  if (options.deploy && DEPLOY_ARCH !== archinfo.host()) {
-    serverArchitectures.push(DEPLOY_ARCH);
-  }
-
-  // XXX Because every run uses a new app with its own IsopackCache directory,
-  //     this always does a clean build of all packages. Maybe we can speed up
-  //     repeated test-packages calls with some sort of shared or semi-shared
-  //     isopack cache that's specific to test-packages?  See #3012.
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: testRunnerAppDir,
-    // If we're currently in an app, we still want to use the real app's
-    // packages subdirectory, not the test runner app's empty one.
-    projectDirForLocalPackages: options.appDir,
-    explicitlyAddedLocalPackageDirs: packagesByPath,
-    serverArchitectures: serverArchitectures,
-    allowIncompatibleUpdate: options['allow-incompatible-update'],
-    lintAppAndLocalPackages: !options['no-lint']
-  });
-
-  main.captureAndExit("=> Errors while setting up tests:", function () {
-    // Read metadata and initialize catalog.
-    projectContext.initializeCatalog();
-  });
-
-  // Overwrite .meteor/release.
-  projectContext.releaseFile.write(
-    release.current.isCheckout() ? "none" : release.current.name);
-
-  var packagesToAdd = getTestPackageNames(projectContext, options.args);
-
-  // filter out excluded packages
-  var excludedPackages = options.exclude && options.exclude.split(',');
-  if (excludedPackages) {
-    packagesToAdd = _.filter(packagesToAdd, function (p) {
-      return ! _.some(excludedPackages, function (excluded) {
-        return p.replace(/^local-test:/, '') === excluded;
-      });
-    });
-  }
-
-  // Use the driver package
-  // Also, add `autoupdate` so that you don't have to manually refresh the tests
-  packagesToAdd.unshift("autoupdate", options['driver-package']);
-  var constraintsToAdd = _.map(packagesToAdd, function (p) {
-    return utils.parsePackageConstraint(p);
-  });
-  // Add the packages to our in-memory representation of .meteor/packages.  (We
-  // haven't yet resolved constraints, so this will affect constraint
-  // resolution.)  This will get written to disk once we prepareProjectForBuild,
-  // either in the Cordova code below, right before deploying below, or in the
-  // app runner.  (Note that removeAllPackages removes any comments from
-  // .meteor/packages, but that's OK since this isn't a real user project.)
-  projectContext.projectConstraintsFile.removeAllPackages();
-  projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
-  // Write these changes to disk now, so that if the first attempt to prepare
-  // the project for build hits errors, we don't lose them on
-  // projectContext.reset.
-  projectContext.projectConstraintsFile.writeIfModified();
-
-  // The rest of the projectContext preparation process will happen inside the
-  // runner, once the proxy is listening. The changes we made were persisted to
-  // disk, so projectContext.reset won't make us forget anything.
-
-  let cordovaRunner;
-
-  if (!_.isEmpty(runTargets)) {
-    main.captureAndExit('', 'preparing Cordova project', () => {
-      const cordovaProject = new CordovaProject(projectContext, {
-        settingsFile: options.settings,
-        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
-
-      cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
-      projectContext.platformList.write(cordovaRunner.platformsForRunTargets);
-      cordovaRunner.checkPlatformsForRunTargets();
-    });
-  }
-
-  options.cordovaRunner = cordovaRunner;
-
-  if (options.velocity) {
-    const serverUrlForVelocity =
-    `http://${(parsedServerUrl.host || "localhost")}:${parsedServerUrl.port}`;
-    const velocity = require('../runners/run-velocity.js');
-    velocity.runVelocity(serverUrlForVelocity);
-  }
-
-  return runTestAppForPackages(projectContext, _.extend(
-    options,
-    { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
-});
-
-// Returns the "local-test:*" package names for the given package names (or for
-// all local packages if packageNames is empty/unspecified).
-var getTestPackageNames = function (projectContext, packageNames) {
-  var packageNamesSpecifiedExplicitly = ! _.isEmpty(packageNames);
-  if (_.isEmpty(packageNames)) {
-    // If none specified, test all local packages. (We don't have tests for
-    // non-local packages.)
-    packageNames = projectContext.localCatalog.getAllPackageNames();
-  }
-  var testPackages = [];
-  main.captureAndExit("=> Errors while collecting tests:", function () {
-    _.each(packageNames, function (p) {
-      buildmessage.enterJob("trying to test package `" + p + "`", function () {
-        // If it's a package name, look it up the normal way.
-        if (p.indexOf('/') === -1) {
-          if (p.indexOf('@') !== -1) {
-            buildmessage.error(
-              "You may not specify versions for local packages: " + p );
-            return;  // recover by ignoring
-          }
-          // Check to see if this is a real local package, and if it is a real
-          // local package, if it has tests.
-          var version = projectContext.localCatalog.getLatestVersion(p);
-          if (! version) {
-            buildmessage.error("Not a known local package, cannot test");
-          } else if (version.testName) {
-            testPackages.push(version.testName);
-          } else if (packageNamesSpecifiedExplicitly) {
-            // It's only an error to *ask* to test a package with no tests, not
-            // to come across a package with no tests when you say "test all
-            // packages".
-            buildmessage.error("Package has no tests");
-          }
-        } else {
-          // Otherwise, it's a directory; find it by source root.
-          version = projectContext.localCatalog.getVersionBySourceRoot(
-            files.pathResolve(p));
-          if (! version) {
-            throw Error("should have been caught when initializing catalog?");
-          }
-          if (version.testName) {
-            testPackages.push(version.testName);
-          }
-          // It is not an error to mention a package by directory that is a
-          // package but has no tests; this means you can run `meteor
-          // test-packages $APP/packages/*` without having to worry about the
-          // packages that don't have tests.
-        }
-      });
-    });
-  });
-
-  return testPackages;
-};
-
-var runTestAppForPackages = function (projectContext, options) {
-  var buildOptions = {
-    minifyMode: options.production ? 'production' : 'development',
-    buildMode: options.production ? 'production' : 'development',
-  };
-
-  if (options.deploy) {
-    // Run the constraint solver and build local packages.
-    main.captureAndExit("=> Errors while initializing project:", function () {
-      projectContext.prepareProjectForBuild();
-    });
-    // No need to display the PackageMapDelta here, since it would include all
-    // of the packages!
-
-    buildOptions.serverArch = DEPLOY_ARCH;
-    return deploy.bundleAndDeploy({
-      projectContext: projectContext,
-      site: options.deploy,
-      settingsFile: options.settings,
-      buildOptions: buildOptions,
-      recordPackageUsage: false
-    });
-  } else {
-    var runAll = require('../runners/run-all.js');
-    return runAll.run({
-      projectContext: projectContext,
-      proxyPort: options.port,
-      debugPort: options['debug-port'],
-      disableOplog: options['disable-oplog'],
-      settingsFile: options.settings,
-      banner: options['show-test-app-path'] ? null : "Tests",
-      buildOptions: buildOptions,
-      rootUrl: process.env.ROOT_URL,
-      mongoUrl: process.env.MONGO_URL,
-      oplogUrl: process.env.MONGO_OPLOG_URL,
-      mobileServerUrl: options.mobileServerUrl,
-      once: options.once,
-      recordPackageUsage: false,
-      selenium: options.selenium,
-      seleniumBrowser: options['selenium-browser'],
-      cordovaRunner: options.cordovaRunner,
-      // On the first run, we shouldn't display the delta between "no packages
-      // in the temp app" and "all the packages we're testing". If we make
-      // changes and reload, though, it's fine to display them.
-      omitPackageMapDeltaDisplayOnFirstRun: true
-    });
-  }
-};
 
 ///////////////////////////////////////////////////////////////////////////////
 // rebuild

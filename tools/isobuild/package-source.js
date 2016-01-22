@@ -1276,7 +1276,7 @@ _.extend(PackageSource.prototype, {
             arch,
             ignoreFiles,
             isApp: true,
-            loopChecker: new SymlinkLoopChecker(self.sourceRoot),
+            loopChecker: new SymlinkLoopChecker(self.sourceRoot)
           };
 
           return {
@@ -1344,7 +1344,7 @@ _.extend(PackageSource.prototype, {
     isApp,
     arch,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
-    ignoreFiles = [],
+    ignoreFiles = []
   }) {
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
@@ -1354,6 +1354,12 @@ _.extend(PackageSource.prototype, {
     sourceReadOptions.exclude.push(/^\./);
     // Ignore the usual ignorable files.
     sourceReadOptions.exclude.push(...ignoreFiles);
+
+    // Unless we're running tests, ignore source files with name
+    // "*test*.*", "*tests*.*", "test.*", "tests.*"
+    if (!global.testCommandMetadata) {
+      sourceReadOptions.exclude.push(/\.tests?\./, /^tests?\./);
+    }
 
     // Read top-level source files, excluding control files that were not
     // explicitly included.
@@ -1374,7 +1380,7 @@ _.extend(PackageSource.prototype, {
       /^tests\/$/,
       /^node_modules\/$/,
       arch === "os" ? /^client\/$/ : /^server\/$/,
-      ...sourceReadOptions.exclude
+      ...sourceReadOptions.exclude,
     ];
 
     const topLevelExcludes = isApp ? [
@@ -1382,7 +1388,7 @@ _.extend(PackageSource.prototype, {
       /^packages\/$/,
       /^programs\/$/,
       /^public\/$/, /^private\/$/,
-      /^cordova-build-override\/$/
+      /^cordova-build-override\/$/,
     ] : anyLevelExcludes;
 
     // Read top-level subdirectories. Ignore subdirectories that have
