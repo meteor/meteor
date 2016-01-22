@@ -115,6 +115,43 @@ meteor test --port 3100
 
 Then you can open two browser windows to see the app in action as well as ensuring you don't break any tests as you develop it.
 
+## Integration testing
+
+XXX: This is still a very rough sketch at this point. I want to get more of a feel for what these tests look like and what should happen.
+
+Integration testing means invoking and asserting properties of your application while different modules work in concert. Meteor's integration testing mode runs your application as usual but replaces the user interface with a test reporter that can runs test cases both on the client and server.
+
+### Integration test mode
+
+To run the integration tests in our application, we run
+
+```
+meteor test --integration
+```
+
+What this does is
+ 
+ 1. Eagerly load our application code as Meteor normally would.
+ 2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
+ 3. Sets the `Meteor.isTest` and `Meteor.isIntegrationTest` flags to be true.
+ 4. Starts up the test reporter package that we've added to our app (`practicalmeteor:mocha-web-reporter`).
+
+The key difference is in point 1 --- our app code loads as normal. So our server runs completely as usual with the full DDP API available, for example. 
+
+On the client side, when we connect to the test instance in a browser, we want to render a testing UI rather than our apps UI, so the `mocha-web-reporter` package will remove any UI of our application and replace it with it's own. Also packages (such as `flow-router`) that might take actions based on browser connectivity should be careful to not do so when `Meteor.isTest` is set.
+
+### Writing an integration test
+
+To write an integration test in Mocha, we do something similar to our unit test but wrap it in a `describe('integration-test')`.
+
+[XXX: ensure this makes sense in Mocha, technically and semantically]
+
+### Creating data in an integration test
+
+### Asserting client and server side in an integration test
+
+
+
 # Testing
 
 1. Testing your Meteor application
