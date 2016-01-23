@@ -26,6 +26,15 @@ module.exports = {
       []);
   },
 
+  getAuthTokenKeyValuePair: function(callback) {
+    cordova.exec(
+      callback,
+      console.error,
+      "MeteorWebApp",
+      "getAuthTokenKeyValuePair",
+      []);
+  },
+
   downloadedVersionExists: function(version, callback) {
     cordova.exec(
       callback,

@@ -5,6 +5,8 @@ let oneYearInSeconds = 60 * 60 * 24 * 365
 let GCDWebServerRequestAttribute_Asset = "GCDWebServerRequestAttribute_Asset"
 let GCDWebServerRequestAttribute_FilePath = "GCDWebServerRequestAttribute_FilePath"
 
+let localFileSystemPath = "/local-filesystem"
+
 // The range of listening ports to choose from. It should be large enough to
 // avoid collisions with other Meteor apps, but chosen to avoid collisions
 // with other apps or services on the device.
@@ -15,6 +17,13 @@ let listeningPortRange: Range<UInt> = 12000...13000
 /// The number of seconds to wait for startup to complete, after which
 /// we revert to the last known good version
 let startupTimeoutInterval = 10.0
+
+// For some reason, initializers in a CDVPlugin subclass do not seem to be
+// executed, so we'll make this a file local property for now
+let authTokenKeyValuePair: String = {
+  let authToken = NSProcessInfo.processInfo().globallyUniqueString
+  return "cdvToken=\(authToken)"
+}()
 
 @objc(METWebApp)
 final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
@@ -70,6 +79,39 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
 
     wwwDirectoryURL = NSBundle.mainBundle().resourceURL!.URLByAppendingPathComponent("www")
 
+    initializeAssetBundles()
+
+    // The WebAppLocalServerPort setting is only used for testing
+    if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
+      localServerPort = UInt(portString) ?? 0
+    // In all other cases, we select a listening port based on the appId to
+    // hopefully avoid collisions between Meteor apps installed on the same device
+    } else {
+      let hashValue = configuration.appId?.hashValue ?? 0
+      localServerPort = listeningPortRange.startIndex +
+        (UInt(bitPattern: hashValue) % UInt(listeningPortRange.count))
+    }
+
+    do {
+      try startLocalServer()
+    } catch {
+      NSLog("Could not start local server: \(error)")
+      return
+    }
+
+    if startupTimer == nil {
+      startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
+        NSLog("App startup timed out, reverting to last known good version")
+        self?.revertToLastKnownGoodVersion()
+      }
+    }
+
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
+
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
+  }
+
+  func initializeAssetBundles() {
     // The initial asset bundle consists of the assets bundled with the app
     let initialAssetBundle: AssetBundle
     do {
@@ -121,40 +163,11 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     // If a last downloaded version has been set and the asset bundle exists,
     // we set it as the current asset bundle
     if let lastDownloadedVersion = configuration.lastDownloadedVersion,
-        let downloadedAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastDownloadedVersion) {
-      currentAssetBundle = downloadedAssetBundle
+      let downloadedAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastDownloadedVersion) {
+        currentAssetBundle = downloadedAssetBundle
     } else {
       currentAssetBundle = initialAssetBundle
     }
-
-    // The WebAppLocalServerPort setting is only used for testing
-    if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
-      localServerPort = UInt(portString) ?? 0
-    // In all other cases, we select a listening port based on the appId to
-    // hopefully avoid collisions between Meteor apps installed on the same device
-    } else {
-      let hashValue = configuration.appId?.hashValue ?? 0
-      localServerPort = listeningPortRange.startIndex +
-        (UInt(bitPattern: hashValue) % UInt(listeningPortRange.count))
-    }
-
-    do {
-      try startLocalServer()
-    } catch {
-      NSLog("Could not start local server: \(error)")
-      return
-    }
-
-    if startupTimer == nil {
-      startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
-        NSLog("App startup timed out, reverting to last known good version")
-        self?.revertToLastKnownGoodVersion()
-      }
-    }
-
-    NSNotificationCenter.defaultCenter().addObserver(self, selector: "applicationDidEnterBackground", name: UIApplicationDidEnterBackgroundNotification, object: nil)
-
-    NSNotificationCenter.defaultCenter().addObserver(self, selector: "pageDidLoad", name: CDVPageDidLoadNotification, object: webView)
   }
 
   /// Called by Cordova before page reload
@@ -337,6 +350,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     // Handlers are added last to first
     addNotFoundHandler()
     addIndexFileHandler()
+    addHandlerForLocalFileSystem()
     addHandlerForWwwDirectory()
     addHandlerForAssetBundle()
 
@@ -352,7 +366,17 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
       // Do not modify startPage if we are testing the app using
       // cordova-plugin-test-framework
       if viewController.startPage != "cdvtests/index.html" {
-        viewController.startPage = "http://localhost:\(localServerPort)"
+        viewController.startPage = "http://localhost:\(localServerPort)?\(authTokenKeyValuePair)"
+      }
+    }
+
+    commandDelegate?.urlTransformer = { (URL: NSURL!) -> NSURL! in
+      guard let path = URL.path else { return URL }
+
+      if URL.scheme == "file" {
+        return NSURL(string: "\(localFileSystemPath)\(path)", relativeToURL: self.localServer.serverURL)
+      } else {
+        return URL
       }
     }
   }
@@ -387,6 +411,25 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
       request.setAttribute(fileURL.path!, forKey: GCDWebServerRequestAttribute_FilePath)
       return request
     }) { (request) -> GCDWebServerResponse! in
+      let filePath = request.attributeForKey(GCDWebServerRequestAttribute_FilePath) as! String
+      return self.responseForFile(request, filePath: filePath, cacheable: false)
+    }
+  }
+
+  private func addHandlerForLocalFileSystem() {
+    localServer.addHandlerWithMatchBlock({ (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
+      if requestMethod != "GET" { return nil }
+
+      if !URLPath.hasPrefix(localFileSystemPath) { return nil }
+
+      let filePath = URLPath.substringFromIndex(localFileSystemPath.endIndex)
+      let fileURL = NSURL(fileURLWithPath: filePath)
+      if fileURL.isRegularFile != true { return nil }
+
+      let request = GCDWebServerRequest(method: requestMethod, url: requestURL, headers: requestHeaders, path: URLPath, query: URLQuery)
+      request.setAttribute(filePath, forKey: GCDWebServerRequestAttribute_FilePath)
+      return request
+      }) { (request) -> GCDWebServerResponse! in
         let filePath = request.attributeForKey(GCDWebServerRequestAttribute_FilePath) as! String
         return self.responseForFile(request, filePath: filePath, cacheable: false)
     }
@@ -395,6 +438,9 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   private func addIndexFileHandler() {
     localServer.addHandlerWithMatchBlock({ [weak self] (requestMethod, requestURL, requestHeaders, URLPath, URLQuery) -> GCDWebServerRequest! in
       if requestMethod != "GET" { return nil }
+
+      // Don't serve index.html for local file system paths
+      if URLPath.hasPrefix(localFileSystemPath) { return nil }
 
       if URLPath == "/favicon.ico" { return nil }
 
@@ -421,6 +467,18 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   private func responseForFile(request: GCDWebServerRequest, filePath: String, cacheable: Bool, hash: String? = nil, sourceMapURLPath: String? = nil) -> GCDWebServerResponse {
+    // To protect our server from access by other apps running on the same device,
+    // we check whether the rponsequest contains an auth token.
+    // The auth token can be passed either as a query item or as a cookie.
+    // If the auth token was passed as a query item, we set the cookie.
+    var shouldSetCookie = false
+    if let query = request.URL.query where query.containsString(authTokenKeyValuePair) {
+      shouldSetCookie = true
+    } else if let cookie = request.headers["Cookie"] where cookie.containsString(authTokenKeyValuePair) {
+    } else {
+      return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_Forbidden.rawValue)
+    }
+    
     if !NSFileManager.defaultManager().fileExistsAtPath(filePath) {
       NSLog("File not found: \(filePath)")
       return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_NotFound.rawValue)
@@ -429,6 +487,10 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     // Support partial requests using byte ranges
     let response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange)
     response.setValue("bytes", forAdditionalHeader: "Accept-Ranges")
+    
+    if shouldSetCookie {
+      response.setValue(authTokenKeyValuePair, forAdditionalHeader: "Set-Cookie")
+    }
 
     // Only cache files when the file is cacheable and the request URL includes a cache buster
     let shouldCache = cacheable &&

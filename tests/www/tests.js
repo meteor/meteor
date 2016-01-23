@@ -2,8 +2,13 @@ var _ = require("cordova-plugin-meteor-webapp-tests.underscore");
 
 exports.defineAutoTests = function() {
   describe("WebAppCordova", function() {
-    beforeAll(function() {
+    beforeAll(function(done) {
       jasmine.addMatchers(customMatchers);
+
+      WebAppCordova.getAuthTokenKeyValuePair(function(authTokenKeyValuePair) {
+        console.log("authTokenKeyValuePair", authTokenKeyValuePair);
+        fetch("http://localhost:12000?" + authTokenKeyValuePair).then(done);
+      });
     });
 
     it("should be defined", function() {
@@ -557,7 +562,10 @@ exports.defineAutoTests = function() {
 var oneYearInSeconds = 60 * 60 * 24 * 365;
 
 function fetchFromLocalServer(path) {
-  return fetch("http://localhost:12000" + path);
+  return fetch("http://localhost:12000" + path, {
+    // Without this, fetch won't send cookies
+    credentials: 'include'
+  });
 }
 
 function expectIndexPageToBeServed(done) {
