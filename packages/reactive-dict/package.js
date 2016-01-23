@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reactive dictionary",
-  version: '1.1.4-cordova.1'
+  version: '1.1.4-cordova.2'
 });
 
 Package.onUse(function (api) {

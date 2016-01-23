@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Small library for expressing HTML trees",
-  version: '1.0.6-cordova.1'
+  version: '1.0.6-cordova.2'
 });
 
 Package.onUse(function (api) {
