@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Tiny testing framework",
-  version: '1.0.7-cordova.1'
+  version: '1.0.7-cordova.2'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Compiler for Spacebars template language",
-  version: '1.0.8-cordova.1'
+  version: '1.0.8-cordova.2'
 });
 
 Package.onUse(function (api) {
