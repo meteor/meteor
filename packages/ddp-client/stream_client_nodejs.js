@@ -136,7 +136,10 @@ _.extend(LivedataTest.ClientStream.prototype, {
     var targetUrl = toWebsocketUrl(self.endpoint);
     var fayeOptions = {
       headers: self.headers,
-      extensions: [deflate]
+      extensions: [deflate],
+      tls: {
+        servername: Npm.require('url').parse(self.endpoint).hostname
+      }
     };
     fayeOptions = _.extend(fayeOptions, self.npmFayeOptions);
     var proxyUrl = self._getProxyUrl(targetUrl);
