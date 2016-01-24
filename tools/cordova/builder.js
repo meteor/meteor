@@ -124,7 +124,7 @@ export class CordovaBuilder {
       'market:*': 'external',
 
       // Allow navigation to localhost, which is needed for the local server
-      'http://localhost/*': 'navigation'
+      'http://localhost': 'navigation'
     };
 
     const mobileServerUrl = this.options.mobileServerUrl;
@@ -140,13 +140,13 @@ export class CordovaBuilder {
       if (utils.isIPv4Address(serverDomain)) {
         this.accessRules['*'] = true;
       } else {
-        this.accessRules['*://' + serverDomain + '/*'] = true;
+        this.accessRules['*://' + serverDomain] = true;
 
         // Android talks to localhost over 10.0.2.2. This config file is used for
         // multiple platforms, so any time that we say the server is on localhost we
         // should also say it is on 10.0.2.2.
         if (serverDomain === 'localhost') {
-          this.accessRules['*://10.0.2.2/*'] = true;
+          this.accessRules['*://10.0.2.2'] = true;
         }
       }
     }
