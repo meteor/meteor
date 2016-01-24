@@ -20,6 +20,8 @@ import java.util.List;
 public class WebApp extends CordovaPlugin {
     private static final String LOG_TAG = "WebApp";
 
+    private static final String APP_AUTHORITY = "app";
+
     private AssetManager assetManager;
     private AssetManagerCache assetManagerCache;
 
@@ -28,7 +30,6 @@ public class WebApp extends CordovaPlugin {
     private Uri wwwDirectoryUri;
     private Uri applicationDirectoryUri;
 
-    private final int localServerPort = 12000;
     private List<WebResourceHandler> resourceHandlers;
 
     private AssetBundle currentAssetBundle;
@@ -153,7 +154,7 @@ public class WebApp extends CordovaPlugin {
 
     @Override
     public Uri remapUri(Uri uri) {
-        if (!(uri.getScheme().equals("http") && uri.getHost().equals("localhost") && uri.getPort() == localServerPort)) return null;
+        if (!(uri.getScheme().equals("file") && uri.getAuthority().equals(APP_AUTHORITY))) return null;
 
         Uri remappedUri = null;
         for (WebResourceHandler handler : resourceHandlers) {
