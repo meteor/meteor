@@ -268,6 +268,17 @@ Tinytest.add("ecmascript - runtime - destructuring", (test) => {
   test.throws(() => {
     const {} = null;
   }, /Cannot destructure undefined/);
+
+  const [x, y, z] = function*() {
+    let x = 1;
+    while (true) {
+      yield x++;
+    }
+  }();
+
+  test.equal(x, 1);
+  test.equal(y, 2);
+  test.equal(z, 3);
 });
 
 Tinytest.addAsync("ecmascript - runtime - misc support", (test, done) => {

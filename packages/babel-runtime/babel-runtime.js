@@ -1,4 +1,6 @@
 var hasOwn = Object.prototype.hasOwnProperty;
+var S = typeof Symbol === "function" ? Symbol : {};
+var iteratorSymbol = S.iterator || "@@iterator";
 
 function canDefineNonEnumerableProperties() {
   var testObj = {};
@@ -338,6 +340,33 @@ var BabelRuntime = {
     }
 
     return Array.from(arr);
+  },
+
+  slicedToArray: function (iterable, limit) {
+    if (Array.isArray(iterable)) {
+      return iterable;
+    }
+
+    if (iterable) {
+      var it = iterable[iteratorSymbol]();
+      var result = [];
+      var info;
+
+      if (typeof limit !== "number") {
+        limit = Infinity;
+      }
+
+      while (result.length < limit &&
+             ! (info = it.next()).done) {
+        result.push(info.value);
+      }
+
+      return result;
+    }
+
+    throw new TypeError(
+      "Invalid attempt to destructure non-iterable instance"
+    );
   },
 
   slice: Array.prototype.slice
