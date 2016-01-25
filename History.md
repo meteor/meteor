@@ -42,6 +42,16 @@
 * Packages in local node_modules directories now take precedence over
   Meteor packages of the same name. #5933
 
+* Upgraded `babel-compiler` to Babel 6, with the following set of plugins:
+  https://github.com/meteor/babel-preset-meteor/blob/master/index.js
+
+* Lazy CSS modules may now be imported by JS: 12c946ee651a93725f243f790c7919de3d445a19
+
+* Packages in the top-level node_modules directory of an app can now be
+  imported by Meteor packages: c631d3ac35f5ca418b93c454f521989855b8ec72
+
+* Added support for wildcard import and export statements. #5872 #5897
+
 ### Performance
 
 * Don't reload package catalog from disk on rebuilds unless package
