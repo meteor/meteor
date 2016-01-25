@@ -194,3 +194,12 @@ describe("Meteor packages", () => {
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
 });
+
+describe("async functions", () => {
+  it("should work on the client and server", async () => {
+    assert.strictEqual(
+      await 2 + 2,
+      await new Promise(resolve => resolve(4))
+    );
+  });
+});
