@@ -1,6 +1,6 @@
 Package.describe({
   name: 'jshint',
-  version: '1.0.1-cordova.2',
+  version: '1.0.1-cordova.3',
   summary: 'Lint all your JavaScript files with JSHint.',
   documentation: 'README.md'
 });

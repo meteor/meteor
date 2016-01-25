@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '1.1.11-cordova.2'
+  version: '1.1.11-cordova.3'
 });
 
 Package.registerBuildPlugin({
