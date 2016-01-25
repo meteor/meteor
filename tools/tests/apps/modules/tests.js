@@ -203,3 +203,10 @@ describe("async functions", () => {
     );
   });
 });
+
+Meteor.isClient &&
+describe("client/compatibility directories", () => {
+  it("should contain bare files", () => {
+    assert.strictEqual(topLevelVariable, 1234);
+  });
+});
