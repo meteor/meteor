@@ -30,6 +30,7 @@
         4. Question: where exactly do we capture logs correctly and log them to terminal?
     3. Testing
     4. Debugging
+    5. https://github.com/meteor/meteor/issues/5973 - solve or document
 4. Designing for mobile - link to external resources or UX guide for all points
     1. Credit: https://github.com/awatson1978/meteor-cookbook/blob/master/cookbook/mobile.md
     2. Media queries/CSS libraries
