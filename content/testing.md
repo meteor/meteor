@@ -92,8 +92,8 @@ meteor test --unit
 
 What this does is run a special version of our application that:
 
- 1. Doesn't eagerly load *any* of our application code as Meteor normally would.
- 2. Does eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
+ 1. *Doesn't* eagerly load *any* of our application code as Meteor normally would.
+ 2. *Does* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
  3. Sets the `Meteor.isTest` and `Meteor.isUnitTest` flags to be true.
  4. Starts up the test reporter package that we've added to our app (`practicalmeteor:mocha-web-reporter`).
 
@@ -131,7 +131,7 @@ meteor test --integration
 
 What this does is
  
- 1. Eagerly load our application code as Meteor normally would.
+ 1. *Does* eagerly load our application code as Meteor normally would.
  2. *Also* eagerly load any file in our application (including in `imports/` folders) that look like `*.tests.*`. 
  3. Sets the `Meteor.isTest` and `Meteor.isIntegrationTest` flags to be true.
  4. Starts up the test reporter package that we've added to our app (`practicalmeteor:mocha-web-reporter`).
