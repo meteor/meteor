@@ -652,7 +652,7 @@ _.extend(AppRunner.prototype, {
       };
     }
 
-    var serverWatchSet = bundleResult.serverWatchSet;
+    var serverWatchSet = bundleResult.serverWatchSet.clone();
     serverWatchSet.merge(settingsWatchSet);
 
     // We only can refresh the client without restarting the server if the
@@ -796,10 +796,10 @@ _.extend(AppRunner.prototype, {
       clientWatcher = new watch.Watcher({
          watchSet: bundleResult.clientWatchSet,
          onChange: function () {
-          var outcome = watch.isUpToDate(serverWatchSet)
-                      ? 'changed-refreshable' // only a client asset has changed
-                      : 'changed'; // both a client and server asset changed
-          self._resolvePromise('run', { outcome: outcome });
+           var outcome = watch.isUpToDate(serverWatchSet)
+                       ? 'changed-refreshable' // only a client asset has changed
+                       : 'changed'; // both a client and server asset changed
+           self._resolvePromise('run', { outcome: outcome });
          }
       });
     };
