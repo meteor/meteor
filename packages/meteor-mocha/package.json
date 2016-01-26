@@ -1,0 +1,73 @@
+{
+  "name": "mocha",
+  "version": "2.1.0",
+  "description": "simple, flexible, fun test framework",
+  "keywords": [
+    "mocha",
+    "test",
+    "bdd",
+    "tdd",
+    "tap"
+  ],
+  "author": "TJ Holowaychuk <tj@vision-media.ca>",
+  "contributors": [
+    "Joshua Appelman <joshua@jbna.nl>",
+    "Oleg Gaidarenko <markelog@gmail.com>",
+    "Christoffer Hallas <christoffer.hallas@gmail.com>",
+    "Christopher Hiller <chiller@badwing.com>",
+    "Travis Jeffery <tj@travisjeffery.com>",
+    "Johnathan Ong <me@jongleberry.com>",
+    "Guillermo Rauch <rauchg@gmail.com>",
+    "Nathan Rajlich <nathan@tootallnate.net>"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mochajs/mocha.git"
+  },
+  "maintainers": [
+    "travisjeffery <tj@travisjeffery.com>",
+    "jbnicolai <joshua@jbna.nl>",
+    "boneskull <chiller@badwing.com>"
+  ],
+  "main": "./index",
+  "browser": "./mocha.js",
+  "bin": {
+    "mocha": "./bin/mocha",
+    "_mocha": "./bin/_mocha"
+  },
+  "engines": {
+    "node": ">= 0.8.x"
+  },
+  "scripts": {
+    "test": "make test-all"
+  },
+  "dependencies": {
+    "commander": "2.3.0",
+    "debug": "2.0.0",
+    "diff": "1.0.8",
+    "escape-string-regexp": "1.0.2",
+    "glob": "3.2.3",
+    "growl": "1.8.1",
+    "jade": "0.26.3",
+    "mkdirp": "0.5.0"
+  },
+  "devDependencies": {
+    "coffee-script": "~1.8.0",
+    "should": "~4.0.0"
+  },
+  "files": [
+    "bin",
+    "images",
+    "lib",
+    "index.js",
+    "mocha.css",
+    "mocha.js",
+    "LICENSE"
+  ],
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://raw.github.com/mochajs/mocha/master/LICENSE"
+    }
+  ]
+}

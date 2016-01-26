@@ -1,0 +1,20 @@
+{
+  "name": "mocha",
+  "version": "2.1.0",
+  "repo": "mochajs/mocha",
+  "description": "simple, flexible, fun test framework",
+  "keywords": [
+    "mocha",
+    "test",
+    "bdd",
+    "tdd",
+    "tap"
+  ],
+  "main": "mocha.js",
+  "scripts": [
+    "mocha.js"
+  ],
+  "styles": [
+    "mocha.css"
+  ]
+}

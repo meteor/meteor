@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>content</key>
+	<string>teardown(function() {
+  $0
+});</string>
+	<key>name</key>
+	<string>tdd - teardown</string>
+	<key>scope</key>
+	<string>source.js</string>
+	<key>tabTrigger</key>
+	<string>teardown</string>
+	<key>uuid</key>
+	<string>9472B167-BEC1-45FD-BA1C-68A99961D8FF</string>
+</dict>
+</plist>
