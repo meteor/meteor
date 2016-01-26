@@ -37,7 +37,7 @@ Meteor.methods({
     new SimpleSchema({
       todoId: { type: String },
       newText: { type: String }
-    }).validate({ todoId, newText }),
+    }).validate({ todoId, newText });
 
     const todo = Todos.findOne(todoId);
 
