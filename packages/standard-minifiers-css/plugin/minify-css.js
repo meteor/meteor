@@ -39,7 +39,7 @@ CssToolsMinifier.prototype.processFilesForBundle = function (files, options) {
 // Lints CSS files and merges them into one file, fixing up source maps and
 // pulling any @import directives up to the top since the CSS spec does not
 // allow them to appear in the middle of a file.
-var mergeCss = function (css) {
+var mergeCss = Profile("mergeCss", function (css) {
   // Filenames passed to AST manipulator mapped to their original files
   var originals = {};
 
@@ -95,31 +95,33 @@ var mergeCss = function (css) {
       return originals[filename].getContentsAsString();
     });
 
-  // If any input files had source maps, apply them.
-  // Ex.: less -> css source map should be composed with css -> css source map
-  var newMap = sourcemap.SourceMapGenerator.fromSourceMap(
-    new sourcemap.SourceMapConsumer(stringifiedCss.map));
+  var newMap;
 
-  Object.keys(originals).forEach(function (name) {
-    var file = originals[name];
-    if (! file.getSourceMap())
-      return;
-    try {
-      newMap.applySourceMap(
-        new sourcemap.SourceMapConsumer(file.getSourceMap()), name);
-    } catch (err) {
-      // If we can't apply the source map, silently drop it.
-      //
-      // XXX This is here because there are some less files that
-      // produce source maps that throw when consumed. We should
-      // figure out exactly why and fix it, but this will do for now.
-    }
+  Profile.time("composing source maps", function () {
+    // If any input files had source maps, apply them.
+    // Ex.: less -> css source map should be composed with css -> css source map
+    newMap = sourcemap.SourceMapGenerator.fromSourceMap(
+      new sourcemap.SourceMapConsumer(stringifiedCss.map));
+
+    Object.keys(originals).forEach(function (name) {
+      var file = originals[name];
+      if (! file.getSourceMap())
+        return;
+      try {
+        newMap.applySourceMap(
+          new sourcemap.SourceMapConsumer(file.getSourceMap()), name);
+      } catch (err) {
+        // If we can't apply the source map, silently drop it.
+        //
+        // XXX This is here because there are some less files that
+        // produce source maps that throw when consumed. We should
+        // figure out exactly why and fix it, but this will do for now.
+      }
+    });
   });
 
   return {
     code: stringifiedCss.code,
     sourceMap: newMap.toString()
   };
-};
-
-
+});
