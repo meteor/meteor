@@ -263,8 +263,16 @@ var print = function (indent, text) {
 };
 
 var isChild = function (entry1, entry2) {
-  return (entry2.length === entry1.length + 1 &&
-          _.isEqual(entry1, entry2.slice(0, entry1.length)));
+  if (entry2.length !== entry1.length + 1) {
+    return false;
+  }
+  for (var i = entry1.length-1; i >= 0; i--) {
+    if (entry1[i] !== entry2[i]) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 var children = function (entry1) {
@@ -338,7 +346,7 @@ var leafTotal = function (leafName) {
   var total = 0;
   _.each(
     _.filter(entries, function (entry) {
-      return isLeaf(entry) && entryName(entry) === leafName;
+      return entryName(entry) === leafName && isLeaf(entry);
     }),
     function (leaf) {
       total += entryTime(leaf);
@@ -399,4 +407,3 @@ Profile.time = time;
 Profile.run = run;
 
 exports.Profile = Profile;
-
