@@ -518,7 +518,7 @@ _.extend(Isopack.prototype, {
       }, function () {
         // Make a new Plugin API object for this plugin.
         var Plugin = self._makePluginApi();
-        plugin.load({ Plugin: Plugin });
+        plugin.load({ Plugin: Plugin, Profile: Profile });
       });
     });
 
