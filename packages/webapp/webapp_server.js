@@ -501,7 +501,7 @@ var runWebAppServer = function () {
 
         // Serve the program as a string at /foo/<arch>/manifest.json
         // XXX change manifest.json -> program.json
-        staticFiles[path.join(urlPrefix, getItemPathname('/manifest.json'))] = {
+        staticFiles[urlPrefix + getItemPathname('/manifest.json')] = {
           content: JSON.stringify(program),
           cacheable: true,
           hash: program.version,
