@@ -165,7 +165,10 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 
 var enabled = !! process.env['METEOR_PROFILE'];
-var filter = ~~process.env['METEOR_PROFILE'] || 100; // ms
+var filter = parseFloat(process.env['METEOR_PROFILE']); // ms
+if (isNaN(filter)) {
+  filter = 100; // ms
+}
 
 var bucketTimes = {};
 
