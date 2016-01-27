@@ -79,7 +79,7 @@ Package.onUse(function (api) {
   
   api.addFiles('end.css', 'client');
 
-  api.addFiles('runTests.js', 'client');
+  api.addFiles('run-tests.js', 'client');
   api.export('runTests', 'client');
 });
 
