@@ -4,6 +4,7 @@ import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import buildmessage from "../utils/buildmessage.js";
+import LRU from "lru-cache";
 import {
   pathJoin,
   pathRelative,
@@ -27,6 +28,22 @@ const extensions = {
       ";\n";
   }
 };
+
+// Map from SHA (which is already calculated, so free for us)
+// to the results of calling findImportedModuleIdentifiers.
+// Each entry is an array of strings, and this is a case where
+// the computation is expensive but the output is very small.
+// The cache can be global because findImportedModuleIdentifiers
+// is a pure function, and that way it applies across instances
+// of ImportScanner (which do not persist across builds).
+const IMPORT_SCANNER_CACHE = new LRU({
+  max: 1024*1024,
+  length(value) {
+    let total = 40; // size of key
+    value.forEach(str => { total += str.length; });
+    return total;
+  }
+});
 
 export default class ImportScanner {
   constructor({
@@ -103,11 +120,25 @@ export default class ImportScanner {
     return this.outputFiles;
   }
 
+  _findImportedModuleIdentifiers(file) {
+    if (IMPORT_SCANNER_CACHE.has(file.hash)) {
+      return IMPORT_SCANNER_CACHE.get(file.hash);
+    }
+
+    const result =
+          keys(findImportedModuleIdentifiers(file.data.toString("utf8")));
+
+    // there should always be file.hash, but better safe than sorry
+    if (file.hash) {
+      IMPORT_SCANNER_CACHE.set(file.hash, result);
+    }
+
+    return result;
+  }
+
   _scanFile(file) {
     const absPath = pathJoin(this.sourceRoot, file.sourcePath);
-    file.deps = file.deps || keys(
-      findImportedModuleIdentifiers(file.data.toString("utf8"))
-    );
+    file.deps = file.deps || this._findImportedModuleIdentifiers(file);
 
     each(file.deps, id => {
       const absImportedPath = this._tryToResolveImportedPath(file, id);
