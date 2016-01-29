@@ -141,7 +141,7 @@ export class CompilerPluginProcessor {
         " (for target ", self.arch, ")"
       ].join('');
 
-      Profile.time(jobTitle, () => {
+      Profile.time("plugin "+sourceProcessor.isopack.name, () => {
         buildmessage.enterJob({
           title: jobTitle
         }, function () {
