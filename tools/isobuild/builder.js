@@ -603,24 +603,22 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 }
 
 function atomicallyRewriteFile(path, data, options) {
-  let stat = null;
+  // create a different file with a random name and then rename over atomically
+  const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
+  const rpath = files.pathJoin(files.pathDirname(path), rname);
+  files.writeFile(rpath, data, options);
   try {
-    stat = files.stat(path);
+    files.rename(rpath, path);
   } catch (e) {
-    if (e.code !== 'ENOENT') {
+    if (e.code === 'EISDIR') {
+      // replacing a directory with a file; this is rare (so it can
+      // be a slow path) but can legitimately happen if e.g. a developer
+      // puts a file where there used to be a directory in their app.
+      files.rm_recursive(path);
+      files.rename(rpath, path);
+    } else {
       throw e;
     }
-  }
-
-  if (stat && stat.isDirectory()) {
-    files.rm_recursive(path);
-    files.writeFile(path, data, options);
-  } else {
-    // create a different file with a random name and then rename over atomically
-    const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
-    const rpath = files.pathJoin(files.pathDirname(path), rname);
-    files.writeFile(rpath, data, options);
-    files.rename(rpath, path);
   }
 }
 
