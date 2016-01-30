@@ -823,6 +823,8 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
     files.rm_recursive(garbageDir);
   }
 };
+files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
+                                          files.renameDirAlmostAtomically);
 
 files.writeFileAtomically = function (filename, contents) {
   var tmpFile = files.pathJoin(
@@ -831,6 +833,8 @@ files.writeFileAtomically = function (filename, contents) {
   files.writeFile(tmpFile, contents);
   files.rename(tmpFile, filename);
 };
+files.writeFileAtomically = Profile("files.writeFileAtomically",
+                                    files.writeFileAtomically);
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.

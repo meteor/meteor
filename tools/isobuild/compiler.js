@@ -323,7 +323,7 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 // options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = function (options) {
+var compileUnibuild = Profile("compileUnibuild", function (options) {
   buildmessage.assertInCapture();
 
   const isopk = options.isopack;
@@ -609,7 +609,7 @@ api.addAssets('${relPath}', 'client').`);
   return {
     pluginProviderPackageNames: pluginProviderPackageNames
   };
-};
+});
 
 function runLinters({inputSourceArch, isopackCache, sources,
                      sourceProcessorSet, watchSet}) {
