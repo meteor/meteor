@@ -565,8 +565,12 @@ api.addAssets('${relPath}', 'client').`);
         addAsset: addAsset
       });
 
+    const handler = buildmessage.markBoundary(classification.legacyHandler);
+
     try {
-      (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
+      Profile.time(`legacy handler (.${classification.extension})`, () => {
+        handler(compileStep);
+      });
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
       buildmessage.exception(e);
