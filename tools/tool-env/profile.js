@@ -335,6 +335,12 @@ var hasChildren = function (entry) {
   return children(entry).length !== 0;
 };
 
+var hasSignificantChildren = function (entry) {
+  return _.some(children(entry), function (entry) {
+    return (entryTime(entry) >= filter);
+  });
+};
+
 var isLeaf = function (entry) {
   return ! hasChildren(entry);
 };
@@ -364,7 +370,7 @@ var reportOn = function (level, entry) {
   if (stats.time < filter) {
     return;
   }
-  var isParent = hasChildren(entry);
+  var isParent = hasSignificantChildren(entry);
   var name = entryName(entry);
   print((isParent ? leftRightDots : leftRightAlign)
         (spaces(level * 3) + name, formatMs(stats.time), 70)
@@ -427,7 +433,7 @@ var getTopLevelTotal = function () {
 
 var setupReport = function () {
   entries = _.map(_.keys(bucketStats), JSON.parse);
-  _.each(_.filter(entries, hasChildren), function (parent) {
+  _.each(_.filter(entries, hasSignificantChildren), function (parent) {
     injectOtherTime(parent);
   });
 };
