@@ -59,18 +59,19 @@ those roles easier.
 <a id="roles-naming" name="roles-naming"></a>
 ### Permissions vs roles  (or What's in a name...)
 
-Although the name of this package is `roles`, you can define your roles, groups, permissions however you like.
-They are essentially just tags that you assign on a user and which you can check for later.
+Although the name of this package is `roles`, you can define your **roles**, **groups** or **permissions** however you like.
+They are essentially just tags that you assign to a user and which you can check upon later.
 
 You can have traditional roles like, `admin` or `webmaster`, or you can assign more granular permissions such
-as, `view-secrets`, `users.view`, or `users.manage`.  Often times more granular is actually better because you are
+as, `view-secrets`, `users.view`, or `users.manage`.  Often, more granular is actually better because you are
 able to handle all those pesky edge cases that come up in real-life usage without creating a ton of higher-level
-`roles`.  To the roles package, it's all just a role object.
+`roles`.  With the `roles` package, it's all just a role object.
 
-Roles can be put into a hierarchy. Roles can have multiple parents and can be children (subroles) of multiple roles.
-If a parent role is set to the user, all its descendants are also in effect. You can use this to create "super roles"
-combining multiple low-level permissions. For example, you could name your top-level roles `user` and `admin`
-and then you could use your second-level roles as permissions and name them `USERS_VIEW`, `POST_EDIT`, and similar.
+Roles can be put into a **hierarchy**.  
+Roles can have multiple parents and can be children (subroles) of multiple roles.
+If a parent role is set to the user, all its descendants are also applying. 
+You can use this to create "super roles" aggregating permissions all the way through the bottom of the tree.  
+For example, you could name two top-level roles `user` and `admin` and then you could use your second-level roles as permissions and name them `USERS_VIEW`, `POST_EDIT`, and similar.
 Then you could set `admin` role as parent role for `USERS_VIEW` and `POST_EDIT`, while `user` would be parent
 only of the `POST_EDIT` role. You can then assign `user` and `admin` roles to your users. And if you need to
 change permissions later for the whole role, just add or remove children roles. You can create roles from this example
