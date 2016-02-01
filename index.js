@@ -21,7 +21,12 @@ exports.compile = function compile(source, options) {
 };
 
 function setCacheDir(cacheDir) {
+  if (compileCache && compileCache.dir === cacheDir) {
+    return;
+  }
+
   var babel = require("babel-core");
+
   compileCache = new Cache(function (source, options) {
     return babel.transform(source, options);
   }, cacheDir);
