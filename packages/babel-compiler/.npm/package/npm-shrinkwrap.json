@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "meteor-babel": {
-      "version": "0.6.3",
+      "version": "0.6.6",
       "dependencies": {
         "babel-core": {
           "version": "6.4.5",
@@ -207,9 +207,6 @@
                 }
               }
             },
-            "babylon": {
-              "version": "6.4.5"
-            },
             "debug": {
               "version": "2.2.0",
               "dependencies": {
@@ -261,7 +258,7 @@
           }
         },
         "babel-preset-meteor": {
-          "version": "6.4.2",
+          "version": "6.4.4",
           "dependencies": {
             "babel-plugin-check-es2015-constants": {
               "version": "6.3.13"
@@ -345,9 +342,6 @@
                     "babel-messages": {
                       "version": "6.3.18"
                     },
-                    "babylon": {
-                      "version": "6.4.5"
-                    },
                     "debug": {
                       "version": "2.2.0",
                       "dependencies": {
@@ -399,12 +393,7 @@
                   }
                 },
                 "babel-template": {
-                  "version": "6.3.13",
-                  "dependencies": {
-                    "babylon": {
-                      "version": "6.4.5"
-                    }
-                  }
+                  "version": "6.3.13"
                 },
                 "lodash": {
                   "version": "3.10.1"
@@ -431,9 +420,6 @@
                 "babel-template": {
                   "version": "6.3.13",
                   "dependencies": {
-                    "babylon": {
-                      "version": "6.4.5"
-                    },
                     "lodash": {
                       "version": "3.10.1"
                     }
@@ -490,9 +476,6 @@
                           }
                         }
                       }
-                    },
-                    "babylon": {
-                      "version": "6.4.5"
                     },
                     "debug": {
                       "version": "2.2.0",
@@ -627,9 +610,6 @@
                             "babel-messages": {
                               "version": "6.3.18"
                             },
-                            "babylon": {
-                              "version": "6.4.5"
-                            },
                             "debug": {
                               "version": "2.2.0",
                               "dependencies": {
@@ -735,9 +715,6 @@
                             "babel-messages": {
                               "version": "6.3.18"
                             },
-                            "babylon": {
-                              "version": "6.4.5"
-                            },
                             "debug": {
                               "version": "2.2.0",
                               "dependencies": {
@@ -787,9 +764,6 @@
                 "babel-template": {
                   "version": "6.3.13",
                   "dependencies": {
-                    "babylon": {
-                      "version": "6.4.5"
-                    },
                     "babel-traverse": {
                       "version": "6.4.5",
                       "dependencies": {
@@ -969,9 +943,6 @@
                         "babel-messages": {
                           "version": "6.3.18"
                         },
-                        "babylon": {
-                          "version": "6.4.5"
-                        },
                         "debug": {
                           "version": "2.2.0",
                           "dependencies": {
@@ -1020,9 +991,6 @@
                     "babel-template": {
                       "version": "6.3.13",
                       "dependencies": {
-                        "babylon": {
-                          "version": "6.4.5"
-                        },
                         "lodash": {
                           "version": "3.10.1"
                         }
@@ -1084,9 +1052,6 @@
                         },
                         "babel-messages": {
                           "version": "6.3.18"
-                        },
-                        "babylon": {
-                          "version": "6.4.5"
                         },
                         "debug": {
                           "version": "2.2.0",
@@ -1201,9 +1166,6 @@
                         "babel-messages": {
                           "version": "6.3.18"
                         },
-                        "babylon": {
-                          "version": "6.4.5"
-                        },
                         "debug": {
                           "version": "2.2.0",
                           "dependencies": {
@@ -1257,9 +1219,6 @@
                 "babel-template": {
                   "version": "6.3.13",
                   "dependencies": {
-                    "babylon": {
-                      "version": "6.4.5"
-                    },
                     "babel-traverse": {
                       "version": "6.4.5",
                       "dependencies": {
@@ -1425,9 +1384,6 @@
                             }
                           }
                         },
-                        "babylon": {
-                          "version": "6.4.5"
-                        },
                         "debug": {
                           "version": "2.2.0",
                           "dependencies": {
@@ -1476,9 +1432,6 @@
                     "babel-template": {
                       "version": "6.3.13",
                       "dependencies": {
-                        "babylon": {
-                          "version": "6.4.5"
-                        },
                         "lodash": {
                           "version": "3.10.1"
                         }
@@ -1560,9 +1513,6 @@
                     "babel-messages": {
                       "version": "6.3.18"
                     },
-                    "babylon": {
-                      "version": "6.4.5"
-                    },
                     "debug": {
                       "version": "2.2.0",
                       "dependencies": {
@@ -1619,9 +1569,6 @@
                 "babel-template": {
                   "version": "6.3.13",
                   "dependencies": {
-                    "babylon": {
-                      "version": "6.4.5"
-                    },
                     "lodash": {
                       "version": "3.10.1"
                     }
@@ -1700,9 +1647,6 @@
                         },
                         "babel-messages": {
                           "version": "6.3.18"
-                        },
-                        "babylon": {
-                          "version": "6.4.5"
                         },
                         "debug": {
                           "version": "2.2.0",
@@ -1825,9 +1769,6 @@
                         "babel-messages": {
                           "version": "6.3.18"
                         },
-                        "babylon": {
-                          "version": "6.4.5"
-                        },
                         "debug": {
                           "version": "2.2.0",
                           "dependencies": {
@@ -1949,9 +1890,6 @@
                             },
                             "babel-messages": {
                               "version": "6.3.18"
-                            },
-                            "babylon": {
-                              "version": "6.4.5"
                             },
                             "debug": {
                               "version": "2.2.0",
@@ -2149,9 +2087,6 @@
                     }
                   }
                 },
-                "babylon": {
-                  "version": "6.4.5"
-                },
                 "private": {
                   "version": "0.1.6"
                 }
@@ -2238,9 +2173,6 @@
                             "babel-messages": {
                               "version": "6.3.18"
                             },
-                            "babylon": {
-                              "version": "6.4.5"
-                            },
                             "debug": {
                               "version": "2.2.0",
                               "dependencies": {
@@ -2301,12 +2233,15 @@
           }
         },
         "babel-runtime": {
-          "version": "5.8.34",
+          "version": "5.8.35",
           "dependencies": {
             "core-js": {
               "version": "1.2.6"
             }
           }
+        },
+        "babylon": {
+          "version": "6.4.5"
         },
         "convert-source-map": {
           "version": "1.1.3"
