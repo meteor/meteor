@@ -33,6 +33,7 @@
     "babel-preset-meteor": "^6.4.2",
     "babel-preset-react": "^6.2.4",
     "babel-runtime": "^5.8.34",
+    "babylon": "^6.4.5",
     "convert-source-map": "^1.1.2"
   },
   "devDependencies": {

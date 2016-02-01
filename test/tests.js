@@ -5,6 +5,16 @@ import {
   helper as testHelper,
 } from "./test-module";
 
+describe("meteor-babel", () => {
+  const meteorBabel = require("../index.js");
+
+  it("should be able to parse non-standard syntax", () => {
+    const ast = meteorBabel.parse("const copy = {...obj};");
+    const prop = ast.program.body[0].declarations[0].init.properties[0];
+    assert.strictEqual(prop.type, "SpreadProperty");
+  });
+});
+
 describe("Babel", function() {
   it("es3.{property,memberExpression}Literals", () => {
     function getCatch(value) {
