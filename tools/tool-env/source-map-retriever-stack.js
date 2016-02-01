@@ -63,6 +63,10 @@ sourceMapSupport.install({
   wrapCallSite
 });
 
+// Save the correct prepareStackTrace so that if third-party code overwrites
+// it (ahem, coffeescript), we can restore it.
+Error.METEOR_prepareStackTrace = Error.prepareStackTrace;
+
 // Default retrievers
 
 // Always fall back to the default in the end
