@@ -5,6 +5,7 @@ import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
 import buildmessage from "../utils/buildmessage.js";
 import LRU from "lru-cache";
+import {Profile} from "../tool-env/profile.js";
 import {
   pathJoin,
   pathRelative,
@@ -476,3 +477,9 @@ export default class ImportScanner {
     }
   }
 }
+
+each(["_readFile", "_findImportedModuleIdentifiers",
+      "_getInstallPath", "_tryToResolveImportedPath"], funcName => {
+  ImportScanner.prototype[funcName] = Profile(
+    `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
+});
