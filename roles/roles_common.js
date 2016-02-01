@@ -61,7 +61,7 @@ _.extend(Roles, {
   createRole: function (roleName, options) {
     var match;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     Roles._checkRoleName(roleName);
 
@@ -407,17 +407,11 @@ _.extend(Roles, {
     if (!users) throw new Error ("Missing 'users' param.");
     if (!roles) throw new Error ("Missing 'roles' param.");
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure arrays
     if (!_.isArray(users)) users = [users];
     if (!_.isArray(roles)) roles = [roles];
-
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
 
     Roles._checkPartitionName(options.partition);
 
@@ -464,17 +458,11 @@ _.extend(Roles, {
     if (!users) throw new Error ("Missing 'users' param.");
     if (!roles) throw new Error ("Missing 'roles' param.");
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure arrays
     if (!_.isArray(users)) users = [users];
     if (!_.isArray(roles)) roles = [roles];
-
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
 
     Roles._checkPartitionName(options.partition);
 
@@ -645,17 +633,11 @@ _.extend(Roles, {
     if (!users) throw new Error ("Missing 'users' param.");
     if (!roles) throw new Error ("Missing 'roles' param.");
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure arrays
     if (!_.isArray(users)) users = [users];
     if (!_.isArray(roles)) roles = [roles];
-
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
 
     Roles._checkPartitionName(options.partition);
 
@@ -826,18 +808,12 @@ _.extend(Roles, {
     var id,
         query;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure array to simplify code
     if (!_.isArray(roles)) roles = [roles];
 
     if (!roles.length) return false;
-
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
 
     Roles._checkPartitionName(options.partition);
 
@@ -915,13 +891,7 @@ _.extend(Roles, {
   getRolesForUser: function (user, options) {
     var roles;
 
-    options = options || {};
-
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
+    options = Roles._normalizeOptions(options);
 
     Roles._checkPartitionName(options.partition);
 
@@ -1022,16 +992,10 @@ _.extend(Roles, {
   _usersInRoleQuery: function (roles, options, queryOptions) {
     var query;
 
-    options = options || {};
+    options = Roles._normalizeOptions(options);
 
     // ensure array to simplify code
     if (!_.isArray(roles)) roles = [roles];
-
-    if (_.isString(options)) {
-      options = {partition: options};
-    }
-
-    options.partition = options.partition || null;
 
     Roles._checkPartitionName(options.partition);
 
@@ -1165,7 +1129,7 @@ _.extend(Roles, {
    * @static
    */
   removePartition: function (name) {
-    name = name || null;
+    name = Roles._normalizePartitionName(name);
 
     Roles._checkPartitionName(name);
 
@@ -1239,7 +1203,7 @@ _.extend(Roles, {
    * @method _partitionMatcher
    * @param {String} partition A partition to match against.
    * @return {Function} A matcher function which accepts a role object and returns `true`
-   *                     if its partition matches `partition`.
+   *                    if its partition matches `partition`.
    * @private
    * @static
    */
@@ -1275,6 +1239,46 @@ _.extend(Roles, {
   _checkRoleName: function (roleName) {
     if (!roleName || !_.isString(roleName) || Roles._trim(roleName) !== roleName) {
       throw new Error("Invalid role name '" + roleName + "'.");
+    }
+  },
+
+  /**
+   * Normalize options.
+   *
+   * @method _normalizeOptions
+   * @param {Object} options Options to normalize.
+   * @return {Object} Normalized options.
+   * @private
+   * @static
+   */
+  _normalizeOptions: function (options) {
+    options = _.isUndefined(options) ? {} : options;
+
+    if (options === null || _.isString(options)) {
+      options = {partition: options};
+    }
+
+    options.partition = Roles._normalizePartitionName(options.partition);
+
+    return options;
+  },
+
+  /**
+   * Normalize partition name.
+   *
+   * @method _normalizePartitionName
+   * @param {String} partitionName A partition name to normalize.
+   * @return {String} Normalized partition name.
+   * @private
+   * @static
+   */
+  _normalizePartitionName: function (partitionName) {
+    // map undefined and null to null
+    if (partitionName == null) {
+      return null;
+    }
+    else {
+      return partitionName;
     }
   },
 

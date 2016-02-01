@@ -144,6 +144,9 @@
       Roles.addUsersToRoles(users.eve, ['editor'], 'partition2');
 
       test.throws(function () {
+        Roles.addUsersToRoles(users.eve, ['admin', 'user'], '');
+      }, /Invalid partition name/);
+      test.throws(function () {
         Roles.addUsersToRoles(users.eve, ['admin', 'user'], ' ');
       }, /Invalid partition name/);
       test.throws(function () {
