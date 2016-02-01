@@ -154,7 +154,7 @@ var _ = require('underscore');
 
 var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 
 var files = require('../fs/files.js');

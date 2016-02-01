@@ -1,7 +1,7 @@
 var _ = require('underscore');
 
 var bundler = require('../isobuild/bundler.js');
-var Builder = require('../isobuild/builder.js');
+import Builder from '../isobuild/builder.js';
 var compiler = require('../isobuild/compiler.js');
 var isopackCacheModule = require('../isobuild/isopack-cache.js');
 

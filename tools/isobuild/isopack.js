@@ -3,7 +3,7 @@ var archinfo = require('../utils/archinfo.js');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var bundler = require('./bundler.js');
 var watch = require('../fs/watch.js');
 var files = require('../fs/files.js');

@@ -24,8 +24,10 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "1.4.28",
     fibers: fibersVersion,
-    "meteor-babel": "0.5.8",
-    "meteor-promise": "0.5.0",
+    "meteor-babel": "0.7.1",
+    "meteor-promise": "0.5.1",
+    // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
+    "babel-runtime": "5.8.35",
     // For various ES2015 polyfills, such as Map and Set.
     "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done

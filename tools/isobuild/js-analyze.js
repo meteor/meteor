@@ -139,8 +139,9 @@ function getRequiredModuleId(node) {
     const argc = args.length;
     if (argc > 0) {
       const arg = args[0];
-      if (arg.type === "Literal" &&
-          typeof arg.value === "string") {
+      if (arg.type === "StringLiteral" ||
+          (arg.type === "Literal" &&
+           typeof arg.value === "string")) {
         return arg.value;
       }
     }
