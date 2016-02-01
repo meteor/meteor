@@ -7,7 +7,7 @@ Meteor.users._ensureIndex({'roles.partition': 1});
 
 /*
  * Publish logged-in user's roles so client-side checks can work.
- * 
+ *
  * Use a named publish function so clients can check `ready()` state.
  */
 Meteor.publish('_roles', function () {
@@ -248,8 +248,14 @@ _.extend(Roles, {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
-    //drop old index, preventing mongo duplicate key 'null' errors
-    Meteor.roles._dropIndex("name_1");
+    // drop old index, preventing mongo duplicate key 'null' errors
+    try {
+      Meteor.roles._dropIndex("name_1");
+    } catch (e) {
+      if (e.name !== 'MongoError') throw e;
+      match = (e.err || e.errmsg).match(/index not found/);
+      if (!match) throw e;
+    }
 
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isNewRole(role)) {
