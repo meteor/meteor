@@ -248,6 +248,9 @@ _.extend(Roles, {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
+    //drop old index, preventing mongo duplicate key 'null' errors
+    Meteor.roles._dropIndex("name_1");
+
     Meteor.roles.find().forEach(function (role, index, cursor) {
       if (!Roles._isNewRole(role)) {
         updateRole(role, Roles._convertToNewRole(role));
