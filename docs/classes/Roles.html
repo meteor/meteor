@@ -114,7 +114,7 @@
 
                     <ul class="index-list methods">
                             <li class="index-item method private">
-                                <a href="#method__addRoleParent">_addRoleParent</a>
+                                <a href="#method__addRoleToParent">_addRoleToParent</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -209,7 +209,7 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method private">
-                                <a href="#method__removeRoleParent">_removeRoleParent</a>
+                                <a href="#method__removeRoleFromParent">_removeRoleFromParent</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -239,7 +239,7 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_addRolesParent">addRolesParent</a>
+                                <a href="#method_addRolesToParent">addRolesToParent</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -290,7 +290,7 @@
                                     <span class="flag static">static</span>
                             </li>
                             <li class="index-item method">
-                                <a href="#method_removeRolesParent">removeRolesParent</a>
+                                <a href="#method_removeRolesFromParent">removeRolesFromParent</a>
 
                                     <span class="flag static">static</span>
                             </li>
@@ -346,8 +346,8 @@
             <div id="methods" class="api-class-tabpanel">
                 <h2 class="off-left">Methods</h2>
 
-<div id="method__addRoleParent" class="method item private">
-    <h3 class="name"><code>_addRoleParent</code></h3>
+<div id="method__addRoleToParent" class="method item private">
+    <h3 class="name"><code>_addRoleToParent</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
@@ -608,7 +608,7 @@ are marked as not explicitly assigned, and have not been part of what we current
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l264"><code>roles&#x2F;roles_server.js:264</code></a>
+        <a href="../files/roles_roles_server.js.html#l266"><code>roles&#x2F;roles_server.js:266</code></a>
         </p>
 
 
@@ -786,6 +786,9 @@ no subroles.</p>
                 <li class="arg">
                         <code>oldRoles</code>
                 </li>
+                <li class="arg">
+                        <code>convertUnderscoresToDots</code>
+                </li>
             </ul><span class="paren">)</span>
         </div>
 
@@ -826,6 +829,17 @@ no subroles.</p>
 
                     <div class="param-description">
                         <p><code>Meteor.users</code> document <code>roles</code> field in the old format.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">convertUnderscoresToDots</code>
+                        <span class="type">Boolean</span>
+
+
+                    <div class="param-description">
+                        <p>Should we convert underscores to dots in group names.</p>
 
                     </div>
 
@@ -941,7 +955,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l157"><code>roles&#x2F;roles_server.js:157</code></a>
+        <a href="../files/roles_roles_server.js.html#l158"><code>roles&#x2F;roles_server.js:158</code></a>
         </p>
 
 
@@ -1086,7 +1100,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l224"><code>roles&#x2F;roles_server.js:224</code></a>
+        <a href="../files/roles_roles_server.js.html#l225"><code>roles&#x2F;roles_server.js:225</code></a>
         </p>
 
 
@@ -1155,7 +1169,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l206"><code>roles&#x2F;roles_server.js:206</code></a>
+        <a href="../files/roles_roles_server.js.html#l207"><code>roles&#x2F;roles_server.js:207</code></a>
         </p>
 
 
@@ -1209,6 +1223,9 @@ no subroles.</p>
                 <li class="arg">
                         <code>updateRole</code>
                 </li>
+                <li class="arg">
+                        <code>convertUnderscoresToDots</code>
+                </li>
             </ul><span class="paren">)</span>
         </div>
 
@@ -1224,7 +1241,7 @@ no subroles.</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/roles_roles_server.js.html#l237"><code>roles&#x2F;roles_server.js:237</code></a>
+        <a href="../files/roles_roles_server.js.html#l238"><code>roles&#x2F;roles_server.js:238</code></a>
         </p>
 
 
@@ -1258,6 +1275,17 @@ no subroles.</p>
 
                     <div class="param-description">
                         <p>Function which updates the role object. Default <code>_defaultUpdateRole</code>.</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">convertUnderscoresToDots</code>
+                        <span class="type">Boolean</span>
+
+
+                    <div class="param-description">
+                        <p>Should we convert underscores to dots in group names.</p>
 
                     </div>
 
@@ -1653,8 +1681,8 @@ if its partition matches <code>partition</code>.</p>
 
 
 </div>
-<div id="method__removeRoleParent" class="method item private">
-    <h3 class="name"><code>_removeRoleParent</code></h3>
+<div id="method__removeRoleFromParent" class="method item private">
+    <h3 class="name"><code>_removeRoleFromParent</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
@@ -2160,8 +2188,8 @@ through to <code>Meteor.users.find(query, options)</code></p>
 
 
 </div>
-<div id="method_addRolesParent" class="method item">
-    <h3 class="name"><code>addRolesParent</code></h3>
+<div id="method_addRolesToParent" class="method item">
+    <h3 class="name"><code>addRolesToParent</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
@@ -2912,8 +2940,8 @@ through to <code>Meteor.users.find(query, options)</code></p>
 
 
 </div>
-<div id="method_removeRolesParent" class="method item">
-    <h3 class="name"><code>removeRolesParent</code></h3>
+<div id="method_removeRolesFromParent" class="method item">
+    <h3 class="name"><code>removeRolesFromParent</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">

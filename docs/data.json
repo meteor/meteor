@@ -232,7 +232,7 @@
             "line": 199,
             "description": "Add role parent to roles.\n\nPrevious parents are kept (role can have multiple parents). For users which have the\nparent role set, new subroles are added automatically.",
             "itemtype": "method",
-            "name": "addRolesParent",
+            "name": "addRolesToParent",
             "params": [
                 {
                     "name": "rolesNames",
@@ -253,7 +253,7 @@
             "file": "roles/roles_common.js",
             "line": 219,
             "itemtype": "method",
-            "name": "_addRoleParent",
+            "name": "_addRoleToParent",
             "params": [
                 {
                     "name": "roleName",
@@ -277,7 +277,7 @@
             "line": 303,
             "description": "Remove role parent from roles.\n\nOther parents are kept (role can have multiple parents). For users which have the\nparent role set, removed subrole is removed automatically.",
             "itemtype": "method",
-            "name": "removeRolesParent",
+            "name": "removeRolesFromParent",
             "params": [
                 {
                     "name": "rolesNames",
@@ -298,7 +298,7 @@
             "file": "roles/roles_common.js",
             "line": 323,
             "itemtype": "method",
-            "name": "_removeRoleParent",
+            "name": "_removeRoleFromParent",
             "params": [
                 {
                     "name": "roleName",
@@ -1033,6 +1033,11 @@
                     "name": "oldRoles",
                     "description": "`Meteor.users` document `roles` field in the old format.",
                     "type": "Array"
+                },
+                {
+                    "name": "convertUnderscoresToDots",
+                    "description": "Should we convert underscores to dots in group names.",
+                    "type": "Boolean"
                 }
             ],
             "return": {
@@ -1047,7 +1052,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 157,
+            "line": 158,
             "itemtype": "method",
             "name": "_convertToOldField",
             "params": [
@@ -1074,7 +1079,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 206,
+            "line": 207,
             "itemtype": "method",
             "name": "_defaultUpdateUser",
             "params": [
@@ -1097,7 +1102,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 224,
+            "line": 225,
             "itemtype": "method",
             "name": "_defaultUpdateRole",
             "params": [
@@ -1120,7 +1125,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 237,
+            "line": 238,
             "description": "Migrates `Meteor.users` and `Meteor.roles` to the new format.",
             "itemtype": "method",
             "name": "_forwardMigrate",
@@ -1134,6 +1139,11 @@
                     "name": "updateRole",
                     "description": "Function which updates the role object. Default `_defaultUpdateRole`.",
                     "type": "Function"
+                },
+                {
+                    "name": "convertUnderscoresToDots",
+                    "description": "Should we convert underscores to dots in group names.",
+                    "type": "Boolean"
                 }
             ],
             "access": "private",
@@ -1144,7 +1154,7 @@
         },
         {
             "file": "roles/roles_server.js",
-            "line": 264,
+            "line": 266,
             "description": "Migrates `Meteor.users` and `Meteor.roles` to the old format.\n\nWe assume that we are converting back a failed migration, so values can only be\nwhat were valid values in the old format. So no group names starting with `$` and\nno subroles.",
             "itemtype": "method",
             "name": "_backwardMigrate",
