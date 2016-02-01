@@ -1590,11 +1590,11 @@
       test.isTrue(Meteor.roles.insert({name: 'editor'}));
       test.isTrue(Meteor.roles.insert({name: 'user'}));
 
-      test.isTrue(Meteor.users.update(users.eve, {$set: {roles: {__global_roles__: ['admin', 'editor'], foo: ['user']}}}));
+      test.isTrue(Meteor.users.update(users.eve, {$set: {roles: {__global_roles__: ['admin', 'editor'], foo_bla: ['user']}}}));
       test.isTrue(Meteor.users.update(users.bob, {$set: {roles: {}}}));
-      test.isTrue(Meteor.users.update(users.joe, {$set: {roles: {__global_roles__: ['user'], foo: ['user']}}}));
+      test.isTrue(Meteor.users.update(users.joe, {$set: {roles: {__global_roles__: ['user'], foo_bla: ['user']}}}));
 
-      Roles._forwardMigrate();
+      Roles._forwardMigrate(null, null, false);
 
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: [{
@@ -1607,7 +1607,7 @@
           assigned: true
         }, {
           _id: 'user',
-          partition: 'foo',
+          partition: 'foo_bla',
           assigned: true
         }]
       });
@@ -1621,7 +1621,7 @@
           assigned: true
         }, {
           _id: 'user',
-          partition: 'foo',
+          partition: 'foo_bla',
           assigned: true
         }]
       });
@@ -1644,7 +1644,7 @@
       test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
         roles: {
           __global_roles__: ['admin', 'editor'],
-          foo: ['user']
+          foo_bla: ['user']
         }
       });
       test.equal(Meteor.users.findOne(users.bob, {fields: {roles: 1, _id: 0}}), {
@@ -1653,7 +1653,7 @@
       test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
         roles: {
           __global_roles__: ['user'],
-          foo: ['user']
+          foo_bla: ['user']
         }
       });
 
@@ -1665,6 +1665,51 @@
       });
       test.equal(Meteor.roles.findOne({name: 'user'}, {fields: {_id: 0}}), {
         name: 'user'
+      });
+
+      Roles._forwardMigrate(null, null, true);
+
+      test.equal(Meteor.users.findOne(users.eve, {fields: {roles: 1, _id: 0}}), {
+        roles: [{
+          _id: 'admin',
+          partition: null,
+          assigned: true
+        }, {
+          _id: 'editor',
+          partition: null,
+          assigned: true
+        }, {
+          _id: 'user',
+          partition: 'foo.bla',
+          assigned: true
+        }]
+      });
+      test.equal(Meteor.users.findOne(users.bob, {fields: {roles: 1, _id: 0}}), {
+        roles: []
+      });
+      test.equal(Meteor.users.findOne(users.joe, {fields: {roles: 1, _id: 0}}), {
+        roles: [{
+          _id: 'user',
+          partition: null,
+          assigned: true
+        }, {
+          _id: 'user',
+          partition: 'foo.bla',
+          assigned: true
+        }]
+      });
+
+      test.equal(Meteor.roles.findOne({_id: 'admin'}), {
+        _id: 'admin',
+        children: []
+      });
+      test.equal(Meteor.roles.findOne({_id: 'editor'}), {
+        _id: 'editor',
+        children: []
+      });
+      test.equal(Meteor.roles.findOne({_id: 'user'}), {
+        _id: 'user',
+        children: []
       });
     });
 

@@ -112,12 +112,13 @@ _.extend(Roles, {
   /**
    * @method _convertToNewField
    * @param {Array} oldRoles `Meteor.users` document `roles` field in the old format.
+   * @param {Boolean} convertUnderscoresToDots Should we convert underscores to dots in group names.
    * @return {Array} Converted `roles` to the new format.
    * @for Roles
    * @private
    * @static
    */
-  _convertToNewField: function (oldRoles) {
+  _convertToNewField: function (oldRoles, convertUnderscoresToDots) {
     var roles = [];
     if (_.isArray(oldRoles)) {
       _.each(oldRoles, function (role, index) {
@@ -135,7 +136,7 @@ _.extend(Roles, {
         if (group === '__global_roles__') {
           group = null;
         }
-        else {
+        else if (convertUnderscoresToDots) {
           // unescape
           group = group.replace(/_/g, '.');
         }
@@ -240,11 +241,12 @@ _.extend(Roles, {
    * @method _forwardMigrate
    * @param {Function} updateUser Function which updates the user object. Default `_defaultUpdateUser`.
    * @param {Function} updateRole Function which updates the role object. Default `_defaultUpdateRole`.
+   * @param {Boolean} convertUnderscoresToDots Should we convert underscores to dots in group names.
    * @for Roles
    * @private
    * @static
    */
-  _forwardMigrate: function (updateUser, updateRole) {
+  _forwardMigrate: function (updateUser, updateRole, convertUnderscoresToDots) {
     updateUser = updateUser || Roles._defaultUpdateUser;
     updateRole = updateRole || Roles._defaultUpdateRole;
 
@@ -256,7 +258,7 @@ _.extend(Roles, {
 
     Meteor.users.find().forEach(function (user, index, cursor) {
       if (!Roles._isNewField(user.roles)) {
-        updateUser(user, Roles._convertToNewField(user.roles));
+        updateUser(user, Roles._convertToNewField(user.roles, convertUnderscoresToDots));
       }
     });
   },
