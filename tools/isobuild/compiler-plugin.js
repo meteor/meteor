@@ -519,10 +519,12 @@ class PackageSourceBatch {
     // use. Note that in the case of conflicting symbols, later packages get
     // precedence.
     //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak/debugOnly dependencies (because the meaning of
-    // a name shouldn't be affected by the non-local decision of whether or not
-    // an unrelated package in the target depends on something).
+    // We don't get imports from unordered dependencies (since they
+    // may not be defined yet) or from
+    // weak/debugOnly/prodOnly/testOnly dependencies (because the
+    // meaning of a name shouldn't be affected by the non-local
+    // decision of whether or not an unrelated package in the target
+    // depends on something).
     self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
     self.usedPackageNames = {};
 
@@ -531,11 +533,12 @@ class PackageSourceBatch {
       arch: self.processor.arch,
       isopackCache: self.processor.isopackCache,
       skipUnordered: true,
-      // don't import symbols from debugOnly and prodOnly packages, because
+      // don't import symbols from debugOnly, prodOnly and testOnly packages, because
       // if the package is not linked it will cause a runtime error.
       // the code must access them with `Package["my-package"].MySymbol`.
       skipDebugOnly: true,
       skipProdOnly: true,
+      skipTestOnly: true,
       // We only care about getting exports here, so it's OK if we get the Mac
       // version when we're bundling for Linux.
       allowWrongPlatform: true,

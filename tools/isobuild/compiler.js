@@ -166,6 +166,7 @@ compiler.compile = Profile(function (packageSource, options) {
     includeTool: packageSource.includeTool,
     debugOnly: packageSource.debugOnly,
     prodOnly: packageSource.prodOnly,
+    testOnly: packageSource.testOnly,
     pluginCacheDir: options.pluginCacheDir,
     isobuildFeatures
   });
@@ -658,11 +659,13 @@ function runLinters({inputSourceArch, isopackCache, sources,
     arch: whichArch,
     isopackCache: isopackCache,
     skipUnordered: true,
-    // don't import symbols from debugOnly and prodOnly packages, because
-    // if the package is not linked it will cause a runtime error.
-    // the code must access them with `Package["my-package"].MySymbol`.
+    // don't import symbols from debugOnly, prodOnly and testOnly
+    // packages, because if the package is not linked it will cause a
+    // runtime error.  the code must access them with
+    // `Package["my-package"].MySymbol`.
     skipDebugOnly: true,
     skipProdOnly: true,
+    skipTestOnly: true,
     // We only care about getting exports here, so it's OK if we get the Mac
     // version when we're bundling for Linux.
     allowWrongPlatform: true,
@@ -862,6 +865,10 @@ compiler.eachUsedUnibuild = function (
     }
     // Ditto prodOnly.
     if (usedPackage.prodOnly && options.skipProdOnly) {
+      continue;
+    }
+    // Ditto testOnly.
+    if (usedPackage.testOnly && options.skipTestOnly) {
       continue;
     }
 

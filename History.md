@@ -85,6 +85,13 @@
 * Don't throw in certain cases when calling a template helper with an
   empty data context. #5411 #5736
 
+### Testing
+
+* Packages can now be marked as `testOnly` to only run as part of app
+  testing with `meteor test-app`. This is achieved by setting
+  `testOnly: true` to `Package.describe`.
+
+
 ### Uncategorized
 
 * Remove warning in the `simple-todos-react` example app. #5716

@@ -659,9 +659,15 @@ var getTestPackageNames = function (projectContext, packageNames) {
 
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
-    minifyMode: options.production ? 'production' : 'development',
-    buildMode: options.production ? 'production' : 'development',
+    minifyMode: options.production ? 'production' : 'development'
   };
+  if (options["test-packages"]) {
+    buildOptions.buildMode = buildOptions.minifyMode;
+  } else if (options["test-app"]) {
+    buildOptions.buildMode = "test";
+  } else {
+    throw new Error("Neither test-packages nor test-app in options");
+  }
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.

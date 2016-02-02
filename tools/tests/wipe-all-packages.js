@@ -29,6 +29,7 @@ selftest.define("wipe all packages", function () {
       isTest: false,
       debugOnly: false,
       prodOnly: false,
+      testOnly: false,
       containsPlugins: false
     };
   };

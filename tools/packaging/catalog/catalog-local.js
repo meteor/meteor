@@ -320,6 +320,7 @@ _.extend(LocalCatalog.prototype, {
             isTest: packageSource.isTest,
             debugOnly: packageSource.debugOnly,
             prodOnly: packageSource.prodOnly,
+            testOnly: packageSource.testOnly,
             containsPlugins: packageSource.containsPlugins()
           }
         };

@@ -6,7 +6,9 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  if (Package.isRunningTests) {
+  // XXX this needs to change. We'll probably have `testOnly` a la
+  // `debugOnly`.
+  if (global.testCommandMetadata) {
     api.imply('tinytest');
     api.imply('test-helpers');
     api.imply('test-in-browser');

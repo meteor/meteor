@@ -3,17 +3,13 @@ Package.describe({
   name: "practicalmeteor:mocha",
   summary: "Write package tests with mocha and run them in the browser or from the command line with spacejam.",
   git: "https://github.com/practicalmeteor/meteor-mocha.git",
-  version: '2.1.0_7'
+  version: '2.1.0_7',
+  testOnly: true
 });
 
 
 Package.onUse(function (api) {
-  if (!global.testCommandMetadata) {
-    return;
-  }
-
   api.addFiles('start.css', 'client');
-  api.versionsFrom('1.0');
 
   api.use('coffeescript');
   api.use('underscore');
