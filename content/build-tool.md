@@ -219,7 +219,7 @@ The aptly named `blaze-html-templates` package that comes with every new Meteor 
 
 <h3 id="blaze-jade">Blaze Jade templates</h3>
 
-If you don't like the Spacebars syntax Meteor uses by default and want something more concise, you can give Jade a try by using [`mquandalle:jade`](https://atmospherejs.com/mquandalle/jade). This package will compile all files in your app with the `.jade` extension into Blaze-compatible code, and can be used side-by-side with `blaze-html-templates` if you want to have some of your code in Spacebars and some in Jade.
+If you don't like the Spacebars syntax Meteor uses by default and want something more concise, you can give Jade a try by using [`dalgard:jade`](https://atmospherejs.com/dalgard/jade). This package will compile all files in your app with the `.jade` extension into Blaze-compatible code, and can be used side-by-side with `blaze-html-templates` if you want to have some of your code in Spacebars and some in Jade.
 
 <h3 id="react-jsx">JSX for React</h3>
 
