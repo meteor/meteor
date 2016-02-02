@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ddp-rate-limiter',
-  version: '1.0.1-modules.5',
+  version: '1.0.1-modules.6',
   // Brief, one-line summary of the package.
   summary: 'The DDPRateLimiter allows users to add rate limits to DDP' +
   ' methods and subscriptions.',

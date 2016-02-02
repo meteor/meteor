@@ -1,6 +1,6 @@
 Package.describe({
   name: 'allow-deny',
-  version: '1.0.1-modules.5',
+  version: '1.0.1-modules.6',
   // Brief, one-line summary of the package.
   summary: 'Implements functionality for allow/deny and client-side db operations',
   // URL to the Git repository containing the source code for this package.
