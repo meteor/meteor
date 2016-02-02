@@ -13,6 +13,19 @@ describe("meteor-babel", () => {
     const prop = ast.program.body[0].declarations[0].init.properties[0];
     assert.strictEqual(prop.type, "SpreadProperty");
   });
+
+  it("should not force strict mode", () => {
+    var sloppy = meteorBabel.compile("export var foo = 42;").code;
+    assert.strictEqual(sloppy.indexOf("strict mode"), -1);
+
+    // Of course the developer should still be able to add "use strict"
+    // explicitly to her code.
+    var strict = meteorBabel.compile([
+      '"use strict";',
+      "export var foo = 42;"
+    ].join("\n")).code;
+    assert.strictEqual(strict.indexOf("use strict"), 1);
+  });
 });
 
 describe("Babel", function() {
