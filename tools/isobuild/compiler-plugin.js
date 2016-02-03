@@ -500,13 +500,15 @@ class ResourceSlot {
 
     if (! archinfo.matches(unibuild.arch, "web")) {
       throw new Error("Document sections can only be emitted to " +
-                      "web targets");
+                      "web targets: " + self.inputResource.path);
     }
     if (options.section !== "head" && options.section !== "body") {
-      throw new Error("'section' must be 'head' or 'body'");
+      throw new Error("'section' must be 'head' or 'body': " +
+                      self.inputResource.path);
     }
     if (typeof options.data !== "string") {
-      throw new Error("'data' option to appendDocument must be a string");
+      throw new Error("'data' option to appendDocument must be a string: " +
+                      self.inputResource.path);
     }
 
     self.outputResources.push({

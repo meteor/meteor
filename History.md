@@ -57,6 +57,9 @@
 * Don't reload package catalog from disk on rebuilds unless package
   depedencies changed. #5747
 
+* Don't reload package catalog from disk on rebuilds unless package
+  depedencies changed. #5747
+
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 

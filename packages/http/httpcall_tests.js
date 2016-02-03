@@ -276,6 +276,7 @@ testAsyncMulti("httpcall - methods", [
     test_method("POST");
     test_method("PUT");
     test_method("DELETE", 'del');
+    test_method("PATCH");
   },
 
   function(test, expect) {

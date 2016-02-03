@@ -325,7 +325,9 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 // options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = Profile("compileUnibuild", function (options) {
+var compileUnibuild = Profile(function (options) {
+  return `compileUnibuild (${options.isopack.name || 'the app'})`;
+}, function (options) {
   buildmessage.assertInCapture();
 
   const isopk = options.isopack;

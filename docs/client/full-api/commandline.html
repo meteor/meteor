@@ -70,6 +70,16 @@ You can use the `--package` option, to create a new package. If used in an
 existing app, this command will create a package in the packages
 directory.
 
+<h3 id="meteorloginlogout">meteor login / logout</h3>
+
+Log in and out of your account using Meteor's authentication system.
+
+You can pass `METEOR_SESSION_FILE=token.json` before `meteor login` to generate
+a login session token so you don't have to share your login credentials with
+third-party service providers. You can revoke the token at any time from your
+[accounts settings page](https://www.meteor.com/account-settings/login-locations).
+
+
 <h3 id="meteordeploy">meteor deploy <i>site</i></h3>
 
 Deploy the project in your current directory to Meteor's servers.
@@ -368,6 +378,27 @@ Some example uses of `meteor admin` include adding and removing package
 maintainers and setting a homepage for a package. It also includes various
 helpful functions for managing a Meteor release.  Run `meteor help admin` for
 more information.
+
+<h3 id="meteorshell">meteor shell</h3>
+
+When `meteor shell` is executed in an application directory where a server
+is already running, it connects to the server and starts an interactive
+shell for evaluating server-side code.
+
+Multiple shells can be attached to the same server. If no server is
+currently available, `meteor shell` will keep trying to connect until it
+succeeds.
+
+Exiting the shell does not terminate the server. If the server restarts
+because a change was made in server code, or a fatal exception was
+encountered, the shell will restart along with the server. This behavior
+can be simulated by typing `.reload` in the shell.
+
+The shell supports tab completion for global variables like `Meteor`,
+`Mongo`, and `Package`. Try typing `Meteor.is` and then pressing tab.
+
+The shell maintains a persistent history across sessions. Previously-run
+commands can be accessed by pressing the up arrow.
 
 
 {{/markdown}}

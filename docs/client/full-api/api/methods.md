@@ -208,7 +208,7 @@ var loginRule = {
     return Meteor.users.findOne(userId).type !== 'Admin';
   },
   type: 'method',
-  method: 'login'
+  name: 'login'
 }
 // Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
