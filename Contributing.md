@@ -1,4 +1,4 @@
-### Contributing to Meteor
+# Contributing to Meteor
 
 Thank you for contributing to the Meteor project! Please read the guidelines below or it might be
 hard for us to help you with your issue.
