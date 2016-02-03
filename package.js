@@ -23,7 +23,6 @@ Package.registerBuildPlugin({
 
 Package.onUse(function(api) {
   api.use('isobuild:compiler-plugin@1.0.0');
-  api.use('jquery');
 
   // Body attributes are compiled to code that uses Meteor.startup
   api.imply('meteor', 'client');
