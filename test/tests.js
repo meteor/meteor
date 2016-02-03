@@ -146,6 +146,13 @@ val = "zxcv";`;
       f(1, 2, 3, 4, 5, 6, 7, 8),
       [1, 2, 3, 4]
     );
+
+    function g(convert, h, ...rest) {
+      rest[0] = convert(rest[0]);
+      return h(...rest);
+    }
+
+    assert.strictEqual(g(x => x + 1, y => y << 1, 3), 8);
   });
 
   it("es6.parameters.default", () => {
