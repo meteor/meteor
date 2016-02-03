@@ -223,6 +223,7 @@ var formatMs = function (n) {
 var globalEntry = [];
 
 var running = false;
+var runningName;
 
 var start = function () {
   bucketStats = {};
@@ -416,7 +417,7 @@ var reportHotLeaves = function () {
     return a.time === b.time ? 0 : a.time > b.time ? -1 : 1;
   });
   _.each(totals, function (total) {
-    if (total.time < filter) {
+    if (total.time < 100) { // hard-coded larger filter to quality as "hot" here
       return;
     }
     print(leftRightDots(total.name, formatMs(total.time), 65));
@@ -438,6 +439,8 @@ var setupReport = function () {
   });
 };
 
+var reportNum = 1;
+
 var report = function () {
   if (! enabled) {
     return;
@@ -449,16 +452,30 @@ var report = function () {
   print('');
   reportHotLeaves();
   print('');
-  print('Total: ' + formatMs(getTopLevelTotal()));
+  print(`(#${reportNum}) Total: ${formatMs(getTopLevelTotal())}` +
+        ` (${runningName})`);
+  print('');
 };
 
 var run = function (bucketName, f) {
-  start();
-  try {
+  if (! enabled) {
+    return f();
+  } else if (running) {
+    // We've kept the calls to Profile.run in the tool disjoint so far,
+    // and should probably keep doing so, but if we mess up, warn and continue.
+    console.log("Warning: Nested Profile.run at " + bucketName);
     return time(bucketName, f);
-  }
-  finally {
-    report();
+  } else {
+    runningName = bucketName;
+    print(`(#${reportNum}) Profiling: ${runningName}`);
+    start();
+    try {
+      return time(bucketName, f);
+    }
+    finally {
+      report();
+      reportNum++;
+    }
   }
 };
 

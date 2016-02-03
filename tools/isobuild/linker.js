@@ -127,7 +127,7 @@ _.extend(Module.prototype, {
 
         const node = file.getPrelinkedOutput({ preserveLineNumbers: true });
         const results = Profile.time(
-          "getPrelinkedFiles toStringWithSourceMap (app)", () => {
+          "toStringWithSourceMap (app)", () => {
             return node.toStringWithSourceMap({
               file: file.servePath
             }); // results has 'code' and 'map' attributes
@@ -191,7 +191,7 @@ _.extend(Module.prototype, {
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
     Profile.time(
-      'getPrelinkedFiles toStringWithSourceMap (packages)',
+      'getPrelinkedFiles toStringWithSourceMap',
       function () {
         const { code, map } = node.toStringWithSourceMap({
           file: self.combinedServePath

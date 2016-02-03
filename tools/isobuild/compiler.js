@@ -199,7 +199,9 @@ compiler.compile = Profile(function (packageSource, options) {
 // - isopack
 // - isopackCache
 // - includeCordovaUnibuild
-compiler.lint = function (packageSource, options) {
+compiler.lint = Profile(function (packageSource, options) {
+  return `compiler.lint(${ packageSource.name || 'the app' })`;
+}, function (packageSource, options) {
   // Note: the buildmessage context of compiler.lint and lintUnibuild is a
   // normal error message context (eg, there might be errors from initializing
   // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
@@ -226,7 +228,7 @@ compiler.lint = function (packageSource, options) {
     }
   });
   return {warnings, linted};
-};
+});
 
 compiler.getMinifiers = function (packageSource, options) {
   buildmessage.assertInJob();

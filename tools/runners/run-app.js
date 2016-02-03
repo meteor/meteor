@@ -572,7 +572,7 @@ _.extend(AppRunner.prototype, {
         });
       }
 
-      var bundleResult = Profile.run("Rebuild App", function () {
+      var bundleResult = Profile.run((firstRun?"B":"Reb")+"uild App", () => {
         var includeNodeModules = 'symlink';
 
         // On Windows we cannot symlink node_modules. Copying them is too slow.

@@ -700,18 +700,20 @@ export class Watcher {
 // Given a WatchSet, returns true if it currently describes the state of the
 // disk.
 export function isUpToDate(watchSet) {
-  var upToDate = true;
-  var watcher = new Watcher({
-    watchSet: watchSet,
-    onChange: function () {
-      upToDate = false;
-    },
-    // internal flag which prevents us from starting watches and timers that
-    // we're about to cancel anyway
-    _justCheckOnce: true
+  return Profile.time('watch.isUpToDate', () => {
+    var upToDate = true;
+    var watcher = new Watcher({
+      watchSet: watchSet,
+      onChange: function () {
+        upToDate = false;
+      },
+      // internal flag which prevents us from starting watches and timers that
+      // we're about to cancel anyway
+      _justCheckOnce: true
+    });
+    watcher.stop();
+    return upToDate;
   });
-  watcher.stop();
-  return upToDate;
 }
 
 // Options should have absPath/include/exclude/names.
