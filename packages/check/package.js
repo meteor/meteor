@@ -12,7 +12,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['check', 'tinytest', 'underscore', 'ejson'], ['client', 'server']);
+  api.use(['check', 'tinytest', 'underscore', 'ejson', 'ecmascript'], ['client', 'server']);
 
   api.addFiles('match_test.js', ['client', 'server']);
 });

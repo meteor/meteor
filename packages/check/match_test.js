@@ -161,6 +161,14 @@ Tinytest.add("check - check", function (test) {
   fails(function () {}, Match.Integer);
   fails(new Date, Match.Integer);
 
+
+  // Test objects that have a prototype
+  var parentObj = {foo:"bar"};
+  var childObj = Object.assign(Object.create(parentObj),{bar:"foo"});
+  matches(childObj,{foo:String,bar:String});
+  fails(childObj,{bar:String});
+
+
   // Test that "arguments" is treated like an array.
   var argumentsMatches = function () {
     matches(arguments, [Number]);
