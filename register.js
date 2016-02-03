@@ -9,15 +9,23 @@ var util = require("./util.js");
 
 var config = {
   sourceMapRootPath: null,
+  allowedDirectories: Object.create(null),
   babelOptions: require("./options").getDefaults()
 };
 
-exports = module.exports = function reconfigure(newConfig) {
-  Object.keys(newConfig).forEach(function (key) {
-    config[key] = newConfig[key];
-  });
+exports.setSourceMapRootPath = function (smrp) {
+  config.sourceMapRootPath = smrp;
+  return exports;
+};
 
-  return reconfigure;
+exports.allowDirectory = function (dir) {
+  config.allowedDirectories[dir] = true;
+  return exports;
+};
+
+exports.setBabelOptions = function (options) {
+  config.babelOptions = options;
+  return exports;
 };
 
 require.extensions[".js"] = function(module, filename) {
@@ -54,19 +62,24 @@ function shouldNotTransform(filename) {
     return true;
   }
 
-  var relPath = path.relative(__dirname, filename);
-  var firstPart = relPath.split(path.sep, 1)[0];
-  var isExternal = firstPart === "..";
+  var dirs = Object.keys(config.allowedDirectories);
+  var allowed = dirs.some(function (dir) {
+    var relPath = path.relative(dir, filename);
+    if (relPath.slice(0, 2) === "..") {
+      // Ignore files that are not contained by an allowed directory.
+      return false;
+    }
 
-  if (isExternal) {
-    // If the file is outside the meteor-babel directory, then ignore it
-    // if it is contained by any node_modules ancestor directory.
-    return filename.split(path.sep).indexOf("node_modules") >= 0;
-  }
+    if (relPath.split(path.sep).indexOf("node_modules") >= 0) {
+      // Ignore files that are contained by a node_modules directory that
+      // is itself contained by the allowed dir.
+      return false;
+    }
 
-  // If the file is inside the meteor-babel directory, then transform it
-  // only if it is contained by the test directory.
-  return firstPart !== "test";
+    return true;
+  });
+
+  return ! allowed;
 }
 
 function getBabelResult(filename) {
