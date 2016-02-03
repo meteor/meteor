@@ -333,15 +333,38 @@ export default class ImportScanner {
   }
 
   // TODO This method can probably be consolidated with _getInstallPath.
-  _tryToResolveImportedPath(file, id) {
+  _tryToResolveImportedPath(file, id, seenDirPaths) {
     let resolved =
       this._resolveAbsolute(file, id) ||
       this._resolveRelative(file, id) ||
       this._resolveNodeModule(file, id);
 
     while (resolved && resolved.stat.isDirectory()) {
-      resolved = this._resolvePkgJsonMain(resolved.path) ||
-        this._joinAndStat(resolved.path, "index.js");
+      let dirPath = resolved.path;
+      seenDirPaths = seenDirPaths || new Set;
+
+      // If the "main" field of a package.json file resolves to a
+      // directory we've already considered, then we should not attempt to
+      // read the same package.json file again.
+      if (! seenDirPaths.has(dirPath)) {
+        seenDirPaths.add(dirPath);
+        resolved = this._resolvePkgJsonMain(dirPath, seenDirPaths);
+        if (resolved) {
+          // The _resolvePkgJsonMain call above may have returned a
+          // directory, so continue the loop to make sure we fully resolve
+          // it to a non-directory.
+          continue;
+        }
+      }
+
+      // If we didn't find a `package.json` file, or it didn't have a
+      // resolvable `.main` property, the only possibility left to
+      // consider is that this directory contains an `index.js` module.
+      // This assignment almost always terminates the while loop, because
+      // there's very little chance an `index.js` file will be a
+      // directory. However, in principle it is remotely possible that a
+      // file called `index.js` could be a directory instead of a file.
+      resolved = this._joinAndStat(dirPath, "index.js");
     }
 
     return resolved && resolved.path;
@@ -379,10 +402,10 @@ export default class ImportScanner {
       this._joinAndStat(this.sourceRoot, id.slice(1));
   }
 
-  _resolveRelative(file, id) {
+  _resolveRelative({ sourcePath }, id) {
     if (id.charAt(0) === ".") {
       return this._joinAndStat(
-        this.sourceRoot, file.sourcePath, "..", id
+        this.sourceRoot, sourcePath, "..", id
       );
     }
   }
@@ -427,7 +450,7 @@ export default class ImportScanner {
     return resolved;
   }
 
-  _resolvePkgJsonMain(dirPath) {
+  _resolvePkgJsonMain(dirPath, seenDirPaths) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
 
     let pkg;
@@ -438,7 +461,19 @@ export default class ImportScanner {
     }
 
     if (pkg && isString(pkg.main)) {
-      const resolved = this._joinAndStat(dirPath, pkg.main);
+      // The "main" field of package.json does not have to begin with ./
+      // to be considered relative, so first we try simply appending it to
+      // the directory path before falling back to a full resolve, which
+      // might return a package from a node_modules directory.
+      const resolved = this._joinAndStat(dirPath, pkg.main) ||
+        // The _tryToResolveImportedPath method takes a file object as its
+        // first parameter, but only the .sourcePath property is ever
+        // used, so we can get away with passing a fake directory file
+        // object with only that property.
+        this._tryToResolveImportedPath({
+          sourcePath: dirPath,
+        }, pkg.main, seenDirPaths);
+
       if (resolved) {
         this._addPkgJsonToOutput(pkgJsonPath, pkg);
         return resolved;

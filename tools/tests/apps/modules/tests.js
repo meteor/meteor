@@ -218,3 +218,12 @@ describe("return statements at top level", () => {
     assert.strictEqual(ret.b, void 0);
   });
 });
+
+describe("circular package.json resolution chains", () => {
+  it("should be broken appropriately", () => {
+    assert.strictEqual(
+      require("./lib").aMain,
+      "/lib/a/index.js"
+    );
+  });
+});
