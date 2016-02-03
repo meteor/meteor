@@ -210,3 +210,11 @@ describe("client/compatibility directories", () => {
     assert.strictEqual(topLevelVariable, 1234);
   });
 });
+
+describe("return statements at top level", () => {
+  it("should be legal", () => {
+    var ret = require("./imports/return.js");
+    assert.strictEqual(ret.a, 1234);
+    assert.strictEqual(ret.b, void 0);
+  });
+});
