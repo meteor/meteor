@@ -68,3 +68,6 @@
     1. Android: https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store
     2. iOS: https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
         1. TestFlight
+
+Useful links:
+http://blog.differential.com/easily-connect-react-native-to-a-meteor-server/
