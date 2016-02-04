@@ -442,7 +442,8 @@ _.extend(Connection.prototype, {
     // implemented by 'store' into a no-op.
     var store = {};
     _.each(['update', 'beginUpdate', 'endUpdate', 'saveOriginals',
-            'retrieveOriginals', 'getDoc'], function (method) {
+            'retrieveOriginals', 'getDoc',
+			'_getCollection'], function (method) {
               store[method] = function () {
                 return (wrappedStore[method]
                         ? wrappedStore[method].apply(wrappedStore, arguments)
