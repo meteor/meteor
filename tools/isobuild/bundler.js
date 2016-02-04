@@ -1877,7 +1877,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler..writeFile", function (file, builder) {
+var writeFile = Profile("bundler writeFile", function (file, builder) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -1894,7 +1894,7 @@ var writeFile = Profile("bundler..writeFile", function (file, builder) {
 
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
-  "bundler..writeTargetToPath",
+  "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
     getRelativeTargetPath,
@@ -1948,9 +1948,8 @@ var writeTargetToPath = Profile(
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
 // - previousBuilder: previous Builder object used in previous iteration
-var writeSiteArchive = Profile(
-  "bundler..writeSiteArchive",
-  function (targets, outputPath, {
+var writeSiteArchive = Profile("bundler writeSiteArchive", function (
+  targets, outputPath, {
     includeNodeModules,
     builtBy,
     releaseName,
@@ -2024,7 +2023,9 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder = previousBuilders && previousBuilders[name];
+      const previousBuilder =
+              (previousBuilders && previousBuilders[name]) ?
+              previousBuilders[name] : null;
       const {
         arch, path, cordovaDependencies,
         nodePath: targetNP,
