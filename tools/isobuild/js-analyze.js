@@ -1,10 +1,24 @@
 import { parse } from 'meteor-babel';
 import { analyze as analyzeScope } from 'escope';
+import LRU from "lru-cache";
+
+var AST_CACHE = new LRU({
+  max: Math.pow(2, 12),
+  length(ast) {
+    return ast.loc.end.line;
+  }
+});
 
 // Like babel.parse, but annotates any thrown error with $ParseError = true.
-function tryToParse(source) {
+function tryToParse(source, hash) {
+  if (hash && AST_CACHE.has(hash)) {
+    return AST_CACHE.get(hash);
+  }
+
+  let ast;
+
   try {
-    return parse(source, {
+    ast = parse(source, {
       strictMode: false,
       ecmaVersion: 6,
       sourceType: "module",
@@ -17,6 +31,12 @@ function tryToParse(source) {
     }
     throw e;
   }
+
+  if (hash) {
+    AST_CACHE.set(hash, ast);
+  }
+
+  return ast;
 }
 
 var dependencyKeywordPattern = /\b(require|import|export)\b/g;
@@ -35,7 +55,7 @@ var dependencyKeywordPattern = /\b(require|import|export)\b/g;
  * if the tokens were actually what we thought they were (a `require`
  * function call, or an `import` or `export` statement).
  */
-export function findImportedModuleIdentifiers(source) {
+export function findImportedModuleIdentifiers(source, hash) {
   const identifiers = {};
   const possibleIndexes = [];
   let match;
@@ -49,7 +69,7 @@ export function findImportedModuleIdentifiers(source) {
     return {};
   }
 
-  const ast = tryToParse(source);
+  const ast = tryToParse(source, hash);
 
   function walk(node, left, right) {
     if (left >= right) {
@@ -149,8 +169,8 @@ function getImportedModuleId(node) {
 //
 // It only cares about assignments to variables; an assignment to a field on an
 // object (`Foo.Bar = true`) neither causes `Foo` nor `Foo.Bar` to be returned.
-export function findAssignedGlobals(source) {
-  const ast = tryToParse(source);
+export function findAssignedGlobals(source, hash) {
+  const ast = tryToParse(source, hash);
 
   // We have to pass ignoreEval; otherwise, the existence of a direct eval call
   // causes escope to not bother to resolve references in the eval's scope.

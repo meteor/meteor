@@ -456,8 +456,8 @@ _.extend(File.prototype, {
     }
 
     try {
-      return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-              _.keys(findAssignedGlobals(self.source)));
+      return ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
+        _.keys(findAssignedGlobals(self.source, self.sourceHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;

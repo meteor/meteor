@@ -126,8 +126,10 @@ export default class ImportScanner {
       return IMPORT_SCANNER_CACHE.get(file.hash);
     }
 
-    const result =
-          keys(findImportedModuleIdentifiers(file.data.toString("utf8")));
+    const result = keys(findImportedModuleIdentifiers(
+      file.data.toString("utf8"),
+      file.hash,
+    ));
 
     // there should always be file.hash, but better safe than sorry
     if (file.hash) {
