@@ -3,7 +3,7 @@
 # Note: 0.5.17 used on branch origin/npm3
 # Note: 0.5.20 used on branch origin/cordova-improvements
 # Note: 0.5.21 used on branch release-1.2.2
-BUNDLE_VERSION=0.5.18
+BUNDLE_VERSION=0.5.22
 
 # OS Check. Put here because here is where we download the precompiled
 # bundles that are arch specific.
