@@ -139,7 +139,20 @@ export default class ImportScanner {
 
   _scanFile(file) {
     const absPath = pathJoin(this.sourceRoot, file.sourcePath);
-    file.deps = file.deps || this._findImportedModuleIdentifiers(file);
+
+    try {
+      file.deps = file.deps || this._findImportedModuleIdentifiers(file);
+    } catch (e) {
+      if (e.$ParseError) {
+        buildmessage.error(e.message, {
+          file: file.sourcePath,
+          line: e.loc.line,
+          column: e.loc.column,
+        });
+        return;
+      }
+      throw e;
+    }
 
     each(file.deps, id => {
       const absImportedPath = this._tryToResolveImportedPath(file, id);
