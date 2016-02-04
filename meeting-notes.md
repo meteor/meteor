@@ -1,3 +1,38 @@
+## Standup 3rd Feb
+
+With Zol, Sashko, Tom.
+
+### Notes
+
+- React outline draft done by Evan.
+- View team to fill in the rest.
+- Uri will mirror the same structure for Angular.
+- Martijn trying to get tech stuff finished before guide. (not essential for 1.3)
+- If we're delaying the mobile release, we should delay it a bit more to build good documentation (e.g the wikis).
+- Tom has spent a lot of time on testing.
+- Run into a roadbump late yesterday trying to convert velocity example app to the new system.
+- Tom is organizing conversation with Workpop to find out what's feasible for them.
+- Updating sketch of an article as framework changes.
+- Avi is pretty close to finishing on his work.
+- Sashko is adamanent we worry about velocity users.
+- Do we want migration path for an app that's completely made up of packages to be super smooth? We should mention the path, step 1 move to modules, step 2 incrementally move tests to mocha, step 3 delete your package.js file.
+- We should message that people shouldn't use tinytest anymore.
+- We should add a migration guide section to the guide whenever we do a new release.
+- Sashko - Useful parts from Code Style are Meteor specific.
+
+### Decisions
+
+- We're definitely reaching out to Workpop to test tests.
+- Consider having Workpop write a blog post for transitioning to the new tests.
+- Don't kill the UI for integration tests, add a single node in the app for the reporter and inline the css.
+- Add a migration from 1.2 -> 1.3 article.
+- Tom is good with owning App Structure and Testing till the 1.3 release.
+- Need to update example apps and possible Meteor create skeleton.
+- Use a linter config (whichever) for example apps.
+- Merge app structure and code style articles with just the useful Meteor specific parts.
+- Tom to get outlines for App Structure and the Migration article in the next few days.
+
+
 ## Standup 20th Jan
 
 With Zol, Sashko, Tom, Matt.
