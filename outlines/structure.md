@@ -37,8 +37,8 @@
   3. All Meteor code samples can follow your style
 5. JavaScript and ES2015
   1. Use JavaScript and compile all of your code with the `ecmascript` package
-  1. Follow the AirBnB style guide, based on the AirBnB style guide
-  2. Use ESLint using the standard config, which is made to work with `ecmascript`
+  1. Follow the AirBnB style guide
+  2. Use ESLint using the standard ABnB config, which is made to work with `ecmascript`
     1. Running ESLint
     1. Setting up linting in your editor
     1. Setting up a linter commit hook
