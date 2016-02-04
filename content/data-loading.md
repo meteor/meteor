@@ -297,7 +297,7 @@ Usually such state is stored in a *global singleton* object which we can call a 
 
 In Meteor, it's best to make stores *reactive data* sources, as that way they tie most naturally into the rest of the ecosystem. There are a few different packages you can use for stores.
 
-If the store is single-dimensional, you can probably use a `ReactiveVar` to store it (provided by the [`reactive-var`](https://atmopsherejs.com/meteor/reactive-var) package). A `ReactiveVar` has two properties, `get()` and `set()`:
+If the store is single-dimensional, you can probably use a `ReactiveVar` to store it (provided by the [`reactive-var`](https://atmospherejs.com/meteor/reactive-var) package). A `ReactiveVar` has two properties, `get()` and `set()`:
 
 ```js
 DocumentHidden = new ReactiveVar(document.hidden);
@@ -306,7 +306,7 @@ $(window).on('visibilitychange', (event) => {
 });
 ```
 
-If the store is multi-dimensional, you may want to use a `ReactiveDict` (from the [`reactive-dict`](https://atmopsherejs.com/meteor/reactive-dict) package):
+If the store is multi-dimensional, you may want to use a `ReactiveDict` (from the [`reactive-dict`](https://atmospherejs.com/meteor/reactive-dict) package):
 
 ```js
 const $window = $(window);
