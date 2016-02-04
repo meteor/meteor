@@ -312,4 +312,28 @@ val = "zxcv";`;
       await 15
     );
   });
+
+  it("Promise.await", () => {
+    var markers = [];
+
+    async function f() {
+      markers.push("before");
+      assert.strictEqual(Promise.await(Promise.resolve(1234)), 1234);
+      markers.push("after");
+      return "done";
+    }
+
+    assert.deepEqual(markers, []);
+
+    var promise = f();
+
+    // The async function should execute synchronously up to the first
+    // Promise.await or await expression, but no further.
+    assert.deepEqual(markers, ["before"]);
+
+    return promise.then(result => {
+      assert.strictEqual(result, "done");
+      assert.deepEqual(markers, ["before", "after"]);
+    });
+  });
 });
