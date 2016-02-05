@@ -65,6 +65,9 @@ export default class ImportScanner {
     this.watchSet = watchSet;
     this.absPathToOutputIndex = {};
     this.outputFiles = [];
+
+    this._statCache = new Map;
+    this._pkgJsonCache = new Map;
   }
 
   addInputFiles(files) {
@@ -386,30 +389,40 @@ export default class ImportScanner {
   }
 
   _joinAndStat(...joinArgs) {
-    const path = pathNormalize(pathJoin(...joinArgs));
-    const exactStat = statOrNull(path);
-    const exactResult = exactStat && { path, stat: exactStat };
-    if (exactResult && exactStat.isFile()) {
-      return exactResult;
+    const joined = pathJoin(...joinArgs);
+    if (this._statCache.has(joined)) {
+      return this._statCache.get(joined);
     }
 
-    for (let ext in extensions) {
-      if (has(extensions, ext)) {
-        const pathWithExt = path + ext;
-        const stat = statOrNull(pathWithExt);
-        if (stat) {
-          return { path: pathWithExt, stat };
+    const path = pathNormalize(joined);
+    const exactStat = statOrNull(path);
+    const exactResult = exactStat && { path, stat: exactStat };
+    let result = null;
+    if (exactResult && exactStat.isFile()) {
+      result = exactResult;
+    }
+
+    if (!result) {
+      for (let ext in extensions) {
+        if (has(extensions, ext)) {
+          const pathWithExt = path + ext;
+          const stat = statOrNull(pathWithExt);
+          if (stat) {
+            result = { path: pathWithExt, stat };
+            break;
+          }
         }
       }
     }
 
-    if (exactResult && exactStat.isDirectory()) {
+    if (!result && exactResult && exactStat.isDirectory()) {
       // After trying all available file extensions, fall back to the
       // original result if it was a directory.
-      return exactResult;
+      result = exactResult;
     }
 
-    return null;
+    this._statCache.set(joined, result);
+    return result;
   }
 
   _resolveAbsolute(file, id) {
@@ -465,15 +478,25 @@ export default class ImportScanner {
     return resolved;
   }
 
+  _readPkgJson(path) {
+    if (this._pkgJsonCache.has(path)) {
+      return this._pkgJsonCache.get(path);
+    }
+
+    let result = null;
+    try {
+      result = JSON.parse(this._readFile(path).data);
+    } catch (e) {
+      // leave result null
+    }
+
+    this._pkgJsonCache.set(path, result);
+    return result;
+  }
+
   _resolvePkgJsonMain(dirPath, seenDirPaths) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
-
-    let pkg;
-    try {
-      pkg = JSON.parse(this._readFile(pkgJsonPath).data);
-    } catch (e) {
-      return null;
-    }
+    const pkg = this._readPkgJson(pkgJsonPath);
 
     if (pkg && isString(pkg.main)) {
       // The "main" field of package.json does not have to begin with ./
@@ -529,7 +552,8 @@ export default class ImportScanner {
 }
 
 each(["_readFile", "_findImportedModuleIdentifiers",
-      "_getInstallPath", "_tryToResolveImportedPath"], funcName => {
+      "_getInstallPath", "_tryToResolveImportedPath",
+      "_resolvePkgJsonMain"], funcName => {
   ImportScanner.prototype[funcName] = Profile(
     `ImportScanner#${funcName}`, ImportScanner.prototype[funcName]);
 });
