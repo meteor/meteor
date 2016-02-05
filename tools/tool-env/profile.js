@@ -220,6 +220,14 @@ var formatMs = function (n) {
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " ms";
 };
 
+var encodeEntryKey = function (entry) {
+  return entry.join('\t');
+};
+
+var decodeEntryKey = function (key) {
+  return key.split('\t');
+};
+
 var globalEntry = [];
 
 var running = false;
@@ -256,7 +264,7 @@ var Profile = function (bucketName, f) {
     }
 
     currentEntry.push(name);
-    var key = JSON.stringify(currentEntry);
+    var key = encodeEntryKey(currentEntry);
     var start = process.hrtime();
     var err = null;
     try {
@@ -294,7 +302,7 @@ var entryName = function (entry) {
 };
 
 var entryStats = function (entry) {
-  return bucketStats[JSON.stringify(entry)];
+  return bucketStats[encodeEntryKey(entry)];
 };
 
 var entryTime = function (entry) {
@@ -358,7 +366,7 @@ var injectOtherTime = function (entry) {
   var name = "other " + entryName(entry);
   var other = _.clone(entry);
   other.push(name);
-  bucketStats[JSON.stringify(other)] = {
+  bucketStats[encodeEntryKey(other)] = {
     time: otherTime(entry),
     count: entryStats(entry).count,
     isOther: true
@@ -438,7 +446,7 @@ var getTopLevelTotal = function () {
 };
 
 var setupReport = function () {
-  entries = _.map(_.keys(bucketStats), JSON.parse);
+  entries = _.map(_.keys(bucketStats), decodeEntryKey);
   _.each(_.filter(entries, hasSignificantChildren), function (parent) {
     injectOtherTime(parent);
   });
