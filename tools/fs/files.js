@@ -1333,8 +1333,15 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
       const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
       const shouldBeSync = alwaysSync || sync;
+      // There's some overhead in awaiting a Promise of an async call,
+      // vs just doing the sync call, which for a call like "stat"
+      // takes longer than the call itself.  Different parts of the tool
+      // may perform 1,000s or 10,000s of stats each under certain
+      // conditions, so we get a nice performance boost from making
+      // these calls sync.
+      const isQuickie = (fsFuncName === 'stat');
 
-      if (canYield && shouldBeSync) {
+      if (canYield && shouldBeSync && !isQuickie) {
         const promise = new Promise((resolve, reject) => {
           args.push((err, value) => {
             if (options.noErr) {
