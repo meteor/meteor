@@ -930,6 +930,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
+  noLineNumbers,
 }) {
   buildmessage.assertInJob();
 
@@ -938,7 +939,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     useMeteorInstall,
     useGlobalNamespace,
     combinedServePath,
-    noLineNumbers: false
+    noLineNumbers
   });
 
   _.each(inputFiles, file => module.addFile(file));

@@ -762,6 +762,7 @@ export class PackageSourceBatch {
 
     // Run the linker.
     const isApp = ! self.unibuild.pkg.name;
+    const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
       useGlobalNamespace: isApp,
       useMeteorInstall: self.useMeteorInstall,
@@ -778,7 +779,8 @@ export class PackageSourceBatch {
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
-      includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")
+      includeSourceMapInstructions: isWeb,
+      noLineNumbers: !isWeb
     };
 
     const cacheKey = sha1(JSON.stringify({
