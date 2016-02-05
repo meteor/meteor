@@ -1,3 +1,7 @@
+## Agenda for next standup
+
+- Do we want people to *only* import and not use globals? In which case do we need to `export` every symbol in the API, so you can e.g. do `import { loginWithPassword } from 'meteor/accounts-password`? In which case should we mark the old APIs as deprecated? (see https://github.com/meteor/guide/pull/221/files#r51830171)
+
 ## Standup 3rd Feb
 
 With Zol, Sashko, Tom.
