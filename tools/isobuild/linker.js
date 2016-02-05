@@ -647,21 +647,6 @@ _.extend(File.prototype, {
         closureHeader,
         preserveLineNumbers ? "" : "\n\n"
       );
-
-      if (! smc) {
-        // No sourcemap? Generate a new one that takes into account the fact
-        // that we added a closure
-        var map = new sourcemap.SourceMapGenerator({ file: self.servePath });
-        _.each(result.code.split('\n'), function (line, i) {
-          map.addMapping({
-            source: self.servePath,
-            original: { line: i + 1, column: 0 },
-            generated: { line: i + 1, column: i === 0 ? closureHeader.length + 1 : 0 }
-          });
-        });
-        map.setSourceContent(self.servePath, result.code);
-        smc = new sourcemap.SourceMapConsumer(map.toJSON());
-      }
     }
 
     if (! preserveLineNumbers) {
