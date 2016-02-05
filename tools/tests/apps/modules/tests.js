@@ -62,6 +62,11 @@ describe("app modules", () => {
       assert.ok(error instanceof Error);
     }
   });
+
+  it("should not be parsed in strictMode", () => {
+    let foo = 1234;
+    delete foo;
+  });
 });
 
 describe("template modules", () => {
