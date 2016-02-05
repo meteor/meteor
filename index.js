@@ -4,6 +4,7 @@ var Cache = require("./cache.js");
 var compileCache; // Lazily initialized.
 var parseOptions = {
   sourceType: "module",
+  strictMode: false,
   allowImportExportEverywhere: true,
   allowReturnOutsideFunction: true,
   plugins: [
