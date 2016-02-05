@@ -74,7 +74,7 @@ it will re-call the method when it reconnects. This means that a client may
 call a method multiple times when it only means to call it once. If this
 behavior is problematic for your method, consider attaching a unique ID
 to each method call on the client, and checking on the server whether a call
-with this ID has already been made.
+with this ID has already been made.  Alternatively, you can use [`Meteor.apply`](#meteor_apply) with the noRetry option set to true.
 
 {{> autoApiBox "DDPCommon.MethodInvocation#userId"}}
 
