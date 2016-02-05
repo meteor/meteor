@@ -12,7 +12,7 @@ if (process.platform === "win32") {
   // Duplicated in dev-bundle-server-package.js
   fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
 } else {
-  fibersVersion = "1.0.5";
+  fibersVersion = "1.0.8";
 }
 
 var packageJson = {
