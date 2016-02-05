@@ -1,5 +1,6 @@
 runTests = function() {
-  document.body.innerHTML = "";
+  // hide any existing HTML but don't remove it
+  $('body > *').css({display: 'none'});
   document.head.title = "Tests";
   
   MochaRunner.setReporter(practical.mocha.HtmlReporter)
