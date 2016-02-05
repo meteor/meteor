@@ -47,7 +47,7 @@ describe("app modules", () => {
     let error;
     let result;
     try {
-      result = require("./server/only");
+      result = require("./server/only").default;
     } catch (expectedOnClient) {
       error = expectedOnClient;
     }
@@ -60,6 +60,72 @@ describe("app modules", () => {
     if (Meteor.isClient) {
       assert.ok(error instanceof Error);
     }
+  });
+});
+
+describe("template modules", () => {
+  Meteor.isClient &&
+  it("should be importable on the client", () => {
+    assert.strictEqual(typeof Template, "function");
+    assert.ok(! _.has(Template, "lazy"));
+    require("./imports/lazy.html");
+    assert.ok(_.has(Template, "lazy"));
+    assert.ok(Template.lazy instanceof Template);
+  });
+
+  Meteor.isServer &&
+  it("should not be importable on the server", () => {
+    let error;
+    try {
+      require("./imports/lazy.html");
+    } catch (expected) {
+      error = expected;
+    }
+    assert.ok(error instanceof Error);
+  });
+});
+
+Meteor.isClient &&
+describe("css modules", () => {
+  it("should be loaded eagerly unless lazy", () => {
+    assert.strictEqual(
+      $(".app-eager-css").css("display"),
+      "none"
+    );
+
+    let error;
+    try {
+      require("./eager.css");
+    } catch (expected) {
+      error = expected;
+    }
+    assert.ok(error instanceof Error);
+  });
+
+  it("should be importable by an app", () => {
+    assert.strictEqual(
+      $(".app-lazy-css").css("display"),
+      "block"
+    );
+
+    require("./imports/lazy.css");
+
+    assert.strictEqual(
+      $(".app-lazy-css").css("display"),
+      "none"
+    );
+  });
+
+  it("should be importable by a package", () => {
+    assert.strictEqual(
+      $(".pkg-lazy-css.imported").css("display"),
+      "none"
+    );
+
+    assert.strictEqual(
+      $(".pkg-lazy-css.not-imported").css("display"),
+      "block"
+    );
   });
 });
 
@@ -94,6 +160,16 @@ describe("local node_modules", () => {
       require("/node_modules/moment")
     );
   });
+
+  it("should be importable by packages", () => {
+    // Defined in packages/modules-test-package/common.js.
+    assert.strictEqual(typeof regeneratorRuntime, "object");
+  });
+
+  it('should expose "version" field of package.json', () => {
+    const pkg = require("moment/package.json");
+    assert.strictEqual(pkg.version, "2.11.1");
+  });
 });
 
 describe("Meteor packages", () => {
@@ -116,5 +192,38 @@ describe("Meteor packages", () => {
     assert.strictEqual(ModulesTestPackage, "loaded");
     const mtp = require("meteor/modules-test-package");
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
+  });
+});
+
+describe("async functions", () => {
+  it("should work on the client and server", async () => {
+    assert.strictEqual(
+      await 2 + 2,
+      await new Promise(resolve => resolve(4))
+    );
+  });
+});
+
+Meteor.isClient &&
+describe("client/compatibility directories", () => {
+  it("should contain bare files", () => {
+    assert.strictEqual(topLevelVariable, 1234);
+  });
+});
+
+describe("return statements at top level", () => {
+  it("should be legal", () => {
+    var ret = require("./imports/return.js");
+    assert.strictEqual(ret.a, 1234);
+    assert.strictEqual(ret.b, void 0);
+  });
+});
+
+describe("circular package.json resolution chains", () => {
+  it("should be broken appropriately", () => {
+    assert.strictEqual(
+      require("./lib").aMain,
+      "/lib/a/index.js"
+    );
   });
 });

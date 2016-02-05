@@ -7,7 +7,7 @@ var watch = require('../fs/watch.js');
 var buildmessage = require('../utils/buildmessage.js');
 var meteorNpm = require('./meteor-npm.js');
 var NpmDiscards = require('./npm-discards.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var archinfo = require('../utils/archinfo.js');
 var catalog = require('../packaging/catalog/catalog.js');
 var packageVersionParser = require('../packaging/package-version-parser.js');

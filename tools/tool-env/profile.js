@@ -165,24 +165,76 @@ var _ = require('underscore');
 var Fiber = require('fibers');
 
 var enabled = !! process.env['METEOR_PROFILE'];
-var filter = ~~process.env['METEOR_PROFILE'] || 100; // ms
+var filter = parseFloat(process.env['METEOR_PROFILE']); // ms
+if (isNaN(filter)) {
+  filter = 100; // ms
+}
 
-var bucketTimes = {};
+var bucketStats = {};
 
+var SPACES_STR = ' ';
+// return a string of `x` spaces
 var spaces = function (x) {
-  var s = '';
-  for (var i = 0; i < x; ++i) {
-    s += '  ';
+  while (SPACES_STR.length < x) {
+    SPACES_STR = SPACES_STR + SPACES_STR;
   }
-  return s;
+  return SPACES_STR.slice(0, x);
+};
+
+var DOTS_STR = '.';
+// return a string of `x` dots
+var dots = function (x) {
+  while (DOTS_STR.length < x) {
+    DOTS_STR = DOTS_STR + DOTS_STR;
+  }
+  return DOTS_STR.slice(0, x);
+};
+
+
+var leftAlign = function (str, len) {
+  if (str.length < len) {
+    str = str + spaces(len - str.length);
+  }
+  return str;
+};
+
+var rightAlign = function (str, len) {
+  if (str.length < len) {
+    str = spaces(len - str.length) + str;
+  }
+  return str;
+};
+
+var leftRightAlign = function (str1, str2, len) {
+  var middle = Math.max(1, len - str1.length - str2.length);
+  return str1 + spaces(middle) + str2;
+};
+
+var leftRightDots = function (str1, str2, len) {
+  var middle = Math.max(1, len - str1.length - str2.length);
+  return str1 + dots(middle) + str2;
+};
+
+var formatMs = function (n) {
+  // integer with thousands separators
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " ms";
+};
+
+var encodeEntryKey = function (entry) {
+  return entry.join('\t');
+};
+
+var decodeEntryKey = function (key) {
+  return key.split('\t');
 };
 
 var globalEntry = [];
 
 var running = false;
+var runningName;
 
 var start = function () {
-  bucketTimes = {};
+  bucketStats = {};
   running = true;
 };
 
@@ -212,7 +264,7 @@ var Profile = function (bucketName, f) {
     }
 
     currentEntry.push(name);
-    var key = JSON.stringify(currentEntry);
+    var key = encodeEntryKey(currentEntry);
     var start = process.hrtime();
     var err = null;
     try {
@@ -223,8 +275,11 @@ var Profile = function (bucketName, f) {
     }
     finally {
       var elapsed = process.hrtime(start);
-      bucketTimes[key] = (bucketTimes[key] || 0) +
-        (elapsed[0] * 1000 + elapsed[1] / 1000000);
+      var stats = (bucketStats[key] || (bucketStats[key] = {
+        time: 0.0, count: 0
+      }));
+      stats.time += (elapsed[0] * 1000 + elapsed[1] / 1000000);
+      stats.count++;
       currentEntry.pop();
     }
 
@@ -246,8 +301,12 @@ var entryName = function (entry) {
   return _.last(entry);
 };
 
+var entryStats = function (entry) {
+  return bucketStats[encodeEntryKey(entry)];
+};
+
 var entryTime = function (entry) {
-  return bucketTimes[JSON.stringify(entry)];
+  return entryStats(entry).time;
 };
 
 var isTopLevelEntry = function (entry) {
@@ -258,13 +317,21 @@ var topLevelEntries = function () {
   return _.filter(entries, isTopLevelEntry);
 };
 
-var print = function (indent, text) {
-  console.log(prefix + spaces(indent * 2) + text);
+var print = function (text) {
+  console.log(prefix + text);
 };
 
 var isChild = function (entry1, entry2) {
-  return (entry2.length === entry1.length + 1 &&
-          _.isEqual(entry1, entry2.slice(0, entry1.length)));
+  if (entry2.length !== entry1.length + 1) {
+    return false;
+  }
+  for (var i = entry1.length-1; i >= 0; i--) {
+    if (entry1[i] !== entry2[i]) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 var children = function (entry1) {
@@ -277,23 +344,20 @@ var hasChildren = function (entry) {
   return children(entry).length !== 0;
 };
 
-var isLeaf = function (entry) {
-  return ! hasChildren(entry);
+var hasSignificantChildren = function (entry) {
+  return _.some(children(entry), function (entry) {
+    return (entryTime(entry) >= filter);
+  });
 };
 
-var reportOnLeaf = function (level, entry) {
-  if (entryTime(entry) < filter) {
-    return;
-  }
-  print(
-    level,
-    _.last(entry) + ": " + entryTime(entry).toFixed(1));
+var isLeaf = function (entry) {
+  return ! hasChildren(entry);
 };
 
 var otherTime = function (entry) {
   var total = 0;
   _.each(children(entry), function (child) {
-    total += bucketTimes[JSON.stringify(child)];
+    total += entryTime(child);
   });
   return entryTime(entry) - total;
 };
@@ -302,25 +366,29 @@ var injectOtherTime = function (entry) {
   var name = "other " + entryName(entry);
   var other = _.clone(entry);
   other.push(name);
-  bucketTimes[JSON.stringify(other)] = otherTime(entry);
+  bucketStats[encodeEntryKey(other)] = {
+    time: otherTime(entry),
+    count: entryStats(entry).count,
+    isOther: true
+  };
   entries.push(other);
 };
 
-var reportOnParent = function (level, entry) {
-  if (entryTime(entry) < filter) {
+var reportOn = function (level, entry) {
+  var stats = entryStats(entry);
+  if (stats.time < filter) {
     return;
   }
-  print(level, entryName(entry) + ": " + entryTime(entry).toFixed(1));
-  _.each(children(entry), function (child) {
-    reportOn(level + 1, child);
-  });
-};
+  var isParent = hasSignificantChildren(entry);
+  var name = entryName(entry);
+  print((isParent ? leftRightDots : leftRightAlign)
+        (spaces(level * 3) + name, formatMs(stats.time), 70)
+        + (stats.isOther ? "" : (" (" + stats.count + ")")));
 
-var reportOn = function (level, entry) {
-  if (hasChildren(entry)) {
-    reportOnParent(level, entry);
-  } else {
-    reportOnLeaf(level, entry);
+  if (isParent) {
+    _.each(children(entry), function (child) {
+      reportOn(level + 1, child);
+    });
   }
 };
 
@@ -334,64 +402,93 @@ var allLeafs = function () {
   return _.union(_.map(_.filter(entries, isLeaf), entryName));
 };
 
-var leafTotal = function (leafName) {
-  var total = 0;
+var leafTotals = function (leafName) {
+  var time = 0;
+  var count = 0;
   _.each(
     _.filter(entries, function (entry) {
-      return isLeaf(entry) && entryName(entry) === leafName;
+      return entryName(entry) === leafName && isLeaf(entry);
     }),
     function (leaf) {
-      total += entryTime(leaf);
+      var stats = entryStats(leaf);
+      time += stats.time;
+      count += stats.count;
     }
   );
-  return total;
+  return {time, count};
 };
 
-var reportTotals = function () {
+var reportHotLeaves = function () {
+  print('Top leaves:');
   var totals = [];
   _.each(allLeafs(), function (leaf) {
-    totals.push({name: leaf, time: leafTotal(leaf)});
+    var info = leafTotals(leaf);
+    totals.push({name: leaf, time: info.time, count: info.count});
   });
   totals.sort(function (a, b) {
     return a.time === b.time ? 0 : a.time > b.time ? -1 : 1;
   });
-  var grandTotal = 0;
   _.each(totals, function (total) {
-    if (total.time < filter) {
+    if (total.time < 100) { // hard-coded larger filter to quality as "hot" here
       return;
     }
-    print(0, total.name + ": " + total.time.toFixed(1));
-    grandTotal += total.time;
+    print(leftRightDots(total.name, formatMs(total.time), 65) +
+          ` (${total.count})`);
   });
-  print(0, "Total: " + grandTotal.toFixed(1));
+};
+
+var getTopLevelTotal = function () {
+  var topTotal = 0;
+  _.each(topLevelEntries(), function (entry) {
+    topTotal += entryTime(entry);
+  });
+  return topTotal;
 };
 
 var setupReport = function () {
-  entries = _.map(_.keys(bucketTimes), JSON.parse);
-  _.each(_.filter(entries, hasChildren), function (parent) {
+  entries = _.map(_.keys(bucketStats), decodeEntryKey);
+  _.each(_.filter(entries, hasSignificantChildren), function (parent) {
     injectOtherTime(parent);
   });
 };
+
+var reportNum = 1;
 
 var report = function () {
   if (! enabled) {
     return;
   }
   running = false;
-  print(0, '');
+  print('');
   setupReport();
   reportHierarchy();
-  print(0, '');
-  reportTotals();
+  print('');
+  reportHotLeaves();
+  print('');
+  print(`(#${reportNum}) Total: ${formatMs(getTopLevelTotal())}` +
+        ` (${runningName})`);
+  print('');
 };
 
 var run = function (bucketName, f) {
-  start();
-  try {
+  if (! enabled) {
+    return f();
+  } else if (running) {
+    // We've kept the calls to Profile.run in the tool disjoint so far,
+    // and should probably keep doing so, but if we mess up, warn and continue.
+    console.log("Warning: Nested Profile.run at " + bucketName);
     return time(bucketName, f);
-  }
-  finally {
-    report();
+  } else {
+    runningName = bucketName;
+    print(`(#${reportNum}) Profiling: ${runningName}`);
+    start();
+    try {
+      return time(bucketName, f);
+    }
+    finally {
+      report();
+      reportNum++;
+    }
   }
 };
 
@@ -399,4 +496,3 @@ Profile.time = time;
 Profile.run = run;
 
 exports.Profile = Profile;
-

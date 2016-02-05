@@ -73,7 +73,7 @@ HTTP.put = function (/* varargs */) {
 };
 
 /**
- * @summary Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with "DELETE" as the first argument. (Named `del` to avoid conflic with the Javascript keyword `delete`)
+ * @summary Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with "DELETE" as the first argument. (Named `del` to avoid conflict with the Javascript keyword `delete`)
  * @param {String} url The URL to which the request should be sent.
  * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
  * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
@@ -81,4 +81,15 @@ HTTP.put = function (/* varargs */) {
  */
 HTTP.del = function (/* varargs */) {
   return HTTP.call.apply(this, ["DELETE"].concat(_.toArray(arguments)));
+};
+
+/**
+ * @summary Send an HTTP `PATCH` request. Equivalent to calling [`HTTP.call`](#http_call) with "PATCH" as the first argument.
+ * @param {String} url The URL to which the request should be sent.
+ * @param {Object} [callOptions] Options passed on to [`HTTP.call`](#http_call).
+ * @param {Function} [asyncCallback] Callback that is called when the request is completed. Required on the client.
+ * @locus Anywhere
+ */
+HTTP.patch = function (/* varargs */) {
+  return HTTP.call.apply(this, ["PATCH"].concat(_.toArray(arguments)));
 };

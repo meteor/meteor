@@ -154,7 +154,7 @@ var _ = require('underscore');
 
 var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 
 var files = require('../fs/files.js');
@@ -745,6 +745,9 @@ class Target {
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
 
+    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
+      .computeJsOutputFilesMap(sourceBatches);
+
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
       const unibuild = sourceBatch.unibuild;
@@ -760,10 +763,11 @@ class Target {
         });
       }
 
-      const isApp = ! unibuild.pkg.name;
+      const name = unibuild.pkg.name || null;
+      const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources();
+      const resources = sourceBatch.getResources(jsOutputFilesMap.get(name));
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
@@ -798,6 +802,13 @@ class Target {
       resources.forEach((resource) => {
         if (resource.type === 'asset') {
           // already handled
+          return;
+        }
+
+        if (resource.type !== "js" &&
+            resource.lazy) {
+          // Only files that compile to JS can be imported, so any other
+          // files should be ignored here, if lazy.
           return;
         }
 
@@ -1879,7 +1890,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler..writeFile", function (file, builder) {
+var writeFile = Profile("bundler writeFile", function (file, builder) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -1896,7 +1907,7 @@ var writeFile = Profile("bundler..writeFile", function (file, builder) {
 
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
-  "bundler..writeTargetToPath",
+  "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
     getRelativeTargetPath,
@@ -1950,9 +1961,8 @@ var writeTargetToPath = Profile(
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
 // - previousBuilder: previous Builder object used in previous iteration
-var writeSiteArchive = Profile(
-  "bundler..writeSiteArchive",
-  function (targets, outputPath, {
+var writeSiteArchive = Profile("bundler writeSiteArchive", function (
+  targets, outputPath, {
     includeNodeModules,
     builtBy,
     releaseName,
@@ -1962,7 +1972,10 @@ var writeSiteArchive = Profile(
   }) {
 
   const builders = {};
-  const builder = new Builder({outputPath});
+  const previousStarBuilder = previousBuilders && previousBuilders.star;
+  const builder = new Builder({outputPath,
+                               previousBuilder: previousStarBuilder});
+  builders.star = builder;
 
   try {
     var json = {
@@ -2026,7 +2039,9 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder = previousBuilders && previousBuilders[name];
+      const previousBuilder =
+              (previousBuilders && previousBuilders[name]) ?
+              previousBuilders[name] : null;
       const {
         arch, path, cordovaDependencies,
         nodePath: targetNP,

@@ -218,8 +218,10 @@ Reload._reload = function (options) {
 
   var tryReload = function () { _.defer(function () {
     if (Reload._migrate(tryReload, options)) {
-      // Tell the browser to shut down this VM and make a new one
-      window.location.reload();
+      // Make the browser reload the page
+      // Using location.replace() instead of location.reload() avoids
+      // validating assets with the server if we still have a fresh cached copy.
+      window.location.replace(window.location.href);
     }
   }); };
 

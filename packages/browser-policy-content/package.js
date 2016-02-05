@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Configure content security policies",
-  version: "1.0.7-modules.4"
+  version: "1.0.7-modules.7"
 });
 
 Package.onUse(function (api) {

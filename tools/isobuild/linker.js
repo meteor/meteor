@@ -127,7 +127,7 @@ _.extend(Module.prototype, {
 
         const node = file.getPrelinkedOutput({ preserveLineNumbers: true });
         const results = Profile.time(
-          "getPrelinkedFiles toStringWithSourceMap (app)", () => {
+          "toStringWithSourceMap (app)", () => {
             return node.toStringWithSourceMap({
               file: file.servePath
             }); // results has 'code' and 'map' attributes
@@ -191,7 +191,7 @@ _.extend(Module.prototype, {
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
     Profile.time(
-      'getPrelinkedFiles toStringWithSourceMap (packages)',
+      'getPrelinkedFiles toStringWithSourceMap',
       function () {
         const { code, map } = node.toStringWithSourceMap({
           file: self.combinedServePath
@@ -456,8 +456,8 @@ _.extend(File.prototype, {
     }
 
     try {
-      return (ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
-              _.keys(findAssignedGlobals(self.source)));
+      return ASSIGNED_GLOBALS_CACHE[self.sourceHash] =
+        _.keys(findAssignedGlobals(self.source, self.sourceHash));
     } catch (e) {
       if (!e.$ParseError) {
         throw e;
@@ -647,21 +647,6 @@ _.extend(File.prototype, {
         closureHeader,
         preserveLineNumbers ? "" : "\n\n"
       );
-
-      if (! smc) {
-        // No sourcemap? Generate a new one that takes into account the fact
-        // that we added a closure
-        var map = new sourcemap.SourceMapGenerator({ file: self.servePath });
-        _.each(result.code.split('\n'), function (line, i) {
-          map.addMapping({
-            source: self.servePath,
-            original: { line: i + 1, column: 0 },
-            generated: { line: i + 1, column: i === 0 ? closureHeader.length + 1 : 0 }
-          });
-        });
-        map.setSourceContent(self.servePath, result.code);
-        smc = new sourcemap.SourceMapConsumer(map.toJSON());
-      }
     }
 
     if (! preserveLineNumbers) {
@@ -819,13 +804,26 @@ var SOURCE_MAP_INSTRUCTIONS_COMMENT = banner([
 
 var getHeader = function (options) {
   var chunks = [];
-  chunks.push("(function () {\n\n" );
-  chunks.push(getImportCode(options.imports, "/* Imports */\n", false));
-  if (!_.isEmpty(options.packageVariables)) {
-    chunks.push("/* Package-scope variables */\n");
-    chunks.push("var " + options.packageVariables.join(', ') +
-                ";\n\n");
+
+  chunks.push(
+    "(function () {\n\n",
+    getImportCode(options.imports, "/* Imports */\n", false),
+  );
+
+  const packageVariables = _.filter(
+    options.packageVariables,
+    name => ! _.has(options.imports, name),
+  );
+
+  if (!_.isEmpty(packageVariables)) {
+    chunks.push(
+      "/* Package-scope variables */\n",
+      "var ",
+      packageVariables.join(', '),
+      ";\n\n",
+    );
   }
+
   return chunks.join('');
 };
 
@@ -932,6 +930,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // True if JS files with source maps should have a comment explaining
   // how to use them in a browser.
   includeSourceMapInstructions,
+  noLineNumbers,
 }) {
   buildmessage.assertInJob();
 
@@ -940,7 +939,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     useMeteorInstall,
     useGlobalNamespace,
     combinedServePath,
-    noLineNumbers: false
+    noLineNumbers
   });
 
   _.each(inputFiles, file => module.addFile(file));

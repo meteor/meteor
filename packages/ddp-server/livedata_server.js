@@ -18,6 +18,9 @@ var SessionDocumentView = function () {
   self.dataByKey = {}; // key-> [ {subscriptionHandle, value} by precedence]
 };
 
+DDPServer._SessionDocumentView = SessionDocumentView;
+
+
 _.extend(SessionDocumentView.prototype, {
 
   getFields: function () {

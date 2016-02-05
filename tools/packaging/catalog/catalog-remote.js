@@ -11,6 +11,7 @@ var Console = require('../../console/console.js').Console;
 var tropohouse = require('../tropohouse.js');
 var packageClient = require('../package-client.js');
 var VersionParser = require('../package-version-parser.js');
+var Profile = require('../../tool-env/profile.js').Profile;
 
 // XXX: Rationalize these flags.  Maybe use the logger?
 var DEBUG_SQL = !!process.env.METEOR_DEBUG_SQL;
@@ -193,7 +194,7 @@ _.extend(Db.prototype, {
   runInTransaction: function (action) {
     var self = this;
 
-    var runOnce = function () {
+    var runOnce = Profile("sqlite query", function () {
       var txn = new Txn(self);
 
       var t1 = Date.now();
@@ -230,7 +231,7 @@ _.extend(Db.prototype, {
       }
 
       return result;
-    };
+    });
 
     for (var attempt = 0; ; attempt++) {
       try {
@@ -546,7 +547,10 @@ _.extend(RemoteCatalog.prototype, {
       "SELECT version FROM versions WHERE packageName=?", name);
     if (match === null)
       return [];
-    return _.pluck(match, 'version').sort(VersionParser.compare);
+    var pvParse = _.memoize(VersionParser.parse);
+    return _.pluck(match, 'version').sort(function (a, b) {
+      return VersionParser.compare(pvParse(a), pvParse(b));
+    });
   },
 
   // Just getVersion mapped over getSortedVersions, but only makes one round
@@ -557,8 +561,11 @@ _.extend(RemoteCatalog.prototype, {
       "SELECT content FROM versions WHERE packageName=?", [name]);
     if (! versionRecords)
       return [];
+
+    var pvParse = _.memoize(VersionParser.parse);
     versionRecords.sort(function (a, b) {
-      return VersionParser.compare(a.version, b.version);
+      return VersionParser.compare(pvParse(a.version),
+                                   pvParse(b.version));
     });
     return versionRecords;
   },

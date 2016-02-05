@@ -1,6 +1,6 @@
 Package.describe({
   name: 'ecmascript',
-  version: '0.3.1-modules.4',
+  version: '0.4.0-modules.7',
   summary: 'Compiler plugin that supports ES2015+ in all .js files',
   documentation: 'README.md'
 });
@@ -30,6 +30,8 @@ Package.onTest(function (api) {
   api.addFiles("runtime-tests.js");
   api.addFiles("transpilation-tests.js", "server");
 
-  api.addFiles("bare-test-file.js", "client", { bare: true });
-  api.addFiles("bare-test.js", "client");
+  api.addFiles("bare-test.js");
+  api.addFiles("bare-test-file.js", ["client", "server"], {
+    bare: true
+  });
 });

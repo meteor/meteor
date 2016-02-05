@@ -1,18 +1,13 @@
 Plugin.registerCompiler({
   extensions: ['js'],
 }, function () {
-  return new BabelCompiler({
-    asyncAwait: true,
-    modules: true
-  });
+  return new BabelCompiler();
 });
 
 Plugin.registerCompiler({
   extensions: ['jsx'],
 }, function () {
   return new BabelCompiler({
-    asyncAwait: true,
-    modules: true,
     react: true
   });
 });

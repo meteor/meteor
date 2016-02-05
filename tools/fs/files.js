@@ -553,12 +553,15 @@ files.findPathsWithRegex = function (dir, regex, options) {
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
-files.copyFile = function (from, to) {
+files.copyFile = function (from, to, origMode=null) {
   files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
 
-  var stats = files.stat(from);
-  if (!stats.isFile()) {
-    throw Error("cannot copy non-files");
+  if (origMode === null) {
+    var stats = files.stat(from);
+    if (!stats.isFile()) {
+      throw Error("cannot copy non-files");
+    }
+    origMode = stats.mode;
   }
 
   // Create the file as readable and writable by everyone, and executable by
@@ -566,10 +569,11 @@ files.copyFile = function (from, to) {
   // modified by umask.) We don't copy the mode *directly* because this function
   // is used by 'meteor create' which is copying from the read-only tools tree
   // into a writable app.
-  var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
+  var mode = (origMode & 0o100) ? 0o777 : 0o666;
 
   copyFileHelper(from, to, mode);
 };
+files.copyFile = Profile("files.copyFile", files.copyFile);
 
 var copyFileHelper = function (from, to, mode) {
   var readStream = files.createReadStream(from);
@@ -823,6 +827,8 @@ files.renameDirAlmostAtomically = function (fromDir, toDir) {
     files.rm_recursive(garbageDir);
   }
 };
+files.renameDirAlmostAtomically = Profile("files.renameDirAlmostAtomically",
+                                          files.renameDirAlmostAtomically);
 
 files.writeFileAtomically = function (filename, contents) {
   var tmpFile = files.pathJoin(
@@ -831,6 +837,8 @@ files.writeFileAtomically = function (filename, contents) {
   files.writeFile(tmpFile, contents);
   files.rename(tmpFile, filename);
 };
+files.writeFileAtomically = Profile("files.writeFileAtomically",
+                                    files.writeFileAtomically);
 
 // Like fs.symlinkSync, but creates a temporay link and renames it over the
 // file; this means it works even if the file already exists.
@@ -871,126 +879,130 @@ files.runJavaScript = function (code, options) {
 
   options = options || {};
   var filename = options.filename || "<anonymous>";
-  var keys = [], values = [];
-  // don't assume that _.keys and _.values are guaranteed to
-  // enumerate in the same order
-  _.each(options.symbols, function (value, name) {
-    keys.push(name);
-    values.push(value);
-  });
 
-  var stackFilename = filename;
-  if (options.sourceMap) {
-    // We want to generate an arbitrary filename that we use to associate the
-    // file with its source map.
-    stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
-  }
+  return Profile.time('runJavaScript ' + filename, () => {
 
-  var chunks = [];
-  var header = "(function(" + keys.join(',') + "){";
-  chunks.push(header);
-  if (options.sourceMap) {
-    var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
-    chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
-      code, consumer));
-  } else {
-    chunks.push(code);
-  }
-  // \n is necessary in case final line is a //-comment
-  chunks.push("\n})");
-
-  var wrapped;
-  var parsedSourceMap = null;
-  if (options.sourceMap) {
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-    var results = node.toStringWithSourceMap({
-      file: stackFilename
+    var keys = [], values = [];
+    // don't assume that _.keys and _.values are guaranteed to
+    // enumerate in the same order
+    _.each(options.symbols, function (value, name) {
+      keys.push(name);
+      values.push(value);
     });
-    wrapped = results.code;
-    parsedSourceMap = results.map.toJSON();
-    if (options.sourceMapRoot) {
-      // Add the specified root to any root that may be in the file.
-      parsedSourceMap.sourceRoot = files.pathJoin(
-        options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
-    }
-    // source-map-support doesn't ever look at the sourcesContent field, so
-    // there's no point in keeping it in memory.
-    delete parsedSourceMap.sourcesContent;
-    parsedSourceMaps[stackFilename] = parsedSourceMap;
-  } else {
-    wrapped = chunks.join('');
-  };
 
-  try {
-    // See #runInThisContext
-    //
-    // XXX it'd be nice to runInNewContext so that the code can't mess
-    // with our globals, but objects that come out of runInNewContext
-    // have bizarro antimatter prototype chains and break 'instanceof
-    // Array'. for now, steer clear
-    //
-    // Pass 'true' as third argument if we want the parse error on
-    // stderr (which we don't).
-    var script = require('vm').createScript(wrapped, stackFilename);
-  } catch (nodeParseError) {
-    if (!(nodeParseError instanceof SyntaxError)) {
+    var stackFilename = filename;
+    if (options.sourceMap) {
+      // We want to generate an arbitrary filename that we use to associate the
+      // file with its source map.
+      stackFilename = "<runJavaScript-" + nextStackFilenameCounter++ + ">";
+    }
+
+    var chunks = [];
+    var header = "(function(" + keys.join(',') + "){";
+    chunks.push(header);
+    if (options.sourceMap) {
+      var consumer = new sourcemap.SourceMapConsumer(options.sourceMap);
+      chunks.push(sourcemap.SourceNode.fromStringWithSourceMap(
+        code, consumer));
+    } else {
+      chunks.push(code);
+    }
+    // \n is necessary in case final line is a //-comment
+    chunks.push("\n})");
+
+    var wrapped;
+    var parsedSourceMap = null;
+    if (options.sourceMap) {
+      var node = new sourcemap.SourceNode(null, null, null, chunks);
+      var results = node.toStringWithSourceMap({
+        file: stackFilename
+      });
+      wrapped = results.code;
+      parsedSourceMap = results.map.toJSON();
+      if (options.sourceMapRoot) {
+        // Add the specified root to any root that may be in the file.
+        parsedSourceMap.sourceRoot = files.pathJoin(
+          options.sourceMapRoot, parsedSourceMap.sourceRoot || '');
+      }
+      // source-map-support doesn't ever look at the sourcesContent field, so
+      // there's no point in keeping it in memory.
+      delete parsedSourceMap.sourcesContent;
+      parsedSourceMaps[stackFilename] = parsedSourceMap;
+    } else {
+      wrapped = chunks.join('');
+    };
+
+    try {
+      // See #runInThisContext
+      //
+      // XXX it'd be nice to runInNewContext so that the code can't mess
+      // with our globals, but objects that come out of runInNewContext
+      // have bizarro antimatter prototype chains and break 'instanceof
+      // Array'. for now, steer clear
+      //
+      // Pass 'true' as third argument if we want the parse error on
+      // stderr (which we don't).
+      var script = require('vm').createScript(wrapped, stackFilename);
+    } catch (nodeParseError) {
+      if (!(nodeParseError instanceof SyntaxError)) {
+        throw nodeParseError;
+      }
+      // Got a parse error. Unfortunately, we can't actually get the
+      // location of the parse error from the SyntaxError; Node has some
+      // hacky support for displaying it over stderr if you pass an
+      // undocumented third argument to stackFilename, but that's not
+      // what we want. See
+      //    https://github.com/joyent/node/issues/3452
+      // for more information. One thing to try (and in fact, what an
+      // early version of this function did) is to actually fork a new
+      // node to run the code and parse its output. We instead run an
+      // entirely different JS parser, from the Babel project, but
+      // which at least has a nice API for reporting errors.
+      var parse = require('meteor-babel').parse;
+      try {
+        parse(wrapped, { strictMode: false });
+      } catch (parseError) {
+        if (typeof parseError.loc !== "object") {
+          throw parseError;
+        }
+
+        var err = new files.FancySyntaxError;
+        err.message = parseError.message;
+
+        if (parsedSourceMap) {
+          // XXX this duplicates code in computeGlobalReferences
+          var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
+          var original = consumer2.originalPositionFor(parseError.loc);
+          if (original.source) {
+            err.file = original.source;
+            err.line = original.line;
+            err.column = original.column;
+            throw err;
+          }
+        }
+
+        err.file = filename;  // *not* stackFilename
+        err.line = parseError.loc.line;
+        err.column = parseError.loc.column;
+
+        // adjust errors on line 1 to account for our header
+        if (err.line === 1) {
+          err.column -= header.length;
+        }
+
+        throw err;
+      }
+
+      // What? Node thought that this was a parse error and Babel didn't?
+      // Eh, just throw Node's error and don't care too much about the line
+      // numbers being right.
       throw nodeParseError;
     }
-    // Got a parse error. Unfortunately, we can't actually get the
-    // location of the parse error from the SyntaxError; Node has some
-    // hacky support for displaying it over stderr if you pass an
-    // undocumented third argument to stackFilename, but that's not
-    // what we want. See
-    //    https://github.com/joyent/node/issues/3452
-    // for more information. One thing to try (and in fact, what an
-    // early version of this function did) is to actually fork a new
-    // node to run the code and parse its output. We instead run an
-    // entirely different JS parser, from the Babel project, but
-    // which at least has a nice API for reporting errors.
-    var parse = require('meteor-babel').parse;
-    try {
-      parse(wrapped, { strictMode: false });
-    } catch (parseError) {
-      if (typeof parseError.loc !== "object") {
-        throw parseError;
-      }
 
-      var err = new files.FancySyntaxError;
-      err.message = parseError.message;
+    var func = script.runInThisContext();
 
-      if (parsedSourceMap) {
-        // XXX this duplicates code in computeGlobalReferences
-        var consumer2 = new sourcemap.SourceMapConsumer(parsedSourceMap);
-        var original = consumer2.originalPositionFor(parseError.loc);
-        if (original.source) {
-          err.file = original.source;
-          err.line = original.line;
-          err.column = original.column;
-          throw err;
-        }
-      }
-
-      err.file = filename;  // *not* stackFilename
-      err.line = parseError.loc.line;
-      err.column = parseError.loc.column;
-
-      // adjust errors on line 1 to account for our header
-      if (err.line === 1) {
-        err.column -= header.length;
-      }
-
-      throw err;
-    }
-
-    // What? Node thought that this was a parse error and Babel didn't?
-    // Eh, just throw Node's error and don't care too much about the line
-    // numbers being right.
-    throw nodeParseError;
-  }
-
-  var func = script.runInThisContext();
-
-  return (buildmessage.markBoundary(func)).apply(null, values);
+    return (buildmessage.markBoundary(func)).apply(null, values);
+  });
 };
 
 // - message: an error message from the parser
@@ -1321,8 +1333,15 @@ function wrapFsFunc(fsFuncName, pathArgIndices, options) {
 
       const canYield = Fiber.current && Fiber.yield && ! Fiber.yield.disallowed;
       const shouldBeSync = alwaysSync || sync;
+      // There's some overhead in awaiting a Promise of an async call,
+      // vs just doing the sync call, which for a call like "stat"
+      // takes longer than the call itself.  Different parts of the tool
+      // may perform 1,000s or 10,000s of stats each under certain
+      // conditions, so we get a nice performance boost from making
+      // these calls sync.
+      const isQuickie = (fsFuncName === 'stat');
 
-      if (canYield && shouldBeSync) {
+      if (canYield && shouldBeSync && !isQuickie) {
         const promise = new Promise((resolve, reject) => {
           args.push((err, value) => {
             if (options.noErr) {

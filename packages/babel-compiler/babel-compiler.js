@@ -56,10 +56,12 @@ BCp.processFilesForTarget = function (inputFiles) {
         ? "/packages/" + packageName + "/" + inputFilePath
         : "/" + inputFilePath;
 
-      babelOptions.sourceMapName = babelOptions.filename + ".map";
+      babelOptions.sourceMapTarget = babelOptions.filename + ".map";
 
       try {
-        var result = Babel.compile(source, babelOptions);
+        var result = profile('Babel.compile', function () {
+          return Babel.compile(source, babelOptions);
+        });
       } catch (e) {
         if (e.loc) {
           inputFile.error({
@@ -85,4 +87,12 @@ BCp.processFilesForTarget = function (inputFiles) {
 
 BCp.setDiskCacheDirectory = function (cacheDir) {
   Babel.setCacheDir(cacheDir);
+};
+
+function profile(name, func) {
+  if (typeof Profile !== 'undefined') {
+    return Profile.time(name, func);
+  } else {
+    return func();
+  }
 };

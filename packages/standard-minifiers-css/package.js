@@ -1,6 +1,6 @@
 Package.describe({
   name: 'standard-minifiers-css',
-  version: '1.0.3-modules.4',
+  version: '1.0.3-modules.7',
   summary: 'Standard css minifiers used with Meteor apps by default.',
   documentation: 'README.md'
 });
@@ -11,7 +11,7 @@ Package.registerBuildPlugin({
     'minifiers-css'
   ],
   npmDependencies: {
-    "source-map": "0.4.2"
+    "source-map": "0.5.3"
   },
   sources: [
     'plugin/minify-css.js'

@@ -124,7 +124,7 @@ Disallows inline CSS.
 
 Finally, you can configure a whitelist of allowed requests that various types of
 content can make. The following functions are defined for the content types
-script, object, image, media, font, frame, and connect.
+script, object, image, media, font, frame, style, and connect.
 
 <dl>
 
