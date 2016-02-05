@@ -18,13 +18,7 @@ function tryToParse(source, hash) {
   let ast;
 
   try {
-    ast = parse(source, {
-      strictMode: false,
-      ecmaVersion: 6,
-      sourceType: "module",
-      allowReturnOutsideFunction: true,
-      allowImportExportEverywhere: true,
-    });
+    ast = parse(source);
   } catch (e) {
     if (typeof e.loc === 'object') {
       e.$ParseError = true;
