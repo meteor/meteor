@@ -515,6 +515,17 @@ function doTestCommand(options) {
     //     isopack cache that's specific to test-packages?  See #3012.
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
+    main.captureAndExit("=> Errors while initializing project:", function () {
+      // We're just reading metadata here --- we'll wait to do the full build
+      // preparation until after we've started listening on the proxy, etc.
+      projectContext.readProjectMetadata();
+    });
+
+    main.captureAndExit("=> Errors while setting up tests:", function () {
+      // Read metadata and initialize catalog.
+      projectContext.initializeCatalog();
+    });
+
     // Overwrite .meteor/release.
     projectContext.releaseFile.write(
       release.current.isCheckout() ? "none" : release.current.name);
@@ -534,9 +545,7 @@ function doTestCommand(options) {
     // Use the driver package if running `meteor test-packages`. For
     // `meteor test-app`, the driver package is expected to already
     // have been added to the app.
-    if (options["test-packages"]) {
-      packagesToAdd.unshit(options['driver-package']);
-    }
+    packagesToAdd.unshift(options['driver-package']);
 
     // Also, add `autoupdate` so that you don't have to manually refresh the tests
     packagesToAdd.unshift("autoupdate");
@@ -561,14 +570,14 @@ function doTestCommand(options) {
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+
+    main.captureAndExit("=> Errors while setting up tests:", function () {
+      // Read metadata and initialize catalog.
+      projectContext.initializeCatalog();
+    });
   } else {
     throw new Error("Unexpected: neither test-packages nor test-app");
   }
-
-  main.captureAndExit("=> Errors while setting up tests:", function () {
-    // Read metadata and initialize catalog.
-    projectContext.initializeCatalog();
-  });
 
   // The rest of the projectContext preparation process will happen inside the
   // runner, once the proxy is listening. The changes we made were persisted to
