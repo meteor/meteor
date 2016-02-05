@@ -15,7 +15,7 @@ var makeConnectMessage = function (session) {
   if (session)
     msg.session = session;
   return msg;
-}
+};
 
 // Tests that stream got a message that matches expected.
 // Expected is normally an object, and allows a wildcard value of '*',
@@ -742,6 +742,39 @@ Tinytest.add("livedata stub - reconnect", function (test) {
   o.stop();
 });
 
+Tinytest.add("livedata stub - reconnect non-idempotent method", function(test) {
+  // This test is for https://github.com/meteor/meteor/issues/6108
+  var stream = new StubStream();
+  var conn = newConnection(stream);
+
+  startAndConnect(test, stream);
+
+  var methodCallbackFired = false;
+  var methodCallbackErrored = false;
+  // call with noRetry true so that the method should fail to retry on reconnect.
+  conn.apply('do_something', [], {noRetry: true}, function(error) {
+    methodCallbackFired = true;
+    // failure on reconnect should trigger an error.
+    if (error && error.error === 409) {
+      methodCallbackErrored = true;
+    }
+  });
+
+  //The method has not succeeded yet
+  test.isFalse(methodCallbackFired);
+  // reconnect.
+  stream.reset();
+
+  //The method callback should fire even though the stream has not sent a response.
+  //the callback should have been fired with an error.
+  test.isTrue(methodCallbackFired);
+  test.isTrue(methodCallbackErrored);
+
+  // verify that a reconnect message was sent.
+  testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+  // verify that the method message was not sent.
+  test.isUndefined(stream.sent.shift);
+});
 
 if (Meteor.isClient) {
   Tinytest.add("livedata stub - reconnect method which only got result", function (test) {
