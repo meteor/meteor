@@ -553,12 +553,15 @@ files.findPathsWithRegex = function (dir, regex, options) {
 // Copies a file, which is expected to exist. Parent directories of "to" do not
 // have to exist. Treats symbolic links transparently (copies the contents, not
 // the link itself, and it's an error if the link doesn't point to a file).
-files.copyFile = function (from, to) {
+files.copyFile = function (from, to, origMode=null) {
   files.mkdir_p(files.pathDirname(files.pathResolve(to)), 0o755);
 
-  var stats = files.stat(from);
-  if (!stats.isFile()) {
-    throw Error("cannot copy non-files");
+  if (origMode === null) {
+    var stats = files.stat(from);
+    if (!stats.isFile()) {
+      throw Error("cannot copy non-files");
+    }
+    origMode = stats.mode;
   }
 
   // Create the file as readable and writable by everyone, and executable by
@@ -566,10 +569,11 @@ files.copyFile = function (from, to) {
   // modified by umask.) We don't copy the mode *directly* because this function
   // is used by 'meteor create' which is copying from the read-only tools tree
   // into a writable app.
-  var mode = (stats.mode & 0o100) ? 0o777 : 0o666;
+  var mode = (origMode & 0o100) ? 0o777 : 0o666;
 
   copyFileHelper(from, to, mode);
 };
+files.copyFile = Profile("files.copyFile", files.copyFile);
 
 var copyFileHelper = function (from, to, mode) {
   var readStream = files.createReadStream(from);
