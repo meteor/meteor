@@ -9,7 +9,7 @@
     2. Group code into data - `api/` and rendering - `client` (?)
     1. Directory structure around features, not client/server
     2. LESS/SCSS files are in the same directory as components
-    3. One file per unit - template, method, collection, etc
+    3. One file per unit - template, method, collection, test etc
     4. Example app structure, model after todos XXX
 3. Splitting your project into multiple apps/entry points
     1. Why you want this structure
