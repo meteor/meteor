@@ -875,7 +875,7 @@ _.extend(AppRunner.prototype, {
       var resetCrashCount = function () {
         crashTimer = setTimeout(function () {
           crashCount = 0;
-        }, 3000);
+        }, 8000);
       };
 
       var runResult = self._runOnce({
