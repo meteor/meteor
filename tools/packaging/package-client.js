@@ -11,6 +11,7 @@ var authClient = require('../meteor-services/auth-client.js');
 var catalog = require('./catalog/catalog.js');
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
+var Profile = require('../tool-env/profile.js').Profile;
 
 // Opens a DDP connection to a package server. Loads the packages needed for a
 // DDP connection, then calls DDP connect to the package server URL in config,
@@ -222,6 +223,9 @@ var _updateServerPackageData = function (dataStore, options) {
 
   return ret;
 };
+
+_updateServerPackageData = Profile('package-client _updateServerPackageData',
+                                   _updateServerPackageData);
 
 // Returns a logged-in DDP connection to the package server, or null if
 // we cannot log in. If an error unrelated to login occurs
