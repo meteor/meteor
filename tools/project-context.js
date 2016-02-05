@@ -15,6 +15,7 @@ var tropohouse = require('./packaging/tropohouse.js');
 var utils = require('./utils/utils.js');
 var watch = require('./fs/watch.js');
 var Profile = require('./tool-env/profile.js').Profile;
+import { KNOWN_ISOBUILD_FEATURE_PACKAGES } from './isobuild/compiler.js';
 
 // The ProjectContext represents all the context associated with an app:
 // metadata files in the `.meteor` directory, the choice of package versions
@@ -492,7 +493,8 @@ _.extend(ProjectContext.prototype, {
           // of it yet.  It's not actually fatal, though, for previousSolution
           // to refer to package versions that we don't have access to or don't
           // exist.  They'll end up getting changed or removed if possible.
-          missingPreviousVersionIsError: canRetry
+          missingPreviousVersionIsError: canRetry,
+          supportedIsobuildFeaturePackages: KNOWN_ISOBUILD_FEATURE_PACKAGES,
         };
         if (self._upgradePackageNames) {
           resolveOptions.upgrade = self._upgradePackageNames;

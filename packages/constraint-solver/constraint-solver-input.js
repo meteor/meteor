@@ -118,25 +118,38 @@ CS.Input.prototype.isInPreviousSolution = function (p) {
   return !! (this.previousSolution && _.has(this.previousSolution, p));
 };
 
-CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
-  var self = this;
+function getMentionedPackages(input) {
+  var packages = {}; // package -> true
 
-  var packagesToLoad = {}; // package -> true
-
-  _.each(self.dependencies, function (pkg) {
-    packagesToLoad[pkg] = true;
+  _.each(input.dependencies, function (pkg) {
+    packages[pkg] = true;
   });
-  _.each(self.constraints, function (constraint) {
-    packagesToLoad[constraint.package] = true;
+  _.each(input.constraints, function (constraint) {
+    packages[constraint.package] = true;
   });
-  if (self.previousSolution) {
-    _.each(self.previousSolution, function (version, pkg) {
-      packagesToLoad[pkg] = true;
+  if (input.previousSolution) {
+    _.each(input.previousSolution, function (version, pkg) {
+      packages[pkg] = true;
     });
   }
 
+  return _.keys(packages);
+}
+
+CS.Input.prototype.loadFromCatalog = function (catalogLoader) {
   // Load packages into the cache (if they aren't loaded already).
-  catalogLoader.loadAllVersionsRecursive(_.keys(packagesToLoad));
+  catalogLoader.loadAllVersionsRecursive(getMentionedPackages(this));
+};
+
+CS.Input.prototype.loadOnlyPreviousSolution = function (catalogLoader) {
+  var self = this;
+
+  // load just the exact versions from the previousSolution
+  if (self.previousSolution) {
+    _.each(self.previousSolution, function (version, pkg) {
+      catalogLoader.loadSingleVersion(pkg, version);
+    });
+  }
 };
 
 CS.Input.prototype.isEqual = function (otherInput) {
