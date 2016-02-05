@@ -132,6 +132,7 @@
   "HTTP.call",
   "HTTP.del",
   "HTTP.get",
+  "HTTP.patch",
   "HTTP.post",
   "HTTP.put",
   "InputFile#addAsset",

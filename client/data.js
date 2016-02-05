@@ -2909,7 +2909,7 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1643,
+    "lineno": 1682,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -3763,7 +3763,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with \"DELETE\" as the first argument. (Named `del` to avoid conflic with the Javascript keyword `delete`)"
+    "summary": "Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with \"DELETE\" as the first argument. (Named `del` to avoid conflict with the Javascript keyword `delete`)"
   },
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
@@ -3807,6 +3807,49 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Send an HTTP `GET` request. Equivalent to calling [`HTTP.call`](#http_call) with \"GET\" as the first argument."
+  },
+  "HTTP.patch": {
+    "filepath": "http/httpcall_common.js",
+    "kind": "function",
+    "lineno": 93,
+    "locus": "Anywhere",
+    "longname": "HTTP.patch",
+    "memberof": "HTTP",
+    "name": "patch",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The URL to which the request should be sent.</p>",
+        "name": "url",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Options passed on to <a href=\"#http_call\"><code>HTTP.call</code></a>.</p>",
+        "name": "callOptions",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Callback that is called when the request is completed. Required on the client.</p>",
+        "name": "asyncCallback",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Send an HTTP `PATCH` request. Equivalent to calling [`HTTP.call`](#http_call) with \"PATCH\" as the first argument."
   },
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
@@ -4550,7 +4593,7 @@ DocsData = {
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 708,
+    "lineno": 746,
     "locus": "Anywhere",
     "longname": "Meteor.apply",
     "memberof": "Meteor",
@@ -4604,6 +4647,10 @@ DocsData = {
         }
       },
       {
+        "description": "<p>options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.</p>",
+        "name": "(Boolean)"
+      },
+      {
         "description": "<p>Optional callback; same semantics as in <a href=\"#meteor_call\"><code>Meteor.call</code></a>.</p>",
         "name": "asyncCallback",
         "optional": true,
@@ -4620,7 +4667,7 @@ DocsData = {
   "Meteor.call": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 667,
+    "lineno": 704,
     "locus": "Anywhere",
     "longname": "Meteor.call",
     "memberof": "Meteor",
@@ -4709,7 +4756,7 @@ DocsData = {
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1020,
+    "lineno": 1059,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
@@ -4962,7 +5009,7 @@ DocsData = {
   "Meteor.methods": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1536,
+    "lineno": 1539,
     "locus": "Anywhere",
     "longname": "Meteor.methods",
     "memberof": "Meteor",
@@ -4985,7 +5032,7 @@ DocsData = {
   "Meteor.onConnection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1397,
+    "lineno": 1400,
     "locus": "Server",
     "longname": "Meteor.onConnection",
     "memberof": "Meteor",
@@ -5008,7 +5055,7 @@ DocsData = {
   "Meteor.publish": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1471,
+    "lineno": 1474,
     "locus": "Server",
     "longname": "Meteor.publish",
     "memberof": "Meteor",
@@ -5040,7 +5087,7 @@ DocsData = {
   "Meteor.reconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1010,
+    "lineno": 1049,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
@@ -5172,7 +5219,7 @@ DocsData = {
   "Meteor.status": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 998,
+    "lineno": 1037,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
@@ -5185,7 +5232,7 @@ DocsData = {
   "Meteor.subscribe": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 482,
+    "lineno": 519,
     "locus": "Client",
     "longname": "Meteor.subscribe",
     "memberof": "Meteor",
@@ -5474,7 +5521,7 @@ DocsData = {
   "Mongo.Collection#find": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 264,
+    "lineno": 269,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#find",
     "memberof": "Mongo.Collection",
@@ -5571,7 +5618,7 @@ DocsData = {
   "Mongo.Collection#findOne": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 290,
+    "lineno": 295,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#findOne",
     "memberof": "Mongo.Collection",
@@ -5659,7 +5706,7 @@ DocsData = {
   "Mongo.Collection#insert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 429,
+    "lineno": 434,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#insert",
     "memberof": "Mongo.Collection",
@@ -5692,7 +5739,7 @@ DocsData = {
   "Mongo.Collection#rawCollection": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 681,
+    "lineno": 686,
     "locus": "Server",
     "longname": "Mongo.Collection#rawCollection",
     "memberof": "Mongo.Collection",
@@ -5705,7 +5752,7 @@ DocsData = {
   "Mongo.Collection#rawDatabase": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 693,
+    "lineno": 698,
     "locus": "Server",
     "longname": "Mongo.Collection#rawDatabase",
     "memberof": "Mongo.Collection",
@@ -5718,7 +5765,7 @@ DocsData = {
   "Mongo.Collection#remove": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 571,
+    "lineno": 576,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#remove",
     "memberof": "Mongo.Collection",
@@ -5751,7 +5798,7 @@ DocsData = {
   "Mongo.Collection#update": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 510,
+    "lineno": 515,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#update",
     "memberof": "Mongo.Collection",
@@ -5821,7 +5868,7 @@ DocsData = {
   "Mongo.Collection#upsert": {
     "filepath": "mongo/collection.js",
     "kind": "function",
-    "lineno": 635,
+    "lineno": 640,
     "locus": "Anywhere",
     "longname": "Mongo.Collection#upsert",
     "memberof": "Mongo.Collection",
@@ -5883,7 +5930,7 @@ DocsData = {
     "filepath": "mongo/collection.js",
     "instancename": "cursor",
     "kind": "class",
-    "lineno": 715,
+    "lineno": 720,
     "longname": "Mongo.Cursor",
     "memberof": "Mongo",
     "name": "Cursor",
@@ -6051,7 +6098,7 @@ DocsData = {
   "Mongo.ObjectID": {
     "filepath": "mongo/collection.js",
     "kind": "class",
-    "lineno": 708,
+    "lineno": 713,
     "locus": "Anywhere",
     "longname": "Mongo.ObjectID",
     "memberof": "Mongo",
@@ -6088,7 +6135,7 @@ DocsData = {
     "options": [],
     "params": [
       {
-        "description": "<p>An object where the keys are package\nnames and the values are one of:</p>\n<ol>\n<li>Version numbers in string form</li>\n<li>Http(s) URLs to a git commit by SHA.   </li>\n<li>Git URLs in the format described <a href=\"https://docs.npmjs.com/files/package.json#git-urls-as-dependencies\">here</a></li>\n<li>Absolute file:// paths</li>\n</ol>\n<p>Https URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre><p>Git URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;git+https://github.com/caolan/async#master&quot;\n});</code></pre>",
+        "description": "<p>An object where the keys are package\nnames and the values are one of:</p>\n<ol>\n<li>Version numbers in string form</li>\n<li>Http(s) URLs to a git commit by SHA.   </li>\n<li>Git URLs in the format described <a href=\"https://docs.npmjs.com/files/package.json#git-urls-as-dependencies\">here</a></li>\n</ol>\n<p>Https URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;https://github.com/caolan/async/archive/71fa2638973dafd8761fa5457c472a312cc820fe.tar.gz&quot;\n});</code></pre><p>Git URL example:</p>\n<pre class=\"prettyprint source lang-js\"><code>Npm.depends({\n  moment: &quot;2.8.3&quot;,\n  async: &quot;git+https://github.com/caolan/async#master&quot;\n});</code></pre>",
         "name": "dependencies",
         "type": {
           "names": [
@@ -6947,7 +6994,7 @@ DocsData = {
     "filepath": "ddp-server/livedata_server.js",
     "instancename": "this",
     "kind": "class",
-    "lineno": 933,
+    "lineno": 936,
     "longname": "Subscription",
     "name": "Subscription",
     "options": [],
@@ -6958,7 +7005,7 @@ DocsData = {
   "Subscription#added": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1227,
+    "lineno": 1230,
     "locus": "Server",
     "longname": "Subscription#added",
     "memberof": "Subscription",
@@ -6999,7 +7046,7 @@ DocsData = {
   "Subscription#changed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1245,
+    "lineno": 1248,
     "locus": "Server",
     "longname": "Subscription#changed",
     "memberof": "Subscription",
@@ -7040,7 +7087,7 @@ DocsData = {
   "Subscription#connection": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 943,
+    "lineno": 946,
     "locus": "Server",
     "longname": "Subscription#connection",
     "memberof": "Subscription",
@@ -7051,7 +7098,7 @@ DocsData = {
   "Subscription#error": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1170,
+    "lineno": 1173,
     "locus": "Server",
     "longname": "Subscription#error",
     "memberof": "Subscription",
@@ -7074,7 +7121,7 @@ DocsData = {
   "Subscription#onStop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1202,
+    "lineno": 1205,
     "locus": "Server",
     "longname": "Subscription#onStop",
     "memberof": "Subscription",
@@ -7097,7 +7144,7 @@ DocsData = {
   "Subscription#ready": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1278,
+    "lineno": 1281,
     "locus": "Server",
     "longname": "Subscription#ready",
     "memberof": "Subscription",
@@ -7110,7 +7157,7 @@ DocsData = {
   "Subscription#removed": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1261,
+    "lineno": 1264,
     "locus": "Server",
     "longname": "Subscription#removed",
     "memberof": "Subscription",
@@ -7142,7 +7189,7 @@ DocsData = {
   "Subscription#stop": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "function",
-    "lineno": 1188,
+    "lineno": 1191,
     "locus": "Server",
     "longname": "Subscription#stop",
     "memberof": "Subscription",
@@ -7155,7 +7202,7 @@ DocsData = {
   "Subscription#userId": {
     "filepath": "ddp-server/livedata_server.js",
     "kind": "member",
-    "lineno": 985,
+    "lineno": 988,
     "locus": "Server",
     "longname": "Subscription#userId",
     "memberof": "Subscription",
