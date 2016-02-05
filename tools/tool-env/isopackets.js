@@ -12,6 +12,7 @@ var watch = require('../fs/watch.js');
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var packageMapModule = require('../packaging/package-map.js');
+var Profile = require('./profile.js').Profile;
 
 // TL;DR: Isopacket is a set of isopacks. Isopackets are used only inside
 // meteor-tool.
@@ -268,6 +269,7 @@ var loadIsopacketFromDisk = function (isopacketName) {
     __meteor_bootstrap__: { startupHooks: [] },
     __meteor_runtime_config__: { meteorRelease: "ISOPACKET" }
   };
+  env.Profile = Profile;
 
   var ret;
   var messages = buildmessage.capture({

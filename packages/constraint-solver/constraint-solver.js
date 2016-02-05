@@ -64,7 +64,7 @@ CS.PackagesResolver.prototype.resolve = function (dependencies, constraints,
   }
 
   Profile.time(
-    "Input#loadFromCatalog (sqlite)",
+    "Input#loadFromCatalog",
     function () {
       input.loadFromCatalog(self.catalogLoader);
     });
