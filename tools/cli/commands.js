@@ -569,6 +569,29 @@ function doTestCommand(options) {
     // XXX copy existing app build directory before, for faster builds?
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
+
+    // Copy the existing build and isopacks to speed up the initial start
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'bundler-cache'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'bundler-cache'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'plugin-cache'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'plugin-cache'),
+      {preserveSymlinks: true}
+    );
+
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
     main.captureAndExit("=> Errors while setting up tests:", function () {
