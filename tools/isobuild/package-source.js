@@ -1316,6 +1316,16 @@ _.extend(PackageSource.prototype, {
     const fileOptions = {};
     const dirs = files.pathDirname(relPath).split(files.pathSep);
 
+    // If the file is restricted to the opposite architecture, make sure
+    // it is not evaluated eagerly.
+    if (arch === "os") {
+      if (dirs.indexOf("client") >= 0) {
+        fileOptions.lazy = true;
+      }
+    } else if (dirs.indexOf("server") >= 0) {
+      fileOptions.lazy = true;
+    }
+
     if (dirs.indexOf("node_modules") >= 0) {
       fileOptions.lazy = true;
       fileOptions.transpile = false;
@@ -1373,7 +1383,6 @@ _.extend(PackageSource.prototype, {
     const anyLevelExcludes = [
       /^tests\/$/,
       /^node_modules\/$/,
-      arch === "os" ? /^client\/$/ : /^server\/$/,
       ...sourceReadOptions.exclude
     ];
 

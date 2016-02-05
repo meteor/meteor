@@ -121,7 +121,8 @@ export default class ImportScanner {
   }
 
   getOutputFiles(options) {
-    return this.outputFiles;
+    // Return all installable output files.
+    return this.outputFiles.filter(file => !! file.installPath);
   }
 
   _findImportedModuleIdentifiers(file) {

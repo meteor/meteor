@@ -5,6 +5,12 @@ import {Meteor as ImportedMeteor} from "meteor/meteor";
 describe("app modules", () => {
   it("can be imported using absolute identifiers", () => {
     assert.strictEqual(require("/tests"), exports);
+    assert.strictEqual(
+      // Client modules should be importable by server modules, though not
+      // vice-versa.
+      require("/client/eager").name,
+      "/client/eager.js"
+    );
   });
 
   it("can have different file extensions", () => {
