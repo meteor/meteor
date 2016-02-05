@@ -713,7 +713,7 @@ var runWebAppServer = function () {
     try {
       boilerplate = getBoilerplate(request, archKey);
     } catch (e) {
-      Log.error("Error running template: " + e);
+      Log.error("Error running template: " + e.stack);
       res.writeHead(500, headers);
       res.end();
       return undefined;
