@@ -1,5 +1,6 @@
 import moment from "moment";
 import shared from "./imports/shared";
+import {Meteor as ImportedMeteor} from "meteor/meteor";
 
 describe("app modules", () => {
   it("can be imported using absolute identifiers", () => {
@@ -173,6 +174,11 @@ describe("local node_modules", () => {
 });
 
 describe("Meteor packages", () => {
+  it("api.export should create named exports", () => {
+    assert.strictEqual(typeof ImportedMeteor, "object");
+    assert.strictEqual(Meteor, ImportedMeteor);
+  });
+
   it("should be importable", () => {
     assert.strictEqual(require("meteor/underscore")._, _);
 
