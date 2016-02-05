@@ -360,7 +360,7 @@ var injectOtherTime = function (entry) {
   other.push(name);
   bucketStats[JSON.stringify(other)] = {
     time: otherTime(entry),
-    count: 0,
+    count: entryStats(entry).count,
     isOther: true
   };
   entries.push(other);
@@ -375,7 +375,7 @@ var reportOn = function (level, entry) {
   var name = entryName(entry);
   print((isParent ? leftRightDots : leftRightAlign)
         (spaces(level * 3) + name, formatMs(stats.time), 70)
-        + (stats.count ? (" (" + stats.count + ")") : ""));
+        + (stats.isOther ? "" : (" (" + stats.count + ")")));
 
   if (isParent) {
     _.each(children(entry), function (child) {
@@ -394,24 +394,28 @@ var allLeafs = function () {
   return _.union(_.map(_.filter(entries, isLeaf), entryName));
 };
 
-var leafTotal = function (leafName) {
-  var total = 0;
+var leafTotals = function (leafName) {
+  var time = 0;
+  var count = 0;
   _.each(
     _.filter(entries, function (entry) {
       return entryName(entry) === leafName && isLeaf(entry);
     }),
     function (leaf) {
-      total += entryTime(leaf);
+      var stats = entryStats(leaf);
+      time += stats.time;
+      count += stats.count;
     }
   );
-  return total;
+  return {time, count};
 };
 
 var reportHotLeaves = function () {
   print('Top leaves:');
   var totals = [];
   _.each(allLeafs(), function (leaf) {
-    totals.push({name: leaf, time: leafTotal(leaf)});
+    var info = leafTotals(leaf);
+    totals.push({name: leaf, time: info.time, count: info.count});
   });
   totals.sort(function (a, b) {
     return a.time === b.time ? 0 : a.time > b.time ? -1 : 1;
@@ -420,7 +424,8 @@ var reportHotLeaves = function () {
     if (total.time < 100) { // hard-coded larger filter to quality as "hot" here
       return;
     }
-    print(leftRightDots(total.name, formatMs(total.time), 65));
+    print(leftRightDots(total.name, formatMs(total.time), 65) +
+          ` (${total.count})`);
   });
 };
 
