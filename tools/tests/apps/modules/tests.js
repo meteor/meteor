@@ -222,6 +222,12 @@ describe("client/compatibility directories", () => {
   });
 });
 
+describe(".es5.js files", () => {
+  it("should not be transpiled", () => {
+    assert.strictEqual(require("./imports/plain.es5.js").let, "ok");
+  });
+});
+
 describe("return statements at top level", () => {
   it("should be legal", () => {
     var ret = require("./imports/return.js");
