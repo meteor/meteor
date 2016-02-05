@@ -384,6 +384,10 @@ var AppRunner = function (options) {
   // is communicating to the app process over ipc. If an error in communication
   // occurs, we can distinguish it in a callback handling the 'error' event.
   self._refreshing = false;
+
+  // Builders saved across rebuilds, so that targets can be re-written in
+  // place instead of created again from scratch.
+  self.builders = {};
 };
 
 _.extend(AppRunner.prototype, {
@@ -491,9 +495,6 @@ _.extend(AppRunner.prototype, {
     // a single invocation of _runOnce().
     var cachedServerWatchSet;
 
-    // Builders saved from previous iterations
-    var builders = {};
-
     var bundleApp = function () {
       if (! firstRun) {
         // If the build fails in a way that could be fixed by a refresh, allow
@@ -588,11 +589,11 @@ _.extend(AppRunner.prototype, {
           includeNodeModules: includeNodeModules,
           buildOptions: self.buildOptions,
           hasCachedBundle: !! cachedServerWatchSet,
-          previousBuilders: builders
+          previousBuilders: self.builders
         });
 
         // save new builders with their caches
-        ({builders} = bundleResult);
+        self.builders = bundleResult.builders;
 
         return bundleResult;
       });

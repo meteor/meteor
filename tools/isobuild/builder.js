@@ -3,29 +3,45 @@ import files from '../fs/files.js';
 import NpmDiscards from './npm-discards.js';
 import {Profile} from '../tool-env/profile.js';
 
-// Builder has two modes of working:
-// - write files to a temp directory and later atomically move it to destination
-// - write files in-place replacing the older files
-// The later doesn't work on Windows but works well on Mac OS X and Linux, since
-// the file system allows writing new files to the path of a file opened by a
-// process. The process only retains the inode, not the path.
+// Builder is in charge of writing "bundles" to disk, which are
+// directory trees such as site archives, programs, and packages.  In
+// addition to writing data to files, it can copy or link in existing
+// files and directories (keeping track of them in a WatchSet in order
+// to trigger rebuilds appropriately).
+//
+// By default, Builder constructs the entire output directory from
+// scratch under a temporary name, and then moves it into place.
+// For efficient rebuilds, Builder can be given a `previousBuilder`,
+// in which case it will write files into the existing output directory
+// instead.
+//
+// On Windows (or when METEOR_DISABLE_BUILDER_IN_PLACE is set), Builder
+// always creates a new output directory under a temporary name rather than
+// using the old directory.  The reason is that we don't want rebuilding to
+// interfere with the running app, and we rely on the fact that on OS X and
+// Linux, if the process has opened a file for reading, it retains the file
+// by its inode, not path, so it is safe to write a new file to the same path
+// (or delete the file).
+//
+// Separate from that, Builder has a strategy of writing files under a temporary
+// name and then renaming them.  This is to achieve an "atomic" write, meaning
+// the server doesn't see a partially-written file that appears truncated.
+//
+// On Windows we copy files instead of symlinking them (see comments inline).
+
+
+// Whether to support writing files into the same directory as a previous
+// Builder on rebuild (rather than creating a new build directory and
+// moving it into place).
 const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
   (process.platform !== 'win32') &&
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
 
 
-// Builder encapsulates much of the file-handling logic need to create
-// "bundles" (directory trees such as site archives, programs, or
-// packages). It can create a temporary directory in which to build
-// the bundle, moving the bundle atomically into place when and if the
-// build successfully completes; sanitize and generate unique
-// filenames; and track dependencies (files that should be watched for
-// changes when developing interactively).
-//
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the
-//    bundle when building is complete. It should not exist. Its
-//    parents will be created if necessary.
+//    bundle when building is complete. It should not exist (unless
+//    previousBuilder is passed). Its parents will be created if necessary.
 // - previousBuilder: Optional. An in-memory instance of Builder left
 // from the previous iteration. It is assumed that the previous builder
 // has completed its job successfully and its files are stored on the
@@ -239,7 +255,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     const absPath = files.pathJoin(this.buildPath, relPath);
 
     if (symlink) {
-      files.symlink(symlink, absPath);
+      symlinkWithOverwrite(symlink, absPath);
     } else {
       hash = hash || sha1(getData());
 
@@ -425,7 +441,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
       if (canSymlink) {
         this._ensureDirectory(files.pathDirname(to));
-        files.symlink(files.pathResolve(from), absPathTo);
+        symlinkWithOverwrite(files.pathResolve(from), absPathTo);
         return;
       }
     }
@@ -474,8 +490,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (isDirectory) {
           walk(thisAbsFrom, thisRelTo);
         } else if (fileStatus.isSymbolicLink()) {
-          files.symlink(files.readlink(thisAbsFrom),
-                         files.pathResolve(this.buildPath, thisRelTo));
+          symlinkWithOverwrite(files.readlink(thisAbsFrom),
+                               files.pathResolve(this.buildPath, thisRelTo));
           // A symlink counts as a file, as far as "can you put something under
           // it" goes.
           this.usedAsFile[thisRelTo] = true;
@@ -616,6 +632,22 @@ function atomicallyRewriteFile(path, data, options) {
       // puts a file where there used to be a directory in their app.
       files.rm_recursive(path);
       files.rename(rpath, path);
+    } else {
+      throw e;
+    }
+  }
+}
+
+// create a symlink, overwriting the target link, file, or directory
+// if it exists
+function symlinkWithOverwrite(source, target) {
+  try {
+    files.symlink(source, target);
+  } catch (e) {
+    if (e.code === 'EEXIST') {
+      // overwrite existing link, file, or directory
+      files.rm_recursive(target);
+      files.symlink(source, target);
     } else {
       throw e;
     }

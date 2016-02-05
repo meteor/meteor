@@ -1959,7 +1959,10 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", function (
   }) {
 
   const builders = {};
-  const builder = new Builder({outputPath});
+  const previousStarBuilder = previousBuilders && previousBuilders.star;
+  const builder = new Builder({outputPath,
+                               previousBuilder: previousStarBuilder});
+  builders.star = builder;
 
   try {
     var json = {
