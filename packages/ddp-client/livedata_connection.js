@@ -352,6 +352,7 @@ var MethodInvoker = function (options) {
   self._message = options.message;
   self._onResultReceived = options.onResultReceived || function () {};
   self._wait = options.wait;
+  self._noRetry = options.noRetry;
   self._methodResult = null;
   self._dataVisible = false;
 
@@ -369,10 +370,19 @@ _.extend(MethodInvoker.prototype, {
     if (self.gotResult())
       throw new Error("sendingMethod is called on method with result");
 
+    // This blocks retries.  If the message was sent once, it doesn't get sent again.
+    // By doing this here, we also avoid this method being included when calculating quiescence.
+    // Thus as soon as everything is fully re-run and resynchronized, this method will immediately call it's callbacks.
+    if (self._noRetry && self.sentMessage) {
+      self.receiveResult(Meteor.Error('409', 'Method is non-idempotent but attempted to call a second time',
+        'Method result is unknown due to dropped connection.  This method request was marked to not retry'), undefined);
+      return;
+    }
+
+
     // If we're re-sending it, it doesn't matter if data was written the first
     // time.
     self._dataVisible = false;
-
     self.sentMessage = true;
 
     // If this is a wait method, make all data messages be buffered until it is
@@ -703,6 +713,7 @@ _.extend(Connection.prototype, {
    * @param {Object} [options]
    * @param {Boolean} options.wait (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
    * @param {Function} options.onResultReceived (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+   * @param (Boolean) options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback with the error
    * @param {Function} [asyncCallback] Optional callback; same semantics as in [`Meteor.call`](#meteor_call).
    */
   apply: function (name, args, options, callback) {
