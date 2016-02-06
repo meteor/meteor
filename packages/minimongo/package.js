@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '1.0.11-modules.7'
+  version: '1.0.11-modules.8'
 });
 
 Package.onUse(function (api) {
