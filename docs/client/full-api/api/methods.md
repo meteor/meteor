@@ -74,7 +74,7 @@ it will re-call the method when it reconnects. This means that a client may
 call a method multiple times when it only means to call it once. If this
 behavior is problematic for your method, consider attaching a unique ID
 to each method call on the client, and checking on the server whether a call
-with this ID has already been made.
+with this ID has already been made.  Alternatively, you can use [`Meteor.apply`](#meteor_apply) with the noRetry option set to true.
 
 {{> autoApiBox "DDPCommon.MethodInvocation#userId"}}
 
@@ -178,7 +178,10 @@ even if the method's writes are not available yet, you can specify an
 
 `Meteor.apply` is just like `Meteor.call`, except that the method arguments are
 passed as an array rather than directly as arguments, and you can specify
-options about how the client executes the method.
+options about how the client executes the method.  Options permitted are:
+- `wait` (Client only): If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
+- `onResultReceived` (Client only): This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+- `noRetry` (Client only): if true, don't send this method again on reload, simply call the callback with an error (will be `Meteor.Error(409)`)
 
 <h2 id="ddpratelimiter"><span>DDPRateLimiter</span></h2>
 
