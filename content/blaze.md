@@ -376,7 +376,7 @@ Template.Lists_show.events({
 
 It's a bad idea to look up things directly in the DOM with jQuery's global `$()`. It's easy to select some element on the page that has nothing to do with the current component. Also, it limits your options on rendering *outside* of the main document (see testing section below).
 
-Instead, Blaze gives you a way to scope a lookup to within the current template instance. Typically you use this either from a `onRendered()` callback to setup jQuery plugins (called via `Template.instance().$()` or `this.$()`), or from event handlers to call DOM functions directly (called via `Template.instance().$()` or using the event handlers second argument like `instance.$()`). For instance, when the user clicks the add todo button, we want to focus the `<input>` element:
+Instead, Blaze gives you a way to scope a lookup to within the current template instance. Typically you use this either from a `onRendered()` callback to setup jQuery plugins (called via `Template.instance().$()` or `this.$()`), or from event handlers to call DOM functions directly (called via `Template.instance().$()` or using the event handler's second argument like `instance.$()`). For instance, when the user clicks the add todo button, we want to focus the `<input>` element:
 
 ```js
 Template.Lists_show.events({
