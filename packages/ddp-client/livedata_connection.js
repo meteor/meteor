@@ -274,11 +274,44 @@ var Connection = function (url, options) {
     msg.support = self._supportedDDPVersions;
     self._send(msg);
 
+    //Mark non-retry calls as failed  This has to be done early as getting these methods out of the current block is
+    // pretty important to making sure that quiescence is properly calculated, as well as possibly moving on
+    // to another useful block.
+
+    // Only bother testing if there is an outstandingMethodBlock (there might not be, especially if we are connecting
+    // for the first time.
+    if (self._outstandingMethodBlocks.length > 0) {
+      // If there is an outstanding method block, we only care about the first one as that is the one
+      // that could have already sent messages with no response, that are not allowed to retry.
+      _.each(self._outstandingMethodBlocks[0].methods, function(methodInvoker) {
+        // if the message wasn't sent or it's allowed to retry, do nothing.
+        if (methodInvoker.sentMessage && methodInvoker.noRetry) {
+          // The next loop serves to get the index in the current method block of this method.
+          var currentMethodBlock = self._outstandingMethodBlocks[0].methods;
+          var loopMethod;
+          for (var i = 0; i < currentMethodBlock.length; i++) {
+            loopMethod = currentMethodBlock[i];
+            if (loopMethod.methodId === methodInvoker.methodId) {
+              break;
+            }
+          }
+          // Remove from current method block. This may leave the block empty, but we
+          // don't move on to the next block until the callback has been delivered, in
+          // _outstandingMethodFinished.
+          currentMethodBlock.splice(i, 1);
+          // make sure that the method is told that it failed.
+          methodInvoker.receiveResult(Meteor.Error(409, 'Method is non-idempotent but attempted to call a second time',
+              'Method result is unknown due to dropped connection.  This method request was marked to not retry'), undefined);
+        }
+      });
+    }
+
     // Now, to minimize setup latency, go ahead and blast out all of
     // our pending methods ands subscriptions before we've even taken
     // the necessary RTT to know if we successfully reconnected. (1)
-    // They're supposed to be idempotent; (2) even if we did
-    // reconnect, we're not sure what messages might have gotten lost
+    // They're supposed to be idempotent, and where they are not,
+    // they can block retry in apply; (2) even if we did reconnect,
+    // we're not sure what messages might have gotten lost
     // (in either direction) since we were disconnected (TCP being
     // sloppy about that.)
 
@@ -352,7 +385,7 @@ var MethodInvoker = function (options) {
   self._message = options.message;
   self._onResultReceived = options.onResultReceived || function () {};
   self._wait = options.wait;
-  self._noRetry = options.noRetry;
+  self.noRetry = options.noRetry;
   self._methodResult = null;
   self._dataVisible = false;
 
@@ -369,15 +402,6 @@ _.extend(MethodInvoker.prototype, {
     // result!
     if (self.gotResult())
       throw new Error("sendingMethod is called on method with result");
-
-    // This blocks retries.  If the message was sent once, it doesn't get sent again.
-    // By doing this here, we also avoid this method being included when calculating quiescence.
-    // Thus as soon as everything is fully re-run and resynchronized, this method will immediately call it's callbacks.
-    if (self._noRetry && self.sentMessage) {
-      self.receiveResult(Meteor.Error('409', 'Method is non-idempotent but attempted to call a second time',
-        'Method result is unknown due to dropped connection.  This method request was marked to not retry'), undefined);
-      return;
-    }
 
 
     // If we're re-sending it, it doesn't matter if data was written the first
@@ -896,7 +920,8 @@ _.extend(Connection.prototype, {
       connection: self,
       onResultReceived: options.onResultReceived,
       wait: !!options.wait,
-      message: message
+      message: message,
+      noRetry: !!options.noRetry
     });
 
     if (options.wait) {
