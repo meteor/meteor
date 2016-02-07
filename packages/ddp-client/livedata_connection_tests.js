@@ -768,13 +768,17 @@ if (Meteor.isClient) {
     // "receive the message"
     stream.reset();
 
+    // verify that a reconnect message was sent.
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
+
+    // Make sure that the stream triggers connection.
+    stream.receive({msg: 'connected', session: SESSION_ID + 1});
+
     //The method callback should fire even though the stream has not sent a response.
     //the callback should have been fired with an error.
     test.isTrue(methodCallbackFired);
     test.isTrue(methodCallbackErrored);
 
-    // verify that a reconnect message was sent.
-    testGotMessage(test, stream, makeConnectMessage(SESSION_ID));
     // verify that the method message was not sent.
     test.isUndefined(stream.sent.shift());
   });
