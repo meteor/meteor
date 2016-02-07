@@ -43,7 +43,7 @@ main.registerCommand({
     for (platform of platformsToAdd) {
       if (_.contains(installedPlatforms, platform)) {
         buildmessage.error(`${platform}: platform is already added`);
-      } else if (!_.contains(cordova.AVAILABLE_PLATFORMS, platform)) {
+      } else if (!_.contains(cordova.CORDOVA_PLATFORMS, platform)) {
         buildmessage.error(`${platform}: no such platform`);
       }
     }
@@ -67,7 +67,9 @@ main.registerCommand({
 
     for (platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
-      cordovaProject.checkPlatformRequirements(platform);
+      if (_.contains(cordovaPlatforms, platform)) {
+        cordovaProject.checkPlatformRequirements(platform);
+      }
     }
   });
 });
@@ -142,10 +144,10 @@ main.registerCommand({
 
   const platform = options.args[0];
 
-  if (!_.contains(cordova.AVAILABLE_PLATFORMS, platform)) {
+  if (!_.contains(cordova.CORDOVA_PLATFORMS, platform)) {
     Console.warn(`Unknown platform: ${platform}`);
     Console.info(`Valid platforms are: \
-${cordova.AVAILABLE_PLATFORMS.join(', ')}`);
+${cordova.CORDOVA_PLATFORMS.join(', ')}`);
     return 1;
   }
 
