@@ -244,12 +244,14 @@ these guidelines:
 
 #### Need help with your pull request?
 
-Meteor now has groups defined to cover areas of the codebase. If you need help on certain pull requests with an area of focus listed below, you can address the appropriate people in the pull request:
+Meteor now has groups defined to cover different areas of the codebase. If you need help getting acceptance on a certain pull requests with an area of focus listed below, you can address the appropriate people in the pull request:
 
 * Meteor Data Team - This includes DDP, tracker, mongo, accounts, etc. You can mention @stubailo in the PR.
 * Blaze - This includes Spacebars, Blaze, etc. You can mention @urigo or @yyx990803 in the PR.
 * Build tools - This includes modules, build tool changes, etc. You can memtion @avital or @benjamn in the PR.
 * Mobile integration - This includes Cordova, React Native, etc. You can mention @martijnwalraven in the PR.
+
+Including the people above is no guarantee that you will get a response, or ultimately that your pull request will be accepted. This section exists to give some minor guidance on internal Meteor Development Group team structures.
 
 ## Running tests on Meteor core
 
