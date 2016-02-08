@@ -503,7 +503,7 @@ var runWebAppServer = function () {
         // XXX change manifest.json -> program.json
         staticFiles[path.join(urlPrefix, getItemPathname('/manifest.json'))] = {
           content: JSON.stringify(program),
-          cacheable: true,
+          cacheable: false,
           hash: program.version,
           type: "json"
         };
