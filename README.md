@@ -13,6 +13,10 @@ Documentation is available at http://docs.meteor.com/.
 
 Try the getting started [tutorial](https://www.meteor.com/try).
 
+## What to Use Meteor for and When to Use It
+
+Meteor is an excellent choice for your next web or mobile app. It excels at fast synchronization of data between client and server, and thanks to Meteor's *collection*, accessing and modifying the data appears instantaneous to the end user. Meteor's full stack solution also allows the freedom to install your favorite components or take advantage of Meteor's own powerful libraries, like Blaze and Tracker. This flexibility allows you to spend your valuable time solving unique problems and creating experiences that delight  users. And because a Meteor app is built with pure Javascript, you can create your production quality app in an amazingly short amount of time.
+
 ## Quick Start
 
 Install Meteor:
