@@ -7,14 +7,17 @@ After reading this article, you'll know:
 3. How to format your code and name the parts of your application in consistent and maintainable ways.
 
 <h2 id="meteor-structure">Meteor Application Structure</h2>
+
 Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and code that runs in *both places*. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and some conventions on application structure makes it easier to understand what code runs where.
 
 <h3 id="es2015-imports">ES2015 Imports</h3>
+
 As of version 1.3, Meteor ships with full support for ES2015 packages, both on the client and on the server. In particular it is simple and straightforward to include NPM package code in either environment, and to write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
 
 However, this is a new feature in Meteor so you will find a lot of code online that uses and older, more centralized system built around packages and app declaring global symbols to be consumed within the app. Also, for backwards compatibility reasons, "pure" modular code must be placed in the `imports/` directory in your application. We expect this to change in an future release.
 
 <h2 id="javascript-structure">JavaScript file structure</h2>
+
 To harness the module system and ensure that our code only runs when we specify that it should, all code for libraries, components and APIs should be placed in the `imports/` directory. This will mean that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
 
 Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create a `main/client` and `main/server` folder to define explicit entry points for the running code of your application. 
@@ -52,6 +55,7 @@ On the server, there can often be a few more logical entry points to control the
 Other logical server-side entry points include setting up job workers and server-side routes.
 
 <h3 id="structuring-imports"</h3>
+
 Once you've placed all files in the `imports/` directory, it makes sense to start thinking about how best to organize it. A good starting point is splitting data / business logic related code from rendering code. We suggest an `imports/api` and `imports/client` as a logical split. 
 
 XXX: I don't think `imports/client` is a good name given server-side rendering. `imports/view[s]`?
@@ -92,63 +96,51 @@ main/
     etc
 ```
 
+<h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
 
+XXX: is there a cooler way to do this in 1.3 with multiple entry points? Maybe that comes in 1.4
 
-3. Splitting your project into multiple apps/entry points
-    1. Why you want this structure
-        1. Lots of different totally separate UIs, and you want to avoid intersecting the code
-            1. Admin app
-            2. Mobile vs. desktop
-            3. Different classes of users
-        2. Independently scaled and secured services
-        3. Independent development teams
-    2. Sharing code between different apps
-        1. Local packages / modules
-        2. Git submodules
-        3. PACKAGE_DIRS
-        4. One or many repositories
-    3. Sharing data between different apps
-        1. Through database directly
-        2. Through DDP API
-        3. Through REST API
-    4. Sharing user accounts between different apps
-        1. AccountsClient/AccountsServer
-        2. Accounts connection URL
-4. Benefits of consistent code style
-  1. Integration with default linters, checkers, transpilers, etc
-  2. Easy for new people to get started on your code
-  3. All Meteor code samples can follow your style
-5. JavaScript and ES2015
-  1. Use JavaScript and compile all of your code with the `ecmascript` package
-  1. Follow the AirBnB style guide
-  2. Use ESLint using the standard ABnB config, which is made to work with `ecmascript`
-    1. Running ESLint
-    1. Setting up linting in your editor
-    1. Setting up a linter commit hook
-    1. Adding linting to your CI alongside tests
-6. Meteor components
-  1. Collections
-    1. Name is plural
-    1. Instance variable is capitalized camel case
-    1. Collection name in DB is same as the instance variable
-    1. Fields in MongoDB should be camel-cased
-  2. Methods and publications
-    1. Camel cased, namespaced with dot separators
-    1. Use mdg:validated-method to reference methods by JavaScript scope
-  3. Packages, files, and exports
-    1. Use ES2015 exports
-    1. Each file should represent one logical module, rather than having a file called `utils.js` that exports a variety of unrelated things
-    1. If a file defines a class or component, the file should be named the same as the class, down to the case
-  4. Templates and components
-    1. Blaze templates should be namespaced via dots since they can't be exported via modules; the HTML, CSS, and JS file related to the template should have the same name.
-    1. React components should be treated as you would normal JavaScript modules/functions
+If you are writing a sufficiently complex system, there can come a point where it starts to make sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separating the code for the mobile and desktop versions of your app.
 
+Another very common use case is splitting a worker process away from your main application so that expensive jobs do not impact on user experience of your visitors by locking up a single web server.
 
----
+There are some advantages of splitting your application in this way:
 
+ - Your client JavaScript bundle can be significantly smaller if you separate out code that a specific user type will never use.
 
+ - You can deploy the different applications at different scales and secure them differently (for instance you might restrict access to your admin application to users behind a firewall).
 
+ - You can allow different teams at your organization to work on the different applications independently.
 
+However there are some challenges to splitting your code in this way that should be considered before jumping in.
+
+<h3 id="sharing-code">Sharing Code</h3>
+
+The primary challenge is sharing code between the different applications you are building. The simplest approach to deal with this issue is to simply deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.md#environment). This approach allows you to easily deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
+
+Alternatively if you want to create totally different Meteor applications, you are best sharing the code via the package system---either Meteor's package system or NPM's. A simple way to do this is to factor code that you'd like to share out into a Meteor package, installed directly into the project by placing it in the application's local `packages/` directory.
+
+Then you have two approaches to share this package between applications:
+
+ 1. If you put both applications in a single repository (say at `app1/` and `app2/`), you can also include a directory of common packages (`packages/`) and create a symbolic link from `app1/packages/x` and `app2/packages/x` to `packages/x`.
+
+ 2. If you'd prefer to put the applications in different repositories, you can use a [git submodule](https://git-scm.com/docs/git-submodule) to include the package (which would live in its own repository) in each app's `packages/` directory.
+
+You can also share module code (like `imports/some-module`) in a similar fashion.
+
+<h3 id="sharing-data">Sharing Data</h3>
+
+Another important consideration is how you'll share the data between your different applications. 
+
+The simplest approach is to point both applications at the same `MONGO_URL` and allow both applications to read and write from the database directly. This can work well thanks to Meteor's from-the-ground-up support for reactivity and realtime changes in the database (when one app changes the some data, a user of the other will see the changes quickly thanks to the oplog driver).
+
+However, in some cases it's better to allow one application to be the master, and control access to the data for other applications via an API. This can help if for instance you want to deploy the different applications on different schedules and want to be conservative about how the data changes.
+
+The simplest way to provide a server-server API is to use the DDP protocol! You can you [`DDP.connect()`](http://docs.meteor.com/#/full/ddp_connect) to connect from a "client" server to the data-managing server, and then use the connection object returned to make method calls and read from publications.
+
+XXX: Do we want to show how to mirror a publication (boilerplate)? or passthrough a method call (complexities about authentication).
+
+XXX: Re: sharing user accounts -- what did you have in mind @sashko? The AccountsClient thing lets you authenticate against a 3rd party server from within the app but it's not clear what you should do next -- make method calls / subscribe directly against that server? Pass the resume token through to proxied method calls?
 
 
 <h2 id="benefits-style">Benefits of consistent style</h2>
