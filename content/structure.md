@@ -184,7 +184,7 @@ As you write more code and come up against the recommended style rules, you can 
 
 Here at Meteor, we strongly believe that JavaScript is the best language to build web applications, for a variety of reasons. JavaScript is constantly improving, and the standards around ES2015 have really brought together the JavaScript community. Here are our recommendations about how to use ES2015 JavaScript in your app today.
 
-![](ben-es2015-demo.gif)
+![](images/ben-es2015-demo.gif)
 
 <h3 id="ecmascript">Use the `ecmascript` package</h3>
 
@@ -201,6 +201,8 @@ All of the code samples in this guide and future Meteor tutorials will use all o
 - [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
 
 <h3 id="style-guide">Follow the Meteor JavaScript style guide</h3>
+
+XXX: still some debate about whether we should publish our own style guide or fall out to ABNB
 
 We have a JavaScript style guide which is heavily based on the popular AirBnB style guide, but has been content edited to include only essential rules. If you would like to follow this style guide in your non-Meteor applications, you will need to enable the same Babel features as supported by the `ecmascript` package linked above.
 
@@ -265,7 +267,7 @@ Go to *Settings -> Packages.* Under "linter-eslint", click the *Settings* button
 
 This will return something like `/usr/local`. Add this to the "Global Node Path", and check "Use Global Eslint":
 
-![Set your "Global Node Path" and check "Use Global Eslint"](atom-configuration.png)
+![Set your "Global Node Path" and check "Use Global Eslint"](images/atom-configuration.png)
 
 Then **restart Atom** to activate linting.
 
@@ -274,14 +276,14 @@ Then **restart Atom** to activate linting.
 
 WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `.eslintrc` file, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
 
-![Enable ESLint here.](webstorm-configuration.png)
+![Enable ESLint here.](images/webstorm-configuration.png)
 
 Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
 
 
 <h3 id="eslint-commit-hook">Setting up a commit hook for linting</h3>
 
-XXX
+XXX I think we just don't worry about these for now?
 
 <h3 id="eslint-ci">Running ESLint in your CI environment</h3>
 
@@ -312,17 +314,19 @@ Widgets.insert({
 
 <h3 id="methods-and-publications">Methods and publications</h3>
 
-Method and publication names should be camelCased and namespaced to a module or collection. For example, if you have a Method related to the Todos collection:
+Method and publication names should be camelCased, and namespaced to the collection or module:
 
 ```js
-// Naming a method
-Todos.methods.updateText = new ValidatedMethod({
+// in imports/api/todos/methods.js
+updateText = new ValidatedMethod({
   name: 'Todos.methods.updateText',
   // ...
 });
 ```
 
-Note that this code sample uses the [ValidatedMethod package recommended in the Methods article](methods.html#XXX). If you aren't using that package, you can use the name as the property passed to `Meteor.methods`.
+// XXX: should we just make the method name `Todos.updateText`? --- it make sense to qualify it with `.method` when it was also the JS name, but that's no longer the case...
+
+Note that this code sample uses the [ValidatedMethod package recommended in the Methods article](methods.html#validated-method). If you aren't using that package, you can use the name as the property passed to `Meteor.methods`.
 
 Here's how this naming convention looks when applied to a publication:
 
@@ -380,7 +384,7 @@ show.js
 show.less
 ```
 
-The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure in the [Application Structure article](XXX).
+The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure [above](#javascript-structure).
 
 If you are writing your UI in React, you don't need to use the underscore-split names because you can import and export your components using the JavaScript module system.
 
