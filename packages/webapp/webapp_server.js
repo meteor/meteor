@@ -323,7 +323,7 @@ var staticFiles;
 // Serve static files from the manifest or added with
 // `addStaticJs`. Exported for tests.
 WebAppInternals.staticFilesMiddleware = function (staticFiles, req, res, next) {
-  if ('GET' != req.method && 'HEAD' != req.method) {
+  if ('GET' != req.method && 'HEAD' != req.method && 'OPTIONS' != req.method) {
     next();
     return;
   }
