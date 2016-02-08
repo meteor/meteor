@@ -44,8 +44,8 @@
     3. Cordova plugins can be a bit of a gamble, since it's hard to make native code that works on a wide variety of devices. Your best bet is to test on a certain set of devices/OS versions yourself
     4. Search for plugins on https://cordova.apache.org/plugins/
     5. Useful lists of plugins
-        1. http://docs.telerik.com/platform/appbuilder/creating-your-project/using-plugins/using-core-plugins/using-core-plugins
-        2. Microsoft plugin kits: http://taco.tools/docs/validated-kits.html
+        1. Core plugins [at least camera + geolocation]
+        2. http://docs.telerik.com/platform/appbuilder/creating-your-project/using-plugins/using-core-plugins/using-core-plugins
 6. Hot code push on mobile
     1. Be careful when analyzing the outcome of hot code push - for example, you need a new app to use new Cordova plugins; so if you add any you need to make sure their app shell has the right plugins
     2. Controlling when reload happens
@@ -56,14 +56,10 @@
             4. Reloaded to a new updated version
         2. reload-on-resume
         3. Special case: when your app needs to hot code push right after the user downloaded it; you should display an upgrade screen in this case
-7. Push notifications with Raix:push
+    3. https://github.com/meteor/meteor/issues/5973 - solve or document
 8. Accessing local files
     1. Files/assets from the app bundle
     2. Local files (not possible in Meteor 1.2, we're working on it)
-9. Offline data - just call out that there isn't a good story for this, and mention the below points briefly
-    1. Not sure if GroundDB covers this
-    2. You can use Cordova plugins for SQLite across different platforms
-    3. You might need to migrate data across different app versions
 10. Configuring your project
     1. App icons
     2. Preferences
@@ -72,3 +68,6 @@
     1. Android: https://github.com/meteor/meteor/wiki/How-to-submit-your-Android-app-to-Play-Store
     2. iOS: https://github.com/meteor/meteor/wiki/How-to-submit-your-iOS-app-to-App-Store
         1. TestFlight
+
+Useful links:
+http://blog.differential.com/easily-connect-react-native-to-a-meteor-server/

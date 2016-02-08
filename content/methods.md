@@ -37,7 +37,7 @@ Meteor.methods({
     new SimpleSchema({
       todoId: { type: String },
       newText: { type: String }
-    }).validate({ todoId, newText }),
+    }).validate({ todoId, newText });
 
     const todo = Todos.findOne(todoId);
 
@@ -442,7 +442,7 @@ Once the Method has finished running on the server, it sends a `result` message 
 
 <h4 id="lifecycle-publications">5. Any DDP publications affected by the Method are updated</h4>
 
-If we have any publications on the page that have been affected by the database writes from this Method, the server sends the appropriate updates to the client. Note that the client data system does reveal these updates to the app UI until the next step.
+If we have any publications on the page that have been affected by the database writes from this Method, the server sends the appropriate updates to the client. Note that the client data system doesn't reveal these updates to the app UI until the next step.
 
 <h4 id="lifecycle-updated">6. `updated` message sent to the client, data replaced with server result, Method callback fires</h4>
 

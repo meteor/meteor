@@ -404,7 +404,7 @@ Template.Lists_show_page.helpers({
 
 The reusable sub-component can then use the `hasChanges` argument to determine if it show some kind of callout to the user to indicate changes are available, and then use the `onShowChanges` callback to trigger them to be shown.
 
-<h3 id="optimistic-ui">Optimisitic UI</h3>
+<h3 id="optimistic-ui">Optimistic UI</h3>
 
 One nice UX pattern which Meteor makes much easier than other frameworks is Optimistic UI. Optimistic UI is the process of showing user-generated changes in the UI without waiting for the server to acknowledge that the change has succeeded, resulting in a user experience that seems faster than is physically possible, since you don't need to wait for any server roundtrips. Since most user actions in a well-designed app will be successful, it makes sense for almost all parts of an app to be optimistic in this way.
 

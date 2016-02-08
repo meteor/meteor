@@ -297,7 +297,7 @@ Usually such state is stored in a *global singleton* object which we can call a 
 
 In Meteor, it's best to make stores *reactive data* sources, as that way they tie most naturally into the rest of the ecosystem. There are a few different packages you can use for stores.
 
-If the store is single-dimensional, you can probably use a `ReactiveVar` to store it (provided by the [`reactive-var`](https://atmopsherejs.com/meteor/reactive-var) package). A `ReactiveVar` has two properties, `get()` and `set()`:
+If the store is single-dimensional, you can probably use a `ReactiveVar` to store it (provided by the [`reactive-var`](https://atmospherejs.com/meteor/reactive-var) package). A `ReactiveVar` has two properties, `get()` and `set()`:
 
 ```js
 DocumentHidden = new ReactiveVar(document.hidden);
@@ -306,7 +306,7 @@ $(window).on('visibilitychange', (event) => {
 });
 ```
 
-If the store is multi-dimensional, you may want to use a `ReactiveDict` (from the [`reactive-dict`](https://atmopsherejs.com/meteor/reactive-dict) package):
+If the store is multi-dimensional, you may want to use a `ReactiveDict` (from the [`reactive-dict`](https://atmospherejs.com/meteor/reactive-dict) package):
 
 ```js
 const $window = $(window);
@@ -480,7 +480,7 @@ Meteor.publishComposite('Todos.admin.inList', function(listId) {
 
 In all of our examples so far (outside of using`Meteor.publishComposite()`) we've returned a cursor from our `Meteor.publish()` handlers. Doing this ensures Meteor takes care of the job of keeping the contents of that cursor in sync between the server and the client. However, there's another API you can use for publish functions which is closer to the way the underlying Distributed Data Protocol (DDP) works.
 
-DDP uses three main messages to communicate changes in the data for a publication: the `added`, `updated` and `removed` messages. So, we can similarly do the same for a publication:
+DDP uses three main messages to communicate changes in the data for a publication: the `added`, `changed` and `removed` messages. So, we can similarly do the same for a publication:
 
 ```js
 Meteor.publish('custom-publication', function() {
@@ -493,7 +493,7 @@ Meteor.publish('custom-publication', function() {
   // We may respond to some 3rd party event and want to send notifications
   Meteor.setTimeout(() => {
     // If we want to modify a document that we've already added
-    this.updated('collection-name', 'id', {field: 'new-value'});
+    this.changed('collection-name', 'id', {field: 'new-value'});
 
     // Or if we don't want the client to see it any more
     this.removed('collection-name', 'id');
@@ -578,7 +578,7 @@ Meteor.publish('polled-publication', function() {
 
     data.forEach((doc) => {
       if (publishedKeys[doc._id]) {
-        this.updated(COLLECTION_NAME, doc._id, doc);
+        this.changed(COLLECTION_NAME, doc._id, doc);
       } else {
         publishedKeys[doc._id] = true;
         if (publishedKeys[doc._id]) {
