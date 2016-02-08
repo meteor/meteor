@@ -19,12 +19,10 @@ $(document).on("keydown", function (event) {
   }
 });
 
-// Open search with any non-special key
-var keysToOpenSearch = /[A-Za-z0-9]/;
 $(document).on("keydown", function (event) {
   // Don't activate search for special keys or keys with modifiers
-  if (event.which && keysToOpenSearch.test(String.fromCharCode(event.which)) &&
-      (! event.ctrlKey) && (! event.metaKey) && (! Session.get("searchOpen"))) {
+  if (event.which >= 48 && event.which <= 90 && (!event.ctrlKey) &&
+      (!event.metaKey) && (!Session.get("searchOpen"))) {
     Session.set("searchOpen", true);
 
     Tracker.flush();
