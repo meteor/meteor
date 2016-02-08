@@ -158,7 +158,7 @@ designed to stand separately.  At the same time, all the parts of core fit toget
 distinctive Meteor development experience.  Core APIs should be consistent between the client and
 the server (not always workable; we don't have fibers on the client or a DOM on the server).  We
 prefer synchronous APIs wherever possible: you can use `Meteor.wrapAsync` on the server to wrap
-async APIs that take a callback.  
+async APIs that take a callback.
 
 Above all, we are concerned with two design requirements when evaluating
 any change to a core package:
@@ -241,6 +241,17 @@ these guidelines:
 
  * Be sure your author field in git is properly filled out with your full name
  and email address so we can credit you.
+
+#### Need help with your pull request?
+
+Meteor now has groups defined to cover different areas of the codebase. If you need help getting acceptance on a certain pull requests with an area of focus listed below, you can address the appropriate people in the pull request:
+
+* Meteor Data Team - This includes DDP, tracker, mongo, accounts, etc. You can mention @stubailo in the PR.
+* Blaze - This includes Spacebars, Blaze, etc. You can mention @urigo or @yyx990803 in the PR.
+* Build tools - This includes modules, build tool changes, etc. You can memtion @avital or @benjamn in the PR.
+* Mobile integration - This includes Cordova, React Native, etc. You can mention @martijnwalraven in the PR.
+
+Including the people above is no guarantee that you will get a response, or ultimately that your pull request will be accepted. This section exists to give some minor guidance on internal Meteor Development Group team structures.
 
 ## Running tests on Meteor core
 
