@@ -1,0 +1,394 @@
+# Application structure and code style
+
+After reading this article, you'll know:
+
+1. How a Meteor application compares to other types of applications in terms of file structure.
+2. How to organize your application both for small and larger applications.
+3. How to format your code and name the parts of your application in consistent and maintainable ways.
+
+<h2 id="meteor-structure">Meteor Application Structure</h2>
+Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and code that runs in *both places*. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and some conventions on application structure makes it easier to understand what code runs where.
+
+<h3 id="es2015-imports">ES2015 Imports</h3>
+As of version 1.3, Meteor ships with full support for ES2015 packages, both on the client and on the server. In particular it is simple and straightforward to include NPM package code in either environment, and to write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
+
+However, this is a new feature in Meteor so you will find a lot of code online that uses and older, more centralized system built around packages and app declaring global symbols to be consumed within the app. Also, for backwards compatibility reasons, "pure" modular code must be placed in the `imports/` directory in your application. We expect this to change in an future release.
+
+<h2 id="javascript-structure">JavaScript file structure</h2>
+To harness the module system and ensure that our code only runs when we specify that it should, all code for libraries, components and APIs should be placed in the `imports/` directory. This will mean that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
+
+Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create a `main/client` and `main/server` folder to define explicit entry points for the running code of your application. 
+
+In the Todos example app, the `main/client/routes.js` indirectly file imports *all* other code that is required on the client, and forms the single entry point for the client application:
+
+```js
+import { FlowRouter } from 'meteor/kadira:flow-router';
+import { BlazeLayout } from 'meteor/kadira:blaze-layout';
+import { AccountsTemplates } from 'meteor/useraccounts:core';
+
+// This file needs to load first, so that useraccounts:core doesn't complain when we define
+// a forgotPwd route
+import '../useraccounts-configuration.js';
+
+// Import to load these templates
+import '../../imports/client/layouts/app-body.js';
+import '../../imports/client/pages/root-redirector.js';
+import '../../imports/client/pages/lists-show-page.js';
+import '../../imports/client/pages/app-not-found.js';
+
+// Import to override accounts templates
+import '../../imports/client/accounts/accounts-templates.js';
+
+// Below here are the route definitions
+```
+
+On the server, there can often be a few more logical entry points to control the behavior of the application server. In the Todos app, we define four:
+
+1. `main/server/api.js' - this defines all the collections, publications and methods that the application provides as an API to the client.
+2. `main/server/fixtures.js' - this defines a starting set of data to be loaded if the app is loaded with an empty db.
+3. `main/server/reset-password-email.js` - this file configures the Accounts package to define the UI of the reset password email.
+4. `main/server/security.js` - setups some rate limiting and other important security settings.
+
+Other logical server-side entry points include setting up job workers and server-side routes.
+
+<h3 id="structuring-imports"</h3>
+Once you've placed all files in the `imports/` directory, it makes sense to start thinking about how best to organize it. A good starting point is splitting data / business logic related code from rendering code. We suggest an `imports/api` and `imports/client` as a logical split. 
+
+XXX: I don't think `imports/client` is a good name given server-side rendering. `imports/view[s]`?
+
+Within the `imports/api` directory, it's sensible to split the code into the logical domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, this is the `imports/api/lists` and `imports/api/todos` domains. Inside each we define the collections, publications and methods that are relevant to those domains.
+
+Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that separating them makes sense however.
+
+Within the `imports/client` directory it typically makes sense to group files into directories based on the type of client side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
+
+For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze JavaScript component should be co-located with it's template HTML and CSS definition. A library file should be co-located with any unit tests defined for the file.
+
+<h3 id="example-app-structure">Example Application Structure</h3>
+
+Combining what's discussed above, we can consider the application structure of the Todos example application. The folders of interest are:
+
+```
+imports/
+  apis/
+    lists/ - as an example
+      server/
+        publications.js -- all list-related publications
+        publications.tests.js -- tests for the list publications
+      lists.js -- the definition of the Lists collection and behavior
+      lists.test.js -- tests for that behavior
+      methods.js -- methods on lists
+      methods.tests.js -- tests for those methods
+  client
+    components/ -- all reusable components in the application (we can break this down by area if it gets long)
+    layouts/ -- wrapper components for behaviour and visuals
+    pages/ -- entry points for the render tree -- where the router points us
+main/
+  client/
+    routes.js -- points to various client pages
+  server/
+    register-api.js -- imports all of imports/api.js
+    fixtures.js -- uses the collections to create initial data
+    etc
+```
+
+
+
+3. Splitting your project into multiple apps/entry points
+    1. Why you want this structure
+        1. Lots of different totally separate UIs, and you want to avoid intersecting the code
+            1. Admin app
+            2. Mobile vs. desktop
+            3. Different classes of users
+        2. Independently scaled and secured services
+        3. Independent development teams
+    2. Sharing code between different apps
+        1. Local packages / modules
+        2. Git submodules
+        3. PACKAGE_DIRS
+        4. One or many repositories
+    3. Sharing data between different apps
+        1. Through database directly
+        2. Through DDP API
+        3. Through REST API
+    4. Sharing user accounts between different apps
+        1. AccountsClient/AccountsServer
+        2. Accounts connection URL
+4. Benefits of consistent code style
+  1. Integration with default linters, checkers, transpilers, etc
+  2. Easy for new people to get started on your code
+  3. All Meteor code samples can follow your style
+5. JavaScript and ES2015
+  1. Use JavaScript and compile all of your code with the `ecmascript` package
+  1. Follow the AirBnB style guide
+  2. Use ESLint using the standard ABnB config, which is made to work with `ecmascript`
+    1. Running ESLint
+    1. Setting up linting in your editor
+    1. Setting up a linter commit hook
+    1. Adding linting to your CI alongside tests
+6. Meteor components
+  1. Collections
+    1. Name is plural
+    1. Instance variable is capitalized camel case
+    1. Collection name in DB is same as the instance variable
+    1. Fields in MongoDB should be camel-cased
+  2. Methods and publications
+    1. Camel cased, namespaced with dot separators
+    1. Use mdg:validated-method to reference methods by JavaScript scope
+  3. Packages, files, and exports
+    1. Use ES2015 exports
+    1. Each file should represent one logical module, rather than having a file called `utils.js` that exports a variety of unrelated things
+    1. If a file defines a class or component, the file should be named the same as the class, down to the case
+  4. Templates and components
+    1. Blaze templates should be namespaced via dots since they can't be exported via modules; the HTML, CSS, and JS file related to the template should have the same name.
+    1. React components should be treated as you would normal JavaScript modules/functions
+
+
+---
+
+
+
+
+
+
+<h2 id="benefits-style">Benefits of consistent style</h2>
+
+Countless hours have been spent by developers throughout the years arguing over single vs. double quotes, where to put brackets, how many spaces to type, and all kinds of other cosmetic code style questions. These are all questions that have at best a tangential relationship to code quality, but are very easy to have opinions about because they are so visual.
+
+While it's not necessarily important whether your code base uses single or double quotes for string literals, there are huge benefits to making that decision once and having it be consistent across your organization. These benefits also apply to the Meteor and JavaScript development communities as a whole.
+
+<h3 id="easy-to-read">Easy to read code</h3>
+
+The same way that you don't read English sentences one word at a time, you don't read code one token at a time. Mostly you just look at the shape of a certain expression, or the way it highlights in your editor, and assume what it does. If the style of every bit of code is consistent, that ensures that bits of code that look the same actually _are_ the same - there isn't any hidden punctuation or gotchas that you don't expect, so you can focus on understanding the logic instead of the symbols. One example of this is indentation - while in JavaScript, indentation is not meaningful, it's helpful to have all of your code consistently indented so that you don't need to read all of the brackets in detail to see what is going on.
+
+```js
+// This code is misleading because it looks like both statements
+// are inside the conditional.
+if (condition)
+  firstStatement();
+  secondStatement();
+```
+
+```js
+// Much clearer!
+if (condition) {
+  firstStatement();
+}
+
+secondStatement();
+```
+
+<h3 id="automatic-error-checking">Automatic error checking</h3>
+
+Having a consistent style means that it's easier to adopt standard tools for error checking. For example, if you adopt a convention that you must always use `let` or `const` instead of `var`, you can now use a tool to ensure all of your variables are scoped the way you expect. That means you can avoid bugs where variables act in unexpected ways. Also, by enforcing that all variables are declared before use, you can easily catch typos before even running any code!
+
+<h3 id="deeper-understanding">Deeper understanding</h3>
+
+It's hard to learn everything about a programming language at once. For example, programmers new to JavaScript often struggle with the `var` keyword and function scope. Using a community-recommended coding style with automatic linting can warn you about these pitfalls proactively. This means you can jump right into coding without learning about all of the edge cases of JavaScript ahead of time.
+
+As you write more code and come up against the recommended style rules, you can take that as an opportunity to learn more about your programming language and how different people prefer to use it.
+
+<h2 id="javascript">JavaScript style</h2>
+
+Here at Meteor, we strongly believe that JavaScript is the best language to build web applications, for a variety of reasons. JavaScript is constantly improving, and the standards around ES2015 have really brought together the JavaScript community. Here are our recommendations about how to use ES2015 JavaScript in your app today.
+
+![](ben-es2015-demo.gif)
+
+<h3 id="ecmascript">Use the `ecmascript` package</h3>
+
+ECMAScript, the language standard on which every browser's JavaScript implementation is based, has moved to yearly standards releases. The newest complete standard is ES2015, which includes some long-awaited and very significant improvements to the JavaScript language. Meteor's `ecmascript` package compiles this standard down to regular JavaScript that all browsers can understand using the [popular Babel compiler](https://babeljs.io/). It's fully backwards compatible to "regular" JavaScript, so you don't have to use any new features if you don't want to. We've put a lot of effort into making advanced browser features like source maps work great with this package, so that you can debug your code using your favorite developer tools without having to see any of the compiled output.
+
+The `ecmascript` package is included in all new apps and packages by default, and compiles all files with the `.js` file extension automatically. See the [list of all ES2015 features supported by the ecmascript package](https://github.com/meteor/meteor/tree/master/packages/ecmascript#supported-es2015-features).
+
+To get the full experience, you should also use the `es5-shim` package which is included in all new apps by default. This means you can rely on runtime features like `Array#forEach` without worrying about which browsers support them.
+
+All of the code samples in this guide and future Meteor tutorials will use all of the new ES2015 features. You can also read more about ES2015 and how to get started with it on the Meteor Blog:
+
+- [Getting started with ES2015 and Meteor](http://info.meteor.com/blog/es2015-get-started)
+- [Set up Sublime Text for ES2015](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
+- [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
+
+<h3 id="style-guide">Follow the Meteor JavaScript style guide</h3>
+
+We have a JavaScript style guide which is heavily based on the popular AirBnB style guide, but has been content edited to include only essential rules. If you would like to follow this style guide in your non-Meteor applications, you will need to enable the same Babel features as supported by the `ecmascript` package linked above.
+
+[Read the Meteor JavaScript style guide.](https://github.com/meteor/javascript)
+
+<h2 id="eslint">Check your code with ESLint</h2>
+
+"Code linting" is the process of automatically checking your code for common errors or style problems. For example, ESLint can determine if you have made a typo in a variable name, or some part of your code is unreachable because of a poorly written `if` condition.
+
+We have a standard ESLint configuration that verifies as much as possible of the Meteor JavaScript style guide.
+
+- [Get the Meteor ESLint configuration here.](XXX we need both eslintrc and eslintignore)
+
+Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's the fastest and easiest way to identify typos and small errors.
+
+<h3 id="eslint-installing">Installing and running ESLint</h3>
+
+To get ESLint up and running on your computer, install the command line tool with NPM:
+
+```
+npm install -g eslint
+npm install -g babel-eslint
+npm install -g eslint-plugin-react
+```
+
+Copy the standard Meteor `.eslintrc` and `.eslintignore` files from above into your app directory, and run the linter on your code with:
+
+```
+eslint .
+```
+
+For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
+
+<h3 id="eslint-editor">Integrating ESLint with your editor</h3>
+
+Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to just write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
+
+
+<h4 id="eslint-sublime">Sublime Text</h4>
+
+You can install the Sublime Text packages that integrate them into the text editor. It's generally recommended to use Package Control to add these packages. If you already have that setup, you can just add the these packages by name; if not, click the instructions links:
+
+* Babel (for syntax highlighting – [full instructions](https://github.com/babel/babel-sublime#installation))
+* SublimeLinter ([full instructions](http://sublimelinter.readthedocs.org/en/latest/installation.html))
+* SublimeLinter-contrib-eslint ([full instructions](https://github.com/roadhump/SublimeLinter-eslint#plugin-installation))
+
+To get proper syntax highlighting, go to a .js file, then select the following through the *View* dropdown menu: *Syntax* -> *Open all with current extension as...* -> *Babel* -> *JavaScript (Babel)*. If you are using React .jsx files, do the same from a .jsx file. If it's working, you will see "JavaScript (Babel)" in the lower right hand corner of the window when you are on one of these files. Refer to the [package readme](https://github.com/babel/babel-sublime) for information on compatible color schemes.
+
+A side note for Emmet users: You can use *\<ctrl-e\>* to expand HTML tags in .jsx files, and it will correctly expand classes to React's "className" property. You can bind to the tab key for this, but [you may not want to](https://github.com/sergeche/emmet-sublime/issues/548).
+
+<h4 id="eslint-atom">Atom</h4>
+
+Install the following three Atom packages. Here's how to install them from the terminal, but you can also select them from within Atom:
+
+    apm install language-babel
+    apm install linter
+    apm install linter-eslint
+
+Go to *Settings -> Packages.* Under "linter-eslint", click the *Settings* button. To allow atom to see ESLint, you need to set "Global Node Path" to your Node path. As indicated in Atom, you can find this out with the following command in the terminal:
+
+    npm config get prefix
+
+This will return something like `/usr/local`. Add this to the "Global Node Path", and check "Use Global Eslint":
+
+![Set your "Global Node Path" and check "Use Global Eslint"](atom-configuration.png)
+
+Then **restart Atom** to activate linting.
+
+
+<h4 id="eslint-webstorm">WebStorm</h4>
+
+WebStorm provides [these instructions for using ESLint](https://www.jetbrains.com/webstorm/help/eslint.html). After you install the ESLint Node packages and set up your `.eslintrc` file, just enable ESLint and click "Apply". You can configure how WebStorm should find your `.eslintrc` file, but on my machine it worked without any changes. It also automatically suggested switching to "JSX Harmony" syntax highlighting.
+
+![Enable ESLint here.](webstorm-configuration.png)
+
+Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
+
+
+<h3 id="eslint-commit-hook">Setting up a commit hook for linting</h3>
+
+XXX
+
+<h3 id="eslint-ci">Running ESLint in your CI environment</h3>
+
+XXX
+
+<h2 id="meteor-features">Meteor features</h2>
+
+The section above talked about JavaScript code in general - you can easily apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
+
+<h3 id="collections">Collections</h3>
+
+Collections should be named as a plural noun, in PascalCase. The name of the collection in the database (the first argument to the collection constructor) should be the same as the name of the JavaScript symbol.
+
+```js
+// Defining a collection
+Lists = new Mongo.Collection('Lists');
+```
+
+Fields in the database should be camelCased just like your JavaScript variable names.
+
+```js
+// Inserting a document with camelCased field names
+Widgets.insert({
+  myFieldName: 'Hello, world!',
+  otherFieldName: 'Goodbye.'
+});
+```
+
+<h3 id="methods-and-publications">Methods and publications</h3>
+
+Method and publication names should be camelCased and namespaced to a module or collection. For example, if you have a Method related to the Todos collection:
+
+```js
+// Naming a method
+Todos.methods.updateText = new ValidatedMethod({
+  name: 'Todos.methods.updateText',
+  // ...
+});
+```
+
+Note that this code sample uses the [ValidatedMethod package recommended in the Methods article](methods.html#XXX). If you aren't using that package, you can use the name as the property passed to `Meteor.methods`.
+
+Here's how this naming convention looks when applied to a publication:
+
+```js
+// Naming a publication
+Meteor.publish('Lists.public', function() {
+  // ...
+});
+```
+
+<h3 id="files-and-exports">Files, exports, and packages</h3>
+
+You should use the ES2015 `import` and `export` features to manage your code. This will let you better understand the dependencies between different parts of your code, and it will be easy to know where to look if you need to read the source code of a dependency.
+
+Each file in your app should represent one logical module. Avoid having catch-all utility modules that export a variety of unrelated functions and symbols. Often, this can mean that it's good to have one class, UI component, or collection per file, but there are cases where it is OK to make an exception, for example if you have a UI component with a small sub-component that isn't used outside of that file.
+
+When a file represents a single class or UI component, the file should be named the same as the thing it defines, with the same capitalization. So if you have a file that exports a class:
+
+```js
+export class ClickCounter { ... }
+```
+
+This class should be defined inside a file called `ClickCounter.js`. When you import it, it'll look like this:
+
+```js
+import ClickCounter from './ClickCounter.js';
+```
+
+Note that imports use relative paths, and include the file extension at the end of the file name.
+
+<h3 id="templates-and-components">Templates and components</h3>
+
+Since Spacebars templates are always global, can't be imported and exported as modules, and need to have names that are completely unique across the whole app, we recommend naming your Blaze templates with the full path to the namespace, separated by underscores. Underscores are a great choice in this case because then you can easily type the name of the template as one symbol in JavaScript.
+
+```html
+<template name="Lists_show">
+  ...
+</template>
+```
+
+If this template is a "smart" component that loads server data and accesses the router, append `_page` to the name:
+
+```html
+<template name="Lists_show_page">
+  ...
+</template>
+```
+
+Often when you are dealing with templates or UI components, you'll have several closely coupled files to manage. They could be two or more of HTML, CSS, and JavaScript. In this case, we recommend putting the files together in the same directory with the same name:
+
+```
+# The Lists_show template from the Todos example app has 3 files:
+show.html
+show.js
+show.less
+```
+
+The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure in the [Application Structure article](XXX).
+
+If you are writing your UI in React, you don't need to use the underscore-split names because you can import and export your components using the JavaScript module system.
+
