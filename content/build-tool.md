@@ -79,7 +79,16 @@ One difference between pre-published packages and local app packages is that the
 
 <h4 id="npm-adding">Adding packages to your app</h4>
 
-Meteor 1.3 will have seamless integration with NPM, and you will be able to simply `npm install` these packages into your app directory. Until then, the easiest way to use NPM packages in your app is [`meteorhacks:npm`](https://atmospherejs.com/meteorhacks/npm).
+To install an NPM package into your app, you can simply run NPM's standard install command:
+
+```
+npm install --save-dev <package name>
+```
+
+XXX: Is it `meteor npm`
+XXX: Do we use --save-dev
+XXX: What about creating an initial `package.json`
+XXX: How do other developers get the packages?
 
 <h4 id="npm-searching">Searching for packages</h4>
 
@@ -175,7 +184,10 @@ sendTextMessage() {
 
 <h3 id="client-npm">NPM on the client</h3>
 
-NPM started as a package manager for Node.js, but is quickly becoming one of the most popular places to publish client-side modules as well. Meteor 1.3 will include built-in support for bundling NPM modules on the client, but in the meantime the best option is to use the [`cosmos:browserify`](https://atmospherejs.com/cosmos/browserify) package to bundle these modules. Since one of the most common scenarios is using React components from NPM, read about how to do this in the [React in Meteor guide](http://react-in-meteor.readthedocs.org/en/latest/client-npm/).
+NPM started as a package manager for Node.js, but is quickly becoming one of the most popular places to publish client-side modules as well. Thanks to Meteor's built in client-side support for [ES2015 modules](app-structure.html#modules), you can use appropriate NPM packages on the client easily, simply by installing the package as usual and `import`-ing from it from a client-side file.
+
+For example, in the [React article](react.html#react-router) we discuss how to use the [React Router](https://github.com/rackt/react-router) in the client side of an app with a few simple commands.
+
 
 <h2 id="javascript-transpilation">JavaScript transpilation</h2>
 
@@ -302,7 +314,33 @@ Currently, Meteor doesn't have a separate build step for post-processing CSS, so
 
 <h3 id="juliancwirko-postcss">juliancwirko:postcss</h3>
 
-Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. It's not completely trivial to set it up, and we hope to make support for PostCSS a more core part of Meteor in the future. Read the documentation for the package to get the steps to add it to your app; we won't reproduce the instructions here since they might change in future versions.
+Use the package [juliancwirko:postcss](https://atmospherejs.com/juliancwirko/postcss) to your app to enable PostCSS for your Meteor app. To do so, we remove the standard CSS minifier and replace it with the postcss package:
+
+```
+meteor remove standard-minifiers
+meteor add juliancwirko:postcss
+# We still want Meteor's built in JS minifiers
+meteor add standard-minifiers-js
+```
+
+Then we can install any NPM CSS processing packages that we'd like to use and reference them from a `postcss` section of our `package.json`. In the Todos example app, we use `autoprefixer` package to increase browser support:
+
+```
+{
+  "devDependencies": {
+    "autoprefixer": "^6.3.1"
+  },
+  "postcss": {
+    "plugins": {
+      "autoprefixer": {"browsers": ["last 2 versions"]}
+    }
+  }
+}
+```
+
+After doing the above, you'll need to ensure you `npm install` and restart the `meteor` process running your app to make sure the PostCSS system has had a chance to set itself up.
+
+XXX: ensure the 1.3 version of this package has been release before publishing this?
 
 <h2 id="minification">Minification</h2>
 
