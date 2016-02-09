@@ -1,12 +1,13 @@
-const sourcemap = Npm.require('source-map');
+import sourcemap from "source-map";
+import coffee from "coffee-script";
 
 // The coffee-script compiler overrides Error.prepareStackTrace, mostly for the
 // use of coffee.run which we don't use.  This conflicts with the tool's use of
-// Error.prepareStackTrace to properly show error messages in linked code.  Save
-// the tool's one and restore it after coffee-script clobbers it.
-const prepareStackTrace = Error.prepareStackTrace;
-const coffee = Npm.require('coffee-script');
-Error.prepareStackTrace = prepareStackTrace;
+// Error.prepareStackTrace to properly show error messages in linked code.
+// Restore the tool's one after coffee-script clobbers it at import time.
+if (Error.METEOR_prepareStackTrace) {
+  Error.prepareStackTrace = Error.METEOR_prepareStackTrace;
+}
 
 Plugin.registerCompiler({
   extensions: ['coffee', 'litcoffee', 'coffee.md']
@@ -14,7 +15,7 @@ Plugin.registerCompiler({
 
 // The CompileResult for this CachingCompiler is a {source, sourceMap} object.
 
-class CoffeeCompiler extends CachingCompiler {
+export class CoffeeCompiler extends CachingCompiler {
   constructor() {
     super({
       compilerName: 'coffeescript',

@@ -154,7 +154,7 @@ var _ = require('underscore');
 
 var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 
 var files = require('../fs/files.js');
@@ -420,6 +420,9 @@ class Target {
     packageMap,
     isopackCache,
 
+    // Path to the root source directory for this Target.
+    sourceRoot,
+
     // the architecture to build
     arch,
     // projectContextModule.CordovaPluginsFile object
@@ -435,6 +438,8 @@ class Target {
   }) {
     this.packageMap = packageMap;
     this.isopackCache = isopackCache;
+
+    this.sourceRoot = sourceRoot;
 
     // Something like "web.browser" or "os" or "os.osx.x86_64"
     this.arch = arch;
@@ -711,6 +716,7 @@ class Target {
     const processor = new compilerPluginModule.CompilerPluginProcessor({
       unibuilds: this.unibuilds,
       arch: this.arch,
+      sourceRoot: this.sourceRoot,
       isopackCache: this.isopackCache,
       linkerCacheDir:
         (this.bundlerCacheDir && files.pathJoin(this.bundlerCacheDir, 'linker'))
@@ -725,6 +731,9 @@ class Target {
 
     const isWeb = archinfo.matches(this.arch, 'web');
     const isOs = archinfo.matches(this.arch, 'os');
+
+    const jsOutputFilesMap = compilerPluginModule.PackageSourceBatch
+      .computeJsOutputFilesMap(sourceBatches);
 
     // Copy their resources into the bundle in order
     sourceBatches.forEach((sourceBatch) => {
@@ -741,10 +750,11 @@ class Target {
         });
       }
 
-      const isApp = ! unibuild.pkg.name;
+      const name = unibuild.pkg.name || null;
+      const isApp = ! name;
 
       // Emit the resources
-      const resources = sourceBatch.getResources();
+      const resources = sourceBatch.getResources(jsOutputFilesMap.get(name));
 
       // First, find all the assets, so that we can associate them with each js
       // resource (for os unibuilds).
@@ -779,6 +789,13 @@ class Target {
       resources.forEach((resource) => {
         if (resource.type === 'asset') {
           // already handled
+          return;
+        }
+
+        if (resource.type !== "js" &&
+            resource.lazy) {
+          // Only files that compile to JS can be imported, so any other
+          // files should be ignored here, if lazy.
           return;
         }
 
@@ -1863,7 +1880,7 @@ class ServerTarget extends JsImageTarget {
   ServerTarget.prototype[method] = Profile(`ServerTarget#${method}`, ServerTarget.prototype[method]);
 });
 
-var writeFile = Profile("bundler..writeFile", function (file, builder) {
+var writeFile = Profile("bundler writeFile", function (file, builder) {
   if (! file.targetPath) {
     throw new Error("No targetPath?");
   }
@@ -1880,7 +1897,7 @@ var writeFile = Profile("bundler..writeFile", function (file, builder) {
 
 // Writes a target a path in 'programs'
 var writeTargetToPath = Profile(
-  "bundler..writeTargetToPath",
+  "bundler writeTargetToPath",
   function (name, target, outputPath, {
     includeNodeModules,
     getRelativeTargetPath,
@@ -1934,9 +1951,8 @@ var writeTargetToPath = Profile(
 // - releaseName: The Meteor release version
 // - getRelativeTargetPath: see doc at ServerTarget.write
 // - previousBuilder: previous Builder object used in previous iteration
-var writeSiteArchive = Profile(
-  "bundler..writeSiteArchive",
-  function (targets, outputPath, {
+var writeSiteArchive = Profile("bundler writeSiteArchive", function (
+  targets, outputPath, {
     includeNodeModules,
     builtBy,
     releaseName,
@@ -1946,7 +1962,10 @@ var writeSiteArchive = Profile(
   }) {
 
   const builders = {};
-  const builder = new Builder({outputPath});
+  const previousStarBuilder = previousBuilders && previousBuilders.star;
+  const builder = new Builder({outputPath,
+                               previousBuilder: previousStarBuilder});
+  builders.star = builder;
 
   try {
     var json = {
@@ -2010,7 +2029,9 @@ Find out more about Meteor at meteor.com.
 
     Object.keys(targets).forEach(name => {
       const target = targets[name];
-      const previousBuilder = previousBuilders && previousBuilders[name];
+      const previousBuilder =
+              (previousBuilders && previousBuilders[name]) ?
+              previousBuilders[name] : null;
       const {
         arch, path, cordovaDependencies,
         nodePath: targetNP,
@@ -2179,12 +2200,16 @@ exports.bundle = function ({
   var messages = buildmessage.capture({
     title: "building the application"
   }, function () {
+    var packageSource = new PackageSource;
+    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+
     var makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", function (app, webArch, options) {
       var client = new ClientTarget({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
+        sourceRoot: packageSource.sourceRoot,
         arch: webArch,
         cordovaPluginsFile: (webArch === 'web.cordova'
                              ? projectContext.cordovaPluginsFile : null),
@@ -2207,6 +2232,7 @@ exports.bundle = function ({
         bundlerCacheDir,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
+        sourceRoot: packageSource.sourceRoot,
         arch: serverArch,
         releaseName: releaseName,
         appIdentifier: appIdentifier,
@@ -2229,8 +2255,6 @@ exports.bundle = function ({
     // Create a Isopack object that represents the app
     // XXX should this be part of prepareProjectForBuild and get cached?
     //     at the very least, would speed up deploy after build.
-    var packageSource = new PackageSource;
-    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
     var app = compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,
@@ -2474,6 +2498,7 @@ exports.buildJsImage = Profile("bundler.buildJsImage", function (options) {
   var target = new JsImageTarget({
     packageMap: options.packageMap,
     isopackCache: options.isopackCache,
+    sourceRoot: packageSource.sourceRoot,
     // This function does not yet support cross-compilation (neither does
     // initFromOptions). That's OK for now since we're only trying to support
     // cross-bundling, not cross-package-building, and this function is only

@@ -35,35 +35,24 @@ Package.onUse(function (api) {
 
   api.use('oauth-encryption', 'server', {weak: true});
 
+  // Though this "Accounts" symbol is the only official Package export for
+  // the accounts-base package, modules that import accounts-base will
+  // have access to anything added to the exports object of the main
+  // module, including AccountsClient and AccountsServer (those symbols
+  // just won't be automatically imported as "global" variables).
   api.export('Accounts');
-  api.export('AccountsClient', 'client');
-  api.export('AccountsServer', 'server');
-  api.export('AccountsTest', {testOnly: true});
 
-  api.addFiles('accounts_common.js', ['client', 'server']);
-  api.addFiles('accounts_server.js', 'server');
-
-  api.addFiles('accounts_rate_limit.js', 'server');
-  api.addFiles('url_server.js', 'server');
-
-  // accounts_client must be before localstorage_token, because
-  // localstorage_token attempts to call functions in accounts_client (eg
-  // Accounts.callLoginMethod) on startup. And localstorage_token must be after
-  // url_client, which sets autoLoginEnabled.
-  api.addFiles('accounts_client.js', 'client');
-  api.addFiles('url_client.js', 'client');
-  api.addFiles('localstorage_token.js', 'client');
-
-  // These files instantiate the default Accounts instance on the server
-  // and the client, so they must be evaluated last to ensure that the
-  // prototypes have been fully populated.
-  api.addFiles('globals_server.js', 'server');
-  api.addFiles('globals_client.js', 'client');
+  // These main modules import all the other modules that comprise the
+  // accounts-base package, and define exports that will be accessible to
+  // modules that import the accounts-base package.
+  api.mainModule('server_main.js', 'server');
+  api.mainModule('client_main.js', 'client');
 });
 
 Package.onTest(function (api) {
   api.use([
     'accounts-base',
+    'ecmascript',
     'tinytest',
     'random',
     'test-helpers',
@@ -73,7 +62,6 @@ Package.onTest(function (api) {
     'accounts-password'
   ]);
 
-  api.addFiles('accounts_tests.js', 'server');
-  api.addFiles("accounts_url_tests.js", "client");
-  api.addFiles("accounts_reconnect_tests.js");
+  api.mainModule('server_tests.js', 'server');
+  api.mainModule('client_tests.js', 'client');
 });

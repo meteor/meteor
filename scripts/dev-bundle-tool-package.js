@@ -12,7 +12,7 @@ if (process.platform === "win32") {
   // Duplicated in dev-bundle-server-package.js
   fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
 } else {
-  fibersVersion = "1.0.5";
+  fibersVersion = "1.0.8";
 }
 
 var packageJson = {
@@ -24,8 +24,10 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "1.4.28",
     fibers: fibersVersion,
-    "meteor-babel": "0.5.8",
-    "meteor-promise": "0.5.0",
+    "meteor-babel": "0.7.2",
+    "meteor-promise": "0.5.1",
+    // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
+    "babel-runtime": "5.8.35",
     // For various ES2015 polyfills, such as Map and Set.
     "meteor-ecmascript-runtime": "0.2.6",
     // Not yet upgrading Underscore from 1.5.2 to 1.7.0 (which should be done
@@ -38,7 +40,7 @@ var packageJson = {
     fstream: "https://github.com/meteor/fstream/tarball/d11b9ec4a13918447c8af7559c243c190744dd1c",
     tar: "1.0.2",
     kexec: "0.2.0",
-    "source-map": "0.1.43",
+    "source-map": "0.5.3",
     "browserstack-webdriver": "2.41.1",
     "node-inspector": "0.7.4",
     chalk: "0.5.1",

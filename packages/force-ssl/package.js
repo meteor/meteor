@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
-  version: "1.0.6"
+  version: "1.0.7-modules.8"
 });
 
 Package.onUse(function (api) {

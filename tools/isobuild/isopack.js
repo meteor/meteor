@@ -3,7 +3,7 @@ var archinfo = require('../utils/archinfo.js');
 var _ = require('underscore');
 var linker = require('./linker.js');
 var buildmessage = require('../utils/buildmessage.js');
-var Builder = require('./builder.js');
+import Builder from './builder.js';
 var bundler = require('./bundler.js');
 var watch = require('../fs/watch.js');
 var files = require('../fs/files.js');
@@ -518,7 +518,7 @@ _.extend(Isopack.prototype, {
       }, function () {
         // Make a new Plugin API object for this plugin.
         var Plugin = self._makePluginApi();
-        plugin.load({ Plugin: Plugin });
+        plugin.load({ Plugin: Plugin, Profile: Profile });
       });
     });
 
@@ -1679,14 +1679,12 @@ _.extend(Isopack.prototype, {
         inputFileContents = inputFileContents.replace(/^.*#RemoveInProd.*$/mg, "");
       }
 
-      var babelOptions = babel.getDefaultOptions(
-        require('../tool-env/babel-features.js')
-      );
+      var babelOptions = babel.getDefaultOptions();
 
       _.extend(babelOptions, {
         filename: path,
         sourceFileName: "/" + path,
-        sourceMapName: path + ".map",
+        sourceMapTarget: path + ".map",
         sourceMap: true
       });
 

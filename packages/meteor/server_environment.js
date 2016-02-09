@@ -1,4 +1,8 @@
+var nodeEnv = process.env.NODE_ENV;
+
 Meteor = {
+  isProduction: nodeEnv === "production",
+  isDevelopment: nodeEnv === "development",
   isClient: false,
   isServer: true,
   isCordova: false

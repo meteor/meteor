@@ -1,8 +1,25 @@
+var nodeEnv = process.env.NODE_ENV;
+
 /**
  * @summary The Meteor namespace
  * @namespace Meteor
  */
 Meteor = {
+  /**
+   * @summary Boolean variable.  True if running in production environment.
+   * @locus Anywhere
+   * @static
+   * @type {Boolean}
+   */
+  isProduction: nodeEnv === "production",
+
+  /**
+   * @summary Boolean variable.  True if running in development environment.
+   * @locus Anywhere
+   * @static
+   * @type {Boolean}
+   */
+  isDevelopment: nodeEnv === "development",
 
   /**
    * @summary Boolean variable.  True if running in client environment.

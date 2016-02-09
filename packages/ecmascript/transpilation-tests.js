@@ -3,7 +3,7 @@
 // such as when it changes its runtime helpers!
 
 function transform(input) {
-  return Babel.transformMeteor(input).code;
+  return Babel.compile(input).code;
 };
 
 function contains(haystack, needle) {
@@ -53,7 +53,7 @@ class Foo {
 }`);
 
   // test that the classCallCheck helper is still in use
-  test.isTrue(contains(output, 'babelHelpers.classCallCheck'));
+  test.isTrue(contains(output, 'helpers/classCallCheck'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - inherits", (test) => {
@@ -62,7 +62,7 @@ class Foo {}
 class Bar extends Foo {}
 `);
 
-  test.isTrue(contains(output, 'babelHelpers.inherits'));
+  test.isTrue(contains(output, 'helpers/inherits'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
@@ -70,7 +70,7 @@ Tinytest.add("ecmascript - transpilation - helpers - bind", (test) => {
   var foo = new Foo(...oneTwo, 3);
 `);
 
-  test.isTrue(contains(output, 'babelHelpers.bind'));
+  test.isTrue(output.match(/\.bind\b/));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
@@ -78,7 +78,7 @@ Tinytest.add("ecmascript - transpilation - helpers - extends", (test) => {
   var full = {a:1, ...middle, d:4};
 `);
 
-  test.isTrue(contains(output, 'babelHelpers._extends'));
+  test.isTrue(contains(output, 'helpers/extends'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (test) => {
@@ -86,7 +86,7 @@ Tinytest.add("ecmascript - transpilation - helpers - objectWithoutProperties", (
 var {a, ...rest} = obj;
 `);
 
-  test.isTrue(contains(output, 'babelHelpers.objectWithoutProperties'));
+  test.isTrue(contains(output, 'helpers/objectWithoutProperties'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", (test) => {
@@ -94,7 +94,7 @@ Tinytest.add("ecmascript - transpilation - helpers - objectDestructuringEmpty", 
 var {} = null;
 `);
 
-  test.isTrue(contains(output, 'babelHelpers.objectDestructuringEmpty'));
+  test.isTrue(contains(output, 'helpers/objectDestructuringEmpty'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose", (test) => {
@@ -102,7 +102,7 @@ Tinytest.add("ecmascript - transpilation - helpers - taggedTemplateLiteralLoose"
 var x = asdf\`A\${foo}C\`
 `);
 
-  test.isTrue(contains(output, 'babelHelpers.taggedTemplateLiteralLoose'));
+  test.isTrue(contains(output, 'helpers/taggedTemplateLiteralLoose'));
 });
 
 Tinytest.add("ecmascript - transpilation - helpers - createClass", (test) => {
@@ -112,7 +112,7 @@ class Foo {
 }
 `);
 
-  test.isTrue(contains(output, 'babelHelpers.createClass'));
+  test.isTrue(contains(output, 'helpers/createClass'));
 });
 
 Tinytest.add("ecmascript - transpilation - flow", (test) => {

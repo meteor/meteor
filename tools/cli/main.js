@@ -551,7 +551,7 @@ Fiber(function () {
   // Set up git hooks, but not on Windows because they don't work there and it;s
   // not worth setting it up at the moment
   if (files.inCheckout() && process.platform !== "win32") {
-    var installGitHooks = require('../tool-env/install-git-hooks.js');
+    var installGitHooks = require('../tool-env/install-git-hooks.js')['default'];
     installGitHooks();
   }
 

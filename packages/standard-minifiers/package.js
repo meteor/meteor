@@ -6,8 +6,7 @@ Package.describe({
 });
 
 Package.onUse(function(api) {
-  api.imply(['standard-minifiers-css','standard-minifiers-js']);
+  api.imply(['standard-minifiers-css', 'standard-minifiers-js']);
 });
 
-Package.onTest(function(api) {
-});
+Package.onTest(function(api) {});

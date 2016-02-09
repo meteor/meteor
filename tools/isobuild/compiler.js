@@ -29,7 +29,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/17';
+compiler.BUILT_BY = 'meteor/18';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -199,7 +199,9 @@ compiler.compile = Profile(function (packageSource, options) {
 // - isopack
 // - isopackCache
 // - includeCordovaUnibuild
-compiler.lint = function (packageSource, options) {
+compiler.lint = Profile(function (packageSource, options) {
+  return `compiler.lint(${ packageSource.name || 'the app' })`;
+}, function (packageSource, options) {
   // Note: the buildmessage context of compiler.lint and lintUnibuild is a
   // normal error message context (eg, there might be errors from initializing
   // plugins in getLinterSourceProcessorSet).  We return the linter warnings as
@@ -226,7 +228,7 @@ compiler.lint = function (packageSource, options) {
     }
   });
   return {warnings, linted};
-};
+});
 
 compiler.getMinifiers = function (packageSource, options) {
   buildmessage.assertInJob();
@@ -323,11 +325,9 @@ var lintUnibuild = function ({isopack, isopackCache, sourceArch}) {
 // options.isopack.
 //
 // Returns a list of source files that were used in the compilation.
-var compileUnibuild = Profile(
-  function (options) {
-    return `compileUnibuild (${options.isopack.name || 'the app'})`;
-  },
-  function (options) {
+var compileUnibuild = Profile(function (options) {
+  return `compileUnibuild (${options.isopack.name || 'the app'})`;
+}, function (options) {
   buildmessage.assertInCapture();
 
   const isopk = options.isopack;
@@ -569,10 +569,12 @@ api.addAssets('${relPath}', 'client').`);
         addAsset: addAsset
       });
 
+    const handler = buildmessage.markBoundary(classification.legacyHandler);
+
     try {
-      Profile(`legacyHandler ${classification.extension}`, function () {
-        (buildmessage.markBoundary(classification.legacyHandler))(compileStep);
-      })();
+      Profile.time(`legacy handler (.${classification.extension})`, () => {
+        handler(compileStep);
+      });
     } catch (e) {
       e.message = e.message + " (compiling " + relPath + ")";
       buildmessage.exception(e);
@@ -595,8 +597,8 @@ api.addAssets('${relPath}', 'client').`);
   }
 
   let nodeModulesPathOrUndefined = nodeModulesPath;
-  if (! archinfo.matches(arch, "os")) {
-    // npm modules only work on server architectures
+  if (! archinfo.matches(arch, "os") && ! isPortable) {
+    // non-portable npm modules only work on server architectures
     nodeModulesPathOrUndefined = undefined;
   }
 

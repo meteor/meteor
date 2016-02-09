@@ -56,12 +56,18 @@ function wrapCallSite(unwrappedFrame) {
 
 sourceMapSupport.install({
   retrieveSourceMap: tryAllSourceMapRetrievers,
-  // For now, don't fix the source line in uncaught exceptions, because we
-  // haven't fixed handleUncaughtExceptions in source-map-support to properly
-  // locate the source files.
+  // Disable the feature of source-map-support that shows an accurate snippet
+  // of source code on uncaught exception, because we haven't fixed it to
+  // be able to locate the proper source code to display.  (Note that the
+  // stack trace of an uncaught exception will be correctly source-mapped
+  // independent of this option.)
   handleUncaughtExceptions: false,
   wrapCallSite
 });
+
+// Save the correct prepareStackTrace so that if third-party code overwrites
+// it (ahem, coffeescript), we can restore it.
+Error.METEOR_prepareStackTrace = Error.prepareStackTrace;
 
 // Default retrievers
 

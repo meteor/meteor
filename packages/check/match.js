@@ -325,7 +325,16 @@ var testSubtree = function (value, pattern) {
       requiredPatterns[key] = subPattern;
   });
 
-  for (var keys = _.keys(value), i = 0, length = keys.length; i < length; i++) {
+  //XXX: replace with underscore's _.allKeys if Meteor updates underscore to 1.8+ (or lodash)
+  var allKeys = function(obj){
+    var keys = [];
+    if (_.isObject(obj)){
+      for (var key in obj) keys.push(key);
+    }
+    return keys;
+  }
+
+  for (var keys = allKeys(value), i = 0, length = keys.length; i < length; i++) {
     var key = keys[i];
     var subValue = value[key];
     if (_.has(requiredPatterns, key)) {

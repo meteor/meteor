@@ -6,7 +6,6 @@
   "source": {
     "exclude": [
       "packages/ddp/sockjs-0.3.4.js",
-      "packages/code-prettify/lang-vb.js",
       "packages/test-in-browser/diff_match_patch_uncompressed.js",
       "packages/jquery/jquery.js",
       "packages/underscore/underscore.js",

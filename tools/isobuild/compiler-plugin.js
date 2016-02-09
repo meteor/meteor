@@ -12,6 +12,7 @@ import {sha1} from  '../fs/watch.js';
 import LRU from 'lru-cache';
 import Fiber from 'fibers';
 import {sourceMapLength} from '../utils/utils.js';
+import ImportScanner from './import-scanner.js';
 
 // This file implements the new compiler plugins added in Meteor 1.2, which are
 // registered with the Plugin.registerCompiler API.
@@ -68,6 +69,7 @@ export class CompilerPluginProcessor {
   constructor({
     unibuilds,
     arch,
+    sourceRoot,
     isopackCache,
     linkerCacheDir,
   }) {
@@ -75,6 +77,7 @@ export class CompilerPluginProcessor {
 
     self.unibuilds = unibuilds;
     self.arch = arch;
+    self.sourceRoot = sourceRoot;
     self.isopackCache = isopackCache;
 
     self.linkerCacheDir = linkerCacheDir;
@@ -91,7 +94,13 @@ export class CompilerPluginProcessor {
     var sourceProcessorsWithSlots = {};
 
     var sourceBatches = _.map(self.unibuilds, function (unibuild) {
+      const { pkg: { name }, arch } = unibuild;
+      const sourceRoot = name
+        && self.isopackCache.getSourceRoot(name, arch)
+        || self.sourceRoot;
+
       return new PackageSourceBatch(unibuild, self, {
+        sourceRoot,
         linkerCacheDir: self.linkerCacheDir
       });
     });
@@ -132,7 +141,7 @@ export class CompilerPluginProcessor {
         " (for target ", self.arch, ")"
       ].join('');
 
-      Profile.time(jobTitle, () => {
+      Profile.time("plugin "+sourceProcessor.isopack.name, () => {
         buildmessage.enterJob({
           title: jobTitle
         }, function () {
@@ -344,11 +353,48 @@ class ResourceSlot {
       // Any resource that isn't handled by compiler plugins just gets passed
       // through.
       if (self.inputResource.type === "js") {
-        self.jsOutputResources.push(self.inputResource);
+        let resource = self.inputResource;
+        if (! _.isString(resource.sourcePath)) {
+          resource.sourcePath = self.inputResource.path;
+        }
+        self.jsOutputResources.push(resource);
       } else {
         self.outputResources.push(self.inputResource);
       }
     }
+  }
+
+  _getOption(name, options) {
+    if (options && _.has(options, name)) {
+      return options[name];
+    }
+    const fileOptions = this.inputResource.fileOptions;
+    return fileOptions && fileOptions[name];
+  }
+
+  _isLazy(options) {
+    let lazy = this._getOption("lazy", options);
+
+    if (typeof lazy === "boolean") {
+      return lazy;
+    }
+
+    const sourcePath = this.inputResource.path;
+
+    if (sourcePath.endsWith(".json")) {
+      // JSON files have no side effects, so there is no reason for them
+      // ever to be evaluated eagerly.
+      return true;
+    }
+
+    // If file.lazy was not previously defined, mark the file lazy if it
+    // is contained by an imports directory. Note that any files contained
+    // by a node_modules directory will already have been marked lazy in
+    // PackageSource#_inferFileOptions.
+    return this.packageSourceBatch.useMeteorInstall &&
+      files.pathDirname(sourcePath)
+        .split(files.pathSep)
+        .indexOf("imports") >= 0;
   }
 
   addStylesheet(options) {
@@ -357,16 +403,40 @@ class ResourceSlot {
       throw Error("addStylesheet on non-source ResourceSlot?");
     }
 
-    self.outputResources.push({
-      type: "css",
+    const data = files.convertToStandardLineEndings(options.data);
+    const useMeteorInstall = self.packageSourceBatch.useMeteorInstall;
+    const resource = {
       refreshable: true,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
-      servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
-        options.path),
+      sourcePath: this.inputResource.path,
+      servePath: self.packageSourceBatch.unibuild.pkg
+        ._getServePath(options.path),
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
-      sourceMap: options.sourceMap
-    });
+      sourceMap: options.sourceMap,
+      hash: sha1(data),
+      lazy: this._isLazy(options),
+    };
+
+    if (useMeteorInstall && resource.lazy) {
+      // If the current packageSourceBatch supports modules, and this CSS
+      // file is lazy, add it as a lazy JS module instead of adding it
+      // unconditionally as a CSS resource, so that it can be imported
+      // when needed.
+      resource.type = "js";
+      resource.data = new Buffer(
+        'module.exports = require("meteor/modules").addStyles(' +
+          JSON.stringify(data) + ');\n',
+        'utf8'
+      );
+
+      self.jsOutputResources.push(resource);
+
+    } else {
+      resource.type = "css";
+      resource.data = new Buffer(data, 'utf8'),
+
+      self.outputResources.push(resource);
+    }
   }
 
   addJavaScript(options) {
@@ -376,19 +446,14 @@ class ResourceSlot {
       throw Error("addJavaScript on non-source ResourceSlot?");
     }
 
-    // By default, use the 'bare' option given to addFiles, but allow the option
-    // passed to addJavaScript to override it.
-    var bare = self.inputResource.fileOptions &&
-      self.inputResource.fileOptions.bare;
-    if (options.hasOwnProperty('bare')) {
-      bare = options.bare;
-    }
-
     var data = new Buffer(
       files.convertToStandardLineEndings(options.data), 'utf8');
     self.jsOutputResources.push({
       type: "js",
       data: data,
+      // The sourcePath should not be alterable by plugins, so it makes
+      // sense to set it unconditionally here.
+      sourcePath: self.inputResource.path,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
       // XXX should we allow users to be trusted and specify a hash?
@@ -396,7 +461,11 @@ class ResourceSlot {
       // XXX do we need to call convertSourceMapPaths here like we did
       //     in legacy handlers?
       sourceMap: options.sourceMap,
-      bare: !! bare
+      // intentionally preserve a possible `undefined` value for files
+      // in apps, rather than convert it into `false` via `!!`
+      lazy: self._isLazy(options),
+      bare: !! self._getOption("bare", options),
+      mainModule: !! self._getOption("mainModule", options),
     });
   }
 
@@ -420,7 +489,8 @@ class ResourceSlot {
       path: options.path,
       servePath: self.packageSourceBatch.unibuild.pkg._getServePath(
         options.path),
-      hash: sha1(options.data)
+      hash: sha1(options.data),
+      lazy: self._isLazy(options),
     });
   }
 
@@ -443,19 +513,25 @@ class ResourceSlot {
 
     self.outputResources.push({
       type: options.section,
-      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8')
+      data: new Buffer(files.convertToStandardLineEndings(options.data), 'utf8'),
+      lazy: self._isLazy(options),
     });
   }
 }
 
-class PackageSourceBatch {
-  constructor(unibuild, processor, {linkerCacheDir}) {
+export class PackageSourceBatch {
+  constructor(unibuild, processor, {
+    sourceRoot,
+    linkerCacheDir,
+  }) {
     const self = this;
     buildmessage.assertInJob();
 
     self.unibuild = unibuild;
     self.processor = processor;
+    self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
+
     var sourceProcessorSet = self._getSourceProcessorSet();
     self.resourceSlots = [];
     unibuild.resources.forEach(function (resource) {
@@ -489,6 +565,47 @@ class PackageSourceBatch {
       }
       self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
     });
+
+    // Compute imports by merging the exports of all of the packages we
+    // use. Note that in the case of conflicting symbols, later packages get
+    // precedence.
+    //
+    // We don't get imports from unordered dependencies (since they may not be
+    // defined yet) or from weak/debugOnly dependencies (because the meaning of
+    // a name shouldn't be affected by the non-local decision of whether or not
+    // an unrelated package in the target depends on something).
+    self.importedSymbolToPackageName = {}; // map from symbol to supplying package name
+    self.usedPackageNames = {};
+
+    compiler.eachUsedUnibuild({
+      dependencies: self.unibuild.uses,
+      arch: self.processor.arch,
+      isopackCache: self.processor.isopackCache,
+      skipUnordered: true,
+      // don't import symbols from debugOnly and prodOnly packages, because
+      // if the package is not linked it will cause a runtime error.
+      // the code must access them with `Package["my-package"].MySymbol`.
+      skipDebugOnly: true,
+      skipProdOnly: true,
+      // We only care about getting exports here, so it's OK if we get the Mac
+      // version when we're bundling for Linux.
+      allowWrongPlatform: true,
+    }, depUnibuild => {
+      _.each(depUnibuild.declaredExports, function (symbol) {
+        // Slightly hacky implementation of test-only exports.
+        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
+          self.importedSymbolToPackageName[symbol.name] = depUnibuild.pkg.name;
+        }
+      });
+
+      self.usedPackageNames[depUnibuild.pkg.name] = true;
+    });
+
+    self.useMeteorInstall =
+      _.isString(self.sourceRoot) && (
+        self.unibuild.pkg.name === "modules" ||
+        _.has(self.usedPackageNames, "modules")
+      );
   }
 
   _getSourceProcessorSet() {
@@ -514,20 +631,126 @@ class PackageSourceBatch {
     return sourceProcessorSet;
   }
 
+  // Returns a map from package names to arrays of JS output files.
+  static computeJsOutputFilesMap(sourceBatches) {
+    const map = new Map;
+    const pkgSourceBatches = [];
+    let appSourceBatch;
+
+    sourceBatches.forEach(batch => {
+      const name = batch.unibuild.pkg.name || null;
+      const inputFiles = [];
+
+      if (name) {
+        pkgSourceBatches.push(batch);
+      } else {
+        appSourceBatch = batch;
+      }
+
+      batch.resourceSlots.forEach(slot => {
+        inputFiles.push(...slot.jsOutputResources);
+      });
+
+      map.set(name, inputFiles);
+    });
+
+    if (! map.has("modules")) {
+      // In the unlikely event that no package is using the modules
+      // package, then the map is already complete, and we don't need to
+      // do any import scanning.
+      return map;
+    }
+
+    const allMissingNodeModules = Object.create(null);
+
+    function scan(batch) {
+      const name = batch.unibuild.pkg.name || null;
+      const isApp = ! name;
+
+      if (! batch.useMeteorInstall && ! isApp) {
+        // If this batch represents a package that does not use the module
+        // system, then we don't need to scan its dependencies.
+        return;
+      }
+
+      const scanner = new ImportScanner({
+        name,
+        bundleArch: batch.processor.arch,
+        sourceRoot: batch.sourceRoot,
+        usedPackageNames: batch.usedPackageNames,
+        nodeModulesPath: batch.unibuild.nodeModulesPath,
+        watchSet: batch.unibuild.watchSet,
+      });
+
+      if (batch.useMeteorInstall) {
+        scanner.addInputFiles(map.get(name));
+
+        scanner.getOutputFiles().forEach(file => {
+          if (file.missingNodeModules) {
+            _.extend(allMissingNodeModules, file.missingNodeModules);
+          }
+        });
+      }
+
+      if (isApp) {
+        scanner.addNodeModules(allMissingNodeModules);
+
+        const appFilesWithoutNodeModules = [];
+
+        scanner.getOutputFiles().forEach(file => {
+          const parts = file.installPath.split("/");
+          const nodeModulesIndex = parts.indexOf("node_modules");
+
+          if (nodeModulesIndex === -1 || (nodeModulesIndex === 0 &&
+                                          parts[1] === "meteor")) {
+            appFilesWithoutNodeModules.push(file);
+          } else {
+            // This file is going to be installed in a node_modules
+            // directory, so we move it to the modules bundle so that it
+            // can be imported by any package that uses the modules
+            // package. Note that this includes all files within any
+            // node_modules directory in the app, even though packages in
+            // client/node_modules will not be importable by Meteor
+            // packages, because it's important for all npm packages in
+            // the app to share the same limited scope (i.e. the scope of
+            // the modules package).
+            map.get("modules").push(file);
+          }
+        });
+
+        map.set(null, appFilesWithoutNodeModules);
+
+      } else {
+        map.set(name, scanner.getOutputFiles());
+      }
+    }
+
+    pkgSourceBatches.forEach(scan);
+
+    if (appSourceBatch) {
+      scan(appSourceBatch);
+    }
+
+    return map;
+  }
+
   // Called by bundler's Target._emitResources.  It returns the actual resources
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources() {
-    const self = this;
+  getResources(jsResources) {
     buildmessage.assertInJob();
 
-    var flatten = function (arrays) {
+    function flatten(arrays) {
       return Array.prototype.concat.apply([], arrays);
-    };
-    var resources = flatten(_.pluck(self.resourceSlots, 'outputResources'));
-    var jsResources = flatten(_.pluck(self.resourceSlots, 'jsOutputResources'));
-    Array.prototype.push.apply(resources, self._linkJS(jsResources));
+    }
+
+    const resources = flatten(_.pluck(this.resourceSlots, 'outputResources'));
+
+    resources.push(...this._linkJS(jsResources || flatten(
+      _.pluck(this.resourceSlots, 'jsOutputResources')
+    )));
+
     return resources;
   }
 
@@ -535,60 +758,29 @@ class PackageSourceBatch {
     const self = this;
     buildmessage.assertInJob();
 
-    var isopackCache = self.processor.isopackCache;
     var bundleArch = self.processor.arch;
-
-    // Compute imports by merging the exports of all of the packages we
-    // use. Note that in the case of conflicting symbols, later packages get
-    // precedence.
-    //
-    // We don't get imports from unordered dependencies (since they may not be
-    // defined yet) or from weak/debugOnly dependencies (because the meaning of
-    // a name shouldn't be affected by the non-local decision of whether or not
-    // an unrelated package in the target depends on something).
-    var imports = {}; // map from symbol to supplying package name
-
-    var addImportsForUnibuild = function (depUnibuild) {
-      _.each(depUnibuild.declaredExports, function (symbol) {
-        // Slightly hacky implementation of test-only exports.
-        if (! symbol.testOnly || self.unibuild.pkg.isTest) {
-          imports[symbol.name] = depUnibuild.pkg.name;
-        }
-      });
-    };
-    compiler.eachUsedUnibuild({
-      dependencies: self.unibuild.uses,
-      arch: bundleArch,
-      isopackCache: isopackCache,
-      skipUnordered: true,
-      // don't import symbols from debugOnly and prodOnly packages, because
-      // if the package is not linked it will cause a runtime error.
-      // the code must access them with `Package["my-package"].MySymbol`.
-      skipDebugOnly: true,
-      skipProdOnly: true,
-      // We only care about getting exports here, so it's OK if we get the Mac
-      // version when we're bundling for Linux.
-      allowWrongPlatform: true,
-    }, addImportsForUnibuild);
 
     // Run the linker.
     const isApp = ! self.unibuild.pkg.name;
+    const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
       useGlobalNamespace: isApp,
+      useMeteorInstall: self.useMeteorInstall,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!
-      combinedServePath: isApp ? null :
+      combinedServePath: isApp ? "/app.js" :
         "/packages/" + colonConverter.convert(
           self.unibuild.pkg.name +
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
       declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
-      imports: imports,
+      imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       importStubServePath: isApp && '/packages/global-imports.js',
-      includeSourceMapInstructions: archinfo.matches(self.unibuild.arch, "web")
+      includeSourceMapInstructions: isWeb,
+      noLineNumbers: !isWeb
     };
 
     const cacheKey = sha1(JSON.stringify({
@@ -644,6 +836,9 @@ class PackageSourceBatch {
         if (CACHE_DEBUG) {
           console.log('LINKER DISK CACHE HIT:', linkerOptions.name, bundleArch);
         }
+        // Add the bufferized value of diskCached to the in-memory LRU cache
+        // so we don't have to go to disk next time.
+        LINKER_CACHE.set(cacheKey, diskCached);
         return diskCached;
       }
     }
@@ -706,4 +901,13 @@ _.each([
     "PackageSourceBatch#" + method,
     proto[method]
   );
+});
+
+// static methods to measure in profile
+_.each([
+  "computeJsOutputFilesMap"
+], method => {
+  PackageSourceBatch[method] = Profile(
+    "PackageSourceBatch." + method,
+    PackageSourceBatch[method]);
 });

@@ -9,7 +9,7 @@ Package.registerBuildPlugin({
   sources: ['plugin/compile-coffeescript.js'],
   npmDependencies: {
     "coffee-script": "1.9.2",
-    "source-map": "0.4.2"
+    "source-map": "0.5.3"
   }
 });
 

@@ -1,19 +1,29 @@
 var PV = PackageVersion;
 var CS = ConstraintSolver;
 
-// A CatalogLoader populates the CatalogCache from the Catalog.  When
-// running unit tests with no Catalog and canned data for the
-// CatalogCache, there will be no CatalogLoader.
+// A CatalogLoader does the work of populating a CatalogCache from the
+// Catalog.  When you run a unit test with canned Catalog data, there is
+// a CatalogCache but no CatalogLoader.
 //
-// Fine-grained Loading: While we don't currently support loading only
-// some versions of a package, CatalogLoader is meant to be extended
-// to support incrementally loading individual package versions.  It
-// has no concept of a "loaded package," for example, just a loaded
-// package version.  CatalogLoader's job, in principle, is to load
-// package versions efficiently, no matter the access pattern, by
-// making the right catalog calls and doing the right caching.
-// Calling a catalog method generally means running a SQLite query,
-// which could be time-consuming.
+// CatalogLoader acts as a minor cache layer between CatalogCache and
+// the Catalog, because going to the Catalog generally means going to
+// SQLite, i.e. disk, while caching a version in the CatalogCache means
+// that it is available to the solver.  CatalogLoader's private cache
+// allows it to over-read from the Catalog so that it can mediate
+// between the granularity provided by the Catalog and the versions
+// requested by the solver.
+//
+// We rely on the following `catalog` methods:
+//
+// * getSortedVersionRecords(packageName) ->
+//     [{packageName, version, dependencies}]
+//
+//   Where `dependencies` is a map from packageName to
+//   an object of the form `{ constraint: String|null,
+//   references: [{arch: String, optional "weak": true}] }`.
+//
+// * getVersion(packageName, version) ->
+//   {packageName, version, dependencies}
 
 CS.CatalogLoader = function (fromCatalog, toCatalogCache) {
   var self = this;
@@ -23,15 +33,6 @@ CS.CatalogLoader = function (fromCatalog, toCatalogCache) {
 
   self._sortedVersionRecordsCache = {};
 };
-
-// We rely on the following `catalog` methods:
-//
-// * getSortedVersionRecords(packageName) ->
-//     [{packageName, version, dependencies}]
-//
-//   Where `dependencies` is a map from packageName to
-//   an object of the form `{ constraint: String|null,
-//   references: [{arch: String, optional "weak": true}] }`.
 
 var convertDeps = function (catalogDeps) {
   return _.map(catalogDeps, function (dep, pkg) {
@@ -57,6 +58,26 @@ CS.CatalogLoader.prototype._getSortedVersionRecords = function (pkg) {
   }
 
   return this._sortedVersionRecordsCache[pkg];
+};
+
+CS.CatalogLoader.prototype.loadSingleVersion = function (pkg, version) {
+  var self = this;
+  var cache = self.catalogCache;
+  if (! cache.hasPackageVersion(pkg, version)) {
+    var rec;
+    if (_.has(self._sortedVersionRecordsCache, pkg)) {
+      rec = _.find(self._sortedVersionRecordsCache[pkg],
+                   function (r) {
+                     return r.version === version;
+                   });
+    } else {
+      rec = self.catalog.getVersion(pkg, version);
+    }
+    if (rec) {
+      var deps = convertDeps(rec.dependencies);
+      cache.addPackageVersion(pkg, version, deps);
+    }
+  }
 };
 
 CS.CatalogLoader.prototype.loadAllVersions = function (pkg) {

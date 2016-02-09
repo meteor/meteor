@@ -20,7 +20,7 @@ import cordova_util from 'cordova-lib/src/cordova/util.js';
 import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.js';
 import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
-import { AVAILABLE_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
+import { CORDOVA_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl,
   installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
@@ -228,7 +228,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
   // Running
 
-  async run(platform, isDevice, options = [], extraPaths) {
+  async run(platform, isDevice, options = [], extraPaths = []) {
     options.push(isDevice ? '--device' : '--emulator');
 
     const env = this.defaultEnvWithPathsAdded(...extraPaths);
@@ -392,7 +392,7 @@ from Cordova project`, async () => {
 
     for (platform of installedPlatforms) {
       if (!_.contains(platforms, platform) &&
-        _.contains(AVAILABLE_PLATFORMS, platform)) {
+        _.contains(CORDOVA_PLATFORMS, platform)) {
         this.removePlatform(platform);
       }
     }

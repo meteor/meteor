@@ -89,7 +89,7 @@ registered with [`Accounts.onResetPasswordLink`](#Accounts-onResetPasswordLink)
 will be called.
 
 If you are using the [`accounts-ui` package](#accountsui), this is handled
-automatically. Otherwise, it is your responsiblity to prompt the user for the
+automatically. Otherwise, it is your responsibility to prompt the user for the
 new password and call `resetPassword`.
 
 {{> autoApiBox "Accounts.resetPassword"}}

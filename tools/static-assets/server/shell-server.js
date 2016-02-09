@@ -6,7 +6,7 @@ var net = require("net");
 var tty = require("tty");
 var vm = require("vm");
 var _ = require("underscore");
-var INFO_FILE_MODE = 0600; // Only the owner can read or write.
+var INFO_FILE_MODE = parseInt("600", 8); // Only the owner can read or write.
 var EXITING_MESSAGE =
   // Exported so that ./client.js can know what to expect.
   exports.EXITING_MESSAGE = "Shell exiting...";

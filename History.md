@@ -1,4 +1,61 @@
-## v.NEXT
+## v1.3
+
+### ES2015/Modules
+
+* Enable ES2015 and CommonJS modules in Meteor apps and packages, on
+  both client and server. Also let you install modules in apps and
+  package by running `npm install`. XXX link to paper document
+
+* Enable ES2015 generators and ES2016 async/await in the `ecmascript`
+  package.
+
+* Inherit static getters and setters in subclasses, when using the
+  `ecmascript` package. #5624
+
+* Report full file paths on compiler errors when using the
+  `ecmascript` package. #5551
+
+* Now possible to `import` or `require` files with a `.json` file
+  extension. #5810
+
+* `process.env.NODE_ENV` is now defined on both client and server as
+  either `development` or `production`, which also determines the boolean
+  flags `Meteor.isDevelopment` and `Meteor.isProduction`.
+
+* Absolute identifiers for app modules no longer have the `/app/` prefix,
+  and absolute identifiers for Meteor packages now have the prefix
+  `/node_modules/meteor/` instead of just `/node_modules/`, meaning you
+  should `import {Blaze} from "meteor/blaze"` instead of `from "blaze"`.
+
+* Package variables imported by application code are once again exposed
+  globally, allowing them to be accessed from the browser console or from
+  `meteor shell`. #5868
+
+* Fixed global variable assignment analysis during linking. #5870 #5819
+
+* Changes to files in node_modules will now trigger a restart of the
+  development server, just like any other file changes. #5815
+
+* The meteor package now exports a `global` variable (a la Node) that
+  provides a reliable reference to the global object for all Meteor code.
+
+* Packages in local node_modules directories now take precedence over
+  Meteor packages of the same name. #5933
+
+* Upgraded `babel-compiler` to Babel 6, with the following set of plugins:
+  https://github.com/meteor/babel-preset-meteor/blob/master/index.js
+
+* Lazy CSS modules may now be imported by JS: 12c946ee651a93725f243f790c7919de3d445a19
+
+* Packages in the top-level node_modules directory of an app can now be
+  imported by Meteor packages: c631d3ac35f5ca418b93c454f521989855b8ec72
+
+* Added support for wildcard import and export statements. #5872 #5897
+
+### Performance
+
+* Don't reload package catalog from disk on rebuilds unless package
+  depedencies changed. #5747
 
 * Don't reload package catalog from disk on rebuilds unless package
   depedencies changed. #5747
@@ -6,16 +63,90 @@
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
-* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS
-  minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these
-  2 minifiers.
+### Platform
 
-* Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It
-  will now error if referenced from the client at all.
+* Upgrade to Node v0.10.41.
+
+* Allow all types of URLs that npm supports in `Npm.depends`
+  declarations.
+
+* Split up `standard-minifiers` in separate CSS
+  (`standard-minifiers-css`) and JS minifiers
+  (`standard-minifiers-js`). `standard-minifiers` now acts as an
+  umbrella package for these 2 minifiers.
+
+* Allow piping commands to `meteor shell` via STDIN. #5575
+
+* Let users set the CAFILE environment variable to override the SSL
+  root certificate list. #4757 #5523
+
+### Cordova
+
+* Don't always download a new version of a Cordova app when it is
+  first run.
+
+* In Cordova apps, `Meteor.startup()` now correctly waits for the
+  device to be ready before firing the callback.
+
+### Accounts
+
+* Make `Accounts.forgotPassword` treat emails as case insensitive, as
+  the rest of the accounts system does.
+
+### Blaze
+
+* Don't throw in certain cases when calling a template helper with an
+  empty data context. #5411 #5736
+
+### Uncategorized
+
+* Remove warning in the `simple-todos-react` example app. #5716
+
+* Fix interaction bwteen `browser-policy` and `oauth` packages. #5628
+
+* Add README.md to the `tinytest` package. #5750
+
+* Don't crash when calling `ReactiveDict.prototype.clear` if a
+  property with a value wasn't previously accessed. #5530 #5602
+
+* Move `DDPRateLimiter` to the server only, since it won't work if it
+  is called from the client. It will now error if referenced from the
+  client at all.
+
+* Don't call function more than once when passing a `Match.Where`
+  argument to `check`. #5630 #5651
+
+* Fix empty object argument check in `this.subscribe` in
+  templates. #5620
+
+* Make `HTTP.call` not crash on undefined content. #5565 #5601
+
+* Return observe handle from
+  `Mongo.Collection.prototype._publishCursor`. #4983 #5615
+
+* Add 'Did you mean?' reminders for some CLI commands to help Rails
+  developers. #5593
+
+* Make internal shell scripts compatible with other Unix-like
+  systems. #5585
+
+* Add a `_pollingInterval` option to `coll.find()` that can be used in
+  conjunction with `_disableOplog: true`. #5586
+
+* Expose Tinytest internals which can be used to extend it. #3541
+
+* Improve error message from `check` when passing in null. #5545
+
+* Detect new Facebook user-agent in the `spiderable` package. #5516
+
+* `check` will now check all keys of an object, including inherited ones #6140
 
 * Allow `git+` URL schemes for npm dependencies #844
 
-Patches contributed by GitHub users vereed, devgrok, ...
+Patches contributed by GitHub users vereed, mitar, nathan-muir,
+robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
+bySabi, mbrookes, TomFreudenberg, TechPlexEngineer, zacharydenton,
+AlexeyMK, gwendall, dandv, devgrok.
 
 
 ## v.1.2.1, 2015-Oct-26
