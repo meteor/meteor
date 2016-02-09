@@ -61,7 +61,7 @@ var packageJson = {
     eachline: "https://github.com/meteor/node-eachline/tarball/ff89722ff94e6b6a08652bf5f44c8fffea8a21da",
     pathwatcher: "4.1.0",
     'lru-cache': '2.6.4',
-    'cordova-lib': "5.4.1"
+    'cordova-lib': "6.0.0"
   }
 };
 
