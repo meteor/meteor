@@ -950,10 +950,11 @@ var getHeader = function (options) {
   if (options.combinedServePath || options.name) {
     chunks.push("/* Package reflection */\n");
     if (options.name) {
-      chunks.push("var PackageName = '" + options.name + "';\n");
+      chunks.push("var PackageName = " + JSON.stringify(options.name) + ";\n");
     }
     if (options.combinedServePath) {
-      chunks.push("var PackagePath = '" + options.combinedServePath.replace(/^\//, '') + "';\n");
+      chunks.push("var PackagePath = " +
+        JSON.stringify(options.combinedServePath.replace(/^\//, '')) + ";\n");
     }
     chunks.push("\n");
   }
