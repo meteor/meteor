@@ -7,13 +7,6 @@ let GCDWebServerRequestAttribute_FilePath = "GCDWebServerRequestAttribute_FilePa
 
 let localFileSystemPath = "/local-filesystem"
 
-// The range of listening ports to choose from. It should be large enough to
-// avoid collisions with other Meteor apps, but chosen to avoid collisions
-// with other apps or services on the device.
-// See https://support.apple.com/en-us/HT202944 for some common ports in
-// use by Apple services.
-let listeningPortRange: Range<UInt> = 12000...13000
-
 /// The number of seconds to wait for startup to complete, after which
 /// we revert to the last known good version
 let startupTimeoutInterval = 10.0
@@ -86,10 +79,9 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
       localServerPort = UInt(portString) ?? 0
     // In all other cases, we select a listening port based on the appId to
     // hopefully avoid collisions between Meteor apps installed on the same device
-    } else {
-      let hashValue = configuration.appId?.hashValue ?? 0
-      localServerPort = listeningPortRange.startIndex +
-        (UInt(bitPattern: hashValue) % UInt(listeningPortRange.count))
+    } else if let viewController = self.viewController as? CDVViewController,
+        let port = NSURLComponents(string: viewController.startPage)?.port {
+      localServerPort = port.unsignedIntegerValue
     }
 
     do {
@@ -478,7 +470,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     } else {
       return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_Forbidden.rawValue)
     }
-    
+
     if !NSFileManager.defaultManager().fileExistsAtPath(filePath) {
       NSLog("File not found: \(filePath)")
       return GCDWebServerResponse(statusCode: GCDWebServerClientErrorHTTPStatusCode.HTTPStatusCode_NotFound.rawValue)
@@ -487,7 +479,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     // Support partial requests using byte ranges
     let response = GCDWebServerFileResponse(file: filePath, byteRange: request.byteRange)
     response.setValue("bytes", forAdditionalHeader: "Accept-Ranges")
-    
+
     if shouldSetCookie {
       response.setValue(authTokenKeyValuePair, forAdditionalHeader: "Set-Cookie")
     }

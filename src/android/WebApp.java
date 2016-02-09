@@ -5,6 +5,7 @@ import android.net.Uri;
 import android.util.Log;
 
 import org.apache.cordova.CallbackContext;
+import org.apache.cordova.Config;
 import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
@@ -28,7 +29,7 @@ public class WebApp extends CordovaPlugin {
     private Uri wwwDirectoryUri;
     private Uri applicationDirectoryUri;
 
-    private final int localServerPort = 12000;
+    private int localServerPort = 0;
     private List<WebResourceHandler> resourceHandlers;
 
     private AssetBundle currentAssetBundle;
@@ -42,6 +43,10 @@ public class WebApp extends CordovaPlugin {
 
         wwwDirectoryUri = Uri.parse("file:///android_asset/www");
         applicationDirectoryUri = Uri.withAppendedPath(wwwDirectoryUri, "application");
+
+        // FIXME: Find a way to get the launchUrl without using
+        // the deprecated Config singleton
+        localServerPort = Uri.parse(Config.getStartUrl()).getPort();
 
         resourceHandlers = new ArrayList<WebResourceHandler>();
 
