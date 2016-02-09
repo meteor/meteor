@@ -57,27 +57,27 @@ const pinnedPlatformVersions = {
 // when we update to a newer version of cordova-lib.
 const pinnedPluginVersions = {
   "cordova-plugin-battery-status": "1.1.1",
-  "cordova-plugin-camera": "2.0.0",
+  "cordova-plugin-camera": "2.1.0",
   "cordova-plugin-console": "1.0.2",
-  "cordova-plugin-contacts": "2.0.0",
-  "cordova-plugin-device": "1.1.0",
+  "cordova-plugin-contacts": "2.0.1",
+  "cordova-plugin-device": "1.1.1",
   "cordova-plugin-device-motion": "1.2.0",
   "cordova-plugin-device-orientation": "1.0.2",
   "cordova-plugin-dialogs": "1.2.0",
-  "cordova-plugin-file": "4.0.0",
-  "cordova-plugin-file-transfer": "1.4.0",
-  "cordova-plugin-geolocation": "2.0.0",
+  "cordova-plugin-file": "4.1.0",
+  "cordova-plugin-file-transfer": "1.5.0",
+  "cordova-plugin-geolocation": "2.1.0",
   "cordova-plugin-globalization": "1.0.2",
-  "cordova-plugin-inappbrowser": "1.1.0",
+  "cordova-plugin-inappbrowser": "1.2.1",
   "cordova-plugin-legacy-whitelist": "1.1.1",
-  "cordova-plugin-media": "2.0.0",
-  "cordova-plugin-media-capture": "1.1.0",
-  "cordova-plugin-network-information": "1.1.0",
-  "cordova-plugin-splashscreen": "3.0.0",
-  "cordova-plugin-statusbar": "2.0.0",
-  "cordova-plugin-test-framework": "1.1.0",
-  "cordova-plugin-vibration": "2.0.0",
-  "cordova-plugin-whitelist": "1.2.0"
+  "cordova-plugin-media": "2.1.0",
+  "cordova-plugin-media-capture": "1.2.0",
+  "cordova-plugin-network-information": "1.2.0",
+  "cordova-plugin-splashscreen": "3.1.0",
+  "cordova-plugin-statusbar": "2.1.0",
+  "cordova-plugin-test-framework": "1.1.1",
+  "cordova-plugin-vibration": "2.1.0",
+  "cordova-plugin-whitelist": "1.2.1"
 }
 
 export class CordovaProject {
