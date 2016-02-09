@@ -77,6 +77,13 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
         self.didFailWithError(WebAppError.DownloadFailure(reason: "Error downloading asset manifest", underlyingError: error))
         return
       }
+      
+      guard let response = response as? NSHTTPURLResponse else { return }
+
+      if !response.isSuccessful {
+        self.didFailWithError(WebAppError.DownloadFailure(reason: "Non-success status code for asset manifest", underlyingError: nil))
+        return
+      }
 
       let manifest: AssetManifest
       do {

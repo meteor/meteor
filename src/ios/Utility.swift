@@ -85,3 +85,9 @@ extension NSURL {
     }
   }
 }
+
+extension NSHTTPURLResponse {
+  var isSuccessful: Bool {
+    return (200..<300).contains(statusCode)
+  }
+}
