@@ -47,7 +47,7 @@ function log(...args) {
 // so we we can update them independently (e.g. use Cordova iOS 4.0.1
 // with Cordova 5.4.1)
 const pinnedPlatformVersions = {
-  'android': '5.0.0',
+  'android': '5.1.0',
   'ios': '4.0.1'
 }
 
