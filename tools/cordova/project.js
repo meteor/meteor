@@ -201,7 +201,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
   // Running
 
-  async run(platform, isDevice, options = [], extraPaths) {
+  async run(platform, isDevice, options = [], extraPaths = []) {
     options.push(isDevice ? '--device' : '--emulator');
 
     const env = this.defaultEnvWithPathsAdded(...extraPaths);
