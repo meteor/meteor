@@ -13,6 +13,8 @@ Documentation is available at http://docs.meteor.com/.
 
 Try the getting started [tutorial](https://www.meteor.com/try).
 
+# Part B
+
 ## Quick Start
 
 Install Meteor:
