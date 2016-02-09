@@ -682,10 +682,10 @@ export class PackageSourceBatch {
         watchSet: batch.unibuild.watchSet,
       });
 
-      if (batch.useMeteorInstall) {
-        scanner.addInputFiles(map.get(name));
+      scanner.addInputFiles(map.get(name));
 
-        scanner.getOutputFiles().forEach(file => {
+      if (batch.useMeteorInstall) {
+        scanner.scanImports().getOutputFiles().forEach(file => {
           if (file.missingNodeModules) {
             _.extend(allMissingNodeModules, file.missingNodeModules);
           }

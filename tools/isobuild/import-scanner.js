@@ -90,6 +90,10 @@ export default class ImportScanner {
       }
     });
 
+    return this;
+  }
+
+  scanImports() {
     this.outputFiles.forEach(file => {
       if (! file.lazy || file.imported) {
         this._scanFile(file);
