@@ -28,7 +28,56 @@ To harness the module system and ensure that our code only runs when we ask it t
 
 Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create two files, `client/main.js` and `server/main.js`, to define explicit entry points. Meteor ensures that any file in a directory named `server/` will only be available on the server, and likewise for `client/`.
 
-From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app loads. This code will also do any configuration necessary for the packages you are using in your app.
+From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app loads. This code will also do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
+
+<h3 id="example-app-structure">Example application structure</h3>
+
+To start, let's look at the specific example of the Todos example application, which is a great implementation of the details we'll discuss below. Here's an overview of the directory structure:
+
+```
+imports/
+  startup/
+    client/
+      routes.js                   # set up all routes in the app
+    server/
+      fixtures.js                 # pre-fill the database if it's empty on startup
+      
+  api/
+    lists/                        # a unit of domain logic
+      server/
+        publications.js           # all list-related publications
+        publications.tests.js     # tests for the list publications
+      lists.js                    # definition of the Lists collection
+      lists.tests.js              # tests for the behavior of that collection
+      methods.js                  # methods related to lists
+      methods.tests.js            # tests for those methods
+      
+  ui/
+    components/                   # all reusable components in the application
+                                  # can be split by domain if there are many
+    layouts/                      # wrapper components for behaviour and visuals
+    pages/                        # entry points for rendering used by the router
+   
+client/
+  main.js                         # client entry point, imports all client code
+ 
+server/
+  main.js                         # server entry point, imports all server code
+```
+
+<h3 id="structuring-imports">Structuring imports</h3>
+
+Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split. 
+
+Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data.
+
+> Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that we need to separate these to demonstrate modularity.
+
+Within the `imports/ui` directory it typically makes sense to group files into directories based on the type of UI side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
+
+For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze UI component should be have its template HTML, JavaScript logic, and CSS rules in the same directory. A JavaScript module with some business logic should be co-located with the unit tests for that module.
+
+<h3 id="startup-files">Startup files</h3>
 
 In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the main entry point for the rest of the client application:
 
@@ -64,53 +113,6 @@ import '../imports/startup/server/security.js';
 // This defines all the collections, publications and methods that the application provides
 // as an API to the client.
 import '../imports/api/api.js';
-```
-
-<h3 id="structuring-imports">Structuring imports</h3>
-
-Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split. 
-
-Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data.
-
-> Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that we need to separate these to demonstrate modularity.
-
-Within the `imports/ui` directory it typically makes sense to group files into directories based on the type of UI side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
-
-For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze UI component should be have its template HTML, JavaScript logic, and CSS rules in the same directory. A JavaScript module with some business logic should be co-located with the unit tests for that module.
-
-<h3 id="example-app-structure">Example application structure</h3>
-
-Let's look at the specific example of the Todos example application, which combines everything we have discussed above. Here's an overview of the directory structure:
-
-```
-imports/
-  startup/
-    client/
-      routes.js                   # set up all routes in the app
-    server/
-      fixtures.js                 # pre-fill the database if it's empty on startup
-      
-  api/
-    lists/                        # a unit of domain logic
-      server/
-        publications.js           # all list-related publications
-        publications.tests.js     # tests for the list publications
-      lists.js                    # definition of the Lists collection
-      lists.tests.js              # tests for the behavior of that collection
-      methods.js                  # methods related to lists
-      methods.tests.js            # tests for those methods
-      
-  ui/
-    components/                   # all reusable components in the application
-                                  # can be split by domain if there are many
-    layouts/                      # wrapper components for behaviour and visuals
-    pages/                        # entry points for rendering used by the router
-   
-client/
-  main.js                         # client entry point, imports all client code
- 
-server/
-  main.js                         # server entry point, imports all server code
 ```
 
 <h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
