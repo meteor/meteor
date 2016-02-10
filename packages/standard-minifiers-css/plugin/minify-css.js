@@ -14,17 +14,19 @@ CssToolsMinifier.prototype.processFilesForBundle = function (files, options) {
 
   if (! files.length) return;
 
-  var merged = mergeCss(files);
-
+  // Don't merge or minify anything for development
   if (mode === 'development') {
-    files[0].addStylesheet({
-      data: merged.code,
-      sourceMap: merged.sourceMap,
-      path: 'merged-stylesheets.css'
+    files.forEach(function (file) {
+      file.addStylesheet({
+        data: file.getContentsAsBuffer(),
+        sourceMap: file.getSourceMap(),
+        path: file.getPathInBundle()
+      });
     });
     return;
   }
 
+  var merged = mergeCss(files);
   var minifiedFiles = CssTools.minifyCss(merged.code);
 
   if (files.length) {
