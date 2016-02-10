@@ -38,7 +38,11 @@ var Connection = function (url, options) {
     reloadWithOutstanding: false,
     supportedDDPVersions: DDPCommon.SUPPORTED_DDP_VERSIONS,
     retry: true,
-    respondToPings: true
+    respondToPings: true,
+    // When updates are coming within this ms interval, batch them together.
+    bufferedWritesInterval: 5,
+    // Flush buffers immediately if writes are happening continuously for more than this many ms.
+    bufferedWritesMaxAge: 500
   }, options);
 
   // If set, called when we reconnect, queuing method calls _before_ the
@@ -173,6 +177,18 @@ var Connection = function (url, options) {
   self._updatesForUnknownStores = {};
   // if we're blocking a migration, the retry func
   self._retryMigrate = null;
+
+  self.__flushBufferedWrites = Meteor.bindEnvironment(
+    self._flushBufferedWrites, "flushing DDP buffered writes", self);
+  // Collection name -> array of messages.
+  self._bufferedWrites = {};
+  // When current buffer of updates must be flushed at, in ms timestamp.
+  self._bufferedWritesFlushAt = null;
+  // Timeout handle for the next processing of all pending writes
+  self._bufferedWritesFlushHandle = null;
+
+  self._bufferedWritesInterval = options.bufferedWritesInterval;
+  self._bufferedWritesMaxAge = options.bufferedWritesMaxAge;
 
   // metadata for subscriptions.  Map from sub ID to object with keys:
   //   - id
@@ -1183,9 +1199,6 @@ _.extend(Connection.prototype, {
   _livedata_data: function (msg) {
     var self = this;
 
-    // collection name -> array of messages
-    var updates = {};
-
     if (self._waitingForQuiescence()) {
       self._messagesBufferedUntilQuiescence.push(msg);
 
@@ -1206,12 +1219,51 @@ _.extend(Connection.prototype, {
       // We'll now process and all of our buffered messages, reset all stores,
       // and apply them all at once.
       _.each(self._messagesBufferedUntilQuiescence, function (bufferedMsg) {
-        self._processOneDataMessage(bufferedMsg, updates);
+        self._processOneDataMessage(bufferedMsg, self._bufferedWrites);
       });
       self._messagesBufferedUntilQuiescence = [];
     } else {
-      self._processOneDataMessage(msg, updates);
+      self._processOneDataMessage(msg, self._bufferedWrites);
     }
+
+    // Immediately flush writes when:
+    //  1. Buffering is disabled. Or;
+    //  2. any non-(added/changed/removed) message arrives.
+    var standardWrite = _.include(['added', 'changed', 'removed'], msg.msg);
+    if (self._bufferedWritesInterval === 0 || !standardWrite) {
+      self._flushBufferedWrites();
+      return;
+    }
+
+    if (self._bufferedWritesFlushAt === null) {
+      self._bufferedWritesFlushAt = new Date().valueOf() + self._bufferedWritesMaxAge;
+    }
+    else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
+      self._flushBufferedWrites();
+      return;
+    }
+
+    if (self._bufferedWritesFlushHandle) {
+      clearTimeout(self._bufferedWritesFlushHandle);
+    }
+    self._bufferedWritesFlushHandle = setTimeout(self.__flushBufferedWrites,
+                                                      self._bufferedWritesInterval);
+  },
+
+  _flushBufferedWrites: function () {
+    var self = this;
+    if (self._bufferedWritesFlushHandle) {
+      clearTimeout(self._bufferedWritesFlushHandle);
+      self._bufferedWritesFlushHandle = null;
+    }
+
+    self._bufferedWritesFlushAt = null;
+    self._performWrites(self._bufferedWrites);
+    self._bufferedWrites = {};
+  },
+
+  _performWrites: function(updates){
+    var self = this;
 
     if (self._resetStores || !_.isEmpty(updates)) {
       // Begin a transactional update of each store.
@@ -1489,6 +1541,11 @@ _.extend(Connection.prototype, {
     // id, result or error. error has error (code), reason, details
 
     var self = this;
+
+    // Lets make sure there are no buffered writes before returning result.
+    if (!_.isEmpty(self._bufferedWrites)) {
+      self._flushBufferedWrites();
+    }
 
     // find the outstanding request
     // should be O(1) in nearly all realistic use cases
