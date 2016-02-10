@@ -756,7 +756,7 @@ if (Meteor.isClient) {
     conn.apply('do_something', [], {noRetry: true}, function(error) {
       methodCallbackFired = true;
       // failure on reconnect should trigger an error.
-      if (error && error.error === 409) {
+      if (error && error.error === 'invocation-failed') {
         methodCallbackErrored = true;
       }
     });
