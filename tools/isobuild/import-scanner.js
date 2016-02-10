@@ -1,5 +1,5 @@
 import assert from "assert";
-import {isString, has, keys, each, without} from "underscore";
+import {isString, has, keys, each, map, without} from "underscore";
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
@@ -510,23 +510,46 @@ export default class ImportScanner {
   _resolvePkgJsonMain(dirPath, seenDirPaths) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
     const pkg = this._readPkgJson(pkgJsonPath);
+    if (! pkg) {
+      return null;
+    }
 
-    if (pkg && isString(pkg.main)) {
+    let main = pkg.main;
+
+    if (archMatches(this.bundleArch, "web") &&
+        isString(pkg.browser)) {
+      main = pkg.browser;
+    }
+
+    if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./
       // to be considered relative, so first we try simply appending it to
       // the directory path before falling back to a full resolve, which
       // might return a package from a node_modules directory.
-      const resolved = this._joinAndStat(dirPath, pkg.main) ||
+      const resolved = this._joinAndStat(dirPath, main) ||
         // The _tryToResolveImportedPath method takes a file object as its
         // first parameter, but only the .sourcePath property is ever
         // used, so we can get away with passing a fake directory file
         // object with only that property.
         this._tryToResolveImportedPath({
           sourcePath: dirPath,
-        }, pkg.main, seenDirPaths);
+        }, main, seenDirPaths);
 
       if (resolved) {
-        this._addPkgJsonToOutput(pkgJsonPath, pkg);
+        // Output a JS module that exports just the "name", "version", and
+        // "main" properties defined in the package.json file.
+        const pkgSubset = {
+          name: pkg.name,
+        };
+
+        if (has(pkg, "version")) {
+          pkgSubset.version = pkg.version;
+        }
+
+        pkgSubset.main = main;
+
+        this._addPkgJsonToOutput(pkgJsonPath, pkgSubset);
+
         return resolved;
       }
     }
@@ -536,13 +559,9 @@ export default class ImportScanner {
 
   _addPkgJsonToOutput(pkgJsonPath, pkg) {
     if (! has(this.absPathToOutputIndex, pkgJsonPath)) {
-      const data = new Buffer(
-        // Output a JS module that exports just the "name", "version", and
-        // "main" properties defined in the package.json file.
-        "exports.name = " + JSON.stringify(pkg.name) + ";\n" +
-        "exports.version = " + JSON.stringify(pkg.version) + ";\n" +
-        "exports.main = " + JSON.stringify(pkg.main) + ";\n"
-      );
+      const data = new Buffer(map(pkg, (value, key) => {
+        return `exports.${key} = ${JSON.stringify(value)};\n`;
+      }).join(""));
 
       const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
 
