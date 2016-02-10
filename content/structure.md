@@ -1,4 +1,7 @@
-# Application structure and code style
+---
+title: App structure and code style
+description: How to structure your Meteor app with modules, and some style guidelines about writing your code.
+---
 
 After reading this article, you'll know:
 
@@ -34,40 +37,40 @@ From these `main.js` files, typically you'd include some _startup_ code which wi
 
 To start, let's look at the specific example of the Todos example application, which is a great implementation of the details we'll discuss below. Here's an overview of the directory structure:
 
-```
+```sh
 imports/
   startup/
     client/
-      routes.js                   # set up all routes in the app
+      routes.js                # set up all routes in the app
     server/
-      fixtures.js                 # pre-fill the database if it's empty on startup
-      
+      fixtures.js              # fill the DB with example data on startup
+
   api/
-    lists/                        # a unit of domain logic
+    lists/                     # a unit of domain logic
       server/
-        publications.js           # all list-related publications
-        publications.tests.js     # tests for the list publications
-      lists.js                    # definition of the Lists collection
-      lists.tests.js              # tests for the behavior of that collection
-      methods.js                  # methods related to lists
-      methods.tests.js            # tests for those methods
-      
+        publications.js        # all list-related publications
+        publications.tests.js  # tests for the list publications
+      lists.js                 # definition of the Lists collection
+      lists.tests.js           # tests for the behavior of that collection
+      methods.js               # methods related to lists
+      methods.tests.js         # tests for those methods
+
   ui/
-    components/                   # all reusable components in the application
-                                  # can be split by domain if there are many
-    layouts/                      # wrapper components for behaviour and visuals
-    pages/                        # entry points for rendering used by the router
-   
+    components/                # all reusable components in the application
+                               # can be split by domain if there are many
+    layouts/                   # wrapper components for behaviour and visuals
+    pages/                     # entry points for rendering used by the router
+
 client/
-  main.js                         # client entry point, imports all client code
- 
+  main.js                      # client entry point, imports all client code
+
 server/
-  main.js                         # server entry point, imports all server code
+  main.js                      # server entry point, imports all server code
 ```
 
 <h3 id="structuring-imports">Structuring imports</h3>
 
-Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split. 
+Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split.
 
 Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data.
 
@@ -147,7 +150,7 @@ You can also share module code (like `imports/some-module`) in a similar fashion
 
 <h3 id="sharing-data">Sharing Data</h3>
 
-Another important consideration is how you'll share the data between your different applications. 
+Another important consideration is how you'll share the data between your different applications.
 
 The simplest approach is to point both applications at the same `MONGO_URL` and allow both applications to read and write from the database directly. This can work well thanks to Meteor's from-the-ground-up support for reactivity and realtime changes in the database (when one app changes the some data, a user of the other will see the changes quickly thanks to the oplog driver).
 
@@ -404,4 +407,3 @@ show.less
 The whole directory or path should indicate that these templates are related to the `Lists` module, so it's not necessary to reproduce that information in the file name. Read more about directory structure [above](#javascript-structure).
 
 If you are writing your UI in React, you don't need to use the underscore-split names because you can import and export your components using the JavaScript module system.
-
