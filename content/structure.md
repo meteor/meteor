@@ -92,7 +92,7 @@ imports/
         publications.js -- all list-related publications
         publications.tests.js -- tests for the list publications
       lists.js -- the definition of the Lists collection and behavior
-      lists.test.js -- tests for that behavior
+      lists.tests.js -- tests for that behavior
       methods.js -- methods on lists
       methods.tests.js -- tests for those methods
   ui/
