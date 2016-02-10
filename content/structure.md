@@ -6,11 +6,11 @@ After reading this article, you'll know:
 2. How to organize your application both for small and larger applications.
 3. How to format your code and name the parts of your application in consistent and maintainable ways.
 
-<h2 id="meteor-structure">Meteor Application Structure</h2>
+<h2 id="meteor-structure">Meteor application structure</h2>
 
 Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and _common_ code that runs in both places. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and includes some application structure conventions to make it easier to understand which code runs where.
 
-<h3 id="es2015-modules">ES2015 Modules</h3>
+<h3 id="es2015-modules">ES2015 modules</h3>
 
 As of version 1.3, Meteor ships with full support for [ES2015 modules](https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import). The ES2015 module standard is the replacement for [CommonJS](http://requirejs.org/docs/commonjs.html) and [AMD](https://github.com/amdjs/amdjs-api), which are commonly used JavaScript module format and loading systems.
 
@@ -66,7 +66,7 @@ import '../imports/startup/server/security.js';
 import '../imports/api/api.js';
 ```
 
-<h3 id="structuring-imports"</h3>
+<h3 id="structuring-imports">Structuring imports</h3>
 
 Once you've placed all files in the `imports/` directory, it makes sense to start thinking about how best to organize it. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data / business logic related code from rendering code. We suggest an `imports/api` and `imports/ui` as a logical split. 
 
@@ -78,7 +78,7 @@ Within the `imports/ui` directory it typically makes sense to group files into d
 
 For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze JavaScript component should be co-located with it's template HTML and CSS definition. A library file should be co-located with any unit tests defined for the file.
 
-<h3 id="example-app-structure">Example Application Structure</h3>
+<h3 id="example-app-structure">Example application structure</h3>
 
 Combining what's discussed above, we can consider the application structure of the Todos example application. The folders of interest are:
 
