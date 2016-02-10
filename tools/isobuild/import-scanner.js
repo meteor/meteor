@@ -17,6 +17,17 @@ import {
   convertToPosixPath,
 } from "../fs/files.js";
 
+const nativeModulesMap = Object.create(null);
+
+Object.keys(process.binding("natives")).forEach(id => {
+  if (id === "freelist" ||
+      id.startsWith("internal/")) {
+    return;
+  }
+
+  nativeModulesMap[id] = true;
+});
+
 // Default handlers for well-known file extensions.
 const extensions = {
   ".js"(data) {
@@ -479,6 +490,14 @@ export default class ImportScanner {
 
   _resolveNodeModule(file, id) {
     let resolved = null;
+    const isNative = has(nativeModulesMap, id);
+
+    if (isNative && archMatches(this.bundleArch, "os")) {
+      // Forbid installing any server module with the same name as a
+      // native Node module.
+      return null;
+    }
+
     let dir = pathJoin(this.sourceRoot, file.sourcePath);
 
     do {
@@ -493,7 +512,6 @@ export default class ImportScanner {
     }
 
     if (! resolved) {
-      const parts = id.split("/");
       // If the imported identifier is neither absolute nor relative, but
       // top-level, then it might be satisfied by a package installed in
       // the top-level node_modules directory, and we should record the

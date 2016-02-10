@@ -165,14 +165,21 @@ describe("native node_modules", () => {
   });
 
   Meteor.isClient &&
-  it("cannot be imported on the client", () => {
-    let error;
-    try {
-      require("fs");
-    } catch (expected) {
-      error = expected;
-    }
-    assert.ok(error instanceof Error);
+  it("are imported as stubs on the client", () => {
+    const inherits = require("util").inherits;
+    assert.strictEqual(typeof inherits, "function");
+    assert.strictEqual(require("util"),
+                       require("util/util.js"));
+  });
+
+  Meteor.isServer &&
+  it("cannot be overridden on the server", () => {
+    assert.strictEqual(typeof require("repl").start, "function");
+  });
+
+  Meteor.isClient &&
+  it("can be overridden on the client", () => {
+    assert.strictEqual(require("repl").notEmpty, true);
   });
 });
 
