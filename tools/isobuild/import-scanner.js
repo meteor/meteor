@@ -125,8 +125,11 @@ export default class ImportScanner {
   }
 
   getOutputFiles(options) {
-    // Return all installable output files.
-    return this.outputFiles.filter(file => !! file.installPath);
+    // Return all installable output files that are either eager or
+    // imported by another module.
+    return this.outputFiles.filter(file => {
+      return file.installPath && (! file.lazy || file.imported);
+    });
   }
 
   _findImportedModuleIdentifiers(file) {
@@ -306,9 +309,8 @@ export default class ImportScanner {
     }
 
     const dirs = this._splitPath(pathDirname(installPath));
-    const bundlingClientApp =
-      ! this.name && // Indicates we are bundling an app.
-      archMatches(this.bundleArch, "web");
+    const isApp = ! this.name;
+    const bundlingForWeb = archMatches(this.bundleArch, "web");
 
     for (let dir of dirs) {
       if (dir.charAt(0) === "." ||
@@ -319,12 +321,21 @@ export default class ImportScanner {
         return;
       }
 
-      if (bundlingClientApp && (dir === "server" ||
-                                dir === "private")) {
-        // If we're bundling an app for a client architecture, any files
-        // contained by a server-only directory that is not contained by
-        // a node_modules directory must be ignored.
-        return;
+      if (isApp) {
+        if (bundlingForWeb) {
+          if (dir === "server" ||
+              dir === "private") {
+            // If we're bundling an app for a client architecture, any files
+            // contained by a server-only directory that is not contained by
+            // a node_modules directory must be ignored.
+            return;
+          }
+        } else if (dir === "client") {
+          // If we're bundling an app for a server architecture, any files
+          // contained by a client-only directory that is not contained by
+          // a node_modules directory must be ignored.
+          return;
+        }
       }
 
       if (dir === "node_modules") {
