@@ -227,6 +227,20 @@ describe("Meteor packages", () => {
     const mtp = require("meteor/modules-test-package");
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
+
+  it("should expose their files for import", () => {
+    const osStub = require("meteor/modules-test-package/os-stub");
+
+    assert.strictEqual(
+      osStub.platform(),
+      "browser"
+    );
+
+    assert.strictEqual(
+      osStub.name,
+      "/node_modules/meteor/modules-test-package/os-stub.js"
+    );
+  });
 });
 
 describe("async functions", () => {

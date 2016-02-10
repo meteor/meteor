@@ -471,16 +471,13 @@ export default class ImportScanner {
 
     if (! resolved) {
       const parts = id.split("/");
-      if (parts[0] !== "meteor") { // Exclude meteor/... packages.
-        // If the imported identifier is neither absolute nor relative,
-        // but top-level, then it might be satisfied by a package
-        // installed in the top-level node_modules directory, and we
-        // should record the missing dependency so that we can include it
-        // in the app bundle.
-        const missing = file.missingNodeModules || Object.create(null);
-        missing[id] = true;
-        file.missingNodeModules = missing;
-      }
+      // If the imported identifier is neither absolute nor relative, but
+      // top-level, then it might be satisfied by a package installed in
+      // the top-level node_modules directory, and we should record the
+      // missing dependency so that we can include it in the app bundle.
+      const missing = file.missingNodeModules || Object.create(null);
+      missing[id] = true;
+      file.missingNodeModules = missing;
     }
 
     // If the dependency is still not resolved, it might be handled by the

@@ -5,6 +5,10 @@ Package.describe({
   documentation: 'README.md'
 });
 
+Npm.depends({
+  "os-browserify": "0.2.0"
+});
+
 Package.onUse(function(api) {
   api.use('ecmascript');
   api.use('templating');
