@@ -20,17 +20,17 @@ In Meteor, it is also simple and straightforward to use the `import` syntax to i
 
 Since this is a new feature introduced in Meteor 1.3, you will find a lot of code online that uses the older, more centralized conventions built around packages and apps declaring global symbols. This old system still works, so to opt-in to the new module system code must be placed in the `imports/` directory in your application. We expect a future release of Meteor will turn on modules by default for all code, because this is more aligned with how developers in the wider JavaScript community write their code.
 
-You can read about the module system in detail in the [`modules` package README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package.
+You can read about the module system in detail in the [`modules` package README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package, so most apps won't need to do anything to start using modules right away.
 
 <h2 id="javascript-structure">JavaScript file structure</h2>
 
-To harness the module system and ensure that our code only runs when we specify that it should, all code for libraries, components and APIs should be placed in the `imports/` directory. This will mean that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
+To harness the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed in the `imports/` directory. This means that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
 
-Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create simple a `client/main.js` and `server/main.js` folder to define explicit entry points for the running code of your application. Meteor ensures that any file in a directory entitled `client/` will only be available on the client (and likewise for the server).
+Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create two files, `client/main.js` and `server/main.js`, to define explicit entry points. Meteor ensures that any file in a directory named `server/` will only be available on the server, and likewise for `client/`.
 
-From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app begins (this includes configuration of whichever packages you are using in your app).
+From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app loads. This code will also do any configuration necessary for the packages you are using in your app.
 
-In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the useraccounts configuration (see the [Accounts](accounts.html) article), and the `imports/startup/client/routes.js` indirectly file imports *all* other code that is required on the client, and forms the single entry point for the client application:
+In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the single entry point for the client application:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -49,7 +49,7 @@ import '../../ui/accounts/accounts-templates.js';
 // Below here are the route definitions
 ```
 
-On the server, we import various modules in our `server/main.js` to acheive the behaviour we want:
+On the server, we import various modules in our `server/main.js` to set up the server environment:
 
 ```js
 // This defines a starting set of data to be loaded if the app is loaded with an empty db.
