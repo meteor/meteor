@@ -120,7 +120,7 @@ import '../imports/api/api.js';
 
 You can see that we don't actually import any variables from these files - we just import them so that they execute in that order.
 
-<h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
+<h2 id="splitting-your-app">Splitting into multiple apps</h2>
 
 If you are writing a sufficiently complex system, there can come a time where it makes sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separate the code for the mobile and desktop versions of your app.
 
@@ -128,7 +128,7 @@ Another very common use case is splitting a worker process away from your main a
 
 There are some advantages of splitting your application in this way:
 
- - Your client JavaScript bundle can be significantly smaller if you separate out code that a specific user type will never use.
+ - Your client JavaScript bundle can be significantly smaller if you separate out code that a specific type of user will never use.
 
  - You can deploy the different applications with different scaling setups and secure them differently (for instance you might restrict access to your admin application to users behind a firewall).
 
@@ -136,11 +136,11 @@ There are some advantages of splitting your application in this way:
 
 However there are some challenges to splitting your code in this way that should be considered before jumping in.
 
-<h3 id="sharing-code">Sharing Code</h3>
+<h3 id="sharing-code">Sharing code</h3>
 
-The primary challenge is sharing code between the different applications you are building. The simplest approach to deal with this issue is to simply deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.md#environment). This approach allows you to easily deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
+The primary challenge is properly sharing code between the different applications you are building. The simplest approach to deal with this issue is to simply deploy the *same* application on different web servers, controlling the behavior via different [settings](deployment.md#environment). This approach allows you to easily deploy different versions with different scaling behavior but doesn't enjoy most of the other advantages stated above.
 
-Alternatively if you want to create totally different Meteor applications, you are best sharing the code via the package system---either Meteor's package system or NPM's. A simple way to do this is to factor code that you'd like to share out into a Meteor package, installed directly into the project by placing it in the application's local `packages/` directory.
+If you want to create Meteor applications with separate code, you are best sharing the code via a package system---either Meteor's package system or NPM. The easiest way to do this is to factor code that you'd like to share out into a Meteor package and add it directly into the app by placing it in the application's local `packages/` directory.
 
 Then you have two approaches to share this package between applications:
 
@@ -148,17 +148,17 @@ Then you have two approaches to share this package between applications:
 
  2. If you'd prefer to put the applications in different repositories, you can use a [git submodule](https://git-scm.com/docs/git-submodule) to include the package (which would live in its own repository) in each app's `packages/` directory.
 
-You can also share module code (like `imports/some-module`) in a similar fashion.
+You can also share a module (like `imports/some-module`) in a similar fashion.
 
-<h3 id="sharing-data">Sharing Data</h3>
+<h3 id="sharing-data">Sharing data</h3>
 
 Another important consideration is how you'll share the data between your different applications.
 
-The simplest approach is to point both applications at the same `MONGO_URL` and allow both applications to read and write from the database directly. This can work well thanks to Meteor's from-the-ground-up support for reactivity and realtime changes in the database (when one app changes the some data, a user of the other will see the changes quickly thanks to the oplog driver).
+The simplest approach is to point both applications at the same `MONGO_URL` and allow both applications to read and write from the database directly. This works well thanks to Meteor's support for reactivity through the database. When one app changes some data in MongoDB, users of the any other app connected to the database will see the changes immediately thanks to Meteor's livequery.
 
-However, in some cases it's better to allow one application to be the master, and control access to the data for other applications via an API. This can help if for instance you want to deploy the different applications on different schedules and want to be conservative about how the data changes.
+However, in some cases it's better to allow one application to be the master, and control access to the data for other applications via an API. This can help if you want to deploy the different applications on different schedules and need to be conservative about how the data changes.
 
-The simplest way to provide a server-server API is to use the DDP protocol! You can you [`DDP.connect()`](http://docs.meteor.com/#/full/ddp_connect) to connect from a "client" server to the data-managing server, and then use the connection object returned to make method calls and read from publications.
+The simplest way to provide a server-server API is to use Meteor's built-in DDP protocol directly. This is the same way your Meteor client gets data from your server, but you can also use it to communicate between different applications. You can use [`DDP.connect()`](http://docs.meteor.com/#/full/ddp_connect) to connect from a "client" server to the master server, and then use the connection object returned to make method calls and read from publications.
 
 XXX: Do we want to show how to mirror a publication (boilerplate)? or passthrough a method call (complexities about authentication).
 
@@ -202,7 +202,7 @@ It's hard to learn everything about a programming language at once. For example,
 
 As you write more code and come up against the recommended style rules, you can take that as an opportunity to learn more about your programming language and how different people prefer to use it.
 
-<h2 id="javascript">JavaScript style</h2>
+<h2 id="javascript">JavaScript style guide</h2>
 
 Here at Meteor, we strongly believe that JavaScript is the best language to build web applications, for a variety of reasons. JavaScript is constantly improving, and the standards around ES2015 have really brought together the JavaScript community. Here are our recommendations about how to use ES2015 JavaScript in your app today.
 
@@ -258,7 +258,7 @@ eslint .
 
 For more details, read the [Getting Started](http://eslint.org/docs/user-guide/getting-started) directions from the ESLint website.
 
-<h3 id="eslint-editor">Integrating ESLint with your editor</h3>
+<h3 id="eslint-editor">Integrating with your editor</h3>
 
 Linting is the fastest way to find potential bugs in your code. Running a linter is usually faster than running your app or your unit tests, so it's a good idea to run it all the time. Setting up linting in your editor can seem annoying at first since it will complain often when you save poorly-formatted code, but over time you'll develop the muscle memory to just write well-formatted code in the first place. Here are some directions for setting up ESLint in different editors:
 
@@ -303,15 +303,15 @@ WebStorm provides [these instructions for using ESLint](https://www.jetbrains.co
 Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
 
 
-<h3 id="eslint-commit-hook">Setting up a commit hook for linting</h3>
+<h3 id="eslint-commit-hook">Setting up a commit hook</h3>
 
 XXX I think we just don't worry about these for now?
 
-<h3 id="eslint-ci">Running ESLint in your CI environment</h3>
+<h3 id="eslint-ci">Running ESLint in CI</h3>
 
 XXX
 
-<h2 id="meteor-features">Meteor features</h2>
+<h2 id="meteor-features">Meteor code style</h2>
 
 The section above talked about JavaScript code in general - you can easily apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
 
