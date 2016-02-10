@@ -68,11 +68,11 @@ import '../imports/api/api.js';
 
 <h3 id="structuring-imports">Structuring imports</h3>
 
-Once you've placed all files in the `imports/` directory, it makes sense to start thinking about how best to organize it. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data / business logic related code from rendering code. We suggest an `imports/api` and `imports/ui` as a logical split. 
+Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split. 
 
-Within the `imports/api` directory, it's sensible to split the code into the logical domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, this is the `imports/api/lists` and `imports/api/todos` domains. Inside each we define the collections, publications and methods that are relevant to those domains.
+Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data.
 
-Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that separating them makes sense however.
+> Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that we need to separate these to demonstrate modularity.
 
 Within the `imports/ui` directory it typically makes sense to group files into directories based on the type of UI side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
 
