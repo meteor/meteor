@@ -27,7 +27,7 @@ Meteor will eagerly load any files outside of `imports/` in the application, but
 
 From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app begins (this includes configuration of whichever packages you are using in your app).
 
-In the Todos example app, the `imports/client/startup/useraccounts-configuration.js` file configures the useraccounts configuration (see the [Accounts](accounts.html) article), and the `imports/client/startup/routes.js` indirectly file imports *all* other code that is required on the client, and forms the single entry point for the client application:
+In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the useraccounts configuration (see the [Accounts](accounts.html) article), and the `imports/startup/client/routes.js` indirectly file imports *all* other code that is required on the client, and forms the single entry point for the client application:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -46,26 +46,32 @@ import '../../ui/accounts/accounts-templates.js';
 // Below here are the route definitions
 ```
 
-On the server, there can often be a few more logical entry points to control the behavior of the application server. In the Todos app, we define four:
+On the server, we import various modules in our `server/main.js` to acheive the behaviour we want:
 
-1. `main/server/api.js' - this defines all the collections, publications and methods that the application provides as an API to the client.
-2. `main/server/fixtures.js' - this defines a starting set of data to be loaded if the app is loaded with an empty db.
-3. `main/server/reset-password-email.js` - this file configures the Accounts package to define the UI of the reset password email.
-4. `main/server/security.js` - setups some rate limiting and other important security settings.
+```js
+// This defines a starting set of data to be loaded if the app is loaded with an empty db.
+import '../imports/startup/server/fixtures.js';
 
-Other logical server-side entry points include setting up job workers and server-side routes.
+// This file configures the Accounts package to define the UI of the reset password email.
+import '../imports/startup/server/reset-password-email.js';
+
+// Set up some rate limiting and other important security settings.
+import '../imports/startup/server/security.js';
+
+// This defines all the collections, publications and methods that the application provides
+// as an API to the client.
+import '../imports/api/api.js';
+```
 
 <h3 id="structuring-imports"</h3>
 
-Once you've placed all files in the `imports/` directory, it makes sense to start thinking about how best to organize it. A good starting point is splitting data / business logic related code from rendering code. We suggest an `imports/api` and `imports/client` as a logical split. 
-
-XXX: I don't think `imports/client` is a good name given server-side rendering. `imports/view[s]`?
+Once you've placed all files in the `imports/` directory, it makes sense to start thinking about how best to organize it. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data / business logic related code from rendering code. We suggest an `imports/api` and `imports/ui` as a logical split. 
 
 Within the `imports/api` directory, it's sensible to split the code into the logical domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, this is the `imports/api/lists` and `imports/api/todos` domains. Inside each we define the collections, publications and methods that are relevant to those domains.
 
 Note: in a larger application, given that the todos themselves are a part of a list, it might make sense to group both of these domains into a single larger "list" module. The Todos example is small enough that separating them makes sense however.
 
-Within the `imports/client` directory it typically makes sense to group files into directories based on the type of client side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
+Within the `imports/ui` directory it typically makes sense to group files into directories based on the type of UI side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
 
 For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze JavaScript component should be co-located with it's template HTML and CSS definition. A library file should be co-located with any unit tests defined for the file.
 
@@ -75,7 +81,12 @@ Combining what's discussed above, we can consider the application structure of t
 
 ```
 imports/
-  apis/
+  startup/
+    client/
+      routes.js - respond to all routes in the app
+    server/
+      fixtures.js - pre-fill the database if loaded empty
+  api/
     lists/ - as an example
       server/
         publications.js -- all list-related publications
@@ -84,22 +95,17 @@ imports/
       lists.test.js -- tests for that behavior
       methods.js -- methods on lists
       methods.tests.js -- tests for those methods
-  client
+  ui/
     components/ -- all reusable components in the application (we can break this down by area if it gets long)
     layouts/ -- wrapper components for behaviour and visuals
     pages/ -- entry points for the render tree -- where the router points us
-main/
-  client/
-    routes.js -- points to various client pages
-  server/
-    register-api.js -- imports all of imports/api.js
-    fixtures.js -- uses the collections to create initial data
-    etc
+client/
+  main.js -- client entry point
+server/
+  main.js -- server entry point
 ```
 
 <h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
-
-XXX: is there a cooler way to do this in 1.3 with multiple entry points? Maybe that comes in 1.4
 
 If you are writing a sufficiently complex system, there can come a point where it starts to make sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separating the code for the mobile and desktop versions of your app.
 
