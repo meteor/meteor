@@ -29,7 +29,7 @@ PollingObserveDriver = function (options) {
   // PollingObserveDriver object.
   self._ensurePollIsScheduled = _.throttle(
     self._unthrottledEnsurePollIsScheduled,
-    self._cursorDescription.options.pollingThrottle || 50 /* ms */);
+    self._cursorDescription.options.pollingThrottleMs || 50 /* ms */);
 
   // XXX figure out if we still need a queue
   self._taskQueue = new Meteor._SynchronousQueue();
@@ -44,7 +44,7 @@ PollingObserveDriver = function (options) {
         self._pendingWrites.push(fence.beginWrite());
       // Ensure a poll is scheduled... but if we already know that one is,
       // don't hit the throttled _ensurePollIsScheduled function (which might
-      // lead to us calling it unnecessarily in <pollingThrottle> ms).
+      // lead to us calling it unnecessarily in <pollingThrottleMs> ms).
       if (self._pollsScheduledButNotStarted === 0)
         self._ensurePollIsScheduled();
     }
@@ -62,7 +62,7 @@ PollingObserveDriver = function (options) {
     self._testOnlyPollCallback = options._testOnlyPollCallback;
   } else {
     var pollingInterval =
-          self._cursorDescription.options.pollingInterval ||
+          self._cursorDescription.options.pollingIntervalMs ||
           self._cursorDescription.options._pollingInterval || // COMPAT with 1.2
           10 * 1000;
     var intervalHandle = Meteor.setInterval(
