@@ -10,14 +10,17 @@ After reading this article, you'll know:
 
 Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and code that runs in *both places*. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and some conventions on application structure makes it easier to understand what code runs where.
 
-<h3 id="es2015-imports">ES2015 Imports</h3>
+<h3 id="es2015-modules">ES2015 Modules</h3>
 
-As of version 1.3, Meteor ships with full support for ES2015 modules, both on the client and on the server. In particular it is simple and straightforward to include NPM package code in either environment, and access the package's exported sybmols as you would any other module's. It helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
+As of version 1.3, Meteor ships with full support for [ES2015 modules](https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import). ES2015 modules are a standardized alternative to [CommonJS](http://requirejs.org/docs/commonjs.html) and [AMD](https://github.com/amdjs/amdjs-api) which are JavaScript module format and loading systems.
+
+ES2015 modules allow you to `import` the symbols exported by a file in your project from another file (we can call such files "modules"). In the source file you declare the local variables within the file that you'd like to export with the `export` keyword.
+
+
+In particular it is simple and straightforward to include NPM package code in either environment (client or server), and access the package's exported sybmols as you would any other module's. It helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
 
 However, this is a new feature in Meteor so you will find a lot of code online that uses and older, more centralized system built around packages and app declaring global symbols to be consumed within the app. Also, for backwards compatibility reasons, "pure" modular code must be placed in the `imports/` directory in your application. We expect this to change in an future release.
 
-XXX: add a bunch more about what this is and how it works
-https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import
 
 <h2 id="javascript-structure">JavaScript file structure</h2>
 
