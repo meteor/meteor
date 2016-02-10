@@ -1,11 +1,11 @@
-var newConnection = function (stream) {
+var newConnection = function (stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
-  return new LivedataTest.Connection(stream, {
+  return new LivedataTest.Connection(stream, _.extend({
     reloadWithOutstanding: true,
     bufferedWritesInterval: 0
-  });
+  }, options));
 };
 
 var makeConnectMessage = function (session) {
@@ -94,6 +94,69 @@ Tinytest.add("livedata stub - receive data", function (test) {
   test.equal(coll.find({}).fetch(), [{_id:'1234', a:2}]);
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
 });
+
+var wait = function(timeout) {
+  return function(test, expect) {
+    Meteor.setTimeout(expect(function(){}), timeout);
+  };
+};
+var addDocument = function(test) {
+  test.stream.receive({
+    msg: 'added',
+    collection: test.coll_name,
+    id: Random.id(),
+    fields: {}
+  });
+};
+var testCount = function(count) {
+  return function(test) {
+    test.equal(test.coll.find({}).count(), count);
+  }
+};
+
+testAsyncMulti("livedata stub - buffering data", [
+  function (test, expect) {
+    test.stream = new StubStream();
+    var conn = newConnection(test.stream, {
+      bufferedWritesInterval: 10,
+      bufferedWritesMaxAge: 40
+    });
+
+    startAndConnect(test, test.stream);
+
+    test.coll_name = Random.id();
+    test.coll = new Mongo.Collection(test.coll_name, conn);
+  },
+  addDocument,
+  // We don't have the document yet as we have buffered it for 1ms
+  testCount(0),
+  wait(10),
+  // Nothing arrived in 10ms so we've flushed
+  testCount(1),
+  addDocument,
+  // Again, nothing's been added yet
+  testCount(1),
+  wait(6),
+  // Haven't hit the max age yet
+  testCount(1),
+  // Do it a bunch more times, frequently enough that we keep buffering
+  //   (Note we don't test the count here because it's not completely deterministic when we'll
+  //    hit the buffer max age with such small timeouts)
+  addDocument,
+  wait(6),
+  addDocument,
+  wait(6),
+  addDocument,
+  wait(6),
+  addDocument,
+  wait(6),
+  addDocument,
+  wait(6),
+  addDocument,
+  wait(6),
+  // By now we should have hit the max age and flush
+  testCount(8)
+]);
 
 Tinytest.add("livedata stub - subscribe", function (test) {
   var stream = new StubStream();
