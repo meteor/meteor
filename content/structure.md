@@ -86,26 +86,31 @@ Let's look at the specific example of the Todos example application, which combi
 imports/
   startup/
     client/
-      routes.js - respond to all routes in the app
+      routes.js                   # set up all routes in the app
     server/
-      fixtures.js - pre-fill the database if it's empty on startup
+      fixtures.js                 # pre-fill the database if it's empty on startup
+      
   api/
-    lists/ - a unit of domain logic
+    lists/                        # a unit of domain logic
       server/
-        publications.js -- all list-related publications
-        publications.tests.js -- tests for the list publications
-      lists.js -- the definition of the Lists collection and behavior
-      lists.tests.js -- tests for that behavior
-      methods.js -- methods on lists
-      methods.tests.js -- tests for those methods
+        publications.js           # all list-related publications
+        publications.tests.js     # tests for the list publications
+      lists.js                    # definition of the Lists collection
+      lists.tests.js              # tests for the behavior of that collection
+      methods.js                  # methods related to lists
+      methods.tests.js            # tests for those methods
+      
   ui/
-    components/ -- all reusable components in the application (we can break this down by area if it gets long)
-    layouts/ -- wrapper components for behaviour and visuals
-    pages/ -- entry points for the render tree, referred to by the router
+    components/                   # all reusable components in the application
+                                  # can be split by domain if there are many
+    layouts/                      # wrapper components for behaviour and visuals
+    pages/                        # entry points for rendering used by the router
+   
 client/
-  main.js -- client entry point
+  main.js                         # client entry point, imports all client code
+ 
 server/
-  main.js -- server entry point
+  main.js                         # server entry point, imports all server code
 ```
 
 <h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
