@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "JavaScript minifiers",
+  summary: "JavaScript minifier",
   version: "1.1.7"
 });
 
@@ -14,11 +14,11 @@ Npm.strip({
 Package.onUse(function (api) {
   api.use('underscore', 'server');
   api.export(['UglifyJSMinify', 'UglifyJS']);
-  api.addFiles(['minifiers.js'], 'server');
+  api.addFiles(['minifier.js'], 'server');
 });
 
 Package.onTest(function (api) {
-  api.use('minifiers-js', 'server');
+  api.use('minifier-js', 'server');
   api.use('tinytest');
 
   api.addFiles([

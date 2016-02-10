@@ -2,7 +2,7 @@
 // The UglifyJSMinify API can also be used for beautification.  Test that it
 // behaves as expected.
 
-Tinytest.add('minifiers - uglify beautify', function (test) {
+Tinytest.add('minifier-js - uglify beautify', function (test) {
   // See <https://github.com/mishoo/UglifyJS2#the-simple-way> and
   // <http://lisperator.net/uglifyjs/codegen> for the API we're calling.
   test.equal(UglifyJSMinify('one = function () { return 1; };',

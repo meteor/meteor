@@ -6,8 +6,8 @@
 * Improve minimongo performance on updating documents when there are
   many active observes. #5627
 
-* Split up `standard-minifiers` in separate CSS (`standard-minifiers-css`) and JS
-  minifiers(`standard-minifiers-js`). `standard-minifiers` now acts as an umbrella package for these
+* Split up `standard-minifiers` in separate CSS (`standard-minifier-css`) and JS
+  minifiers(`standard-minifier-js`). `standard-minifiers` now acts as an umbrella package for these
   2 minifiers.
 
 * Move `DDPRateLimiter` to the server only, since it won't work if it is called from the client. It

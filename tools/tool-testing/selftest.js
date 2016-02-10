@@ -128,7 +128,8 @@ var ROOT_PACKAGES_TO_BUILD_IN_SANDBOX = [
   'tracker',
   "autopublish",
   "insecure",
-  "standard-minifiers",
+  "standard-minifier-css",
+  "standard-minifier-js",
   "es5-shim"
 ];
 
