@@ -30,7 +30,7 @@ Meteor will eagerly load any files outside of `imports/` in the application, but
 
 From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app loads. This code will also do any configuration necessary for the packages you are using in your app.
 
-In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the single entry point for the client application:
+In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the main entry point for the rest of the client application:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -76,11 +76,11 @@ Within the `imports/api` directory, it's sensible to split the code into directo
 
 Within the `imports/ui` directory it typically makes sense to group files into directories based on the type of UI side code they define---top level `pages`, wrapping `layouts`, or reusable `components`.
 
-For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze JavaScript component should be co-located with it's template HTML and CSS definition. A library file should be co-located with any unit tests defined for the file.
+For each module defined above, it makes sense to co-locate the various auxiliary files with the the base JavaScript file. For instance, a Blaze UI component should be have its template HTML, JavaScript logic, and CSS rules in the same directory. A JavaScript module with some business logic should be co-located with the unit tests for that module.
 
 <h3 id="example-app-structure">Example application structure</h3>
 
-Combining what's discussed above, we can consider the application structure of the Todos example application. The folders of interest are:
+Let's look at the specific example of the Todos example application, which combines everything we have discussed above. Here's an overview of the directory structure:
 
 ```
 imports/
@@ -88,9 +88,9 @@ imports/
     client/
       routes.js - respond to all routes in the app
     server/
-      fixtures.js - pre-fill the database if loaded empty
+      fixtures.js - pre-fill the database if it's empty on startup
   api/
-    lists/ - as an example
+    lists/ - a unit of domain logic
       server/
         publications.js -- all list-related publications
         publications.tests.js -- tests for the list publications
@@ -101,7 +101,7 @@ imports/
   ui/
     components/ -- all reusable components in the application (we can break this down by area if it gets long)
     layouts/ -- wrapper components for behaviour and visuals
-    pages/ -- entry points for the render tree -- where the router points us
+    pages/ -- entry points for the render tree, referred to by the router
 client/
   main.js -- client entry point
 server/
@@ -110,7 +110,7 @@ server/
 
 <h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
 
-If you are writing a sufficiently complex system, there can come a point where it starts to make sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separating the code for the mobile and desktop versions of your app.
+If you are writing a sufficiently complex system, there can come a time where it makes sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separate the code for the mobile and desktop versions of your app.
 
 Another very common use case is splitting a worker process away from your main application so that expensive jobs do not impact on user experience of your visitors by locking up a single web server.
 
@@ -118,7 +118,7 @@ There are some advantages of splitting your application in this way:
 
  - Your client JavaScript bundle can be significantly smaller if you separate out code that a specific user type will never use.
 
- - You can deploy the different applications at different scales and secure them differently (for instance you might restrict access to your admin application to users behind a firewall).
+ - You can deploy the different applications with different scaling setups and secure them differently (for instance you might restrict access to your admin application to users behind a firewall).
 
  - You can allow different teams at your organization to work on the different applications independently.
 
