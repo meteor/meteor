@@ -41,7 +41,7 @@ or to allow your package to provide several components which your package's
 users can opt into one by one.
 
 Each compiled source file produces a separate CSS file.  (The
-`standard-minifiers` package merges them into one file afterwards.)
+`standard-minifier-css` package merges them into one file afterwards.)
 
 ## Importing
 
