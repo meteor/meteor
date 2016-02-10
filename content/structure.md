@@ -12,35 +12,36 @@ Meteor is a *full-stack* framework for building applications; this means Meteor 
 
 <h3 id="es2015-imports">ES2015 Imports</h3>
 
-As of version 1.3, Meteor ships with full support for ES2015 packages, both on the client and on the server. In particular it is simple and straightforward to include NPM package code in either environment, and to write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
+As of version 1.3, Meteor ships with full support for ES2015 modules, both on the client and on the server. In particular it is simple and straightforward to include NPM package code in either environment, and access the package's exported sybmols as you would any other module's. It helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
 
 However, this is a new feature in Meteor so you will find a lot of code online that uses and older, more centralized system built around packages and app declaring global symbols to be consumed within the app. Also, for backwards compatibility reasons, "pure" modular code must be placed in the `imports/` directory in your application. We expect this to change in an future release.
+
+XXX: add a bunch more about what this is and how it works
+https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import
 
 <h2 id="javascript-structure">JavaScript file structure</h2>
 
 To harness the module system and ensure that our code only runs when we specify that it should, all code for libraries, components and APIs should be placed in the `imports/` directory. This will mean that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
 
-Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create a `main/client` and `main/server` folder to define explicit entry points for the running code of your application. 
+Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create simple a `client/main.js` and `server/main.js` folder to define explicit entry points for the running code of your application. Meteor ensures that any file in a directory entitled `client/` will only be available on the client (and likewise for the server).
 
-In the Todos example app, the `main/client/routes.js` indirectly file imports *all* other code that is required on the client, and forms the single entry point for the client application:
+From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app begins (this includes configuration of whichever packages you are using in your app).
+
+In the Todos example app, the `imports/client/startup/useraccounts-configuration.js` file configures the useraccounts configuration (see the [Accounts](accounts.html) article), and the `imports/client/startup/routes.js` indirectly file imports *all* other code that is required on the client, and forms the single entry point for the client application:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
 import { BlazeLayout } from 'meteor/kadira:blaze-layout';
 import { AccountsTemplates } from 'meteor/useraccounts:core';
 
-// This file needs to load first, so that useraccounts:core doesn't complain when we define
-// a forgotPwd route
-import '../useraccounts-configuration.js';
-
 // Import to load these templates
-import '../../imports/client/layouts/app-body.js';
-import '../../imports/client/pages/root-redirector.js';
-import '../../imports/client/pages/lists-show-page.js';
-import '../../imports/client/pages/app-not-found.js';
+import '../../ui/layouts/app-body.js';
+import '../../ui/pages/root-redirector.js';
+import '../../ui/pages/lists-show-page.js';
+import '../../ui/pages/app-not-found.js';
 
 // Import to override accounts templates
-import '../../imports/client/accounts/accounts-templates.js';
+import '../../ui/accounts/accounts-templates.js';
 
 // Below here are the route definitions
 ```
