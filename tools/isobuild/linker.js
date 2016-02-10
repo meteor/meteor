@@ -112,12 +112,10 @@ _.extend(Module.prototype, {
     // preserving the line numbers.
     if (self.useGlobalNamespace &&
         ! self.useMeteorInstall) {
-      return _.map(self.files, function (file) {
-        if (file.lazy) {
-          // Ignore lazy files unless we have a module system.
-          return;
-        }
+      // Ignore lazy files unless we have a module system.
+      const eagerFiles = _.filter(self.files, file => ! file.lazy);
 
+      return _.map(eagerFiles, function (file) {
         const cacheKey = JSON.stringify([
           file.sourceHash, file.bare, file.servePath]);
 
