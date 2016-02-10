@@ -25,7 +25,7 @@ Since this is a new feature introduced in Meteor 1.3, you will find a lot of cod
 
 You can read about the module system in detail in the [`modules` package README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package, so most apps won't need to do anything to start using modules right away.
 
-<h2 id="javascript-structure">JavaScript file structure</h2>
+<h2 id="javascript-structure">File structure</h2>
 
 To harness the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed in the `imports/` directory. This means that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
 
@@ -33,7 +33,7 @@ Meteor will eagerly load any files outside of `imports/` in the application, but
 
 From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app loads. This code will also do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
 
-<h3 id="example-app-structure">Example application structure</h3>
+<h3 id="example-app-structure">Example directory layout</h3>
 
 To start, let's look at the specific example of the Todos example application, which is a great implementation of the details we'll discuss below. Here's an overview of the directory structure:
 
@@ -70,7 +70,7 @@ server/
 
 <h3 id="structuring-imports">Structuring imports</h3>
 
-Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. We've seen that it makes sense to put all "startup" code in a `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split.
+Now that we have placed all files in the `imports/` directory, let's think about how best to organize our code using modules. It makes sense to put all code that runs when your app starts in an `imports/startup` directory. Another good idea is splitting data and business logic from UI rendering code. We suggest using directories called `imports/api` and `imports/ui` for this logical split.
 
 Within the `imports/api` directory, it's sensible to split the code into directories based on the domain that the code is providing an API for --- typically this corresponds to the collections you've defined in your app. For instance in the Todos example app, we have the `imports/api/lists` and `imports/api/todos` domains. Inside each directory we define the collections, publications and methods used to manipulate the relevant domain data.
 
@@ -82,7 +82,7 @@ For each module defined above, it makes sense to co-locate the various auxiliary
 
 <h3 id="startup-files">Startup files</h3>
 
-In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the main entry point for the rest of the client application:
+Some of your code isn't going to be a unit of business logic or UI, it's just some setup or configuration code that needs to run in the context of the app when it starts up. In the Todos example app, the `imports/startup/client/useraccounts-configuration.js` file configures the `useraccounts` login templates and routes (see the [Accounts](accounts.html) article for more information about `useraccounts`). The `imports/startup/client/routes.js` configures all of the routes and then imports *all* other code that is required on the client, forming the main entry point for the rest of the client application:
 
 ```js
 import { FlowRouter } from 'meteor/kadira:flow-router';
@@ -117,6 +117,8 @@ import '../imports/startup/server/security.js';
 // as an API to the client.
 import '../imports/api/api.js';
 ```
+
+You can see that we don't actually import any variables from these files - we just import them so that they execute in that order.
 
 <h2 id="splitting-your-app">Splitting your code into multiple apps</h2>
 
