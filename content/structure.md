@@ -359,7 +359,7 @@ export class ClickCounter { ... }
 This class should be defined inside a file called `ClickCounter.js`. When you import it, it'll look like this:
 
 ```js
-import ClickCounter from './ClickCounter.js';
+import { ClickCounter } from './ClickCounter.js';
 ```
 
 Note that imports use relative paths, and include the file extension at the end of the file name.
