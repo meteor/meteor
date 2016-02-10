@@ -8,20 +8,19 @@ After reading this article, you'll know:
 
 <h2 id="meteor-structure">Meteor Application Structure</h2>
 
-Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and code that runs in *both places*. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and some conventions on application structure makes it easier to understand what code runs where.
+Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and _common_ code that runs in both places. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and includes some application structure conventions to make it easier to understand which code runs where.
 
 <h3 id="es2015-modules">ES2015 Modules</h3>
 
-As of version 1.3, Meteor ships with full support for [ES2015 modules](https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import). ES2015 modules are a standardized alternative to [CommonJS](http://requirejs.org/docs/commonjs.html) and [AMD](https://github.com/amdjs/amdjs-api) which are JavaScript module format and loading systems.
+As of version 1.3, Meteor ships with full support for [ES2015 modules](https://developer.mozilla.org/en/docs/web/javascript/reference/statements/import). The ES2015 module standard is the replacement for [CommonJS](http://requirejs.org/docs/commonjs.html) and [AMD](https://github.com/amdjs/amdjs-api), which are commonly used JavaScript module format and loading systems.
 
-ES2015 modules allow you to `import` the symbols exported by a file in your project from another file (we can call such files "modules"). In the source file you declare the local variables within the file that you'd like to export with the `export` keyword.
+In ES2015, you can make variables available outside a file using the `export` keyword. To use the variables somewhere else, you must `import` them using the path of the source. Files that export some variables are called "modules", because they represent a unit of reusable code. Explicitly importing the modules and packages you use helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance".
 
+In Meteor, it is also simple and straightforward to use the `import` syntax to include NPM packages on the client or server, and access the package's exported symbols as you would with any other module.  
 
-In particular it is simple and straightforward to include NPM package code in either environment (client or server), and access the package's exported sybmols as you would any other module's. It helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance". 
+Since this is a new feature introduced in Meteor 1.3, you will find a lot of code online that uses the older, more centralized conventions built around packages and apps declaring global symbols. This old system still works, so to opt-in to the new module system code must be placed in the `imports/` directory in your application. We expect a future release of Meteor will turn on modules by default for all code, because this is more aligned with how developers in the wider JavaScript community write their code.
 
-However, this is a new feature in Meteor so you will find a lot of code online that uses and older, more centralized system built around packages and app declaring global symbols to be consumed within the app. Also, for backwards compatibility reasons, "pure" modular code must be placed in the `imports/` directory in your application. We expect this to change in an future release.
-
-You can read about the module system in detail in the [README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules) for the `modules` package (used automatically if you use the `ecmascript` package).
+You can read about the module system in detail in the [`modules` package README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package.
 
 <h2 id="javascript-structure">JavaScript file structure</h2>
 
