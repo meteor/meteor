@@ -21,6 +21,7 @@ In particular it is simple and straightforward to include NPM package code in ei
 
 However, this is a new feature in Meteor so you will find a lot of code online that uses and older, more centralized system built around packages and app declaring global symbols to be consumed within the app. Also, for backwards compatibility reasons, "pure" modular code must be placed in the `imports/` directory in your application. We expect this to change in an future release.
 
+You can read about the module system in detail in the [README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules) for the `modules` package (used automatically if you use the `ecmascript` package).
 
 <h2 id="javascript-structure">JavaScript file structure</h2>
 
