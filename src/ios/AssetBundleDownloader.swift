@@ -313,7 +313,7 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
   private func verifyResponse(response: NSHTTPURLResponse, forAsset asset: Asset) throws {
     // A response with a non-success status code should not be considered a succesful download
     if !response.isSuccessful {
-      throw WebAppError.DownloadFailure(reason: "Non-success status code for asset: \(asset)", underlyingError: nil)
+      throw WebAppError.DownloadFailure(reason: "Non-success status code \(response.statusCode) for asset: \(asset)", underlyingError: nil)
       // If we have a hash for the asset, and the ETag header also specifies
       // a hash, we compare these to verify if we received the expected asset version
     } else if let expectedHash = asset.hash,

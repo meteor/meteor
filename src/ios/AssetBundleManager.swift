@@ -81,7 +81,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
       guard let response = response as? NSHTTPURLResponse else { return }
 
       if !response.isSuccessful {
-        self.didFailWithError(WebAppError.DownloadFailure(reason: "Non-success status code for asset manifest", underlyingError: nil))
+        self.didFailWithError(WebAppError.DownloadFailure(reason: "Non-success status code \(response.statusCode) for asset manifest", underlyingError: nil))
         return
       }
 
