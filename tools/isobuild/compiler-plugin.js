@@ -379,20 +379,12 @@ class ResourceSlot {
       return lazy;
     }
 
-    const sourcePath = this.inputResource.path;
-
-    if (sourcePath.endsWith(".json")) {
-      // JSON files have no side effects, so there is no reason for them
-      // ever to be evaluated eagerly.
-      return true;
-    }
-
     // If file.lazy was not previously defined, mark the file lazy if it
     // is contained by an imports directory. Note that any files contained
     // by a node_modules directory will already have been marked lazy in
     // PackageSource#_inferFileOptions.
     return this.packageSourceBatch.useMeteorInstall &&
-      files.pathDirname(sourcePath)
+      files.pathDirname(this.inputResource.path)
         .split(files.pathSep)
         .indexOf("imports") >= 0;
   }
