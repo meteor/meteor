@@ -283,8 +283,8 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   // MARK: AssetBundleManagerDelegate
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, shouldDownloadBundleForManifest manifest: AssetManifest) -> Bool {
-    // No need to redownload the current version
-    if currentAssetBundle.version == manifest.version {
+    // No need to redownload the current or the pending version
+    if currentAssetBundle.version == manifest.version || pendingAssetBundle?.version == manifest.version {
       return false
     }
 
