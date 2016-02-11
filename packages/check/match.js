@@ -47,6 +47,9 @@ Match = {
   Optional: function (pattern) {
     return new Optional(pattern);
   },
+  Maybe: function (pattern) {
+    return new Maybe(pattern);
+  },
   OneOf: function (/*arguments*/) {
     return new OneOf(_.toArray(arguments));
   },
@@ -111,6 +114,8 @@ Match = {
 var Optional = function (pattern) {
   this.pattern = pattern;
 };
+
+var Maybe = Optional;
 
 var OneOf = function (choices) {
   if (_.isEmpty(choices))
@@ -245,8 +250,12 @@ var testSubtree = function (value, pattern) {
   }
 
 
-  if (pattern instanceof Optional)
+  if (pattern instanceof Maybe) {
+    pattern = Match.OneOf(undefined, null, pattern.pattern);
+  }
+  else if (pattern instanceof Optional) {
     pattern = Match.OneOf(undefined, pattern.pattern);
+  }
 
   if (pattern instanceof OneOf) {
     for (var i = 0; i < pattern.choices.length; ++i) {
@@ -259,7 +268,7 @@ var testSubtree = function (value, pattern) {
     }
     // XXX this error is terrible
     return {
-      message: "Failed Match.OneOf or Match.Optional validation",
+      message: "Failed Match.OneOf, Match.Maybe or Match.Optional validation",
       path: ""
     };
   }
@@ -319,7 +328,7 @@ var testSubtree = function (value, pattern) {
   var requiredPatterns = {};
   var optionalPatterns = {};
   _.each(pattern, function (subPattern, key) {
-    if (subPattern instanceof Optional)
+    if (subPattern instanceof Optional || subPattern instanceof Maybe)
       optionalPatterns[key] = subPattern.pattern;
     else
       requiredPatterns[key] = subPattern;
