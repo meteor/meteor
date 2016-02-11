@@ -117,9 +117,9 @@ The best way to make your app secure is to understand all of the possible inputs
 ```js
 Lists.methods.makePrivate = new ValidatedMethod({
   name: 'Lists.methods.makePrivate',
-  schema: new SimpleSchema({
+  validate: new SimpleSchema({
     listId: { type: String }
-  }),
+  }).validator(),
   run({ listId }) {
     if (!this.userId) {
       throw new Meteor.Error('Lists.methods.makePrivate.notLoggedIn',
@@ -149,10 +149,10 @@ However, this doesn't mean you can't have any flexibility in your Methods. Let's
 ```js
 const Meteor.users.methods.setUserData = new ValidatedMethod({
   name: 'Meteor.users.methods.setUserData',
-  schema: new SimpleSchema({
+  validate: new SimpleSchema({
     fullName: { type: String, optional: true },
     dateOfBirth: { type: Date, optional: true },
-  }),
+  }).validator(),
   run(fieldsToSet) {
     Meteor.users.update(this.userId, {
       $set: fieldsToSet
