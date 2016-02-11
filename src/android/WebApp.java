@@ -31,6 +31,8 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
 
     private static final long STARTUP_TIMEOUT = 10000;
 
+    private static final String LOCAL_FILESYSTEM_PATH = "/local-filesystem";
+
     private AssetManager assetManager;
     private AssetManagerCache assetManagerCache;
 
@@ -339,6 +341,19 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
             }
         });
 
+        // Serve local file system at /local-filesystem/<path>
+        resourceHandlers.add(new WebResourceHandler() {
+            @Override
+            public Uri remapUri(Uri uri) {
+                String path = uri.getPath();
+
+                if (!path.startsWith(LOCAL_FILESYSTEM_PATH)) return null;
+
+                String filePath = path.substring(LOCAL_FILESYSTEM_PATH.length());
+                return new Uri.Builder().scheme("file").appendPath(filePath).build();
+            }
+        });
+
         // Serve index.html as a last resort
         resourceHandlers.add(new WebResourceHandler() {
             @Override
@@ -346,6 +361,9 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
                 if (currentAssetBundle == null) return null;
 
                 String path = uri.getPath();
+
+                // Don't serve index.html for local file system paths
+                if (path.startsWith(LOCAL_FILESYSTEM_PATH)) return null;
 
                 if (path.equals("favicon.ico")) return null;
 

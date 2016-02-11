@@ -1,3 +1,5 @@
+var fileUrlRegEx = /^file:\/\/(.*)/;
+
 module.exports = {
   startupDidComplete: function(callback) {
     cordova.exec(
@@ -37,5 +39,13 @@ module.exports = {
       "MeteorWebApp",
       "onDownloadFailure",
       []);
+  },
+
+  localFileSystemUrl: function(fileUrl) {
+    var match = fileUrlRegEx.exec(fileUrl);
+    if (!match) return fileUrl;
+
+    var path = match[1];
+    return "/local-filesystem" + path;
   }
 };
