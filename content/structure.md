@@ -11,7 +11,7 @@ After reading this article, you'll know:
 
 <h2 id="meteor-structure">Universal JavaScript</h2>
 
-Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and _common_ code that runs in both places. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and includes some application structure conventions to make it easier to understand which code runs where.
+Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that runs on the client, code that runs on the server, and _common_ code that runs in both places. The Meteor build tool enables you to run JavaScript code easily and consistenly in both client and server environments, and includes some application structure conventions to make it easy to specify which code should run where.
 
 <h3 id="es2015-modules">ES2015 modules</h3>
 
@@ -19,23 +19,25 @@ As of version 1.3, Meteor ships with full support for [ES2015 modules](https://d
 
 In ES2015, you can make variables available outside a file using the `export` keyword. To use the variables somewhere else, you must `import` them using the path of the source. Files that export some variables are called "modules", because they represent a unit of reusable code. Explicitly importing the modules and packages you use helps you write your code in a modular way, avoiding the introduction of global symbols and "action at a distance".
 
-In Meteor, it is also simple and straightforward to use the `import` syntax to include NPM packages on the client or server, and access the package's exported symbols as you would with any other module.  
-
 Since this is a new feature introduced in Meteor 1.3, you will find a lot of code online that uses the older, more centralized conventions built around packages and apps declaring global symbols. This old system still works, so to opt-in to the new module system code must be placed in the `imports/` directory in your application. We expect a future release of Meteor will turn on modules by default for all code, because this is more aligned with how developers in the wider JavaScript community write their code.
 
 You can read about the module system in detail in the [`modules` package README](https://github.com/meteor/meteor/tree/release-1.3/packages/modules). This package is automatically included in every new Meteor app as part of the `ecmascript` meta-package, so most apps won't need to do anything to start using modules right away.
 
+<h3 id="importing-from-packages">Importing from packages</h3>
+
+In Meteor, it is also simple and straightforward to use the `import` syntax to load NPM packages on the client or server, and access the package's exported symbols as you would with any other module. You can also import from Atmosphere packages, but the import path must be prefixed with `meteor` to avoid conflict with the NPM package namespace. For example, to import `HTTP` you can do `import { HTTP } from 'meteor/http'`.
+
 <h2 id="javascript-structure">File structure</h2>
 
-To harness the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed in the `imports/` directory. This means that the Meteor build system will only bundle and include that code if it is `import`-ed from another file.
+To fully use the module system and ensure that our code only runs when we ask it to, we recommend that all of your application code should be placed in the `imports/` directory. This means that the Meteor build system will only bundle and include that file if it is referenced from another file using an `import`.
 
-Meteor will eagerly load any files outside of `imports/` in the application, but to be explicit, it's best to create two files, `client/main.js` and `server/main.js`, to define explicit entry points. Meteor ensures that any file in a directory named `server/` will only be available on the server, and likewise for `client/`.
+Meteor will eagerly load any files outside of `imports/` in the application, but it's best to create exactly two eagerly loaded files, `client/main.js` and `server/main.js`, to define explicit entry points. Meteor ensures that any file in a directory named `server/` will only be available on the server, and likewise for `client/`.
 
-From these `main.js` files, typically you'd include some _startup_ code which will run immediately on the client and server when the app loads. This code will also do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
+These `main.js` files won't do anything themselves, but they should import some _startup_ modules which will run immediately on the client and server when the app loads. These modules should do any configuration necessary for the packages you are using in your app, and import the rest of your app's code.
 
 <h3 id="example-app-structure">Example directory layout</h3>
 
-To start, let's look at the specific example of the Todos example application, which is a great implementation of the details we'll discuss below. Here's an overview of the directory structure:
+To start, let's look at the specific example of the Todos example application, which is a great example to follow when structuring your app. Here's an overview of the directory structure:
 
 ```sh
 imports/
