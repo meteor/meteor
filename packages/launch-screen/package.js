@@ -10,7 +10,7 @@ Package.describe({
 });
 
 Cordova.depends({
-  'cordova-plugin-splashscreen': '3.0.0'
+  'cordova-plugin-splashscreen': 'https://github.com/apache/cordova-plugin-splashscreen.git#2e1ec329168633b39c0251ca9e1ec87d9a9483c9'
 });
 
 Package.onUse(function(api) {
