@@ -746,3 +746,8 @@ function popCallbackFromArgs(args) {
     return args.pop();
   }
 }
+
+const Collection = Mongo.Collection;
+const Cursor = Mongo.Cursor;
+const ObjectID = Mongo.ObjectID;
+export { Collection, Cursor, ObjectID };

@@ -73,7 +73,7 @@ Package.onUse(function (api) {
                 'server');
   api.addFiles('local_collection_driver.js', ['client', 'server']);
   api.addFiles('remote_collection_driver.js', 'server');
-  api.addFiles('collection.js', ['client', 'server']);
+  api.mainModule('collection.js', ['client', 'server']);
 });
 
 Package.onTest(function (api) {
