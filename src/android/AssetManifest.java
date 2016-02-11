@@ -1,5 +1,7 @@
 package com.meteor.webapp;
 
+import android.util.Log;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -10,6 +12,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 final class AssetManifest {
+    private static final String LOG_TAG = AssetManifest.class.getSimpleName();
+
     static final class Entry {
         final String filePath;
         final String urlPath;
@@ -34,12 +38,12 @@ final class AssetManifest {
     final List<Entry> entries;
 
     public AssetManifest(InputStream inputStream) throws IOException, JSONException {
-        this(new JSONObject(Utils.stringFromInputStream(inputStream)));
+        this(new JSONObject(IOUtils.stringFromInputStream(inputStream)));
     }
 
     public AssetManifest(JSONObject json) throws JSONException {
-        String format = json.getString("format");
-        if (!format.equals("web-program-pre1")) {
+        String format = json.optString("format");
+        if (format != null && !format.equals("web-program-pre1")) {
             throw new JSONException("The asset manifest format is incompatible: " + format);
         }
 
@@ -56,11 +60,12 @@ final class AssetManifest {
 
             String filePath = entryJSON.getString("path");
             String urlPath = entryJSON.getString("url");
+
             String fileType = entryJSON.getString("type");
             boolean cacheable = entryJSON.getBoolean("cacheable");
-            String hash = entryJSON.getString("hash");
-            String sourceMapFilePath = entryJSON.optString("sourceMap");
-            String sourceMapUrlPath = entryJSON.optString("sourceMapUrl");
+            String hash = entryJSON.optString("hash", null);
+            String sourceMapFilePath = entryJSON.optString("sourceMap", null);
+            String sourceMapUrlPath = entryJSON.optString("sourceMapUrl", null);
 
             Entry entry = new Entry(filePath, urlPath, fileType, cacheable, hash, sourceMapFilePath, sourceMapUrlPath);
             entries.add(entry);

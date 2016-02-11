@@ -7,6 +7,8 @@ import java.io.ObjectInputStream;
 import java.util.Map;
 
 class AssetManagerCache {
+    private static final String LOG_TAG = AssetManagerCache.class.getSimpleName();
+
     private AssetManager assetManager;
     private Map<String, String[]> listCache;
 
@@ -28,7 +30,7 @@ class AssetManagerCache {
         }
     }
 
-    public boolean exists(String path) {
+    public final String[] list(String path) {
         if (path.startsWith("/")) {
             path = path.substring(1);
         }
@@ -37,6 +39,11 @@ class AssetManagerCache {
             path = path.substring(0, path.length() - 1);
         }
 
+        String[] children = listCache.get(path);
+        return children;
+    }
+
+    public boolean exists(String path) {
         String parentPath;
         String filename;
 
@@ -49,7 +56,8 @@ class AssetManagerCache {
             filename = path.substring(parentEndIndex + 1);
         }
 
-        String[] children = listCache.get(parentPath);
+        String[] children = list(parentPath);
+
         if (children == null) return false;
 
         for (String child : children) {
