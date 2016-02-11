@@ -111,7 +111,9 @@ export class CordovaBuilder {
     if (packageMap && packageMap.getInfo('launch-screen')) {
       this.additionalConfiguration.global.AutoHideSplashScreen = false;
       this.additionalConfiguration.global.SplashScreen = 'screen';
-      this.additionalConfiguration.global.SplashScreenDelay = 10000;
+      this.additionalConfiguration.global.SplashScreenDelay = 5000;
+      this.additionalConfiguration.global.FadeSplashScreenDuration = 250;
+      this.additionalConfiguration.global.ShowSplashScreenSpinner = false;
     }
 
     if (packageMap && packageMap.getInfo('mobile-status-bar')) {
