@@ -3,6 +3,14 @@ title: Code style
 description: Suggested style guidelines for your code.
 ---
 
+After reading this article, you'll know:
+
+1. Why it's a good idea to have consistent code style
+2. Which style guide we recommend for JavaScript code
+3. How to set up ESLint to check code style automatically
+4. Style suggestions for Meteor-specific patterns, such as Methods, publications, and more
+
+
 <h2 id="benefits-style">Benefits of consistent style</h2>
 
 Countless hours have been spent by developers throughout the years arguing over single vs. double quotes, where to put brackets, how many spaces to type, and all kinds of other cosmetic code style questions. These are all questions that have at best a tangential relationship to code quality, but are very easy to have opinions about because they are so visual.
