@@ -390,7 +390,7 @@ exports.defineAutoTests = function() {
 
       it("should invoke the onDownloadFailure callback with an error", function(done) {
         WebAppCordova.onDownloadFailure(function(error) {
-          expect(error.message).toEqual("Non-success status code for asset: /app/template.mobileapp.js");
+          expect(error.message).toEqual("Non-success status code 404 for asset: /app/template.mobileapp.js");
           done();
         });
 
