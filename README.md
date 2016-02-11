@@ -14,7 +14,8 @@ Documentation is available at http://docs.meteor.com/.
 Try the getting started [tutorial](https://www.meteor.com/try).
 
 # Part B
-
+ In your new branch, write the second section, What to Use [name of the repository] for and When to Use It. Polish your writing until it shines with grandeur. Then, commit your changes. 
+ 
 ## Quick Start
 
 Install Meteor:
