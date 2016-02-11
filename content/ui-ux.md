@@ -441,7 +441,7 @@ Note that the `listId` returned by the list method (which is the one generated b
 Sometimes the user may be interested in knowing when the update has hit the server. For instance, in a chat application, it's a typical pattern to optimistically display the message in the chat log, but indicate that it is "pending" until the server has acknowledged the write. We can do this easily in Meteor by simply modifying the Method to act differently on the client:
 
 ```js
-Messages.methods.insert = new Method({
+Messages.methods.insert = new ValidatedMethod({
   name: 'Messages.methods.insert',
   schema: new SimpleSchema({
     text: {type: String}

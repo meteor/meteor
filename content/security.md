@@ -115,7 +115,7 @@ The _only_ times you should be passing any user ID as an argument are the follow
 The best way to make your app secure is to understand all of the possible inputs that could come from an untrusted source, and make sure that they are all handled correctly. The easiest way to understand what inputs can come from the client is to restrict them to as small of a space as possible. This means your Methods should all be specific actions, and shouldn't take a multitude of options that change the behavior in significant ways. The end goal is that you can easily look at each Method in your app and validate or test that it is secure. Here's a secure example Method from the Todos example app:
 
 ```js
-Lists.methods.makePrivate = new Method({
+Lists.methods.makePrivate = new ValidatedMethod({
   name: 'Lists.methods.makePrivate',
   schema: new SimpleSchema({
     listId: { type: String }
@@ -147,7 +147,7 @@ You can see that this Method does a _very specific thing_ - it just makes a sing
 However, this doesn't mean you can't have any flexibility in your Methods. Let's look at an example:
 
 ```js
-const Meteor.users.methods.setUserData = new Method({
+const Meteor.users.methods.setUserData = new ValidatedMethod({
   name: 'Meteor.users.methods.setUserData',
   schema: new SimpleSchema({
     fullName: { type: String, optional: true },
@@ -339,7 +339,7 @@ MMR = {
 
 ```js
 // In a file loaded on client and server
-const Meteor.users.methods.updateMMR = new Method({
+const Meteor.users.methods.updateMMR = new ValidatedMethod({
   name: 'Meteor.users.methods.updateMMR',
   validate: null,
   run() {
