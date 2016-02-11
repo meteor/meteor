@@ -191,7 +191,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   public func startupDidComplete(command: CDVInvokedUrlCommand) {
     startupTimer?.stop()
 
-    // If startup completed succesfully, we consider a version good
+    // If startup completed successfully, we consider a version good
     configuration.lastKnownGoodVersion = currentAssetBundle.version
 
     commandDelegate?.runInBackground() {
@@ -255,7 +255,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   // MARK: - Managing Versions
 
   func revertToLastKnownGoodVersion() {
-    // Blacklist the current version, so we don't update to it again rightaway
+    // Blacklist the current version, so we don't update to it again right away
     configuration.addBlacklistedVersion(currentAssetBundle.version)
 
     // If there is a last known good version and we can load the bundle, revert to it
