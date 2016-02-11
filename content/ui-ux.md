@@ -443,9 +443,9 @@ Sometimes the user may be interested in knowing when the update has hit the serv
 ```js
 Messages.methods.insert = new ValidatedMethod({
   name: 'Messages.methods.insert',
-  schema: new SimpleSchema({
+  validate: new SimpleSchema({
     text: {type: String}
-  }),
+  }).validator(),
   run(message) {
     // In the simulation (on the client), we add an extra pending field.
     // It will be removed when the server comes back with the "true" data.
