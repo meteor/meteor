@@ -9,7 +9,7 @@ After reading this article, you'll know:
 2. How to organize your application both for small and larger applications.
 3. How to format your code and name the parts of your application in consistent and maintainable ways.
 
-<h2 id="meteor-structure">Meteor application structure</h2>
+<h2 id="meteor-structure">Universal JavaScript</h2>
 
 Meteor is a *full-stack* framework for building applications; this means Meteor applications differ from most applications in that they include code that both runs on the client, code that runs on the server, and _common_ code that runs in both places. Meteor applications enable you to run JavaScript code easily and consistenly in both client and server environments, and includes some application structure conventions to make it easier to understand which code runs where.
 
