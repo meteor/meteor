@@ -200,10 +200,10 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
       } catch {
         NSLog("Could not remove unused asset bundles: \(error)")
       }
-
-      let result = CDVPluginResult(status: CDVCommandStatus_OK)
-      self.commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
     }
+
+    let result = CDVPluginResult(status: CDVCommandStatus_OK)
+    self.commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
   }
 
   public func checkForUpdates(command: CDVInvokedUrlCommand) {
