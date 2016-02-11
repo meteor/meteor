@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Facebook OAuth flow",
-  version: "1.2.3-modules.8"
+  version: "1.2.3-cordova.4"
 });
 
 Package.onUse(function(api) {

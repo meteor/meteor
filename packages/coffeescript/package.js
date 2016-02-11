@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Javascript dialect with fewer braces and semicolons",
-  version: "1.0.12-cordova.3"
+  version: "1.0.12-cordova.4"
 });
 
 Package.registerBuildPlugin({

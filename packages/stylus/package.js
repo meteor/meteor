@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Expressive, dynamic, robust CSS',
-  version: "2.511.2-cordova.3"
+  version: "2.511.2-cordova.4"
 });
 
 Package.registerBuildPlugin({

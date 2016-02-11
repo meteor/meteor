@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Utility functions for tests",
-  version: '1.0.6-modules.8'
+  version: '1.0.6-cordova.4'
 });
 
 Package.onUse(function (api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Dependency tracker to allow reactive callbacks",
-  version: '1.0.10-modules.8'
+  version: '1.0.10-cordova.4'
 });
 
 Package.onUse(function (api) {

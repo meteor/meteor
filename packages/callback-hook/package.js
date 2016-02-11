@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Register callbacks on a hook",
-  version: '1.0.5-modules.8'
+  version: '1.0.5-cordova.4'
 });
 
 Package.onUse(function (api) {

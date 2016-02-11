@@ -1,6 +1,6 @@
 Package.describe({
   summary: "A user account system",
-  version: "1.2.3-cordova.3"
+  version: "1.2.3-cordova.4"
 });
 
 Package.onUse(function (api) {

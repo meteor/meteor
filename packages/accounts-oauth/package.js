@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based login services",
-  version: "1.1.9-modules.8"
+  version: "1.1.9-cordova.4"
 });
 
 Package.onUse(function (api) {
