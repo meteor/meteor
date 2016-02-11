@@ -4,5 +4,5 @@ Package.describe({
 });
 
 Cordova.depends({
-  'cordova-plugin-statusbar': '2.0.0'
+  'cordova-plugin-statusbar': '2.1.0'
 });
