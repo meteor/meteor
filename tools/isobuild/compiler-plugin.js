@@ -670,46 +670,54 @@ export class PackageSourceBatch {
       scanner.addInputFiles(map.get(name));
 
       if (batch.useMeteorInstall) {
-        scanner.scanImports().getOutputFiles().forEach(file => {
-          if (file.missingNodeModules) {
-            _.extend(allMissingNodeModules, file.missingNodeModules);
-          }
-        });
+        scanner.scanImports();
+        _.extend(allMissingNodeModules, scanner.allMissingNodeModules);
       }
 
       scannerMap.set(name, scanner);
     });
 
-    const missingMap = new Map;
+    function handleMissing(missingNodeModules) {
+      const missingMap = new Map;
 
-    Object.keys(allMissingNodeModules).forEach(id => {
-      const parts = id.split("/");
-      let name = null;
+      Object.keys(missingNodeModules).forEach(id => {
+        const parts = id.split("/");
+        let name = null;
 
-      if (parts[0] === "meteor") {
-        if (parts.length > 2) {
-          name = parts[1];
-          parts[1] = ".";
-          id = parts.slice(1).join("/");
-        } else {
+        if (parts[0] === "meteor") {
+          if (parts.length > 2) {
+            name = parts[1];
+            parts[1] = ".";
+            id = parts.slice(1).join("/");
+          } else {
+            return;
+          }
+        }
+
+        if (! scannerMap.has(name)) {
           return;
         }
-      }
 
-      if (! scannerMap.has(name)) {
-        return;
-      }
+        if (missingMap.has(name)) {
+          missingMap.get(name).push(id);
+        } else {
+          missingMap.set(name, [id]);
+        }
+      });
 
-      if (missingMap.has(name)) {
-        missingMap.get(name).push(id);
-      } else {
-        missingMap.set(name, [id]);
-      }
-    });
+      const nextMissingNodeModules = Object.create(null);
 
-    missingMap.forEach((ids, name) => {
-      scannerMap.get(name).addNodeModules(ids);
-    });
+      missingMap.forEach((ids, name) => {
+        _.extend(nextMissingNodeModules,
+                 scannerMap.get(name).addNodeModules(ids));
+      });
+
+      if (! _.isEmpty(nextMissingNodeModules)) {
+        handleMissing(nextMissingNodeModules);
+      }
+    }
+
+    handleMissing(allMissingNodeModules);
 
     scannerMap.forEach((scanner, name) => {
       const isApp = ! name;

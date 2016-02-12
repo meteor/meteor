@@ -63,7 +63,8 @@ export default class ImportScanner {
     this.usedPackageNames = usedPackageNames;
     this.nodeModulesPath = nodeModulesPath;
     this.watchSet = watchSet;
-    this.absPathToOutputIndex = {};
+    this.absPathToOutputIndex = Object.create(null);
+    this.allMissingNodeModules = Object.create(null);
     this.outputFiles = [];
 
     this._statCache = new Map;
@@ -104,6 +105,8 @@ export default class ImportScanner {
   }
 
   addNodeModules(identifiers) {
+    const newMissingNodeModules = Object.create(null);
+
     if (identifiers) {
       if (typeof identifiers === "object" &&
           ! Array.isArray(identifiers)) {
@@ -111,17 +114,37 @@ export default class ImportScanner {
       }
 
       if (identifiers.length > 0) {
-        this._scanFile({
-          sourcePath: "fake.js",
-          // By specifying the .deps property of this fake file ahead of
-          // time, we can avoid calling findImportedModuleIdentifiers in the
-          // _scanFile method.
-          deps: identifiers,
-        });
+        const previousAllMissingNodeModules = this.allMissingNodeModules;
+        this.allMissingNodeModules = newMissingNodeModules;
+
+        try {
+          this._scanFile({
+            sourcePath: "fake.js",
+            // By specifying the .deps property of this fake file ahead of
+            // time, we can avoid calling findImportedModuleIdentifiers in the
+            // _scanFile method.
+            deps: identifiers,
+          });
+
+        } finally {
+          this.allMissingNodeModules = previousAllMissingNodeModules;
+
+          // Remove previously seen missing module identifiers from
+          // newMissingNodeModules and merge the new identifiers back into
+          // this.allMissingNodeModules.
+          each(keys(newMissingNodeModules), key => {
+            if (has(previousAllMissingNodeModules, key)) {
+              delete newMissingNodeModules[key];
+            } else {
+              previousAllMissingNodeModules[key] =
+                newMissingNodeModules[key];
+            }
+          });
+        }
       }
     }
 
-    return this;
+    return newMissingNodeModules;
   }
 
   getOutputFiles(options) {
@@ -476,7 +499,7 @@ export default class ImportScanner {
       // the top-level node_modules directory, and we should record the
       // missing dependency so that we can include it in the app bundle.
       const missing = file.missingNodeModules || Object.create(null);
-      missing[id] = true;
+      this.allMissingNodeModules[id] = missing[id] = true;
       file.missingNodeModules = missing;
     }
 
