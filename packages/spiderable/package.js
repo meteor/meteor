@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Makes the application crawlable to web spiders",
-  version: "1.0.10-cordova.4"
+  version: "1.0.10-cordova.5"
 });
 
 Package.onUse(function (api) {

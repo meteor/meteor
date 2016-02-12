@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Google OAuth flow",
-  version: "1.1.8-cordova.4"
+  version: "1.1.8-cordova.5"
 });
 
 Package.onUse(function(api) {

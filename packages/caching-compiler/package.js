@@ -1,6 +1,6 @@
 Package.describe({
   name: 'caching-compiler',
-  version: '1.0.1-cordova.4',
+  version: '1.0.1-cordova.5',
   summary: 'An easy way to make compiler plugins cache',
   documentation: 'README.md'
 });

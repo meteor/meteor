@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Github OAuth flow",
-  version: "1.1.5-cordova.4"
+  version: "1.1.5-cordova.5"
 });
 
 Package.onUse(function(api) {

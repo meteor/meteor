@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '1.1.4-cordova.4'
+  version: '1.1.4-cordova.5'
 });
 
 Npm.depends({

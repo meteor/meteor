@@ -1,6 +1,6 @@
 Package.describe({
   name: "es5-shim",
-  version: "4.3.2-cordova.4",
+  version: "4.3.2-cordova.5",
   summary: "Shims and polyfills to improve ECMAScript 5 support",
   documentation: "README.md"
 });

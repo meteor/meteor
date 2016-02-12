@@ -1,6 +1,6 @@
 Package.describe({
   name: 'meteor-env-dev',
-  version: '0.0.1-cordova.4',
+  version: '0.0.1-cordova.5',
   summary: 'Package for setting up development-specific Meteor environment',
   debugOnly: true,
   documentation: 'README.md'

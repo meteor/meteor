@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Full-featured JavaScript parser",
-  version: "1.0.5-cordova.4"
+  version: "1.0.5-cordova.5"
 });
 
 Package.onUse(function (api) {

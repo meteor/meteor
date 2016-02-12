@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Binary Heap datastructure implementation",
-  version: '1.0.5-cordova.4'
+  version: '1.0.5-cordova.5'
 });
 
 Package.onUse(function (api) {

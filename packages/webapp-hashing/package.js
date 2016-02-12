@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Used internally by WebApp. Knows how to hash programs from manifests.",
-  version: "1.0.6-cordova.4"
+  version: "1.0.6-cordova.5"
 });
 
 Package.onUse(function(api) {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Observe changes to various sequence types such as arrays, cursors and objects",
-  version: "1.0.8-cordova.4"
+  version: "1.0.8-cordova.5"
 });
 
 Package.onUse(function (api) {
