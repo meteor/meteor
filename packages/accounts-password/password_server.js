@@ -1061,3 +1061,22 @@ Meteor.users._ensureIndex('services.email.verificationTokens.token',
                           {unique: 1, sparse: 1});
 Meteor.users._ensureIndex('services.password.reset.token',
                           {unique: 1, sparse: 1});
+
+
+const AccountsPassword = _.pick(Accounts,
+  'findUserByEmail',
+  'findUserByUsername',
+  'onEmailVerificationLink',
+  'onEnrollmentLink',
+  'onResetPasswordLink',
+  'addEmail',
+  'removeEmail',
+  'sendEnrollmentEmail',
+  'sendResetPasswordEmail',
+  'sendVerificationEmail',
+  'setPassword',
+  'setUsername',
+  'createUser',
+  'emailTemplates'
+);
+export {AccountsPassword};

@@ -11,7 +11,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use(['check', 'random', 'ejson', 'underscore', 'tracker',
-           'retry', 'id-map'],
+           'retry', 'id-map', 'ecmascript'],
           ['client', 'server']);
 
   // common functionality
@@ -36,7 +36,7 @@ Package.onUse(function (api) {
 
   api.addFiles('livedata_connection.js', ['client', 'server']);
 
-  api.addFiles('client_convenience.js', 'client');
+  api.mainModule('client_convenience.js', 'client');
 
   api.export('DDP');
   api.export('LivedataTest', {testOnly: true});

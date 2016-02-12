@@ -263,3 +263,13 @@ Accounts.verifyEmail = function(token, callback) {
     methodArguments: [token],
     userCallback: callback});
 };
+
+const AccountsPassword = _.pick(Accounts,
+  'changePassword',
+  'createUser',
+  'forgotPassword',
+  'resetPassword',
+  'verifyEmail'
+);
+AccountsPassword.loginWithPassword = Meteor.loginWithPassword;
+export {AccountsPassword};

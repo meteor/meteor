@@ -69,3 +69,7 @@ Meteor.default_connection = Meteor.connection;
 // We should transition from Meteor.connect to DDP.connect.
 // XXX COMPAT WITH 0.6.4
 Meteor.connect = DDP.connect;
+
+const MeteorConnection = Meteor.connection;
+const connect = DDP.connect;
+export {MeteorConnection, connect};

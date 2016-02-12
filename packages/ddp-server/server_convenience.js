@@ -20,3 +20,6 @@ _.each(['publish', 'methods', 'call', 'apply', 'onConnection'],
 // backcompat as a courtesy even though it was never documented.
 // XXX COMPAT WITH 0.6.4
 Meteor.default_server = Meteor.server;
+
+const MeteorServer = Meteor.server;
+export {MeteorServer};

@@ -16,10 +16,10 @@ Package.onUse(function (api) {
   // Accounts.oauth.registerService) exists.
   api.use('accounts-password', {weak: true});
 
-  api.addFiles([
-    'accounts_ui.js',
+  api.mainModule('accounts_ui.js');
 
-    'login_buttons.html',
+ api.addFiles([
+   'login_buttons.html',
     'login_buttons_single.html',
     'login_buttons_dropdown.html',
     'login_buttons_dialogs.html',

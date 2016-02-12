@@ -47,7 +47,7 @@ Package.onUse(function (api) {
   api.addFiles('writefence.js', 'server');
   api.addFiles('crossbar.js', 'server');
 
-  api.addFiles('server_convenience.js', 'server');
+  api.mainModule('server_convenience.js', 'server');
 });
 
 

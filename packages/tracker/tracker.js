@@ -617,3 +617,7 @@ Tracker.afterFlush = function (f) {
   afterFlushCallbacks.push(f);
   requireFlush();
 };
+
+const Computation = Tracker.Computation;
+const Dependency = Tracker.Dependency;
+export {Computation, Dependency};
