@@ -6,7 +6,6 @@ exports.defineAutoTests = function() {
       jasmine.addMatchers(customMatchers);
 
       WebAppCordova.getAuthTokenKeyValuePair(function(authTokenKeyValuePair) {
-        console.log("authTokenKeyValuePair", authTokenKeyValuePair);
         fetch("http://localhost:12000?" + authTokenKeyValuePair).then(done);
       });
     });

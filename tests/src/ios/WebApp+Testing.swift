@@ -17,6 +17,7 @@ extension WebApp {
   }
 
   func simulatePageReload(command: CDVInvokedUrlCommand) {
+    NSLog("simulatePageReload");
     onReset()
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
@@ -24,6 +25,8 @@ extension WebApp {
   }
 
   func simulateAppRestart(command: CDVInvokedUrlCommand) {
+    NSLog("simulateAppRestart");
+
     initializeAssetBundles()
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)

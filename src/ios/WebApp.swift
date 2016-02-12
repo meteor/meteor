@@ -37,7 +37,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   private(set) var assetBundleManager: AssetBundleManager!
 
   /// The asset bundle currently used to serve assets from
-  var currentAssetBundle: AssetBundle! {
+  private var currentAssetBundle: AssetBundle! {
     didSet {
       if currentAssetBundle != nil {
         configuration.appId = currentAssetBundle.appId
@@ -160,12 +160,16 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     } else {
       currentAssetBundle = initialAssetBundle
     }
+    
+    // Workaround to make sure tests run in a clean state, see
+    // WebApp+Testing.resetToInitialState()
+    pendingAssetBundle = nil
   }
 
   /// Called by Cordova before page reload
   override public func onReset() {
     super.onReset()
-
+    
     // If there is a pending asset bundle, we make it the current
     if let pendingAssetBundle = pendingAssetBundle {
       currentAssetBundle = pendingAssetBundle
@@ -201,7 +205,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
         NSLog("Could not remove unused asset bundles: \(error)")
       }
     }
-
+    
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     self.commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
   }
