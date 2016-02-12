@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '1.2.4-cordova.4'
+  version: '1.2.5-cordova.4'
 });
 
 Npm.depends({connect: "2.30.2",
@@ -15,7 +15,7 @@ Npm.strip({
 
 Cordova.depends({
   'cordova-plugin-whitelist': '1.2.1',
-  'cordova-plugin-wkwebview-engine': '1.0.1',
+  'cordova-plugin-wkwebview-engine': '1.0.2',
   'cordova-plugin-meteor-webapp': 'https://github.com/meteor/cordova-plugin-meteor-webapp.git#7df6a1ffc7211aca43a967893780ce44b4d172d6'
 });
 
