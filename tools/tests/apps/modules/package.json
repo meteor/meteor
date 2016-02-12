@@ -4,8 +4,10 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
+    "events": "^1.1.0",
     "moment": "2.11.1",
     "regenerator": "^0.8.42",
+    "stream-browserify": "^2.0.1",
     "util": "^0.10.3"
   },
   "scripts": {

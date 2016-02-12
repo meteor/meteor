@@ -202,10 +202,12 @@ export default class ImportScanner {
     }
 
     each(file.deps, id => {
-      const absImportedPath = this._tryToResolveImportedPath(file, id);
-      if (! absImportedPath) {
+      const resolved = this._tryToResolveImportedPath(file, id);
+      if (! resolved) {
         return;
       }
+
+      const absImportedPath = resolved.path;
 
       if (has(this.absPathToOutputIndex, absImportedPath)) {
         // Avoid scanning files that we've scanned before, but mark them
@@ -435,7 +437,7 @@ export default class ImportScanner {
       resolved = this._joinAndStat(dirPath, "index.js");
     }
 
-    return resolved && resolved.path;
+    return resolved;
   }
 
   _joinAndStat(...joinArgs) {
@@ -489,9 +491,7 @@ export default class ImportScanner {
   }
 
   _resolveNodeModule(file, id) {
-    let resolved = null;
     const isNative = has(nativeModulesMap, id);
-
     if (isNative && archMatches(this.bundleArch, "os")) {
       // Forbid installing any server module with the same name as a
       // native Node module.
@@ -499,11 +499,15 @@ export default class ImportScanner {
     }
 
     let dir = pathJoin(this.sourceRoot, file.sourcePath);
-
-    do {
+    let resolved = this._joinAndStat(dir);
+    if (! resolved || ! resolved.stat.isDirectory()) {
       dir = pathDirname(dir);
-      resolved = this._joinAndStat(dir, "node_modules", id);
-    } while (! resolved && dir !== this.sourceRoot);
+    }
+
+    while (! (resolved = this._joinAndStat(dir, "node_modules", id)) &&
+           dir !== this.sourceRoot) {
+      dir = pathDirname(dir);
+    }
 
     if (! resolved && this.nodeModulesPath) {
       // After checking any local node_modules directories, fall back to
@@ -573,7 +577,7 @@ export default class ImportScanner {
         // used, so we can get away with passing a fake directory file
         // object with only that property.
         this._tryToResolveImportedPath({
-          sourcePath: dirPath,
+          sourcePath: pathRelative(this.sourceRoot, dirPath),
         }, main, seenDirPaths);
 
       if (resolved) {

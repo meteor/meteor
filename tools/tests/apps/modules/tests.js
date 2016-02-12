@@ -181,6 +181,12 @@ describe("native node_modules", () => {
   it("can be overridden on the client", () => {
     assert.strictEqual(require("repl").notEmpty, true);
   });
+
+  it("can be implemented by wrapper npm packages", () => {
+    const Stream = require("stream");
+    assert.strictEqual(typeof Stream, "function");
+    assert.strictEqual(typeof Stream.Readable, "function");
+  });
 });
 
 describe("local node_modules", () => {
