@@ -19,3 +19,7 @@ exports.addStyles = function (css) {
 
   return head.appendChild(style);
 };
+
+// Node modules are installed in the context of this package, and Node
+// modules expect a global Buffer constructor.
+Buffer = this.Buffer || require("buffer").Buffer;

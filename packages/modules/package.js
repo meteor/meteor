@@ -5,6 +5,10 @@ Package.describe({
   documentation: "README.md"
 });
 
+Npm.depends({
+  buffer: "4.4.0"
+});
+
 Package.onUse(function(api) {
   api.use("modules-runtime");
   api.mainModule("client.js", "client");
