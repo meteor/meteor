@@ -5,12 +5,6 @@ import {Meteor as ImportedMeteor} from "meteor/meteor";
 describe("app modules", () => {
   it("can be imported using absolute identifiers", () => {
     assert.strictEqual(require("/tests"), exports);
-    assert.strictEqual(
-      // Client modules should be importable by server modules, though not
-      // vice-versa.
-      require("/client/eager").name,
-      "/client/eager.js"
-    );
   });
 
   it("can have different file extensions", () => {
@@ -62,9 +56,32 @@ describe("app modules", () => {
     if (Meteor.isServer) {
       assert.strictEqual(typeof error, "undefined");
       assert.strictEqual(result, "/server/only.js");
+      assert.strictEqual(require("./server/only"),
+                         require("/server/only"));
     }
 
     if (Meteor.isClient) {
+      assert.ok(error instanceof Error);
+    }
+  });
+
+  it("cannot import client modules on server", () => {
+    let error;
+    let result;
+    try {
+      result = require("./client/only").default;
+    } catch (expectedOnServer) {
+      error = expectedOnServer;
+    }
+
+    if (Meteor.isClient) {
+      assert.strictEqual(typeof error, "undefined");
+      assert.strictEqual(result, "/client/only.js");
+      assert.strictEqual(require("./client/only"),
+                         require("/client/only"));
+    }
+
+    if (Meteor.isServer) {
       assert.ok(error instanceof Error);
     }
   });
@@ -209,6 +226,20 @@ describe("Meteor packages", () => {
     assert.strictEqual(ModulesTestPackage, "loaded");
     const mtp = require("meteor/modules-test-package");
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
+  });
+
+  it("should expose their files for import", () => {
+    const osStub = require("meteor/modules-test-package/os-stub");
+
+    assert.strictEqual(
+      osStub.platform(),
+      "browser"
+    );
+
+    assert.strictEqual(
+      osStub.name,
+      "/node_modules/meteor/modules-test-package/os-stub.js"
+    );
   });
 });
 

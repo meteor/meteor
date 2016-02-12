@@ -379,20 +379,12 @@ class ResourceSlot {
       return lazy;
     }
 
-    const sourcePath = this.inputResource.path;
-
-    if (sourcePath.endsWith(".json")) {
-      // JSON files have no side effects, so there is no reason for them
-      // ever to be evaluated eagerly.
-      return true;
-    }
-
     // If file.lazy was not previously defined, mark the file lazy if it
     // is contained by an imports directory. Note that any files contained
     // by a node_modules directory will already have been marked lazy in
     // PackageSource#_inferFileOptions.
     return this.packageSourceBatch.useMeteorInstall &&
-      files.pathDirname(sourcePath)
+      files.pathDirname(this.inputResource.path)
         .split(files.pathSep)
         .indexOf("imports") >= 0;
   }
@@ -634,18 +626,10 @@ export class PackageSourceBatch {
   // Returns a map from package names to arrays of JS output files.
   static computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
-    const pkgSourceBatches = [];
-    let appSourceBatch;
 
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
       const inputFiles = [];
-
-      if (name) {
-        pkgSourceBatches.push(batch);
-      } else {
-        appSourceBatch = batch;
-      }
 
       batch.resourceSlots.forEach(slot => {
         inputFiles.push(...slot.jsOutputResources);
@@ -662,8 +646,9 @@ export class PackageSourceBatch {
     }
 
     const allMissingNodeModules = Object.create(null);
+    const scannerMap = new Map;
 
-    function scan(batch) {
+    sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
       const isApp = ! name;
 
@@ -692,9 +677,44 @@ export class PackageSourceBatch {
         });
       }
 
-      if (isApp) {
-        scanner.addNodeModules(allMissingNodeModules);
+      scannerMap.set(name, scanner);
+    });
 
+    const missingMap = new Map;
+
+    Object.keys(allMissingNodeModules).forEach(id => {
+      const parts = id.split("/");
+      let name = null;
+
+      if (parts[0] === "meteor") {
+        if (parts.length > 2) {
+          name = parts[1];
+          parts[1] = ".";
+          id = parts.slice(1).join("/");
+        } else {
+          return;
+        }
+      }
+
+      if (! scannerMap.has(name)) {
+        return;
+      }
+
+      if (missingMap.has(name)) {
+        missingMap.get(name).push(id);
+      } else {
+        missingMap.set(name, [id]);
+      }
+    });
+
+    missingMap.forEach((ids, name) => {
+      scannerMap.get(name).addNodeModules(ids);
+    });
+
+    scannerMap.forEach((scanner, name) => {
+      const isApp = ! name;
+
+      if (isApp) {
         const appFilesWithoutNodeModules = [];
 
         scanner.getOutputFiles().forEach(file => {
@@ -723,13 +743,7 @@ export class PackageSourceBatch {
       } else {
         map.set(name, scanner.getOutputFiles());
       }
-    }
-
-    pkgSourceBatches.forEach(scan);
-
-    if (appSourceBatch) {
-      scan(appSourceBatch);
-    }
+    });
 
     return map;
   }

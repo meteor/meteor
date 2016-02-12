@@ -1383,6 +1383,7 @@ _.extend(PackageSource.prototype, {
     const anyLevelExcludes = [
       /^tests\/$/,
       /^node_modules\/$/,
+      arch === "os" ? /^client\/$/ : /^server\/$/,
       ...sourceReadOptions.exclude
     ];
 

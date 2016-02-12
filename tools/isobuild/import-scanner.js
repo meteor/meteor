@@ -1,5 +1,5 @@
 import assert from "assert";
-import {isString, has, keys, each, without} from "underscore";
+import {isString, has, keys, each, map, without} from "underscore";
 import {sha1, readAndWatchFileWithHash} from "../fs/watch.js";
 import {matches as archMatches} from "../utils/archinfo.js";
 import {findImportedModuleIdentifiers} from "./js-analyze.js";
@@ -125,8 +125,11 @@ export default class ImportScanner {
   }
 
   getOutputFiles(options) {
-    // Return all installable output files.
-    return this.outputFiles.filter(file => !! file.installPath);
+    // Return all installable output files that are either eager or
+    // imported by another module.
+    return this.outputFiles.filter(file => {
+      return file.installPath && (! file.lazy || file.imported);
+    });
   }
 
   _findImportedModuleIdentifiers(file) {
@@ -306,9 +309,8 @@ export default class ImportScanner {
     }
 
     const dirs = this._splitPath(pathDirname(installPath));
-    const bundlingClientApp =
-      ! this.name && // Indicates we are bundling an app.
-      archMatches(this.bundleArch, "web");
+    const isApp = ! this.name;
+    const bundlingForWeb = archMatches(this.bundleArch, "web");
 
     for (let dir of dirs) {
       if (dir.charAt(0) === "." ||
@@ -319,12 +321,21 @@ export default class ImportScanner {
         return;
       }
 
-      if (bundlingClientApp && (dir === "server" ||
-                                dir === "private")) {
-        // If we're bundling an app for a client architecture, any files
-        // contained by a server-only directory that is not contained by
-        // a node_modules directory must be ignored.
-        return;
+      if (isApp) {
+        if (bundlingForWeb) {
+          if (dir === "server" ||
+              dir === "private") {
+            // If we're bundling an app for a client architecture, any files
+            // contained by a server-only directory that is not contained by
+            // a node_modules directory must be ignored.
+            return;
+          }
+        } else if (dir === "client") {
+          // If we're bundling an app for a server architecture, any files
+          // contained by a client-only directory that is not contained by
+          // a node_modules directory must be ignored.
+          return;
+        }
       }
 
       if (dir === "node_modules") {
@@ -460,16 +471,13 @@ export default class ImportScanner {
 
     if (! resolved) {
       const parts = id.split("/");
-      if (parts[0] !== "meteor") { // Exclude meteor/... packages.
-        // If the imported identifier is neither absolute nor relative,
-        // but top-level, then it might be satisfied by a package
-        // installed in the top-level node_modules directory, and we
-        // should record the missing dependency so that we can include it
-        // in the app bundle.
-        const missing = file.missingNodeModules || Object.create(null);
-        missing[id] = true;
-        file.missingNodeModules = missing;
-      }
+      // If the imported identifier is neither absolute nor relative, but
+      // top-level, then it might be satisfied by a package installed in
+      // the top-level node_modules directory, and we should record the
+      // missing dependency so that we can include it in the app bundle.
+      const missing = file.missingNodeModules || Object.create(null);
+      missing[id] = true;
+      file.missingNodeModules = missing;
     }
 
     // If the dependency is still not resolved, it might be handled by the
@@ -502,23 +510,46 @@ export default class ImportScanner {
   _resolvePkgJsonMain(dirPath, seenDirPaths) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
     const pkg = this._readPkgJson(pkgJsonPath);
+    if (! pkg) {
+      return null;
+    }
 
-    if (pkg && isString(pkg.main)) {
+    let main = pkg.main;
+
+    if (archMatches(this.bundleArch, "web") &&
+        isString(pkg.browser)) {
+      main = pkg.browser;
+    }
+
+    if (isString(main)) {
       // The "main" field of package.json does not have to begin with ./
       // to be considered relative, so first we try simply appending it to
       // the directory path before falling back to a full resolve, which
       // might return a package from a node_modules directory.
-      const resolved = this._joinAndStat(dirPath, pkg.main) ||
+      const resolved = this._joinAndStat(dirPath, main) ||
         // The _tryToResolveImportedPath method takes a file object as its
         // first parameter, but only the .sourcePath property is ever
         // used, so we can get away with passing a fake directory file
         // object with only that property.
         this._tryToResolveImportedPath({
           sourcePath: dirPath,
-        }, pkg.main, seenDirPaths);
+        }, main, seenDirPaths);
 
       if (resolved) {
-        this._addPkgJsonToOutput(pkgJsonPath, pkg);
+        // Output a JS module that exports just the "name", "version", and
+        // "main" properties defined in the package.json file.
+        const pkgSubset = {
+          name: pkg.name,
+        };
+
+        if (has(pkg, "version")) {
+          pkgSubset.version = pkg.version;
+        }
+
+        pkgSubset.main = main;
+
+        this._addPkgJsonToOutput(pkgJsonPath, pkgSubset);
+
         return resolved;
       }
     }
@@ -528,13 +559,9 @@ export default class ImportScanner {
 
   _addPkgJsonToOutput(pkgJsonPath, pkg) {
     if (! has(this.absPathToOutputIndex, pkgJsonPath)) {
-      const data = new Buffer(
-        // Output a JS module that exports just the "name", "version", and
-        // "main" properties defined in the package.json file.
-        "exports.name = " + JSON.stringify(pkg.name) + ";\n" +
-        "exports.version = " + JSON.stringify(pkg.version) + ";\n" +
-        "exports.main = " + JSON.stringify(pkg.main) + ";\n"
-      );
+      const data = new Buffer(map(pkg, (value, key) => {
+        return `exports.${key} = ${JSON.stringify(value)};\n`;
+      }).join(""));
 
       const relPkgJsonPath = pathRelative(this.sourceRoot, pkgJsonPath);
 
