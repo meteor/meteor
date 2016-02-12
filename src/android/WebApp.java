@@ -365,7 +365,7 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
                 // Don't serve index.html for local file system paths
                 if (path.startsWith(LOCAL_FILESYSTEM_PATH)) return null;
 
-                if (path.equals("favicon.ico")) return null;
+                if (path.equals("/favicon.ico")) return null;
 
                 AssetBundle.Asset asset = currentAssetBundle.getIndexFile();
                 if (asset != null) {
@@ -387,7 +387,19 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
             if (remappedUri != null) break;
         }
 
-        return remappedUri;
+        if (remappedUri != null) {
+            return remappedUri;
+        } else {
+            // This will result in a call to handleOpenForRead(), which we use to return a 404 response
+            return toPluginUri(uri);
+        }
+    }
+
+    @Override
+    public CordovaResourceApi.OpenForReadResult handleOpenForRead(Uri uri) throws IOException {
+        Uri originalUri = fromPluginUri(uri);
+        // Returning a null inputStream will result in a 404 response
+        return new CordovaResourceApi.OpenForReadResult(originalUri, null, null, 0, null);
     }
 
     //endregion
