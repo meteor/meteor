@@ -1,0 +1,61 @@
+## Migrating to use imports everywhere
+
+1. Use `import {Collection, Cursor, ObjectID} from 'meteor/mongo'`
+
+2. Use `import {MeteorServer} from 'meteor/ddp-server'` and call:
+  1. `MeteorServer.publish()`
+  2. `MeteorServer.methods()`
+
+3. Use `import {MeteorConnection} from 'meteor/ddp-client'` and call:
+  1. `MeteorConnection.apply()`
+  1. `MeteorConnection.call()`
+  1. `MeteorConnection.disconnect()`
+  1. `MeteorConnection.onConnection()`
+  1. `MeteorConnection.reconnect()`
+  1. `MeteorConnection.status()`
+  1. `MeteorConnection.subscribe()`
+
+4. Use `import {connect} from 'meteor/ddp-client'` rather than `DDP.connect`;
+
+5. Use `import {Accounts} from 'meteor/accounts-base'` and (on the client) use:
+  1. `Accounts.user()` instead of `Meteor.currentUser()`
+  2. `Accounts.userId()` instead of `Meteor.userId()`,
+  3. `Accounts.loggingIn()` insead of `Meteor.loggingIn()`,
+  4. `Accounts.logout()` instead of `Meteor.logout()`,
+  5. `Accounts.logoutOtherClients()` instead of `Meteor.logoutOtherClient()`
+  6. `Accounts.users` instead of `Meteor.users`
+  
+6. Use `import {AccountsPassword} from 'meteor/accounts-password'` and:
+  1. On the client, call:
+    1. `AccountsPassword.loginWithPassword()` instead of `Meteor.loginWithPassword()`,
+    1. `AccountsPassword.changePassword()`,
+    1. `AccountsPassword.createUser()`,
+    1. `AccountsPassword.forgotPassword()`,
+    1. `AccountsPassword.resetPassword()`,
+    1. `AccountsPassword.verifyEmai()`
+  2. On the server, call:
+    1. `AccountsPassword.findUserByEmail()`,
+    1. `AccountsPassword.findUserByUsername()`,
+    1. `AccountsPassword.onEmailVerificationLink()`,
+    1. `AccountsPassword.onEnrollmentLink()`,
+    1. `AccountsPassword.onResetPasswordLink()`,
+    1. `AccountsPassword.addEmail()`,
+    1. `AccountsPassword.removeEmail()`,
+    1. `AccountsPassword.sendEnrollmentEmail()`,
+    1. `AccountsPassword.sendResetPasswordEmail()`,
+    1. `AccountsPassword.sendVerificationEmail()`,
+    1. `AccountsPassword.setPassword()`,
+    1. `AccountsPassword.setUsername()`,
+    1. `AccountsPassword.createUser()`,
+    1. `AccountsPassword.emailTemplate()`
+
+7. Use `import {AccountsFacebook} from 'meteor/accounts-facebook'` and:
+  1. `AccountsFacebook.loginWithFacebook()` rather than `Meteor.loginWithFacebook()`.
+
+  XXX: not yet changed on the branch, in lieu of bikeshedding
+
+8. Use `import {Template} from 'meteor/templating'` (gotcha)
+
+9. Use `import {config} from 'meteor/accounts-ui-unstyled'`
+
+10. Use `import {Computation, Dependency} from 'meteor/tracker'`
