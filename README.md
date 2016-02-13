@@ -13,10 +13,9 @@ Documentation is available at http://docs.meteor.com/.
 
 Try the getting started [tutorial](https://www.meteor.com/try).
 
-# Part B
- In your new branch, write the second section, What to Use [name of the repository] for and When to Use It. Polish your writing until it shines with grandeur. Then, commit your changes. 
- 
- You should consider Meteor for developing single page webapps that require realtime rendering.  One of the principles of Meteor is "Simplicity equals productivity". This is demonstarted in Meteor as JavaScript is used for the front and back end. Additionaly,the same line of code can run on the client and server side. Therefore, making it beginner friendly and you should consider using Meteor to develop your first webapp.
+# When and what to use Meteor for
+
+You should consider Meteor for developing single page web and mobile apps that require realtime rendering of data.  One of the principles of Meteor is "Simplicity equals productivity". This is demonstrated in Meteor as the same line of code can run both on the client and server side. Additionaly, JavaScript is used for the front and back ends. Both these factors make Meteor beginner friendly. Meteor is also a good choice for startups that require a minimal viable product in a short period of time, as the Meteor ecosystem includes smart packages that speed up development.
  
 ## Quick Start
 
