@@ -107,6 +107,6 @@
     <source-file src="src/android/IOUtils.java" target-dir="src/com/meteor/webapp" />
 
     <framework src="src/android/build-extras.gradle" custom="true" type="gradleReference" />
-    <framework src="com.squareup.okhttp3:okhttp:3.1.1" />
+    <framework src="com.squareup.okhttp3:okhttp:3.1.2" />
   </platform>
 </plugin>
