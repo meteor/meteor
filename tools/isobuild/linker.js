@@ -495,14 +495,30 @@ _.extend(File.prototype, {
   _getClosureHeader() {
     if (this._useMeteorInstall()) {
       var header = "";
+
       if (this.deps.length > 0) {
         header += "[";
         _.each(this.deps, dep => {
           header += JSON.stringify(dep) + ",";
         });
       }
-      return header + "function(require,exports,module){";
+
+      const headerParts = [
+        header,
+        "function(require,exports,module"
+      ];
+
+      if (this.source.match(/\b__dirname\b/)) {
+        headerParts.push(",__filename,__dirname");
+      } else if (this.source.match(/\b__filename\b/)) {
+        headerParts.push(",__filename");
+      }
+
+      headerParts.push("){");
+
+      return headerParts.join("");
     }
+
     return "(function(){";
   },
 
