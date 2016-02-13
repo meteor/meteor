@@ -740,9 +740,28 @@ _.extend(ProjectContext.prototype, {
   _saveChangedMetadata: function () {
     var self = this;
 
+    // update any lines which don't have a description, but do represent a package constraint
+    // this is an underscore filter to grab an array of only the lines worth changing (copy by reference)
+    // followed by a foreach to update that description (if available).
+    _.filter(self.projectConstraintsFile._constraintLines, (line) => !line.trailingSpaceAndComment && line.constraint)
+    .forEach(line => {
+      //line doesn't have a description, but does represent a constraint line.
+      var constraint = line.constraint;
+      // version will be the selected version for this project.
+      var version = self.packageMap.getInfo(constraint.package).version;
+      // version record is the the metadata for the package at the selected version.
+      var versionRecord = self.projectCatalog.getVersion(
+          constraint.package, version);
+      //finally if a description is available, tack it on.
+      if (versionRecord.description) {
+        line.trailingSpaceAndComment = '        # '+versionRecord.description;
+      }
+    });
+
     // Save any changes to .meteor/packages.
-    if (! self._neverWriteProjectConstraintsFile)
+    if (! self._neverWriteProjectConstraintsFile) {
       self.projectConstraintsFile.writeIfModified();
+    }
 
     // Write .meteor/versions if the command always wants to (create/update),
     // or if the release of the app matches the release of the process.
