@@ -67,8 +67,8 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
     private Timer startupTimer;
 
     @Override
-    public void initialize(final CordovaInterface cordova, CordovaWebView webView) {
-        super.initialize(cordova, webView);
+    public void pluginInitialize() {
+        super.pluginInitialize();
 
         resourceApi = webView.getResourceApi();
 
@@ -84,21 +84,14 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         SharedPreferences preferences = cordova.getActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         configuration = new WebAppConfiguration(preferences);
 
-        resourceHandlers = new ArrayList<WebResourceHandler>();
-        initializeResourceHandlers();
+        try {
+            assetManagerCache = new AssetManagerCache(assetManager);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Could not load asset manager cache", e);
+            return;
+        }
 
-        cordova.getThreadPool().execute(new Runnable() {
-            public void run() {
-                try {
-                    assetManagerCache = new AssetManagerCache(assetManager);
-                } catch (IOException e) {
-                    Log.e(LOG_TAG, "Could not load asset manager cache", e);
-                    return;
-                }
-
-                initializeAssetBundles();
-            }
-        });
+        initializeAssetBundles();
 
         resourceHandlers = new ArrayList<WebResourceHandler>();
         initializeResourceHandlers();

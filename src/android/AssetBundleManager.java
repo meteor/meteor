@@ -226,7 +226,7 @@ class AssetBundleManager {
     protected AssetManifest loadAssetManifest(Uri uri) {
         InputStream inputStream = null;
         try {
-            inputStream = resourceApi.openForRead(uri).inputStream;
+            inputStream = resourceApi.openForRead(uri, true).inputStream;
             return new AssetManifest(inputStream);
         } catch (IOException e) {
             throw new RuntimeException("Error loading asset manifest", e);
@@ -245,7 +245,7 @@ class AssetBundleManager {
     JSONObject loadRuntimeConfig(Uri uri) {
         InputStream inputStream = null;
         try {
-            inputStream = resourceApi.openForRead(uri).inputStream;
+            inputStream = resourceApi.openForRead(uri, true).inputStream;
             String indexFileString = IOUtils.stringFromInputStream(inputStream);
             Matcher matcher = runtimeConfigPattern.matcher(indexFileString);
             if (!matcher.find()) {
