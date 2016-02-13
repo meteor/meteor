@@ -4,6 +4,7 @@
   "description": "Test app exercising many aspects of the Meteor module system.",
   "private": true,
   "dependencies": {
+    "buffer": "^4.4.0",
     "events": "^1.1.0",
     "moment": "2.11.1",
     "path": "^0.12.7",
