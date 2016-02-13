@@ -754,7 +754,7 @@ _.extend(ProjectContext.prototype, {
           constraint.package, version);
       //finally if a description is available, tack it on.
       if (versionRecord.description) {
-        line.trailingSpaceAndComment = '        # '+versionRecord.description;
+        line.trailingSpaceAndComment = '\t\t# '+versionRecord.description;
       }
     });
 
