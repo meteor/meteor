@@ -62,69 +62,71 @@ class AssetBundleDownloader {
     public void resume() {
         Log.v(LOG_TAG, "Start downloading assets from bundle with version: " + assetBundle.getVersion());
 
-        for (final AssetBundle.Asset asset : missingAssets) {
-            if (assetsDownloading.contains(asset)) continue;
+        synchronized (missingAssets) {
+            for (final AssetBundle.Asset asset : missingAssets) {
+                if (assetsDownloading.contains(asset)) continue;
 
-            assetsDownloading.add(asset);
+                assetsDownloading.add(asset);
 
-            HttpUrl url = downloadUrlForAsset(asset);
-            Request request = new Request.Builder().url(url).build();
-            httpClient.newCall(request).enqueue(new okhttp3.Callback() {
-                @Override
-                public void onFailure(Call call, IOException e) {
-                    assetsDownloading.remove(asset);
+                HttpUrl url = downloadUrlForAsset(asset);
+                Request request = new Request.Builder().url(url).build();
+                httpClient.newCall(request).enqueue(new okhttp3.Callback() {
+                    @Override
+                    public void onFailure(Call call, IOException e) {
+                        assetsDownloading.remove(asset);
 
-                    if (!call.isCanceled()) {
-                        didFail(new DownloadFailureException("Error downloading asset: " + asset, e));
-                    }
-                }
-
-                @Override
-                public void onResponse(Call call, Response response) throws IOException {
-                    assetsDownloading.remove(asset);
-
-                    try {
-                        verifyResponse(response, asset);
-                    } catch (DownloadFailureException e) {
-                        didFail(e);
-                        return;
+                        if (!call.isCanceled()) {
+                            didFail(new DownloadFailureException("Error downloading asset: " + asset, e));
+                        }
                     }
 
-                    try {
-                        IOUtils.writeToFile(response.body().source(), asset.getFile());
-                    } catch (IOException e) {
-                        didFail(e);
-                        return;
-                    }
+                    @Override
+                    public void onResponse(Call call, Response response) throws IOException {
+                        assetsDownloading.remove(asset);
 
-                    // We don't have a hash for the index page, so we have to parse the runtime config
-                    // and compare autoupdateVersionCordova to the version in the manifest to verify
-                    // if we downloaded the expected version
-                    if (asset.filePath.equals("index.html")) {
-                        JSONObject runtimeConfig = assetBundle.getRuntimeConfig();
-                        if (runtimeConfig != null) {
-                            String expectedVersion = assetBundle.getVersion();
-                            String actualVersion = runtimeConfig.optString("autoupdateVersionCordova", null);
-                            if (actualVersion != null) {
-                                if (!actualVersion.equals(expectedVersion)) {
-                                    didFail(new DownloadFailureException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion));
-                                    return;
+                        try {
+                            verifyResponse(response, asset);
+                        } catch (DownloadFailureException e) {
+                            didFail(e);
+                            return;
+                        }
+
+                        try {
+                            IOUtils.writeToFile(response.body().source(), asset.getFile());
+                        } catch (IOException e) {
+                            didFail(e);
+                            return;
+                        }
+
+                        // We don't have a hash for the index page, so we have to parse the runtime config
+                        // and compare autoupdateVersionCordova to the version in the manifest to verify
+                        // if we downloaded the expected version
+                        if (asset.filePath.equals("index.html")) {
+                            JSONObject runtimeConfig = assetBundle.getRuntimeConfig();
+                            if (runtimeConfig != null) {
+                                String expectedVersion = assetBundle.getVersion();
+                                String actualVersion = runtimeConfig.optString("autoupdateVersionCordova", null);
+                                if (actualVersion != null) {
+                                    if (!actualVersion.equals(expectedVersion)) {
+                                        didFail(new DownloadFailureException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion));
+                                        return;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    missingAssets.remove(asset);
+                        missingAssets.remove(asset);
 
-                    if (missingAssets.isEmpty()) {
-                        Log.i(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
+                        if (missingAssets.isEmpty()) {
+                            Log.i(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
 
-                        if (callback != null) {
-                            callback.onFinished();
+                            if (callback != null) {
+                                callback.onFinished();
+                            }
                         }
                     }
-                }
-            });
+                });
+            }
         }
     }
 
