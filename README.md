@@ -13,7 +13,7 @@ Documentation is available at http://docs.meteor.com/.
 
 Try the getting started [tutorial](https://www.meteor.com/try).
 
-# When and what to use Meteor for
+## When and what to use Meteor for
 
 You should consider using Meteor for developing single page web and mobile applications that require realtime rendering of data. For example webapps that display real time rendering of graphs, user comments etc. This is possible through its inbuilt reactive programming model which makes it easier to build real time web applications. One of the principles of Meteor is "Simplicity equals productivity". This is demonstrated in Meteor as the same line of code can run both on the client and server side. Additionaly, JavaScript is used for the front and back ends. Both these factors make Meteor beginner friendly. Meteor is also a good choice for startups that require a minimal viable product in a short period of time, as the Meteor ecosystem includes smart packages and one command deploy option that speed up development.
  
