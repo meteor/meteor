@@ -62,7 +62,7 @@ final class WebAppConfiguration {
     }
 
     set {
-      if newValue != lastDownloadedVersion {
+      if newValue != lastSeenInitialVersion {
         if newValue == nil {
           userDefaults.removeObjectForKey("MeteorWebAppLastSeenInitialVersion")
         } else {
