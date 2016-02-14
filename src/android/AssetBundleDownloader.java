@@ -2,10 +2,13 @@ package com.meteor.webapp;
 
 import android.util.Log;
 
+import org.apache.cordova.CordovaResourceApi;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -33,17 +36,19 @@ class AssetBundleDownloader {
     private final HttpUrl baseUrl;
 
     private final OkHttpClient httpClient;
+    private final Set<AssetBundle.Asset> missingAssets;
     private final Set<AssetBundle.Asset> assetsDownloading;
     private boolean canceled;
 
-    public AssetBundleDownloader(AssetBundle assetBundle, HttpUrl baseUrl) {
+    public AssetBundleDownloader(AssetBundle assetBundle, HttpUrl baseUrl, Set<AssetBundle.Asset> missingAssets) {
         this.assetBundle = assetBundle;
         this.baseUrl = baseUrl;
 
         httpClient = new OkHttpClient.Builder().cache(null).build();
         httpClient.dispatcher().setMaxRequestsPerHost(6);
 
-        assetsDownloading = Collections.newSetFromMap(new ConcurrentHashMap<AssetBundle.Asset,Boolean>());
+        this.missingAssets = Collections.synchronizedSet(missingAssets);
+        assetsDownloading = Collections.synchronizedSet(new HashSet<AssetBundle.Asset>());
     }
 
     public AssetBundle getAssetBundle() {
@@ -57,7 +62,9 @@ class AssetBundleDownloader {
     public void resume() {
         Log.v(LOG_TAG, "Start downloading assets from bundle with version: " + assetBundle.getVersion());
 
-        for (final AssetBundle.Asset asset : assetBundle.getOwnAssets()) {
+        for (final AssetBundle.Asset asset : missingAssets) {
+            if (assetsDownloading.contains(asset)) continue;
+
             assetsDownloading.add(asset);
 
             HttpUrl url = downloadUrlForAsset(asset);
@@ -65,6 +72,8 @@ class AssetBundleDownloader {
             httpClient.newCall(request).enqueue(new okhttp3.Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
+                    assetsDownloading.remove(asset);
+
                     if (!call.isCanceled()) {
                         didFail(new DownloadFailureException("Error downloading asset: " + asset, e));
                     }
@@ -72,6 +81,8 @@ class AssetBundleDownloader {
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
+                    assetsDownloading.remove(asset);
+
                     try {
                         verifyResponse(response, asset);
                     } catch (DownloadFailureException e) {
@@ -103,9 +114,9 @@ class AssetBundleDownloader {
                         }
                     }
 
-                    assetsDownloading.remove(asset);
+                    missingAssets.remove(asset);
 
-                    if (assetsDownloading.isEmpty()) {
+                    if (missingAssets.isEmpty()) {
                         Log.i(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
 
                         if (callback != null) {

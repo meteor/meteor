@@ -3,17 +3,27 @@ package com.meteor.webapp;
 import android.net.Uri;
 import android.util.Log;
 
+import org.apache.cordova.CordovaResourceApi;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLDecoder;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import okhttp3.HttpUrl;
 
 class AssetBundle {
     private static final String LOG_TAG = AssetBundle.class.getSimpleName();
+
+    static final Pattern runtimeConfigPattern = Pattern.compile("__meteor_runtime_config__ = JSON.parse\\(decodeURIComponent\\(\"([^\"]*)\"\\)\\)");
 
     final class Asset {
         final String filePath;
@@ -37,7 +47,7 @@ class AssetBundle {
         }
 
         public File getFile() {
-            return manager.getResourceApi().mapUriToFile(getFileUri());
+            return resourceApi.mapUriToFile(getFileUri());
         }
 
         @Override
@@ -46,13 +56,12 @@ class AssetBundle {
         }
     }
 
-    private final AssetBundleManager manager;
+    private final CordovaResourceApi resourceApi;
+    private Uri directoryUri;
+    private final AssetBundle parentAssetBundle;
 
     private final String version;
 
-    private final AssetBundle parentAssetBundle;
-
-    private Uri directoryUri;
     private Map<String, Asset> ownAssetsByURLPath;
     private Asset indexFile;
 
@@ -60,10 +69,18 @@ class AssetBundle {
     private String appId;
     private HttpUrl rootUrl;
 
-    public AssetBundle(AssetBundleManager manager, Uri directoryUri, AssetManifest manifest, AssetBundle parentAssetBundle) {
-        this.manager = manager;
+    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri) {
+        this(resourceApi, directoryUri, null, null);
+    }
+
+    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetManifest manifest, AssetBundle parentAssetBundle) {
+        this.resourceApi = resourceApi;
         this.directoryUri = directoryUri;
         this.parentAssetBundle = parentAssetBundle;
+
+        if (manifest == null) {
+            manifest = loadAssetManifest();
+        }
 
         version = manifest.version;
 
@@ -94,8 +111,8 @@ class AssetBundle {
         ownAssetsByURLPath.put(asset.urlPath, asset);
     }
 
-    public Iterable<Asset> getOwnAssets() {
-        return ownAssetsByURLPath.values();
+    public Set<Asset> getOwnAssets() {
+        return new HashSet<Asset>(ownAssetsByURLPath.values());
     }
 
     public Asset assetForUrlPath(String urlPath) {
@@ -129,7 +146,7 @@ class AssetBundle {
 
     public JSONObject getRuntimeConfig() {
         if (runtimeConfig == null) {
-            runtimeConfig = manager.loadRuntimeConfig(getIndexFile().getFileUri());
+            runtimeConfig = loadRuntimeConfig(getIndexFile().getFileUri());
         }
         return runtimeConfig;
     }
@@ -164,5 +181,54 @@ class AssetBundle {
 
     void didMoveToDirectoryAtUri(Uri directoryUri) {
         this.directoryUri = directoryUri;
+    }
+
+    private AssetManifest loadAssetManifest() {
+        Uri manifestUri = Uri.withAppendedPath(directoryUri, "program.json");
+        try {
+            String string = stringFromUri(manifestUri);
+            return new AssetManifest(string);
+        } catch (IOException e) {
+            throw new RuntimeException("Error loading asset manifest", e);
+        } catch (JSONException e) {
+            throw new RuntimeException("Error parsing asset manifest", e);
+        }
+    }
+
+    JSONObject loadRuntimeConfig(Uri uri) {
+        try {
+            String string = stringFromUri(uri);
+            Matcher matcher = runtimeConfigPattern.matcher(string);
+            if (!matcher.find()) {
+                Log.e(LOG_TAG, "Could not find runtime config in index file");
+                return null;
+            }
+            String runtimeConfigString = URLDecoder.decode(matcher.group(1), "UTF-8");
+            return new JSONObject(runtimeConfigString);
+        } catch (IOException e) {
+            Log.e(LOG_TAG, "Error loading index file", e);
+            return null;
+        } catch (IllegalStateException e) {
+            Log.e(LOG_TAG, "Could not find runtime config in index file", e);
+            return null;
+        } catch (JSONException e) {
+            Log.e(LOG_TAG, "Error parsing runtime config", e);
+            return null;
+        }
+    }
+
+    String stringFromUri(Uri uri) throws IOException {
+        InputStream inputStream = null;
+        try {
+            inputStream = resourceApi.openForRead(uri, true).inputStream;
+            return IOUtils.stringFromInputStream(inputStream);
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                }
+            }
+        }
     }
 }

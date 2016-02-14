@@ -102,14 +102,11 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
     }
 
     void initializeAssetBundles() {
+        // The initial asset bundle consists of the assets bundled with the app
+        AssetBundle initialAssetBundle = new AssetBundle(resourceApi, applicationDirectoryUri);
+
         // Downloaded versions are stored in /data/data/<app>/files/meteor
         File versionsDirectory = new File(cordova.getActivity().getFilesDir(), "meteor");
-
-        assetBundleManager = new AssetBundleManager(resourceApi, applicationDirectoryUri, versionsDirectory);
-        assetBundleManager.setCallback(WebApp.this);
-
-        // The initial asset bundle consists of the assets bundled with the app
-        AssetBundle initialAssetBundle = assetBundleManager.initialAssetBundle;
 
         // If the last seen initial version is different from the currently bundled
         // version, we delete the versions directory and unset lastDownloadedVersion
@@ -124,6 +121,9 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
             configuration.reset();
         }
 
+        // We keep track of the last seen initial version (see above)
+        configuration.setLastSeenInitialVersion(initialAssetBundle.getVersion());
+
         // If the versions directory does not exist, we create it
         if (!versionsDirectory.exists()) {
             if (!versionsDirectory.mkdirs()) {
@@ -132,8 +132,8 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
             }
         }
 
-        // We keep track of the last seen initial version (see above)
-        configuration.setLastSeenInitialVersion(initialAssetBundle.getVersion());
+        assetBundleManager = new AssetBundleManager(resourceApi, initialAssetBundle, versionsDirectory);
+        assetBundleManager.setCallback(WebApp.this);
 
         String lastDownloadedVersion = configuration.getLastDownloadedVersion();
         if (lastDownloadedVersion != null) {
@@ -341,7 +341,7 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
     }
 
     @Override
-    public void onFinishedDownloadingNewBundle(AssetBundle assetBundle) {
+    public void onFinishedDownloadingAssetBundle(AssetBundle assetBundle) {
         configuration.setLastDownloadedVersion(assetBundle.getVersion());
         pendingAssetBundle = assetBundle;
         notifyNewVersionDownloaded(assetBundle.getVersion());

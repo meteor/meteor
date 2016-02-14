@@ -12,6 +12,11 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,11 +29,9 @@ import okhttp3.Response;
 class AssetBundleManager {
     private static final String LOG_TAG = AssetBundleManager.class.getSimpleName();
 
-    static final Pattern runtimeConfigPattern = Pattern.compile("__meteor_runtime_config__ = JSON.parse\\(decodeURIComponent\\(\"([^\"]*)\"\\)\\)");
-
     public interface Callback {
         public boolean shouldDownloadBundleForManifest(AssetManifest manifest);
-        public void onFinishedDownloadingNewBundle(AssetBundle assetBundle);
+        public void onFinishedDownloadingAssetBundle(AssetBundle assetBundle);
         public void onDownloadFailure(Throwable cause);
     }
 
@@ -39,22 +42,25 @@ class AssetBundleManager {
     private final OkHttpClient httpClient;
 
     /** The directory used to store downloaded asset bundles */
-    private File versionsDirectory;
+    private final File versionsDirectory;
+    private final Map<String, AssetBundle> downloadedAssetBundlesByVersion;
 
     /** The directory used while downloading a new asset bundle */
-    private File downloadDirectory;
+    private final File downloadDirectory;
 
     private AssetBundleDownloader assetBundleDownloader;
 
     /** The initial asset bundle included in the app bundle */
-    public AssetBundle initialAssetBundle;
+    public final AssetBundle initialAssetBundle;
 
-    public AssetBundleManager(CordovaResourceApi resourceApi, Uri applicationDirectoryUri, File versionsDirectory) {
+    public AssetBundleManager(CordovaResourceApi resourceApi, AssetBundle initialAssetBundle, File versionsDirectory) {
         this.resourceApi = resourceApi;
-        initialAssetBundle = loadAssetBundle(applicationDirectoryUri);
+        this.initialAssetBundle = initialAssetBundle;
         this.versionsDirectory = versionsDirectory;
-
         downloadDirectory = new File(versionsDirectory, "Downloading");
+
+        downloadedAssetBundlesByVersion = new HashMap<String, AssetBundle>();
+        loadDownloadedAssetBundles();
 
         httpClient = new OkHttpClient();
     }
@@ -64,12 +70,7 @@ class AssetBundleManager {
     }
 
     synchronized public AssetBundle downloadedAssetBundleWithVersion(String version) {
-        File versionDirectory = new File(versionsDirectory, version);
-        if (versionDirectory.exists()) {
-            return loadAssetBundle(Uri.fromFile(versionDirectory));
-        } else {
-            return null;
-        }
+        return downloadedAssetBundlesByVersion.get(version);
     }
 
     public void checkForUpdates(final HttpUrl baseUrl) {
@@ -96,7 +97,7 @@ class AssetBundleManager {
                 AssetManifest manifest;
                 try {
                     manifestBytes = response.body().bytes();
-                    manifest = new AssetManifest(new ByteArrayInputStream(manifestBytes));
+                    manifest = new AssetManifest(new String(manifestBytes));
                 } catch (JSONException e) {
                     didFail(new DownloadFailureException("Error parsing asset manifest", e));
                     return;
@@ -147,7 +148,7 @@ class AssetBundleManager {
                     return;
                 }
 
-                AssetBundle assetBundle = new AssetBundle(AssetBundleManager.this, Uri.fromFile(downloadDirectory), manifest, initialAssetBundle);
+                AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(downloadDirectory), manifest, initialAssetBundle);
                 downloadAssetBundle(assetBundle, baseUrl);
             }
         });
@@ -158,7 +159,10 @@ class AssetBundleManager {
     }
 
     synchronized protected void downloadAssetBundle(final AssetBundle assetBundle, HttpUrl baseUrl) {
+        Set<AssetBundle.Asset> missingAssets = new HashSet<AssetBundle.Asset>();
+
         for (AssetBundle.Asset asset : assetBundle.getOwnAssets()) {
+            // Create containing directories for the asset if necessary
             File containingDirectory = asset.getFile().getParentFile();
             if (!containingDirectory.exists()) {
                 if (!containingDirectory.mkdirs()) {
@@ -166,19 +170,35 @@ class AssetBundleManager {
                     return;
                 }
             }
+
+            // If we find a cached asset, we copy it
+            AssetBundle.Asset cachedAsset = cachedAssetForAsset(asset);
+            if (cachedAsset != null) {
+                try {
+                    resourceApi.copyResource(cachedAsset.getFileUri(), asset.getFileUri());
+                } catch (IOException e) {
+                    didFail(e);
+                    return;
+                }
+            } else {
+                missingAssets.add(asset);
+            }
         }
 
-        assetBundleDownloader = new AssetBundleDownloader(assetBundle, baseUrl);
+        // If all assets were cached, there is no need to start a download
+        if (missingAssets.isEmpty()) {
+            didFinishDownloadingAssetBundle(assetBundle);
+            return;
+        }
+
+        assetBundleDownloader = new AssetBundleDownloader(assetBundle, baseUrl, missingAssets);
         assetBundleDownloader.setCallback(new AssetBundleDownloader.Callback() {
             @Override
             public void onFinished() {
                 assetBundleDownloader = null;
 
                 moveDownloadedAssetBundleIntoPlace(assetBundle);
-
-                if (callback != null) {
-                    callback.onFinishedDownloadingNewBundle(assetBundle);
-                }
+                didFinishDownloadingAssetBundle(assetBundle);
             }
 
             @Override
@@ -189,85 +209,60 @@ class AssetBundleManager {
         assetBundleDownloader.resume();
     }
 
+    protected void didFinishDownloadingAssetBundle(AssetBundle assetBundle) {
+        if (callback != null) {
+            callback.onFinishedDownloadingAssetBundle(assetBundle);
+        }
+    }
+
     protected void didFail(Throwable cause) {
         if (callback != null) {
             callback.onDownloadFailure(cause);
         }
     }
 
+    protected AssetBundle.Asset cachedAssetForAsset(AssetBundle.Asset asset) {
+        for (AssetBundle assetBundle : downloadedAssetBundlesByVersion.values()) {
+            AssetBundle.Asset cachedAsset = assetBundle.cachedAssetForUrlPath(asset.urlPath, asset.hash);
+            if (cachedAsset != null) {
+                return cachedAsset;
+            }
+        }
+        return null;
+    }
+
     /** Move the downloaded asset bundle to a new directory named after the version */
     synchronized protected void moveDownloadedAssetBundleIntoPlace(AssetBundle assetBundle) {
-        File versionDirectory = new File(versionsDirectory, assetBundle.getVersion());
-
+        final String version = assetBundle.getVersion();
+        File versionDirectory = new File(versionsDirectory, version);
         downloadDirectory.renameTo(versionDirectory);
-
         assetBundle.didMoveToDirectoryAtUri(Uri.fromFile(versionDirectory));
+        downloadedAssetBundlesByVersion.put(version, assetBundle);
     }
 
     synchronized void removeAllDownloadedAssetBundlesExceptForVersion(String versionToKeep) {
-        for (File file : versionsDirectory.listFiles()) {
-            if (downloadDirectory.equals(file)) continue;
+        Iterator<AssetBundle> iterator = downloadedAssetBundlesByVersion.values().iterator();
+        while (iterator.hasNext()) {
+            AssetBundle assetBundle = iterator.next();
+            final String version = assetBundle.getVersion();
 
-            if (!file.getName().equals(versionToKeep)) {
-                IOUtils.deleteRecursively(file);
-            }
+            if (version.equals(versionToKeep)) continue;
+
+            File versionDirectory = new File(versionsDirectory, version);
+            IOUtils.deleteRecursively(versionDirectory);
+            iterator.remove();
         }
     }
 
     //region Loading
 
-    protected AssetBundle loadAssetBundle(Uri directoryUri) {
-        Uri manifestUri = Uri.withAppendedPath(directoryUri, "program.json");
-        AssetManifest assetManifest = loadAssetManifest(manifestUri);
-        return new AssetBundle(this, directoryUri, assetManifest, initialAssetBundle);
-    }
+    private void loadDownloadedAssetBundles() {
+        for (File file: versionsDirectory.listFiles()) {
+            if (downloadDirectory.equals(file)) continue;
 
-    protected AssetManifest loadAssetManifest(Uri uri) {
-        InputStream inputStream = null;
-        try {
-            inputStream = resourceApi.openForRead(uri, true).inputStream;
-            return new AssetManifest(inputStream);
-        } catch (IOException e) {
-            throw new RuntimeException("Error loading asset manifest", e);
-        } catch (JSONException e) {
-            throw new RuntimeException("Error parsing asset manifest", e);
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                }
-            }
-        }
-    }
-
-    JSONObject loadRuntimeConfig(Uri uri) {
-        InputStream inputStream = null;
-        try {
-            inputStream = resourceApi.openForRead(uri, true).inputStream;
-            String indexFileString = IOUtils.stringFromInputStream(inputStream);
-            Matcher matcher = runtimeConfigPattern.matcher(indexFileString);
-            if (!matcher.find()) {
-                Log.e(LOG_TAG, "Could not find runtime config in index file");
-                return null;
-            }
-            String runtimeConfigString = URLDecoder.decode(matcher.group(1), "UTF-8");
-            return new JSONObject(runtimeConfigString);
-        } catch (IOException e) {
-            Log.e(LOG_TAG, "Error loading index file", e);
-            return null;
-        } catch (IllegalStateException e) {
-            Log.e(LOG_TAG, "Could not find runtime config in index file", e);
-            return null;
-        } catch (JSONException e) {
-            Log.e(LOG_TAG, "Error parsing runtime config", e);
-            return null;
-        } finally {
-            if (inputStream != null) {
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                }
+            if (file.isDirectory()) {
+                AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(file), null, initialAssetBundle);
+                downloadedAssetBundlesByVersion.put(assetBundle.getVersion(), assetBundle);
             }
         }
     }
@@ -275,10 +270,6 @@ class AssetBundleManager {
     //endregion
 
     //region Testing support
-
-    CordovaResourceApi getResourceApi() {
-        return resourceApi;
-    }
 
     File getDownloadDirectory() {
         return downloadDirectory;

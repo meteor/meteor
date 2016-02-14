@@ -6,8 +6,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,11 +35,8 @@ final class AssetManifest {
     final String version;
     final List<Entry> entries;
 
-    public AssetManifest(InputStream inputStream) throws IOException, JSONException {
-        this(new JSONObject(IOUtils.stringFromInputStream(inputStream)));
-    }
-
-    public AssetManifest(JSONObject json) throws JSONException {
+    public AssetManifest(String string) throws JSONException {
+        JSONObject json = new JSONObject(string);
         String format = json.optString("format");
         if (format != null && !format.equals("web-program-pre1")) {
             throw new JSONException("The asset manifest format is incompatible: " + format);
