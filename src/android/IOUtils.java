@@ -1,5 +1,6 @@
 package com.meteor.webapp;
 
+import android.net.Uri;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -16,7 +17,7 @@ class IOUtils {
     private static final String LOG_TAG = IOUtils.class.getSimpleName();
 
     public static String stringFromInputStream(InputStream inputStream) throws IOException {
-        assert(inputStream != null);
+        assert (inputStream != null);
 
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
         StringBuilder stringBuilder = new StringBuilder();

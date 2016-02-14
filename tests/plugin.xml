@@ -26,11 +26,14 @@
   <asset src="fixtures/downloadable_versions" target="downloadable_versions" />
   <asset src="fixtures/partially_downloaded_versions" target="partially_downloaded_versions" />
 
+  <config-file target="config.xml" parent="/*">
+    <preference name="WebAppLocalServerPort" value="12000" />
+  </config-file>
+
   <platform name="ios">
     <hook type="after_plugin_install" src="../scripts/iosAddBridgingHeader.js" />
 
     <config-file target="config.xml" parent="/*">
-      <preference name="WebAppLocalServerPort" value="12000" />
       <feature name="WebAppMockRemoteServer">
         <param name="ios-package" value="METWebAppMockRemoteServer" />
         <param name="onload" value="true"/>
@@ -55,5 +58,7 @@
     </config-file>
 
     <source-file src="src/android/WebAppMockRemoteServer.java" target-dir="src/com/meteor/webapp" />
+
+    <framework src="com.squareup.okhttp3:mockwebserver:3.1.2" />
   </platform>
 </plugin>

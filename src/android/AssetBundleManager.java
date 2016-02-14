@@ -7,10 +7,8 @@ import org.apache.cordova.CordovaResourceApi;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
@@ -18,31 +16,27 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okio.BufferedSink;
-import okio.ByteString;
-import okio.Okio;
-import okio.Source;
 
 class AssetBundleManager {
     private static final String LOG_TAG = AssetBundleManager.class.getSimpleName();
 
-    public interface Delegate {
-        public boolean shouldDownloadBundleForManifest(AssetManifest manifest);
-        public void onFinishedDownloadingNewBundle(AssetBundle assetBundle);
-    }
-
     static final Pattern runtimeConfigPattern = Pattern.compile("__meteor_runtime_config__ = JSON.parse\\(decodeURIComponent\\(\"([^\"]*)\"\\)\\)");
 
-    private Delegate delegate;
+    public interface Callback {
+        public boolean shouldDownloadBundleForManifest(AssetManifest manifest);
+        public void onFinishedDownloadingNewBundle(AssetBundle assetBundle);
+        public void onDownloadFailure(Throwable cause);
+    }
+
+    private Callback callback;
 
     private final CordovaResourceApi resourceApi;
 
-    private final OkHttpClient httpClient = new OkHttpClient();
+    private final OkHttpClient httpClient;
 
     /** The directory used to store downloaded asset bundles */
     private File versionsDirectory;
@@ -61,14 +55,12 @@ class AssetBundleManager {
         this.versionsDirectory = versionsDirectory;
 
         downloadDirectory = new File(versionsDirectory, "Downloading");
+
+        httpClient = new OkHttpClient();
     }
 
-    CordovaResourceApi getResourceApi() {
-        return resourceApi;
-    }
-
-    public void setDelegate(Delegate delegate) {
-        this.delegate = delegate;
+    public void setCallback(Callback callback) {
+        this.callback = callback;
     }
 
     synchronized public AssetBundle downloadedAssetBundleWithVersion(String version) {
@@ -85,26 +77,31 @@ class AssetBundleManager {
 
         Request request = new Request.Builder().url(manifestUrl).build();
 
-        httpClient.newCall(request).enqueue(new Callback() {
+        httpClient.newCall(request).enqueue(new okhttp3.Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                Log.e(LOG_TAG, "Error downloading asset manifest", e);
+                if (!call.isCanceled()) {
+                    didFail(new DownloadFailureException("Error downloading asset manifest", e));
+                }
             }
 
             @Override
-            public void onResponse(Call call, Response response) throws IOException {
+            public void onResponse(Call call, Response response) {
                 if (!response.isSuccessful()) {
-                    Log.e(LOG_TAG, "Non-success status code " + response.code() + "for asset manifest");
+                    didFail(new DownloadFailureException("Non-success status code " + response.code() + "for asset manifest"));
                     return;
                 }
 
-                byte[] bytes = response.body().bytes();
-
-                AssetManifest manifest = null;
+                byte[] manifestBytes;
+                AssetManifest manifest;
                 try {
-                    manifest = new AssetManifest(new ByteArrayInputStream(bytes));
+                    manifestBytes = response.body().bytes();
+                    manifest = new AssetManifest(new ByteArrayInputStream(manifestBytes));
                 } catch (JSONException e) {
-                    Log.e(LOG_TAG, "Error parsing asset manifest", e);
+                    didFail(new DownloadFailureException("Error parsing asset manifest", e));
+                    return;
+                } catch (IOException e) {
+                    didFail(e);
                     return;
                 }
 
@@ -117,8 +114,8 @@ class AssetBundleManager {
                     return;
                 }
 
-                // Give the delegate a chance to decide whether the version should be downloaded
-                if (delegate != null && !delegate.shouldDownloadBundleForManifest(manifest)) {
+                // Give the callback a chance to decide whether the version should be downloaded
+                if (callback != null && !callback.shouldDownloadBundleForManifest(manifest)) {
                     return;
                 }
 
@@ -137,12 +134,18 @@ class AssetBundleManager {
 
                 // Create download directory
                 if (!downloadDirectory.mkdir()) {
-                    Log.e(LOG_TAG, "Could not create download directory");
+                    didFail(new IOException("Could not create download directory"));
                     return;
                 }
 
+                // Copy downloaded asset manifest to file
                 File manifestFile = new File(downloadDirectory, "program.json");
-                IOUtils.writeToFile(bytes, manifestFile);
+                try {
+                    IOUtils.writeToFile(manifestBytes, manifestFile);
+                } catch (IOException e) {
+                    didFail(e);
+                    return;
+                }
 
                 AssetBundle assetBundle = new AssetBundle(AssetBundleManager.this, Uri.fromFile(downloadDirectory), manifest, initialAssetBundle);
                 downloadAssetBundle(assetBundle, baseUrl);
@@ -154,29 +157,42 @@ class AssetBundleManager {
         return assetBundleDownloader != null;
     }
 
-    synchronized protected void downloadAssetBundle(AssetBundle assetBundle, HttpUrl baseUrl) {
+    synchronized protected void downloadAssetBundle(final AssetBundle assetBundle, HttpUrl baseUrl) {
         for (AssetBundle.Asset asset : assetBundle.getOwnAssets()) {
             File containingDirectory = asset.getFile().getParentFile();
             if (!containingDirectory.exists()) {
                 if (!containingDirectory.mkdirs()) {
-                    Log.e(LOG_TAG, "Could not create containing directory: " + containingDirectory);
+                    didFail(new IOException("Could not create containing directory: " + containingDirectory));
                     return;
                 }
             }
         }
 
         assetBundleDownloader = new AssetBundleDownloader(assetBundle, baseUrl);
-        assetBundleDownloader.setListener(new AssetBundleDownloader.Listener() {
+        assetBundleDownloader.setCallback(new AssetBundleDownloader.Callback() {
             @Override
-            public void onDownloadFinished(AssetBundle assetBundle) {
+            public void onFinished() {
                 assetBundleDownloader = null;
 
                 moveDownloadedAssetBundleIntoPlace(assetBundle);
 
-                delegate.onFinishedDownloadingNewBundle(assetBundle);
+                if (callback != null) {
+                    callback.onFinishedDownloadingNewBundle(assetBundle);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable cause) {
+                didFail(cause);
             }
         });
         assetBundleDownloader.resume();
+    }
+
+    protected void didFail(Throwable cause) {
+        if (callback != null) {
+            callback.onDownloadFailure(cause);
+        }
     }
 
     /** Move the downloaded asset bundle to a new directory named after the version */
@@ -194,23 +210,6 @@ class AssetBundleManager {
 
             if (!file.getName().equals(versionToKeep)) {
                 IOUtils.deleteRecursively(file);
-            }
-        }
-    }
-
-    synchronized public void removeVersionsDirectory() {
-        if (versionsDirectory.exists()) {
-            if (!IOUtils.deleteRecursively(versionsDirectory)) {
-                Log.w(LOG_TAG, "Could not remove versions directory");
-            }
-        }
-    }
-
-    synchronized public void createVersionsDirectoryIfNeeded() {
-        if (!versionsDirectory.exists()) {
-            if (!versionsDirectory.mkdirs()) {
-                Log.e(LOG_TAG, "Could not create versions directory");
-                return;
             }
         }
     }
@@ -271,6 +270,18 @@ class AssetBundleManager {
                 }
             }
         }
+    }
+
+    //endregion
+
+    //region Testing support
+
+    CordovaResourceApi getResourceApi() {
+        return resourceApi;
+    }
+
+    File getDownloadDirectory() {
+        return downloadDirectory;
     }
 
     //endregion

@@ -103,6 +103,7 @@
     <source-file src="src/android/AssetBundle.java" target-dir="src/com/meteor/webapp" />
     <source-file src="src/android/AssetBundleManager.java" target-dir="src/com/meteor/webapp" />
     <source-file src="src/android/AssetBundleDownloader.java" target-dir="src/com/meteor/webapp" />
+    <source-file src="src/android/DownloadFailureException.java" target-dir="src/com/meteor/webapp" />
     <source-file src="src/android/AssetManifest.java" target-dir="src/com/meteor/webapp" />
     <source-file src="src/android/IOUtils.java" target-dir="src/com/meteor/webapp" />
 

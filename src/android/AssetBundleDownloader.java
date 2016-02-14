@@ -2,7 +2,6 @@ package com.meteor.webapp;
 
 import android.util.Log;
 
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
@@ -13,31 +12,29 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import okhttp3.Call;
-import okhttp3.Callback;
 import okhttp3.HttpUrl;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
-import okio.BufferedSink;
-import okio.Okio;
 
 class AssetBundleDownloader {
     private static final String LOG_TAG = AssetBundleDownloader.class.getSimpleName();
 
     static final Pattern eTagWithSha1HashPattern = Pattern.compile("\"([0-9a-f]{40})\"");
 
-    public interface Listener {
-        public void onDownloadFinished(AssetBundle assetBundle);
+    public interface Callback {
+        public void onFinished();
+        public void onFailure(Throwable cause);
     }
+
+    private Callback callback;
 
     private final AssetBundle assetBundle;
     private final HttpUrl baseUrl;
 
     private final OkHttpClient httpClient;
-
     private final Set<AssetBundle.Asset> assetsDownloading;
-
-    private Listener listener;
+    private boolean canceled;
 
     public AssetBundleDownloader(AssetBundle assetBundle, HttpUrl baseUrl) {
         this.assetBundle = assetBundle;
@@ -53,8 +50,8 @@ class AssetBundleDownloader {
         return assetBundle;
     }
 
-    public void setListener(Listener listener) {
-        this.listener = listener;
+    public void setCallback(Callback callback) {
+        this.callback = callback;
     }
 
     public void resume() {
@@ -65,23 +62,29 @@ class AssetBundleDownloader {
 
             HttpUrl url = downloadUrlForAsset(asset);
             Request request = new Request.Builder().url(url).build();
-            httpClient.newCall(request).enqueue(new Callback() {
+            httpClient.newCall(request).enqueue(new okhttp3.Callback() {
                 @Override
                 public void onFailure(Call call, IOException e) {
-                    Log.w(LOG_TAG, "Error downloading asset: " + asset, e);
-                    cancel();
+                    if (!call.isCanceled()) {
+                        didFail(new DownloadFailureException("Error downloading asset: " + asset, e));
+                    }
                 }
 
                 @Override
                 public void onResponse(Call call, Response response) throws IOException {
-                    if (!verifyResponse(response, asset)) {
-                        cancel();
+                    try {
+                        verifyResponse(response, asset);
+                    } catch (DownloadFailureException e) {
+                        didFail(e);
                         return;
                     }
 
-                    // Log.v(LOG_TAG, "Finished downloading asset: " + asset);
-
-                    IOUtils.writeToFile(response.body().source(), asset.getFile());
+                    try {
+                        IOUtils.writeToFile(response.body().source(), asset.getFile());
+                    } catch (IOException e) {
+                        didFail(e);
+                        return;
+                    }
 
                     // We don't have a hash for the index page, so we have to parse the runtime config
                     // and compare autoupdateVersionCordova to the version in the manifest to verify
@@ -93,8 +96,7 @@ class AssetBundleDownloader {
                             String actualVersion = runtimeConfig.optString("autoupdateVersionCordova", null);
                             if (actualVersion != null) {
                                 if (!actualVersion.equals(expectedVersion)) {
-                                    Log.w(LOG_TAG, "Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion);
-                                    cancel();
+                                    didFail(new DownloadFailureException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion));
                                     return;
                                 }
                             }
@@ -104,10 +106,10 @@ class AssetBundleDownloader {
                     assetsDownloading.remove(asset);
 
                     if (assetsDownloading.isEmpty()) {
-                        Log.v(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
+                        Log.i(LOG_TAG, "Finished downloading new asset bundle version: " + assetBundle.getVersion());
 
-                        if (listener != null) {
-                            listener.onDownloadFinished(assetBundle);
+                        if (callback != null) {
+                            callback.onFinished();
                         }
                     }
                 }
@@ -136,10 +138,9 @@ class AssetBundleDownloader {
         return  builder.build();
     }
 
-    protected boolean verifyResponse(Response response, AssetBundle.Asset asset) {
+    protected void verifyResponse(Response response, AssetBundle.Asset asset) throws DownloadFailureException {
         if (!response.isSuccessful()) {
-            Log.w(LOG_TAG, "Non-success status code " + response.code() + " for asset: " + asset);
-            return false;
+            throw new DownloadFailureException("Non-success status code " + response.code() + " for asset: " + asset);
         }
 
         // If we have a hash for the asset, and the ETag header also specifies
@@ -154,17 +155,25 @@ class AssetBundleDownloader {
                     String actualHash = matcher.group(1);
 
                     if (!actualHash.equals(expectedHash)) {
-                        Log.w(LOG_TAG, "Hash mismatch for asset: " + asset);
-                        return false;
+                        throw new DownloadFailureException("Hash mismatch for asset: " + asset);
                     }
                 }
             }
         }
+    }
 
-        return true;
+    protected void didFail(Throwable cause) {
+        if (canceled) return;
+
+        cancel();
+
+        if (callback != null) {
+            callback.onFailure(cause);
+        }
     }
 
     public void cancel() {
+        canceled = true;
         httpClient.dispatcher().cancelAll();
     }
 }

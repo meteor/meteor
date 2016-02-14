@@ -1,12 +1,18 @@
 var _ = require("cordova-plugin-meteor-webapp-tests.underscore");
 
+var localServerPort = 12000;
+
 exports.defineAutoTests = function() {
   describe("WebAppCordova", function() {
     beforeAll(function(done) {
       jasmine.addMatchers(customMatchers);
 
       WebAppCordova.getAuthTokenKeyValuePair(function(authTokenKeyValuePair) {
-        fetch("http://localhost:12000?" + authTokenKeyValuePair).then(done);
+        if (authTokenKeyValuePair) {
+          fetch("http://localhost:" + localServerPort + "?" + authTokenKeyValuePair).then(done);
+        } else {
+          done();
+        }
       });
     });
 
@@ -561,7 +567,7 @@ exports.defineAutoTests = function() {
 var oneYearInSeconds = 60 * 60 * 24 * 365;
 
 function fetchFromLocalServer(path) {
-  return fetch("http://localhost:12000" + path, {
+  return fetch("http://localhost:" + localServerPort + path, {
     // Without this, fetch won't send cookies
     credentials: 'include'
   });
@@ -617,7 +623,6 @@ function downloadAndServeVersionLocally(version, done) {
 function expectVersionServedToEqual(expectedVersion, done) {
   fetchFromLocalServer("/").then(function(response) {
     expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toContain("no-cache");
     expect(response.headers.get("Content-Type")).toEqual("text/html");
     response.text().then(function(html) {
       var config = runtimeConfigFromHTML(html);

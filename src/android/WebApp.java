@@ -8,10 +8,8 @@ import android.util.Log;
 
 import org.apache.cordova.CallbackContext;
 import org.apache.cordova.Config;
-import org.apache.cordova.CordovaInterface;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CordovaResourceApi;
-import org.apache.cordova.CordovaWebView;
 import org.apache.cordova.PluginResult;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -25,7 +23,7 @@ import java.util.TimerTask;
 
 import okhttp3.HttpUrl;
 
-public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate {
+public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback {
     private static final String LOG_TAG = WebApp.class.getSimpleName();
     public static final String PREFS_NAME = "MeteorWebApp";
 
@@ -62,10 +60,15 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
     private AssetBundle pendingAssetBundle;
 
     private CallbackContext newVersionDownloadedCallbackContext;
+    private CallbackContext downloadFailureCallbackContext;
+
 
     /** Timer used to wait for startup to complete after a reload */
     private Timer startupTimer;
 
+    //region Lifecycle
+
+    /** Called by Cordova on plugin initialization */
     @Override
     public void pluginInitialize() {
         super.pluginInitialize();
@@ -77,12 +80,13 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
 
         // FIXME: Find a way to get the launchUrl without using the deprecated Config singleton
         launchUrl = Config.getStartUrl();
-        localServerPort = Uri.parse(launchUrl).getPort();
 
-        assetManager = cordova.getActivity().getAssets();
+        localServerPort = preferences.getInteger("WebAppLocalServerPort", Uri.parse(launchUrl).getPort());
 
         SharedPreferences preferences = cordova.getActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         configuration = new WebAppConfiguration(preferences);
+
+        assetManager = cordova.getActivity().getAssets();
 
         try {
             assetManagerCache = new AssetManagerCache(assetManager);
@@ -97,12 +101,12 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         initializeResourceHandlers();
     }
 
-    private void initializeAssetBundles() {
+    void initializeAssetBundles() {
         // Downloaded versions are stored in /data/data/<app>/files/meteor
         File versionsDirectory = new File(cordova.getActivity().getFilesDir(), "meteor");
 
         assetBundleManager = new AssetBundleManager(resourceApi, applicationDirectoryUri, versionsDirectory);
-        assetBundleManager.setDelegate(WebApp.this);
+        assetBundleManager.setCallback(WebApp.this);
 
         // The initial asset bundle consists of the assets bundled with the app
         AssetBundle initialAssetBundle = assetBundleManager.initialAssetBundle;
@@ -112,25 +116,84 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         // and blacklistedVersions
         if (!initialAssetBundle.getVersion().equals(configuration.getLastSeenInitialVersion()))  {
             Log.w(LOG_TAG, "Detected new bundled version, removing versions directory if it exists");
-            assetBundleManager.removeVersionsDirectory();
+            if (versionsDirectory.exists()) {
+                if (!IOUtils.deleteRecursively(versionsDirectory)) {
+                    Log.w(LOG_TAG, "Could not remove versions directory");
+                }
+            }
             configuration.reset();
+        }
+
+        // If the versions directory does not exist, we create it
+        if (!versionsDirectory.exists()) {
+            if (!versionsDirectory.mkdirs()) {
+                Log.e(LOG_TAG, "Could not create versions directory");
+                return;
+            }
         }
 
         // We keep track of the last seen initial version (see above)
         configuration.setLastSeenInitialVersion(initialAssetBundle.getVersion());
 
-        // If the versions directory does not exist, we create it
-        assetBundleManager.createVersionsDirectoryIfNeeded();
-
         String lastDownloadedVersion = configuration.getLastDownloadedVersion();
         if (lastDownloadedVersion != null) {
             currentAssetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastDownloadedVersion);
+            if (currentAssetBundle == null) {
+                currentAssetBundle = initialAssetBundle;
+            }
+        } else {
+            currentAssetBundle = initialAssetBundle;
         }
 
-        if (currentAssetBundle == null) {
-            currentAssetBundle = assetBundleManager.initialAssetBundle;
+        pendingAssetBundle = null;
+    }
+
+    /** Called by Cordova before page reload */
+    @Override
+    public void onReset() {
+        super.onReset();
+
+        // Clear existing callbacks
+        newVersionDownloadedCallbackContext = null;
+        downloadFailureCallbackContext = null;
+
+        // If there is a pending asset bundle, we make it the current
+        if (pendingAssetBundle != null) {
+            currentAssetBundle = pendingAssetBundle;
+            pendingAssetBundle = null;
+        }
+
+        Log.d(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
+
+        // Don't start startup timer when running a test
+        if (testingDelegate == null) {
+            startStartupTimer();
         }
     }
+
+    private void startStartupTimer() {
+        removeStartupTimer();
+
+        startupTimer = new Timer();
+        startupTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Log.w(LOG_TAG, "App startup timed out, reverting to last known good version");
+                revertToLastKnownGoodVersion();
+            }
+        }, STARTUP_TIMEOUT);
+    }
+
+    private void removeStartupTimer() {
+        if (startupTimer != null) {
+            startupTimer.cancel();
+            startupTimer = null;
+        }
+    }
+
+    //endregion
+
+    //region Public plugin commands
 
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
@@ -140,12 +203,19 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         } else if ("onNewVersionDownloaded".equals(action)) {
             onNewVersionDownloaded(callbackContext);
             return true;
+        } else if ("onDownloadFailure".equals(action)) {
+            onDownloadFailure(callbackContext);
+            return true;
         } else if ("startupDidComplete".equals(action)) {
             startupDidComplete(callbackContext);
             return true;
         }
 
-        return super.execute(action, args, callbackContext);
+        if (testingDelegate != null) {
+            return testingDelegate.execute(action, args, callbackContext);
+        }
+
+        return false;
     }
 
     private void checkForUpdates(final CallbackContext callbackContext) {
@@ -179,7 +249,71 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         }
     }
 
-    //region AssetBundleManager.Delegate
+    private void onDownloadFailure(CallbackContext callbackContext) {
+        PluginResult pluginResult = new PluginResult(PluginResult.Status.NO_RESULT);
+        pluginResult.setKeepCallback(true);
+        callbackContext.sendPluginResult(pluginResult);
+
+        downloadFailureCallbackContext = callbackContext;
+    }
+
+    private void notifyDownloadFailure(Throwable cause) {
+        if (downloadFailureCallbackContext != null) {
+            PluginResult pluginResult = new PluginResult(PluginResult.Status.OK, cause.getMessage());
+            pluginResult.setKeepCallback(true);
+            downloadFailureCallbackContext.sendPluginResult(pluginResult);
+        }
+    }
+
+    private void startupDidComplete(CallbackContext callbackContext) {
+        removeStartupTimer();
+
+        // If startup completed successfully, we consider a version good
+        configuration.setLastKnownGoodVersion(currentAssetBundle.getVersion());
+
+        cordova.getThreadPool().execute(new Runnable() {
+            @Override
+            public void run() {
+                assetBundleManager.removeAllDownloadedAssetBundlesExceptForVersion(currentAssetBundle.getVersion());
+            }
+        });
+
+        callbackContext.success();
+    }
+
+    //endregion
+
+    private void revertToLastKnownGoodVersion() {
+        // Blacklist the current version, so we don't update to it again right away
+        configuration.addBlacklistedVersion(currentAssetBundle.getVersion());
+
+        // If there is a last known good version and we can load the bundle, revert to it
+        String lastKnownGoodVersion = configuration.getLastKnownGoodVersion();
+        if (lastKnownGoodVersion != null) {
+            AssetBundle assetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion);
+            if (assetBundle != null) {
+                pendingAssetBundle = assetBundle;
+            }
+        }
+
+        // Else, revert to the initial asset bundle, unless that is what we are currently serving
+        if (!currentAssetBundle.equals(assetBundleManager.initialAssetBundle)) {
+            pendingAssetBundle = assetBundleManager.initialAssetBundle;
+        }
+
+        // Only reload if we have a pending asset bundle to reload
+        if (pendingAssetBundle != null) {
+            cordova.getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    webView.loadUrlIntoView(launchUrl, false);
+
+                }
+            });
+        }
+    }
+
+    //region AssetBundleManager.Callback
 
     @Override
     public boolean shouldDownloadBundleForManifest(AssetManifest manifest) {
@@ -213,84 +347,13 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         notifyNewVersionDownloaded(assetBundle.getVersion());
     }
 
-    //endregion
-
     @Override
-    public void onReset() {
-        super.onReset();
-
-        // If there is a pending asset bundle, we make it the current
-        if (pendingAssetBundle != null) {
-            currentAssetBundle = pendingAssetBundle;
-            pendingAssetBundle = null;
-        }
-
-        Log.d(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
-
-        removeStartupTimer();
-
-        startupTimer = new Timer();
-        startupTimer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                Log.w(LOG_TAG, "App startup timed out, reverting to last known good version");
-                revertToLastKnownGoodVersion();
-            }
-        }, STARTUP_TIMEOUT);
+    public void onDownloadFailure(Throwable cause) {
+        Log.w(LOG_TAG, "Download failure", cause);
+        notifyDownloadFailure(cause);
     }
 
-    private void startupDidComplete(CallbackContext callbackContext) {
-        removeStartupTimer();
-
-        // If startup completed successfully, we consider a version good
-        configuration.setLastKnownGoodVersion(currentAssetBundle.getVersion());
-
-        cordova.getThreadPool().execute(new Runnable() {
-            @Override
-            public void run() {
-                assetBundleManager.removeAllDownloadedAssetBundlesExceptForVersion(currentAssetBundle.getVersion());
-            }
-        });
-
-        callbackContext.success();
-    }
-
-    private void removeStartupTimer() {
-        if (startupTimer != null) {
-            startupTimer.cancel();
-            startupTimer = null;
-        }
-    }
-
-    private void revertToLastKnownGoodVersion() {
-        // Blacklist the current version, so we don't update to it again right away
-        configuration.addBlacklistedVersion(currentAssetBundle.getVersion());
-
-        // If there is a last known good version and we can load the bundle, revert to it
-        String lastKnownGoodVersion = configuration.getLastKnownGoodVersion();
-        if (lastKnownGoodVersion != null) {
-            AssetBundle assetBundle = assetBundleManager.downloadedAssetBundleWithVersion(lastKnownGoodVersion);
-            if (assetBundle != null) {
-                pendingAssetBundle = assetBundle;
-            }
-        }
-
-        // Else, revert to the initial asset bundle, unless that is what we are currently serving
-        if (!currentAssetBundle.equals(assetBundleManager.initialAssetBundle)) {
-            pendingAssetBundle = assetBundleManager.initialAssetBundle;
-        }
-
-        // Only reload if we have a pending asset bundle to reload
-        if (pendingAssetBundle != null) {
-            cordova.getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    webView.loadUrlIntoView(launchUrl, false);
-
-                }
-            });
-        }
-    }
+    //endregion
 
     //region Local web server
 
@@ -393,6 +456,32 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Delegate
         Uri originalUri = fromPluginUri(uri);
         // Returning a null inputStream will result in a 404 response
         return new CordovaResourceApi.OpenForReadResult(originalUri, null, null, 0, null);
+    }
+
+    //endregion
+
+    //region Testing support
+
+    public interface TestingDelegate {
+        boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException;
+    }
+
+    private TestingDelegate testingDelegate;
+
+    void setTestingDelegate(TestingDelegate testingDelegate) {
+        this.testingDelegate = testingDelegate;
+    }
+
+    WebAppConfiguration getConfiguration() {
+        return configuration;
+    }
+
+    AssetManagerCache getAssetManagerCache() {
+        return assetManagerCache;
+    }
+
+    AssetBundleManager getAssetBundleManager() {
+        return assetBundleManager;
     }
 
     //endregion
