@@ -174,6 +174,8 @@ exports.defineAutoTests = function() {
           });
 
           it("should set application/json for a .json file", function(done) {
+            pendingOnAndroid();
+            
             fetchFromLocalServer("/some-data.json").then(function(response) {
               expect(response.headers.get("Content-Type")).toEqual("application/json");
               done();
@@ -216,6 +218,8 @@ exports.defineAutoTests = function() {
           });
 
           it("should set application/octet-stream for files without an extension", function(done) {
+            pendingOnAndroid();
+
             fetchFromLocalServer("/some-file").then(function(response) {
               expect(response.headers.get("Content-Type")).toEqual("application/octet-stream");
               done();
