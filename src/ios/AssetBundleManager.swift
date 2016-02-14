@@ -37,6 +37,10 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     queue = dispatch_queue_create("com.meteor.webapp.AssetBundleManager", nil)
 
     downloadedAssetBundlesByVersion = [String: AssetBundle]()
+    loadDownloadedAssetBundles()
+  }
+
+  private func loadDownloadedAssetBundles() {
     let items: [NSURL]
     items = try! fileManager.contentsOfDirectoryAtURL(versionsDirectoryURL,
       includingPropertiesForKeys: [NSURLIsDirectoryKey],
@@ -77,7 +81,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
         self.didFailWithError(WebAppError.DownloadFailure(reason: "Error downloading asset manifest", underlyingError: error))
         return
       }
-      
+
       guard let response = response as? NSHTTPURLResponse else { return }
 
       if !response.isSuccessful {
@@ -92,7 +96,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
         self.didFailWithError(error)
         return
       }
-      
+
       let version = manifest.version
 
       NSLog("Downloaded asset manifest for version: \(version)")
@@ -150,14 +154,6 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     // if other downloads are in progress
     dataTask.priority = NSURLSessionTaskPriorityHigh
     dataTask.resume()
-  }
-  
-  private func didFinishDownloadingAssetBundle(assetBundle: AssetBundle) {
-    delegate?.assetBundleManager(self, didFinishDownloadingBundle: assetBundle)
-  }
-  
-  private func didFailWithError(error: ErrorType) {
-    delegate?.assetBundleManager(self, didFailDownloadingBundleWithError: error)
   }
 
   /// If there is an existing Downloading directory, move it
@@ -218,25 +214,38 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
         didFinishDownloadingAssetBundle(assetBundle)
       } catch {
         self.didFailWithError(error)
-        return
       }
-    } else {
-      assetBundleDownloader = AssetBundleDownloader(assetBundle: assetBundle, baseURL: baseURL, missingAssets: missingAssets)
-      assetBundleDownloader!.delegate = self
-      assetBundleDownloader!.resume()
+      return
     }
+
+    assetBundleDownloader = AssetBundleDownloader(assetBundle: assetBundle, baseURL: baseURL, missingAssets: missingAssets)
+    assetBundleDownloader!.delegate = self
+    assetBundleDownloader!.resume()
   }
 
-  /// Remove all downloaded asset bundles, except for one
-  func removeAllDownloadedAssetBundlesExceptFor(assetBundleToKeep: AssetBundle) throws {
-    try dispatch_sync(queue) {
-      for assetBundle in self.downloadedAssetBundlesByVersion.values {
-        if assetBundle !== assetBundleToKeep {
-          try self.fileManager.removeItemAtURL(assetBundle.directoryURL)
-          self.downloadedAssetBundlesByVersion.removeValueForKey(assetBundle.version)
-        }
+  private func didFinishDownloadingAssetBundle(assetBundle: AssetBundle) {
+    delegate?.assetBundleManager(self, didFinishDownloadingBundle: assetBundle)
+  }
+
+  private func didFailWithError(error: ErrorType) {
+    delegate?.assetBundleManager(self, didFailDownloadingBundleWithError: error)
+  }
+
+  private func cachedAssetForAsset(asset: Asset) -> Asset? {
+    for assetBundle in downloadedAssetBundlesByVersion.values {
+      if let cachedAsset = assetBundle.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
+        return cachedAsset
       }
     }
+
+    if let cachedAsset = partiallyDownloadedAssetBundle?.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
+      // Make sure the asset has been downloaded
+      if fileManager.fileExistsAtPath(cachedAsset.fileURL.path!) {
+        return cachedAsset
+      }
+    }
+
+    return nil
   }
 
   /// Move the downloaded asset bundle to a new directory named after the version
@@ -258,21 +267,16 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     }
   }
 
-  private func cachedAssetForAsset(asset: Asset) -> Asset? {
-    for assetBundle in downloadedAssetBundlesByVersion.values {
-      if let cachedAsset = assetBundle.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
-        return cachedAsset
+  /// Remove all downloaded asset bundles, except for one
+  func removeAllDownloadedAssetBundlesExceptFor(assetBundleToKeep: AssetBundle) throws {
+    try dispatch_sync(queue) {
+      for assetBundle in self.downloadedAssetBundlesByVersion.values {
+        if assetBundle !== assetBundleToKeep {
+          try self.fileManager.removeItemAtURL(assetBundle.directoryURL)
+          self.downloadedAssetBundlesByVersion.removeValueForKey(assetBundle.version)
+        }
       }
     }
-
-    if let cachedAsset = partiallyDownloadedAssetBundle?.cachedAssetForURLPath(asset.URLPath, hash: asset.hash) {
-      // Make sure the asset has been downloaded
-      if fileManager.fileExistsAtPath(cachedAsset.fileURL.path!) {
-        return cachedAsset
-      }
-    }
-
-    return nil
   }
 
   // MARK: AssetBundleDownloaderDelegate
