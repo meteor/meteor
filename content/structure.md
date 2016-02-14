@@ -162,6 +162,22 @@ However, in some cases it's better to allow one application to be the master, an
 
 The simplest way to provide a server-server API is to use Meteor's built-in DDP protocol directly. This is the same way your Meteor client gets data from your server, but you can also use it to communicate between different applications. You can use [`DDP.connect()`](http://docs.meteor.com/#/full/ddp_connect) to connect from a "client" server to the master server, and then use the connection object returned to make method calls and read from publications.
 
-XXX: Do we want to show how to mirror a publication (boilerplate)? or passthrough a method call (complexities about authentication).
+<h3 id="sharing-accounts">Sharing accounts</h3>
 
-XXX: Re: sharing user accounts -- what did you have in mind @sashko? The AccountsClient thing lets you authenticate against a 3rd party server from within the app but it's not clear what you should do next -- make method calls / subscribe directly against that server? Pass the resume token through to proxied method calls?
+If you have two servers that access the same database and you want authenticated users to make DDP calls across the both of them, you can use the *resume token* set on one connection to login on the other.
+
+If your user has connectioned to server A, then you can use `DDP.connect()` to open a connection to server B, and pass in server A's resume token to authenticate on server B. As both servers are using the same DB, the same server token will work in both cases. The code to authenticate looks like:
+
+```js
+// This is server A's token as the default `Accounts` points at our server
+const token = Accounts._storedLoginToken();
+
+// We create a *second* accounts client pointing at server B
+const app2 = DDP.connect('url://of.server.b');
+const accounts2 = new AccountsClient({connection: app2});
+
+// Now we can login with the token. Further calls to `accounts2` will be authenticated
+accounts2.loginWithToken(token);
+```
+
+You can see a proof of concept of this architecture in an [example repository](https://github.com/tmeasday/multi-app-accounts).
