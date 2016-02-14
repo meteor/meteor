@@ -29,7 +29,6 @@ final class AssetBundleDownloader: NSObject, NSURLSessionDelegate, NSURLSessionT
     case Suspended
     case Running
     case Waiting
-    case Offline
     case Canceling
     case Invalid
   }
