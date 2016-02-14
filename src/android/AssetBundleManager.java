@@ -48,6 +48,9 @@ class AssetBundleManager {
     /** The directory used while downloading a new asset bundle */
     private final File downloadDirectory;
 
+    private final File partialDownloadDirectory;
+    private AssetBundle partiallyDownloadedAssetBundle;
+
     private AssetBundleDownloader assetBundleDownloader;
 
     /** The initial asset bundle included in the app bundle */
@@ -58,11 +61,24 @@ class AssetBundleManager {
         this.initialAssetBundle = initialAssetBundle;
         this.versionsDirectory = versionsDirectory;
         downloadDirectory = new File(versionsDirectory, "Downloading");
+        partialDownloadDirectory = new File(versionsDirectory, "PartialDownload");
 
         downloadedAssetBundlesByVersion = new HashMap<String, AssetBundle>();
         loadDownloadedAssetBundles();
 
         httpClient = new OkHttpClient();
+    }
+
+    private void loadDownloadedAssetBundles() {
+        for (File file: versionsDirectory.listFiles()) {
+            if (downloadDirectory.equals(file)) continue;
+            if (partialDownloadDirectory.equals(file)) continue;
+
+            if (file.isDirectory()) {
+                AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(file), null, initialAssetBundle);
+                downloadedAssetBundlesByVersion.put(assetBundle.getVersion(), assetBundle);
+            }
+        }
     }
 
     public void setCallback(Callback callback) {
@@ -106,7 +122,7 @@ class AssetBundleManager {
                     return;
                 }
 
-                String version = manifest.version;
+                final String version = manifest.version;
 
                 Log.v(LOG_TAG, "Downloaded asset manifest for version: " + version);
 
@@ -120,18 +136,23 @@ class AssetBundleManager {
                     return;
                 }
 
+                // Cancel in progress download if there is one
                 if (assetBundleDownloader != null) {
                     assetBundleDownloader.cancel();
                 }
-
                 assetBundleDownloader = null;
 
-                // Delete existing download directory if needed
-                if (downloadDirectory.exists()) {
-                    if (!IOUtils.deleteRecursively(downloadDirectory)) {
-                        Log.w(LOG_TAG, "Could not delete download directory");
-                    }
+                // If there is a previously downloaded asset bundle with the requested
+                // version, use that
+                AssetBundle downloadedAssetBundle = downloadedAssetBundleWithVersion(version);
+                if (downloadedAssetBundle != null) {
+                    didFinishDownloadingAssetBundle(downloadedAssetBundle);
+                    return;
                 }
+
+                // Else, get ready to download the new asset bundle
+
+                moveExistingDownloadDirectoryIfNeeded();
 
                 // Create download directory
                 if (!downloadDirectory.mkdir()) {
@@ -152,6 +173,33 @@ class AssetBundleManager {
                 downloadAssetBundle(assetBundle, baseUrl);
             }
         });
+    }
+
+    /** If there is an existing Downloading directory, move it
+     * to PartialDownload and load the partiallyDownloadedAssetBundle so we
+     * don't unnecessarily redownload assets
+     */
+    private void moveExistingDownloadDirectoryIfNeeded() {
+        if (downloadDirectory.exists()) {
+            if (partialDownloadDirectory.exists()) {
+                if (!IOUtils.deleteRecursively(partialDownloadDirectory)) {
+                    Log.w(LOG_TAG, "Could not delete partial download directory");
+                }
+            }
+
+            partiallyDownloadedAssetBundle = null;
+
+            if (!downloadDirectory.renameTo(partialDownloadDirectory)) {
+                Log.w(LOG_TAG, "Could not rename existing download directory");
+                return;
+            }
+
+            try {
+                partiallyDownloadedAssetBundle = new AssetBundle(resourceApi, Uri.fromFile(partialDownloadDirectory), initialAssetBundle);
+            } catch (Exception e) {
+                Log.w(LOG_TAG, "Could not load partially downloaded asset bundle", e);
+            }
+        }
     }
 
     public boolean isDownloading() {
@@ -228,6 +276,15 @@ class AssetBundleManager {
                 return cachedAsset;
             }
         }
+
+        if (partiallyDownloadedAssetBundle != null) {
+            AssetBundle.Asset cachedAsset = partiallyDownloadedAssetBundle.cachedAssetForUrlPath(asset.urlPath, asset.hash);
+            // Make sure the asset has been downloaded
+            if (cachedAsset != null && cachedAsset.getFile().exists()) {
+                return cachedAsset;
+            }
+        }
+
         return null;
     }
 
@@ -253,21 +310,6 @@ class AssetBundleManager {
             iterator.remove();
         }
     }
-
-    //region Loading
-
-    private void loadDownloadedAssetBundles() {
-        for (File file: versionsDirectory.listFiles()) {
-            if (downloadDirectory.equals(file)) continue;
-
-            if (file.isDirectory()) {
-                AssetBundle assetBundle = new AssetBundle(resourceApi, Uri.fromFile(file), null, initialAssetBundle);
-                downloadedAssetBundlesByVersion.put(assetBundle.getVersion(), assetBundle);
-            }
-        }
-    }
-
-    //endregion
 
     //region Testing support
 

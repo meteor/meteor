@@ -73,6 +73,10 @@ class AssetBundle {
         this(resourceApi, directoryUri, null, null);
     }
 
+    public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetBundle parentAssetBundle) {
+        this(resourceApi, directoryUri, null, parentAssetBundle);
+    }
+
     public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri, AssetManifest manifest, AssetBundle parentAssetBundle) {
         this.resourceApi = resourceApi;
         this.directoryUri = directoryUri;

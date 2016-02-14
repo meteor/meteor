@@ -274,10 +274,10 @@ public class WebAppMockRemoteServer extends CordovaPlugin implements WebApp.Test
 
         if (children != null) {
             for (String child : children) {
-                copyRecursively(path + "/" + child, destinationUri);
+                copyRecursively(path + "/" + child, Uri.withAppendedPath(destinationUri, child));
             }
         } else {
-            resourceApi.copyResource(Uri.withAppendedPath(ASSET_BASE_URI, path), Uri.withAppendedPath(destinationUri, path));
+            resourceApi.copyResource(Uri.withAppendedPath(ASSET_BASE_URI, path), destinationUri);
         }
     }
 }
