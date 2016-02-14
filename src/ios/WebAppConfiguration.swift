@@ -37,6 +37,24 @@ final class WebAppConfiguration {
     }
   }
   
+  /// The last seen initial version of the asset bundle
+  var lastSeenInitialVersion: String? {
+    get {
+      return userDefaults.stringForKey("MeteorWebAppLastSeenInitialVersion")
+    }
+    
+    set {
+      if newValue != lastSeenInitialVersion {
+        if newValue == nil {
+          userDefaults.removeObjectForKey("MeteorWebAppLastSeenInitialVersion")
+        } else {
+          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
+        }
+        userDefaults.synchronize()
+      }
+    }
+  }
+  
   /// The last downloaded version of the asset bundle
   var lastDownloadedVersion: String? {
     get {
@@ -49,24 +67,6 @@ final class WebAppConfiguration {
           userDefaults.removeObjectForKey("MeteorWebAppLastDownloadedVersion")
         } else {
           userDefaults.setObject(newValue, forKey: "MeteorWebAppLastDownloadedVersion")
-        }
-        userDefaults.synchronize()
-      }
-    }
-  }
-
-  /// The last seen initial version of the asset bundle
-  var lastSeenInitialVersion: String? {
-    get {
-      return userDefaults.stringForKey("MeteorWebAppLastSeenInitialVersion")
-    }
-
-    set {
-      if newValue != lastSeenInitialVersion {
-        if newValue == nil {
-          userDefaults.removeObjectForKey("MeteorWebAppLastSeenInitialVersion")
-        } else {
-          userDefaults.setObject(newValue, forKey: "MeteorWebAppLastSeenInitialVersion")
         }
         userDefaults.synchronize()
       }
@@ -117,6 +117,7 @@ final class WebAppConfiguration {
   }
   
   func reset() {
+    lastSeenInitialVersion = nil
     lastDownloadedVersion = nil
     lastKnownGoodVersion = nil
     blacklistedVersions = []

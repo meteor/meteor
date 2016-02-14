@@ -1,23 +1,5 @@
 extension WebApp {
-  func resetToInitialState(command: CDVInvokedUrlCommand) {
-    commandDelegate?.runInBackground() {
-      self.removeUserDefaults()
-      self.initializeAssetBundles()
-
-      let result = CDVPluginResult(status: CDVCommandStatus_OK)
-      self.commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
-    }
-  }
-
-  private func removeUserDefaults() {
-    let userDefaults = NSUserDefaults.standardUserDefaults()
-    userDefaults.removeObjectForKey("MeteorWebAppLastSeenInitialVersion")
-    userDefaults.removeObjectForKey("MeteorWebAppLastDownloadedVersion")
-    userDefaults.synchronize()
-  }
-
   func simulatePageReload(command: CDVInvokedUrlCommand) {
-    NSLog("simulatePageReload");
     onReset()
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
@@ -25,16 +7,25 @@ extension WebApp {
   }
 
   func simulateAppRestart(command: CDVInvokedUrlCommand) {
-    NSLog("simulateAppRestart");
-
     initializeAssetBundles()
+    onReset()
 
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
   }
+  
+  func resetToInitialState(command: CDVInvokedUrlCommand) {
+    commandDelegate?.runInBackground() {
+      self.configuration.reset()
+      self.initializeAssetBundles()
+      self.onReset()
+      
+      let result = CDVPluginResult(status: CDVCommandStatus_OK)
+      self.commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
+    }
+  }
 
   func getAuthTokenKeyValuePair(command: CDVInvokedUrlCommand) {
-    NSLog("authTokenKeyValuePair: \(authTokenKeyValuePair)")
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: authTokenKeyValuePair)
     commandDelegate?.sendPluginResult(result, callbackId:command.callbackId)
   }

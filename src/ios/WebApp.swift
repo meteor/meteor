@@ -30,7 +30,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   private(set) var wwwDirectoryURL: NSURL!
 
   /// Persistent configuration settings for the webapp
-  private var configuration: WebAppConfiguration!
+  private(set) var configuration: WebAppConfiguration!
 
   /// The asset bundle manager is responsible for managing asset bundles
   /// and checking for updates
@@ -130,7 +130,6 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
         }
       } catch {
         NSLog("Could not remove versions directory: \(error)")
-        return
       }
 
       configuration.reset()
@@ -160,9 +159,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     } else {
       currentAssetBundle = initialAssetBundle
     }
-    
-    // Workaround to make sure tests run in a clean state, see
-    // WebApp+Testing.resetToInitialState()
+
     pendingAssetBundle = nil
   }
 
@@ -170,6 +167,10 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   override public func onReset() {
     super.onReset()
     
+    // Clear existing callbacks
+    newVersionDownloadedCallbackId = nil
+    downloadFailureCallbackId = nil
+
     // If there is a pending asset bundle, we make it the current
     if let pendingAssetBundle = pendingAssetBundle {
       currentAssetBundle = pendingAssetBundle
@@ -205,7 +206,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
         NSLog("Could not remove unused asset bundles: \(error)")
       }
     }
-    
+
     let result = CDVPluginResult(status: CDVCommandStatus_OK)
     self.commandDelegate?.sendPluginResult(result, callbackId: command.callbackId)
   }
