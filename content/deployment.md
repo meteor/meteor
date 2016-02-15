@@ -231,14 +231,14 @@ The analytics package hooks into Flow Router (see the [routing article](routing.
 You may want to track non-page change related events (for instance publication subscription, or method calls) also. To do so you can use the custom event tracking functionality:
 
 ```js
-Todos.methods.updateText = new ValidatedMethod({
+export const updateText = new ValidatedMethod({
   ...
   run({ todoId, newText }) {
     // We use `isClient` here because we only want to track
     // attempted method calls from the client, not server to
     // server method calls
     if (Meteor.isClient) {
-      analytics.track('Todos.methods.updateText', { todoId, newText });
+      analytics.track('todos.updateText', { todoId, newText });
     }
 
     // ...

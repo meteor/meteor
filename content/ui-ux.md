@@ -79,7 +79,7 @@ Template.Lists_show_page.onCreated(function() {
   this.getListId = () => FlowRouter.getParam('_id');
 
   this.autorun(() => {
-    this.subscribe('Todos.inList', this.getListId());
+    this.subscribe('todos.inList', this.getListId());
   });
 });
 
@@ -164,12 +164,17 @@ If you do not, you'll see performance problems across the board: you'll be flood
 To throttle writes, a typical approach is to use underscore's [`.throttle()`](http://underscorejs.org/#throttle) or [`.debounce()`](http://underscorejs.org/#debounce) functions. For instance, in the Todos example app, we throttle writes on user input to 300ms:
 
 ```js
+import {
+  updateText,
+} from '../../api/todos/methods.js';
+
+
 Template.Todos_item.events({
   // update the text of the item on keypress but throttle the event to ensure
   // we don't flood the server with updates (handles the event at most once
   // every 300ms)
   'keyup input[type=text]': _.throttle(function(event) {
-    Todos.methods.updateText.call({
+    updateText.call({
       todoId: this.todo._id,
       newText: event.target.value
     }, (err) => {
@@ -415,9 +420,11 @@ So when should you wait for the server and when not? It basically comes down to 
 For instance, in the Todos example app, when creating a new list, the list creation will basically always succeed, so we write:
 
 ```js
+import { insert } from '../../api/lists/methods.js';
+
 Template.App_body.events({
   'click .js-new-list'() {
-    const listId = Lists.methods.insert.call((err) => {
+    const listId = insert.call((err) => {
       if (err) {
         // At this point, we have already redirected to the new list page, but
         // for some reason the list didn't get created. This should almost never

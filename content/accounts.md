@@ -424,7 +424,7 @@ We suggest using the `this.userId` property on the context of Methods and public
 
 ```js
 // Accessing this.userId inside a publication
-Meteor.publish('Lists.private', function() {
+Meteor.publish('lists.private', function() {
   if (!this.userId) {
     return this.ready();
   }
@@ -440,7 +440,7 @@ Meteor.publish('Lists.private', function() {
 ```js
 // Accessing this.userId inside a Method
 Meteor.methods({
-  'Todos.methods.updateText'({ todoId, newText }) {
+  'todos.updateText'({ todoId, newText }) {
     new SimpleSchema({
       todoId: { type: String },
       newText: { type: String }
@@ -449,7 +449,7 @@ Meteor.methods({
     const todo = Todos.findOne(todoId);
 
     if (!todo.editableBy(this.userId)) {
-      throw new Meteor.Error('Todos.methods.updateText.unauthorized',
+      throw new Meteor.Error('todos.updateText.unauthorized',
         'Cannot edit todos in a private list that is not yours');
     }
 
