@@ -175,7 +175,7 @@ exports.defineAutoTests = function() {
 
           it("should set application/json for a .json file", function(done) {
             pendingOnAndroid();
-            
+
             fetchFromLocalServer("/some-data.json").then(function(response) {
               expect(response.headers.get("Content-Type")).toEqual("application/json");
               done();
@@ -357,6 +357,91 @@ exports.defineAutoTests = function() {
         WebAppCordova.onNewVersionDownloaded(function() {
           WebAppCordova.simulateAppRestart(function() {
             expectVersionServedToEqual("version3", done);
+          });
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
+    describe("when updating from a downloaded app version to the bundled version", function() {
+      beforeEach(function(done) {
+        downloadAndServeVersionLocally("version2", function() {
+          WebAppMockRemoteServer.serveVersion("version1", done);
+        });
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should only serve the new verson after a page reload", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          expectVersionServedToEqual("version2", function() {
+            WebAppCordova.simulatePageReload(function() {
+              expectVersionServedToEqual("version1", done);
+            });
+          });
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should only download the manifest", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          WebAppMockRemoteServer.receivedRequests(expectPathsForRequestsToMatch([
+            "/__cordova/manifest.json"],
+            done));
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should still serve assets that haven't changed", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          WebAppCordova.simulatePageReload(function() {
+            expectAssetToBeServed("some-text.txt", done);
+          });
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not redownload the bundled version", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          WebAppCordova.downloadedVersionExists("version1", function(versionExists) {
+            expect(versionExists).toBe(false);
+            done();
+          });
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should delete the old version after startup completes", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          WebAppCordova.simulatePageReload(function() {
+            WebAppCordova.downloadedVersionExists("version2", function(versionExists) {
+              expect(versionExists).toBe(true);
+
+              WebAppCordova.startupDidComplete(function() {
+                WebAppCordova.downloadedVersionExists("version2", function(versionExists) {
+                  expect(versionExists).toBe(false);
+
+                  done();
+                });
+              });
+            });
+          });
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should remember the new version after a restart", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          WebAppCordova.simulateAppRestart(function() {
+            expectVersionServedToEqual("version1", done);
           });
         });
 

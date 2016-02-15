@@ -112,40 +112,45 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
           return
         }
 
-        let fileManager = self.fileManager
-
         // Cancel in progress download if there is one
         self.assetBundleDownloader?.cancel()
         self.assetBundleDownloader = nil
+
+        // There is no need to redownload the initial version
+        if self.initialAssetBundle.version == version {
+          self.didFinishDownloadingAssetBundle(self.initialAssetBundle)
+          return
+        }
 
         // If there is a previously downloaded asset bundle with the requested
         // version, use that
         if let assetBundle = self.downloadedAssetBundleWithVersion(manifest.version) {
           self.didFinishDownloadingAssetBundle(assetBundle)
+          return
+        }
+        
         // Else, get ready to download the new asset bundle
-        } else {
-          self.moveExistingDownloadDirectoryIfNeeded()
+        self.moveExistingDownloadDirectoryIfNeeded()
+        
+        // Create download directory
+        do {
+          try self.fileManager.createDirectoryAtURL(self.downloadDirectoryURL, withIntermediateDirectories: true, attributes: nil)
+        } catch {
+          self.didFailWithError(WebAppError.FileSystemFailure(reason: "Could not create download directory", underlyingError: error))
+          return
+        }
 
-          // Create download directory
-          do {
-            try fileManager.createDirectoryAtURL(self.downloadDirectoryURL, withIntermediateDirectories: true, attributes: nil)
-          } catch {
-            self.didFailWithError(WebAppError.FileSystemFailure(reason: "Could not create download directory", underlyingError: error))
-            return
-          }
+        let manifestFileURL = self.downloadDirectoryURL.URLByAppendingPathComponent("program.json")
+        if !data.writeToURL(manifestFileURL, atomically: false) {
+          self.didFailWithError(WebAppError.FileSystemFailure(reason: "Could not write asset manifest to: \(manifestFileURL)", underlyingError: error))
+          return
+        }
 
-          let manifestFileURL = self.downloadDirectoryURL.URLByAppendingPathComponent("program.json")
-          if !data.writeToURL(manifestFileURL, atomically: false) {
-            self.didFailWithError(WebAppError.FileSystemFailure(reason: "Could not write asset manifest to: \(manifestFileURL)", underlyingError: error))
-            return
-          }
-
-          do {
-            let assetBundle = try AssetBundle(directoryURL: self.downloadDirectoryURL, manifest: manifest, parentAssetBundle: self.initialAssetBundle)
-            self.downloadAssetBundle(assetBundle, withBaseURL: baseURL)
-          } catch let error {
-            self.didFailWithError(error)
-          }
+        do {
+          let assetBundle = try AssetBundle(directoryURL: self.downloadDirectoryURL, manifest: manifest, parentAssetBundle: self.initialAssetBundle)
+          self.downloadAssetBundle(assetBundle, withBaseURL: baseURL)
+        } catch let error {
+          self.didFailWithError(error)
         }
       }
     }

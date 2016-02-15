@@ -142,6 +142,12 @@ class AssetBundleManager {
                 }
                 assetBundleDownloader = null;
 
+                // There is no need to redownload the initial version
+                if (initialAssetBundle.getVersion().equals(version)) {
+                    didFinishDownloadingAssetBundle(initialAssetBundle);
+                    return;
+                }
+
                 // If there is a previously downloaded asset bundle with the requested
                 // version, use that
                 AssetBundle downloadedAssetBundle = downloadedAssetBundleWithVersion(version);
