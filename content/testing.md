@@ -2,11 +2,34 @@
 title: "Testing"
 ---
 
-## Testing your Meteor application
+<h2 id="testing-applications">Testing your Application</h2>
 
-## Challenges of testing a Meteor application
+There are many benefits of testing your application to ensure it works the way you think it does. Reasons include maintaining a high level of quality (especially over time as your codebase changes), allowing you to refactor and rewrite code with confidence, and concrete documentation of expected behavior (other developers can figure out what parts of your app are supposed to do by reading the tests!).
 
-## Generating test data
+Automated testing allows you to do all of these things to a much greater degree and *run tests more often* which means your codebase will remain in better shape and regress less. 
+
+<h3 id="testing-concepts">Testing concepts</h3>
+
+Entire books have been written on the subject of testing, so we will simply touch on some basic of testing here. The important thing to consider when writing a test is what part of the application you are trying to test, and how you are verifying the behaviour works.
+
+If you are testing simply one small module of your application, you are writing a *unit test* and you'll need to take steps to *stub* and *mock* other modules that your module usually leverages to *isolate* it. You'll typically need to *spy* on actions that the module takes to verify that it indeed takes the actions you expect.
+
+If you are testing that multiple modules behave properly in concert, you are writing an *integration test*. Such tests are much more complex and may require running code both on the client on the server to verify that communication across that divide is working as expected. Typically a integration test will still isolate a part of the entire application and directly verify results in code.
+
+If you want to write a test that can be run against any running version of your app and verifies at the browser level that the right things happen when you push the right buttons, then you are writing an *acceptance* or *end-to-end (e2e) test*. Such tests typically try to hook into the application as little as possible, beyond perhaps setting up the right data to run a test against.
+
+Finally you may wish to test your application bears up properly to typical load or see how much load it can handle before it falls over. If so you are writing a *load or stress test*. Such tests can be challenging to setup and typically aren't run often, but are very important for confidence before a big production launch.
+
+<h3 id="isolation-techniques">Isolation techniques</h3>
+
+http://martinfowler.com/articles/mocksArentStubs.html
+
+<h3 id="challenges-with-meteor">Challenges of testing in Meteor</h3>
+
+
+
+<h2 id="generating-test-data">Generating test data</h2>
+
 
 ## Unit testing in Meteor
 
@@ -154,13 +177,6 @@ To write an integration test in Mocha, we do something similar to our unit test 
 
 # Testing
 
-1. Testing your Meteor application
-  1. Basic intro to testing concepts
-  2. Unit testing to ensure a module works in isolation
-    1. Using stubs / mocks / spies to isolate a module
-  3. Integration testing to ensure parts of the system works together
-  4. End-to-end/acceptance testing to ensure the system works in totality
-  5. Load/stress testing to ensure the application can handle real world load
 2. Challenges of testing a Meteor application
   1. The client/server divide, ensuring data is available on the client
   2. Reactivity + testing the system responds to changing data properly
