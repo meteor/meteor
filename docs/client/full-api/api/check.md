@@ -111,6 +111,10 @@ only if the key is not set as opposed to the value being set to `undefined`.
 
 {{/dtdd}}
 
+{{#dtdd "<code>Match.Maybe(<em>pattern</em>)</code>"}} Behaves like `Match.Optional`
+except it also matches `null`. If used in an object, the behaviour is identical to `Match.optional`.
+{{/dtdd}}
+
 {{#dtdd "<code>Match.OneOf(<em>pattern1</em>, <em>pattern2</em>, ...)</code>"}}
 Matches any value that matches at least one of the provided patterns.
 {{/dtdd}}
