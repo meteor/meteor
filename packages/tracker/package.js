@@ -6,7 +6,7 @@ Package.describe({
 Package.onUse(function (api) {
   api.export('Tracker');
   api.export('Deps');
-  api.addFiles('tracker.js');
+  api.mainModule('tracker.js');
   api.addFiles('deprecated.js');
 });
 
