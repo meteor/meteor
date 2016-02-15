@@ -92,6 +92,10 @@ function PackageAPI (options) {
   self.uses = {};
   self.implies = {};
 
+  // dependencies between architectures, for each architecture, a list of other
+  // architectures it depends on
+  self.archDependencies = {};
+
   _.each(compiler.ALL_ARCHES, function (arch) {
     self.files[arch] = {
       assets: [],
@@ -101,6 +105,8 @@ function PackageAPI (options) {
     self.exports[arch] = [];
     self.uses[arch] = [];
     self.implies[arch] = [];
+
+    self.archDependencies[arch] = [];
   });
 
   self.releaseRecords = [];
@@ -222,6 +228,65 @@ _.extend(PackageAPI.prototype, {
           weak: options.weak || false
         });
       });
+    }
+  },
+
+  /**
+   *
+   * @memberOf PackageAPI
+   * @summary Defines that another architecture or architectures are a dependency when a given
+   * architecture is defined as used.
+   * @locus package.js
+   * @instance
+   * @param {String|Object} arch An architecture for which dependencies are provided. Can be
+   * an object mapping between an architecture and a list of dependant architectures.
+   * @param {String|String[]} [archList] A list of dependant architectures.
+   */
+  archDepends: function (arch, archList) {
+    var self = this;
+
+    var archMap = {};
+    if (_.isString(arch)) {
+      archMap[arch] = archList;
+    }
+    else if (_.isObject(arch) && ! _.isArray(arch)) {
+      archMap = arch;
+    }
+    else {
+       buildmessage.error(
+        "Invalid 'archDepends' argument: '" + arch + "'",
+        {useMyCaller: true});
+      return;
+    }
+
+    // avoid using _.each so as to not add more frames to skip
+    for (var arch in archMap) {
+      if (! archMap.hasOwnProperty(arch)) continue;
+      var archList = archMap[arch];
+
+      arch = _.uniq(_.flatten(_.map(toArray(arch), mapWhereToArch)));
+
+      // avoid using _.each so as to not add more frames to skip
+      for (var i = 0; i < arch.length; i++) {
+        var fromArch = arch[i];
+
+        var isMatch = _.any(_.map(compiler.ALL_ARCHES, function (actualArch) {
+          return archinfo.matches(actualArch, fromArch);
+        }));
+        if (! isMatch) {
+          buildmessage.error(
+            "Invalid 'archDepends' argument: '" + fromArch + "'",
+            {useMyCaller: true});
+          return;
+        }
+
+        archList = _.uniq(_.flatten(_.map(toArray(archList), mapWhereToArch)));
+
+        forAllMatchingArchs(archList, function (a) {
+          self.archDependencies[fromArch].push(a);
+          self.archDependencies[fromArch] = _.uniq(self.archDependencies[fromArch]);
+        });
+      }
     }
   },
 

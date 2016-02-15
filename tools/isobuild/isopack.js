@@ -45,6 +45,7 @@ var Unibuild = function (isopack, options) {
 
   self.uses = options.uses;
   self.implies = options.implies || [];
+  self.archDependencies = options.archDependencies || [];
 
   // This WatchSet will end up having the watch items from the
   // SourceArch (such as package.js or .meteor/packages), plus all of
@@ -1084,6 +1085,7 @@ _.extend(Isopack.prototype, {
         arch: unibuildMeta.arch,
         uses: unibuildJson.uses,
         implies: unibuildJson.implies,
+        archDependencies: unibuildJson.archDependencies,
         watchSet: unibuildWatchSets[unibuildMeta.path],
         nodeModulesPath: nodeModulesPath,
         declaredExports: declaredExports,
@@ -1293,6 +1295,7 @@ _.extend(Isopack.prototype, {
             };
           }),
           implies: (_.isEmpty(unibuild.implies) ? undefined : unibuild.implies),
+          archDependencies: unibuild.archDependencies,
           node_modules: nodeModulesPath,
           resources: []
         };
