@@ -68,21 +68,15 @@ All of the code samples in this guide and future Meteor tutorials will use all o
 - [Set up Sublime Text for ES2015](http://info.meteor.com/blog/set-up-sublime-text-for-meteor-es6-es2015-and-jsx-syntax-and-linting)
 - [How much does ES2015 cost?](http://info.meteor.com/blog/how-much-does-es2015-cost)
 
-<h3 id="style-guide">Follow the Meteor JavaScript style guide</h3>
+<h3 id="style-guide">Follow a JavaScript style guide</h3>
 
-XXX: still some debate about whether we should publish our own style guide or fall out to ABNB
-
-We have a JavaScript style guide which is heavily based on the popular AirBnB style guide, but has been content edited to include only essential rules. If you would like to follow this style guide in your non-Meteor applications, you will need to enable the same Babel features as supported by the `ecmascript` package linked above.
-
-[Read the Meteor JavaScript style guide.](https://github.com/meteor/javascript)
+We recommend choosing and sticking to a JavaScript style guide and enforcing it with tools. A popular option that we rcommend is the [AirBnB style guide](https://github.com/airbnb/javascript) with the ES6 extensions (and optionally React extensions).
 
 <h2 id="eslint">Check your code with ESLint</h2>
 
 "Code linting" is the process of automatically checking your code for common errors or style problems. For example, ESLint can determine if you have made a typo in a variable name, or some part of your code is unreachable because of a poorly written `if` condition.
 
-We have a standard ESLint configuration that verifies as much as possible of the Meteor JavaScript style guide.
-
-- [Get the Meteor ESLint configuration here.](XXX we need both eslintrc and eslintignore)
+We recommend using the [AirBnB eslint configuration](https://github.com/airbnb/javascript/tree/master/packages/eslint-config-airbnb) which verifies the AirBnB styleguide.
 
 Below, you can find directions for setting up automatic linting at many different stages of development. In general, you want to run the linter as often as possible, because it's the fastest and easiest way to identify typos and small errors.
 
@@ -92,11 +86,32 @@ To get ESLint up and running on your computer, install the command line tool wit
 
 ```
 npm install -g eslint
-npm install -g babel-eslint
+# if you are using react
 npm install -g eslint-plugin-react
+npm install -g eslint-config-airbnb
 ```
 
-Copy the standard Meteor `.eslintrc` and `.eslintignore` files from above into your app directory, and run the linter on your code with:
+XXX: should we install it locally in `package.json` and add a script to `package.json` so you can `npm run lint`? 
+
+Then you can create a `.eslintrc` file at the top of your project to set up your linting rules:
+
+```
+{
+  "extends": "airbnb/base",
+  "env": {},
+  "rules": {
+
+/**
+  * App Specific Overrides
+  */
+
+  }
+}
+```
+
+Use `airbnb/base` for a normal ecmascript-based config and `airbnb` in a React project.
+
+To run the linter, you can now simply type:
 
 ```
 eslint .
@@ -149,14 +164,6 @@ WebStorm provides [these instructions for using ESLint](https://www.jetbrains.co
 Linting can be activated on WebStorm on a project-by-project basis, or you can set ESLint as a default under Editor > Inspections, choosing the Default profile, checking "ESLint", and applying.
 
 
-<h3 id="eslint-commit-hook">Setting up a commit hook</h3>
-
-XXX I think we just don't worry about these for now?
-
-<h3 id="eslint-ci">Running ESLint in CI</h3>
-
-XXX
-
 <h2 id="meteor-features">Meteor code style</h2>
 
 The section above talked about JavaScript code in general - you can easily apply it in any JavaScript application, not just with Meteor apps. However, there are some style questions that are Meteor-specific, in particular how to name and structure all of the different components of your app.
@@ -182,17 +189,15 @@ Widgets.insert({
 
 <h3 id="methods-and-publications">Methods and publications</h3>
 
-Method and publication names should be camelCased, and namespaced to the collection or module:
+Method and publication names should be camelCased, and namespaced to the module they are in:
 
 ```js
 // in imports/api/todos/methods.js
 updateText = new ValidatedMethod({
-  name: 'Todos.methods.updateText',
+  name: 'todos.updateText',
   // ...
 });
 ```
-
-// XXX: should we just make the method name `Todos.updateText`? --- it make sense to qualify it with `.method` when it was also the JS name, but that's no longer the case...
 
 Note that this code sample uses the [ValidatedMethod package recommended in the Methods article](methods.html#validated-method). If you aren't using that package, you can use the name as the property passed to `Meteor.methods`.
 
@@ -200,7 +205,7 @@ Here's how this naming convention looks when applied to a publication:
 
 ```js
 // Naming a publication
-Meteor.publish('Lists.public', function() {
+Meteor.publish('lists.public', function() {
   // ...
 });
 ```
