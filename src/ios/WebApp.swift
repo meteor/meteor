@@ -166,7 +166,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   /// Called by Cordova before page reload
   override public func onReset() {
     super.onReset()
-    
+
     // Clear existing callbacks
     newVersionDownloadedCallbackId = nil
     downloadFailureCallbackId = nil
@@ -236,7 +236,11 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   private func notifyNewVersionDownloaded(version: String?) {
+    guard let newVersionDownloadedCallbackId = newVersionDownloadedCallbackId else { return }
+
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: version)
+    // This allows us to invoke the callback later
+    result.setKeepCallbackAsBool(true)
     commandDelegate?.sendPluginResult(result, callbackId: newVersionDownloadedCallbackId)
   }
 
@@ -251,9 +255,13 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
 
   private func notifyDownloadFailure(error: ErrorType) {
     NSLog("Failure: \(error)")
+    
+    guard let downloadFailureCallbackId = downloadFailureCallbackId else { return }
 
     let errorMessage = String(error)
     let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAsString: errorMessage)
+    // This allows us to invoke the callback later
+    result.setKeepCallbackAsBool(true)
     commandDelegate?.sendPluginResult(result, callbackId: downloadFailureCallbackId)
   }
 
