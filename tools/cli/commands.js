@@ -436,7 +436,11 @@ testCommandOptions = {
 
     // one of the following must be true
     'test-app': { type: Boolean, 'default': false },
-    'test-packages': { type: Boolean, 'default': false }
+    'test-packages': { type: Boolean, 'default': false },
+
+    // For 'test-packages': Run in unit test or integration test mode
+    'unit': { type: Boolean, 'default': false },
+    'integration': { type: Boolean, 'default': false }
   }
 };
 
@@ -567,6 +571,17 @@ function doTestCommand(options) {
   } else if (options["test-app"]) {
     // XXX look in package list for testOnly packages
     global.testCommandMetadata.driverPackage = 'practicalmeteor:mocha';
+
+    // Default to `--integration`
+    if (!options.unit && !options.integration) {
+      options.integration = true;
+    }
+
+    if (options.unit && options.integration) {
+      throw new Error("Can't pass both --unit and --integration");
+    }
+    global.testCommandMetadata.isUnitTest = options.unit;
+    global.testCommandMetadata.isIntegrationTest = options.integration;
 
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');

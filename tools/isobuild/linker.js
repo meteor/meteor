@@ -960,12 +960,20 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
-  // are we running `meteor test-app` or `meteor test-packages`
+  // are we running `meteor test-app` or `meteor test-packages`?
   if (global.testCommandMetadata) {
     // XXX pass in test driver package from CLI
     var weAreLinkingTheApp = (name === null);
     if (weAreLinkingTheApp) {
       var testDriverPackageName = global.testCommandMetadata.driverPackage;
+
+      var setMeteorIntegrationOrUnitTest = "";
+      if (global.testCommandMetadata.isUnitTest) {
+        setMeteorIntegrationOrUnitTest = "Meteor.isUnitTest = true;";
+      } else if (global.testCommandMetadata.isIntegrationTest) {
+        setMeteorIntegrationOrUnitTest = "Meteor.isIntegrationTest = true;";
+      }
+
 
       prelinkedFiles.push({
         source: `\
@@ -975,8 +983,11 @@ setTimeout(function() {
     throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
   }
 
-  // Only run on browser where runTests is defined
+  // Only run on browser where runTests is defined. Not sure why
+  // \`Meteor\` is undefined on the server here.
   if (testDriverPackage.runTests) {
+    Meteor.isTest = true;
+    ${setMeteorIntegrationOrUnitTest}
     testDriverPackage.runTests();
   }
 }, 0);`,

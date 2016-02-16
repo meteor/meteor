@@ -379,10 +379,11 @@ class ResourceSlot {
       return lazy;
     }
 
-    // If file.lazy was not previously defined, mark the file lazy if it
-    // is contained by an imports directory. Note that any files contained
-    // by a node_modules directory will already have been marked lazy in
-    // PackageSource#_inferFileOptions.
+    // If file.lazy was not previously defined, mark the file lazy if
+    // it is contained by an imports directory. Note that any files
+    // contained by a node_modules directory will already have been
+    // marked lazy in PackageSource#_inferFileOptions. Same for
+    // non-test files if running unit tests (`meteor test-app --unit`)
     return this.packageSourceBatch.useMeteorInstall &&
       files.pathDirname(this.inputResource.path)
         .split(files.pathSep)

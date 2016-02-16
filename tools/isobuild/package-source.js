@@ -1342,6 +1342,19 @@ _.extend(PackageSource.prototype, {
       fileOptions.transpile = false;
     }
 
+    // If running in unit test mode (`meteor test-app --unit`), all
+    // files other than test files should be loaded lazily
+    if (global.testCommandMetadata && testCommandMetadata.isUnitTest) {
+      const isTestFile = _.any(dirs, (dir) =>
+                               /\.tests?\./.test(dir) ||
+                               /^tests?\./.test(dir) ||
+                               /^tests$/.test(dir));
+
+      if (!isTestFile) {
+        fileOptions.lazy = true;
+      }
+    }
+
     // Special case: in app code on the client, JavaScript files in a
     // `client/compatibility` directory don't get wrapped in a closure.
     if (isApp && // Skip this check for packages.

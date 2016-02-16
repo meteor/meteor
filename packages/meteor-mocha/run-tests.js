@@ -18,5 +18,3 @@ runTests = function() {
   $('head link[rel=stylesheet]').remove();
   $('head').append('<style>' + styles + '</style>');
 };
-
-Meteor.isTest = true;
