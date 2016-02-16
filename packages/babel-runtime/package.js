@@ -5,6 +5,10 @@ Package.describe({
   documentation: 'README.md'
 });
 
+Npm.depends({
+  regenerator: "0.8.42"
+});
+
 Package.onUse(function (api) {
   api.use("modules");
   api.addFiles("babel-runtime.js");
