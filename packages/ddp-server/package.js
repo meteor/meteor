@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '1.2.3-modules.8',
+  version: '1.2.3-cordova.5',
   documentation: null
 });
 

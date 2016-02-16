@@ -31,6 +31,9 @@ __meteor_bootstrap__ = {
   configJson: configJson };
 __meteor_runtime_config__ = { meteorRelease: configJson.meteorRelease };
 
+if (!process.env.APP_ID) {
+  process.env.APP_ID = configJson.appId;
+}
 
 // connect (and some other NPM modules) use $NODE_ENV to make some decisions;
 // eg, if $NODE_ENV is not production, they send stack traces on error. connect

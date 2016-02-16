@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules-runtime",
-  version: "0.5.0-modules.8",
+  version: "0.5.0-cordova.5",
   summary: "CommonJS module system",
   git: "https://github.com/benjamn/install",
   documentation: "README.md"

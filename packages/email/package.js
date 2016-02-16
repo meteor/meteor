@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Send email messages",
-  version: "1.0.9-modules.8"
+  version: "1.0.9-cordova.5"
 });
 
 Npm.depends({

@@ -1,6 +1,6 @@
 Package.describe({
   name: 'allow-deny',
-  version: '1.0.1-modules.8',
+  version: '1.0.1-cordova.5',
   // Brief, one-line summary of the package.
   summary: 'Implements functionality for allow/deny and client-side db operations',
   // URL to the Git repository containing the source code for this package.

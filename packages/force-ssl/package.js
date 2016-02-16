@@ -1,6 +1,7 @@
 Package.describe({
   summary: "Require this application to use HTTPS",
-  version: "1.0.7-modules.8"
+  version: "1.0.8-cordova.5",
+  prodOnly: true
 });
 
 Package.onUse(function (api) {

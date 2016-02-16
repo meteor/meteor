@@ -56,7 +56,7 @@ Similar to `cordova prepare <platform>`. Synchronizes the project contents
 updates plugins in a platform-specific manner (modifying an Xcode project for
 instance).
 
-* `CordovaProject#buildForPlatform(platform, options = [], extraPaths)`
+* `CordovaProject#buildForPlatform(platform, options = {}, extraPaths)`
 
 Similar to `cordova build <platform>`. Uses platform-specific build mechanisms
 to compile app. Includes everything done in the prepare stage. It is used for

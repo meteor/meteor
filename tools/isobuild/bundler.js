@@ -1748,11 +1748,13 @@ class ServerTarget extends JsImageTarget {
   // options specific to this subclass:
   // - clientTarget: the ClientTarget to serve up over HTTP as our client
   // - releaseName: the Meteor release name (for retrieval at runtime)
+  // - appIdentifier: the app identifier (for retrieval at runtime)
   constructor (options, ...args) {
     super(options, ...args);
 
     this.clientTargets = options.clientTargets;
     this.releaseName = options.releaseName;
+    this.appIdentifier = options.appIdentifier;
 
     if (! archinfo.matches(this.arch, "os")) {
       throw new Error("ServerTarget targeting something that isn't a server?");
@@ -1791,6 +1793,7 @@ class ServerTarget extends JsImageTarget {
     // server driver alongside the JsImage
     builder.writeJson("config.json", {
       meteorRelease: self.releaseName || undefined,
+      appId: self.appIdentifier || undefined,
       clientPaths: clientTargetPaths
     });
 
@@ -2172,6 +2175,8 @@ exports.bundle = function ({
   var builtBy = "Meteor" + (release.current.name ?
                             " " + release.current.name : "");
 
+  var appIdentifier = projectContext.appIdentifier;
+
   var success = false;
   var serverWatchSet = new watch.WatchSet();
   var clientWatchSet = new watch.WatchSet();
@@ -2230,6 +2235,7 @@ exports.bundle = function ({
         sourceRoot: packageSource.sourceRoot,
         arch: serverArch,
         releaseName: releaseName,
+        appIdentifier: appIdentifier,
         buildMode: buildOptions.buildMode,
         providePackageJSONForUnavailableBinaryDeps
       };

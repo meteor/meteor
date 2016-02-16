@@ -348,6 +348,7 @@ function doRunCommand(options) {
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+      if (buildmessage.jobHasMessages()) return;
 
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       cordovaRunner.checkPlatformsForRunTargets();
@@ -861,11 +862,7 @@ var buildCommand = function (options) {
   if (!options._serverOnly) {
     cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
 
-    if (process.platform === 'win32' && !_.isEmpty(cordovaPlatforms)) {
-      Console.warn(`Can't build for mobile on Windows. Skipping the following \
-platforms: ${cordovaPlatforms.join(", ")}`);
-      cordovaPlatforms = [];
-    } else if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
+    if (process.platform !== 'darwin' && _.contains(cordovaPlatforms, 'ios')) {
       cordovaPlatforms = _.without(cordovaPlatforms, 'ios');
       Console.warn("Currently, it is only possible to build iOS apps \
 on an OS X system.");
@@ -968,21 +965,19 @@ on an OS X system.");
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+        if (buildmessage.jobHasMessages()) return;
 
-        const plugins = cordova.pluginVersionsFromStarManifest(
+        const pluginVersions = cordova.pluginVersionsFromStarManifest(
           bundleResult.starManifest);
 
-        cordovaProject.prepareFromAppBundle(bundlePath, plugins);
+        cordovaProject.prepareFromAppBundle(bundlePath, pluginVersions);
       });
 
       for (platform of cordovaPlatforms) {
         buildmessage.enterJob(
           { title: `building Cordova app for \
 ${cordova.displayNameForPlatform(platform)}` }, () => {
-            let buildOptions = [];
-            if (!options.debug) {
-              buildOptions.push('--release');
-            }
+            let buildOptions = { release: !options.debug };
             cordovaProject.buildForPlatform(platform, buildOptions);
 
             const buildPath = files.pathJoin(
@@ -1584,6 +1579,7 @@ main.registerCommand({
       const cordovaProject = new CordovaProject(projectContext, {
         settingsFile: options.settings,
         mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) });
+      if (buildmessage.jobHasMessages()) return;
 
       cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
       projectContext.platformList.write(cordovaRunner.platformsForRunTargets);

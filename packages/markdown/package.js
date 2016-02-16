@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Markdown-to-HTML processor",
-  version: "1.0.6-modules.8"
+  version: "1.0.6-cordova.5"
 });
 
 Package.onUse(function (api) {

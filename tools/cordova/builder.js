@@ -14,42 +14,49 @@ import { CORDOVA_ARCH } from './index.js';
 // Hard-coded size constants
 
 const iconsIosSizes = {
-  'iphone': '60x60',
   'iphone_2x': '120x120',
   'iphone_3x': '180x180',
   'ipad': '76x76',
-  'ipad_2x': '152x152'
+  'ipad_2x': '152x152',
+  'ipad_pro': '167x167',
+  'ios_settings': '29x29',
+  'ios_settings_2x': '58x58',
+  'ios_settings_3x': '87x87',
+  'ios_spotlight': '40x40',
+  'ios_spotlight_2x': '80x80'
 };
 
 const iconsAndroidSizes = {
-  'android_ldpi': '36x36',
-  'android_mdpi': '42x42',
+  'android_mdpi': '48x48',
   'android_hdpi': '72x72',
-  'android_xhdpi': '96x96'
+  'android_xhdpi': '96x96',
+  'android_xxhdpi': '144x144',
+  'android_xxxhdpi': '192x192'
 };
 
 const launchIosSizes = {
-  'iphone': '320x480',
   'iphone_2x': '640x960',
   'iphone5': '640x1136',
   'iphone6': '750x1334',
   'iphone6p_portrait': '1242x2208',
   'iphone6p_landscape': '2208x1242',
-  'ipad_portrait': '768x1004',
-  'ipad_portrait_2x': '1536x2008',
-  'ipad_landscape': '1024x748',
-  'ipad_landscape_2x': '2048x1496'
+  'ipad_portrait': '768x1024',
+  'ipad_portrait_2x': '1536x2048',
+  'ipad_landscape': '1024x768',
+  'ipad_landscape_2x': '2048x1536',
+  'ipad_pro_portrait': '2048x2732',
+  'ipad_pro_landscape': '2732x2048'
 };
 
 const launchAndroidSizes = {
-  'android_ldpi_portrait': '320x426',
-  'android_ldpi_landscape': '426x320',
   'android_mdpi_portrait': '320x470',
   'android_mdpi_landscape': '470x320',
   'android_hdpi_portrait': '480x640',
   'android_hdpi_landscape': '640x480',
   'android_xhdpi_portrait': '720x960',
-  'android_xhdpi_landscape': '960x720'
+  'android_xhdpi_landscape': '960x720',
+  'android_xxhdpi_portrait': '1080x1440',
+  'android_xxhdpi_landscape': '1440x1080'
 };
 
 export class CordovaBuilder {
@@ -66,6 +73,15 @@ export class CordovaBuilder {
   }
 
   initalizeDefaults() {
+    // Convert the appId (a base 36 string) to a number
+    const appIdAsNumber = parseInt(this.projectContext.appIdentifier, 36);
+    // We use the appId to choose a local server port between 12000-13000.
+    // This range should be large enough to avoid collisions with other
+    // Meteor apps, and has also been chosen to avoid collisions
+    // with other apps or services on the device (although this can never be
+    // guaranteed).
+    const localServerPort = 12000 + (appIdAsNumber % 1000);
+
     this.metadata = {
       id: 'com.id' + this.projectContext.appIdentifier,
       version: '0.0.1',
@@ -74,15 +90,15 @@ export class CordovaBuilder {
       description: 'New Meteor Mobile App',
       author: 'A Meteor Developer',
       email: 'n/a',
-      website: 'n/a'
+      website: 'n/a',
+      contentUrl: `http://localhost:${localServerPort}/`
     };
 
     // Set some defaults different from the Cordova defaults
     this.additionalConfiguration = {
       global: {
         'webviewbounce': false,
-        'DisallowOverscroll': true,
-        'deployment-target': '7.0'
+        'DisallowOverscroll': true
       },
       platform: {
           ios: {},
@@ -95,7 +111,9 @@ export class CordovaBuilder {
     if (packageMap && packageMap.getInfo('launch-screen')) {
       this.additionalConfiguration.global.AutoHideSplashScreen = false;
       this.additionalConfiguration.global.SplashScreen = 'screen';
-      this.additionalConfiguration.global.SplashScreenDelay = 10000;
+      this.additionalConfiguration.global.SplashScreenDelay = 5000;
+      this.additionalConfiguration.global.FadeSplashScreenDuration = 250;
+      this.additionalConfiguration.global.ShowSplashScreenSpinner = false;
     }
 
     if (packageMap && packageMap.getInfo('mobile-status-bar')) {
@@ -116,30 +134,31 @@ export class CordovaBuilder {
       'sms:*': 'external',
       'market:*': 'external',
 
-      // phonegap/cordova related protocols
-      // "file:" protocol is used to access first files from disk
-      'file:*': true,
-      'cdv:*': true,
-      'gap:*': true,
-
-      // allow Meteor's local emulated server url - this is the url from which the
-      // application loads its assets
-      'http://meteor.local/*': true
+      // Allow navigation to localhost, which is needed for the local server
+      'http://localhost': 'navigation'
     };
 
     const mobileServerUrl = this.options.mobileServerUrl;
     const serverDomain = mobileServerUrl ?
       utils.parseUrl(mobileServerUrl).host : null;
 
-    // If the remote server domain is known, allow access to it for xhr and DDP
+    // If the remote server domain is known, allow access to it for XHR and DDP
     // connections.
     if (serverDomain) {
-      this.accessRules['*://' + serverDomain + '/*'] = true;
-      // Android talks to localhost over 10.0.2.2. This config file is used for
-      // multiple platforms, so any time that we say the server is on localhost we
-      // should also say it is on 10.0.2.2.
-      if (serverDomain === 'localhost') {
-        this.accessRules['*://10.0.2.2/*'] = true;
+      // Application Transport Security (new in iOS 9) doesn't allow you
+      // to give access to IP addresses (just domains). So we allow access to
+      // everything if we don't have a domain, which sets NSAllowsArbitraryLoads.
+      if (utils.isIPv4Address(serverDomain)) {
+        this.accessRules['*'] = true;
+      } else {
+        this.accessRules['*://' + serverDomain] = true;
+
+        // Android talks to localhost over 10.0.2.2. This config file is used for
+        // multiple platforms, so any time that we say the server is on localhost we
+        // should also say it is on 10.0.2.2.
+        if (serverDomain === 'localhost') {
+          this.accessRules['*://10.0.2.2'] = true;
+        }
       }
     }
 
@@ -153,19 +172,24 @@ export class CordovaBuilder {
     const iconsPath = files.pathJoin(assetsPath, 'icons');
     const launchScreensPath = files.pathJoin(assetsPath, 'launchscreens');
 
-    const setIcon = (size, name) => {
-      this.imagePaths.icon[name] = files.pathJoin(iconsPath, size + '.png');
+    const setDefaultIcon = (size, name) => {
+      const imageFile = files.pathJoin(iconsPath, size + '.png');
+      if (files.exists(imageFile)) {
+        this.imagePaths.icon[name] = imageFile;
+      }
     };
 
-    const setLaunchscreen = (size, name) => {
-      this.imagePaths.splash[name] =
-        files.pathJoin(launchScreensPath, `${size}.png`);
+    const setDefaultLaunchScreen = (size, name) => {
+      const imageFile = files.pathJoin(launchScreensPath, `${size}.png`);
+      if (files.exists(imageFile)) {
+        this.imagePaths.splash[name] = imageFile;
+      }
     };
 
-    _.each(iconsIosSizes, setIcon);
-    _.each(iconsAndroidSizes, setIcon);
-    _.each(launchIosSizes, setLaunchscreen);
-    _.each(launchAndroidSizes, setLaunchscreen);
+    _.each(iconsIosSizes, setDefaultIcon);
+    _.each(iconsAndroidSizes, setDefaultIcon);
+    _.each(launchIosSizes, setDefaultLaunchScreen);
+    _.each(launchAndroidSizes, setDefaultLaunchScreen);
 
     this.pluginsConfiguration = {};
   }
@@ -228,17 +252,17 @@ export class CordovaBuilder {
       });
     });
 
-    // Load from index.html by default
-    config.element('content', { src: 'index.html' });
+    config.element('content', { src: this.metadata.contentUrl });
 
     // Copy all the access rules
     _.each(this.accessRules, (rule, pattern) => {
-      var opts = { origin: pattern };
       if (rule === 'external') {
-        opts['launch-external'] = true;
+        config.element('allow-intent', { href: pattern });
+      } else if (rule === 'navigation') {
+        config.element('allow-navigation', { href: pattern });
+      } else {
+        config.element('access', { origin: pattern });
       }
-
-      config.element('access', opts);
     });
 
     const platformElement = {
@@ -321,26 +345,6 @@ export class CordovaBuilder {
 
       // Set it to the xml tree
       xmlElement.element(tag, imageAttributes(name, width, height, src));
-
-      // XXX reuse one size for other dimensions
-      const dups = {
-        '60x60': ['29x29', '40x40', '50x50', '57x57', '58x58'],
-        '76x76': ['72x72'],
-        '152x152': ['144x144'],
-        '120x120': ['80x80', '100x100', '114x114'],
-        '768x1004': ['768x1024'],
-        '1536x2008': ['1536x2048'],
-        '1024x748': ['1024x768'],
-        '2048x1496': ['2048x1536']
-      }[size];
-
-      // just use the same image
-      _.each(dups, (size) => {
-        const [width, height] = size.split('x');
-        // XXX this is fine to not supply a name since it is always iOS, but
-        // this is a hack right now.
-        xmlElement.element(tag, imageAttributes('n/a', width, height, src));
-      });
     });
   }
 
@@ -358,52 +362,54 @@ export class CordovaBuilder {
     const programPath = files.pathJoin(bundlePath, 'programs', CORDOVA_ARCH);
     files.cp_r(programPath, applicationPath);
 
-    const bootstrapPage = this.generateBootstrapPage(applicationPath);
-    files.writeFile(files.pathJoin(applicationPath, 'index.html'),
-      bootstrapPage, 'utf8');
-
-    files.copyFile(
-      files.pathJoin(__dirname, 'client', 'meteor_cordova_loader.js'),
-      files.pathJoin(wwwPath, 'meteor_cordova_loader.js'));
-    files.copyFile(
-      files.pathJoin(__dirname, 'client', 'cordova_index.html'),
-      files.pathJoin(wwwPath, 'index.html'));
-  }
-
-  generateBootstrapPage(applicationPath) {
+    // Load program.json
     const programJsonPath = files.convertToOSPath(
       files.pathJoin(applicationPath, 'program.json'));
-    const programJson = JSON.parse(files.readFile(programJsonPath, 'utf8'));
-    const manifest = programJson.manifest;
+    const program = JSON.parse(files.readFile(programJsonPath, 'utf8'));
 
+    // Load settings
     const settingsFile = this.options.settingsFile;
     const settings = settingsFile ?
       JSON.parse(files.readFile(settingsFile, 'utf8')) : {};
     const publicSettings = settings['public'];
 
-    const meteorRelease =
-      release.current.isCheckout() ? "none" : release.current.name;
+    // Calculate client hash and append to program
+    this.appendVersion(program, publicSettings);
 
+    // Write program.json
+    files.writeFile(programJsonPath, JSON.stringify(program), 'utf8');
+
+    const bootstrapPage = this.generateBootstrapPage(applicationPath, program, publicSettings);
+    files.writeFile(files.pathJoin(applicationPath, 'index.html'),
+      bootstrapPage, 'utf8');
+  }
+
+  appendVersion(program, publicSettings) {
     let configDummy = {};
     configDummy.PUBLIC_SETTINGS = publicSettings || {};
 
     const { WebAppHashing } =
       isopackets.load('cordova-support')['webapp-hashing'];
-    const calculatedHash =
-      WebAppHashing.calculateClientHash(manifest, null, configDummy);
+    program.version =
+      WebAppHashing.calculateClientHash(program.manifest, null, configDummy);
+  }
 
-    // XXX partially copied from autoupdate package
-    const version = process.env.AUTOUPDATE_VERSION || calculatedHash;
+  generateBootstrapPage(applicationPath, program, publicSettings) {
+    const meteorRelease =
+      release.current.isCheckout() ? "none" : release.current.name;
+
+    const manifest = program.manifest;
+    const autoupdateVersion = process.env.AUTOUPDATE_VERSION || program.version;
 
     const mobileServerUrl = this.options.mobileServerUrl;
 
     const runtimeConfig = {
       meteorRelease: meteorRelease,
-      ROOT_URL: mobileServerUrl + "/",
+      ROOT_URL: mobileServerUrl,
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: '',
       DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
-      autoupdateVersionCordova: version,
+      autoupdateVersionCordova: autoupdateVersion,
       appId: this.projectContext.appIdentifier
     };
 
@@ -504,15 +510,21 @@ Valid platforms are: ios, android.`);
      * relative to the project root directory.
      *
      * Valid key values:
-     * - `iphone`
-     * - `iphone_2x`
-     * - `iphone_3x`
-     * - `ipad`
-     * - `ipad_2x`
-     * - `android_ldpi`
-     * - `android_mdpi`
-     * - `android_hdpi`
-     * - `android_xhdpi`
+     * - `iphone_2x` (120x120)
+     * - `iphone_3x` (180x180)
+     * - `ipad` (76x76)
+     * - `ipad_2x` (152x152)
+     * - `ipad_pro` (167x167)
+     * - `ios_settings` (29x29)
+     * - `ios_settings_2x` (58x58)
+     * - `ios_settings_3x` (87x87)
+     * - `ios_spotlight` (40x40)
+     * - `ios_spotlight_2x` (80x80)
+     * - `android_mdpi` (48x48)
+     * - `android_hdpi` (72x72)
+     * - `android_xhdpi` (96x96)
+     * - `android_xxhdpi` (144x144)
+     * - `android_xxxhdpi` (192x192)
      * @memberOf App
      */
     icons: function (icons) {
@@ -520,7 +532,8 @@ Valid platforms are: ios, android.`);
         _.keys(iconsIosSizes).concat(_.keys(iconsAndroidSizes));
       _.each(icons, function (value, key) {
         if (!_.include(validDevices, key)) {
-          throw new Error(key + ": unknown key in App.icons configuration.");
+          Console.labelWarn(`${key}: unknown key in App.icons \
+configuration. The key may be deprecated.`);
         }
       });
       _.extend(builder.imagePaths.icon, icons);
@@ -537,24 +550,25 @@ Valid platforms are: ios, android.`);
      * stretched. See the [Android docs](https://developer.android.com/guide/topics/graphics/2d-graphics.html#nine-patch).
      *
      * Valid key values:
-     * - `iphone`
-     * - `iphone_2x`
-     * - `iphone5`
-     * - `iphone6`
-     * - `iphone6p_portrait`
-     * - `iphone6p_landscape`
-     * - `ipad_portrait`
-     * - `ipad_portrait_2x`
-     * - `ipad_landscape`
-     * - `ipad_landscape_2x`
-     * - `android_ldpi_portrait`
-     * - `android_ldpi_landscape`
-     * - `android_mdpi_portrait`
-     * - `android_mdpi_landscape`
-     * - `android_hdpi_portrait`
-     * - `android_hdpi_landscape`
-     * - `android_xhdpi_portrait`
-     * - `android_xhdpi_landscape`
+     * - `iphone_2x` (640x960)
+     * - `iphone5` (640x1136)
+     * - `iphone6` (750x1334)
+     * - `iphone6p_portrait` (1242x2208)
+     * - `iphone6p_landscape` (2208x1242)
+     * - `ipad_portrait` (768x1024)
+     * - `ipad_portrait_2x` (1536x2048)
+     * - `ipad_landscape` (1024x768)
+     * - `ipad_landscape_2x` (2048x1536)
+     * - `ipad_pro_portrait` (2048x2732)
+     * - `ipad_pro_landscape` (2732x2048)
+     * - `android_mdpi_portrait` (320x470)
+     * - `android_mdpi_landscape` (470x320)
+     * - `android_hdpi_portrait` (480x640)
+     * - `android_hdpi_landscape` (640x480)
+     * - `android_xhdpi_portrait` (720x960)
+     * - `android_xhdpi_landscape` (960x720)
+     * - `android_xxhdpi_portrait` (1080x1440)
+     * - `android_xxhdpi_landscape` (1440x1080)
      *
      * @memberOf App
      */
@@ -564,7 +578,8 @@ Valid platforms are: ios, android.`);
 
       _.each(launchScreens, function (value, key) {
         if (!_.include(validDevices, key)) {
-          throw new Error(key + ": unknown key in App.launchScreens configuration.");
+          Console.labelWarn(`${key}: unknown key in App.launchScreens \
+configuration. The key may be deprecated.`);
         }
       });
       _.extend(builder.imagePaths.splash, launchScreens);

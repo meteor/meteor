@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Collection of small helpers: _.map, _.each, ...",
-  version: '1.0.5-modules.8'
+  version: '1.0.5-cordova.5'
 });
 
 Package.onUse(function (api) {

@@ -14,21 +14,24 @@ import main from '../cli/main.js';
 import httpHelpers from '../utils/http-helpers.js';
 import { execFileSync, execFileAsync } from '../utils/processes.js';
 
-import './protect-string-proto.js'; // must always come before 'cordova-lib'
 import { cordova as cordova_lib, events as cordova_events, CordovaError }
   from 'cordova-lib';
 import cordova_util from 'cordova-lib/src/cordova/util.js';
-import superspawn from 'cordova-lib/src/cordova/superspawn.js';
-import PluginInfoProvider from 'cordova-lib/src/PluginInfoProvider.js';
+import superspawn from 'cordova-lib/node_modules/cordova-common/src/superspawn.js';
+import PluginInfoProvider from 'cordova-lib/node_modules/cordova-common/src/PluginInfo/PluginInfoProvider.js';
 
 import { CORDOVA_PLATFORMS, displayNameForPlatform, displayNamesForPlatforms,
   newPluginId, convertPluginVersions, convertToGitUrl,
   installationInstructionsUrlForPlatform } from './index.js';
 import { CordovaBuilder } from './builder.js';
 
-cordova_events.on('results', logIfVerbose);
+cordova_events.on('verbose', logIfVerbose);
 cordova_events.on('log', logIfVerbose);
+cordova_events.on('info', logIfVerbose);
 cordova_events.on('warn', log);
+cordova_events.on('error', log);
+
+cordova_events.on('results', logIfVerbose);
 
 function logIfVerbose(...args) {
   if (Console.verbose) {
@@ -40,13 +43,45 @@ function log(...args) {
   Console.rawInfo(`%% ${util.format.apply(null, args)}\n`);
 }
 
+// We pin platform versions ourselves instead of relying on cordova-lib
+// so we we can update them independently (e.g. use Cordova iOS 4.0.1
+// with Cordova 5.4.1)
+const pinnedPlatformVersions = {
+  'android': '5.1.0',
+  'ios': '4.0.1'
+}
+
+// We pin plugin versions to make sure we do not install versions that are
+// incompatible with the current platform versions.
+// Versions are taken from cordova-lib's package.json and should be updated
+// when we update to a newer version of cordova-lib.
+const pinnedPluginVersions = {
+  "cordova-plugin-battery-status": "1.1.1",
+  "cordova-plugin-camera": "2.1.0",
+  "cordova-plugin-console": "1.0.2",
+  "cordova-plugin-contacts": "2.0.1",
+  "cordova-plugin-device": "1.1.1",
+  "cordova-plugin-device-motion": "1.2.0",
+  "cordova-plugin-device-orientation": "1.0.2",
+  "cordova-plugin-dialogs": "1.2.0",
+  "cordova-plugin-file": "4.1.1",
+  "cordova-plugin-file-transfer": "1.5.0",
+  "cordova-plugin-geolocation": "2.1.0",
+  "cordova-plugin-globalization": "1.0.2",
+  "cordova-plugin-inappbrowser": "1.3.0",
+  "cordova-plugin-legacy-whitelist": "1.1.1",
+  "cordova-plugin-media": "2.2.0",
+  "cordova-plugin-media-capture": "1.2.0",
+  "cordova-plugin-network-information": "1.2.0",
+  "cordova-plugin-splashscreen": "3.2.0",
+  "cordova-plugin-statusbar": "2.1.1",
+  "cordova-plugin-test-framework": "1.1.1",
+  "cordova-plugin-vibration": "2.1.0",
+  "cordova-plugin-whitelist": "1.2.1"
+}
+
 export class CordovaProject {
   constructor(projectContext, options = {}) {
-    if (process.platform === 'win32') {
-      Console.warn(`Building mobile apps on a Windows system is not \
-yet supported.`);
-      throw new main.ExitWithCode(1);
-    }
 
     this.projectContext = projectContext;
 
@@ -66,15 +101,7 @@ yet supported.`);
     if (files.exists(this.projectRoot)) {
       const installedPlatforms = this.listInstalledPlatforms();
 
-      // XXX Decide whether to update these if we update cordova-lib.
-      // If we can guarantee there are no issues going forward, we may want to
-      // use updatePlatforms instead of removing the whole directory.
-      const minPlatformVersions = {
-        'android': '4.1.0',
-        'ios': '3.9.0'
-      }
-
-      const outdated = _.some(minPlatformVersions, (minVersion, platform) => {
+      const outdated = _.some(pinnedPlatformVersions, (pinnedVersion, platform) => {
         // If the platform is not installed, it cannot be outdated
         if (!_.contains(installedPlatforms, platform)) {
           return false;
@@ -86,7 +113,7 @@ yet supported.`);
           return true;
         }
 
-        return semver.lt(installedVersion, minVersion);
+        return semver.lt(installedVersion, pinnedVersion);
       });
 
       if (outdated) {
@@ -187,7 +214,7 @@ ${displayNameForPlatform(platform)}`, async () => {
 
   // Building (includes prepare)
 
-  buildForPlatform(platform, options = [], extraPaths) {
+  buildForPlatform(platform, options = {}, extraPaths) {
     assert(platform);
 
     const commandOptions = _.extend(this.defaultOptions,
@@ -331,7 +358,9 @@ ${displayNamesForPlatforms(platforms)}`, async () => {
   addPlatform(platform) {
     this.runCommands(`adding platform ${displayNameForPlatform(platform)} \
 to Cordova project`, async () => {
-      await cordova_lib.raw.platform('add', platform, this.defaultOptions);
+      const version = pinnedPlatformVersions[platform];
+      const platformSpec = version ? `${platform}@${version}` : platform;
+      await cordova_lib.raw.platform('add', platformSpec, this.defaultOptions);
     });
   }
 
@@ -461,7 +490,7 @@ from Cordova project`, async () => {
     const target = this.targetForPlugin(id, version);
     if (target) {
       const commandOptions = _.extend(this.defaultOptions,
-        { cli_variables: config });
+        { cli_variables: config, link: utils.isUrlWithFileScheme(version) });
 
       this.runCommands(`adding plugin ${target} \
 to Cordova project`, async () => {
@@ -499,6 +528,11 @@ from Cordova project`, async () => {
       // tarball URLs to new Git URLs, and check if other Git URLs contain a
       // SHA reference.
       pluginVersions = convertPluginVersions(pluginVersions);
+
+      // To ensure we do not attempt to install plugin versions incompatible
+      // with the current platform versions, we compare them against a list of
+      // pinned versions and adjust them if necessary.
+      this.ensurePinnedPluginVersions(pluginVersions);
 
       if (buildmessage.jobHasMessages()) {
         return;
@@ -598,6 +632,27 @@ mobile-config.js accordingly.`);
     });
   }
 
+  ensurePinnedPluginVersions(pluginVersions) {
+    assert(pluginVersions);
+
+    _.each(pluginVersions, (version, id) => {
+      // Skip plugin specs that are not actual versions
+      if (utils.isUrlWithSha(version) || utils.isUrlWithFileScheme(version)) {
+        return;
+      }
+
+      const pinnedVersion = pinnedPluginVersions[id];
+
+      if (pinnedVersion && semver.lt(version, pinnedVersion)) {
+        Console.labelWarn(`Attempting to install plugin ${id}@${version}, but \
+it should have a minimum version of ${pinnedVersion} to ensure compatibility \
+with the current platform versions. Installing the minimum version for \
+convenience, but you should adjust your dependencies.`);
+        pluginVersions[id] = pinnedVersion;
+      }
+    });
+  }
+
   // Cordova commands support
 
   get defaultOptions() {
@@ -634,7 +689,10 @@ mobile-config.js accordingly.`);
 
     const oldEnv = process.env;
     if (env) {
-      process.env = env;
+      // this preserves case insensitivity for PATH on windows
+      Object.keys(env).forEach(key => {
+        process.env[key] = env[key];
+      });
     }
 
     try {

@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.0.9-modules.8',
+  version: '1.0.9-cordova.5',
   documentation: null
 });
 

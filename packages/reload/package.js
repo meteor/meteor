@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Reload the page while preserving application state.",
-  version: '1.1.5-modules.8'
+  version: '1.1.5-cordova.5'
 });
 
 Package.onUse(function (api) {

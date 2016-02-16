@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor Reactive Templating library",
-  version: '2.1.4-modules.8'
+  version: '2.1.4-cordova.5'
 });
 
 Package.onUse(function (api) {

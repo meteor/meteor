@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Twitter OAuth flow",
-  version: '1.1.6-modules.8'
+  version: '1.1.6-cordova.5'
 });
 
 Package.onUse(function(api) {

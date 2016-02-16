@@ -3,7 +3,7 @@
 
 Package.describe({
   summary: "Wrapper around the mongo npm package",
-  version: '1.4.40-modules.8',
+  version: '1.4.40-cordova.5',
   documentation: null
 });
 
