@@ -384,10 +384,30 @@ class ResourceSlot {
     // contained by a node_modules directory will already have been
     // marked lazy in PackageSource#_inferFileOptions. Same for
     // non-test files if running unit tests (`meteor test-app --unit`)
-    return this.packageSourceBatch.useMeteorInstall &&
+    if (!this.packageSourceBatch.useMeteorInstall) {
+      return false;
+    }
+
+    const dirs =
       files.pathDirname(this.inputResource.path)
-        .split(files.pathSep)
-        .indexOf("imports") >= 0;
+        .split(files.pathSep);
+
+    const isInImports = dirs.indexOf("imports") >= 0;
+
+    if (global.testCommandMetadata &&
+        (global.testCommandMetadata.isUnitTest ||
+         global.testCommandMetadata.isIntegrationTest)) {
+      const isTestFile = _.any(dirs, (dir) =>
+                               /\.tests?\./.test(dir) ||
+                               /^tests?\./.test(dir) ||
+                               /^tests$/.test(dir));
+
+      // test files should always be included, if we're running app
+      // tests.
+      return isInImports && !isTestFile;
+    } else {
+      return isInImports;
+    }
   }
 
   addStylesheet(options) {
