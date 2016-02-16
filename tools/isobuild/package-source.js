@@ -1345,10 +1345,10 @@ _.extend(PackageSource.prototype, {
     // If running in unit test mode (`meteor test-app --unit`), all
     // files other than test files should be loaded lazily
     if (global.testCommandMetadata && global.testCommandMetadata.isUnitTest) {
-      const isTestFile = _.any(dirs, (dir) =>
-                               /\.tests?\./.test(dir) ||
-                               /^tests?\./.test(dir) ||
-                               /^tests$/.test(dir));
+      const isTestFile = _.any(relPath.split(files.pathSep), (comp) =>
+                               /\.tests?\./.test(comp) ||
+                               /^tests?\./.test(comp) ||
+                               /^tests$/.test(comp));
 
       if (!isTestFile) {
         fileOptions.lazy = true;

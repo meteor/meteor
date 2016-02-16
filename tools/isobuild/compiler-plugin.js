@@ -388,19 +388,16 @@ class ResourceSlot {
       return false;
     }
 
-    const dirs =
-      files.pathDirname(this.inputResource.path)
-        .split(files.pathSep);
-
-    const isInImports = dirs.indexOf("imports") >= 0;
+    const splitPath = this.inputResource.path.split(files.pathSep);
+    const isInImports = splitPath.indexOf("imports") >= 0;
 
     if (global.testCommandMetadata &&
         (global.testCommandMetadata.isUnitTest ||
          global.testCommandMetadata.isIntegrationTest)) {
-      const isTestFile = _.any(dirs, (dir) =>
-                               /\.tests?\./.test(dir) ||
-                               /^tests?\./.test(dir) ||
-                               /^tests$/.test(dir));
+      const isTestFile = _.any(splitPath, (comp) =>
+                               /\.tests?\./.test(comp) ||
+                               /^tests?\./.test(comp) ||
+                               /^tests$/.test(comp));
 
       // test files should always be included, if we're running app
       // tests.
