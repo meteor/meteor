@@ -962,7 +962,6 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   // are we running `meteor test-app` or `meteor test-packages`?
   if (global.testCommandMetadata) {
-    // XXX pass in test driver package from CLI
     var weAreLinkingTheApp = (name === null);
     if (weAreLinkingTheApp) {
       var testDriverPackageName = global.testCommandMetadata.driverPackage;
