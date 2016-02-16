@@ -464,7 +464,7 @@ function doTestCommand(options) {
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
   global.testCommandMetadata = {
-    testRunnerPackage: options['test-runner-package']
+    driverPackage: options['driver-package']
   };
 
   Console.setVerbose(!!options.verbose);

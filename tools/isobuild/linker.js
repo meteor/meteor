@@ -952,7 +952,12 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     var weAreLinkingTheApp = (name === null);
     if (weAreLinkingTheApp) {
       prelinkedFiles.push({
-        source: "if (Meteor.isClient) Meteor.startup(function() { Package[\"practicalmeteor:mocha\"].runTests(); });",
+        source: `\
+if (Meteor.isClient) {
+  Meteor.startup(function() {
+    Package[\"${global.testCommandMetadata.driverPackage}\"].runTests();
+  });
+}`,
         servePath: "/packages/runTests.js"
       });
     }
