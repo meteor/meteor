@@ -965,11 +965,20 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     // XXX pass in test driver package from CLI
     var weAreLinkingTheApp = (name === null);
     if (weAreLinkingTheApp) {
+      var testDriverPackageName = global.testCommandMetadata.driverPackage;
+
       prelinkedFiles.push({
         source: `\
 setTimeout(function() {
-  var runTestsFunc = Package[\"${global.testCommandMetadata.driverPackage}\"].runTests;
-  runTestsFunc && runTestsFunc(); // Only run on browser where runTests is defined
+  var testDriverPackage = Package[\"${testDriverPackageName}\"];
+  if (!testDriverPackage) {
+    throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
+  }
+
+  // Only run on browser where runTests is defined
+  if (testDriverPackage.runTests) {
+    testDriverPackage.runTests();
+  }
 }, 0);`,
         servePath: "/packages/runTests.js"
       });

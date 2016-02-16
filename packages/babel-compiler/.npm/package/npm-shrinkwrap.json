@@ -350,11 +350,11 @@
             "babel-plugin-transform-runtime": {
               "version": "6.4.3"
             },
-            "ansi-regex": {
-              "version": "2.0.0"
-            },
             "amdefine": {
               "version": "1.0.0"
+            },
+            "ansi-regex": {
+              "version": "2.0.0"
             },
             "ansi-styles": {
               "version": "2.1.0"
@@ -404,14 +404,14 @@
             "babel-template": {
               "version": "6.3.13"
             },
-            "babel-traverse": {
-              "version": "6.4.5"
-            },
             "babel-types": {
               "version": "6.4.5"
             },
             "balanced-match": {
               "version": "0.3.0"
+            },
+            "babel-traverse": {
+              "version": "6.4.5"
             },
             "brace-expansion": {
               "version": "1.1.2"
@@ -425,11 +425,11 @@
             "core-js": {
               "version": "1.2.6"
             },
-            "debug": {
-              "version": "2.2.0"
-            },
             "detect-indent": {
               "version": "3.0.1"
+            },
+            "debug": {
+              "version": "2.2.0"
             },
             "escape-string-regexp": {
               "version": "1.0.4"
@@ -473,11 +473,11 @@
             "line-numbers": {
               "version": "0.2.0"
             },
-            "lodash": {
-              "version": "3.10.1"
-            },
             "loose-envify": {
               "version": "1.1.0"
+            },
+            "lodash": {
+              "version": "3.10.1"
             },
             "minimatch": {
               "version": "2.0.10"
@@ -536,11 +536,11 @@
             "to-fast-properties": {
               "version": "1.0.1"
             },
-            "trim-right": {
-              "version": "1.0.1"
-            },
             "user-home": {
               "version": "1.1.1"
+            },
+            "trim-right": {
+              "version": "1.0.1"
             },
             "mkdirp": {
               "version": "0.5.1",

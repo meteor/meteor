@@ -463,9 +463,7 @@ function doTestCommand(options) {
   //
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
-  global.testCommandMetadata = {
-    driverPackage: options['driver-package']
-  };
+  global.testCommandMetadata = {};
 
   Console.setVerbose(!!options.verbose);
 
@@ -497,6 +495,7 @@ function doTestCommand(options) {
   var projectContext;
 
   if (options["test-packages"]) {
+    global.testCommandMetadata.driverPackage = options['driver-package'];
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
 
@@ -566,7 +565,9 @@ function doTestCommand(options) {
     // projectContext.reset.
     projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test-app"]) {
-    // XXX copy existing app build directory before, for faster builds?
+    // XXX look in package list for testOnly packages
+    global.testCommandMetadata.driverPackage = 'practicalmeteor:mocha';
+
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
