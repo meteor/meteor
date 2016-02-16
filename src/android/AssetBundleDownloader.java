@@ -3,6 +3,7 @@ package com.meteor.webapp;
 import android.util.Log;
 
 import org.apache.cordova.CordovaResourceApi;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
@@ -32,6 +33,7 @@ class AssetBundleDownloader {
 
     private Callback callback;
 
+    private final WebAppConfiguration webAppConfiguration;
     private final AssetBundle assetBundle;
     private final HttpUrl baseUrl;
 
@@ -40,7 +42,8 @@ class AssetBundleDownloader {
     private final Set<AssetBundle.Asset> assetsDownloading;
     private boolean canceled;
 
-    public AssetBundleDownloader(AssetBundle assetBundle, HttpUrl baseUrl, Set<AssetBundle.Asset> missingAssets) {
+    public AssetBundleDownloader(WebAppConfiguration webAppConfiguration, AssetBundle assetBundle, HttpUrl baseUrl, Set<AssetBundle.Asset> missingAssets) {
+        this.webAppConfiguration = webAppConfiguration;
         this.assetBundle = assetBundle;
         this.baseUrl = baseUrl;
 
@@ -104,13 +107,11 @@ class AssetBundleDownloader {
                         if (asset.filePath.equals("index.html")) {
                             JSONObject runtimeConfig = assetBundle.getRuntimeConfig();
                             if (runtimeConfig != null) {
-                                String expectedVersion = assetBundle.getVersion();
-                                String actualVersion = runtimeConfig.optString("autoupdateVersionCordova", null);
-                                if (actualVersion != null) {
-                                    if (!actualVersion.equals(expectedVersion)) {
-                                        didFail(new DownloadFailureException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion));
-                                        return;
-                                    }
+                                try {
+                                    verifyRuntimeConfig(runtimeConfig);
+                                } catch (DownloadFailureException e) {
+                                    didFail(e);
+                                    return;
                                 }
                             }
                         }
@@ -172,6 +173,35 @@ class AssetBundleDownloader {
                     }
                 }
             }
+        }
+    }
+
+    protected void verifyRuntimeConfig(JSONObject runtimeConfig) throws DownloadFailureException {
+        String expectedVersion = assetBundle.getVersion();
+        String actualVersion = runtimeConfig.optString("autoupdateVersionCordova", null);
+        if (actualVersion != null) {
+            if (!actualVersion.equals(expectedVersion)) {
+                throw new DownloadFailureException("Version mismatch for index page, expected: " + expectedVersion + ", actual: " + actualVersion);
+            }
+        }
+
+        String rootUrlString;
+        try {
+            rootUrlString = runtimeConfig.getString("ROOT_URL");
+            if (!rootUrlString.equals(webAppConfiguration.getRootUrlString())) {
+                throw new DownloadFailureException("ROOT_URL in downloaded asset bundle does not match current ROOT_URL. Make sure ROOT_URL has been configured correctly on the server.");
+            }
+        } catch (JSONException e) {
+            throw new DownloadFailureException("Could not find ROOT_URL in downloaded asset bundle");
+        }
+
+        try {
+            String appId = runtimeConfig.getString("appId");
+            if (!appId.equals(webAppConfiguration.getAppId())) {
+                throw new DownloadFailureException("appId in downloaded asset bundle does not match current appId. Make sure the server at " + rootUrlString + " is serving the right app.");
+            }
+        } catch (JSONException e) {
+            throw new DownloadFailureException("Could not find appId in downloaded asset bundle");
         }
     }
 

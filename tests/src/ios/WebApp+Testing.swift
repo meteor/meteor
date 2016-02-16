@@ -60,6 +60,11 @@ extension WebApp {
       let downloadDirectoryURL = versionsDirectoryURL.URLByAppendingPathComponent("Downloading")
 
       let fileManager = NSFileManager.defaultManager()
+      
+      if fileManager.fileExistsAtPath(downloadDirectoryURL.path!) {
+        try! fileManager.removeItemAtURL(downloadDirectoryURL)
+      }
+      
       try! fileManager.copyItemAtURL(versionDirectoryURL, toURL: downloadDirectoryURL)
 
       let result = CDVPluginResult(status: CDVCommandStatus_OK)

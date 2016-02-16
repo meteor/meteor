@@ -16,6 +16,7 @@ import org.json.JSONException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Timer;
@@ -65,6 +66,22 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
 
     /** Timer used to wait for startup to complete after a reload */
     private Timer startupTimer;
+
+    WebAppConfiguration getConfiguration() {
+        return configuration;
+    }
+
+    CordovaResourceApi getResourceApi() {
+        return resourceApi;
+    }
+
+    AssetBundleManager getAssetBundleManager() {
+        return assetBundleManager;
+    }
+
+    AssetManagerCache getAssetManagerCache() {
+        return assetManagerCache;
+    }
 
     //region Lifecycle
 
@@ -132,7 +149,7 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
             }
         }
 
-        assetBundleManager = new AssetBundleManager(resourceApi, initialAssetBundle, versionsDirectory);
+        assetBundleManager = new AssetBundleManager(resourceApi, configuration, initialAssetBundle, versionsDirectory);
         assetBundleManager.setCallback(WebApp.this);
 
         String lastDownloadedVersion = configuration.getLastDownloadedVersion();
@@ -164,6 +181,9 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
         }
 
         Log.d(LOG_TAG, "Serving asset bundle with version: " + currentAssetBundle.getVersion());
+
+        configuration.setAppId(currentAssetBundle.getAppId());
+        configuration.setRootUrlString(currentAssetBundle.getRootUrlString());
 
         // Don't start startup timer when running a test
         if (testingDelegate == null) {
@@ -221,7 +241,7 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
     private void checkForUpdates(final CallbackContext callbackContext) {
         cordova.getThreadPool().execute(new Runnable() {
             public void run() {
-                HttpUrl rootUrl = currentAssetBundle.getRootUrl();
+                HttpUrl rootUrl = HttpUrl.parse(currentAssetBundle.getRootUrlString());
                 if (rootUrl == null) {
                     callbackContext.error("checkForUpdates requires a rootURL to be configured");
                     return;
@@ -470,18 +490,6 @@ public class WebApp extends CordovaPlugin implements AssetBundleManager.Callback
 
     void setTestingDelegate(TestingDelegate testingDelegate) {
         this.testingDelegate = testingDelegate;
-    }
-
-    WebAppConfiguration getConfiguration() {
-        return configuration;
-    }
-
-    AssetManagerCache getAssetManagerCache() {
-        return assetManagerCache;
-    }
-
-    AssetBundleManager getAssetBundleManager() {
-        return assetBundleManager;
     }
 
     //endregion

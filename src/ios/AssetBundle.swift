@@ -5,15 +5,18 @@ private let configJSONRegEx = try! NSRegularExpression(
 
 /// Load the runtime config by extracting and parsing
 /// `__meteor_runtime_config__` from index.html
-func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) -> JSONObject? {
-  guard
-    let indexFileString = try? NSString(contentsOfURL: fileURL, encoding: NSUTF8StringEncoding),
-    let match  = configJSONRegEx.firstMatchInString(indexFileString as String),
-    let configString = (indexFileString.substringWithRange(match.rangeAtIndex(1)) as NSString).stringByRemovingPercentEncoding,
-    let configData = configString.dataUsingEncoding(NSUTF8StringEncoding)
-    else { return nil }
-  
-  return try? NSJSONSerialization.JSONObjectWithData(configData, options: []) as! JSONObject
+func loadRuntimeConfigFromIndexFileAtURL(fileURL: NSURL) throws -> AssetBundle.RuntimeConfig {
+  do {
+    let indexFileString = try NSString(contentsOfURL: fileURL, encoding: NSUTF8StringEncoding)
+    guard
+      let match  = configJSONRegEx.firstMatchInString(indexFileString as String),
+      let configString = (indexFileString.substringWithRange(match.rangeAtIndex(1)) as NSString).stringByRemovingPercentEncoding,
+      let configData = configString.dataUsingEncoding(NSUTF8StringEncoding)
+      else { throw WebAppError.UnsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: nil) }
+    return AssetBundle.RuntimeConfig(JSON: try NSJSONSerialization.JSONObjectWithData(configData, options: []) as! JSONObject)
+  } catch {
+    throw WebAppError.UnsuitableAssetBundle(reason: "Couldn't load runtime config from index file", underlyingError: error)
+  }
 }
 
 final class AssetBundle {
@@ -93,23 +96,44 @@ final class AssetBundle {
     }
   }
   
+  struct RuntimeConfig {
+    private let JSON: JSONObject
+    
+    var appId: String? {
+      return JSON["appId"] as? String
+    }
+    
+    var rootURL: NSURL? {
+      if let rootURLString = JSON["ROOT_URL"] as? String {
+        return NSURL(string: rootURLString)
+      } else {
+        return nil
+      }
+    }
+    
+    var autoupdateVersionCordova: String? {
+      return JSON["autoupdateVersionCordova"] as? String
+    }
+  }
+  
   /// The runtime config is lazily initialized by loading it from the index.html
-  lazy var runtimeConfig: JSONObject? = {
+  lazy var runtimeConfig: RuntimeConfig? = {
     guard let indexFile = self.indexFile else { return nil }
     
-    return loadRuntimeConfigFromIndexFileAtURL(indexFile.fileURL)
+    do {
+      return try loadRuntimeConfigFromIndexFileAtURL(indexFile.fileURL)
+    } catch {
+      NSLog("\(error)")
+      return nil
+    }
   }()
   
   var appId: String? {
-    return runtimeConfig?["appId"] as? String
+    return runtimeConfig?.appId
   }
   
   var rootURL: NSURL? {
-    if let rootURLString = runtimeConfig?["ROOT_URL"] as? String {
-      return NSURL(string: rootURLString)
-    } else {
-      return nil
-    }
+    return runtimeConfig?.rootURL
   }
 
   func didMoveToDirectoryAtURL(directoryURL: NSURL) {

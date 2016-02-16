@@ -5,6 +5,8 @@ protocol AssetBundleManagerDelegate: class {
 }
 
 final class AssetBundleManager: AssetBundleDownloaderDelegate {
+  let configuration: WebAppConfiguration
+  
   /// The directory used to store downloaded asset bundles
   let versionsDirectoryURL: NSURL
 
@@ -17,9 +19,10 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   private let queue: dispatch_queue_t
 
   private let fileManager = NSFileManager()
-
   private var downloadedAssetBundlesByVersion: [String: AssetBundle]
-
+  
+  private var session: NSURLSession!
+  
   private var downloadDirectoryURL: NSURL
   private var assetBundleDownloader: AssetBundleDownloader?
   private var partiallyDownloadedAssetBundle: AssetBundle?
@@ -28,7 +31,8 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
     return assetBundleDownloader != nil
   }
 
-  init(versionsDirectoryURL: NSURL, initialAssetBundle: AssetBundle) {
+  init(configuration: WebAppConfiguration, versionsDirectoryURL: NSURL, initialAssetBundle: AssetBundle) {
+    self.configuration = configuration
     self.versionsDirectoryURL = versionsDirectoryURL
     self.initialAssetBundle = initialAssetBundle
 
@@ -38,6 +42,19 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
     downloadedAssetBundlesByVersion = [String: AssetBundle]()
     loadDownloadedAssetBundles()
+    
+    let operationQueue = NSOperationQueue()
+    operationQueue.maxConcurrentOperationCount = 1
+    operationQueue.underlyingQueue = queue
+    
+    // We use a separate to download the manifest, so we can use caching
+    // (which we disable for the session we use to download the other files 
+    // in AssetBundleDownloader)
+    session = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration(), delegate: nil, delegateQueue: operationQueue)
+  }
+  
+  deinit {
+    assetBundleDownloader?.cancel()
   }
 
   private func loadDownloadedAssetBundles() {
@@ -65,7 +82,11 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
   }
 
   func downloadedAssetBundleWithVersion(version: String) -> AssetBundle? {
-    return downloadedAssetBundlesByVersion[version]
+    var assetBundle: AssetBundle?
+    dispatch_sync(queue) {
+      assetBundle = self.downloadedAssetBundlesByVersion[version]
+    }
+    return assetBundle
   }
 
   func checkForUpdatesWithBaseURL(baseURL: NSURL) {
@@ -73,9 +94,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
     NSLog("Start downloading asset manifest from: \(manifestURL)")
 
-    // We use sharedSession to download the manifest, so we can use caching
-    // (which we disable for the session we use to download the other files)
-    let dataTask = NSURLSession.sharedSession().dataTaskWithURL(manifestURL) {
+    let dataTask = session.dataTaskWithURL(manifestURL) {
       (data, response, error) in
       guard let data = data else {
         self.didFailWithError(WebAppError.DownloadFailure(reason: "Error downloading asset manifest", underlyingError: error))
@@ -124,7 +143,7 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
 
         // If there is a previously downloaded asset bundle with the requested
         // version, use that
-        if let assetBundle = self.downloadedAssetBundleWithVersion(manifest.version) {
+        if let assetBundle = self.downloadedAssetBundlesByVersion[version] {
           self.didFinishDownloadingAssetBundle(assetBundle)
           return
         }
@@ -223,16 +242,18 @@ final class AssetBundleManager: AssetBundleDownloaderDelegate {
       return
     }
 
-    assetBundleDownloader = AssetBundleDownloader(assetBundle: assetBundle, baseURL: baseURL, missingAssets: missingAssets)
+    assetBundleDownloader = AssetBundleDownloader(configuration: configuration, assetBundle: assetBundle, baseURL: baseURL, missingAssets: missingAssets)
     assetBundleDownloader!.delegate = self
     assetBundleDownloader!.resume()
   }
 
   private func didFinishDownloadingAssetBundle(assetBundle: AssetBundle) {
+    NSLog("didFinishDownloadingAssetBundle: \(assetBundle.version)")
     delegate?.assetBundleManager(self, didFinishDownloadingBundle: assetBundle)
   }
 
   private func didFailWithError(error: ErrorType) {
+    NSLog("didFailWithError: \(error)")
     delegate?.assetBundleManager(self, didFailDownloadingBundleWithError: error)
   }
 

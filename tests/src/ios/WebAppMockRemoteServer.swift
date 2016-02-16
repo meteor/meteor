@@ -49,7 +49,7 @@ class WebAppMockRemoteServer: CDVPlugin, GCDWebServerTestingDelegate {
       return
     }
 
-    print("WebAppMockRemoteServer.serveVersion: \(version)")
+    NSLog("WebAppMockRemoteServer.serveVersion: \(version)")
 
     let wwwDirectoryURL = NSBundle.mainBundle().resourceURL!.URLByAppendingPathComponent("www")
     versionDirectoryURL = wwwDirectoryURL.URLByAppendingPathComponent("downloadable_versions/\(version)")

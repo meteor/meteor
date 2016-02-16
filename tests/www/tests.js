@@ -545,9 +545,9 @@ exports.defineAutoTests = function() {
       });
     });
 
-    describe("when downloading an invalid index page", function() {
+    describe("when downloading an index page with the wrong version", function() {
       beforeEach(function(done) {
-        WebAppMockRemoteServer.serveVersion("version2_with_invalid_index_page", done);
+        WebAppMockRemoteServer.serveVersion("version2_with_version_mismatch", done);
       });
 
       afterEach(function(done) {
@@ -557,6 +557,130 @@ exports.defineAutoTests = function() {
       it("should invoke the onDownloadFailure callback with an error", function(done) {
         WebAppCordova.onDownloadFailure(function(error) {
           expect(error.message).toEqual("Version mismatch for index page, expected: version2, actual: version3");
+          done();
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionDownloaded callback", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
+    describe("when downloading an index page with a missing ROOT_URL", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("missing_root_url", done);
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should invoke the onDownloadFailure callback with an error", function(done) {
+        WebAppCordova.onDownloadFailure(function(error) {
+          expect(error.message).toEqual("Could not find ROOT_URL in downloaded asset bundle");
+          done();
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionDownloaded callback", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
+    describe("when downloading an index page with the wrong ROOT_URL", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("wrong_root_url", done);
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should invoke the onDownloadFailure callback with an error", function(done) {
+        WebAppCordova.onDownloadFailure(function(error) {
+          expect(error.message).toContain("ROOT_URL in downloaded asset bundle does not match current ROOT_URL");
+          done();
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionDownloaded callback", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
+    describe("when downloading an index page with a missing appId", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("missing_app_id", done);
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should invoke the onDownloadFailure callback with an error", function(done) {
+        WebAppCordova.onDownloadFailure(function(error) {
+          expect(error.message).toEqual("Could not find appId in downloaded asset bundle");
+          done();
+        });
+
+        WebAppCordova.checkForUpdates();
+      });
+
+      it("should not invoke the onNewVersionDownloaded callback", function(done) {
+        WebAppCordova.onNewVersionDownloaded(function() {
+          fail();
+          done();
+        });
+
+        // Wait 500ms for the test to fail
+        waitForTestToFail(500, done);
+
+        WebAppCordova.checkForUpdates();
+      });
+    });
+
+    describe("when downloading an index page with the wrong appId", function() {
+      beforeEach(function(done) {
+        WebAppMockRemoteServer.serveVersion("wrong_app_id", done);
+      });
+
+      afterEach(function(done) {
+        WebAppCordova.resetToInitialState(done);
+      });
+
+      it("should invoke the onDownloadFailure callback with an error", function(done) {
+        WebAppCordova.onDownloadFailure(function(error) {
+          expect(error.message).toContain("appId in downloaded asset bundle does not match current appId");
           done();
         });
 

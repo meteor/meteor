@@ -38,6 +38,7 @@ class AssetBundleManager {
     private Callback callback;
 
     private final CordovaResourceApi resourceApi;
+    private final WebAppConfiguration webAppConfiguration;
 
     private final OkHttpClient httpClient;
 
@@ -56,8 +57,9 @@ class AssetBundleManager {
     /** The initial asset bundle included in the app bundle */
     public final AssetBundle initialAssetBundle;
 
-    public AssetBundleManager(CordovaResourceApi resourceApi, AssetBundle initialAssetBundle, File versionsDirectory) {
+    public AssetBundleManager(CordovaResourceApi resourceApi, WebAppConfiguration webAppConfiguration, AssetBundle initialAssetBundle, File versionsDirectory) {
         this.resourceApi = resourceApi;
+        this.webAppConfiguration = webAppConfiguration;
         this.initialAssetBundle = initialAssetBundle;
         this.versionsDirectory = versionsDirectory;
         downloadDirectory = new File(versionsDirectory, "Downloading");
@@ -245,7 +247,7 @@ class AssetBundleManager {
             return;
         }
 
-        assetBundleDownloader = new AssetBundleDownloader(assetBundle, baseUrl, missingAssets);
+        assetBundleDownloader = new AssetBundleDownloader(webAppConfiguration, assetBundle, baseUrl, missingAssets);
         assetBundleDownloader.setCallback(new AssetBundleDownloader.Callback() {
             @Override
             public void onFinished() {

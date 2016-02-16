@@ -13,7 +13,7 @@ class WebAppConfiguration {
         this.preferences = preferences;
     }
 
-    public String appId() {
+    public String getAppId() {
         return preferences.getString("appId", null);
     }
 
@@ -21,7 +21,7 @@ class WebAppConfiguration {
         preferences.edit().putString("appId", appId).commit();
     }
 
-    public String rootUrlString() {
+    public String getRootUrlString() {
         return preferences.getString("rootUrl", null);
     }
 

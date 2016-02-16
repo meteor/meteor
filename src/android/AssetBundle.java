@@ -18,8 +18,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import okhttp3.HttpUrl;
-
 class AssetBundle {
     private static final String LOG_TAG = AssetBundle.class.getSimpleName();
 
@@ -67,7 +65,7 @@ class AssetBundle {
 
     private JSONObject runtimeConfig;
     private String appId;
-    private HttpUrl rootUrl;
+    private String rootUrlString;
 
     public AssetBundle(CordovaResourceApi resourceApi, Uri directoryUri) {
         this(resourceApi, directoryUri, null, null);
@@ -160,7 +158,7 @@ class AssetBundle {
             JSONObject runtimeConfig = getRuntimeConfig();
             if (runtimeConfig != null) {
                 try {
-                    appId = runtimeConfig.getString("APP_ID");
+                    appId = runtimeConfig.getString("appId");
                 } catch (JSONException e) {
                     Log.w(LOG_TAG, "Error reading APP_ID from runtime config", e);
                 }
@@ -169,18 +167,18 @@ class AssetBundle {
         return appId;
     }
 
-    public HttpUrl getRootUrl() {
-        if (rootUrl == null) {
+    public String getRootUrlString() {
+        if (rootUrlString == null) {
             JSONObject runtimeConfig = getRuntimeConfig();
             if (runtimeConfig != null) {
                 try {
-                    rootUrl = HttpUrl.parse(runtimeConfig.getString("ROOT_URL"));
+                    rootUrlString = runtimeConfig.getString("ROOT_URL");
                 } catch (JSONException e) {
                     Log.w(LOG_TAG, "Error reading ROOT_URL from runtime config", e);
                 }
             }
         }
-        return rootUrl;
+        return rootUrlString;
     }
 
     void didMoveToDirectoryAtUri(Uri directoryUri) {
@@ -221,7 +219,7 @@ class AssetBundle {
         }
     }
 
-    String stringFromUri(Uri uri) throws IOException {
+    private String stringFromUri(Uri uri) throws IOException {
         InputStream inputStream = null;
         try {
             inputStream = resourceApi.openForRead(uri, true).inputStream;

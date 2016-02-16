@@ -54,19 +54,33 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   private var pendingAssetBundle: AssetBundle?
 
   /// Callback ID used to send a newVersionDownloaded notification to JavaScript
-  private var newVersionDownloadedCallbackId: String?
+  var newVersionDownloadedCallbackId: String?
 
   /// Callback ID used to send a downloadFailure notification to JavaScript
-  private var downloadFailureCallbackId: String?
+  var downloadFailureCallbackId: String?
 
   /// Timer used to wait for startup to complete after a reload
   private var startupTimer: METTimer?
+  
+  private var isTesting: Bool = false
 
   // MARK: - Lifecycle
 
   /// Called by Cordova on plugin initialization
   override public func pluginInitialize() {
     super.pluginInitialize()
+    
+    // Detect whether we are testing the app using
+    // cordova-plugin-test-framework
+    if let viewController = self.viewController as? CDVViewController
+      where viewController.startPage == "cdvtests/index.html" {
+        isTesting = true
+    }
+    
+    // FIXME: Due to what seems like a Swift bug, these properties are not
+    // initialized to nil but to an empty string
+    newVersionDownloadedCallbackId = nil
+    downloadFailureCallbackId = nil
 
     configuration = WebAppConfiguration()
 
@@ -74,11 +88,12 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
 
     initializeAssetBundles()
 
-    // The WebAppLocalServerPort setting is only used for testing
+    // The WebAppLocalServerPort setting is currently only used for testing
     if let portString = (commandDelegate?.settings["WebAppLocalServerPort".lowercaseString] as? String) {
       localServerPort = UInt(portString) ?? 0
-    // In all other cases, we select a listening port based on the appId to
-    // hopefully avoid collisions between Meteor apps installed on the same device
+    // In all other cases, we use a listening port that has been set during build
+    // and that is determined based on the appId. Hopefully this will avoid 
+    // collisions between Meteor apps installed on the same device
     } else if let viewController = self.viewController as? CDVViewController,
         let port = NSURLComponents(string: viewController.startPage)?.port {
       localServerPort = port.unsignedIntegerValue
@@ -91,7 +106,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
       return
     }
 
-    if startupTimer == nil {
+    if !isTesting {
       startupTimer = METTimer(queue: dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) { [weak self] in
         NSLog("App startup timed out, reverting to last known good version")
         self?.revertToLastKnownGoodVersion()
@@ -104,6 +119,8 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   }
 
   func initializeAssetBundles() {
+    assetBundleManager = nil;
+    
     // The initial asset bundle consists of the assets bundled with the app
     let initialAssetBundle: AssetBundle
     do {
@@ -148,7 +165,7 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
       return
     }
 
-    assetBundleManager = AssetBundleManager(versionsDirectoryURL: versionsDirectoryURL, initialAssetBundle: initialAssetBundle)
+    assetBundleManager = AssetBundleManager(configuration: configuration, versionsDirectoryURL: versionsDirectoryURL, initialAssetBundle: initialAssetBundle)
     assetBundleManager.delegate = self
 
     // If a last downloaded version has been set and the asset bundle exists,
@@ -312,33 +329,9 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFinishDownloadingBundle assetBundle: AssetBundle) {
     NSLog("Finished downloading new asset bundle version: \(assetBundle.version)")
 
-    do {
-      try verifyDownloadedAssetBundle(assetBundle)
-
-      configuration.lastDownloadedVersion = assetBundle.version
-      pendingAssetBundle = assetBundle
-      notifyNewVersionDownloaded(assetBundle.version)
-    } catch {
-      notifyDownloadFailure(error)
-    }
-  }
-
-  private func verifyDownloadedAssetBundle(assetBundle: AssetBundle) throws {
-    guard let appId = assetBundle.appId else {
-      throw WebAppError.UnsuitableAssetBundle(reason: "Could not find appId in downloaded asset bundle", underlyingError: nil)
-    }
-
-    if appId != configuration.appId {
-      throw WebAppError.UnsuitableAssetBundle(reason: "appId in downloaded asset bundle does not match current appId", underlyingError: nil)
-    }
-
-    guard let rootURL = assetBundle.rootURL else {
-      throw WebAppError.UnsuitableAssetBundle(reason: "Could not find ROOT_URL in downloaded asset bundle", underlyingError: nil)
-    }
-
-    if configuration.rootURL?.host != "localhost" && rootURL.host == "localhost" {
-      throw WebAppError.UnsuitableAssetBundle(reason: "ROOT_URL in downloaded asset bundle would change current ROOT_URL to localhost. Make sure ROOT_URL has been configured correctly on the server.", underlyingError: nil)
-    }
+    configuration.lastDownloadedVersion = assetBundle.version
+    pendingAssetBundle = assetBundle
+    notifyNewVersionDownloaded(assetBundle.version)
   }
 
   func assetBundleManager(assetBundleManager: AssetBundleManager, didFailDownloadingBundleWithError error: ErrorType) {
@@ -367,12 +360,10 @@ final public class WebApp: CDVPlugin, AssetBundleManagerDelegate {
     // Set localServerPort to the assigned port, in case it is different
     localServerPort = localServer.port
 
-    if let viewController = self.viewController as? CDVViewController {
+    if !isTesting, let viewController = self.viewController as? CDVViewController {
       // Do not modify startPage if we are testing the app using
       // cordova-plugin-test-framework
-      if viewController.startPage != "cdvtests/index.html" {
-        viewController.startPage = "http://localhost:\(localServerPort)?\(authTokenKeyValuePair)"
-      }
+      viewController.startPage = "http://localhost:\(localServerPort)?\(authTokenKeyValuePair)"
     }
 
     commandDelegate?.urlTransformer = { (URL: NSURL!) -> NSURL! in

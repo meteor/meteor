@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height">
+  <meta name="msapplication-tap-highlight" content="no">
+
+  <link rel="stylesheet" type="text/css" class="__meteor-css__" href="/merged-stylesheets.css?20ae2c8d51b2507244e598844414ecdec2615ce3">
+
+  <script type="text/javascript">
+    __meteor_runtime_config__ = JSON.parse(decodeURIComponent("%7B%22meteorRelease%22%3A%22none%22%2C%22ROOT_URL%22%3A%22http%3A%2F%2Flocalhost%3A3000%2F%22%2C%22ROOT_URL_PATH_PREFIX%22%3A%22%22%2C%22DDP_DEFAULT_CONNECTION_URL%22%3A%22http%3A%2F%2Flocalhost%3A3000%22%2C%22autoupdateVersionCordova%22%3A%22missing_app_id%22%7D"));
+
+    if (/Android/i.test(navigator.userAgent)) {
+      // When Android app is emulated, it cannot connect to localhost,
+      // instead it should connect to 10.0.2.2
+      // (unless we're using an http proxy; then it works!)
+      if (!__meteor_runtime_config__.httpProxyPort) {
+        __meteor_runtime_config__.ROOT_URL = (__meteor_runtime_config__.ROOT_URL || '').replace(/localhost/i, '10.0.2.2');
+        __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL = (__meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL || '').replace(/localhost/i, '10.0.2.2');
+      }
+    }
+  </script>
+
+  <script type="text/javascript" src="/cordova.js"></script>
+  <script type="text/javascript" src="/packages/es5-shim.js?03b82f907286b5353e3a371eb320635a634fc88b"></script>
+  <script type="text/javascript" src="/packages/underscore.js?46eaedbdeb6e71c82af1b16f51c7da4127d6f285"></script>
+  <script type="text/javascript" src="/packages/meteor.js?57d11a30155349aa5106f8150cee35eac5f4764c"></script>
+  <script type="text/javascript" src="/packages/meteor-base.js?f0836ed3757e6217fff6e2710a1293407a6d9b09"></script>
+  <script type="text/javascript" src="/packages/mobile-experience.js?674f55574f9947b91bb5f92f9ea9be098479b649"></script>
+  <script type="text/javascript" src="/packages/base64.js?6b407c3b106cfc043cc07a07a111a2443d789bd4"></script>
+  <script type="text/javascript" src="/packages/ejson.js?5e95dd4b5971d96cb2d3287c54b14d9002f83ab7"></script>
+  <script type="text/javascript" src="/packages/check.js?cfa4250d2aae369fa666098adc27266de8e26aea"></script>
+  <script type="text/javascript" src="/packages/babel-compiler.js?b72b25550ee1619b0eaddf5e0c1541e8c264ccf0"></script>
+  <script type="text/javascript" src="/packages/ecmascript.js?9c79b20dd3f3a6da85828defdd8585b8436af75d"></script>
+  <script type="text/javascript" src="/packages/babel-runtime.js?b0359ff15b87202234ffb6a78f85b70175b412af"></script>
+  <script type="text/javascript" src="/packages/ecmascript-runtime.js?d552d50ef9d63d143f8f549245241748a4796cec"></script>
+  <script type="text/javascript" src="/packages/promise.js?c18eac25a2117745aa5b372e139bae2fce4a84fe"></script>
+  <script type="text/javascript" src="/packages/random.js?5851416a296763029b1a4d7302fb9dc24aba51d2"></script>
+  <script type="text/javascript" src="/packages/id-map.js?c9a0833f370b91bbc3fd76d54f21d6ce1850af49"></script>
+  <script type="text/javascript" src="/packages/ordered-dict.js?18a4254f3dd5f8c97946dadb60e33c91efab39c1"></script>
+  <script type="text/javascript" src="/packages/tracker.js?7776276660c988c38fed448d8262b925dffb5bc3"></script>
+  <script type="text/javascript" src="/packages/mongo-id.js?3c6c0f6ceace5f42b7dfee0fcafe19ae1b711909"></script>
+  <script type="text/javascript" src="/packages/diff-sequence.js?f4337773c8aaf9bcaa5f5f22865660cbdd471eaa"></script>
+  <script type="text/javascript" src="/packages/geojson-utils.js?bfbab9d995bbbb19fa1b11a3cfdb9da5f5f328ba"></script>
+  <script type="text/javascript" src="/packages/minimongo.js?cdf1a26cf7719fa9471a8017c3defd5aea812727"></script>
+  <script type="text/javascript" src="/packages/retry.js?acb5f93adc31a57311c18af4ce21068297f00f37"></script>
+  <script type="text/javascript" src="/packages/ddp-common.js?5bfbe93c6ad5580f8d13f28d81b2c0db0dae13c4"></script>
+  <script type="text/javascript" src="/packages/reload.js?234f78ebae6ce49cbb0da4705afaec398706283b"></script>
+  <script type="text/javascript" src="/packages/ddp-client.js?250b63e6c919c5383a0511ee4efbf42bb70a650f"></script>
+  <script type="text/javascript" src="/packages/ddp.js?1c935134013739ed5ece46880dea800b6319bd67"></script>
+  <script type="text/javascript" src="/packages/insecure.js?e7411f6cee07c76688e26c3b20767e857b42ad9f"></script>
+  <script type="text/javascript" src="/packages/ddp-server.js?1057b33d71942bc01fd0167e2b2a5f49f5545d11"></script>
+  <script type="text/javascript" src="/packages/mongo.js?0b527241aafaebe6039db562bc84b47f5c13febe"></script>
+  <script type="text/javascript" src="/packages/blaze-html-templates.js?31453f3129c01ec6fabaa5b791f6572e8c4464a2"></script>
+  <script type="text/javascript" src="/packages/reactive-dict.js?e43655c138a9184c40228ef4dd2da3f65f1bd8bb"></script>
+  <script type="text/javascript" src="/packages/session.js?9a40cf46e8dc125a3486dc33b2a965c1e9f8ff2b"></script>
+  <script type="text/javascript" src="/packages/jquery.js?1015953f785c9b76503e2ecb391507dce965f357"></script>
+  <script type="text/javascript" src="/packages/standard-minifiers.js?b02a7937678c6058031ee7b2f45b5a617518335d"></script>
+  <script type="text/javascript" src="/packages/autopublish.js?c5edcae57ad2cf69f735706476fb86d91c1f1b0e"></script>
+  <script type="text/javascript" src="/packages/webapp.js?1b9f36d855fc5c8399abf2579ac1e1512060cc95"></script>
+  <script type="text/javascript" src="/packages/livedata.js?93f27626c1702ea8af804d6170ffbf8968626718"></script>
+  <script type="text/javascript" src="/packages/hot-code-push.js?3916ae26c3ca4928e61dc2da7e7b3f93e4164c0c"></script>
+  <script type="text/javascript" src="/packages/fastclick.js?3226c1cc5431061e8dd6a68a8bdeee10e867eb2b"></script>
+  <script type="text/javascript" src="/packages/mobile-status-bar.js?93ea41a7f26014b58108322969c0d57188fb9418"></script>
+  <script type="text/javascript" src="/packages/deps.js?a0f1fc18309813a3aac8954f76d0c73e4c5d46f4"></script>
+  <script type="text/javascript" src="/packages/htmljs.js?fd1566f5a5a4b277eb93f0a636a84a07ab9a83db"></script>
+  <script type="text/javascript" src="/packages/observe-sequence.js?cd318009bd759e1458173f84a537c5dd315b4f86"></script>
+  <script type="text/javascript" src="/packages/reactive-var.js?975c4d5513ecf8c3a212b5aa160a9ea4447f3079"></script>
+  <script type="text/javascript" src="/packages/blaze.js?9391df93ba5076c2cfc61ee68724eb79b65f00d9"></script>
+  <script type="text/javascript" src="/packages/spacebars.js?1aedcc2aa3ae9ff5d860d73516110cedd77c033e"></script>
+  <script type="text/javascript" src="/packages/templating.js?142b64439619ddabba8ad16a798ed8349de73bae"></script>
+  <script type="text/javascript" src="/packages/launch-screen.js?ee2e48ad25736d40bc90c4f0aab02496e501ed4d"></script>
+  <script type="text/javascript" src="/packages/ui.js?6aa94fb4743be2472f799f928674607edae2afdf"></script>
+  <script type="text/javascript" src="/packages/url.js?8c4d6df291ec5bafdb89c7be74de61e08741b10f"></script>
+  <script type="text/javascript" src="/packages/http.js?40d307fefc00445c189ac03f4ba12bc9ccf50635"></script>
+  <script type="text/javascript" src="/packages/autoupdate.js?713e633fb817f91fa3826ccf39f2424c8b34c56c"></script>
+  <script type="text/javascript" src="/packages/global-imports.js?b85184f6e78c8973654f86cb65e5ae7bc50f66d2"></script>
+  <script type="text/javascript" src="/app/template.mobileapp.js?979b20f66caf126704c250fbd29ce253c6cb490e"></script>
+  <script type="text/javascript" src="/app/mobileapp.js?6db9763f3e0f4e4cbf78111f73823043ab08e3e7"></script>
+
+
+  <title>mobileapp</title>
+</head>
+
+<body>
+
+</body>
+</html>
