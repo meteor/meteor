@@ -1,5 +1,6 @@
 import moment from "moment";
 import shared from "./imports/shared";
+import {Meteor as ImportedMeteor} from "meteor/meteor";
 
 describe("app modules", () => {
   it("can be imported using absolute identifiers", () => {
@@ -55,11 +56,47 @@ describe("app modules", () => {
     if (Meteor.isServer) {
       assert.strictEqual(typeof error, "undefined");
       assert.strictEqual(result, "/server/only.js");
+      assert.strictEqual(require("./server/only"),
+                         require("/server/only"));
     }
 
     if (Meteor.isClient) {
       assert.ok(error instanceof Error);
     }
+  });
+
+  it("cannot import client modules on server", () => {
+    let error;
+    let result;
+    try {
+      result = require("./client/only").default;
+    } catch (expectedOnServer) {
+      error = expectedOnServer;
+    }
+
+    if (Meteor.isClient) {
+      assert.strictEqual(typeof error, "undefined");
+      assert.strictEqual(result, "/client/only.js");
+      assert.strictEqual(require("./client/only"),
+                         require("/client/only"));
+    }
+
+    if (Meteor.isServer) {
+      assert.ok(error instanceof Error);
+    }
+  });
+
+  it("should not be parsed in strictMode", () => {
+    let foo = 1234;
+    delete foo;
+  });
+
+  it("should have access to filename and dirname", () => {
+    assert.strictEqual(require(__filename), exports);
+    assert.strictEqual(
+      require("path").relative(__dirname, __filename),
+      "tests.js"
+    );
   });
 });
 
@@ -136,14 +173,27 @@ describe("native node_modules", () => {
   });
 
   Meteor.isClient &&
-  it("cannot be imported on the client", () => {
-    let error;
-    try {
-      require("fs");
-    } catch (expected) {
-      error = expected;
-    }
-    assert.ok(error instanceof Error);
+  it("are imported as stubs on the client", () => {
+    const inherits = require("util").inherits;
+    assert.strictEqual(typeof inherits, "function");
+    assert.strictEqual(require("util"),
+                       require("util/util.js"));
+  });
+
+  Meteor.isServer &&
+  it("cannot be overridden on the server", () => {
+    assert.strictEqual(typeof require("repl").start, "function");
+  });
+
+  Meteor.isClient &&
+  it("can be overridden on the client", () => {
+    assert.strictEqual(require("repl").notEmpty, true);
+  });
+
+  it("can be implemented by wrapper npm packages", () => {
+    const Stream = require("stream");
+    assert.strictEqual(typeof Stream, "function");
+    assert.strictEqual(typeof Stream.Readable, "function");
   });
 });
 
@@ -173,6 +223,11 @@ describe("local node_modules", () => {
 });
 
 describe("Meteor packages", () => {
+  it("api.export should create named exports", () => {
+    assert.strictEqual(typeof ImportedMeteor, "object");
+    assert.strictEqual(Meteor, ImportedMeteor);
+  });
+
   it("should be importable", () => {
     assert.strictEqual(require("meteor/underscore")._, _);
 
@@ -193,6 +248,20 @@ describe("Meteor packages", () => {
     const mtp = require("meteor/modules-test-package");
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
+
+  it("should expose their files for import", () => {
+    const osStub = require("meteor/modules-test-package/os-stub");
+
+    assert.strictEqual(
+      osStub.platform(),
+      "browser"
+    );
+
+    assert.strictEqual(
+      osStub.name,
+      "/node_modules/meteor/modules-test-package/os-stub.js"
+    );
+  });
 });
 
 describe("async functions", () => {
@@ -208,6 +277,12 @@ Meteor.isClient &&
 describe("client/compatibility directories", () => {
   it("should contain bare files", () => {
     assert.strictEqual(topLevelVariable, 1234);
+  });
+});
+
+describe(".es5.js files", () => {
+  it("should not be transpiled", () => {
+    assert.strictEqual(require("./imports/plain.es5.js").let, "ok");
   });
 });
 

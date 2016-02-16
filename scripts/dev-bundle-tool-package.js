@@ -12,7 +12,7 @@ if (process.platform === "win32") {
   // Duplicated in dev-bundle-server-package.js
   fibersVersion = "https://github.com/meteor/node-fibers/tarball/d519f0c5971c33d99c902dad346b817e84bab001";
 } else {
-  fibersVersion = "1.0.5";
+  fibersVersion = "1.0.8";
 }
 
 var packageJson = {
@@ -24,7 +24,7 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "1.4.28",
     fibers: fibersVersion,
-    "meteor-babel": "0.7.1",
+    "meteor-babel": "0.7.2",
     "meteor-promise": "0.5.1",
     // So that Babel 6 can emit require("babel-runtime/helpers/...") calls.
     "babel-runtime": "5.8.35",

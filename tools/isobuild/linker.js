@@ -112,12 +112,10 @@ _.extend(Module.prototype, {
     // preserving the line numbers.
     if (self.useGlobalNamespace &&
         ! self.useMeteorInstall) {
-      return _.map(self.files, function (file) {
-        if (file.lazy) {
-          // Ignore lazy files unless we have a module system.
-          return;
-        }
+      // Ignore lazy files unless we have a module system.
+      const eagerFiles = _.filter(self.files, file => ! file.lazy);
 
+      return _.map(eagerFiles, function (file) {
         const cacheKey = JSON.stringify([
           file.sourceHash, file.bare, file.servePath]);
 
@@ -497,14 +495,30 @@ _.extend(File.prototype, {
   _getClosureHeader() {
     if (this._useMeteorInstall()) {
       var header = "";
+
       if (this.deps.length > 0) {
         header += "[";
         _.each(this.deps, dep => {
           header += JSON.stringify(dep) + ",";
         });
       }
-      return header + "function(require,exports,module){";
+
+      const headerParts = [
+        header,
+        "function(require,exports,module"
+      ];
+
+      if (this.source.match(/\b__dirname\b/)) {
+        headerParts.push(",__filename,__dirname");
+      } else if (this.source.match(/\b__filename\b/)) {
+        headerParts.push(",__filename");
+      }
+
+      headerParts.push("){");
+
+      return headerParts.join("");
     }
+
     return "(function(){";
   },
 

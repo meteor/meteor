@@ -146,6 +146,10 @@
 
 * Detect new Facebook user-agent in the `spiderable` package. #5516
 
+* `check` will now check all keys of an object, including inherited ones #6140
+
+* Allow `git+` URL schemes for npm dependencies #844
+
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,
 bySabi, mbrookes, TomFreudenberg, TechPlexEngineer, zacharydenton,

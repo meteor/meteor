@@ -13,12 +13,12 @@ Package.describe({
 Package.onUse(function(api) {
 ~cc~  api.versionsFrom('~release~');
   api.use('ecmascript');
-  api.addFiles('~fs-name~.js');
+  api.mainModule('~fs-name~.js');
 });
 
 Package.onTest(function(api) {
   api.use('ecmascript');
   api.use('tinytest');
   api.use('~name~');
-  api.addFiles('~fs-name~-tests.js');
+  api.mainModule('~fs-name~-tests.js');
 });
