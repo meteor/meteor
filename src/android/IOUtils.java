@@ -1,8 +1,5 @@
 package com.meteor.webapp;
 
-import android.net.Uri;
-import android.util.Log;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;

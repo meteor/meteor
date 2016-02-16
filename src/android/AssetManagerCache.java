@@ -2,10 +2,8 @@ package com.meteor.webapp;
 
 import android.content.res.AssetManager;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.util.List;
 import java.util.Map;
 
 class AssetManagerCache {
