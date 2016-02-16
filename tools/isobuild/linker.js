@@ -961,35 +961,12 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   var prelinkedFiles = module.getPrelinkedFiles();
 
   // are we running `meteor test-app` or `meteor test-packages`?
+  // Include a short code snippet that calls `runTests`.
   if (global.testCommandMetadata) {
     var weAreLinkingTheApp = (name === null);
     if (weAreLinkingTheApp) {
-      var testDriverPackageName = global.testCommandMetadata.driverPackage;
-
-      var setMeteorIntegrationOrUnitTest = "";
-      if (global.testCommandMetadata.isUnitTest) {
-        setMeteorIntegrationOrUnitTest = "Meteor.isUnitTest = true;";
-      } else if (global.testCommandMetadata.isIntegrationTest) {
-        setMeteorIntegrationOrUnitTest = "Meteor.isIntegrationTest = true;";
-      }
-
-
       prelinkedFiles.push({
-        source: `\
-setTimeout(function() {
-  var testDriverPackage = Package[\"${testDriverPackageName}\"];
-  if (!testDriverPackage) {
-    throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
-  }
-
-  // Only run on browser where runTests is defined. Not sure why
-  // \`Meteor\` is undefined on the server here.
-  if (testDriverPackage.runTests) {
-    Meteor.isTest = true;
-    ${setMeteorIntegrationOrUnitTest}
-    testDriverPackage.runTests();
-  }
-}, 0);`,
+        source: getRunTestsSource(),
         servePath: "/packages/runTests.js"
       });
     }
@@ -1077,3 +1054,33 @@ setTimeout(function() {
     }
   });
 });
+
+function getRunTestsSource() {
+  const testDriverPackageName = global.testCommandMetadata.driverPackage;
+
+  let setMeteorIntegrationOrUnitTest = "";
+  if (global.testCommandMetadata.isUnitTest) {
+    setMeteorIntegrationOrUnitTest = "Package.meteor.Meteor.isUnitTest = true;";
+  } else if (global.testCommandMetadata.isIntegrationTest) {
+    setMeteorIntegrationOrUnitTest = "Package.meteor.Meteor.isIntegrationTest = true;";
+  }
+
+  return `\
+setTimeout(function() {
+  var testDriverPackage = Package[\"${testDriverPackageName}\"];
+  if (!testDriverPackage) {
+    throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
+  }
+
+  // Only run on browser where runTests is defined. Not sure why
+  // \`Meteor\` is undefined on the server here.
+  if (Package.meteor.Meteor.isClient) {
+    Package.meteor.Meteor.isTest = true;
+    ${setMeteorIntegrationOrUnitTest}
+    if (!testDriverPackage.runTests) {
+      throw new Error("Test driver package ${testDriverPackageName} missing \`runTests\` export");
+    }
+    testDriverPackage.runTests();
+  }
+}, 0);`;
+}
