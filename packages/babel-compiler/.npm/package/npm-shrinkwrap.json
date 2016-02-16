@@ -350,11 +350,11 @@
             "babel-plugin-transform-runtime": {
               "version": "6.4.3"
             },
-            "amdefine": {
-              "version": "1.0.0"
-            },
             "ansi-regex": {
               "version": "2.0.0"
+            },
+            "amdefine": {
+              "version": "1.0.0"
             },
             "ansi-styles": {
               "version": "2.1.0"
@@ -398,11 +398,11 @@
             "babel-plugin-transform-strict-mode": {
               "version": "6.3.13"
             },
-            "babel-template": {
-              "version": "6.3.13"
-            },
             "babel-register": {
               "version": "6.4.3"
+            },
+            "babel-template": {
+              "version": "6.3.13"
             },
             "babel-traverse": {
               "version": "6.4.5"
@@ -521,11 +521,11 @@
             "shebang-regex": {
               "version": "1.0.0"
             },
-            "source-map": {
-              "version": "0.5.3"
-            },
             "slash": {
               "version": "1.0.0"
+            },
+            "source-map": {
+              "version": "0.5.3"
             },
             "strip-ansi": {
               "version": "3.0.0"

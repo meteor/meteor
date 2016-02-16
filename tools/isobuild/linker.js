@@ -953,11 +953,10 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     if (weAreLinkingTheApp) {
       prelinkedFiles.push({
         source: `\
-if (Meteor.isClient) {
-  Meteor.startup(function() {
-    Package[\"${global.testCommandMetadata.driverPackage}\"].runTests();
-  });
-}`,
+setTimeout(function() {
+  var runTestsFunc = Package[\"${global.testCommandMetadata.driverPackage}\"].runTests;
+  runTestsFunc && runTestsFunc(); // Only run on browser where runTests is defined
+}, 0);`,
         servePath: "/packages/runTests.js"
       });
     }
