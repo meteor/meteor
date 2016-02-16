@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Make HTTP calls to remote servers",
-  version: '1.1.2-cordova.5'
+  version: '1.1.2-beta.9'
 });
 
 Npm.depends({request: "2.53.0"});

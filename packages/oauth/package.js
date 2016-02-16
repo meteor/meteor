@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: "1.1.7-cordova.5"
+  version: "1.1.7-beta.9"
 });
 
 Package.onUse(function (api) {

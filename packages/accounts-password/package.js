@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Password support for accounts",
-  version: "1.1.5-cordova.5"
+  version: "1.1.5-beta.9"
 });
 
 Package.onUse(function(api) {

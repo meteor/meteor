@@ -1,6 +1,6 @@
 Package.describe({
   name: "modules",
-  version: "0.5.0-cordova.5",
+  version: "0.5.0-beta.9",
   summary: "CommonJS module system",
   documentation: "README.md"
 });

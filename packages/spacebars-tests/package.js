@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Additional tests for Spacebars",
-  version: '1.0.5-cordova.5'
+  version: '1.0.5-beta.9'
 });
 
 // These tests are in a separate package to avoid a circular dependency
