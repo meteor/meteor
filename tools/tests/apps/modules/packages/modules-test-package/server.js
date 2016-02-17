@@ -6,3 +6,6 @@ assert.strictEqual(common.ModulesTestPackage, "loaded");
 export {ModulesTestPackage} from "./common";
 
 export const where = "server";
+
+ServerPackageVar = "server";
+common.checkPackageVars();
