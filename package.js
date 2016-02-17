@@ -11,10 +11,10 @@ Package.onUse(function (api) {
   api.use('blaze-tools');
 
   api.use('underscore');
-  // The templating plugin will pull in minifiers-js, so that generated code will
+  // The templating plugin will pull in minifier-js, so that generated code will
   // be beautified. But it's a weak dependency so that eg boilerplate-generator
-  // doesn't pull in minifiers.
-  api.use('minifiers-js', ['server'], { weak: true });
+  // doesn't pull in the minifier.
+  api.use('minifier-js', ['server'], { weak: true });
   api.addFiles(['templatetag.js',
                  'optimizer.js',
                  'react.js',
