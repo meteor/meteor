@@ -961,12 +961,13 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   var prelinkedFiles = module.getPrelinkedFiles();
 
   // are we running `meteor test-app` or `meteor test-packages`?
-  // Include a short code snippet that calls `runTests`.
+  // Include a short code snippet that sets `Meteor.isTest` and calls
+  // `runTests`.
   if (global.testCommandMetadata) {
     var weAreLinkingTheApp = (name === null);
     if (weAreLinkingTheApp) {
-      prelinkedFiles.push({
-        source: getRunTestsSource(),
+      prelinkedFiles.unshift({
+        source: getTestPreamble(),
         servePath: "/packages/runTests.js"
       });
     }
@@ -1055,7 +1056,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   });
 });
 
-function getRunTestsSource() {
+function getTestPreamble() {
   const testDriverPackageName = global.testCommandMetadata.driverPackage;
 
   let setMeteorIntegrationOrUnitTest = "";
@@ -1066,21 +1067,20 @@ function getRunTestsSource() {
   }
 
   return `\
-setTimeout(function() {
-  var testDriverPackage = Package[\"${testDriverPackageName}\"];
-  if (!testDriverPackage) {
-    throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
-  }
+if (Package.meteor.Meteor.isClient) {
+  Package.meteor.Meteor.isTest = true;
+  ${setMeteorIntegrationOrUnitTest}
 
-  // Only run on browser where runTests is defined. Not sure why
-  // \`Meteor\` is undefined on the server here.
-  if (Package.meteor.Meteor.isClient) {
-    Package.meteor.Meteor.isTest = true;
-    ${setMeteorIntegrationOrUnitTest}
+  Package.meteor.Meteor.startup(function() {
+    var testDriverPackage = Package[\"${testDriverPackageName}\"];
+    if (!testDriverPackage) {
+      throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
+    }
+
     if (!testDriverPackage.runTests) {
       throw new Error("Test driver package ${testDriverPackageName} missing \`runTests\` export");
     }
     testDriverPackage.runTests();
-  }
-}, 0);`;
+  });
+}`;
 }
