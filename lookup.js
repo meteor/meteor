@@ -6,6 +6,11 @@ Blaze.registerHelper = function (name, func) {
   Blaze._globalHelpers[name] = func;
 };
 
+// Also documented as Template.deregisterHelper
+Blaze.deregisterHelper = function(name) {
+  delete Blaze._globalHelpers[name];
+}
+
 var bindIfIsFunction = function (x, target) {
   if (typeof x !== 'function')
     return x;
