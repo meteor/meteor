@@ -2,6 +2,7 @@
 
 - Look over changes detailed here: https://github.com/meteor/guide/blob/1.3-migration-content/content/1.3-migration.md
 - i18n - should we do more in the Todos app (add spanish? translation / UI to change language)
+- Can we / should we bin: basic docs; Meteor Projects
 - Should we recommend a richer community package in the Blaze chapter? (https://forums.meteor.com/t/meteor-guide-regarding-blaze/17506/32)
 
 ## Standup 3rd Feb
