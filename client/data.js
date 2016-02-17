@@ -2909,7 +2909,7 @@ DocsData = {
   "DDP.connect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1643,
+    "lineno": 1682,
     "locus": "Anywhere",
     "longname": "DDP.connect",
     "memberof": "DDP",
@@ -3763,7 +3763,7 @@ DocsData = {
       }
     ],
     "scope": "static",
-    "summary": "Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with \"DELETE\" as the first argument. (Named `del` to avoid conflic with the Javascript keyword `delete`)"
+    "summary": "Send an HTTP `DELETE` request. Equivalent to calling [`HTTP.call`](#http_call) with \"DELETE\" as the first argument. (Named `del` to avoid conflict with the Javascript keyword `delete`)"
   },
   "HTTP.get": {
     "filepath": "http/httpcall_common.js",
@@ -3807,6 +3807,49 @@ DocsData = {
     ],
     "scope": "static",
     "summary": "Send an HTTP `GET` request. Equivalent to calling [`HTTP.call`](#http_call) with \"GET\" as the first argument."
+  },
+  "HTTP.patch": {
+    "filepath": "http/httpcall_common.js",
+    "kind": "function",
+    "lineno": 93,
+    "locus": "Anywhere",
+    "longname": "HTTP.patch",
+    "memberof": "HTTP",
+    "name": "patch",
+    "options": [],
+    "params": [
+      {
+        "description": "<p>The URL to which the request should be sent.</p>",
+        "name": "url",
+        "type": {
+          "names": [
+            "String"
+          ]
+        }
+      },
+      {
+        "description": "<p>Options passed on to <a href=\"#http_call\"><code>HTTP.call</code></a>.</p>",
+        "name": "callOptions",
+        "optional": true,
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      },
+      {
+        "description": "<p>Callback that is called when the request is completed. Required on the client.</p>",
+        "name": "asyncCallback",
+        "optional": true,
+        "type": {
+          "names": [
+            "function"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Send an HTTP `PATCH` request. Equivalent to calling [`HTTP.call`](#http_call) with \"PATCH\" as the first argument."
   },
   "HTTP.post": {
     "filepath": "http/httpcall_common.js",
@@ -4550,7 +4593,7 @@ DocsData = {
   "Meteor.apply": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 708,
+    "lineno": 746,
     "locus": "Anywhere",
     "longname": "Meteor.apply",
     "memberof": "Meteor",
@@ -4604,6 +4647,10 @@ DocsData = {
         }
       },
       {
+        "description": "<p>options.noRetry (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.</p>",
+        "name": "(Boolean)"
+      },
+      {
         "description": "<p>Optional callback; same semantics as in <a href=\"#meteor_call\"><code>Meteor.call</code></a>.</p>",
         "name": "asyncCallback",
         "optional": true,
@@ -4620,7 +4667,7 @@ DocsData = {
   "Meteor.call": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 667,
+    "lineno": 704,
     "locus": "Anywhere",
     "longname": "Meteor.call",
     "memberof": "Meteor",
@@ -4709,7 +4756,7 @@ DocsData = {
   "Meteor.disconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1020,
+    "lineno": 1059,
     "locus": "Client",
     "longname": "Meteor.disconnect",
     "memberof": "Meteor",
@@ -5040,7 +5087,7 @@ DocsData = {
   "Meteor.reconnect": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 1010,
+    "lineno": 1049,
     "locus": "Client",
     "longname": "Meteor.reconnect",
     "memberof": "Meteor",
@@ -5172,7 +5219,7 @@ DocsData = {
   "Meteor.status": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 998,
+    "lineno": 1037,
     "locus": "Client",
     "longname": "Meteor.status",
     "memberof": "Meteor",
@@ -5185,7 +5232,7 @@ DocsData = {
   "Meteor.subscribe": {
     "filepath": "ddp-client/livedata_connection.js",
     "kind": "function",
-    "lineno": 482,
+    "lineno": 519,
     "locus": "Client",
     "longname": "Meteor.subscribe",
     "memberof": "Meteor",
