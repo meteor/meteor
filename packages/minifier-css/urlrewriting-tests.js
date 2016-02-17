@@ -1,5 +1,5 @@
 
-Tinytest.add("minifiers - url rewriting when merging", function (test) {
+Tinytest.add("minifier-css - url rewriting when merging", function (test) {
   var stylesheet = function(backgroundPath) {
     return "body { color: green; background: top center url(" + backgroundPath + ") black, bottom center url(" + backgroundPath + "); }"
   };
@@ -45,7 +45,7 @@ Tinytest.add("minifiers - url rewriting when merging", function (test) {
 
 });
 
-Tinytest.add("minifiers - url rewriting with media queries (ast rule recursion)", function (test) {
+Tinytest.add("minifier-css - url rewriting with media queries (ast rule recursion)", function (test) {
   var stylesheet = function(backgroundPath) {
     return "@media (min--moz-device-pixel-ratio: 1.5),\n\
     (-o-min-device-pixel-ratio: 3/2),\n\

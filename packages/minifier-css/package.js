@@ -1,5 +1,5 @@
 Package.describe({
-  summary: "JavaScript and CSS minifiers",
+  summary: "CSS minifier",
   version: "1.1.8-beta.9"
 });
 
@@ -16,15 +16,15 @@ Npm.strip({
 Package.onUse(function (api) {
   api.use('underscore', 'server');
   api.export(['CssTools']);
-  api.addFiles(['minification.js', 'minifiers.js'], 'server');
+  api.addFiles(['minification.js', 'minifier.js'], 'server');
 });
 
 Package.onTest(function (api) {
-  api.use('minifiers-css', 'server');
+  api.use('minifier-css', 'server');
   api.use('tinytest');
 
   api.addFiles([
-    'minifiers-tests.js',
+    'minifier-tests.js',
     'urlrewriting-tests.js'
   ], 'server');
 });

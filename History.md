@@ -134,11 +134,19 @@
 
 * Improve error message from `check` when passing in null. #5545
 
+* Split up `standard-minifiers` in separate CSS (`standard-minifier-css`) and JS
+  minifiers(`standard-minifier-js`). `standard-minifiers` now acts as an umbrella package for these
+  2 minifiers.
+
 * Detect new Facebook user-agent in the `spiderable` package. #5516
 
 * `check` will now check all keys of an object, including inherited ones #6140
 
 * Allow `git+` URL schemes for npm dependencies #844
+
+* Expose options `disableOplog`, `pollingIntervalMs`, and
+  `pollingThrottleMs` to `Cursor.find` for tuning observe parameters
+  on the server.
 
 Patches contributed by GitHub users vereed, mitar, nathan-muir,
 robfallows, skishore, okland, Primigenus, zimme, welelay, rgoomar,

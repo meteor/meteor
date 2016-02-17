@@ -369,7 +369,7 @@ running.
 
 Instead of opening a shell, specifying --url (-U) will return a URL
 suitable for an external program to connect to the database. For remote
-databases on deployed applications, the URL is valid for one minute.
+databases on deployed applications, the URL is valid for one hour.
 
 Options:
   --url, -U  return a Mongo database URL
