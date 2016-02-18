@@ -1,6 +1,6 @@
 Package.describe({
   name: 'meteor-env-dev',
-  version: '0.0.1-beta.9',
+  version: '0.0.1-beta.10',
   summary: 'Package for setting up development-specific Meteor environment',
   debugOnly: true,
   documentation: 'README.md'
