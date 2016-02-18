@@ -43,7 +43,7 @@
                   "version": "3.0.0",
                   "dependencies": {
                     "brace-expansion": {
-                      "version": "1.1.2",
+                      "version": "1.1.3",
                       "dependencies": {
                         "balanced-match": {
                           "version": "0.3.0"
@@ -69,7 +69,7 @@
               }
             },
             "graceful-fs": {
-              "version": "4.1.2"
+              "version": "4.1.3"
             },
             "iconv-lite": {
               "version": "0.4.13"
@@ -129,16 +129,16 @@
                   "version": "2.1.0",
                   "dependencies": {
                     "center-align": {
-                      "version": "0.1.2",
+                      "version": "0.1.3",
                       "dependencies": {
                         "align-text": {
-                          "version": "0.1.3",
+                          "version": "0.1.4",
                           "dependencies": {
                             "kind-of": {
-                              "version": "2.0.1",
+                              "version": "3.0.2",
                               "dependencies": {
                                 "is-buffer": {
-                                  "version": "1.1.1"
+                                  "version": "1.1.2"
                                 }
                               }
                             },
@@ -151,7 +151,7 @@
                           }
                         },
                         "lazy-cache": {
-                          "version": "0.2.7"
+                          "version": "1.0.3"
                         }
                       }
                     },
@@ -159,13 +159,13 @@
                       "version": "0.1.3",
                       "dependencies": {
                         "align-text": {
-                          "version": "0.1.3",
+                          "version": "0.1.4",
                           "dependencies": {
                             "kind-of": {
-                              "version": "2.0.1",
+                              "version": "3.0.2",
                               "dependencies": {
                                 "is-buffer": {
-                                  "version": "1.1.1"
+                                  "version": "1.1.2"
                                 }
                               }
                             },

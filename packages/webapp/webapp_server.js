@@ -491,6 +491,7 @@ var runWebAppServer = function () {
         });
 
         var program = {
+          format: "web-program-pre1",
           manifest: manifest,
           version: WebAppHashing.calculateClientHash(manifest, null, _.pick(
             __meteor_runtime_config__, 'PUBLIC_SETTINGS')),

@@ -505,13 +505,19 @@ _.extend(File.prototype, {
 
       const headerParts = [
         header,
-        "function(require,exports,module"
+        "function("
       ];
 
       if (this.source.match(/\b__dirname\b/)) {
-        headerParts.push(",__filename,__dirname");
+        headerParts.push("require,exports,module,__filename,__dirname");
       } else if (this.source.match(/\b__filename\b/)) {
-        headerParts.push(",__filename");
+        headerParts.push("require,exports,module,__filename");
+      } else if (this.source.match(/\bmodule\b/)) {
+        headerParts.push("require,exports,module");
+      } else if (this.source.match(/\bexports\b/)) {
+        headerParts.push("require,exports");
+      } else if (this.source.match(/\brequire\b/)) {
+        headerParts.push("require");
       }
 
       headerParts.push("){");

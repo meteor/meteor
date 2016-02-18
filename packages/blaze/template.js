@@ -437,6 +437,10 @@ Blaze.TemplateInstance.prototype.subscriptionsReady = function () {
  * @param {Object} helpers Dictionary of helper functions by name.
  */
 Template.prototype.helpers = function (dict) {
+  if (! _.isObject(dict)) {
+    throw new Error("Helpers dictionary has to be an object");
+  }
+
   for (var k in dict)
     this.__helpers.set(k, dict[k]);
 };
@@ -466,6 +470,10 @@ Template._withTemplateInstanceFunc = function (templateInstanceFunc, func) {
  * @param {EventMap} eventMap Event handlers to associate with this template.
  */
 Template.prototype.events = function (eventMap) {
+  if (! _.isObject(eventMap)) {
+    throw new Error("Event map has to be an object");
+  }
+
   var template = this;
   var eventMap2 = {};
   for (var k in eventMap) {

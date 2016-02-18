@@ -1,10 +1,10 @@
 Package.describe({
   summary: "Makes your Cordova application use the Crosswalk WebView \
 instead of the System WebView on Android",
-  version: '1.3.1',
+  version: '1.4.0-beta.9',
   documentation: null
 });
 
 Cordova.depends({
-  'cordova-plugin-crosswalk-webview': '1.3.1'
+  'cordova-plugin-crosswalk-webview': '1.4.0'
 });

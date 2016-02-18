@@ -41,6 +41,9 @@ Tinytest.add("check - check", function (test) {
         matches(pair[0], type);
         matches(pair[0], Match.Optional(type));
         matches(undefined, Match.Optional(type));
+        matches(pair[0], Match.Maybe(type));
+        matches(undefined, Match.Maybe(type));
+        matches(null, Match.Maybe(type));
         matches(pair[0], Match.Where(function () {
           check(pair[0], type);
           return true;
@@ -98,9 +101,16 @@ Tinytest.add("check - check", function (test) {
   matches({}, {a: Match.Optional(Number)});
   matches({a: 1}, {a: Match.Optional(Number)});
   fails({a: true}, {a: Match.Optional(Number)});
+  matches({}, {a: Match.Maybe(Number)});
+  matches({a: 1}, {a: Match.Maybe(Number)});
+  fails({a: true}, {a: Match.Maybe(Number)});
   // Match.Optional means "or undefined" at the top level but "or absent" in
   // objects.
   fails({a: undefined}, {a: Match.Optional(Number)});
+  // Match.Maybe should behave the same as Match.Optional in objects
+  // including handling nulls
+  fails({a: undefined}, {a: Match.Maybe(Number)});
+  fails({a: null}, {a: Match.Maybe(Number)});
   var F = function () {
     this.x = 123;
   };

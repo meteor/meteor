@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'GeoJSON utility functions (from https://github.com/maxogden/geojson-js-utils)',
-  version: '1.0.5-modules.8'
+  version: '1.0.5-beta.9'
 });
 
 Package.onUse(function (api) {

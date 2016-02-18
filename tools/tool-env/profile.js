@@ -215,6 +215,18 @@ var leftRightDots = function (str1, str2, len) {
   return str1 + dots(middle) + str2;
 };
 
+var printIndentation = function (isLastLeafStack) {
+  if (_.isEmpty(isLastLeafStack)) {
+    return '';
+  }
+
+  var init = _.map(_.initial(isLastLeafStack), function(isLastLeaf) {
+    return isLastLeaf ? '   ' : '│  ';
+  }).join('');
+  var last = _.last(isLastLeafStack) ? '└─ ' : '├─ ';
+  return init + last;
+};
+
 var formatMs = function (n) {
   // integer with thousands separators
   return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + " ms";
@@ -374,27 +386,29 @@ var injectOtherTime = function (entry) {
   entries.push(other);
 };
 
-var reportOn = function (level, entry) {
+var reportOn = function (entry, isLastLeafStack = []) {
   var stats = entryStats(entry);
-  if (stats.time < filter) {
-    return;
-  }
   var isParent = hasSignificantChildren(entry);
   var name = entryName(entry);
   print((isParent ? leftRightDots : leftRightAlign)
-        (spaces(level * 3) + name, formatMs(stats.time), 70)
+        (printIndentation(isLastLeafStack) + name, formatMs(stats.time), 70)
         + (stats.isOther ? "" : (" (" + stats.count + ")")));
 
   if (isParent) {
-    _.each(children(entry), function (child) {
-      reportOn(level + 1, child);
+    var childrenList = _.filter(children(entry), function(entry) {
+      var stats = entryStats(entry);
+      return stats.time > filter;
+    });
+    _.each(childrenList, function (child, i) {
+      var isLastLeaf = i === childrenList.length - 1;
+      reportOn(child, isLastLeafStack.concat(isLastLeaf));
     });
   }
 };
 
 var reportHierarchy = function () {
   _.each(topLevelEntries(), function (entry) {
-    reportOn(0, entry);
+    reportOn(entry);
   });
 };
 

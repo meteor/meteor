@@ -48,7 +48,8 @@ httpServer.addListener('request', function (req, res) {
     host = host.replace(/:\d+$/, '');
 
     res.writeHead(302, {
-      'Location': 'https://' + host + req.url
+      'Location': 'https://' + host + req.url,
+      'Access-Control-Allow-Origin': '*'
     });
     res.end();
     return;

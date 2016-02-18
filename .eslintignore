@@ -58,6 +58,7 @@ tools/cli/commands.js
 tools/cli/main.js
 
 tools/tool-env/flush-buffers-on-exit-in-windows.js
+tools/tool-env/install-babel.js
 tools/tool-env/isopackets.js
 tools/tool-env/profile-require.js
 tools/tool-env/profile.js
@@ -94,3 +95,4 @@ tools/isobuild/meteor-npm.js
 tools/isobuild/npm-discards.js
 tools/isobuild/package-api.js
 tools/isobuild/package-source.js
+tools/isobuild/source-arch.js

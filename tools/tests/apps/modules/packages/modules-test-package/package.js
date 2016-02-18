@@ -6,7 +6,8 @@ Package.describe({
 });
 
 Npm.depends({
-  "os-browserify": "0.2.0"
+  "os-browserify": "0.2.0",
+  "assert": "1.3.0"
 });
 
 Package.onUse(function(api) {
