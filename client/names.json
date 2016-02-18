@@ -165,6 +165,8 @@
   "Meteor.disconnect",
   "Meteor.isClient",
   "Meteor.isCordova",
+  "Meteor.isDevelopment",
+  "Meteor.isProduction",
   "Meteor.isServer",
   "Meteor.loggingIn",
   "Meteor.loginWith<ExternalService>",
