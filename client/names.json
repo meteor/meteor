@@ -149,6 +149,7 @@
   "InputFile.getDeclaredExports",
   "InputFile.getDirname",
   "InputFile.getDisplayPath",
+  "InputFile.getFileOptions",
   "InputFile.getPackageName",
   "InputFile.getPathInPackage",
   "InputFile.getSourceHash",
