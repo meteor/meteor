@@ -570,7 +570,7 @@ function doTestCommand(options) {
     projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test-app"]) {
     // XXX look in package list for testOnly packages
-    global.testCommandMetadata.driverPackage = 'practicalmeteor:mocha';
+    global.testCommandMetadata.driverPackage = 'avital:mocha';
 
     // Default to `--integration`
     if (!options.unit && !options.integration) {
