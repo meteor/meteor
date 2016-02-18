@@ -3,7 +3,7 @@ import {AccountsCommon} from "./accounts_common.js";
 /**
  * @summary Constructor for the `Accounts` object on the client.
  * @locus Client
- * @class
+ * @class AccountsClient
  * @extends AccountsCommon
  * @instancename accountsClient
  * @param {Object} options an object with fields:

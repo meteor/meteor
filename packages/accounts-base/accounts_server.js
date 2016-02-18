@@ -5,7 +5,7 @@ import {AccountsCommon} from "./accounts_common.js";
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
- * @class
+ * @class AccountsServer
  * @extends AccountsCommon
  * @instancename accountsServer
  * @param {Object} server A server object such as `Meteor.server`.
