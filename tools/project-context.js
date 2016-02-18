@@ -85,6 +85,12 @@ _.extend(ProjectContext.prototype, {
     self._explicitlyAddedLocalPackageDirs =
       options.explicitlyAddedLocalPackageDirs;
 
+    // Used to override the directory that Meteor's build process
+    // writes to; used by `meteor test-app` so that you can test your
+    // app in parallel to writing it, with an isolated database.
+    self.projectLocalDir = options.projectLocalDir ||
+      files.pathJoin(self.projectDir, '.meteor', 'local');
+
     // Used by 'meteor rebuild'; true to rebuild all packages, or a list of
     // package names.  Deletes the isopacks and their plugin caches.
     self._forceRebuildPackages = options.forceRebuildPackages;
@@ -278,7 +284,7 @@ _.extend(ProjectContext.prototype, {
 
   getProjectLocalDirectory: function (subdirectory) {
     var self = this;
-    return files.pathJoin(self.projectDir, '.meteor', 'local', subdirectory);
+    return files.pathJoin(self.projectLocalDir, subdirectory);
   },
 
   getMeteorShellDirectory: function(projectDir) {

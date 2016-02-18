@@ -310,6 +310,10 @@ var PackageSource = function () {
   // builds.
   self.prodOnly = false;
 
+  // A package marked testOnly is ONLY picked up by the bundler as
+  // part of the `meteor test-app` command.
+  self.testOnly = false;
+
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
   // built copies of all known isopackets.
@@ -521,6 +525,8 @@ _.extend(PackageSource.prototype, {
        * meant to be used in development only.
        * @param {Boolean} options.prodOnly A package with this flag set to true
        * will ONLY be bundled into production builds.
+       * @param {Boolean} options.testOnly A package with this flag set to true
+       * will ONLY be bundled as part of `meteor test-app`.
        */
       describe: function (options) {
         _.each(options, function (value, key) {
@@ -573,19 +579,21 @@ _.extend(PackageSource.prototype, {
               buildmessage.error(
                 "trying to initialize a nonexistent base package " + value);
             }
-            // `debugOnly` and `prodOnly` are boolean flags you can put on a
-            // package, currently undocumented.  when set to true, they cause
-            // a package's code to be only included (i.e. linked into the bundle)
-            // in dev mode or prod mode (`meteor --production`), and excluded
-            // otherwise.
+            // `debugOnly`, `prodOnly` and `testOnly` are boolean
+            // flags you can put on a package, currently undocumented.
+            // when set to true, they cause a package's code to be
+            // only included (i.e. linked into the bundle) in dev
+            // mode, prod mode (`meteor --production`) or app tests
+            // (`meteor test-app`), and excluded otherwise.
             //
             // Notes:
             //
             // * These flags do not affect which packages or which versions are
             //   are selected by the version solver.
             //
-            // * When you use a debugOnly or prodOnly package, its exports are
-            //   not imported for you.  You have to access them using
+            // * When you use a debugOnly, prodOnly or testOnly
+            //   package, its exports are not imported for you.  You
+            //   have to access them using
             //   `Package["my-package"].MySymbol`.
             //
             // * These flags CAN cause different package load orders in
@@ -600,12 +608,15 @@ _.extend(PackageSource.prototype, {
             self.debugOnly = !!value;
           } else if (key === "prodOnly") {
             self.prodOnly = !!value;
+          } else if (key === "testOnly") {
+            self.testOnly = !!value;
           } else {
             // Do nothing. We might want to add some keys later, and we should err
             // on the side of backwards compatibility.
           }
-          if (self.debugOnly && self.prodOnly) {
-            buildmessage.error("Package can't have both debugOnly and prodOnly set.");
+          if (_.size(_.compact([self.debugOnly, self.prodOnly, self.testOnly])) > 1) {
+            buildmessage.error(
+              "Package can't have more than one of: debugOnly, prodOnly, testOnly.");
           }
         });
       },
@@ -995,9 +1006,9 @@ _.extend(PackageSource.prototype, {
     // to exclude in production mode from a published package. Eventually, we'll
     // add such a flag to the isopack format, but until then we'll sidestep the
     // issue by disallowing build plugins in debugOnly packages.
-    if (self.debugOnly && !_.isEmpty(self.pluginInfo)) {
+    if ((self.debugOnly || self.prodOnly || self.testOnly) && !_.isEmpty(self.pluginInfo)) {
       buildmessage.error(
-        "can't register build plugins in debugOnly packages");
+        "can't register build plugins in debugOnly, prodOnly or testOnly packages");
       // recover by ignoring
     }
 
@@ -1276,7 +1287,7 @@ _.extend(PackageSource.prototype, {
             arch,
             ignoreFiles,
             isApp: true,
-            loopChecker: new SymlinkLoopChecker(self.sourceRoot),
+            loopChecker: new SymlinkLoopChecker(self.sourceRoot)
           };
 
           return {
@@ -1331,6 +1342,19 @@ _.extend(PackageSource.prototype, {
       fileOptions.transpile = false;
     }
 
+    // If running in unit test mode (`meteor test-app --unit`), all
+    // files other than test files should be loaded lazily
+    if (global.testCommandMetadata && global.testCommandMetadata.isUnitTest) {
+      const isTestFile = _.any(relPath.split(files.pathSep), (comp) =>
+                               /\.tests?\./.test(comp) ||
+                               /^tests?\./.test(comp) ||
+                               /^tests$/.test(comp));
+
+      if (!isTestFile) {
+        fileOptions.lazy = true;
+      }
+    }
+
     // Special case: in app code on the client, JavaScript files in a
     // `client/compatibility` directory don't get wrapped in a closure.
     if (isApp && // Skip this check for packages.
@@ -1354,7 +1378,7 @@ _.extend(PackageSource.prototype, {
     isApp,
     arch,
     loopChecker = new SymlinkLoopChecker(this.sourceRoot),
-    ignoreFiles = [],
+    ignoreFiles = []
   }) {
     const sourceReadOptions =
       sourceProcessorSet.appReadDirectoryOptions(arch);
@@ -1364,6 +1388,12 @@ _.extend(PackageSource.prototype, {
     sourceReadOptions.exclude.push(/^\./);
     // Ignore the usual ignorable files.
     sourceReadOptions.exclude.push(...ignoreFiles);
+
+    // Unless we're running tests, ignore source files with name
+    // "*test*.*", "*tests*.*", "test.*", "tests.*"
+    if (!global.testCommandMetadata) {
+      sourceReadOptions.exclude.push(/\.tests?\./, /^tests?\./);
+    }
 
     // Read top-level source files, excluding control files that were not
     // explicitly included.
@@ -1381,18 +1411,21 @@ _.extend(PackageSource.prototype, {
     );
 
     const anyLevelExcludes = [
-      /^tests\/$/,
       /^node_modules\/$/,
       arch === "os" ? /^client\/$/ : /^server\/$/,
-      ...sourceReadOptions.exclude
+      ...sourceReadOptions.exclude,
     ];
+
+    if (!global.testCommandMetadata) {
+      anyLevelExcludes.push(/^tests\/$/);
+    }
 
     const topLevelExcludes = isApp ? [
       ...anyLevelExcludes,
       /^packages\/$/,
       /^programs\/$/,
       /^public\/$/, /^private\/$/,
-      /^cordova-build-override\/$/
+      /^cordova-build-override\/$/,
     ] : anyLevelExcludes;
 
     // Read top-level subdirectories. Ignore subdirectories that have

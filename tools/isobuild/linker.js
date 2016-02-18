@@ -966,6 +966,19 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var prelinkedFiles = module.getPrelinkedFiles();
 
+  // are we running `meteor test-app` or `meteor test-packages`?
+  // Include a short code snippet that sets `Meteor.isTest` and calls
+  // `runTests`.
+  if (global.testCommandMetadata) {
+    var weAreLinkingTheApp = (name === null);
+    if (weAreLinkingTheApp) {
+      prelinkedFiles.unshift({
+        source: getTestPreamble(),
+        servePath: "/packages/runTests.js"
+      });
+    }
+  }
+
   // If we're in the app, then we just add the import code as its own file in
   // the front.
   if (useGlobalNamespace) {
@@ -1048,3 +1061,32 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
     }
   });
 });
+
+function getTestPreamble() {
+  const testDriverPackageName = global.testCommandMetadata.driverPackage;
+
+  let setMeteorIntegrationOrUnitTest = "";
+  if (global.testCommandMetadata.isUnitTest) {
+    setMeteorIntegrationOrUnitTest = "Package.meteor.Meteor.isUnitTest = true;";
+  } else if (global.testCommandMetadata.isIntegrationTest) {
+    setMeteorIntegrationOrUnitTest = "Package.meteor.Meteor.isIntegrationTest = true;";
+  }
+
+  return `\
+if (Package.meteor.Meteor.isClient) {
+  Package.meteor.Meteor.isTest = true;
+  ${setMeteorIntegrationOrUnitTest}
+
+  Package.meteor.Meteor.startup(function() {
+    var testDriverPackage = Package[\"${testDriverPackageName}\"];
+    if (!testDriverPackage) {
+      throw new Error(\"Can\'t find test driver package: ${testDriverPackageName}\");
+    }
+
+    if (!testDriverPackage.runTests) {
+      throw new Error("Test driver package ${testDriverPackageName} missing \`runTests\` export");
+    }
+    testDriverPackage.runTests();
+  });
+}`;
+}

@@ -250,13 +250,14 @@ _.extend(PackageAPI.prototype, {
   imply: function (names, arch) {
     var self = this;
 
-    // We currently disallow build plugins in debugOnly packages; but if
-    // you could use imply in a debugOnly package, you could pull in the
-    // build plugin from an implied package, which would have the same
-    // problem as allowing build plugins directly in the package. So no
-    // imply either!
-    if (self.debugOnly) {
-      buildmessage.error("can't use imply in debugOnly packages");
+    // We currently disallow build plugins in
+    // debugOnly/prodOnly/testOnly packages; but if you could use
+    // imply in a debugOnly package, you could pull in the build
+    // plugin from an implied package, which would have the same
+    // problem as allowing build plugins directly in the package. So
+    // no imply either!
+    if (self.debugOnly || self.prodOnly || self.testOnly) {
+      buildmessage.error("can't use imply in packages that are debugOnly, prodOnly or testOnly");
       // recover by ignoring
       return;
     }
@@ -533,9 +534,9 @@ _.extend(PackageAPI.prototype, {
    * @instance
    * @summary Export package-level variables in your package. The specified
    * variables (declared without `var` in the source code) will be available
-   * to packages that use your package. If your package sets the `debugOnly`
-   * or `prodOnly` options to `true` when it calls `Package.describe()`, then
-   * packages that use your package will need to use
+   * to packages that use your package. If your package sets the `debugOnly`,
+   * `prodOnly` or `testOnly` options to `true` when it calls
+   * `Package.describe()`, then packages that use your package will need to use
    * `Package["package-name"].ExportedVariableName` to access the value of an
    * exported variable.
    * @locus package.js

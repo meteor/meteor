@@ -545,3 +545,11 @@ Template.parentData = Blaze._parentData;
  * @param {Function} function The helper function itself.
  */
 Template.registerHelper = Blaze.registerHelper;
+
+/**
+ * @summary Removes a global [helper function](#template_helpers).
+ * @locus Client
+ * @function
+ * @param {String} name The name of the helper function you are defining.
+ */
+Template.deregisterHelper = Blaze.deregisterHelper;

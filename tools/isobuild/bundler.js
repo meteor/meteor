@@ -427,8 +427,9 @@ class Target {
     arch,
     // projectContextModule.CordovaPluginsFile object
     cordovaPluginsFile,
-    // 'development' or 'production'; determines whether debugOnly
-    //  and prodOnly packages are included; defaults to 'production'
+    // 'development', 'production' or 'test'; determines whether
+    // debugOnly, prodOnly and testOnly packages are included;
+    // defaults to 'production'
     buildMode,
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir,
@@ -578,10 +579,16 @@ class Target {
         if (typeof p === 'string') {
           p = isopackCache.getIsopack(p);
         }
-        if (p.debugOnly && this.buildMode !== 'development') {
+
+        // `debugOnly` packages work with "debug" and "test" build
+        // modes.
+        if (p.debugOnly && this.buildMode === 'production') {
           return;
         }
         if (p.prodOnly && this.buildMode !== 'production') {
+          return;
+        }
+        if (p.testOnly && this.buildMode !== 'test') {
           return;
         }
         const unibuild = p.getUnibuildAtArch(this.arch, {
@@ -618,8 +625,11 @@ class Target {
           dependencies: unibuild.uses,
           arch: this.arch,
           isopackCache: isopackCache,
-          skipDebugOnly: this.buildMode !== 'development',
+          // in both "development" and "test" build modes we should
+          // include `debugOnly` packages.
+          skipDebugOnly: this.buildMode === 'production',
           skipProdOnly: this.buildMode !== 'production',
+          skipTestOnly: this.buildMode !== 'test',
           allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
         }, addToGetsUsed);
       }.bind(this);
@@ -685,8 +695,11 @@ class Target {
           isopackCache: isopackCache,
           skipUnordered: true,
           acceptableWeakPackages: this.usedPackages,
-          skipDebugOnly: this.buildMode !== 'development',
+          // in both "development" and "test" build modes we should
+          // include `debugOnly` packages.
+          skipDebugOnly: this.buildMode === 'production',
           skipProdOnly: this.buildMode !== 'production',
+          skipTestOnly: this.buildMode !== 'test',
           allowWrongPlatform: this.providePackageJSONForUnavailableBinaryDeps,
         }, processUnibuild);
         this.unibuilds.push(unibuild);
@@ -2122,8 +2135,8 @@ Find out more about Meteor at meteor.com.
  *     ('development'/'production', defaults to 'development')
  *   - serverArch: the server architecture to target (string, default
  *     archinfo.host())
- *   - buildMode: string, 'development'/'production', governs inclusion of
- *     debugOnly and prodOnly packages, default 'production'
+ *   - buildMode: string, 'development'/'production'/'test', governs inclusion
+ *     of debugOnly, prodOnly and testOnly packages, default 'production'
  *   - webArchs: array of 'web.*' options to build (defaults to
  *     projectContext.platformList.getWebArchs())
  *   - warnings: a MessageSet of linting messages or null if linting
@@ -2193,7 +2206,7 @@ exports.bundle = function ({
     throw new Error("running wrong release for app?");
   }
 
-  if (! _.contains(['development', 'production'], buildMode)) {
+  if (! _.contains(['development', 'production', 'test'], buildMode)) {
     throw new Error('Unrecognized build mode: ' + buildMode);
   }
 

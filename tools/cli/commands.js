@@ -1130,7 +1130,7 @@ main.registerCommand({
     // localhost mode
     var findMongoPort =
       require('../runners/run-mongo.js').findMongoPort;
-    var mongoPort = findMongoPort(options.appDir);
+    var mongoPort = findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
 
     // XXX detect the case where Meteor is running, but MONGO_URL was
     // specified?
@@ -1205,7 +1205,7 @@ main.registerCommand({
   // XXX detect the case where Meteor is running the app, but
   // MONGO_URL was set, so we don't see a Mongo process
   var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-  var isRunning = !! findMongoPort(options.appDir);
+  var isRunning = !! findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
   if (isRunning) {
     Console.error("reset: Meteor is running.");
     Console.error();
@@ -1421,17 +1421,13 @@ main.registerCommand({
   return deploy.claim(site);
 });
 
-
 ///////////////////////////////////////////////////////////////////////////////
-// test-packages
+// test-app and test-packages
 ///////////////////////////////////////////////////////////////////////////////
 
-//
-// Test your local packages.
-//
-main.registerCommand({
-  name: 'test-packages',
+testCommandOptions = {
   maxArgs: Infinity,
+  catalogRefresh: new catalog.Refresh.Never(),
   options: {
     port: { type: String, short: "p", default: DEFAULT_PORT },
     'mobile-server': { type: String },
@@ -1481,10 +1477,43 @@ main.registerCommand({
 
     // allow excluding packages when testing all packages.
     // should be a comma-separated list of package names.
-    'exclude': { type: String }
-  },
-  catalogRefresh: new catalog.Refresh.Never()
-}, function (options) {
+    'exclude': { type: String },
+
+    // one of the following must be true
+    'test-app': { type: Boolean, 'default': false },
+    'test-packages': { type: Boolean, 'default': false },
+
+    // For 'test-packages': Run in unit test or integration test mode
+    'unit': { type: Boolean, 'default': false },
+    'integration': { type: Boolean, 'default': false }
+  }
+};
+
+main.registerCommand(_.extend({
+  name: 'test-app',
+  requiresApp: true
+}, testCommandOptions), function (options) {
+  options['test-app'] = true;
+  return doTestCommand(options);
+});
+
+main.registerCommand(_.extend(
+  { name: 'test-packages' },
+  testCommandOptions
+), function (options) {
+  options['test-packages'] = true;
+  return doTestCommand(options);
+});
+
+function doTestCommand(options) {
+  // This "metadata" is accessed in a few places. Using a global
+  // variable here was more expedient than navigating the many layers
+  // of abstraction across the the build process.
+  //
+  // As long as the Meteor CLI runs a single command as part of each
+  // process, this should be safe.
+  global.testCommandMetadata = {};
+
   Console.setVerbose(!!options.verbose);
 
   const runTargets = parseRunTargets(_.intersection(
@@ -1492,12 +1521,6 @@ main.registerCommand({
 
   const { parsedServerUrl, parsedMobileServerUrl } =
     parseServerOptionsForRunCommand(options, runTargets);
-
-  // Find any packages mentioned by a path instead of a package name. We will
-  // load them explicitly into the catalog.
-  var packagesByPath = _.filter(options.args, function (p) {
-    return p.indexOf('/') !== -1;
-  });
 
   // Make a temporary app dir (based on the test runner app). This will be
   // cleaned up on process exit. Using a temporary app dir means that we can
@@ -1513,60 +1536,132 @@ main.registerCommand({
     serverArchitectures.push(DEPLOY_ARCH);
   }
 
-  // XXX Because every run uses a new app with its own IsopackCache directory,
-  //     this always does a clean build of all packages. Maybe we can speed up
-  //     repeated test-packages calls with some sort of shared or semi-shared
-  //     isopack cache that's specific to test-packages?  See #3012.
-  var projectContext = new projectContextModule.ProjectContext({
-    projectDir: testRunnerAppDir,
-    // If we're currently in an app, we still want to use the real app's
-    // packages subdirectory, not the test runner app's empty one.
-    projectDirForLocalPackages: options.appDir,
-    explicitlyAddedLocalPackageDirs: packagesByPath,
+  var projectContextOptions = {
     serverArchitectures: serverArchitectures,
     allowIncompatibleUpdate: options['allow-incompatible-update'],
     lintAppAndLocalPackages: !options['no-lint']
-  });
+  };
+  var projectContext;
 
-  main.captureAndExit("=> Errors while setting up tests:", function () {
-    // Read metadata and initialize catalog.
-    projectContext.initializeCatalog();
-  });
+  if (options["test-packages"]) {
+    global.testCommandMetadata.driverPackage = options['driver-package'];
+    projectContextOptions.projectDir = testRunnerAppDir;
+    projectContextOptions.projectDirForLocalPackages = options.appDir;
 
-  // Overwrite .meteor/release.
-  projectContext.releaseFile.write(
-    release.current.isCheckout() ? "none" : release.current.name);
-
-  var packagesToAdd = getTestPackageNames(projectContext, options.args);
-
-  // filter out excluded packages
-  var excludedPackages = options.exclude && options.exclude.split(',');
-  if (excludedPackages) {
-    packagesToAdd = _.filter(packagesToAdd, function (p) {
-      return ! _.some(excludedPackages, function (excluded) {
-        return p.replace(/^local-test:/, '') === excluded;
-      });
+    // Find any packages mentioned by a path instead of a package name. We will
+    // load them explicitly into the catalog.
+    var packagesByPath = _.filter(options.args, function (p) {
+      return p.indexOf('/') !== -1;
     });
-  }
+    // If we're currently in an app, we still want to use the real app's
+    // packages subdirectory, not the test runner app's empty one.
+    projectContextOptions.explicitlyAddedLocalPackageDirs = packagesByPath;
 
-  // Use the driver package
-  // Also, add `autoupdate` so that you don't have to manually refresh the tests
-  packagesToAdd.unshift("autoupdate", options['driver-package']);
-  var constraintsToAdd = _.map(packagesToAdd, function (p) {
-    return utils.parsePackageConstraint(p);
-  });
-  // Add the packages to our in-memory representation of .meteor/packages.  (We
-  // haven't yet resolved constraints, so this will affect constraint
-  // resolution.)  This will get written to disk once we prepareProjectForBuild,
-  // either in the Cordova code below, right before deploying below, or in the
-  // app runner.  (Note that removeAllPackages removes any comments from
-  // .meteor/packages, but that's OK since this isn't a real user project.)
-  projectContext.projectConstraintsFile.removeAllPackages();
-  projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
-  // Write these changes to disk now, so that if the first attempt to prepare
-  // the project for build hits errors, we don't lose them on
-  // projectContext.reset.
-  projectContext.projectConstraintsFile.writeIfModified();
+    // XXX Because every run uses a new app with its own IsopackCache directory,
+    //     this always does a clean build of all packages. Maybe we can speed up
+    //     repeated test-packages calls with some sort of shared or semi-shared
+    //     isopack cache that's specific to test-packages?  See #3012.
+    projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+
+    main.captureAndExit("=> Errors while initializing project:", function () {
+      // We're just reading metadata here --- we'll wait to do the full build
+      // preparation until after we've started listening on the proxy, etc.
+      projectContext.readProjectMetadata();
+    });
+
+    main.captureAndExit("=> Errors while setting up tests:", function () {
+      // Read metadata and initialize catalog.
+      projectContext.initializeCatalog();
+    });
+
+    // Overwrite .meteor/release.
+    projectContext.releaseFile.write(
+      release.current.isCheckout() ? "none" : release.current.name);
+
+    var packagesToAdd = getTestPackageNames(projectContext, options.args);
+
+    // filter out excluded packages
+    var excludedPackages = options.exclude && options.exclude.split(',');
+    if (excludedPackages) {
+      packagesToAdd = _.filter(packagesToAdd, function (p) {
+        return ! _.some(excludedPackages, function (excluded) {
+          return p.replace(/^local-test:/, '') === excluded;
+        });
+      });
+    }
+
+    // Use the driver package if running `meteor test-packages`. For
+    // `meteor test-app`, the driver package is expected to already
+    // have been added to the app.
+    packagesToAdd.unshift(options['driver-package']);
+
+    // Also, add `autoupdate` so that you don't have to manually refresh the tests
+    packagesToAdd.unshift("autoupdate");
+
+    var constraintsToAdd = _.map(packagesToAdd, function (p) {
+      return utils.parsePackageConstraint(p);
+    });
+    // Add the packages to our in-memory representation of .meteor/packages.  (We
+    // haven't yet resolved constraints, so this will affect constraint
+    // resolution.)  This will get written to disk once we prepareProjectForBuild,
+    // either in the Cordova code below, right before deploying below, or in the
+    // app runner.  (Note that removeAllPackages removes any comments from
+    // .meteor/packages, but that's OK since this isn't a real user project.)
+    projectContext.projectConstraintsFile.removeAllPackages();
+    projectContext.projectConstraintsFile.addConstraints(constraintsToAdd);
+    // Write these changes to disk now, so that if the first attempt to prepare
+    // the project for build hits errors, we don't lose them on
+    // projectContext.reset.
+    projectContext.projectConstraintsFile.writeIfModified();
+  } else if (options["test-app"]) {
+    // XXX look in package list for testOnly packages
+    global.testCommandMetadata.driverPackage = 'avital:mocha';
+
+    // Default to `--integration`
+    if (!options.unit && !options.integration) {
+      options.integration = true;
+    }
+
+    if (options.unit && options.integration) {
+      throw new Error("Can't pass both --unit and --integration");
+    }
+    global.testCommandMetadata.isUnitTest = options.unit;
+    global.testCommandMetadata.isIntegrationTest = options.integration;
+
+    projectContextOptions.projectDir = options.appDir;
+    projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
+
+    // Copy the existing build and isopacks to speed up the initial start
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'build'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'build'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'bundler-cache'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'bundler-cache'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'isopacks'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'isopacks'),
+      {preserveSymlinks: true}
+    );
+    files.cp_r(
+      files.pathJoin(options.appDir, '.meteor', 'local', 'plugin-cache'),
+      files.pathJoin(testRunnerAppDir, '.meteor', 'local', 'plugin-cache'),
+      {preserveSymlinks: true}
+    );
+
+    projectContext = new projectContextModule.ProjectContext(projectContextOptions);
+
+    main.captureAndExit("=> Errors while setting up tests:", function () {
+      // Read metadata and initialize catalog.
+      projectContext.initializeCatalog();
+    });
+  } else {
+    throw new Error("Unexpected: neither test-packages nor test-app");
+  }
 
   // The rest of the projectContext preparation process will happen inside the
   // runner, once the proxy is listening. The changes we made were persisted to
@@ -1599,7 +1694,7 @@ main.registerCommand({
   return runTestAppForPackages(projectContext, _.extend(
     options,
     { mobileServerUrl: utils.formatUrl(parsedMobileServerUrl) }));
-});
+}
 
 // Returns the "local-test:*" package names for the given package names (or for
 // all local packages if packageNames is empty/unspecified).
@@ -1658,9 +1753,15 @@ var getTestPackageNames = function (projectContext, packageNames) {
 
 var runTestAppForPackages = function (projectContext, options) {
   var buildOptions = {
-    minifyMode: options.production ? 'production' : 'development',
-    buildMode: options.production ? 'production' : 'development',
+    minifyMode: options.production ? 'production' : 'development'
   };
+  if (options["test-packages"]) {
+    buildOptions.buildMode = buildOptions.minifyMode;
+  } else if (options["test-app"]) {
+    buildOptions.buildMode = "test";
+  } else {
+    throw new Error("Neither test-packages nor test-app in options");
+  }
 
   if (options.deploy) {
     // Run the constraint solver and build local packages.
@@ -1704,6 +1805,8 @@ var runTestAppForPackages = function (projectContext, options) {
     });
   }
 };
+
+
 
 ///////////////////////////////////////////////////////////////////////////////
 // rebuild

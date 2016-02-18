@@ -1,0 +1,18 @@
+{
+  "dependencies": {
+    "buffer": {
+      "version": "4.4.0",
+      "dependencies": {
+        "base64-js": {
+          "version": "1.0.4"
+        },
+        "ieee754": {
+          "version": "1.1.6"
+        },
+        "isarray": {
+          "version": "1.0.0"
+        }
+      }
+    }
+  }
+}

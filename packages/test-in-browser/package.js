@@ -13,6 +13,7 @@ Package.onUse(function (api) {
 
   api.use('session');
   api.use('reload');
+  api.use('jquery');
 
   api.use(['webapp', 'blaze', 'templating', 'spacebars',
            'ddp', 'tracker'], 'client');
@@ -20,12 +21,14 @@ Package.onUse(function (api) {
   api.addFiles('diff_match_patch_uncompressed.js', 'client');
 
   api.addFiles([
-    'driver.css',
     'driver.html',
-    'driver.js'
+    'driver.js',
+    'driver.css'
   ], "client");
 
   api.use('autoupdate', 'server', {weak: true});
   api.use('random', 'server');
   api.addFiles('autoupdate.js', 'server');
+
+  api.export('runTests');
 });
