@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Standards-compliant HTML tools",
-  version: '1.0.6-beta.9'
+  version: '1.0.6-beta.10'
 });
 
 Package.onUse(function (api) {
