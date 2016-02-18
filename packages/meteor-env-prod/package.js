@@ -1,6 +1,6 @@
 Package.describe({
   name: 'meteor-env-prod',
-  version: '0.0.1-beta.10',
+  version: '0.0.1-beta.11',
   summary: 'Package for setting up production-specific Meteor environment',
   prodOnly: true,
   documentation: 'README.md'
