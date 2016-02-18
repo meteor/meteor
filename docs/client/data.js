@@ -1639,27 +1639,6 @@ DocsData = {
     "scope": "static",
     "summary": "Retrieve the contents of the static server asset as a UTF8-encoded string."
   },
-  "Assets.absoluteFilePath": {
-    "kind": "function",
-    "locus": "Server",
-    "longname": "Assets.absoluteFilePath",
-    "memberof": "Assets",
-    "name": "absoluteFilePath",
-    "options": [],
-    "params": [
-      {
-        "description": "<p>The path of the asset, relative to the application's <code>private</code> subdirectory.</p>",
-        "name": "assetPath",
-        "type": {
-          "names": [
-            "String"
-          ]
-        }
-      }
-    ],
-    "scope": "static",
-    "summary": "Get the absolute path to the static server asset. Note that assets are read-only."
-  },
   "Blaze": {
     "filepath": "blaze/preamble.js",
     "kind": "namespace",
@@ -4378,6 +4357,25 @@ DocsData = {
     "scope": "static",
     "summary": "Returns a relative path that can be used to form error messages or\nother display properties. Can be used as an input to a source map."
   },
+  "InputFile.getFileOptions": {
+    "kind": "function",
+    "longname": "InputFile.getFileOptions",
+    "memberof": "InputFile",
+    "name": "getFileOptions",
+    "options": [],
+    "params": [],
+    "returns": [
+      {
+        "type": {
+          "names": [
+            "Object"
+          ]
+        }
+      }
+    ],
+    "scope": "static",
+    "summary": "Returns an object of file options such as those passed as the\n         third argument to api.addFiles."
+  },
   "InputFile.getPackageName": {
     "kind": "function",
     "longname": "InputFile.getPackageName",
@@ -4510,7 +4508,7 @@ DocsData = {
   "Meteor": {
     "filepath": "meteor/client_environment.js",
     "kind": "namespace",
-    "lineno": 1,
+    "lineno": 3,
     "longname": "Meteor",
     "name": "Meteor",
     "scope": "global",
@@ -4799,7 +4797,7 @@ DocsData = {
   "Meteor.isClient": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 28,
+    "lineno": 30,
     "locus": "Anywhere",
     "longname": "Meteor.isClient",
     "memberof": "Meteor",
@@ -4831,7 +4829,7 @@ DocsData = {
   "Meteor.isDevelopment": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 20,
+    "lineno": 22,
     "locus": "Anywhere",
     "longname": "Meteor.isDevelopment",
     "memberof": "Meteor",
@@ -4847,7 +4845,7 @@ DocsData = {
   "Meteor.isProduction": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 12,
+    "lineno": 14,
     "locus": "Anywhere",
     "longname": "Meteor.isProduction",
     "memberof": "Meteor",
@@ -4863,7 +4861,7 @@ DocsData = {
   "Meteor.isServer": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 36,
+    "lineno": 38,
     "locus": "Anywhere",
     "longname": "Meteor.isServer",
     "memberof": "Meteor",
@@ -5242,7 +5240,7 @@ DocsData = {
   "Meteor.settings": {
     "filepath": "meteor/client_environment.js",
     "kind": "member",
-    "lineno": 47,
+    "lineno": 49,
     "locus": "Anywhere",
     "longname": "Meteor.settings",
     "memberof": "Meteor",
