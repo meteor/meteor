@@ -2120,7 +2120,7 @@ main.registerCommand({
     } else if (! projectContext.projectConstraintsFile.getConstraint(packageName)) {
       // Check that we are using the package. We don't check if the package
       // exists. You should be able to remove non-existent packages.
-      Console.error(packageName  + " is not in this project.");
+      Console.error(packageName  + " is not a direct dependency in this project.");
       exitCode = 1;
     } else {
       packagesToRemove.push(packageName);
