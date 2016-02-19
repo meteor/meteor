@@ -95,6 +95,9 @@
 * Don't throw in certain cases when calling a template helper with an
   empty data context. #5411 #5736
 
+* Improve automatic blocking of URLs in attribute values to also
+  include `vbscript:` URLs.
+
 ### Testing
 
 * Packages can now be marked as `testOnly` to only run as part of app
