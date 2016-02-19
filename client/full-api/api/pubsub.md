@@ -122,15 +122,13 @@ Example:
       }
     });
 
-Since publish functions usually expect particular types as arguments,
-use [`check`](#check) liberally to ensure the arguments have
-the correct [types and structure](#matchpatterns).
-
 {{#warning}}
 Meteor will emit a warning message if you call `Meteor.publish` in a
 project that includes the `autopublish` package.  Your publish function
 will still work.
 {{/warning}}
+
+Read more about publications and how to use them in the [Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
 
 {{> autoApiBox "Subscription#userId"}}
 
