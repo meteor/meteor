@@ -57,6 +57,10 @@
 
     entry.meta = undefined;
 
+    if (entry.filepath) {
+      entry.module = entry.filepath.split('/')[0];
+    }
+
     names.push(entry.longname);
     dataContents[entry.longname] = entry;
   };
