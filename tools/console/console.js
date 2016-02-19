@@ -901,11 +901,18 @@ _.extend(Console.prototype, {
   // with the CHECKMARK as the bullet point in front of it.
   success: function (message) {
     var self = this;
+    var checkmark;
 
     if (! self._pretty) {
       return self.info(message);
     }
-    var checkmark = chalk.green('\u2713'); // CHECKMARK
+
+    if (process.platform === "win32") {
+      checkmark = chalk.green('SUCCESS');
+    } else {
+      checkmark = chalk.green('\u2713'); // CHECKMARK
+    }
+
     return self.info(
         chalk.green(message),
         self.options({ bulletPoint: checkmark  + " "}));

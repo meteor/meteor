@@ -42,11 +42,6 @@ function log(...args) {
 
 export class CordovaProject {
   constructor(projectContext, options = {}) {
-    if (process.platform === 'win32') {
-      Console.warn(`Building mobile apps on a Windows system is not \
-yet supported.`);
-      throw new main.ExitWithCode(1);
-    }
 
     this.projectContext = projectContext;
 
@@ -634,7 +629,10 @@ mobile-config.js accordingly.`);
 
     const oldEnv = process.env;
     if (env) {
-      process.env = env;
+      // this preserves case insensitivity for PATH on windows
+      Object.keys(env).forEach(key => {
+        process.env[key] = env[key];
+      });
     }
 
     try {
