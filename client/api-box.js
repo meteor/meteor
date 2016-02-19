@@ -155,6 +155,9 @@ Template.autoApiBox.helpers({
 
     return signature;
   },
+  importName() {
+    return this.memberof || this.name;
+  },
   id: function () {
     if (Session.get("fullApi") && nameToId[this.longname]) {
       return nameToId[this.longname];
