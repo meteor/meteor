@@ -1,4 +1,9 @@
-var options = {};
+var options = {
+  // File extensions to try when an imported module identifier does not
+  // exactly match any installed file.
+  extensions: []
+};
+
 var hasOwn = options.hasOwnProperty;
 
 // RegExp matching strings that don't start with a `.` or a `/`.
@@ -32,4 +37,22 @@ options.fallback = function (id, dir, error) {
   throw error;
 };
 
-meteorInstall = makeInstaller(options);
+var install = makeInstaller(options);
+
+(install.addExtension = function (ext) {
+  var args = arguments;
+  for (var i = 0; i < args.length; ++i) {
+    ext = args[i].toLowerCase();
+
+    if (! /^\.\w+/.test(ext)) {
+      throw new Error("bad module extension: " + ext);
+    }
+
+    var extensions = options.extensions;
+    if (extensions.indexOf(ext) < 0) {
+      extensions.push(ext);
+    }
+  }
+})(".js", ".json");
+
+meteorInstall = install;
