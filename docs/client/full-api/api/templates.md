@@ -18,6 +18,10 @@ or replaced and should be cleaned up.  You can associate data with a
 template instance, and you can access its DOM nodes when it is in the
 document.
 
+XXX: Link to spacebars docs
+
+Read more about templates and how to use them in the [Blaze](http://guide.meteor.com/blaze.html) article in the Meteor Guide.
+
 {{> autoApiBox "Template#events"}}
 
 Declare event handlers for instances of this template. Multiple calls add

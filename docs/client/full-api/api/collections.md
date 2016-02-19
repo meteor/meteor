@@ -165,6 +165,8 @@ issue, since it's unusual for a client to have enough data that an
 index is worthwhile.
 {{/warning}}
 
+Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
+
 {{> autoApiBox "Mongo.Collection#find"}}
 
 `find` returns a cursor.  It does not immediately access the database or return
