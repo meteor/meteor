@@ -13,6 +13,6 @@
     "util": "^0.10.3"
   },
   "scripts": {
-    "test": "../../../../meteor run"
+    "test": "../../../../meteor test-app"
   }
 }
