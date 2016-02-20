@@ -6,6 +6,5 @@
  */
 Meteor.isCordova = true;
 
-var nodeEnv = process.env.NODE_ENV;
-Meteor.isProduction = nodeEnv === "production";
-Meteor.isDevelopment = nodeEnv === "development";
+Meteor.isProduction = meteorEnv.NODE_ENV === "production";
+Meteor.isDevelopment = meteorEnv.NODE_ENV === "development";

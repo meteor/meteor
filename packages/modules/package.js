@@ -5,12 +5,11 @@ Package.describe({
   documentation: "README.md"
 });
 
-Npm.depends({
-  buffer: "4.4.0"
-});
-
 Package.onUse(function(api) {
   api.use("modules-runtime");
   api.mainModule("client.js", "client");
+  api.mainModule("server.js", "server");
   api.export("meteorInstall");
+  api.export("Buffer");
+  api.export("process");
 });
