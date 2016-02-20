@@ -46,7 +46,7 @@ var Module = function (options) {
   self.files = [];
 
   // options
-  self.useMeteorInstall = options.useMeteorInstall;
+  self.meteorInstallOptions = options.meteorInstallOptions;
   self.useGlobalNamespace = options.useGlobalNamespace;
   self.combinedServePath = options.combinedServePath;
   self.noLineNumbers = options.noLineNumbers;
@@ -111,7 +111,7 @@ _.extend(Module.prototype, {
     // then our job is much simpler. And we can get away with
     // preserving the line numbers.
     if (self.useGlobalNamespace &&
-        ! self.useMeteorInstall) {
+        ! self.meteorInstallOptions) {
       // Ignore lazy files unless we have a module system.
       const eagerFiles = _.filter(self.files, file => ! file.lazy);
 
@@ -161,7 +161,7 @@ _.extend(Module.prototype, {
     let chunks = [];
 
     // Emit each file
-    if (self.useMeteorInstall) {
+    if (self.meteorInstallOptions) {
       const tree = self._buildModuleTree();
       const moduleCount =
         self._chunkifyModuleTree(tree, chunks, sourceWidth);
@@ -208,7 +208,7 @@ _.extend(Module.prototype, {
   // (representing directories) or File objects (representing modules).
   // Bare files and lazy files that are never imported are ignored.
   _buildModuleTree() {
-    assert.ok(this.useMeteorInstall);
+    assert.ok(this.meteorInstallOptions);
 
     const tree = {};
 
@@ -245,7 +245,7 @@ _.extend(Module.prototype, {
   _chunkifyModuleTree(tree, chunks, sourceWidth) {
     const self = this;
 
-    assert.ok(self.useMeteorInstall);
+    assert.ok(self.meteorInstallOptions);
     assert.ok(_.isArray(chunks));
     assert.ok(_.isNumber(sourceWidth));
 
@@ -278,7 +278,7 @@ _.extend(Module.prototype, {
     // allows us to call meteorInstall just once to install everything.
     chunks.push("var require = meteorInstall(");
     walk(tree);
-    chunks.push(");");
+    chunks.push(",", JSON.stringify(self.meteorInstallOptions), ");");
 
     if (moduleCount === 0) {
       // If no files were actually added to the chunks array, roll back
@@ -489,7 +489,7 @@ _.extend(File.prototype, {
   }),
 
   _useMeteorInstall() {
-    return this.module.useMeteorInstall;
+    return this.module.meteorInstallOptions;
   },
 
   _getClosureHeader() {
@@ -928,9 +928,9 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
   // actually combine files into a single file. used when linking apps (as
   // opposed to packages).
   useGlobalNamespace,
-  // Boolean indicating whether the output bundle should use
-  // meteorInstall, thereby enabling modules.
-  useMeteorInstall,
+  // Options to pass as the second argument to meteorInstall. Falsy if
+  // meteorInstall is disabled.
+  meteorInstallOptions,
   // If we end up combining all of the files into one, use this as the
   // servePath.
   combinedServePath,
@@ -956,7 +956,7 @@ export var fullLink = Profile("linker.fullLink", function (inputFiles, {
 
   var module = new Module({
     name,
-    useMeteorInstall,
+    meteorInstallOptions,
     useGlobalNamespace,
     combinedServePath,
     noLineNumbers

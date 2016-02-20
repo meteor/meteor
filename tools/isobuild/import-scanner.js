@@ -30,7 +30,7 @@ Object.keys(process.binding("natives")).forEach(id => {
 
 // Default handlers for well-known file extensions.
 // Note that these function expect strings, not Buffer objects.
-const extensions = {
+const defaultExtensionHandlers = {
   ".js"(dataString) {
     // Strip any #! line from the beginning of the file.
     return dataString.replace(/^#![^\n]*/, "");
@@ -63,6 +63,7 @@ export default class ImportScanner {
   constructor({
     name,
     bundleArch,
+    extensions = [".js", ".json"],
     sourceRoot,
     usedPackageNames = {},
     nodeModulesPath,
@@ -72,6 +73,7 @@ export default class ImportScanner {
 
     this.name = name;
     this.bundleArch = bundleArch;
+    this.extensions = extensions;
     this.sourceRoot = sourceRoot;
     this.usedPackageNames = usedPackageNames;
     this.nodeModulesPath = nodeModulesPath;
@@ -90,7 +92,7 @@ export default class ImportScanner {
 
       const dotExt = "." + file.type;
       const dataString = file.data.toString("utf8");
-      file.dataString = extensions[dotExt](dataString);
+      file.dataString = defaultExtensionHandlers[dotExt](dataString);
       if (file.dataString !== dataString) {
         file.data = new Buffer(file.dataString, "utf8");
       }
@@ -243,7 +245,7 @@ export default class ImportScanner {
         return;
       }
 
-      if (! this._hasKnownExtension(absImportedPath)) {
+      if (! this._hasDefaultExtension(absImportedPath)) {
         // The _readModule method provides hardcoded support for files
         // with known extensions, but any other type of file must be
         // ignored at this point, because it was not in the set of input
@@ -300,7 +302,7 @@ export default class ImportScanner {
     }
 
     const ext = pathExtname(absPath).toLowerCase();
-    info.dataString = extensions[ext](info.dataString);
+    info.dataString = defaultExtensionHandlers[ext](info.dataString);
 
     if (info.dataString !== dataString) {
       info.data = new Buffer(info.dataString, "utf8");
@@ -340,7 +342,7 @@ export default class ImportScanner {
         return;
       }
 
-      if (! this._hasKnownExtension(relPathWithinNodeModules)) {
+      if (! this._hasDefaultExtension(relPathWithinNodeModules)) {
         // Only accept files within node_modules directories if they
         // have one of the known extensions.
         return;
@@ -396,7 +398,7 @@ export default class ImportScanner {
       }
 
       if (dir === "node_modules") {
-        if (! this._hasKnownExtension(installPath)) {
+        if (! this._hasDefaultExtension(installPath)) {
           // Reject any files within node_modules directories that do
           // not have one of the known extensions.
           return;
@@ -411,8 +413,11 @@ export default class ImportScanner {
     return installPath;
   }
 
-  _hasKnownExtension(path) {
-    return has(extensions, pathExtname(path).toLowerCase());
+  _hasDefaultExtension(path) {
+    return has(
+      defaultExtensionHandlers,
+      pathExtname(path).toLowerCase()
+    );
   }
 
   _splitPath(path) {
@@ -475,20 +480,17 @@ export default class ImportScanner {
       result = exactResult;
     }
 
-    if (!result) {
-      for (let ext in extensions) {
-        if (has(extensions, ext)) {
-          const pathWithExt = path + ext;
-          const stat = statOrNull(pathWithExt);
-          if (stat) {
-            result = { path: pathWithExt, stat };
-            break;
-          }
+    if (! result) {
+      this.extensions.some(ext => {
+        const pathWithExt = path + ext;
+        const stat = statOrNull(pathWithExt);
+        if (stat) {
+          return result = { path: pathWithExt, stat };
         }
-      }
+      });
     }
 
-    if (!result && exactResult && exactStat.isDirectory()) {
+    if (! result && exactResult && exactStat.isDirectory()) {
       // After trying all available file extensions, fall back to the
       // original result if it was a directory.
       result = exactResult;

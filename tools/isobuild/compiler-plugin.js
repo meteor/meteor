@@ -538,8 +538,10 @@ export class PackageSourceBatch {
     self.processor = processor;
     self.sourceRoot = sourceRoot;
     self.linkerCacheDir = linkerCacheDir;
+    self.importExtensions = [".js", ".json"];
 
     var sourceProcessorSet = self._getSourceProcessorSet();
+
     self.resourceSlots = [];
     unibuild.resources.forEach(function (resource) {
       let sourceProcessor = null;
@@ -568,8 +570,11 @@ export class PackageSourceBatch {
             return;
             // recover by ignoring
           }
+
+          self.addImportExtension(extension);
         }
       }
+
       self.resourceSlots.push(new ResourceSlot(resource, sourceProcessor, self));
     });
 
@@ -618,6 +623,18 @@ export class PackageSourceBatch {
       );
   }
 
+  addImportExtension(extension) {
+    extension = extension.toLowerCase();
+
+    if (! extension.startsWith(".")) {
+      extension = "." + extension;
+    }
+
+    if (this.importExtensions.indexOf(extension) < 0) {
+      this.importExtensions.push(extension);
+    }
+  }
+
   _getSourceProcessorSet() {
     const self = this;
 
@@ -653,7 +670,10 @@ export class PackageSourceBatch {
         inputFiles.push(...slot.jsOutputResources);
       });
 
-      map.set(name, inputFiles);
+      map.set(name, {
+        files: inputFiles,
+        importExtensions: batch.importExtensions,
+      });
     });
 
     if (! map.has("modules")) {
@@ -679,13 +699,14 @@ export class PackageSourceBatch {
       const scanner = new ImportScanner({
         name,
         bundleArch: batch.processor.arch,
+        extensions: batch.importExtensions,
         sourceRoot: batch.sourceRoot,
         usedPackageNames: batch.usedPackageNames,
         nodeModulesPath: batch.unibuild.nodeModulesPath,
         watchSet: batch.unibuild.watchSet,
       });
 
-      scanner.addInputFiles(map.get(name));
+      scanner.addInputFiles(map.get(name).files);
 
       if (batch.useMeteorInstall) {
         scanner.scanImports();
@@ -760,14 +781,14 @@ export class PackageSourceBatch {
             // packages, because it's important for all npm packages in
             // the app to share the same limited scope (i.e. the scope of
             // the modules package).
-            map.get("modules").push(file);
+            map.get("modules").files.push(file);
           }
         });
 
-        map.set(null, appFilesWithoutNodeModules);
+        map.get(null).files = appFilesWithoutNodeModules;
 
       } else {
-        map.set(name, scanner.getOutputFiles());
+        map.get(name).files = scanner.getOutputFiles();
       }
     });
 
@@ -778,7 +799,10 @@ export class PackageSourceBatch {
   // that end up in the program for this package.  By this point, it knows what
   // its dependencies are and what their exports are, so it can set up
   // linker-style imports and exports.
-  getResources(jsResources) {
+  getResources({
+    files: jsResources,
+    importExtensions = [".js", ".json"],
+  }) {
     buildmessage.assertInJob();
 
     function flatten(arrays) {
@@ -789,12 +813,14 @@ export class PackageSourceBatch {
 
     resources.push(...this._linkJS(jsResources || flatten(
       _.pluck(this.resourceSlots, 'jsOutputResources')
-    )));
+    ), this.useMeteorInstall && {
+      extensions: importExtensions
+    }));
 
     return resources;
   }
 
-  _linkJS(jsResources) {
+  _linkJS(jsResources, meteorInstallOptions) {
     const self = this;
     buildmessage.assertInJob();
 
@@ -805,7 +831,7 @@ export class PackageSourceBatch {
     const isWeb = archinfo.matches(self.unibuild.arch, "web");
     const linkerOptions = {
       useGlobalNamespace: isApp,
-      useMeteorInstall: self.useMeteorInstall,
+      meteorInstallOptions,
       // I was confused about this, so I am leaving a comment -- the
       // combinedServePath is either [pkgname].js or [pluginName]:plugin.js.
       // XXX: If we change this, we can get rid of source arch names!

@@ -9,19 +9,19 @@ describe("app modules", () => {
 
   it("can have different file extensions", () => {
     assert.strictEqual(
-      require("./eager.jsx").extension,
+      require("./eager-jsx").extension,
       ".jsx"
     );
 
     assert.strictEqual(
-      require("./eager.coffee").extension,
+      require("./eager-coffee").extension,
       ".coffee"
     );
   });
 
   it("are eagerly evaluated if outside imports/", () => {
-    assert.strictEqual(shared["/eager.jsx"], "eager jsx");
-    assert.strictEqual(shared["/eager.coffee"], "eager coffee");
+    assert.strictEqual(shared["/eager-jsx.jsx"], "eager jsx");
+    assert.strictEqual(shared["/eager-coffee.coffee"], "eager coffee");
   });
 
   it("are lazily evaluated if inside imports/", (done) => {
