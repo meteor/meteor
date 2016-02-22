@@ -532,7 +532,65 @@ Options:
   --verbose         Print all output from builds logs.
   --no-lint         Don't run linters used by the tested packages on every
                     test app rebuild.
+>>> test-app
+Test the application
+Usage: meteor test-app [options]
+       meteor test-app --unit [options]
+       meteor test-app --integration [options]
+       
+Runs tests against the application, either in *unit* or *integration* 
+test mode. meteor test-app will start a special app based on a test driver
+which handles the task of running tests and displaying the results in the 
+browser when you visit it.
 
+In unit test mode, no files in your application are eagerly loaded, aside
+from test files (in you tests/ directory or named *.tests.*). You can
+import your app's modules from within your tests and test them in isolation.
+
+In integration test mode, your app is loaded as usual, and your tests can
+inspect and effect the running state. Test files are loaded similarly to in
+unit test mode.
+
+Open the test dashboard in your browser to run the tests and see the
+results. By default the URL is localhost:3000 but that can be changed
+with --port. Alternatively, you can deploy the tests onto the 'meteor
+deploy' server by using --deploy. This gives you a public URL that you
+can use in conjunction with a service like Browserling or BrowserStack
+to try the tests against many different browser versions.
+
+Read more about testing your application in the Testing Article of the 
+Meteor Guide - https://guide.meteor.com/testing.html
+
+Options:
+  --port, -p        Port to listen on (instead of the default 3000). Also
+                    uses port N+1 and N+2.
+  --debug-port      Specify a port to enable server-side debugging. The
+                    server will be paused before any tests run, waiting
+                    for incoming connections from debugger clients.
+  --mobile-server   If running tests in an emulator or on a mobile device,
+                    the location where mobile builds connect to the
+                    Meteor server. Defaults to your local IP and the
+                    port that the Meteor server binds to. Can include a
+                    URL scheme (for example,
+                    --mobile-server=https://example.com:443).
+  --deploy          Optionally, specify a domain to deploy to, rather than
+                    running locally.
+  --production      Simulate production mode. Minify and bundle CSS, JS files.
+  --settings        Set optional data for Meteor.settings on the server
+  --driver-package  Set the test driver package which displays tests results
+                    in a browser or in console logs.
+
+  --ios,            Run tests in an emulator or on a mobile device. All of
+  --android,        the tests for client and server will run in addition to
+  --ios-device,     mobile-specific tests.
+  --android-device
+  --test-app-path   Set the directory in which to create a temporary app used
+                    for tests. Defaults to the system's temporary directory,
+                    usually /tmp.
+  --velocity        [Experimental] Execute tests using phantomjs and exit.
+  --verbose         Print all output from builds logs.
+  --no-lint         Don't run linters used by the tested packages on every
+                    test app rebuild.
 
 >>> self-test
 Run tests of the 'meteor' tool.
