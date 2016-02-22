@@ -1,0 +1,23 @@
+<!-- Expects the data context to have a `template` property (the name of
+the template to render) and an optional `data` property. If the `data`
+property is not specified, then the parent data context will be used
+instead. Uses the __dynamicWithDataContext template below to actually
+render the template. -->
+<template name="__dynamic">
+  {{checkContext}}
+  {{#if dataContextPresent}}
+    {{# __dynamicWithDataContext}}{{> Template.contentBlock}}{{/__dynamicWithDataContext}}
+  {{else}}
+    {{! if there was no explicit 'data' argument, use the parent context}}
+    {{# __dynamicWithDataContext template=template data=..}}{{> Template.contentBlock}}{{/__dynamicWithDataContext}}
+  {{/if}}
+</template>
+
+<!-- Expects the data context to have a `template` property (the name of
+the template to render) and a `data` property, which can be falsey. -->
+<template name="__dynamicWithDataContext">
+  {{#with chooseTemplate template}}
+    {{!-- The .. is evaluated inside {{#with ../data}} --}}
+    {{# .. ../data}}{{> Template.contentBlock}}{{/ ..}}
+  {{/with}}
+</template>
